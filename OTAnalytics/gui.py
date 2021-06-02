@@ -1,188 +1,236 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter.constants import ANCHOR
 import cv2
-import PIL.Image, PIL.ImageTk
-import time
+from PIL import Image, ImageTk
+from tkinter import Button, Toplevel, filedialog
 
 
-class Controlpanel:
-    def __init__(self, padx, side, anchor):
-        self.button1 = tk.Button(text="play")
-        self.button2 = tk.Button(text="stop")
+class MainWindow(tk.Frame):
+    def __init__(self, master):
+        self.videos = {}
+        self.detectors = {}
+        self.videoobject = None
 
-        self.button1.pack(padx=padx, side=side, anchor=anchor)
-        self.button2.pack(padx=padx, side=side, anchor=anchor)
+        self.master = master
+        self.frame = tk.Frame(self.master)
+        self.frame.grid()
+        self.master.title("OTAnalytics")
+        #self.master.geometry("1000x600")
+        self.new_detector_creation_buttonClicked = False
+ 
+        self.Listbox1 = tk.Listbox(self.frame)
+        self.Listbox1.grid(row=0, column=0, columnspan=6, sticky="ew")
+        self.Listbox1.bind('<<ListboxSelect>>',self.CurSelet)
+
+        self.Button1 = tk.Button(self.frame,text="Add", command= lambda: MainWindow.load_video_and_frame(self))
+        self.Button1.grid(row=1, column=0, sticky="w")
+
+        self.Button2 = tk.Button(self.frame,text="Remove")
+        self.Button2.grid(row=1, column=1 ,columnspan=2, sticky="w")
+
+        self.Button3 = tk.Button(self.frame,text="Clear")
+        self.Button3.grid(row=1, column=2, sticky="w")
+
+        self.Listbox2 = tk.Listbox(self.frame)
+        self.Listbox2.grid(row=2, column=0, columnspan=6, sticky="ew")
+
+        self.Button4 = tk.Button(self.frame, text="New", command= lambda: MainWindow.new_detector_button(self))
+        self.Button4.grid(row=3, column=0, sticky="w")
+
+        self.Button5 = tk.Button(self.frame,text="Rename")
+        self.Button5.grid(row=3, column=1, sticky="w")
+
+        self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_detector(self))
+        self.Button6.grid(row=3, column=2, sticky="w")
+
+        self.Button7 = tk.Button(self.frame,text="Clear")
+        self.Button7.grid(row=3, column=3, sticky="w")
+
+        self.Button8 = tk.Button(self.frame,text="Save")
+        self.Button8.grid(row=3, column=4, sticky="w")
+
+        self.Button9 = tk.Button(self.frame,text="Load")
+        self.Button9.grid(row=3, column=5, sticky="w")
+
+        self.Button9 = tk.Button(self.frame,text="Add to movement")
+        self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
+
+        self.Listbox3 = tk.Listbox(self.frame, width=25)
+        self.Listbox3.grid(row=5, column=0, columnspan=3, sticky="ew")
+
+        self.Listbox4 = tk.Listbox(self.frame, width=25)
+        self.Listbox4.grid(row=5, column=3, columnspan=3, sticky="ew")
+
+        self.Button10 = tk.Button(self.frame,text="New")
+        self.Button10.grid(row=6, column=0, sticky="w")
+
+        self.Button11 = tk.Button(self.frame,text="Rename")
+        self.Button11.grid(row=6, column=1, sticky="w")
+
+        self.Button12 = tk.Button(self.frame,text="Remove")
+        self.Button12.grid(row=6, column=2, sticky="w")
+
+        self.Button13 = tk.Button(self.frame,text="Clear")
+        self.Button13.grid(row=6, column=3, sticky="w")
+
+        self.Button14 = tk.Button(self.frame,text="Save")
+        self.Button14.grid(row=6, column=4, sticky="w")
+
+        self.Button15 = tk.Button(self.frame,text="Load")
+        self.Button15.grid(row=6, column=5, sticky="w")
 
 
-class Sidepanel:
-    def __init__(self, padx, side, anchor):
-        self.button1 = tk.Button(text="load", command=App.load_video)
-        self.button2 = tk.Button(text="save")
-
-        self.button1.pack(padx=padx, side=side, anchor=anchor)
-        self.button2.pack(padx=padx, side=side, anchor=anchor)
+    def load_video_and_frame(self):
+        # opens dialog to load video file
+        video_source = filedialog.askopenfile(filetypes=[("Videofiles", '*.mkv')])       
+        video_source = video_source.name
+        video_name = video_source.split('/')[-1]
 
 
-class App:
-    def __init__(self, window, window_title, video_source=0):
-        self.window = window
-        self.window.title(window_title)
-        self.video_source = video_source
-        self.window.geometry("1000x950")
+        # creates Videoobject
+        # key is the name of the object
+        self.videos[video_name] = Video(video_source)
+        self.videoobject = self.videos[video_name]
 
-        self.sidepanel = Sidepanel(5, "right", "n")
-        self.controlpanel = Controlpanel(5, "left", "n")
+    
 
-        self.general = init_general_dict()
+        # creates image from video
+        self.image = cv2.cvtColor(self.videoobject.cap.read()[1], cv2.COLOR_BGR2RGB) # to RGB
+        self.image = Image.fromarray(self.image) # to PIL format
+        self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
 
-        # open video source (by default this will try to open the computer webcam)
-        self.vid = Video(self.video_source)
+        # puts image on canvas
+        self.canvas = tk.Canvas(self.frame, width=self.videoobject.width, height=self.videoobject.height, bg="white")
+        self.canvas.bind("<ButtonPress-1>", self.on_button_press)
+        self.canvas.bind("<B1-Motion>", self.on_move_press)
+        self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
+        self.canvas.grid(row= 0,rowspan=6,column=7, sticky="n")
 
-        # Create a canvas that can fit the above video source size
-        self.canvas = tk.Canvas(window, width=self.vid.width, height=self.vid.height)
-        self.canvas.pack()
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
-        # After it is called once, the update method will be automatically called every delay milliseconds
-        self.delay = 15
-        self.update()
+        # fills listbox with added video
+        self.recieve_videoname(self.Listbox1, self.videoobject.filename)
 
-        self.window.mainloop()
+        print(self.videoobject)
 
-    def update(self):
-        # Get a frame from the video source
-        ret, frame = self.vid.get_frame()
+    def CurSelet(self, event):
+        # return selected videoname, puts frame of selected image on canvas
+        self.widget = event.widget
+        self.selection=self.widget.curselection()
 
-        if ret:
-            self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
-            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+        video_name = self.widget.get(self.selection[0])
 
-        self.window.after(self.delay, self.update)
+        #print(video_name)
+        self.videoobject = self.videos[video_name]
 
-    def load_video():
-        video_source = filedialog.askopenfile(filetypes=("all video format", ".mp4"))
+        # creates image from video
+        self.image = cv2.cvtColor(self.videoobject.cap.read()[-1], cv2.COLOR_BGR2RGB) # to RGB
+        self.image = Image.fromarray(self.image) # to PIL format
+        self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
+
+    def new_detector_button(self):
+
+        self.new_detector_creation_buttonClicked = not self.new_detector_creation_buttonClicked
+        
+        if self.new_detector_creation_buttonClicked == True:
+            self.Button4.config(text="Finish")
+        else: self.Button4.config(text="New")
+
+        print(self.new_detector_creation_buttonClicked)
 
 
-# class for videos, including the file itself
+    def on_button_press(self, event):
+        # save mouse drag start position
+
+        if self.new_detector_creation_buttonClicked == True:
+
+            self.start_x = self.canvas.canvasx(event.x)
+            self.start_y = self.canvas.canvasy(event.y)
+
+            self.x = self.y = 0
+
+            self.lineid = self.canvas.create_line(self.x, self.y, 1, 1)
+
+    def on_move_press(self, event):
+
+        if self.new_detector_creation_buttonClicked == True:
+
+            self.end_x = self.canvas.canvasx(event.x)
+            self.end_y = self.canvas.canvasy(event.y)
+
+            w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+            if event.x > 0.9*w:
+                self.canvas.xview_scroll(1, 'units') 
+            elif event.x < 0.1*w:
+                self.canvas.xview_scroll(-1, 'units')
+            if event.y > 0.9*h:
+                self.canvas.yview_scroll(1, 'units') 
+            elif event.y < 0.1*h:
+                self.canvas.yview_scroll(-1, 'units')
+
+            # expand rectangle as you drag the mouse
+            self.canvas.coords(self.lineid, self.start_x, self.start_y, self.end_x, self.end_y)    
+
+    def on_button_release(self, event):
+
+        if self.new_detector_creation_buttonClicked == True:
+
+            self.new_detector_creation = Toplevel()
+            #self.new_detector_creation.geometry("200x200")
+            self.new_detector_creation.title("Create new section")
+            self.detector_name_entry = tk.Entry(self.new_detector_creation, textvariable="Sectionname")
+            self.detector_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
+            self.add_section = tk.Button(self.new_detector_creation,text="Add section", command= self.recieve_detectorname)
+            self.add_section.grid( row=1, column=1, sticky="w", pady=10, padx=10)
+
+    def recieve_videoname(self,Listbox, filename):
+      
+        Listbox.insert(0, filename)
+
+    def recieve_detectorname(self):
+
+        self.detector_name = self.detector_name_entry.get()
+        self.detectors[self.detector_name]= {'id': self.lineid, 'start_x': self.start_x, 'start_y': self.start_y, 'end_x': self.end_x, 'end_y': self.end_y}
+        self.Listbox2.insert(0,self.detector_name)
+
+
+        print(self.detectors[self.detector_name])
+
+    def delete_detector(self):
+        # deletes selected detectors from dic; listbox2; canvas
+
+        self.detector_name=self.Listbox2.get(self.Listbox2.curselection())
+        self.Listbox2.delete(self.Listbox2.curselection())
+        self.canvas.delete(self.detectors[self.detector_name]["id"])
+
+        del self.detectors[self.detector_name]
+
+ 
+
+
 class Video:
-    def __init__(self, filepath, startdatetime, id_):
-        # Open the video source
-        self.video_file = cv2.VideoCapture(filepath)
-        # not None for no errors during multiprocessing, where the video_file gets
-        # set to "multiprocessing" to not copy the video for each process
-        #  (if video file is None, isOpened function cant be called)
-        if self.video_file != "multiprocessing" and not self.video_file.isOpened():
-            raise ValueError("Unable to open video source", filepath)
+    # objekt which contains relevant information of the video
+    def __init__(self, filepath) -> None:
 
-        # Get video source width and height
-        self.width = self.video_file.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.height = self.video_file.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        self.fps = self.video_file.get(cv2.CAP_PROP_FPS)
-        self.frames = self.video_file.get(cv2.CAP_PROP_FRAME_COUNT)
-        self.startdatetime = startdatetime
-        # self.current_frame = 0
-        self.corner_angles_list = None  # later and only for radial
-        self.id_ = id_
-        self.path = filepath
-        # get duration (ms) of the video
-        # self.video_file.set(cv2.CAP_PROP_POS_AVI_RATIO, 1)
-        self.duration = self.frames / self.fps * 1000
-        # set back to start
-        # self.video_file.set(cv2.CAP_PROP_POS_AVI_RATIO, 0)
-        self.last_showen_frame = None
-        self.current_CAP_PROP_POS_MSEC = -10000
+        #self.id = id
+        self.filepath = filepath
+        self.filename = filepath.split('/')[-1]
 
-        print(
-            "id: "
-            + str(self.id_)
-            + ", filpath: "
-            + str(self.path)
-            + ", width: "
-            + str(self.width)
-            + ", height:"
-            + str(self.height)
-            + ", duration: "
-            + str(self.duration)
-            + " ms"
-            + ", fps: "
-            + str(self.fps)
-            + ", frames: "
-            + str(self.frames)
-        )
+        #opens video source
+        self.cap = cv2.VideoCapture(self.filepath)
 
-    # Release the video source when the object is destroyed
-    def __del__(self):
-        if self.video_file != "multiprocessing" and self.video_file.isOpened():
-            self.video_file.release()
-            # self.window.mainloop()
-
-    # get frame from the file
-    def get_frame(self, app):
-        if self.video_file.isOpened():
-            if app.general["active_modul"] == "mtc":
-                # if it is just a small step in the same video --> change by grab()
-                # because grab is way faster than always set the wanted time
-                if 1100 > app.mtc["video_state"]["current_timeskip"] > 0:
-                    frames_to_skip = round(
-                        app.mtc["video_state"]["current_timeskip"] / (1000 / self.fps)
-                    )
-                    if frames_to_skip > 1:
-                        for i in range(frames_to_skip - 1):
-                            self.video_file.grab()
-                # get the frame
-                i = 2
-                while True:
-                    ret, frame = self.video_file.read()
-                    # take the frame only if the current time
-                    # position changed or it is on the beginning of
-                    # the video (no changes expected)
-                    # break the loop than
-                    if (
-                        self.video_file.get(cv2.CAP_PROP_POS_MSEC)
-                        != self.current_CAP_PROP_POS_MSEC
-                        or self.video_file.get(cv2.CAP_PROP_POS_MSEC) <= 150
-                    ):
-                        break
-                    # if it should go backward but didnt change the position
-                    # (sometimes the case for some reason, results in no time pos change),
-                    # the timeskip size have to be changed by set
-                    # if it shoulw go forward, read() is enough to change the
-                    # position in the next duration (but read only can go forward)
-                    if app.mtc["video_state"]["current_timeskip"] < 0:
-                        self.video_file.set(
-                            cv2.CAP_PROP_POS_MSEC,
-                            self.current_CAP_PROP_POS_MSEC - 100 * i,
-                        )
-                    # increase i to increase the backward timeskip with every duration
-                    i += 1
-                app.mtc["video_state"]["current_timeskip"] = 0
-            # ot (just get the start frame, nothing else to do)
-            else:
-                ret, frame = self.video_file.read()
-            if ret:
-                # Return a boolean success flag and the current frame converted to BGR
-                return (ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            else:
-                return (ret, None)
-        else:
-            return (ret, None)
+        # retrieve dimensions of video
+        self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
 
-def init_general_dict():
-    return {
-        "video": None,  # current video
-        "junction": None,
-        "active_modul": "mtc",
-        # "previous_modul":None,???
-        "count_name": None,
-        "click_counter": None,
-        # names --> later a boolean if the boxes for the counting have names beside increasing numbers
-        "names_boolean": None,
-        "gate_assignment_finished": False,
-        # modes: radial, two_clicks, any_number_clicks
-        "mode": None,
-        "load_filepath": None,
-    }
 
 
-# Create a window and pass it to the Application object
-App(tk.Tk(), "tk and OpenCV")
+def main():
+    root = tk.Tk()
+    app = MainWindow(root)
+    root.mainloop()
+    
+if __name__ == '__main__':
+    main()
