@@ -272,7 +272,6 @@ class MainWindow(tk.Frame):
                 self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="orange")
 
                 self.new_detector_creation = Toplevel()
-                #self.new_detector_creation.geometry("200x200")
                 self.new_detector_creation.title("Create new section")
                 self.detector_name_entry = tk.Entry(self.new_detector_creation, textvariable="Sectionname")
                 self.detector_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
@@ -286,7 +285,6 @@ class MainWindow(tk.Frame):
                     self.canvas.delete(i)
 
                 self.polylineid_list = []
-                self.polypoints = []
 
     def on_move_press(self, event):
         # expands the line in linedetectorcreationmode
@@ -380,6 +378,7 @@ class MainWindow(tk.Frame):
             
             self.polygondetectors[self.detector_name] ={"id": self.polygonid, "Points": self.polypoints}
             
+            self.polypoints = []
 
         self.Listbox2.insert(0,self.detector_name)
 
@@ -422,6 +421,8 @@ class Video:
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
+class Sidepanel:
+    pass
 
 
 def main():
