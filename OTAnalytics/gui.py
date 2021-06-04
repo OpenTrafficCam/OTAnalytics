@@ -30,7 +30,7 @@ class MainWindow(tk.Frame):
  
         self.Listboxvideo = tk.Listbox(self.frame)
         self.Listboxvideo.grid(row=0, column=0, columnspan=6, sticky="ew")
-        self.Listboxvideo.bind('<<ListboxSelect>>',self.CurSelet)
+        self.Listboxvideo.bind('<<ListboxSelect>>',self.curselected_video)
 
         self.Buttonaddvideo = tk.Button(self.frame,text="Add", command= lambda: MainWindow.load_video_and_frame(self))
         self.Buttonaddvideo.grid(row=1, column=0, sticky="w")
@@ -43,6 +43,8 @@ class MainWindow(tk.Frame):
 
         self.Listbox2 = tk.Listbox(self.frame)
         self.Listbox2.grid(row=2, column=0, columnspan=6, sticky="ew")
+        self.Listbox2.bind('<<ListboxSelect>>', self.curselected_detetector)
+        
 
         self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.new_linedetector_button(self))
         self.Button4.grid(row=3, column=0, sticky="w")
@@ -120,7 +122,11 @@ class MainWindow(tk.Frame):
         self.canvas.bind("<ButtonPress-1>", self.on_leftbutton_press)
         self.canvas.bind("<B1-Motion>", self.on_move_press)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
-        self.canvas.bind("<ButtonPress-3>", self.on_rightbutton_press, add="+")
+        self.canvas.bind("<ButtonPress-3>", self.on_rightbutton_press)
+        self.canvas.bind("<ButtonPress-2>", self.on_middlebutton)
+
+
+
         self.canvas.grid(row= 0,rowspan=6,column=7, sticky="n")
 
         # puts the image from the videosourse on canvas
@@ -129,7 +135,7 @@ class MainWindow(tk.Frame):
         # fills listbox with added video
         self.recieve_videoname(self.Listboxvideo, self.videoobject.filename)
 
-    def CurSelet(self, event):
+    def curselected_video(self, event):
         """Selected video from Listboxvideo-Listbox gets displayed on canvas
 
         Args:
@@ -149,6 +155,44 @@ class MainWindow(tk.Frame):
         self.image = Image.fromarray(self.image) # to PIL format
         self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
+
+    def curselected_detetector(self, event):
+
+        self.widget = event.widget
+        self.selection=self.widget.curselection()
+
+        detector_name = self.widget.get(self.selection[0])
+        
+        self.reset_detector_color()
+
+        if detector_name in self.linedetectors.keys():
+
+            id = self.linedetectors[detector_name]["id"]
+            self.canvas.itemconfig(id, fill="blue") # change color
+
+
+        if detector_name in self.polygondetectors.keys():
+
+            id = self.polygondetectors[detector_name]["id"]
+            self.canvas.itemconfig(id, fill="blue") # change color
+
+    def reset_detector_color(self):
+        """iterates over line or polygon dictionary,takes id and changes color of line
+        or polygon to red
+        """
+
+        if self.linedetectors:
+            for linedetector, attributes in self.linedetectors.items():
+                
+                id = attributes["id"]
+                self.canvas.itemconfig(id, fill="red")
+
+        if self.polygondetectors:
+            print(self.polygondetectors)
+            for polygondetector, attributes in self.polygondetectors.items():
+                id = attributes["id"]
+                self.canvas.itemconfig(id,outline="red" ,fill="orange")  
+
 
     def new_linedetector_button(self):
         """if the button for the creation of linedector is clicked the buttontext changes and bool:
@@ -199,6 +243,7 @@ class MainWindow(tk.Frame):
 
             # creates lines using all the points from pointlist which appends with each mouseclick
             for i in range(len(self.polypoints) - 1):
+                #self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="red")
                 self.polylineid = self.canvas.create_line(self.polypoints[i], self.polypoints[i + 1],fill="red", width=2)
                 self.polylineid_list.append(self.polylineid)
 
@@ -270,7 +315,6 @@ class MainWindow(tk.Frame):
         if self.new_linedetector_creation_buttonClicked == True:
 
             self.new_detector_creation = Toplevel()
-            #self.new_detector_creation.geometry("200x200")
             self.new_detector_creation.title("Create new section")
             self.detector_name_entry = tk.Entry(self.new_detector_creation, textvariable="Sectionname")
             self.detector_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
@@ -297,6 +341,27 @@ class MainWindow(tk.Frame):
 
         self.new_detector_creation.destroy()
 
+    def on_middlebutton(self, event):
+        """delete last line and points on canvas
+
+        Args:
+            event (middlebutton): middlebutton because keyboard doesnt work somehow
+        """
+        print(self.polylineid_list)
+        print(self.polypoints)
+
+        if self.polypoints :
+
+            del self.polypoints[-1]
+
+        if self.polylineid_list :
+
+            self.canvas.delete(self.polylineid_list[-1])
+
+            del self.polylineid_list[-1]
+
+        else:
+            print("Nothing to delete")
 
     def recieve_videoname(self,Listbox, filename):
       
@@ -305,8 +370,6 @@ class MainWindow(tk.Frame):
     def recieve_detectorname(self):
 
         self.detector_name = self.detector_name_entry.get()
-
-        print(self.detector_name)
 
         if self.new_linedetector_creation_buttonClicked == True:
             
@@ -319,6 +382,8 @@ class MainWindow(tk.Frame):
             
 
         self.Listbox2.insert(0,self.detector_name)
+
+        self.new_detector_creation.destroy()
 
 
     def delete_detector(self):
@@ -356,6 +421,7 @@ class Video:
         # retrieve dimensions of video
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
 
 
 def main():
