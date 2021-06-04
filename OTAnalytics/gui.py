@@ -17,13 +17,12 @@ class MainWindow(tk.Frame):
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
         self.polypoints = []
         # auxilery list of polygonline/ gets deleted after polygon creation
-        self.polylineid_list = []
+        self.polylineid_list = []   
 
         self.master = master
         self.frame = tk.Frame(self.master)
         self.frame.grid()
         self.master.title("OTAnalytics")
-        #self.master.geometry("1000x600")
         # boolean to toggle line or poly detector creation
         self.new_linedetector_creation_buttonClicked = False
         self.new_polygondetector_creation_buttonClicked = False
@@ -125,8 +124,6 @@ class MainWindow(tk.Frame):
         self.canvas.bind("<ButtonPress-3>", self.on_rightbutton_press)
         self.canvas.bind("<ButtonPress-2>", self.on_middlebutton)
 
-
-
         self.canvas.grid(row= 0,rowspan=6,column=7, sticky="n")
 
         # puts the image from the videosourse on canvas
@@ -134,6 +131,8 @@ class MainWindow(tk.Frame):
 
         # fills listbox with added video
         self.recieve_videoname(self.Listboxvideo, self.videoobject.filename)
+
+        #self.statepanel = StatePanel(self.master,row=2, column=)
 
     def curselected_video(self, event):
         """Selected video from Listboxvideo-Listbox gets displayed on canvas
@@ -420,9 +419,24 @@ class Video:
         # retrieve dimensions of video
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-class Sidepanel:
-    pass
+class StatePanel:
+    # initialize StatePanel
+    def __init__(self, window, row, column, sticky):
+        self.scrollbar = tk.Scrollbar(window)
+        self.text = tk.Text(window, height=4, width=100, yscrollcommand=self.scrollbar.set, state="disabled")
+        self.scrollbar.config(command=self.text.yview)
+        self.scrollbar.grid(row=row, column=column, columnspan=2, padx='5', pady='3', sticky='e')
+        self.text.grid(row=row, column=column, padx='5', pady='3', sticky=sticky)
+    # new information 
+    def update(self, text):
+        self.text.config(state="normal")
+        self.text.insert(tk.END, "- " + str(text) + "\n")
+        self.text.see("end")
+        self.text.config(state="disabled")
+    # change position
+    def move(self, row, column, sticky, columnspan=2):
+        self.scrollbar.grid(row=row, column=column, padx='5', pady='3', sticky='e')
+        self.text.grid(row=row, column=column, padx='5', pady='3', sticky=sticky, columnspan=columnspan)
 
 
 def main():
