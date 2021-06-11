@@ -101,7 +101,7 @@ class MainWindow(tk.Frame):
         includes mouse motion and button press events
         """
         # opens dialog to load video file
-        video_source = filedialog.askopenfile(filetypes=[("Videofiles", '*.mkv')])       
+        video_source = filedialog.askopenfile(filetypes=[("Videofiles", '*.mkv'), ("Videofiles", '*.mp4')])       
         video_source = video_source.name
         video_name = video_source.split('/')[-1]
 
@@ -419,6 +419,7 @@ class Video:
         # retrieve dimensions of video
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
 class StatePanel:
     # initialize StatePanel
     def __init__(self, window, row, column, sticky):
