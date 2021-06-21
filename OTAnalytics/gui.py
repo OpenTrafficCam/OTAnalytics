@@ -15,6 +15,8 @@ class MainWindow(tk.Frame):
         self.linedetectors = {}
         # dictionary of linedetectors, include id, start point, end point
         self.polygondetectors = {}
+
+        self.movement_dict = {}
         self.videoobject = None
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
         self.polypoints = []
@@ -70,7 +72,7 @@ class MainWindow(tk.Frame):
         self.Button9 = tk.Button(self.frame,text="Load", command= lambda: MainWindow.load_detectors(self))
         self.Button9.grid(row=3, column=6, sticky="ew")
 
-        self.Button9 = tk.Button(self.frame,text="Add to movement")
+        self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: MainWindow.add_to_movement(self) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
         self.Listbox3 = tk.Listbox(self.frame, width=25)
@@ -79,7 +81,7 @@ class MainWindow(tk.Frame):
         self.Listbox4 = tk.Listbox(self.frame, width=25)
         self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
 
-        self.Button10 = tk.Button(self.frame,text="New")
+        self.Button10 = tk.Button(self.frame,text="New",command = lambda: MainWindow.new_movement(self))
         self.Button10.grid(row=6, column=0, sticky="ew")
 
         self.Button11 = tk.Button(self.frame,text="Rename")
@@ -465,6 +467,34 @@ class MainWindow(tk.Frame):
 
             self.Listbox2.insert(0,self.detector_name)
 
+    def new_movement(self):
+        self.new_movement_creation = Toplevel()
+
+        self.new_movement_creation.title("Create new movement")
+        self.movement_name_entry = tk.Entry(self.new_movement_creation, textvariable="Movement")
+        self.movement_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
+        self.movement_name_entry.delete(0, END)
+        self.add_movement = tk.Button(self.new_movement_creation,text="Add movement", command= self.recieve_movement_name)
+        self.add_movement.grid( row=1, column=1, sticky="w", pady=10, padx=10)   
+        self.new_movement_creation.protocol("WM_DELETE_WINDOW")
+
+
+    def recieve_movement_name(self):
+        self.movement_name = self.movement_name_entry.get()
+        self.Listbox3.insert(0,self.movement_name)
+
+        self.movement_dict[self.movement_name] = {}
+
+        self.new_movement_creation.destroy()
+
+    def add_to_movement(self):
+        selection = self.Listbox2.curselection()
+
+        print(selection)
+
+        self.Listbox4.insert(0, selection)
+
+    
 
 class Video:
     # objekt which contains relevant information of the video
@@ -480,6 +510,7 @@ class Video:
         # retrieve dimensions of video
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
 
 class StatePanel:
     # initialize StatePanel
