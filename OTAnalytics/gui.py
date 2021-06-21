@@ -3,6 +3,8 @@ from tkinter.constants import ANCHOR, END
 import cv2
 from PIL import Image, ImageTk
 from tkinter import Button, Toplevel, filedialog
+import json
+import ast
 
 
 class MainWindow(tk.Frame):
@@ -23,48 +25,50 @@ class MainWindow(tk.Frame):
         self.frame = tk.Frame(self.master)
         self.frame.grid()
         self.master.title("OTAnalytics")
+        
+
         # boolean to toggle line or poly detector creation
         self.new_linedetector_creation_buttonClicked = False
         self.new_polygondetector_creation_buttonClicked = False
  
         self.Listboxvideo = tk.Listbox(self.frame)
-        self.Listboxvideo.grid(row=0, column=0, columnspan=6, sticky="ew")
+        self.Listboxvideo.grid(row=0, column=0, columnspan=7, sticky="ew")
         self.Listboxvideo.bind('<<ListboxSelect>>',self.curselected_video)
 
         self.Buttonaddvideo = tk.Button(self.frame,text="Add", command= lambda: MainWindow.load_video_and_frame(self))
-        self.Buttonaddvideo.grid(row=1, column=0, sticky="w")
+        self.Buttonaddvideo.grid(row=1, column=0, sticky="ew")
 
         self.Button2 = tk.Button(self.frame,text="Remove")
-        self.Button2.grid(row=1, column=1 ,columnspan=2, sticky="w")
+        self.Button2.grid(row=1, column=1 ,columnspan=1, sticky="ew")
 
         self.Button3 = tk.Button(self.frame,text="Clear")
-        self.Button3.grid(row=1, column=2, sticky="w")
+        self.Button3.grid(row=1, column=2, sticky="ew")
 
         self.Listbox2 = tk.Listbox(self.frame)
-        self.Listbox2.grid(row=2, column=0, columnspan=6, sticky="ew")
+        self.Listbox2.grid(row=2, column=0, columnspan=7, sticky="ew")
         self.Listbox2.bind('<<ListboxSelect>>', self.curselected_detetector)
         
 
         self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.new_linedetector_button(self))
-        self.Button4.grid(row=3, column=0, sticky="w")
+        self.Button4.grid(row=3, column=0, sticky="ew")
 
         self.ButtonPoly = tk.Button(self.frame, text="Polygon", command= lambda: MainWindow.new_polygondetector_button(self))
-        self.ButtonPoly.grid(row=3, column=1, sticky="w")
+        self.ButtonPoly.grid(row=3, column=1, sticky="ew")
 
         self.Button5 = tk.Button(self.frame,text="Rename")
-        self.Button5.grid(row=3, column=2, sticky="w")
+        self.Button5.grid(row=3, column=2, sticky="ew")
 
         self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_detector(self))
-        self.Button6.grid(row=3, column=3, sticky="w")
+        self.Button6.grid(row=3, column=3, sticky="ew")
 
         self.Button7 = tk.Button(self.frame,text="Clear")
-        self.Button7.grid(row=3, column=4, sticky="w")
+        self.Button7.grid(row=3, column=4, sticky="ew")
 
-        self.Button8 = tk.Button(self.frame,text="Save")
-        self.Button8.grid(row=3, column=5, sticky="w")
+        self.Button8 = tk.Button(self.frame,text="Save", command= lambda: MainWindow.save_detectors(self))
+        self.Button8.grid(row=3, column=5, sticky="ew")
 
-        self.Button9 = tk.Button(self.frame,text="Load")
-        self.Button9.grid(row=3, column=5, sticky="w")
+        self.Button9 = tk.Button(self.frame,text="Load", command= lambda: MainWindow.load_detectors(self))
+        self.Button9.grid(row=3, column=6, sticky="ew")
 
         self.Button9 = tk.Button(self.frame,text="Add to movement")
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
@@ -73,25 +77,25 @@ class MainWindow(tk.Frame):
         self.Listbox3.grid(row=5, column=0, columnspan=3, sticky="ew")
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
-        self.Listbox4.grid(row=5, column=3, columnspan=3, sticky="ew")
+        self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
 
         self.Button10 = tk.Button(self.frame,text="New")
-        self.Button10.grid(row=6, column=0, sticky="w")
+        self.Button10.grid(row=6, column=0, sticky="ew")
 
         self.Button11 = tk.Button(self.frame,text="Rename")
-        self.Button11.grid(row=6, column=1, sticky="w")
+        self.Button11.grid(row=6, column=1, sticky="ew")
 
         self.Button12 = tk.Button(self.frame,text="Remove")
-        self.Button12.grid(row=6, column=2, sticky="w")
+        self.Button12.grid(row=6, column=2, sticky="ew")
 
         self.Button13 = tk.Button(self.frame,text="Clear")
-        self.Button13.grid(row=6, column=3, sticky="w")
+        self.Button13.grid(row=6, column=3, sticky="ew")
 
         self.Button14 = tk.Button(self.frame,text="Save")
-        self.Button14.grid(row=6, column=4, sticky="w")
+        self.Button14.grid(row=6, column=4, sticky="ew")
 
         self.Button15 = tk.Button(self.frame,text="Load")
-        self.Button15.grid(row=6, column=5, sticky="w")
+        self.Button15.grid(row=6, column=5, sticky="ew")
 
 
     def load_video_and_frame(self):
@@ -104,6 +108,9 @@ class MainWindow(tk.Frame):
         video_source = filedialog.askopenfile(filetypes=[("Videofiles", '*.mkv'), ("Videofiles", '*.mp4')])       
         video_source = video_source.name
         video_name = video_source.split('/')[-1]
+
+        self.statepanel = StatePanel(self.frame, 7,0,sticky="w", columnspan=8)
+        self.statepanel.update("statepanel initialized")
 
 
         # creates Videoobject
@@ -124,7 +131,7 @@ class MainWindow(tk.Frame):
         self.canvas.bind("<ButtonPress-3>", self.on_rightbutton_press)
         self.canvas.bind("<ButtonPress-2>", self.on_middlebutton)
 
-        self.canvas.grid(row= 0,rowspan=6,column=7, sticky="n")
+        self.canvas.grid(row= 0,rowspan=7,column=7, sticky="n")
 
         # puts the image from the videosourse on canvas
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
@@ -187,7 +194,6 @@ class MainWindow(tk.Frame):
                 self.canvas.itemconfig(id, fill="red")
 
         if self.polygondetectors:
-            print(self.polygondetectors)
             for polygondetector, attributes in self.polygondetectors.items():
                 id = attributes["id"]
                 self.canvas.itemconfig(id,outline="red" ,fill="orange")  
@@ -202,7 +208,10 @@ class MainWindow(tk.Frame):
         
         if self.new_linedetector_creation_buttonClicked == True and self.new_polygondetector_creation_buttonClicked == False:
             self.Button4.config(text="Finish")
-        else: self.Button4.config(text="Line")
+            self.statepanel.update("keep left mouse-button pressed to draw line detector on canvas")
+        else: 
+            self.Button4.config(text="Line")
+            self.statepanel.update("")
 
     def new_polygondetector_button(self):
         """if the button for the creation of linedector is clicked the buttontext changes and bool:
@@ -213,6 +222,7 @@ class MainWindow(tk.Frame):
         
         if self.new_polygondetector_creation_buttonClicked == True and self.new_linedetector_creation_buttonClicked == False:
             self.ButtonPoly.config(text="Finish")
+            self.statepanel.update("left click to create new polyogon corner\nmiddle button to delete previous corner\nright click to close polygon")
         else: self.ButtonPoly.config(text="Polygon")
 
     def on_leftbutton_press(self, event):
@@ -245,6 +255,8 @@ class MainWindow(tk.Frame):
                 #self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="red")
                 self.polylineid = self.canvas.create_line(self.polypoints[i], self.polypoints[i + 1],fill="red", width=2)
                 self.polylineid_list.append(self.polylineid)
+
+
 
     def on_rightbutton_press(self,event):
         """closes the polygon while in polygoncreation mode
@@ -344,9 +356,6 @@ class MainWindow(tk.Frame):
         Args:
             event (middlebutton): middlebutton because keyboard doesnt work somehow
         """
-        print(self.polylineid_list)
-        print(self.polypoints)
-
         if self.polypoints :
 
             del self.polypoints[-1]
@@ -371,11 +380,11 @@ class MainWindow(tk.Frame):
         if self.new_linedetector_creation_buttonClicked == True:
             
             # type des detectors abfragen
-            self.linedetectors[self.detector_name]= {'id': self.lineid, 'start_x': self.start_x, 'start_y': self.start_y, 'end_x': self.end_x, 'end_y': self.end_y}
+            self.linedetectors[self.detector_name]= {'type': 'line', 'id': self.lineid, 'start_x': self.start_x, 'start_y': self.start_y, 'end_x': self.end_x, 'end_y': self.end_y}
 
         if self.new_polygondetector_creation_buttonClicked == True:
             
-            self.polygondetectors[self.detector_name] ={"id": self.polygonid, "Points": self.polypoints}
+            self.polygondetectors[self.detector_name] ={'type': 'polygon',"id": self.polygonid, "Points": self.polypoints}
             
             self.polypoints = []
 
@@ -404,6 +413,58 @@ class MainWindow(tk.Frame):
 
             del self.polygondetectors[self.detector_name]
 
+    def save_detectors(self):
+        files = [('Files', '*.OTSect')]
+        file = filedialog.asksaveasfile(filetypes = files, defaultextension = files)
+
+        a_file = open(file.name, "w")
+
+
+        json.dump([self.linedetectors, self.polygondetectors], a_file)
+
+        a_file.close()
+
+
+    def load_detectors(self):
+        """loads detectors from a .OTSect-File 
+        """
+
+        filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.OTSect')])   
+        files = open(filepath.name, "r")
+        files = files.read()
+
+        loaded_dict = json.loads(files)
+
+        self.linedetectors = loaded_dict[0]
+        self.polygondetectors = loaded_dict[1]
+
+        self.draw_detector_from_dict()
+
+
+    def draw_detector_from_dict(self):
+        for self.detector_name, values in self.linedetectors.items():
+
+            self.start_x = values["start_x"]
+            self.end_x = values["end_x"]
+            self.start_y = values["start_y"]
+            self.end_y = values["end_y"]
+
+            self.lineid = self.canvas.create_line(self.start_x, self.start_y, self.end_x, self.end_y,fill="red", width=2)
+
+            #overwrites the id with the true canvas id
+            values["id"] = self.lineid
+
+            self.Listbox2.insert(0,self.detector_name)
+
+        for self.detector_name, values in self.polygondetectors.items():
+            self.polypoints = values["Points"]
+            self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="orange")
+
+            #overwrites the id with the true canvas id
+            values["id"] = self.polygonid
+
+            self.Listbox2.insert(0,self.detector_name)
+
 
 class Video:
     # objekt which contains relevant information of the video
@@ -422,16 +483,17 @@ class Video:
 
 class StatePanel:
     # initialize StatePanel
-    def __init__(self, window, row, column, sticky):
+    def __init__(self, window, row, column, sticky, columnspan):
         self.scrollbar = tk.Scrollbar(window)
-        self.text = tk.Text(window, height=4, width=100, yscrollcommand=self.scrollbar.set, state="disabled")
+        self.text = tk.Text(window, height=4, width=150, yscrollcommand=self.scrollbar.set, state="disabled")
         self.scrollbar.config(command=self.text.yview)
         self.scrollbar.grid(row=row, column=column, columnspan=2, padx='5', pady='3', sticky='e')
-        self.text.grid(row=row, column=column, padx='5', pady='3', sticky=sticky)
+        self.text.grid(row=row, column=column, padx='5', pady='3', sticky=sticky, columnspan=columnspan)
     # new information 
     def update(self, text):
         self.text.config(state="normal")
-        self.text.insert(tk.END, "- " + str(text) + "\n")
+        self.text.delete("1.0", "end")
+        self.text.insert(tk.END, str(text))
         self.text.see("end")
         self.text.config(state="disabled")
     # change position
