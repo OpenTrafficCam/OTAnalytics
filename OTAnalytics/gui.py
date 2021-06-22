@@ -75,8 +75,9 @@ class MainWindow(tk.Frame):
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: MainWindow.add_to_movement(self) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
-        self.Listbox3 = tk.Listbox(self.frame, width=25)
+        self.Listbox3 = tk.Listbox(self.frame, width=25, exportselection=False)
         self.Listbox3.grid(row=5, column=0, columnspan=3, sticky="ew")
+        self.Listbox3.bind('<<ListboxSelect>>', self.curselected_movement)
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
         self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
@@ -482,17 +483,34 @@ class MainWindow(tk.Frame):
     def recieve_movement_name(self):
         self.movement_name = self.movement_name_entry.get()
         self.Listbox3.insert(0,self.movement_name)
-
-        self.movement_dict[self.movement_name] = {}
+        self.movement_dict[self.movement_name] = []
 
         self.new_movement_creation.destroy()
 
     def add_to_movement(self):
-        selection = self.Listbox2.curselection()
 
-        print(selection)
+        detector_selection = self.Listbox2.curselection()
+        detector_name = self.Listbox2.get(detector_selection[0])
 
-        self.Listbox4.insert(0, selection)
+        movement_selection = self.Listbox3.curselection()
+        self.movement_name = self.Listbox3.get(movement_selection[0])     
+
+        self.movement_dict[self.movement_name].append(detector_name)
+
+        self.Listbox4.insert(0, detector_name)
+
+        print(self.movement_dict)
+
+    def curselected_movement(self, event):
+
+        self.Listbox4.delete(0,'end')
+
+        movement_selection = self.Listbox3.curselection()
+        self.movement_name = self.Listbox3.get(movement_selection[0])
+
+        for detector_name in self.movement_dict[self.movement_name]:
+            self.Listbox4.insert(0, detector_name)
+
 
     
 
