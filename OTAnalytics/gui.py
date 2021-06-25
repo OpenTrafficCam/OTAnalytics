@@ -94,7 +94,7 @@ class MainWindow(tk.Frame):
         self.Button13 = tk.Button(self.frame,text="Clear")
         self.Button13.grid(row=6, column=3, sticky="ew")
 
-        self.Button14 = tk.Button(self.frame,text="Save")
+        self.Button14 = tk.Button(self.frame,text="Save", command= lambda: MainWindow.save_movements(self))
         self.Button14.grid(row=6, column=4, sticky="ew")
 
         self.Button15 = tk.Button(self.frame,text="Load")
@@ -283,7 +283,8 @@ class MainWindow(tk.Frame):
                     self.polylineid = self.canvas.create_line(self.polypoints[-1], self.polypoints[0],fill="red", width=2)
                     self.polylineid_list.append(self.polylineid)
 
-                self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="orange")
+                self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="orange", stipple="gray50")
+
 
                 self.new_detector_creation = Toplevel()
                 self.new_detector_creation.title("Create new section")
@@ -377,6 +378,7 @@ class MainWindow(tk.Frame):
         Listbox.insert(0, filename)
 
     def recieve_detectorname(self):
+        # takes the new created section and adds it to the listbox
 
         self.detector_name = self.detector_name_entry.get()
 
@@ -438,13 +440,22 @@ class MainWindow(tk.Frame):
 
         loaded_dict = json.loads(files)
 
-        self.linedetectors = loaded_dict[0]
-        self.polygondetectors = loaded_dict[1]
+        self.linedetectors.update(loaded_dict[0])
+        self.polygondetectors.update(loaded_dict[1])
 
         self.draw_detector_from_dict()
 
+        # resets polypoints list or else creation of new polygon leads to bug
+        self.polypoints = []
+
+        print(self.linedetectors)
+
+
 
     def draw_detector_from_dict(self):
+
+        self.Listbox2.delete(0,'end')
+
         for self.detector_name, values in self.linedetectors.items():
 
             self.start_x = values["start_x"]
@@ -461,7 +472,7 @@ class MainWindow(tk.Frame):
 
         for self.detector_name, values in self.polygondetectors.items():
             self.polypoints = values["Points"]
-            self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="orange")
+            self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="orange", stipple="gray50")
 
             #overwrites the id with the true canvas id
             values["id"] = self.polygonid
@@ -469,6 +480,8 @@ class MainWindow(tk.Frame):
             self.Listbox2.insert(0,self.detector_name)
 
     def new_movement(self):
+        """creates new movement and adds it to the movement listbox
+        """
         self.new_movement_creation = Toplevel()
 
         self.new_movement_creation.title("Create new movement")
@@ -483,25 +496,37 @@ class MainWindow(tk.Frame):
     def recieve_movement_name(self):
         self.movement_name = self.movement_name_entry.get()
         self.Listbox3.insert(0,self.movement_name)
-        self.movement_dict[self.movement_name] = []
+        self.movement_dict[self.movement_name] = {}
 
         self.new_movement_creation.destroy()
 
     def add_to_movement(self):
+        """when movement is highlighted in the listbox, it is possible
+         to add detectors and sections to the selected movement
+        """
 
         detector_selection = self.Listbox2.curselection()
         detector_name = self.Listbox2.get(detector_selection[0])
 
         movement_selection = self.Listbox3.curselection()
-        self.movement_name = self.Listbox3.get(movement_selection[0])     
+        self.movement_name = self.Listbox3.get(movement_selection[0])
 
-        self.movement_dict[self.movement_name].append(detector_name)
+        if detector_name in self.linedetectors:
+
+            self.movement_dict[self.movement_name].update({detector_name : self.linedetectors[detector_name]})
+
+        else:
+            self.movement_dict[self.movement_name].update({detector_name : self.polygondetectors[detector_name]})
+
+        #self.movement_dict[self.movement_name].append(detector_name)
 
         self.Listbox4.insert(0, detector_name)
 
         print(self.movement_dict)
 
+
     def curselected_movement(self, event):
+        #shows detectors and sections belonging to selected movement         
 
         self.Listbox4.delete(0,'end')
 
@@ -511,8 +536,22 @@ class MainWindow(tk.Frame):
         for detector_name in self.movement_dict[self.movement_name]:
             self.Listbox4.insert(0, detector_name)
 
+    def save_movements(self):
+        files = [('Files', '*.OTMov')]
+        file = filedialog.asksaveasfile(filetypes = files, defaultextension = files)
 
-    
+        a_file = open(file.name, "w")
+
+
+        json.dump(self.movement_dict, a_file)
+
+        a_file.close()
+
+    def load_movements(self):
+        # insert in list 2,3
+        # draw on canvas
+        pass
+   
 
 class Video:
     # objekt which contains relevant information of the video
