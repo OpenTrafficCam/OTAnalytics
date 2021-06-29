@@ -7,6 +7,7 @@ from tkinter import Button, Toplevel, filedialog
 import json
 import ast
 import numpy as np
+from OTAnalytics_dict import *
 
 
 class MainWindow(tk.Frame):
@@ -59,7 +60,7 @@ class MainWindow(tk.Frame):
         self.Listbox2.bind('<<ListboxSelect>>', self.curselected_detetector)
         
 
-        self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.draw_line_opencv(self))
+        self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.new_linedetector_button(self))
         self.Button4.grid(row=3, column=0, sticky="ew")
 
         self.ButtonPoly = tk.Button(self.frame, text="Polygon", command= lambda: MainWindow.new_polygondetector_button(self))
@@ -71,7 +72,7 @@ class MainWindow(tk.Frame):
         self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_detector(self))
         self.Button6.grid(row=3, column=3, sticky="ew")
 
-        self.Button7 = tk.Button(self.frame,text="Clear")
+        self.Button7 = tk.Button(self.frame,text="undo", command = lambda: MainWindow.undo_detector_creation(self))
         self.Button7.grid(row=3, column=4, sticky="ew")
 
         self.Button8 = tk.Button(self.frame,text="Save", command= lambda: MainWindow.save_detectors(self))
@@ -140,10 +141,10 @@ class MainWindow(tk.Frame):
         # puts image on canvas
         self.canvas = tk.Canvas(self.frame, width=self.videoobject.width, height=self.videoobject.height, bg="white")
         self.canvas.bind("<ButtonPress-1>", self.get_coordinates_opencv)
-        self.canvas.bind("<B1-Motion>", self.on_move_press)
+        self.canvas.bind("<B1-Motion>")
         self.canvas.bind("<ButtonRelease-1>")
-        self.canvas.bind("<ButtonPress-3>", self.on_rightbutton_press)
-        self.canvas.bind("<ButtonPress-2>", self.on_middlebutton)
+        self.canvas.bind("<ButtonPress-3>")
+        self.canvas.bind("<ButtonPress-2>")
 
         self.canvas.grid(row= 0,rowspan=7,column=7, sticky="n")
 
@@ -230,9 +231,9 @@ class MainWindow(tk.Frame):
 
         self.detector_name = self.detector_name_entry.get()
 
-        #if self.new_linedetector_creation_buttonClicked == True:
+        if gui_dict["linedetector_toggle"] == True:
             
-        self.linedetectors[self.detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1]}
+            self.linedetectors[self.detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1]}
 
         # after creation of detector is successfull save new image to imagelist
         self.imagelist.append(self.new_image)
@@ -247,6 +248,30 @@ class MainWindow(tk.Frame):
         self.Listbox2.insert(0,self.detector_name)
 
         self.new_detector_creation.destroy()
+
+    def undo_detector_creation(self):
+        #undos last creation of detector
+        print(len(self.imagelist))
+
+        if len(self.imagelist) >= 2:
+
+            del self.imagelist[-1]
+
+            self.image_original = Image.fromarray(self.imagelist[-1]) # to PIL format
+            self.image = ImageTk.PhotoImage(self.image_original.copy()) # to ImageTk format 
+
+            #self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.image))
+            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+
+            self.linedetectors.popitem()
+
+            print(self.linedetectors)
+
+
+
+
+
+
 
     def curselected_video(self, event):
         """Selected video from Listboxvideo-Listbox gets displayed on canvas
@@ -310,12 +335,13 @@ class MainWindow(tk.Frame):
         """if the button for the creation of linedector is clicked the buttontext changes and bool:
         self.new_linedetector_creation_buttonClicked changes status
         """
+        print(gui_dict["linedetector_toggle"])
 
-        self.new_linedetector_creation_buttonClicked = not self.new_linedetector_creation_buttonClicked
+        gui_dict["linedetector_toggle"] = not gui_dict["linedetector_toggle"]
         
-        if self.new_linedetector_creation_buttonClicked == True and self.new_polygondetector_creation_buttonClicked == False:
+        if gui_dict["linedetector_toggle"] == True and gui_dict["polygondetector_toggle"] == False:
             self.Button4.config(text="Finish")
-            self.statepanel.update("keep left mouse-button pressed to draw line detector on canvas")
+            self.statepanel.update("Press two times on canvas to create a line")
         else: 
             self.Button4.config(text="Line")
             self.statepanel.update("")
@@ -325,132 +351,13 @@ class MainWindow(tk.Frame):
         self.new_polygondetector_creation_buttonClicked changes status
         """
 
-        self.new_polygondetector_creation_buttonClicked = not self.new_polygondetector_creation_buttonClicked
+        gui_dict["polygondetector_toggle"] = not gui_dict["polygondetector_toggle"]
         
-        if self.new_polygondetector_creation_buttonClicked == True and self.new_linedetector_creation_buttonClicked == False:
+        if gui_dict["polygondetector_toggle"] == True and gui_dict["linedetector_toggle"] == False:
             self.ButtonPoly.config(text="Finish")
             self.statepanel.update("left click to create new polyogon corner\nmiddle button to delete previous corner\nright click to close polygon")
         else: self.ButtonPoly.config(text="Polygon")
-
-    def on_leftbutton_press(self, event):
-        """draw a line either for a linesection or polygon section
-
-        Args:
-            event (Leftbutton-Press): [recieves the coordinates on the canvas]
-        """
-        # save mouse drag start position /linedetector
-        if self.new_linedetector_creation_buttonClicked == True:
-
-            self.start_x = self.canvas.canvasx(event.x)
-            self.start_y = self.canvas.canvasy(event.y)
-
-            self.x = self.y = 0
-
-            self.lineid = self.canvas.create_line(self.x, self.y, 1, 1,fill="red", width=2)
-
-        # save mouse drag start position /polygondetector       
-        if self.new_polygondetector_creation_buttonClicked == True:
-
-            self.start_x = self.canvas.canvasx(event.x)
-            self.start_y = self.canvas.canvasy(event.y)
-
-            # appends the List of points needed for the creation of the polygon
-            self.polypoints.append((self.start_x, self.start_y))
-
-            # creates lines using all the points from pointlist which appends with each mouseclick
-            for i in range(len(self.polypoints) - 1):
-                #self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="red")
-                self.polylineid = self.canvas.create_line(self.polypoints[i], self.polypoints[i + 1],fill="red", width=2)
-                self.polylineid_list.append(self.polylineid)
-
-
-
-    def on_rightbutton_press(self,event):
-        """closes the polygon while in polygoncreation mode
-
-        Args:
-            event (rightbutton-click): only creates polygon when there are more than 2 point-tuple is the pointlist
-            draws a last line from last two first point coordinates in list ==> if successfull
-            creates toplevel with entry for the detector name
-            when add button is pressed than dictionary entry is created and detector is inserted in detectorlistbox
-            deletion process:
-                drawn lines to indicate polygon 
-                and also the list with the polygonlineids
-                listofpoints for the creation of the polygon    
-                
-        """
-        if self.new_polygondetector_creation_buttonClicked == True:
-
-            if len(self.polypoints) >= 3:
-
-                if self.new_polygondetector_creation_buttonClicked == True:
-                    self.polylineid = self.canvas.create_line(self.polypoints[-1], self.polypoints[0],fill="red", width=2)
-                    self.polylineid_list.append(self.polylineid)
-
-                self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="orange", stipple="gray50")
-
-
-                self.new_detector_creation = Toplevel()
-                self.new_detector_creation.title("Create new section")
-                self.detector_name_entry = tk.Entry(self.new_detector_creation, textvariable="Sectionname")
-                self.detector_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
-                self.detector_name_entry.delete(0, END)
-                self.add_section = tk.Button(self.new_detector_creation,text="Add section", command= self.recieve_detectorname)
-                self.add_section.grid( row=1, column=1, sticky="w", pady=10, padx=10)
-            
-                self.new_detector_creation.protocol("WM_DELETE_WINDOW",  self.on_close)
-
-                for i in self.polylineid_list:
-                    self.canvas.delete(i)
-
-                self.polylineid_list = []
-
-    def on_move_press(self, event):
-        # expands the line in linedetectorcreationmode
-
-        if self.new_linedetector_creation_buttonClicked == True:
-
-            self.end_x = self.canvas.canvasx(event.x)
-            self.end_y = self.canvas.canvasy(event.y)
-
-            w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
-            if event.x > 0.9*w:
-                self.canvas.xview_scroll(1, 'units') 
-            elif event.x < 0.1*w:
-                self.canvas.xview_scroll(-1, 'units')
-            if event.y > 0.9*h:
-                self.canvas.yview_scroll(1, 'units') 
-            elif event.y < 0.1*h:
-                self.canvas.yview_scroll(-1, 'units')
-
-            # expand rectangle as you drag the mouse
-            self.canvas.coords(self.lineid, self.start_x, self.start_y, self.end_x, self.end_y)    
-
-        
-
-
-    def on_middlebutton(self, event):
-        """delete last line and points on canvas
-
-        Args:
-            event (middlebutton): middlebutton because keyboard doesnt work somehow
-        """
-        if self.polypoints :
-
-            del self.polypoints[-1]
-
-        if self.polylineid_list :
-
-            self.canvas.delete(self.polylineid_list[-1])
-
-            del self.polylineid_list[-1]
-
-        else:
-            print("Nothing to delete")
-
-    def recieve_videoname(self,Listbox, filename):
       
-        Listbox.insert(0, filename)
 
 
 
@@ -507,33 +414,6 @@ class MainWindow(tk.Frame):
         print(self.linedetectors)
 
 
-
-    def draw_detector_from_dict(self):
-
-        self.Listbox2.delete(0,'end')
-
-        for self.detector_name, values in self.linedetectors.items():
-
-            self.start_x = values["start_x"]
-            self.end_x = values["end_x"]
-            self.start_y = values["start_y"]
-            self.end_y = values["end_y"]
-
-            self.lineid = self.canvas.create_line(self.start_x, self.start_y, self.end_x, self.end_y,fill="red", width=2)
-
-            #overwrites the id with the true canvas id
-            values["id"] = self.lineid
-
-            self.Listbox2.insert(0,self.detector_name)
-
-        for self.detector_name, values in self.polygondetectors.items():
-            self.polypoints = values["Points"]
-            self.polygonid = self.canvas.create_polygon(self.polypoints, outline="red", width=2, fill="orange", stipple="gray50")
-
-            #overwrites the id with the true canvas id
-            values["id"] = self.polygonid
-
-            self.Listbox2.insert(0,self.detector_name)
 
     def new_movement(self):
         """creates new movement and adds it to the movement listbox
