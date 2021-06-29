@@ -393,8 +393,6 @@ class MainWindow(tk.Frame):
 
         self.draw_from_dict()
 
-        print(self.linedetectors)
-
 
     def draw_from_dict(self):
 
