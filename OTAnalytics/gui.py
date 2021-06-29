@@ -274,24 +274,24 @@ class MainWindow(tk.Frame):
 
     def delete_selected_detector_opencv(self):
         #gets selection from listbox
+        #TODO: also delete from movement
         self.detector_name=self.Listbox2.get(self.Listbox2.curselection())
         self.Listbox2.delete(self.Listbox2.curselection())
 
         self.imagelist = []
         self.imagelist.append(self.image_original)
 
-        if gui_dict["linedetector_toggle"] == True: #WRONG
-            
+        if gui_dict["linedetector_toggle"] == True: #WRONG          
 
             del self.linedetectors[self.detector_name]
 
 
-            for linedetectors in self.linedetectors:
+            for linedetector in self.linedetectors:
 
-                start_x = self.linedetectors[linedetectors]["start_x"]
-                start_y = self.linedetectors[linedetectors]["start_y"]
-                end_x = self.linedetectors[linedetectors]["end_x"]
-                end_y = self.linedetectors[linedetectors]["end_y"] 
+                start_x = self.linedetectors[linedetector]["start_x"]
+                start_y = self.linedetectors[linedetector]["start_y"]
+                end_x = self.linedetectors[linedetector]["end_x"]
+                end_y = self.linedetectors[linedetector]["end_y"] 
 
                 self.new_image = cv2.line(self.imagelist[-1].copy(),(start_x,start_y),(end_x,end_y),(255,0,0),5)
                 self.imagelist.append(self.new_image)
@@ -300,6 +300,8 @@ class MainWindow(tk.Frame):
                 self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
 
                 self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+
+
 
         if not self.linedetectors:
 
