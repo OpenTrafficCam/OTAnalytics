@@ -154,7 +154,10 @@ class MainWindow(tk.Frame):
         # fills listbox with added video
         self.recieve_videoname(self.Listboxvideo, self.videoobject.filename)
 
-        #self.statepanel = StatePanel(self.master,row=2, column=)
+
+    def recieve_videoname(self,Listbox, filename):
+      
+        Listbox.insert(0, filename)
 
     def get_coordinates_opencv(self,event):
 
