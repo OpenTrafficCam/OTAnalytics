@@ -57,7 +57,7 @@ class MainWindow(tk.Frame):
 
         self.Listbox2 = tk.Listbox(self.frame)
         self.Listbox2.grid(row=2, column=0, columnspan=7, sticky="ew")
-        self.Listbox2.bind('<<ListboxSelect>>', self.curselected_detetector)
+        self.Listbox2.bind('<<ListboxSelect>>')
         
 
         self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.new_linedetector_button(self))
@@ -69,7 +69,7 @@ class MainWindow(tk.Frame):
         self.Button5 = tk.Button(self.frame,text="Rename")
         self.Button5.grid(row=3, column=2, sticky="ew")
 
-        self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_detector(self))
+        self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_selected_detector_opencv(self))
         self.Button6.grid(row=3, column=3, sticky="ew")
 
         self.Button7 = tk.Button(self.frame,text="undo", command = lambda: MainWindow.undo_detector_creation(self))
@@ -182,7 +182,7 @@ class MainWindow(tk.Frame):
             #creates new image from last saved image to the imagelist
 
             self.new_image = cv2.line(self.imagelist[-1].copy(),self.linepoints[0],self.linepoints[1],(255,0,0),5)
-
+            
             self.image = Image.fromarray(self.new_image.copy()) # to PIL format
             self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
 
@@ -254,9 +254,8 @@ class MainWindow(tk.Frame):
 
     def undo_detector_creation(self):
         #undos last creation of detector
-        print(len(self.imagelist))
 
-        if len(self.imagelist) >= 2:
+        if len(self.imagelist) > 1:
 
             del self.imagelist[-1]
 
@@ -268,11 +267,46 @@ class MainWindow(tk.Frame):
 
             self.linedetectors.popitem()
 
-            print(self.linedetectors)
+            self.Listbox2.delete(0,'end')
+
+            for key in self.linedetectors:
+                self.Listbox2.insert(0,key)
+
+    def delete_selected_detector_opencv(self):
+        #gets selection from listbox
+        self.detector_name=self.Listbox2.get(self.Listbox2.curselection())
+        self.Listbox2.delete(self.Listbox2.curselection())
+
+        self.imagelist = []
+        self.imagelist.append(self.image_original)
+
+        if gui_dict["linedetector_toggle"] == True: #WRONG
+            
+
+            del self.linedetectors[self.detector_name]
 
 
+            for linedetectors in self.linedetectors:
 
+                start_x = self.linedetectors[linedetectors]["start_x"]
+                start_y = self.linedetectors[linedetectors]["start_y"]
+                end_x = self.linedetectors[linedetectors]["end_x"]
+                end_y = self.linedetectors[linedetectors]["end_y"] 
 
+                self.new_image = cv2.line(self.imagelist[-1].copy(),(start_x,start_y),(end_x,end_y),(255,0,0),5)
+                self.imagelist.append(self.new_image)
+            
+                self.image = Image.fromarray(self.new_image.copy()) # to PIL format
+                self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+
+                self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+
+        if not self.linedetectors:
+
+                self.image = Image.fromarray(self.imagelist[0].copy()) # to PIL format
+                self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+
+                self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
 
 
@@ -296,42 +330,6 @@ class MainWindow(tk.Frame):
         self.image = Image.fromarray(self.image) # to PIL format
         self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
-
-    def curselected_detetector(self, event):
-
-        self.widget = event.widget
-        self.selection=self.widget.curselection()
-
-        detector_name = self.widget.get(self.selection[0])
-        
-        self.reset_detector_color()
-
-        if detector_name in self.linedetectors.keys():
-
-            id = self.linedetectors[detector_name]["id"]
-            self.canvas.itemconfig(id, fill="blue") # change color
-
-
-        if detector_name in self.polygondetectors.keys():
-
-            id = self.polygondetectors[detector_name]["id"]
-            self.canvas.itemconfig(id, fill="blue") # change color
-
-    def reset_detector_color(self):
-        """iterates over line or polygon dictionary,takes id and changes color of line
-        or polygon to red
-        """
-
-        if self.linedetectors:
-            for linedetector, attributes in self.linedetectors.items():
-                
-                id = attributes["id"]
-                self.canvas.itemconfig(id, fill="red")
-
-        if self.polygondetectors:
-            for polygondetector, attributes in self.polygondetectors.items():
-                id = attributes["id"]
-                self.canvas.itemconfig(id,outline="red" ,fill="orange")  
 
 
     def new_linedetector_button(self):
@@ -363,27 +361,6 @@ class MainWindow(tk.Frame):
       
 
 
-
-    def delete_detector(self):
-        """Buttoncommand to delete detectors from list and canvas
-        BUG: ONLY WORKS WHEN DETECTIONCREATION BUTTON IS TOGGLED ELSE PROGRAMM COLLAPSE
-        """
-        # deletes selected linedetectors from dic; listbox2; canvas
-
-        self.detector_name=self.Listbox2.get(self.Listbox2.curselection())
-        self.Listbox2.delete(self.Listbox2.curselection())
-
-        if self.new_linedetector_creation_buttonClicked == True: #WRONG
-            self.canvas.delete(self.linedetectors[self.detector_name]["id"])
-
-            del self.linedetectors[self.detector_name]
-
-        if self.new_polygondetector_creation_buttonClicked == True: #WRONG
-
-            self.canvas.delete(self.polygondetectors[self.detector_name]["id"])
-
-            del self.polygondetectors[self.detector_name]
-
     def save_detectors(self):
         files = [('Files', '*.OTSect')]
         file = filedialog.asksaveasfile(filetypes = files, defaultextension = files)
@@ -409,13 +386,35 @@ class MainWindow(tk.Frame):
         self.linedetectors.update(loaded_dict[0])
         self.polygondetectors.update(loaded_dict[1])
 
-        self.draw_detector_from_dict()
-
         # resets polypoints list or else creation of new polygon leads to bug
         self.polypoints = []
 
+        self.draw_from_dict()
+
         print(self.linedetectors)
 
+
+    def draw_from_dict(self):
+
+
+         for linedetectors in self.linedetectors:
+
+            start_x = self.linedetectors[linedetectors]["start_x"]
+            start_y = self.linedetectors[linedetectors]["start_y"]
+            end_x = self.linedetectors[linedetectors]["end_x"]
+            end_y = self.linedetectors[linedetectors]["end_y"] 
+
+            self.new_image = cv2.line(self.imagelist[-1].copy(),(start_x,start_y),(end_x,end_y),(255,0,0),5)
+            self.imagelist.append(self.new_image)
+        
+            self.image = Image.fromarray(self.new_image.copy()) # to PIL format
+            self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+
+            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+
+            self.Listbox2.insert(0,linedetectors)
+
+            print(len(self.imagelist))
 
 
     def new_movement(self):
