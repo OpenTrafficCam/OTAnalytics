@@ -22,6 +22,8 @@ class MainWindow(tk.Frame):
 
         self.movement_dict = {}
         self.videoobject = None
+
+        self.original_image = None
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
         self.polypoints = []
         # auxilery list of polygonline/ gets deleted after polygon creation
@@ -131,12 +133,12 @@ class MainWindow(tk.Frame):
         self.videoobject = self.videos[video_name]
     
         # creates image from video
-        self.image_original = cv2.cvtColor(self.videoobject.cap.read()[1], cv2.COLOR_BGR2RGB) # to RGB
+        self.original_image = cv2.cvtColor(self.videoobject.cap.read()[1], cv2.COLOR_BGR2RGB) # to RGB
         # copy is important or else original image will be changed
-        self.image = Image.fromarray(self.image_original.copy()) # to PIL format
+        self.image = Image.fromarray(self.original_image.copy()) # to PIL format
         self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
 
-        self.imagelist.append(self.image_original)
+        #self.imagelist.append(self.image_original)
 
         # puts image on canvas
         self.canvas = tk.Canvas(self.frame, width=self.videoobject.width, height=self.videoobject.height, bg="white")
@@ -147,7 +149,6 @@ class MainWindow(tk.Frame):
         self.canvas.bind("<ButtonPress-2>")
 
         self.canvas.grid(row= 0,rowspan=7,column=7, sticky="n")
-
         # puts the image from the videosourse on canvas
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
