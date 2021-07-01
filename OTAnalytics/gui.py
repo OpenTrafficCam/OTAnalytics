@@ -23,13 +23,12 @@ class MainWindow(tk.Frame):
         self.movement_dict = {}
         self.videoobject = None
 
-        self.original_image = None
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
         self.polypoints = []
         # auxilery list of polygonline/ gets deleted after polygon creation
         #self.polylineid_list = []   
 
-        self.imagelist = []
+        self.imagelist = [0,0]
 
         self.master = master
         self.frame = tk.Frame(self.master)
@@ -133,12 +132,12 @@ class MainWindow(tk.Frame):
         self.videoobject = self.videos[video_name]
     
         # creates image from video
-        self.original_image = cv2.cvtColor(self.videoobject.cap.read()[1], cv2.COLOR_BGR2RGB) # to RGB
+        self.image_original = cv2.cvtColor(self.videoobject.cap.read()[1], cv2.COLOR_BGR2RGB) # to RGB
         # copy is important or else original image will be changed
-        self.image = Image.fromarray(self.original_image.copy()) # to PIL format
+        self.image = Image.fromarray(self.image_original.copy()) # to PIL format
         self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
 
-        #self.imagelist.append(self.image_original)
+        self.imagelist[0] = self.image_original
 
         # puts image on canvas
         self.canvas = tk.Canvas(self.frame, width=self.videoobject.width, height=self.videoobject.height, bg="white")
@@ -149,6 +148,7 @@ class MainWindow(tk.Frame):
         self.canvas.bind("<ButtonPress-2>")
 
         self.canvas.grid(row= 0,rowspan=7,column=7, sticky="n")
+
         # puts the image from the videosourse on canvas
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
@@ -175,22 +175,35 @@ class MainWindow(tk.Frame):
 
             self.draw_line_opencv()
 
+    def draw_line_with_mousedrag(self, event):
+        pass
 
     def draw_line_opencv(self):
 
-        if len(self.linepoints) == 2:
+        if gui_dict["linedetector_toggle"] == True:
 
-            #creates new image from last saved image to the imagelist
+            if len(self.linepoints) == 2:
 
-            self.new_image = cv2.line(self.imagelist[-1].copy(),self.linepoints[0],self.linepoints[1],(255,0,0),5)
+
+                if self.linedetectors:
+
+                    self.image_cache = cv2.line(self.imagelist[1].copy(),self.linepoints[0],self.linepoints[1],(255,0,0),5)
+
+                else:
+
+                    self.image_cache = cv2.line(self.imagelist[0].copy(),self.linepoints[0],self.linepoints[1],(255,0,0),5)
             
-            self.image = Image.fromarray(self.new_image.copy()) # to PIL format
-            self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+                self.image = Image.fromarray(self.image_cache) # to PIL format
+                self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
 
-            #self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.image))
-            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+                #self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.image))
+                self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
-            self.after_drawing_line_opencv()
+                self.after_drawing_line_opencv()
+
+            else:
+                pass
+
 
     def after_drawing_line_opencv(self):
     # creates window to insert name of detector
@@ -214,12 +227,7 @@ class MainWindow(tk.Frame):
         #if self.new_linedetector_creation_buttonClicked == True:
         if self.detector_name_entry.get() == "":
 
-            self.image_original = Image.fromarray(self.imagelist[-1]) # to PIL format
-            self.image = ImageTk.PhotoImage(self.image_original.copy()) # to ImageTk format 
-
-        #self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.image))
-            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
-
+            self.draw_from_dict()
 
         if self.new_polygondetector_creation_buttonClicked == True:
             if self.detector_name_entry.get() == "":
@@ -239,9 +247,7 @@ class MainWindow(tk.Frame):
             
             self.linedetectors[self.detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1]}
 
-        # after creation of detector is successfull save new image to imagelist
-        self.imagelist.append(self.new_image)
-
+        self.draw_from_dict()
 
         # if self.new_polygondetector_creation_buttonClicked == True:
             
@@ -276,6 +282,7 @@ class MainWindow(tk.Frame):
     def delete_selected_detector_opencv(self):
         #gets selection from listbox
         #TODO: also delete from movement
+        # delete from dict and draw new
         self.detector_name=self.Listbox2.get(self.Listbox2.curselection())
         self.Listbox2.delete(self.Listbox2.curselection())
 
@@ -392,30 +399,47 @@ class MainWindow(tk.Frame):
         # resets polypoints list or else creation of new polygon leads to bug
         self.polypoints = []
 
+        for linedetectors in self.linedetectors:
+            self.Listbox2.insert(0,linedetectors)
+
+
+        #after loading dict, iterate over dict and draw every detector + insertion
         self.draw_from_dict()
 
 
     def draw_from_dict(self):
 
+        #takes original picture
+        self.image_cache= self.imagelist[0].copy()
 
-         for linedetectors in self.linedetectors:
+        if self.linedetectors:
+            print(self.linedetectors)
 
-            start_x = self.linedetectors[linedetectors]["start_x"]
-            start_y = self.linedetectors[linedetectors]["start_y"]
-            end_x = self.linedetectors[linedetectors]["end_x"]
-            end_y = self.linedetectors[linedetectors]["end_y"] 
+            for linedetectors in self.linedetectors:
 
-            self.new_image = cv2.line(self.imagelist[-1].copy(),(start_x,start_y),(end_x,end_y),(255,0,0),5)
-            self.imagelist.append(self.new_image)
-        
-            self.image = Image.fromarray(self.new_image.copy()) # to PIL format
+
+                    start_x = self.linedetectors[linedetectors]["start_x"]
+                    start_y = self.linedetectors[linedetectors]["start_y"]
+                    end_x = self.linedetectors[linedetectors]["end_x"]
+                    end_y = self.linedetectors[linedetectors]["end_y"] 
+
+                    self.image_cache = cv2.line(self.image_cache,(start_x,start_y),(end_x,end_y),(255,0,0),5)
+                    self.imagelist[1] = self.image_cache
+                
+                    self.image = Image.fromarray(self.image_cache) # to PIL format
+                    self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+
+                    self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+
+        else:
+            self.image = Image.fromarray(self.image_cache) # to PIL format
             self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
-
             self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
-            self.Listbox2.insert(0,linedetectors)
+            print("dic is empty")
 
-            print(len(self.imagelist))
+        # must remain 2 (original picture; alteration)
+        print(len(self.imagelist))
 
 
     def new_movement(self):
