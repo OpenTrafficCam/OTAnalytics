@@ -16,7 +16,7 @@ class MainWindow(tk.Frame):
         self.videos = {}
         # dictionary of linedetectors, include id, start point, end point
         self.linedetectors = {}
-        self.linepoints = []
+        self.linepoints = [(0,0),(0,0)]
         # dictionary of linedetectors, include id, start point, end point
         self.polygondetectors = {}
 
@@ -35,8 +35,9 @@ class MainWindow(tk.Frame):
         self.frame.grid()
         self.master.title("OTAnalytics")
 
-        self.drawing=False # true if mouse is pressed
-        self.mode=True # if True, draw rectangle. Press 'm' to toggle to curve
+        self.new_detector_creation = False
+
+
         
 
         # boolean to toggle line or poly detector creation
@@ -142,8 +143,8 @@ class MainWindow(tk.Frame):
         # puts image on canvas
         self.canvas = tk.Canvas(self.frame, width=self.videoobject.width, height=self.videoobject.height, bg="white")
         self.canvas.bind("<ButtonPress-1>", self.get_coordinates_opencv)
-        self.canvas.bind("<B1-Motion>")
-        self.canvas.bind("<ButtonRelease-1>")
+        self.canvas.bind("<B1-Motion>", self.draw_line_with_mousedrag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
         self.canvas.bind("<ButtonPress-3>")
         self.canvas.bind("<ButtonPress-2>")
 
@@ -162,28 +163,39 @@ class MainWindow(tk.Frame):
 
     def get_coordinates_opencv(self,event):
 
-            if len(self.linepoints) == 2:
-                self.linepoints = []
-
             # uses mouseevents to get coordinates (left button)
-            self.x = int(self.canvas.canvasx(event.x))
-            self.y = int(self.canvas.canvasy(event.y))
+            self.start_x = int(self.canvas.canvasx(event.x))
+            self.start_y = int(self.canvas.canvasy(event.y))
 
-            linepoints = (self.x, self.y)
+            self.linepoints[0] = (self.start_x, self.start_y)
 
-            self.linepoints.append(linepoints)
-
-            self.draw_line_opencv()
 
     def draw_line_with_mousedrag(self, event):
-        pass
+
+        if gui_dict["linedetector_toggle"] == True:
+
+
+            self.end_x = int(self.canvas.canvasx(event.x))
+            self.end_y = int(self.canvas.canvasy(event.y))
+
+            self.linepoints[1] = (self.end_x, self.end_y)
+
+
+            w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+            if event.x > 0.9*w:
+                self.canvas.xview_scroll(1, 'units') 
+            elif event.x < 0.1*w:
+                self.canvas.xview_scroll(-1, 'units')
+            if event.y > 0.9*h:
+                self.canvas.yview_scroll(1, 'units') 
+            elif event.y < 0.1*h:
+                self.canvas.yview_scroll(-1, 'units')
+
+            self.draw_line_opencv()
 
     def draw_line_opencv(self):
 
         if gui_dict["linedetector_toggle"] == True:
-
-            if len(self.linepoints) == 2:
-
 
                 if self.linedetectors:
 
@@ -199,26 +211,27 @@ class MainWindow(tk.Frame):
                 #self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.image))
                 self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
-                self.after_drawing_line_opencv()
 
-            else:
-                pass
+    def on_button_release(self, event):
+        if gui_dict["linedetector_toggle"] == True and len(self.linepoints)==2:
+            self.after_drawing_line_opencv()
 
 
     def after_drawing_line_opencv(self):
-    # creates window to insert name of detector
+        # creates window to insert name of detector
 
-    #if self.new_linedetector_creation_buttonClicked == True:
+        #if self.new_linedetector_creation_buttonClicked == True:
 
-        self.new_detector_creation = Toplevel()
-        self.new_detector_creation.title("Create new section")
-        self.detector_name_entry = tk.Entry(self.new_detector_creation, textvariable="Sectionname")
-        self.detector_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
-        self.detector_name_entry.delete(0, END)
-        self.add_section = tk.Button(self.new_detector_creation,text="Add section", command= self.recieve_detectorname)
-        self.add_section.grid( row=1, column=1, sticky="w", pady=10, padx=10)
-    
-        self.new_detector_creation.protocol("WM_DELETE_WINDOW",  self.on_close)
+            self.new_detector_creation = Toplevel()
+            self.new_detector_creation.title("Create new section")
+            self.detector_name_entry = tk.Entry(self.new_detector_creation, textvariable="Sectionname")
+            self.detector_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
+            self.detector_name_entry.delete(0, END)
+            self.add_section = tk.Button(self.new_detector_creation,text="Add section", command= self.recieve_detectorname)
+            self.add_section.grid( row=1, column=1, sticky="w", pady=10, padx=10)
+        
+            self.new_detector_creation.protocol("WM_DELETE_WINDOW",  self.on_close)
+
 
     def on_close(self):
         """deletes polygon or line on canvas if no name is entered and toplevelwindow is closed
@@ -236,6 +249,7 @@ class MainWindow(tk.Frame):
                 self.polylineid_list = []
                 self.polypoints = []
 
+        
         self.new_detector_creation.destroy()
 
     def recieve_detectorname(self):
@@ -286,29 +300,12 @@ class MainWindow(tk.Frame):
         self.detector_name=self.Listbox2.get(self.Listbox2.curselection())
         self.Listbox2.delete(self.Listbox2.curselection())
 
-        self.imagelist = []
-        self.imagelist.append(self.image_original)
 
         if gui_dict["linedetector_toggle"] == True: #WRONG          
 
             del self.linedetectors[self.detector_name]
 
-
-            for linedetector in self.linedetectors:
-
-                start_x = self.linedetectors[linedetector]["start_x"]
-                start_y = self.linedetectors[linedetector]["start_y"]
-                end_x = self.linedetectors[linedetector]["end_x"]
-                end_y = self.linedetectors[linedetector]["end_y"] 
-
-                self.new_image = cv2.line(self.imagelist[-1].copy(),(start_x,start_y),(end_x,end_y),(255,0,0),5)
-                self.imagelist.append(self.new_image)
-            
-                self.image = Image.fromarray(self.new_image.copy()) # to PIL format
-                self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
-
-                self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
-
+            self.draw_from_dict()
 
 
         if not self.linedetectors:
