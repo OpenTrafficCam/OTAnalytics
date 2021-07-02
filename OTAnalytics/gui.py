@@ -86,9 +86,9 @@ class MainWindow(tk.Frame):
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: MainWindow.add_to_movement(self) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
-        self.Listbox3 = tk.Listbox(self.frame, width=25, exportselection=False)
-        self.Listbox3.grid(row=5, column=0, columnspan=3, sticky="ew")
-        self.Listbox3.bind('<<ListboxSelect>>', self.curselected_movement)
+        self.ListboxDetector = tk.Listbox(self.frame, width=25, exportselection=False)
+        self.ListboxDetector.grid(row=5, column=0, columnspan=3, sticky="ew")
+        self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_movement)
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
         self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
@@ -108,7 +108,7 @@ class MainWindow(tk.Frame):
         self.Button14 = tk.Button(self.frame,text="Save", command= lambda: MainWindow.save_movements(self))
         self.Button14.grid(row=6, column=4, sticky="ew")
 
-        self.Button15 = tk.Button(self.frame,text="Load")
+        self.Button15 = tk.Button(self.frame,text="Load", command= lambda: MainWindow.load_movements(self))
         self.Button15.grid(row=6, column=5, sticky="ew")
 
 
@@ -142,6 +142,8 @@ class MainWindow(tk.Frame):
 
         # puts image on canvas
         self.canvas = tk.Canvas(self.frame, width=self.videoobject.width, height=self.videoobject.height, bg="white")
+        #prevents canvas from scrolling
+        self.canvas.configure(scrollregion=(0,0,self.videoobject.width,self.videoobject.height))
         self.canvas.bind("<ButtonPress-1>", self.get_coordinates_opencv)
         self.canvas.bind("<B1-Motion>", self.draw_line_with_mousedrag)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
@@ -252,6 +254,7 @@ class MainWindow(tk.Frame):
         
         self.new_detector_creation.destroy()
 
+
     def recieve_detectorname(self):
         # takes the new created section and adds it to the listbox
 
@@ -272,6 +275,9 @@ class MainWindow(tk.Frame):
         self.Listbox2.insert(0,self.detector_name)
 
         self.new_detector_creation.destroy()
+
+    def cur_selected_detector(self):
+        pass
 
     def undo_detector_creation(self):
         #undos last creation of detector
@@ -455,7 +461,7 @@ class MainWindow(tk.Frame):
 
     def recieve_movement_name(self):
         self.movement_name = self.movement_name_entry.get()
-        self.Listbox3.insert(0,self.movement_name)
+        self.ListboxDetector.insert(0,self.movement_name)
         self.movement_dict[self.movement_name] = {}
 
         self.new_movement_creation.destroy()
@@ -468,8 +474,8 @@ class MainWindow(tk.Frame):
         detector_selection = self.Listbox2.curselection()
         detector_name = self.Listbox2.get(detector_selection[0])
 
-        movement_selection = self.Listbox3.curselection()
-        self.movement_name = self.Listbox3.get(movement_selection[0])
+        movement_selection = self.ListboxDetector.curselection()
+        self.movement_name = self.ListboxDetector.get(movement_selection[0])
 
         if detector_name in self.linedetectors:
 
@@ -490,8 +496,8 @@ class MainWindow(tk.Frame):
 
         self.Listbox4.delete(0,'end')
 
-        movement_selection = self.Listbox3.curselection()
-        self.movement_name = self.Listbox3.get(movement_selection[0])
+        movement_selection = self.ListboxDetector.curselection()
+        self.movement_name = self.ListboxDetector.get(movement_selection[0])
 
         for detector_name in self.movement_dict[self.movement_name]:
             self.Listbox4.insert(0, detector_name)
@@ -508,9 +514,31 @@ class MainWindow(tk.Frame):
         a_file.close()
 
     def load_movements(self):
-        # insert in list 2,3
-        # draw on canvas
-        pass
+        filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.OTMov')])   
+        files = open(filepath.name, "r")
+        files = files.read()
+
+        loaded_movement_dict = json.loads(files)
+
+        self.movement_dict.update(loaded_movement_dict)
+
+        #insert listbox with movements
+        for movement in self.movement_dict:
+
+            self.ListboxDetector.insert(0,movement)
+                            
+            for detector in self.movement_dict[movement]:
+                if self.movement_dict[movement][detector]["type"] == "line":
+                    self.linedetectors.update(self.movement_dict[movement])
+                    self.Listbox2.insert(0, detector)
+
+                else: self.polygondetectors.update(self.movement_dict[movement])
+
+        self.draw_from_dict()
+
+        # resets polypoints list or else creation of new polygon leads to bug
+        self.polypoints = []
+   
    
 
 class Video:
