@@ -59,7 +59,7 @@ class MainWindow(tk.Frame):
 
         self.Listbox2 = tk.Listbox(self.frame)
         self.Listbox2.grid(row=2, column=0, columnspan=7, sticky="ew")
-        self.Listbox2.bind('<<ListboxSelect>>')
+        self.Listbox2.bind('<<ListboxSelect>>', self.curselected_detetector)
         
 
         self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.new_linedetector_button(self))
@@ -86,9 +86,9 @@ class MainWindow(tk.Frame):
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: MainWindow.add_to_movement(self) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
-        self.ListboxDetector = tk.Listbox(self.frame, width=25, exportselection=False)
-        self.ListboxDetector.grid(row=5, column=0, columnspan=3, sticky="ew")
-        self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_movement)
+        self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
+        self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
+        self.ListboxMovement.bind('<<ListboxSelect>>', self.curselected_movement)
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
         self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
@@ -234,6 +234,25 @@ class MainWindow(tk.Frame):
         
             self.new_detector_creation.protocol("WM_DELETE_WINDOW",  self.on_close)
 
+    def curselected_detetector(self, event):
+
+        self.widget = event.widget
+        self.selection=self.widget.curselection()
+
+        detector_name = self.widget.get(self.selection[0])    
+
+        for key in self.linedetectors.keys():
+
+            if detector_name == key:
+
+                self.linedetectors[detector_name]["color"] = (0,0,255)
+
+            else:
+                self.linedetectors[key]["color"] = (255,0,0)
+
+
+        self.draw_from_dict()
+
 
     def on_close(self):
         """deletes polygon or line on canvas if no name is entered and toplevelwindow is closed
@@ -262,7 +281,7 @@ class MainWindow(tk.Frame):
 
         if gui_dict["linedetector_toggle"] == True:
             
-            self.linedetectors[self.detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1]}
+            self.linedetectors[self.detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1], 'color': (255,0,0)}
 
         self.draw_from_dict()
 
@@ -275,9 +294,6 @@ class MainWindow(tk.Frame):
         self.Listbox2.insert(0,self.detector_name)
 
         self.new_detector_creation.destroy()
-
-    def cur_selected_detector(self):
-        pass
 
     def undo_detector_creation(self):
         #undos last creation of detector
@@ -424,9 +440,10 @@ class MainWindow(tk.Frame):
                     start_x = self.linedetectors[linedetectors]["start_x"]
                     start_y = self.linedetectors[linedetectors]["start_y"]
                     end_x = self.linedetectors[linedetectors]["end_x"]
-                    end_y = self.linedetectors[linedetectors]["end_y"] 
+                    end_y = self.linedetectors[linedetectors]["end_y"]
+                    color = self.linedetectors[linedetectors]["color"]
 
-                    self.image_cache = cv2.line(self.image_cache,(start_x,start_y),(end_x,end_y),(255,0,0),5)
+                    self.image_cache = cv2.line(self.image_cache,(start_x,start_y),(end_x,end_y),color,5)
                     self.imagelist[1] = self.image_cache
                 
                     self.image = Image.fromarray(self.image_cache) # to PIL format
@@ -461,7 +478,7 @@ class MainWindow(tk.Frame):
 
     def recieve_movement_name(self):
         self.movement_name = self.movement_name_entry.get()
-        self.ListboxDetector.insert(0,self.movement_name)
+        self.ListboxMovement.insert(0,self.movement_name)
         self.movement_dict[self.movement_name] = {}
 
         self.new_movement_creation.destroy()
@@ -474,8 +491,8 @@ class MainWindow(tk.Frame):
         detector_selection = self.Listbox2.curselection()
         detector_name = self.Listbox2.get(detector_selection[0])
 
-        movement_selection = self.ListboxDetector.curselection()
-        self.movement_name = self.ListboxDetector.get(movement_selection[0])
+        movement_selection = self.ListboxMovement.curselection()
+        self.movement_name = self.ListboxMovement.get(movement_selection[0])
 
         if detector_name in self.linedetectors:
 
@@ -496,8 +513,8 @@ class MainWindow(tk.Frame):
 
         self.Listbox4.delete(0,'end')
 
-        movement_selection = self.ListboxDetector.curselection()
-        self.movement_name = self.ListboxDetector.get(movement_selection[0])
+        movement_selection = self.ListboxMovement.curselection()
+        self.movement_name = self.ListboxMovement.get(movement_selection[0])
 
         for detector_name in self.movement_dict[self.movement_name]:
             self.Listbox4.insert(0, detector_name)
@@ -525,7 +542,7 @@ class MainWindow(tk.Frame):
         #insert listbox with movements
         for movement in self.movement_dict:
 
-            self.ListboxDetector.insert(0,movement)
+            self.ListboxMovement.insert(0,movement)
                             
             for detector in self.movement_dict[movement]:
                 if self.movement_dict[movement][detector]["type"] == "line":
