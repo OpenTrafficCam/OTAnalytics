@@ -8,6 +8,8 @@ import json
 import ast
 import numpy as np
 from OTAnalytics_dict import *
+from sections import get_coordinates_opencv
+from movement import new_movement, save_movements, load_movements, add_to_movement, curselected_movement
 
 
 class MainWindow(tk.Frame):
@@ -57,9 +59,9 @@ class MainWindow(tk.Frame):
         self.Button3 = tk.Button(self.frame,text="Clear")
         self.Button3.grid(row=1, column=2, sticky="ew")
 
-        self.Listbox2 = tk.Listbox(self.frame)
-        self.Listbox2.grid(row=2, column=0, columnspan=7, sticky="ew")
-        self.Listbox2.bind('<<ListboxSelect>>', self.curselected_detetector)
+        self.ListboxDetector = tk.Listbox(self.frame)
+        self.ListboxDetector.grid(row=2, column=0, columnspan=7, sticky="ew")
+        self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)
         
 
         self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.new_linedetector_button(self))
@@ -77,23 +79,21 @@ class MainWindow(tk.Frame):
         self.Button7 = tk.Button(self.frame,text="undo", command = lambda: MainWindow.undo_detector_creation(self))
         self.Button7.grid(row=3, column=4, sticky="ew")
 
-        self.Button8 = tk.Button(self.frame,text="Save", command= lambda: MainWindow.save_detectors(self))
+        self.Button8 = tk.Button(self.frame,text="Save", command= lambda: MainWindow.save_detectors(self.movement_dict))
         self.Button8.grid(row=3, column=5, sticky="ew")
 
         self.Button9 = tk.Button(self.frame,text="Load", command= lambda: MainWindow.load_detectors(self))
         self.Button9.grid(row=3, column=6, sticky="ew")
 
-        self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: MainWindow.add_to_movement(self) )
+        self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.linedetectors,self.polygondetectors, self.movement_dict, self.Listbox4) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
-        self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
-        self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
-        self.ListboxMovement.bind('<<ListboxSelect>>', self.curselected_movement)
+
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
         self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
 
-        self.Button10 = tk.Button(self.frame,text="New",command = lambda: MainWindow.new_movement(self))
+        self.Button10 = tk.Button(self.frame,text="New",command = lambda: new_movement(self.ListboxMovement, self.movement_dict))
         self.Button10.grid(row=6, column=0, sticky="ew")
 
         self.Button11 = tk.Button(self.frame,text="Rename")
@@ -105,12 +105,15 @@ class MainWindow(tk.Frame):
         self.Button13 = tk.Button(self.frame,text="Clear")
         self.Button13.grid(row=6, column=3, sticky="ew")
 
-        self.Button14 = tk.Button(self.frame,text="Save", command= lambda: MainWindow.save_movements(self))
+        self.Button14 = tk.Button(self.frame,text="Save", command= lambda: save_movements(self.movement_dict))
         self.Button14.grid(row=6, column=4, sticky="ew")
 
-        self.Button15 = tk.Button(self.frame,text="Load", command= lambda: MainWindow.load_movements(self))
+        self.Button15 = tk.Button(self.frame,text="Load", command= lambda: [load_movements(self.movement_dict, self.ListboxMovement, self.linedetectors, self.ListboxDetector), self.draw_from_dict()])
         self.Button15.grid(row=6, column=5, sticky="ew")
 
+        self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
+        self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
+        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event: curselected_movement(event, self.Listbox4,self.ListboxMovement, self.movement_dict))
 
     def load_video_and_frame(self):
         """ask for videofile via dialogue
@@ -144,7 +147,7 @@ class MainWindow(tk.Frame):
         self.canvas = tk.Canvas(self.frame, width=self.videoobject.width, height=self.videoobject.height, bg="white")
         #prevents canvas from scrolling
         self.canvas.configure(scrollregion=(0,0,self.videoobject.width,self.videoobject.height))
-        self.canvas.bind("<ButtonPress-1>", self.get_coordinates_opencv)
+        self.canvas.bind("<ButtonPress-1>", lambda event: get_coordinates_opencv(event,self.linepoints, self.canvas))
         self.canvas.bind("<B1-Motion>", self.draw_line_with_mousedrag)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
         self.canvas.bind("<ButtonPress-3>")
@@ -162,14 +165,6 @@ class MainWindow(tk.Frame):
     def recieve_videoname(self,Listbox, filename):
       
         Listbox.insert(0, filename)
-
-    def get_coordinates_opencv(self,event):
-
-            # uses mouseevents to get coordinates (left button)
-            self.start_x = int(self.canvas.canvasx(event.x))
-            self.start_y = int(self.canvas.canvasy(event.y))
-
-            self.linepoints[0] = (self.start_x, self.start_y)
 
 
     def draw_line_with_mousedrag(self, event):
@@ -293,7 +288,7 @@ class MainWindow(tk.Frame):
             
         #     self.polypoints = []
 
-        self.Listbox2.insert(0,self.detector_name)
+        self.ListboxDetector.insert(0,self.detector_name)
 
         self.new_detector_creation.destroy()
 
@@ -312,17 +307,17 @@ class MainWindow(tk.Frame):
 
             self.linedetectors.popitem()
 
-            self.Listbox2.delete(0,'end')
+            self.ListboxDetector.delete(0,'end')
 
             for key in self.linedetectors:
-                self.Listbox2.insert(0,key)
+                self.ListboxDetector.insert(0,key)
 
     def delete_selected_detector_opencv(self):
         #gets selection from listbox
         #TODO: also delete from movement
         # delete from dict and draw new
-        self.detector_name=self.Listbox2.get(self.Listbox2.curselection())
-        self.Listbox2.delete(self.Listbox2.curselection())
+        self.detector_name=self.ListboxDetector.get(self.ListboxDetector.curselection())
+        self.ListboxDetector.delete(self.ListboxDetector.curselection())
 
 
         if gui_dict["linedetector_toggle"] == True: #WRONG          
@@ -421,7 +416,7 @@ class MainWindow(tk.Frame):
         self.polypoints = []
 
         for linedetectors in self.linedetectors:
-            self.Listbox2.insert(0,linedetectors)
+            self.ListboxDetector.insert(0,linedetectors)
 
 
         #after loading dict, iterate over dict and draw every detector + insertion
@@ -434,7 +429,6 @@ class MainWindow(tk.Frame):
         self.image_cache= self.imagelist[0].copy()
 
         if self.linedetectors:
-            print(self.linedetectors)
 
             for linedetectors in self.linedetectors:
 
@@ -460,103 +454,6 @@ class MainWindow(tk.Frame):
 
             print("dic is empty")
 
-        # must remain 2 (original picture; alteration)
-        print(len(self.imagelist))
-
-
-    def new_movement(self):
-        """creates new movement and adds it to the movement listbox
-        """
-        self.new_movement_creation = Toplevel()
-
-        self.new_movement_creation.title("Create new movement")
-        self.movement_name_entry = tk.Entry(self.new_movement_creation, textvariable="Movement")
-        self.movement_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
-        self.movement_name_entry.delete(0, END)
-        self.add_movement = tk.Button(self.new_movement_creation,text="Add movement", command= self.recieve_movement_name)
-        self.add_movement.grid( row=1, column=1, sticky="w", pady=10, padx=10)   
-        self.new_movement_creation.protocol("WM_DELETE_WINDOW")
-
-
-    def recieve_movement_name(self):
-        self.movement_name = self.movement_name_entry.get()
-        self.ListboxMovement.insert(0,self.movement_name)
-        self.movement_dict[self.movement_name] = {}
-
-        self.new_movement_creation.destroy()
-
-    def add_to_movement(self):
-        """when movement is highlighted in the listbox, it is possible
-         to add detectors and sections to the selected movement
-        """
-
-        detector_selection = self.Listbox2.curselection()
-        detector_name = self.Listbox2.get(detector_selection[0])
-
-        movement_selection = self.ListboxMovement.curselection()
-        self.movement_name = self.ListboxMovement.get(movement_selection[0])
-
-        if detector_name in self.linedetectors:
-
-            self.movement_dict[self.movement_name].update({detector_name : self.linedetectors[detector_name]})
-
-        else:
-            self.movement_dict[self.movement_name].update({detector_name : self.polygondetectors[detector_name]})
-
-        #self.movement_dict[self.movement_name].append(detector_name)
-
-        self.Listbox4.insert(0, detector_name)
-
-        print(self.movement_dict)
-
-
-    def curselected_movement(self, event):
-        #shows detectors and sections belonging to selected movement         
-
-        self.Listbox4.delete(0,'end')
-
-        movement_selection = self.ListboxMovement.curselection()
-        self.movement_name = self.ListboxMovement.get(movement_selection[0])
-
-        for detector_name in self.movement_dict[self.movement_name]:
-            self.Listbox4.insert(0, detector_name)
-
-    def save_movements(self):
-        files = [('Files', '*.OTMov')]
-        file = filedialog.asksaveasfile(filetypes = files, defaultextension = files)
-
-        a_file = open(file.name, "w")
-
-
-        json.dump(self.movement_dict, a_file)
-
-        a_file.close()
-
-    def load_movements(self):
-        filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.OTMov')])   
-        files = open(filepath.name, "r")
-        files = files.read()
-
-        loaded_movement_dict = json.loads(files)
-
-        self.movement_dict.update(loaded_movement_dict)
-
-        #insert listbox with movements
-        for movement in self.movement_dict:
-
-            self.ListboxMovement.insert(0,movement)
-                            
-            for detector in self.movement_dict[movement]:
-                if self.movement_dict[movement][detector]["type"] == "line":
-                    self.linedetectors.update(self.movement_dict[movement])
-                    self.Listbox2.insert(0, detector)
-
-                else: self.polygondetectors.update(self.movement_dict[movement])
-
-        self.draw_from_dict()
-
-        # resets polypoints list or else creation of new polygon leads to bug
-        self.polypoints = []
    
    
 
@@ -604,3 +501,4 @@ def main():
     
 if __name__ == '__main__':
     main()
+
