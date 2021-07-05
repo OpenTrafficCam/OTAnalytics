@@ -233,6 +233,8 @@ class MainWindow(tk.Frame):
             self.add_section.grid( row=1, column=1, sticky="w", pady=10, padx=10)
         
             self.new_detector_creation.protocol("WM_DELETE_WINDOW",  self.on_close)
+            #makes the background window unavailable
+            self.new_detector_creation.grab_set()
 
     def curselected_detetector(self, event):
 
@@ -241,14 +243,14 @@ class MainWindow(tk.Frame):
 
         detector_name = self.widget.get(self.selection[0])    
 
-        for key in self.linedetectors.keys():
+        for dict_key in self.linedetectors.keys():
 
-            if detector_name == key:
+            if detector_name == dict_key:
 
                 self.linedetectors[detector_name]["color"] = (0,0,255)
 
             else:
-                self.linedetectors[key]["color"] = (255,0,0)
+                self.linedetectors[dict_key]["color"] = (255,0,0)
 
 
         self.draw_from_dict()
