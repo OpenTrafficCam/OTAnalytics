@@ -42,3 +42,21 @@ def draw_line(linedetectors, imagelist, linepoints):
                 image = ImageTk.PhotoImage(image) # to ImageTk format 
 
                 return image
+def load_detectors(linedetectors, polygondetectors, ListboxDetector):
+        """loads detectors from a .OTSect-File 
+        """
+
+        filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.OTSect')])   
+        files = open(filepath.name, "r")
+        files = files.read()
+
+        loaded_dict = json.loads(files)
+
+        linedetectors.update(loaded_dict[0])
+        polygondetectors.update(loaded_dict[1])
+
+        # resets polypoints list or else creation of new polygon leads to bug
+        #self.polypoints = []
+
+        for linedetectors in linedetectors:
+                ListboxDetector.insert(0,linedetectors)

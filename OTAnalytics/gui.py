@@ -10,7 +10,7 @@ import numpy as np
 from OTAnalytics_dict import *
 from sections import get_coordinates_opencv
 from movement import new_movement, save_movements, load_movements, add_to_movement, curselected_movement
-from sections import save_detectors, draw_line
+from sections import save_detectors, draw_line, load_detectors
 
 class MainWindow(tk.Frame):
     def __init__(self, master):
@@ -79,7 +79,7 @@ class MainWindow(tk.Frame):
         self.Button8 = tk.Button(self.frame,text="Save", command= lambda: save_detectors(self.linedetectors, self.polygondetectors))
         self.Button8.grid(row=3, column=5, sticky="ew")
 
-        self.Button9 = tk.Button(self.frame,text="Load", command= lambda: MainWindow.load_detectors(self))
+        self.Button9 = tk.Button(self.frame,text="Load", command= lambda: [load_detectors(self.linedetectors, self.polygondetectors, self.ListboxDetector), self.draw_from_dict()])
         self.Button9.grid(row=3, column=6, sticky="ew")
 
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.linedetectors,self.polygondetectors, self.movement_dict, self.Listbox4) )
@@ -154,12 +154,9 @@ class MainWindow(tk.Frame):
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
         # fills listbox with added video
-        self.recieve_videoname(self.Listboxvideo, self.videoobject.filename)
+        filename = self.videoobject.filename
 
-
-    def recieve_videoname(self,Listbox, filename):
-      
-        Listbox.insert(0, filename)
+        self.Listboxvideo.insert(0, filename)
 
 
     def draw_line_with_mousedrag(self, event):
@@ -246,6 +243,7 @@ class MainWindow(tk.Frame):
 
 
     def recieve_detectorname(self):
+        #TODO outsource this function
         # takes the new created section and adds it to the listbox
 
         self.detector_name = self.detector_name_entry.get()
@@ -281,7 +279,7 @@ class MainWindow(tk.Frame):
             self.draw_from_dict()
 
         if not self.linedetectors:
-
+        # deletes polygon
                 self.image = Image.fromarray(self.imagelist[0].copy()) # to PIL format
                 self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
 
@@ -336,30 +334,6 @@ class MainWindow(tk.Frame):
             self.statepanel.update("left click to create new polyogon corner\nmiddle button to delete previous corner\nright click to close polygon")
         else: self.ButtonPoly.config(text="Polygon")
       
-    def load_detectors(self):
-        """loads detectors from a .OTSect-File 
-        """
-
-        filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.OTSect')])   
-        files = open(filepath.name, "r")
-        files = files.read()
-
-        loaded_dict = json.loads(files)
-
-        self.linedetectors.update(loaded_dict[0])
-        self.polygondetectors.update(loaded_dict[1])
-
-        # resets polypoints list or else creation of new polygon leads to bug
-        self.polypoints = []
-
-        for linedetectors in self.linedetectors:
-            self.ListboxDetector.insert(0,linedetectors)
-
-
-        #after loading dict, iterate over dict and draw every detector + insertion
-        self.draw_from_dict()
-
-
     def draw_from_dict(self):
 
         #takes original picture
