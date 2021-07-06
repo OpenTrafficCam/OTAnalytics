@@ -10,7 +10,7 @@ import numpy as np
 from OTAnalytics_dict import *
 from sections import get_coordinates_opencv
 from movement import new_movement, save_movements, load_movements, add_to_movement, curselected_movement
-
+from sections import save_detectors, draw_line
 
 class MainWindow(tk.Frame):
     def __init__(self, master):
@@ -37,10 +37,7 @@ class MainWindow(tk.Frame):
         self.frame.grid()
         self.master.title("OTAnalytics")
 
-        self.new_detector_creation = False
-
-
-        
+        self.new_detector_creation = False   
 
         # boolean to toggle line or poly detector creation
         self.new_linedetector_creation_buttonClicked = False
@@ -64,10 +61,10 @@ class MainWindow(tk.Frame):
         self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)
         
 
-        self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.new_linedetector_button(self))
+        self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.button_information_line(self))
         self.Button4.grid(row=3, column=0, sticky="ew")
 
-        self.ButtonPoly = tk.Button(self.frame, text="Polygon", command= lambda: MainWindow.new_polygondetector_button(self))
+        self.ButtonPoly = tk.Button(self.frame, text="Polygon", command= lambda: MainWindow.button_information_polygon(self))
         self.ButtonPoly.grid(row=3, column=1, sticky="ew")
 
         self.Button5 = tk.Button(self.frame,text="Rename")
@@ -76,10 +73,10 @@ class MainWindow(tk.Frame):
         self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_selected_detector_opencv(self))
         self.Button6.grid(row=3, column=3, sticky="ew")
 
-        self.Button7 = tk.Button(self.frame,text="undo", command = lambda: MainWindow.undo_detector_creation(self))
+        self.Button7 = tk.Button(self.frame,text="undo")
         self.Button7.grid(row=3, column=4, sticky="ew")
 
-        self.Button8 = tk.Button(self.frame,text="Save", command= lambda: MainWindow.save_detectors(self.movement_dict))
+        self.Button8 = tk.Button(self.frame,text="Save", command= lambda: save_detectors(self.linedetectors, self.polygondetectors))
         self.Button8.grid(row=3, column=5, sticky="ew")
 
         self.Button9 = tk.Button(self.frame,text="Load", command= lambda: MainWindow.load_detectors(self))
@@ -87,8 +84,6 @@ class MainWindow(tk.Frame):
 
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.linedetectors,self.polygondetectors, self.movement_dict, self.Listbox4) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
-
-
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
         self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
@@ -148,7 +143,7 @@ class MainWindow(tk.Frame):
         #prevents canvas from scrolling
         self.canvas.configure(scrollregion=(0,0,self.videoobject.width,self.videoobject.height))
         self.canvas.bind("<ButtonPress-1>", lambda event: get_coordinates_opencv(event,self.linepoints, self.canvas))
-        self.canvas.bind("<B1-Motion>", self.draw_line_with_mousedrag)
+        self.canvas.bind("<B1-Motion>",self.draw_line_with_mousedrag)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
         self.canvas.bind("<ButtonPress-3>")
         self.canvas.bind("<ButtonPress-2>")
@@ -188,35 +183,14 @@ class MainWindow(tk.Frame):
             elif event.y < 0.1*h:
                 self.canvas.yview_scroll(-1, 'units')
 
-            self.draw_line_opencv()
+            self.image = draw_line(self.linedetectors, self.imagelist, self.linepoints)
 
-    def draw_line_opencv(self):
-
-        if gui_dict["linedetector_toggle"] == True:
-
-                if self.linedetectors:
-
-                    self.image_cache = cv2.line(self.imagelist[1].copy(),self.linepoints[0],self.linepoints[1],(255,0,0),5)
-
-                else:
-
-                    self.image_cache = cv2.line(self.imagelist[0].copy(),self.linepoints[0],self.linepoints[1],(255,0,0),5)
-            
-                self.image = Image.fromarray(self.image_cache) # to PIL format
-                self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
-
-                #self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.image))
-                self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
-
+            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
     def on_button_release(self, event):
         if gui_dict["linedetector_toggle"] == True and len(self.linepoints)==2:
-            self.after_drawing_line_opencv()
 
-
-    def after_drawing_line_opencv(self):
         # creates window to insert name of detector
-
         #if self.new_linedetector_creation_buttonClicked == True:
 
             self.new_detector_creation = Toplevel()
@@ -292,26 +266,6 @@ class MainWindow(tk.Frame):
 
         self.new_detector_creation.destroy()
 
-    def undo_detector_creation(self):
-        #undos last creation of detector
-
-        if len(self.imagelist) > 1:
-
-            del self.imagelist[-1]
-
-            self.image_original = Image.fromarray(self.imagelist[-1]) # to PIL format
-            self.image = ImageTk.PhotoImage(self.image_original.copy()) # to ImageTk format 
-
-            #self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.image))
-            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
-
-            self.linedetectors.popitem()
-
-            self.ListboxDetector.delete(0,'end')
-
-            for key in self.linedetectors:
-                self.ListboxDetector.insert(0,key)
-
     def delete_selected_detector_opencv(self):
         #gets selection from listbox
         #TODO: also delete from movement
@@ -325,7 +279,6 @@ class MainWindow(tk.Frame):
             del self.linedetectors[self.detector_name]
 
             self.draw_from_dict()
-
 
         if not self.linedetectors:
 
@@ -358,22 +311,20 @@ class MainWindow(tk.Frame):
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
 
-    def new_linedetector_button(self):
+    def button_information_line(self):
         """if the button for the creation of linedector is clicked the buttontext changes and bool:
         self.new_linedetector_creation_buttonClicked changes status
         """
-        print(gui_dict["linedetector_toggle"])
-
         gui_dict["linedetector_toggle"] = not gui_dict["linedetector_toggle"]
         
         if gui_dict["linedetector_toggle"] == True and gui_dict["polygondetector_toggle"] == False:
             self.Button4.config(text="Finish")
-            self.statepanel.update("Press two times on canvas to create a line")
+            self.statepanel.update(statepanel_txt["Linedetector_information"])
         else: 
             self.Button4.config(text="Line")
             self.statepanel.update("")
 
-    def new_polygondetector_button(self):
+    def button_information_polygon(self):
         """if the button for the creation of linedector is clicked the buttontext changes and bool:
         self.new_polygondetector_creation_buttonClicked changes status
         """
@@ -385,20 +336,6 @@ class MainWindow(tk.Frame):
             self.statepanel.update("left click to create new polyogon corner\nmiddle button to delete previous corner\nright click to close polygon")
         else: self.ButtonPoly.config(text="Polygon")
       
-
-
-    def save_detectors(self):
-        files = [('Files', '*.OTSect')]
-        file = filedialog.asksaveasfile(filetypes = files, defaultextension = files)
-
-        a_file = open(file.name, "w")
-
-
-        json.dump([self.linedetectors, self.polygondetectors], a_file)
-
-        a_file.close()
-
-
     def load_detectors(self):
         """loads detectors from a .OTSect-File 
         """
@@ -454,9 +391,7 @@ class MainWindow(tk.Frame):
 
             print("dic is empty")
 
-   
-   
-
+ 
 class Video:
     # objekt which contains relevant information of the video
     def __init__(self, filepath) -> None:
