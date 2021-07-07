@@ -19,45 +19,10 @@ def new_movement(ListboxMovement, movement_dict):
 def recieve_movement_name(movement_name_entry ,ListboxMovement, movement_dict, new_movement_creation):
     movement_name = movement_name_entry.get()
     ListboxMovement.insert(0,movement_name)
-    movement_dict[movement_name] = {}
+    movement_dict[movement_name] = []
 
     new_movement_creation.destroy()
 
-def save_movements(movement_dict):
-    files = [('Files', '*.OTMov')]
-    file = filedialog.asksaveasfile(filetypes = files, defaultextension = files)
-
-    a_file = open(file.name, "w")
-
-
-    json.dump(movement_dict, a_file)
-
-    a_file.close()
-
-
-def load_movements(movement_dict, ListboxMovement, linedetectors, ListboxDetector):
-    filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.OTMov')])   
-    files = open(filepath.name, "r")
-    files = files.read()
-
-    loaded_movement_dict = json.loads(files)
-
-    movement_dict.update(loaded_movement_dict)
-
-    #insert listbox with movements
-    for movement in movement_dict:
-
-        ListboxMovement.insert(0,movement)
-                        
-        for detector in movement_dict[movement]:
-            if movement_dict[movement][detector]["type"] == "line":
-                linedetectors.update(movement_dict[movement])
-                ListboxDetector.insert(0, detector)
-
-           # else: polygondetectors.update(movement_dict[movement])
-
-    # resets polypoints list or else creation of new polygon leads to bug
-    polypoints = []
 
 def add_to_movement(Listbox, ListboxMovement, linedetectors, polygondetectors, movement_dict, Listbox4):
     """when movement is highlighted in the listbox, it is possible
@@ -72,7 +37,7 @@ def add_to_movement(Listbox, ListboxMovement, linedetectors, polygondetectors, m
 
     if detector_name in linedetectors:
 
-        movement_dict[movement_name].update({detector_name : linedetectors[detector_name]})
+        movement_dict[movement_name].append(detector_name)
 
     else:
         movement_dict[movement_name].update({detector_name : polygondetectors[detector_name]})

@@ -7,10 +7,10 @@ from tkinter import Button, Toplevel, filedialog
 import json
 import ast
 import numpy as np
-from OTAnalytics_dict import *
+from gui_dict import *
 from sections import get_coordinates_opencv
-from movement import new_movement, save_movements, load_movements, add_to_movement, curselected_movement
-from sections import save_detectors, draw_line, load_detectors
+from movement import new_movement, add_to_movement, curselected_movement
+from sections import save_file, draw_line, load_file
 
 class MainWindow(tk.Frame):
     def __init__(self, master):
@@ -23,6 +23,7 @@ class MainWindow(tk.Frame):
         self.polygondetectors = {}
 
         self.movement_dict = {}
+        self.combined_dic = {}
         self.videoobject = None
 
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
@@ -58,8 +59,7 @@ class MainWindow(tk.Frame):
 
         self.ListboxDetector = tk.Listbox(self.frame)
         self.ListboxDetector.grid(row=2, column=0, columnspan=7, sticky="ew")
-        self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)
-        
+        self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)  
 
         self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.button_information_line(self))
         self.Button4.grid(row=3, column=0, sticky="ew")
@@ -75,12 +75,6 @@ class MainWindow(tk.Frame):
 
         self.Button7 = tk.Button(self.frame,text="undo")
         self.Button7.grid(row=3, column=4, sticky="ew")
-
-        self.Button8 = tk.Button(self.frame,text="Save", command= lambda: save_detectors(self.linedetectors, self.polygondetectors))
-        self.Button8.grid(row=3, column=5, sticky="ew")
-
-        self.Button9 = tk.Button(self.frame,text="Load", command= lambda: [load_detectors(self.linedetectors, self.polygondetectors, self.ListboxDetector), self.draw_from_dict()])
-        self.Button9.grid(row=3, column=6, sticky="ew")
 
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.linedetectors,self.polygondetectors, self.movement_dict, self.Listbox4) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
@@ -100,10 +94,10 @@ class MainWindow(tk.Frame):
         self.Button13 = tk.Button(self.frame,text="Clear")
         self.Button13.grid(row=6, column=3, sticky="ew")
 
-        self.Button14 = tk.Button(self.frame,text="Save", command= lambda: save_movements(self.movement_dict))
+        self.Button14 = tk.Button(self.frame,text="Save", command= lambda: save_file(self.combined_dic, self.linedetectors, self.movement_dict))
         self.Button14.grid(row=6, column=4, sticky="ew")
 
-        self.Button15 = tk.Button(self.frame,text="Load", command= lambda: [load_movements(self.movement_dict, self.ListboxMovement, self.linedetectors, self.ListboxDetector), self.draw_from_dict()])
+        self.Button15 = tk.Button(self.frame,text="Load", command= lambda: [load_file(self.linedetectors,self.movement_dict, self.ListboxDetector, self.ListboxMovement), self.draw_from_dict()])
         self.Button15.grid(row=6, column=5, sticky="ew")
 
         self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
@@ -123,7 +117,6 @@ class MainWindow(tk.Frame):
 
         self.statepanel = StatePanel(self.frame, 7,0,sticky="w", columnspan=8)
         self.statepanel.update("statepanel initialized")
-
 
         # creates Videoobject
         # key is the name of the object
@@ -162,7 +155,6 @@ class MainWindow(tk.Frame):
     def draw_line_with_mousedrag(self, event):
 
         if gui_dict["linedetector_toggle"] == True:
-
 
             self.end_x = int(self.canvas.canvasx(event.x))
             self.end_y = int(self.canvas.canvasy(event.y))
@@ -269,15 +261,29 @@ class MainWindow(tk.Frame):
         #TODO: also delete from movement
         # delete from dict and draw new
         self.detector_name=self.ListboxDetector.get(self.ListboxDetector.curselection())
-        self.ListboxDetector.delete(self.ListboxDetector.curselection())
+        
 
 
-        if gui_dict["linedetector_toggle"] == True: #WRONG          
+        if gui_dict["linedetector_toggle"] == True: #WRONG      
+
+            self.ListboxDetector.delete(self.ListboxDetector.curselection())    
 
             del self.linedetectors[self.detector_name]
 
-            self.draw_from_dict()
+            #check if detetector is in movement and delete as well
+       
+            for movement in self.movement_dict:    
+                if self.detector_name in self.movement_dict[movement]:
+                    self.movement_dict[movement].remove(self.detector_name)
 
+                    self.Listbox4.delete(0,'end')
+
+                    for detector_name in self.movement_dict[movement]:
+                        self.Listbox4.insert(0, detector_name)
+
+
+        self.draw_from_dict()
+          
         if not self.linedetectors:
         # deletes polygon
                 self.image = Image.fromarray(self.imagelist[0].copy()) # to PIL format
@@ -286,6 +292,7 @@ class MainWindow(tk.Frame):
                 self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
 
+        
 
     def curselected_video(self, event):
         """Selected video from Listboxvideo-Listbox gets displayed on canvas
