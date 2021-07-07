@@ -2,6 +2,7 @@ from tkinter import filedialog, Toplevel
 import tkinter as tk
 from tkinter.constants import ANCHOR, END
 import json
+from gui_dict import statepanel_txt
     
 def new_movement(ListboxMovement, movement_dict):
     """creates new movement and adds it to the movement listbox
@@ -47,7 +48,7 @@ def add_to_movement(Listbox, ListboxMovement, linedetectors, polygondetectors, m
     Listbox4.insert(0, detector_name)
 
 
-def curselected_movement(event, Listbox4,ListboxMovement, movement_dict):
+def curselected_movement(event, Listbox4,ListboxMovement, movement_dict, statepanel):
     #shows detectors and sections belonging to selected movement         
 
     Listbox4.delete(0,'end')
@@ -57,3 +58,5 @@ def curselected_movement(event, Listbox4,ListboxMovement, movement_dict):
 
     for detector_name in movement_dict[movement_name]:
         Listbox4.insert(0, detector_name)
+
+    statepanel.update(statepanel_txt["Add_movement_information"])

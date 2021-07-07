@@ -17,14 +17,16 @@ class MainWindow(tk.Frame):
         # dictionary of videoobjects
         self.videos = {}
         # dictionary of linedetectors, include id, start point, end point
-        self.linedetectors = {}
         self.linepoints = [(0,0),(0,0)]
         # dictionary of linedetectors, include id, start point, end point
         self.polygondetectors = {}
 
-        self.movement_dict = {}
-        self.combined_dic = {}
+        self.flow_dict = {}
+        self.flow_dict["Detectors"] = {}
+        self.flow_dict["Movements"] = {}
         self.videoobject = None
+
+        self.tracks = {}
 
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
         self.polypoints = []
@@ -76,13 +78,16 @@ class MainWindow(tk.Frame):
         self.Button7 = tk.Button(self.frame,text="undo")
         self.Button7.grid(row=3, column=4, sticky="ew")
 
-        self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.linedetectors,self.polygondetectors, self.movement_dict, self.Listbox4) )
+        self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.flow_dict["Detectors"],self.polygondetectors, self.flow_dict["Movements"], self.Listbox4) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
+
+        self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: MainWindow.load_tracks(self))
+        self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
         self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
 
-        self.Button10 = tk.Button(self.frame,text="New",command = lambda: new_movement(self.ListboxMovement, self.movement_dict))
+        self.Button10 = tk.Button(self.frame,text="New",command = lambda: new_movement(self.ListboxMovement, self.flow_dict["Movements"]))
         self.Button10.grid(row=6, column=0, sticky="ew")
 
         self.Button11 = tk.Button(self.frame,text="Rename")
@@ -94,15 +99,15 @@ class MainWindow(tk.Frame):
         self.Button13 = tk.Button(self.frame,text="Clear")
         self.Button13.grid(row=6, column=3, sticky="ew")
 
-        self.Button14 = tk.Button(self.frame,text="Save", command= lambda: save_file(self.combined_dic, self.linedetectors, self.movement_dict))
+        self.Button14 = tk.Button(self.frame,text="Save", command= lambda: save_file(self.flow_dict, self.flow_dict["Detectors"], self.flow_dict["Movements"]))
         self.Button14.grid(row=6, column=4, sticky="ew")
 
-        self.Button15 = tk.Button(self.frame,text="Load", command= lambda: [load_file(self.linedetectors,self.movement_dict, self.ListboxDetector, self.ListboxMovement), self.draw_from_dict()])
+        self.Button15 = tk.Button(self.frame,text="Load", command= lambda: [load_file(self.flow_dict["Detectors"],self.flow_dict["Movements"], self.ListboxDetector, self.ListboxMovement), self.draw_from_dict()])
         self.Button15.grid(row=6, column=5, sticky="ew")
 
         self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
         self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
-        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event: curselected_movement(event, self.Listbox4,self.ListboxMovement, self.movement_dict))
+        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event: curselected_movement(event, self.Listbox4,self.ListboxMovement, self.flow_dict["Movements"], self.statepanel))
 
     def load_video_and_frame(self):
         """ask for videofile via dialogue
@@ -150,6 +155,59 @@ class MainWindow(tk.Frame):
         filename = self.videoobject.filename
 
         self.Listboxvideo.insert(0, filename)
+    
+    def load_tracks(self):
+        """loads detectors from a .Track-File 
+        """
+        trackpoints = []
+
+        filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.ottrk')])   
+        files = open(filepath.name, "r")
+        files = files.read()
+
+        loaded_dict = json.loads(files)
+
+        self.tracks.update(loaded_dict)
+
+
+        #cv2.polylines(self.imagelist[0], pointList, false, Scalar(0, 0, 255), lineWidht)
+
+        #function to create pointlist x, y are the points
+
+        self.image_cache= self.imagelist[0].copy()
+
+
+        for i in self.tracks["data"]:
+            vehicle = self.tracks["data"][i]["1"]
+
+            trackpoints.append([vehicle["x"], vehicle["y"]])
+
+        print(trackpoints)
+
+        pts = np.array(trackpoints, np.int32)
+
+        pts = pts.reshape((-1, 1, 2))
+
+        self.image = cv2.polylines(self.image_cache, [pts], False,color= (255, 0, 0), thickness=2 )
+
+        self.imagelist[1] = self.image_cache
+    
+        self.image = Image.fromarray(self.image_cache) # to PIL format
+        self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+
+        self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+
+            
+
+
+
+
+
+
+
+
+        # resets polypoints list or else creation of new polygon leads to bug
+        #self.polypoints = []
 
 
     def draw_line_with_mousedrag(self, event):
@@ -172,7 +230,7 @@ class MainWindow(tk.Frame):
             elif event.y < 0.1*h:
                 self.canvas.yview_scroll(-1, 'units')
 
-            self.image = draw_line(self.linedetectors, self.imagelist, self.linepoints)
+            self.image = draw_line(self.flow_dict["Detectors"], self.imagelist, self.linepoints)
 
             self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
@@ -201,14 +259,14 @@ class MainWindow(tk.Frame):
 
         detector_name = self.widget.get(self.selection[0])    
 
-        for dict_key in self.linedetectors.keys():
+        for dict_key in self.flow_dict["Detectors"].keys():
 
             if detector_name == dict_key:
 
-                self.linedetectors[detector_name]["color"] = (0,0,255)
+                self.flow_dict["Detectors"][detector_name]["color"] = (0,0,255)
 
             else:
-                self.linedetectors[dict_key]["color"] = (255,0,0)
+                self.flow_dict["Detectors"][dict_key]["color"] = (255,0,0)
 
 
         self.draw_from_dict()
@@ -238,11 +296,11 @@ class MainWindow(tk.Frame):
         #TODO outsource this function
         # takes the new created section and adds it to the listbox
 
-        self.detector_name = self.detector_name_entry.get()
+        detector_name = self.detector_name_entry.get()
 
         if gui_dict["linedetector_toggle"] == True:
             
-            self.linedetectors[self.detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1], 'color': (255,0,0)}
+            self.flow_dict["Detectors"][detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1], 'color': (255,0,0)}
 
         self.draw_from_dict()
 
@@ -252,7 +310,7 @@ class MainWindow(tk.Frame):
             
         #     self.polypoints = []
 
-        self.ListboxDetector.insert(0,self.detector_name)
+        self.ListboxDetector.insert(0,detector_name)
 
         self.new_detector_creation.destroy()
 
@@ -260,7 +318,7 @@ class MainWindow(tk.Frame):
         #gets selection from listbox
         #TODO: also delete from movement
         # delete from dict and draw new
-        self.detector_name=self.ListboxDetector.get(self.ListboxDetector.curselection())
+        detector_name=self.ListboxDetector.get(self.ListboxDetector.curselection())
         
 
 
@@ -268,23 +326,27 @@ class MainWindow(tk.Frame):
 
             self.ListboxDetector.delete(self.ListboxDetector.curselection())    
 
-            del self.linedetectors[self.detector_name]
+            del self.flow_dict["Detectors"][detector_name]
 
             #check if detetector is in movement and delete as well
        
-            for movement in self.movement_dict:    
-                if self.detector_name in self.movement_dict[movement]:
-                    self.movement_dict[movement].remove(self.detector_name)
+            for movement in self.flow_dict["Movements"]:    
+                if detector_name in self.flow_dict["Movements"][movement]:
+                    self.flow_dict["Movements"][movement].remove(detector_name)
 
-                    self.Listbox4.delete(0,'end')
+                    print(movement, self.ListboxMovement.get(self.ListboxMovement.curselection()))
 
-                    for detector_name in self.movement_dict[movement]:
-                        self.Listbox4.insert(0, detector_name)
+                    if self.ListboxMovement.get(self.ListboxMovement.curselection()) == movement:
+
+                        self.Listbox4.delete(0,'end')
+
+                        for detector_name in self.flow_dict["Movements"][movement]:
+                            self.Listbox4.insert(0, detector_name)
 
 
         self.draw_from_dict()
           
-        if not self.linedetectors:
+        if not self.flow_dict["Detectors"]:
         # deletes polygon
                 self.image = Image.fromarray(self.imagelist[0].copy()) # to PIL format
                 self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
@@ -346,16 +408,16 @@ class MainWindow(tk.Frame):
         #takes original picture
         self.image_cache= self.imagelist[0].copy()
 
-        if self.linedetectors:
+        if self.flow_dict["Detectors"]:
 
-            for linedetectors in self.linedetectors:
+            for linedetectors in self.flow_dict["Detectors"]:
 
 
-                    start_x = self.linedetectors[linedetectors]["start_x"]
-                    start_y = self.linedetectors[linedetectors]["start_y"]
-                    end_x = self.linedetectors[linedetectors]["end_x"]
-                    end_y = self.linedetectors[linedetectors]["end_y"]
-                    color = self.linedetectors[linedetectors]["color"]
+                    start_x = self.flow_dict["Detectors"][linedetectors]["start_x"]
+                    start_y = self.flow_dict["Detectors"][linedetectors]["start_y"]
+                    end_x = self.flow_dict["Detectors"][linedetectors]["end_x"]
+                    end_y = self.flow_dict["Detectors"][linedetectors]["end_y"]
+                    color = self.flow_dict["Detectors"][linedetectors]["color"]
 
                     self.image_cache = cv2.line(self.image_cache,(start_x,start_y),(end_x,end_y),color,5)
                     self.imagelist[1] = self.image_cache
