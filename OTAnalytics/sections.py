@@ -3,7 +3,7 @@ import cv2
 import tkinter as tk
 from PIL import Image, ImageTk
 import json
-from tkinter import filedialog
+from tkinter import Listbox, filedialog
 
 def get_coordinates_opencv(event, linepoints, canvas):
 
@@ -65,7 +65,11 @@ def load_file(linedetectors, movement_dict, ListboxDetector, ListboxMovement):
         for movement in movement_dict:
 
                 ListboxMovement.insert(0,movement)
+
+
                                 
         for detector in linedetectors:
 
                 ListboxDetector.insert(0, detector)
+
+        ListboxMovement.select_set(0)

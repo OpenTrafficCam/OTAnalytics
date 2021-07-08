@@ -64,7 +64,7 @@ class MainWindow(tk.Frame):
         self.ListboxDetector.grid(row=2, column=0, columnspan=3, sticky="ew")
         self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)  
 
-        self.ListboxTracks = tk.Listbox(self.frame, selectmode='multiple')
+        self.ListboxTracks = tk.Listbox(self.frame, selectmode='multiple', exportselection=False)
         self.ListboxTracks.grid(row=2, column=3, columnspan=4, sticky="ew")
         self.ListboxTracks.bind('<<ListboxSelect>>', self.curselected_track) 
 
@@ -80,7 +80,7 @@ class MainWindow(tk.Frame):
         self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_selected_detector_opencv(self))
         self.Button6.grid(row=3, column=3, sticky="ew")
 
-        self.Button7 = tk.Button(self.frame,text="undo")
+        self.Button7 = tk.Button(self.frame,text="display")
         self.Button7.grid(row=3, column=4, sticky="ew")
 
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.flow_dict["Detectors"],self.polygondetectors, self.flow_dict["Movements"], self.Listbox4) )
@@ -199,7 +199,14 @@ class MainWindow(tk.Frame):
 
     def draw_tracks_from_dict(self):
 
-        self.image_cache= self.imagelist[0].copy()
+        # if detectors exist in dictionary then use the altered picture
+
+        if self.flow_dict["Detectors"]:
+
+            self.image_cache= self.imagelist[1].copy()
+
+        else: 
+            self.image_cache= self.imagelist[0].copy()
 
         for track in self.object_dict:
 
@@ -211,7 +218,6 @@ class MainWindow(tk.Frame):
                 trackcolor = (0,255,0)
             if self.object_dict[track]["Class"] == "motorcycle":
                 trackcolor = (240,248,255)
-
 
             pts = np.array(self.object_dict[track]["Coord"], np.int32)
 
@@ -227,8 +233,23 @@ class MainWindow(tk.Frame):
             self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
     def curselected_track(self, event):
+        """draws on or more selected tracks on canvas
 
-        self.image_cache= self.imagelist[0].copy()
+        Args:
+            event Listboxmultiselection: all highlighted object_ids will displayed on canvas as colored tracks
+        """
+        # mayby
+
+        # if detecors have been created ==> use altered picture for displaying tracks
+        # if self.flow_dict["Detectors"]:
+
+        #     self.image_cache= self.imagelist[1].copy()
+
+        # else: 
+        #     self.image_cache= self.imagelist[0].copy()
+
+        self.draw_from_dict()
+        
 
         self.widget = event.widget
         multiselection=self.widget.curselection()
@@ -265,9 +286,6 @@ class MainWindow(tk.Frame):
             self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
 
             self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
-
- 
-        
 
 
 
@@ -332,6 +350,9 @@ class MainWindow(tk.Frame):
 
         self.draw_from_dict()
 
+        # BUG: very slow!!
+        #self.draw_tracks_from_dict()
+
 
     def on_close(self):
         """deletes polygon or line on canvas if no name is entered and toplevelwindow is closed
@@ -377,12 +398,10 @@ class MainWindow(tk.Frame):
 
     def delete_selected_detector_opencv(self):
         #gets selection from listbox
-        #TODO: also delete from movement
         # delete from dict and draw new
         detector_name=self.ListboxDetector.get(self.ListboxDetector.curselection())
-        
 
-
+       
         if gui_dict["linedetector_toggle"] == True: #WRONG      
 
             self.ListboxDetector.delete(self.ListboxDetector.curselection())    
@@ -391,19 +410,17 @@ class MainWindow(tk.Frame):
 
             #check if detetector is in movement and delete as well
        
-            for movement in self.flow_dict["Movements"]:    
+            for movement in self.flow_dict["Movements"]: 
                 if detector_name in self.flow_dict["Movements"][movement]:
                     self.flow_dict["Movements"][movement].remove(detector_name)
 
-                    print(movement, self.ListboxMovement.get(self.ListboxMovement.curselection()))
-
+                    # BUG
                     if self.ListboxMovement.get(self.ListboxMovement.curselection()) == movement:
 
                         self.Listbox4.delete(0,'end')
 
                         for detector_name in self.flow_dict["Movements"][movement]:
                             self.Listbox4.insert(0, detector_name)
-
 
         self.draw_from_dict()
           
@@ -495,6 +512,9 @@ class MainWindow(tk.Frame):
 
             print("dic is empty")
 
+        if gui_dict["display_tracks_toggle"]:
+
+            self.draw_tracks_from_dict()
  
 class Video:
     # objekt which contains relevant information of the video
