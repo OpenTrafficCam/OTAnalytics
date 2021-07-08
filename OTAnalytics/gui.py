@@ -24,6 +24,7 @@ class MainWindow(tk.Frame):
         self.flow_dict = {}
         self.flow_dict["Detectors"] = {}
         self.flow_dict["Movements"] = {}
+        self.object_dict = {}
         self.videoobject = None
 
         self.tracks = {}
@@ -63,9 +64,9 @@ class MainWindow(tk.Frame):
         self.ListboxDetector.grid(row=2, column=0, columnspan=3, sticky="ew")
         self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)  
 
-        self.ListboxTracks = tk.Listbox(self.frame)
+        self.ListboxTracks = tk.Listbox(self.frame, selectmode='multiple')
         self.ListboxTracks.grid(row=2, column=3, columnspan=4, sticky="ew")
-        self.ListboxTracks.bind('<<ListboxSelect>>') 
+        self.ListboxTracks.bind('<<ListboxSelect>>', self.curselected_track) 
 
         self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.button_information_line(self))
         self.Button4.grid(row=3, column=0, sticky="ew")
@@ -85,7 +86,7 @@ class MainWindow(tk.Frame):
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.flow_dict["Detectors"],self.polygondetectors, self.flow_dict["Movements"], self.Listbox4) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: MainWindow.load_tracks(self))
+        self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: [self.load_tracks(),self.draw_tracks_from_dict()])
         self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
@@ -161,42 +162,62 @@ class MainWindow(tk.Frame):
         self.Listboxvideo.insert(0, filename)
     
     def load_tracks(self):
-        """loads detectors from a .Track-File 
+        """loads detectors from a .Track-File and converts into displayable format
         """
+
+        gui_dict["tracks_imported"] = True
+
         filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.ottrk')])   
         files = open(filepath.name, "r")
         files = files.read()
 
         loaded_dict = json.loads(files)
 
-        self.tracks.update(loaded_dict["data"])
+        detections = {}
+
+        detections.update(loaded_dict["data"])
 
 
         self.image_cache= self.imagelist[0].copy()
 
-        x = self.tracks
 
-
-        object_dic = {}
-        for i in x:
-            for v in x[i]:
-                if 'object_'+str(v) in object_dic.keys():
-                   object_dic['object_%s' % v]["Coord"].append([x[i][v]["x"], x[i][v]["y"]])
+        for frame in detections:
+            for detection in detections[frame]:
+                if 'object_'+str(detection) in self.object_dict.keys():
+                   self.object_dict['object_%s' % detection]["Coord"].append([detections[frame][detection]["x"], detections[frame][detection]["y"]])
                 else:
-                    object_dic['object_%s' % v] = {}
-                    object_dic['object_%s' % v]["Coord"] = []
-                    object_dic['object_%s' % v]["Class"] = x[i][v]["class"]
-                    object_dic['object_%s' % v]["Coord"].append([x[i][v]["x"], x[i][v]["y"]])
+                    self.object_dict['object_%s' % detection] = {}
+                    self.object_dict['object_%s' % detection]["Coord"] = []
+                    self.object_dict['object_%s' % detection]["Class"] = detections[frame][detection]["class"]
+                    self.object_dict['object_%s' % detection]["Coord"].append([detections[frame][detection]["x"], detections[frame][detection]["y"]])
         
 
+        for object in list(self.object_dict.keys()):
+
+            self.ListboxTracks.insert(0,object)
 
 
-        for track in object_dic:
-            pts = np.array(object_dic[track]["Coord"], np.int32)
+    def draw_tracks_from_dict(self):
+
+        self.image_cache= self.imagelist[0].copy()
+
+        for track in self.object_dict:
+
+            trackcolor = (0,0,255)       
+
+            if self.object_dict[track]["Class"] == "car":
+                trackcolor = (255,0,0)
+            if self.object_dict[track]["Class"] == "person":
+                trackcolor = (0,255,0)
+            if self.object_dict[track]["Class"] == "motorcycle":
+                trackcolor = (240,248,255)
+
+
+            pts = np.array(self.object_dict[track]["Coord"], np.int32)
 
             pts = pts.reshape((-1, 1, 2))
 
-            self.image = cv2.polylines(self.image_cache, [pts], False,color= (0, 0, 255), thickness=2 )
+            self.image = cv2.polylines(self.image_cache, [pts], False,color= trackcolor, thickness=2 )
 
             self.imagelist[1] = self.image_cache
         
@@ -205,10 +226,49 @@ class MainWindow(tk.Frame):
 
             self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
+    def curselected_track(self, event):
 
-        for object in list(object_dic.keys()):
+        self.image_cache= self.imagelist[0].copy()
 
-            self.ListboxTracks.insert(0,object)
+        self.widget = event.widget
+        multiselection=self.widget.curselection()
+
+        selectionlist = []
+
+        for selection in multiselection:
+            entry = self.widget.get(selection)
+            selectionlist.append(entry)
+
+        #TODO ZUSAMMENFASSEN!!     
+
+        for object_id in selectionlist:
+
+            trackcolor = (0,0,255)       
+
+            if self.object_dict[object_id]["Class"] == "car":
+                trackcolor = (255,0,0)
+            if self.object_dict[object_id]["Class"] == "person":
+                trackcolor = (0,255,0)
+            if self.object_dict[object_id]["Class"] == "motorcycle":
+                trackcolor = (240,248,255)
+
+
+            pts = np.array(self.object_dict[object_id]["Coord"], np.int32)
+
+            pts = pts.reshape((-1, 1, 2))
+
+            self.image = cv2.polylines(self.image_cache, [pts], False,color= trackcolor, thickness=2 )
+
+            self.imagelist[1] = self.image_cache
+        
+            self.image = Image.fromarray(self.image_cache) # to PIL format
+            self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+
+            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+
+ 
+        
+
 
 
     def draw_line_with_mousedrag(self, event):

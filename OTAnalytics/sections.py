@@ -33,8 +33,8 @@ def draw_line(linedetectors, imagelist, linepoints):
 
         if gui_dict["linedetector_toggle"] == True:
 
-                if linedetectors:
-
+                if linedetectors or gui_dict["tracks_imported"]:
+                        
                         image_cache = cv2.line(imagelist[1].copy(),linepoints[0],linepoints[1],(255,0,0),5)
 
                 else:
