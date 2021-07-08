@@ -1,6 +1,7 @@
 gui_dict = {
     "linedetector_toggle" : False ,
-    "polygondetector_toggle": False
+    "polygondetector_toggle": False,
+    "tracks_imported" : False
 }
 
 statepanel_txt = {"Linedetector_information": "press and drag mouse to create a line\nButton needs to be toggled to remove sections",

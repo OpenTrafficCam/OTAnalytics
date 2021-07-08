@@ -60,8 +60,12 @@ class MainWindow(tk.Frame):
         self.Button3.grid(row=1, column=2, sticky="ew")
 
         self.ListboxDetector = tk.Listbox(self.frame)
-        self.ListboxDetector.grid(row=2, column=0, columnspan=7, sticky="ew")
+        self.ListboxDetector.grid(row=2, column=0, columnspan=3, sticky="ew")
         self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)  
+
+        self.ListboxTracks = tk.Listbox(self.frame)
+        self.ListboxTracks.grid(row=2, column=3, columnspan=4, sticky="ew")
+        self.ListboxTracks.bind('<<ListboxSelect>>') 
 
         self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.button_information_line(self))
         self.Button4.grid(row=3, column=0, sticky="ew")
@@ -159,55 +163,52 @@ class MainWindow(tk.Frame):
     def load_tracks(self):
         """loads detectors from a .Track-File 
         """
-        trackpoints = []
-
         filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.ottrk')])   
         files = open(filepath.name, "r")
         files = files.read()
 
         loaded_dict = json.loads(files)
 
-        self.tracks.update(loaded_dict)
+        self.tracks.update(loaded_dict["data"])
 
-
-        #cv2.polylines(self.imagelist[0], pointList, false, Scalar(0, 0, 255), lineWidht)
-
-        #function to create pointlist x, y are the points
 
         self.image_cache= self.imagelist[0].copy()
 
+        x = self.tracks
 
-        for i in self.tracks["data"]:
-            vehicle = self.tracks["data"][i]["1"]
 
-            trackpoints.append([vehicle["x"], vehicle["y"]])
-
-        print(trackpoints)
-
-        pts = np.array(trackpoints, np.int32)
-
-        pts = pts.reshape((-1, 1, 2))
-
-        self.image = cv2.polylines(self.image_cache, [pts], False,color= (255, 0, 0), thickness=2 )
-
-        self.imagelist[1] = self.image_cache
-    
-        self.image = Image.fromarray(self.image_cache) # to PIL format
-        self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
-
-        self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
-
-            
+        object_dic = {}
+        for i in x:
+            for v in x[i]:
+                if 'object_'+str(v) in object_dic.keys():
+                   object_dic['object_%s' % v]["Coord"].append([x[i][v]["x"], x[i][v]["y"]])
+                else:
+                    object_dic['object_%s' % v] = {}
+                    object_dic['object_%s' % v]["Coord"] = []
+                    object_dic['object_%s' % v]["Class"] = x[i][v]["class"]
+                    object_dic['object_%s' % v]["Coord"].append([x[i][v]["x"], x[i][v]["y"]])
+        
 
 
 
+        for track in object_dic:
+            pts = np.array(object_dic[track]["Coord"], np.int32)
+
+            pts = pts.reshape((-1, 1, 2))
+
+            self.image = cv2.polylines(self.image_cache, [pts], False,color= (0, 0, 255), thickness=2 )
+
+            self.imagelist[1] = self.image_cache
+        
+            self.image = Image.fromarray(self.image_cache) # to PIL format
+            self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+
+            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
 
+        for object in list(object_dic.keys()):
 
-
-
-        # resets polypoints list or else creation of new polygon leads to bug
-        #self.polypoints = []
+            self.ListboxTracks.insert(0,object)
 
 
     def draw_line_with_mousedrag(self, event):
