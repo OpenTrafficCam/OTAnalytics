@@ -11,6 +11,7 @@ from gui_dict import *
 from sections import get_coordinates_opencv
 from movement import new_movement, add_to_movement, curselected_movement
 from sections import save_file, draw_line, load_file
+from tracks import load_tracks
 
 class MainWindow(tk.Frame):
     def __init__(self, master):
@@ -68,10 +69,10 @@ class MainWindow(tk.Frame):
         self.ListboxTracks.grid(row=2, column=3, columnspan=4, sticky="ew")
         self.ListboxTracks.bind('<<ListboxSelect>>', self.curselected_track) 
 
-        self.Button4 = tk.Button(self.frame, text="Line", command= lambda: MainWindow.button_information_line(self))
-        self.Button4.grid(row=3, column=0, sticky="ew")
+        self.ButtonLine = tk.Button(self.frame, text="Line", command= lambda: button_information_line(self.ButtonLine, self.statepanel))
+        self.ButtonLine.grid(row=3, column=0, sticky="ew")
 
-        self.ButtonPoly = tk.Button(self.frame, text="Polygon", command= lambda: MainWindow.button_information_polygon(self))
+        self.ButtonPoly = tk.Button(self.frame, text="Polygon", command= lambda: button_information_polygon(self.ButtonPoly, self.statepanel))
         self.ButtonPoly.grid(row=3, column=1, sticky="ew")
 
         self.Button5 = tk.Button(self.frame,text="Rename")
@@ -80,13 +81,13 @@ class MainWindow(tk.Frame):
         self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_selected_detector_opencv(self))
         self.Button6.grid(row=3, column=3, sticky="ew")
 
-        self.Button7 = tk.Button(self.frame,text="display")
+        self.Button7 = tk.Button(self.frame,width= 10, text="show tracks", command= lambda: [button_display_tracks_toggle(self.Button7), self.draw_from_dict()])
         self.Button7.grid(row=3, column=4, sticky="ew")
 
         self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.flow_dict["Detectors"],self.polygondetectors, self.flow_dict["Movements"], self.Listbox4) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: [self.load_tracks(),self.draw_tracks_from_dict()])
+        self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: [load_tracks(self.object_dict, self.ListboxTracks), self.draw_from_dict()])
         self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.Listbox4 = tk.Listbox(self.frame, width=25)
@@ -161,76 +162,44 @@ class MainWindow(tk.Frame):
 
         self.Listboxvideo.insert(0, filename)
     
-    def load_tracks(self):
-        """loads detectors from a .Track-File and converts into displayable format
-        """
-
-        gui_dict["tracks_imported"] = True
-
-        filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.ottrk')])   
-        files = open(filepath.name, "r")
-        files = files.read()
-
-        loaded_dict = json.loads(files)
-
-        detections = {}
-
-        detections.update(loaded_dict["data"])
-
-
-        self.image_cache= self.imagelist[0].copy()
-
-
-        for frame in detections:
-            for detection in detections[frame]:
-                if 'object_'+str(detection) in self.object_dict.keys():
-                   self.object_dict['object_%s' % detection]["Coord"].append([detections[frame][detection]["x"], detections[frame][detection]["y"]])
-                else:
-                    self.object_dict['object_%s' % detection] = {}
-                    self.object_dict['object_%s' % detection]["Coord"] = []
-                    self.object_dict['object_%s' % detection]["Class"] = detections[frame][detection]["class"]
-                    self.object_dict['object_%s' % detection]["Coord"].append([detections[frame][detection]["x"], detections[frame][detection]["y"]])
-        
-
-        for object in list(self.object_dict.keys()):
-
-            self.ListboxTracks.insert(0,object)
-
-
     def draw_tracks_from_dict(self):
 
         # if detectors exist in dictionary then use the altered picture
 
-        if self.flow_dict["Detectors"]:
+        if gui_dict["display_tracks_toggle"]== True:
 
-            self.image_cache= self.imagelist[1].copy()
+            if self.flow_dict["Detectors"]:
+                print(bool(self.flow_dict["Detectors"]))
 
-        else: 
-            self.image_cache= self.imagelist[0].copy()
+                self.image_cache= self.imagelist[1].copy()
 
-        for track in self.object_dict:
+            else: 
+                self.image_cache = self.imagelist[0].copy()
+                print("this pic is used 0")
 
-            trackcolor = (0,0,255)       
+            for track in self.object_dict:
 
-            if self.object_dict[track]["Class"] == "car":
-                trackcolor = (255,0,0)
-            if self.object_dict[track]["Class"] == "person":
-                trackcolor = (0,255,0)
-            if self.object_dict[track]["Class"] == "motorcycle":
-                trackcolor = (240,248,255)
+                trackcolor = (0,0,255)       
 
-            pts = np.array(self.object_dict[track]["Coord"], np.int32)
+                if self.object_dict[track]["Class"] == "car":
+                    trackcolor = (255,0,0)
+                if self.object_dict[track]["Class"] == "person":
+                    trackcolor = (0,255,0)
+                if self.object_dict[track]["Class"] == "motorcycle":
+                    trackcolor = (240,248,255)
 
-            pts = pts.reshape((-1, 1, 2))
+                pts = np.array(self.object_dict[track]["Coord"], np.int32)
 
-            self.image = cv2.polylines(self.image_cache, [pts], False,color= trackcolor, thickness=2 )
+                pts = pts.reshape((-1, 1, 2))
 
-            self.imagelist[1] = self.image_cache
-        
-            self.image = Image.fromarray(self.image_cache) # to PIL format
-            self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+                self.image = cv2.polylines(self.image_cache, [pts], False,color= trackcolor, thickness=2 )
 
-            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+                self.imagelist[1] = self.image_cache
+            
+                self.image = Image.fromarray(self.image_cache) # to PIL format
+                self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+
+                self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
     def curselected_track(self, event):
         """draws on or more selected tracks on canvas
@@ -350,10 +319,6 @@ class MainWindow(tk.Frame):
 
         self.draw_from_dict()
 
-        # BUG: very slow!!
-        #self.draw_tracks_from_dict()
-
-
     def on_close(self):
         """deletes polygon or line on canvas if no name is entered and toplevelwindow is closed
         """
@@ -422,8 +387,7 @@ class MainWindow(tk.Frame):
                         for detector_name in self.flow_dict["Movements"][movement]:
                             self.Listbox4.insert(0, detector_name)
 
-        self.draw_from_dict()
-          
+        
         if not self.flow_dict["Detectors"]:
         # deletes polygon
                 self.image = Image.fromarray(self.imagelist[0].copy()) # to PIL format
@@ -431,7 +395,7 @@ class MainWindow(tk.Frame):
 
                 self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
 
-
+        self.draw_from_dict()
         
 
     def curselected_video(self, event):
@@ -454,33 +418,7 @@ class MainWindow(tk.Frame):
         self.image = Image.fromarray(self.image) # to PIL format
         self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
-
-
-    def button_information_line(self):
-        """if the button for the creation of linedector is clicked the buttontext changes and bool:
-        self.new_linedetector_creation_buttonClicked changes status
-        """
-        gui_dict["linedetector_toggle"] = not gui_dict["linedetector_toggle"]
-        
-        if gui_dict["linedetector_toggle"] == True and gui_dict["polygondetector_toggle"] == False:
-            self.Button4.config(text="Finish")
-            self.statepanel.update(statepanel_txt["Linedetector_information"])
-        else: 
-            self.Button4.config(text="Line")
-            self.statepanel.update("")
-
-    def button_information_polygon(self):
-        """if the button for the creation of linedector is clicked the buttontext changes and bool:
-        self.new_polygondetector_creation_buttonClicked changes status
-        """
-
-        gui_dict["polygondetector_toggle"] = not gui_dict["polygondetector_toggle"]
-        
-        if gui_dict["polygondetector_toggle"] == True and gui_dict["linedetector_toggle"] == False:
-            self.ButtonPoly.config(text="Finish")
-            self.statepanel.update("left click to create new polyogon corner\nmiddle button to delete previous corner\nright click to close polygon")
-        else: self.ButtonPoly.config(text="Polygon")
-      
+    
     def draw_from_dict(self):
 
         #takes original picture
@@ -512,9 +450,7 @@ class MainWindow(tk.Frame):
 
             print("dic is empty")
 
-        if gui_dict["display_tracks_toggle"]:
-
-            self.draw_tracks_from_dict()
+        self.draw_tracks_from_dict()
  
 class Video:
     # objekt which contains relevant information of the video
