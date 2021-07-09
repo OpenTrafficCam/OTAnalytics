@@ -12,6 +12,7 @@ from sections import get_coordinates_opencv
 from movement import new_movement, add_to_movement, curselected_movement
 from sections import save_file, draw_line, load_file
 from tracks import load_tracks
+import time
 
 class MainWindow(tk.Frame):
     def __init__(self, master):
@@ -27,6 +28,8 @@ class MainWindow(tk.Frame):
         self.flow_dict["Movements"] = {}
         self.object_dict = {}
         self.videoobject = None
+
+        self.interval = 20
 
         self.tracks = {}
 
@@ -55,7 +58,7 @@ class MainWindow(tk.Frame):
         self.Buttonaddvideo = tk.Button(self.frame,text="Add", command= lambda: MainWindow.load_video_and_frame(self))
         self.Buttonaddvideo.grid(row=1, column=0, sticky="ew")
 
-        self.Button2 = tk.Button(self.frame,text="Remove")
+        self.Button2 = tk.Button(self.frame,text="Play", command= lambda: [MainWindow.update_image(self), button_play_video_toggle(self.Button2)])
         self.Button2.grid(row=1, column=1 ,columnspan=1, sticky="ew")
 
         self.Button3 = tk.Button(self.frame,text="Clear")
@@ -161,6 +164,17 @@ class MainWindow(tk.Frame):
         filename = self.videoobject.filename
 
         self.Listboxvideo.insert(0, filename)
+
+    def update_image(self):
+        # Get the latest frame and convert image format
+
+            self.image_original = cv2.cvtColor(self.videoobject.cap.read()[1], cv2.COLOR_BGR2RGB) # to RGB
+
+            self.imagelist[0] = self.image_original
+
+            self.draw_from_dict()
+
+            self.frame.after(self.interval, self.update_image)
     
     def draw_tracks_from_dict(self):
 
@@ -207,15 +221,6 @@ class MainWindow(tk.Frame):
         Args:
             event Listboxmultiselection: all highlighted object_ids will displayed on canvas as colored tracks
         """
-        # mayby
-
-        # if detecors have been created ==> use altered picture for displaying tracks
-        # if self.flow_dict["Detectors"]:
-
-        #     self.image_cache= self.imagelist[1].copy()
-
-        # else: 
-        #     self.image_cache= self.imagelist[0].copy()
 
         self.draw_from_dict()
         
@@ -255,7 +260,6 @@ class MainWindow(tk.Frame):
             self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
 
             self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
-
 
 
     def draw_line_with_mousedrag(self, event):
@@ -334,7 +338,6 @@ class MainWindow(tk.Frame):
 
                 self.polylineid_list = []
                 self.polypoints = []
-
         
         self.new_detector_creation.destroy()
 
@@ -350,12 +353,6 @@ class MainWindow(tk.Frame):
             self.flow_dict["Detectors"][detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1], 'color': (255,0,0)}
 
         self.draw_from_dict()
-
-        # if self.new_polygondetector_creation_buttonClicked == True:
-            
-        #     self.polygondetectors[self.detector_name] ={'type': 'polygon',"id": self.polygonid, "Points": self.polypoints}
-            
-        #     self.polypoints = []
 
         self.ListboxDetector.insert(0,detector_name)
 
@@ -451,6 +448,7 @@ class MainWindow(tk.Frame):
             print("dic is empty")
 
         self.draw_tracks_from_dict()
+
  
 class Video:
     # objekt which contains relevant information of the video

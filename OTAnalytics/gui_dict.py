@@ -3,7 +3,8 @@ gui_dict = {
     "polygondetector_toggle": False,
     #"tracks_imported" : False, 
     "detections_drawn": False,
-    "display_tracks_toggle": False
+    "display_tracks_toggle": False,
+    "play_video": False
 }
 
 statepanel_txt = {"Linedetector_information": "press and drag mouse to create a line\nButton needs to be toggled to remove sections",
@@ -41,3 +42,13 @@ def button_display_tracks_toggle(button):
     if  gui_dict["display_tracks_toggle"] == True:
             button.config(text="hide tracks")
     else: button.config(text="show tracks")
+
+
+def button_play_video_toggle(button):
+    gui_dict["play_video"] = not gui_dict["play_video"]
+
+    print(gui_dict["play_video"])
+
+    if  gui_dict["play_video"] == True:
+            button.config(text="Play")
+    else: button.config(text="Stop")
