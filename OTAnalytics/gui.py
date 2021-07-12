@@ -35,9 +35,8 @@ class MainWindow(tk.Frame):
 
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
         self.polypoints = []
-        # auxilery list of polygonline/ gets deleted after polygon creation
-        #self.polylineid_list = []   
 
+        #imagelist with original and altered images, zeros are placeholder
         self.imagelist = [0,0]
 
         self.master = master
@@ -45,12 +44,6 @@ class MainWindow(tk.Frame):
         self.frame.grid()
         self.master.title("OTAnalytics")
 
-        self.new_detector_creation = False   
-
-        # boolean to toggle line or poly detector creation
-        self.new_linedetector_creation_buttonClicked = False
-        self.new_polygondetector_creation_buttonClicked = False
- 
         self.Listboxvideo = tk.Listbox(self.frame)
         self.Listboxvideo.grid(row=0, column=0, columnspan=7, sticky="ew")
         self.Listboxvideo.bind('<<ListboxSelect>>',self.curselected_video)
@@ -58,8 +51,8 @@ class MainWindow(tk.Frame):
         self.Buttonaddvideo = tk.Button(self.frame,text="Add", command= lambda: MainWindow.load_video_and_frame(self))
         self.Buttonaddvideo.grid(row=1, column=0, sticky="ew")
 
-        self.Button2 = tk.Button(self.frame,text="Play", command= lambda: [MainWindow.update_image(self), button_play_video_toggle(self.Button2)])
-        self.Button2.grid(row=1, column=1 ,columnspan=1, sticky="ew")
+        self.ButtonPlayVideo = tk.Button(self.frame,text="Play", command= lambda: [MainWindow.update_image(self), button_play_video_toggle(self.ButtonPlayVideo)])
+        self.ButtonPlayVideo.grid(row=1, column=1 ,columnspan=1, sticky="ew")
 
         self.Button3 = tk.Button(self.frame,text="Clear")
         self.Button3.grid(row=1, column=2, sticky="ew")
@@ -81,23 +74,23 @@ class MainWindow(tk.Frame):
         self.Button5 = tk.Button(self.frame,text="Rename")
         self.Button5.grid(row=3, column=2, sticky="ew")
 
-        self.Button6 = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_selected_detector_opencv(self))
-        self.Button6.grid(row=3, column=3, sticky="ew")
+        self.ButtonDeleteDetector = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_selected_detector(self))
+        self.ButtonDeleteDetector.grid(row=3, column=3, sticky="ew")
 
-        self.Button7 = tk.Button(self.frame,width= 10, text="show tracks", command= lambda: [button_display_tracks_toggle(self.Button7), self.draw_from_dict()])
-        self.Button7.grid(row=3, column=4, sticky="ew")
+        self.ButtonDisplayTracks = tk.Button(self.frame,width= 10, text="show tracks", command= lambda: [button_display_tracks_toggle(self.ButtonDisplayTracks), self.draw_from_dict()])
+        self.ButtonDisplayTracks.grid(row=3, column=4, sticky="ew")
 
-        self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.flow_dict["Detectors"],self.polygondetectors, self.flow_dict["Movements"], self.Listbox4) )
+        self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.flow_dict["Detectors"],self.polygondetectors, self.flow_dict["Movements"], self.ListBoxMovement) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
         self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: [load_tracks(self.object_dict, self.ListboxTracks), self.draw_from_dict()])
         self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
 
-        self.Listbox4 = tk.Listbox(self.frame, width=25)
-        self.Listbox4.grid(row=5, column=3, columnspan=4, sticky="ew")
+        self.ListBoxMovement = tk.Listbox(self.frame, width=25)
+        self.ListBoxMovement.grid(row=5, column=3, columnspan=4, sticky="ew")
 
-        self.Button10 = tk.Button(self.frame,text="New",command = lambda: new_movement(self.ListboxMovement, self.flow_dict["Movements"]))
-        self.Button10.grid(row=6, column=0, sticky="ew")
+        self.ButtonNewMovement = tk.Button(self.frame,text="New",command = lambda: new_movement(self.ListboxMovement, self.flow_dict["Movements"]))
+        self.ButtonNewMovement.grid(row=6, column=0, sticky="ew")
 
         self.Button11 = tk.Button(self.frame,text="Rename")
         self.Button11.grid(row=6, column=1, sticky="ew")
@@ -108,15 +101,15 @@ class MainWindow(tk.Frame):
         self.Button13 = tk.Button(self.frame,text="Clear")
         self.Button13.grid(row=6, column=3, sticky="ew")
 
-        self.Button14 = tk.Button(self.frame,text="Save", command= lambda: save_file(self.flow_dict, self.flow_dict["Detectors"], self.flow_dict["Movements"]))
-        self.Button14.grid(row=6, column=4, sticky="ew")
+        self.ButtonSaveFlow = tk.Button(self.frame,text="Save", command= lambda: save_file(self.flow_dict, self.flow_dict["Detectors"], self.flow_dict["Movements"]))
+        self.ButtonSaveFlow.grid(row=6, column=4, sticky="ew")
 
-        self.Button15 = tk.Button(self.frame,text="Load", command= lambda: [load_file(self.flow_dict["Detectors"],self.flow_dict["Movements"], self.ListboxDetector, self.ListboxMovement), self.draw_from_dict()])
-        self.Button15.grid(row=6, column=5, sticky="ew")
+        self.ButtonLoadFlow = tk.Button(self.frame,text="Load", command= lambda: [load_file(self.flow_dict["Detectors"],self.flow_dict["Movements"], self.ListboxDetector, self.ListboxMovement), self.draw_from_dict()])
+        self.ButtonLoadFlow.grid(row=6, column=5, sticky="ew")
 
         self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
         self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
-        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event: curselected_movement(event, self.Listbox4,self.ListboxMovement, self.flow_dict["Movements"], self.statepanel))
+        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event: curselected_movement(event, self.ListBoxMovement,self.ListboxMovement, self.flow_dict["Movements"], self.statepanel))
 
     def load_video_and_frame(self):
         """ask for videofile via dialogue
@@ -178,7 +171,7 @@ class MainWindow(tk.Frame):
     
     def draw_tracks_from_dict(self):
 
-        # if detectors exist in dictionary then use the altered picture
+        # if detectors exist in dictionary and "display tracks-button" is pressed then use the altered picture
 
         if gui_dict["display_tracks_toggle"]== True:
 
@@ -219,7 +212,8 @@ class MainWindow(tk.Frame):
         """draws on or more selected tracks on canvas
 
         Args:
-            event Listboxmultiselection: all highlighted object_ids will displayed on canvas as colored tracks
+            event Listboxmultiselection: all highlighted object_ids will be displayed on canvas as colored tracks
+            corresponding to vehicle class
         """
 
         self.draw_from_dict()
@@ -305,6 +299,11 @@ class MainWindow(tk.Frame):
             self.new_detector_creation.grab_set()
 
     def curselected_detetector(self, event):
+        """Re draws detectors, where the selected detectors has different color
+
+        Args:
+            event (Listboxselection): single listboxselection
+        """
 
         self.widget = event.widget
         self.selection=self.widget.curselection()
@@ -358,9 +357,9 @@ class MainWindow(tk.Frame):
 
         self.new_detector_creation.destroy()
 
-    def delete_selected_detector_opencv(self):
+    def delete_selected_detector(self):
         #gets selection from listbox
-        # delete from dict and draw new
+        # delete from dict and re draw detectors on canvas
         detector_name=self.ListboxDetector.get(self.ListboxDetector.curselection())
 
        
@@ -379,10 +378,10 @@ class MainWindow(tk.Frame):
                     # BUG
                     if self.ListboxMovement.get(self.ListboxMovement.curselection()) == movement:
 
-                        self.Listbox4.delete(0,'end')
+                        self.ListBoxMovement.delete(0,'end')
 
                         for detector_name in self.flow_dict["Movements"][movement]:
-                            self.Listbox4.insert(0, detector_name)
+                            self.ListBoxMovement.insert(0, detector_name)
 
         
         if not self.flow_dict["Detectors"]:
