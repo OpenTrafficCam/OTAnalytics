@@ -12,7 +12,7 @@ from sections import get_coordinates_opencv
 from movement import new_movement, add_to_movement, curselected_movement
 from sections import save_file, draw_line, load_file
 from tracks import load_tracks
-import time
+import time, sys
 
 class MainWindow(tk.Frame):
     def __init__(self, master):
@@ -28,6 +28,10 @@ class MainWindow(tk.Frame):
         self.flow_dict["Movements"] = {}
         self.object_dict = {}
         self.videoobject = None
+
+        #list to scroll through frames
+        self.framelist = []
+        self.counter = 0
 
         self.interval = 20
 
@@ -145,7 +149,7 @@ class MainWindow(tk.Frame):
         self.canvas.bind("<ButtonPress-1>", lambda event: get_coordinates_opencv(event,self.linepoints, self.canvas))
         self.canvas.bind("<B1-Motion>",self.draw_line_with_mousedrag)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
-        self.canvas.bind("<ButtonPress-3>")
+        self.canvas.bind("<MouseWheel>",  lambda event: self.scroll_through_video(event))
         self.canvas.bind("<ButtonPress-2>")
 
         self.canvas.grid(row= 0,rowspan=7,column=7, sticky="n")
@@ -158,16 +162,42 @@ class MainWindow(tk.Frame):
 
         self.Listboxvideo.insert(0, filename)
 
-    def update_image(self):
-        # Get the latest frame and convert image format
+    def scroll_through_video(self, event):
+        """lets you scroll through the video with the mousewheel
 
-            self.image_original = cv2.cvtColor(self.videoobject.cap.read()[1], cv2.COLOR_BGR2RGB) # to RGB
+        Args:
+            event ([mousewheel]): mousewheel up and mouswheel down
+        """
+
+        # intager of mousewheel scroll event
+        i = 1* event.delta//120
+
+        if i > 0:
+
+            _, frame =self.videoobject.cap.read()
+
+            self.framelist.append(frame) 
+
+            self.image_original = cv2.cvtColor(self.framelist[self.counter], cv2.COLOR_BGR2RGB) # to RGB
 
             self.imagelist[0] = self.image_original
 
             self.draw_from_dict()
 
-            self.frame.after(self.interval, self.update_image)
+            self.counter += 1
+
+
+        if i < 0 and self.counter >=1:
+            
+            self.counter -= 1
+
+            self.image_original = cv2.cvtColor(self.framelist[self.counter], cv2.COLOR_BGR2RGB) # to RGB
+
+            self.imagelist[0] = self.image_original
+
+            self.draw_from_dict()
+
+        print(sys.getsizeof(self.framelist))
     
     def draw_tracks_from_dict(self):
 
@@ -459,6 +489,7 @@ class Video:
 
         #opens video source
         self.cap = cv2.VideoCapture(self.filepath)
+        self.fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
 
         # retrieve dimensions of video
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
