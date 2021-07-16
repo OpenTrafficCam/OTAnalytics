@@ -13,6 +13,7 @@ from movement import new_movement, add_to_movement, curselected_movement
 from sections import save_file, draw_line, load_file
 from tracks import load_tracks
 import time, sys
+import math
 
 class MainWindow(tk.Frame):
     def __init__(self, master):
@@ -32,9 +33,7 @@ class MainWindow(tk.Frame):
         #list to scroll through frames
         self.framelist = []
         self.counter = 0
-
         self.interval = 20
-
         self.tracks = {}
 
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
@@ -88,7 +87,10 @@ class MainWindow(tk.Frame):
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
         self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: [load_tracks(self.object_dict, self.ListboxTracks), self.draw_from_dict()])
-        self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
+        self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
+
+        self.ButtonLoadTracks = tk.Button(self.frame,text="autocount")
+        self.ButtonLoadTracks.grid(row=3, column=3, columnspan=4, sticky="ew")
 
         self.ListBoxMovement = tk.Listbox(self.frame, width=25)
         self.ListBoxMovement.grid(row=5, column=3, columnspan=4, sticky="ew")
@@ -197,6 +199,7 @@ class MainWindow(tk.Frame):
 
             self.draw_from_dict()
 
+        #prints size of images
         print(sys.getsizeof(self.framelist))
     
     def draw_tracks_from_dict(self):
@@ -361,13 +364,7 @@ class MainWindow(tk.Frame):
 
             self.draw_from_dict()
 
-        if self.new_polygondetector_creation_buttonClicked == True:
-            if self.detector_name_entry.get() == "":
-                self.canvas.delete(self.polygonid)
-
-                self.polylineid_list = []
-                self.polypoints = []
-        
+       
         self.new_detector_creation.destroy()
 
 
@@ -447,6 +444,8 @@ class MainWindow(tk.Frame):
     
     def draw_from_dict(self):
 
+        m = [0,1]
+
         #takes original picture
         self.image_cache= self.imagelist[0].copy()
 
@@ -461,7 +460,18 @@ class MainWindow(tk.Frame):
                     end_y = self.flow_dict["Detectors"][linedetectors]["end_y"]
                     color = self.flow_dict["Detectors"][linedetectors]["color"]
 
-                    self.image_cache = cv2.line(self.image_cache,(start_x,start_y),(end_x,end_y),color,5)
+                    self.image_cache = cv2.line(self.image_cache,(start_x,start_y),(end_x,end_y),color,3)
+
+                    m[0] = math.ceil(((start_x+end_x)/2))
+                    m[1] = math.ceil(((start_y+end_y)/2))
+
+                    d = math.ceil((math.sqrt((end_x-start_x)**2+(end_y-start_y)**2)))
+                    d = math.ceil(d/2)
+
+                    angle =math.degrees((math.atan2((end_y-start_y), (end_x-start_x))))
+
+
+                    self.image_cache = cv2.ellipse(self.image_cache,(m[0],m[1]),(d, 50), angle, 0,360 ,(255,0,0),3)
                     self.imagelist[1] = self.image_cache
                 
                     self.image = Image.fromarray(self.image_cache) # to PIL format
@@ -489,7 +499,7 @@ class Video:
 
         #opens video source
         self.cap = cv2.VideoCapture(self.filepath)
-        self.fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
 
         # retrieve dimensions of video
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)

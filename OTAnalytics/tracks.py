@@ -33,3 +33,10 @@ def load_tracks(object_dict, ListboxTracks):
     for object in list(object_dict.keys()):
 
         ListboxTracks.insert(0,object)
+
+    save_object_dic(object_dict)
+
+def save_object_dic(object_dict):
+
+    json.dump(object_dict,open( "object_dic.json", 'w' ) ,indent=4)
+

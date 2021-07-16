@@ -7,12 +7,22 @@ from tkinter import Listbox, filedialog
 
 def get_coordinates_opencv(event, linepoints, canvas):
 
+        if gui_dict["linedetector_toggle"]:
 
-        # uses mouseevents to get coordinates (left button)
-        start_x = int(canvas.canvasx(event.x))
-        start_y = int(canvas.canvasy(event.y))
+                # uses mouseevents to get coordinates (left button)
+                start_x = int(canvas.canvasx(event.x))
+                start_y = int(canvas.canvasy(event.y))
 
-        linepoints[0] = (start_x, start_y)
+                linepoints[0] = (start_x, start_y)
+
+        else:
+                # uses mouseevents to get coordinates (left button)
+                start_x = int(canvas.canvasx(event.x))
+                start_y = int(canvas.canvasy(event.y))
+
+                print(start_x,start_y)
+                
+                return start_x, start_y
 
 def save_file(combined_dic, linedetectors, movement_dict):
         files = [('Files', '*.OTflow')]
@@ -31,13 +41,14 @@ def save_file(combined_dic, linedetectors, movement_dict):
 
 def draw_line(linedetectors, imagelist, linepoints):
 
-
+        m =[]
 
         if gui_dict["linedetector_toggle"] == True:
 
                 if linedetectors or gui_dict["display_tracks_toggle"]:
                         
                         image_cache = cv2.line(imagelist[1].copy(),linepoints[0],linepoints[1],(255,0,0),5)
+
 
                 else:
 
