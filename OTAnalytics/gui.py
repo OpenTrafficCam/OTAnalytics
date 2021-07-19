@@ -12,6 +12,7 @@ from sections import get_coordinates_opencv
 from movement import new_movement, add_to_movement, curselected_movement
 from sections import save_file, draw_line, load_file
 from tracks import load_tracks
+from auto_counting import automated_counting
 import time, sys
 import math
 
@@ -89,8 +90,8 @@ class MainWindow(tk.Frame):
         self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: [load_tracks(self.object_dict, self.ListboxTracks), self.draw_from_dict()])
         self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame,text="autocount")
-        self.ButtonLoadTracks.grid(row=3, column=3, columnspan=4, sticky="ew")
+        self.ButtonLoadTracks = tk.Button(self.frame,text="autocount" , command = lambda: [automated_counting(self.flow_dict)])
+        self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.ListBoxMovement = tk.Listbox(self.frame, width=25)
         self.ListBoxMovement.grid(row=5, column=3, columnspan=4, sticky="ew")
