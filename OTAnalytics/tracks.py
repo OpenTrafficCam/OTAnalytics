@@ -19,7 +19,6 @@ def load_tracks(object_dict, ListboxTracks):
 
 
     for seconds in detections:
-        print(seconds)
         for detection in detections[seconds]:
             if 'object_'+str(detection) in object_dict.keys():
                 object_dict['object_%s' % detection]["Coord"].append([detections[seconds][detection]["x"], detections[seconds][detection]["y"]])
@@ -34,6 +33,8 @@ def load_tracks(object_dict, ListboxTracks):
     for object in list(object_dict.keys()):
 
         ListboxTracks.insert(0,object)
+
+    print(object_dict)
 
     save_object_dic(object_dict)
 

@@ -3,66 +3,11 @@ import geopandas as gpd
 import geopandas.tools
 from pandas.core.internals.blocks import ObjectBlock
 import shapely
-from shapely.geometry import Polygon, LineString,MultiLineString, multilinestring, polygon
+from shapely.geometry import Polygon, LineString, polygon
 import pandas as pd
 import json
 from gui_dict import *
-
-detector_data = {
-    "Detectors": {
-        "dect1": {
-            "type": "line",
-            "start_x": 47,
-            "start_y": 210,
-            "end_x": 244,
-            "end_y": 381,
-            "color": [
-                255,
-                0,
-                0
-            ]
-        },
-        "dect2": {
-            "type": "line",
-            "start_x": 349,
-            "start_y": 120,
-            "end_x": 49,
-            "end_y": 200,
-            "color": [
-                255,
-                0,
-                0
-            ]
-        },
-        "dect3": {
-            "type": "line",
-            "start_x": 570,
-            "start_y": 217,
-            "end_x": 282,
-            "end_y": 410,
-            "color": [
-                255,
-                0,
-                0
-            ]
-        },
-        "dect4": {
-            "type": "line",
-            "start_x": 427,
-            "start_y": 117,
-            "end_x": 587,
-            "end_y": 201,
-            "color": [
-                0,
-                0,
-                255
-            ]
-        }
-
-    },
-    "movements":{"test":0, "test2":15}
-}
-
+from tkinter import filedialog
 
 def dic_to_detector_dataframe(detector_dic):
     """creates a dataframe from detector dictionary, creates column with LineString-objects for the calculation of lineintersection with tracks
@@ -85,10 +30,11 @@ def dic_to_detector_dataframe(detector_dic):
 
     # turn coordinates into LineString parameters
     detector_df["geometry"] = detector_df.apply(lambda coordinates: LineString([(coordinates['start_x'], coordinates['start_y']) , (coordinates['end_x'], coordinates['end_y'])]), axis = 1)
+    print(detector_df)
 
     return detector_df
 
-def dic_to_object_dataframe():
+def dic_to_object_dataframe(object_dict):
     """creates a dataframe from object dictionary, creates column with Polygon-objects for the calculation of lineintersection with sections
 
     Args:
@@ -97,13 +43,6 @@ def dic_to_object_dataframe():
     Returns:
         dataframe: dataframe with essential information
     """
-    filepath = "C:\\Users\\Goerner\\Desktop\\code\\OpenTrafficCam\\OTAnalytics\\tests\\data\\object_dic.json"
-
-    files = open(filepath, "r")
-    files = files.read()
-
-    object_dict = json.loads(files)
-
     #count number of coordinates (if the count is less then 3, geopandas cant create Polygon)
     for object in object_dict:
         object_dict[object]["Coord_count"] = len(object_dict[object]["Coord"])
@@ -134,6 +73,9 @@ def calculate_intersections(detector_df, object_df_validated_copy):
     for index2, detector in detector_df.iterrows():
         object_df_validated_copy[index2] = False
 
+
+    
+
     #TODO make faster
     for index1, object in object_df_validated_copy.iterrows():
         for index2, detector in detector_df.iterrows():
@@ -144,20 +86,29 @@ def calculate_intersections(detector_df, object_df_validated_copy):
 
             object_df_validated_copy.loc[index1, index2] = a[0]
 
-    print(object_df_validated_copy)
+
 
     return object_df_validated_copy
 
-def automated_counting(detector_data):
+def safe_to_csv(process_object):
 
-    if gui_dict["tracks_imported"] and detector_data:
+    autocount_csv_file = process_object.to_csv(index=True)
 
-        detector_dataframe = dic_to_detector_dataframe(detector_data)
+    file_path=filedialog.asksaveasfile(mode='w',defaultextension=".csv")
+   
+    file_path.write(autocount_csv_file)
+    file_path.close
 
-        object_dataframe = dic_to_object_dataframe()
+
+def automated_counting(detector_dict, object_dict):
+
+    if gui_dict["tracks_imported"] and detector_dict:
+
+        detector_dataframe = dic_to_detector_dataframe(detector_dict)
+
+        object_dataframe = dic_to_object_dataframe(object_dict)
 
         processed_object = calculate_intersections(detector_dataframe,object_dataframe)
 
-        return processed_object
+        safe_to_csv(processed_object)
 
-automated_counting(detector_data)

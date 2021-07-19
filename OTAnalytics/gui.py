@@ -90,7 +90,7 @@ class MainWindow(tk.Frame):
         self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: [load_tracks(self.object_dict, self.ListboxTracks), self.draw_from_dict()])
         self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame,text="autocount" , command = lambda: [automated_counting(self.flow_dict)])
+        self.ButtonLoadTracks = tk.Button(self.frame,text="autocount" , command = lambda: [automated_counting(self.flow_dict, self.object_dict)])
         self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.ListBoxMovement = tk.Listbox(self.frame, width=25)
