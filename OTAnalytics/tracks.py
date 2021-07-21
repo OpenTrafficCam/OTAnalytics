@@ -34,13 +34,12 @@ def load_tracks(object_dict, ListboxTracks):
 
         ListboxTracks.insert(0,object)
 
-    print(object_dict)
-
     save_object_dic(object_dict)
 
     gui_dict["tracks_imported"] = True
 
 def save_object_dic(object_dict):
+    #experimental function / not necessary for end product
 
     json.dump(object_dict,open( "object_dic.json", 'w' ) ,indent=4)
 

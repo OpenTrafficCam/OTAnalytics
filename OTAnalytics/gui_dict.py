@@ -1,7 +1,7 @@
 gui_dict = {
-    "linedetector_toggle" : False ,
+    "linedetector_toggle": False,
     "polygondetector_toggle": False,
-    "tracks_imported" : False, 
+    "tracks_imported": False,
     "detections_drawn": False,
     "display_tracks_toggle": False,
     "play_video": False

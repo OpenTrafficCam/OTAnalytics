@@ -5,7 +5,7 @@ from PIL import Image, ImageTk
 import json
 from tkinter import Listbox, filedialog
 
-def get_coordinates_opencv(event, linepoints, canvas):
+def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
 
         if gui_dict["linedetector_toggle"]:
 
@@ -15,14 +15,17 @@ def get_coordinates_opencv(event, linepoints, canvas):
 
                 linepoints[0] = (start_x, start_y)
 
-        else:
+        if gui_dict["polygondetector_toggle"]:
                 # uses mouseevents to get coordinates (left button)
+                
                 start_x = int(canvas.canvasx(event.x))
                 start_y = int(canvas.canvasy(event.y))
 
-                print(start_x,start_y)
+                polygonpoints.append((start_x, start_y))
+
+                print(polygonpoints)
+
                 
-                return start_x, start_y
 
 def save_file(combined_dic, linedetectors, movement_dict):
         files = [('Files', '*.OTflow')]
@@ -41,8 +44,6 @@ def save_file(combined_dic, linedetectors, movement_dict):
 
 def draw_line(linedetectors, imagelist, linepoints):
 
-        m =[]
-
         if gui_dict["linedetector_toggle"] == True:
 
                 if linedetectors or gui_dict["display_tracks_toggle"]:
@@ -58,6 +59,9 @@ def draw_line(linedetectors, imagelist, linepoints):
                 image = ImageTk.PhotoImage(image) # to ImageTk format 
 
                 return image
+
+        if gui_dict["polygondetector_toggle"] == True:
+                pass
                 
 def load_file(linedetectors, movement_dict, ListboxDetector, ListboxMovement):
         """loads detectors from a .OTSect-File 

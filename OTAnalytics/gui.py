@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter.constants import ANCHOR, END
+from tkinter.constants import END
 import cv2
 import PIL
 from PIL import Image, ImageTk
@@ -16,12 +16,14 @@ from auto_counting import automated_counting
 import time, sys
 import math
 
+
 class MainWindow(tk.Frame):
     def __init__(self, master):
         # dictionary of videoobjects
         self.videos = {}
         # dictionary of linedetectors, include id, start point, end point
-        self.linepoints = [(0,0),(0,0)]
+        self.linepoints = [(0, 0), (0, 0)]
+        self.polygonpoints = []
         # dictionary of linedetectors, include id, start point, end point
         self.polygondetectors = {}
 
@@ -31,7 +33,7 @@ class MainWindow(tk.Frame):
         self.object_dict = {}
         self.videoobject = None
 
-        #list to scroll through frames
+        # list to scroll through frames
         self.framelist = []
         self.counter = 0
         self.interval = 20
@@ -40,8 +42,8 @@ class MainWindow(tk.Frame):
         # auxilery list for polygondetector creation/ gets deleted after polygon creation
         self.polypoints = []
 
-        #imagelist with original and altered images, zeros are placeholder
-        self.imagelist = [0,0]
+        # imagelist with original and altered images, zeros are placeholder
+        self.imagelist = [0, 0]
 
         self.master = master
         self.frame = tk.Frame(self.master)
@@ -52,13 +54,13 @@ class MainWindow(tk.Frame):
         self.Listboxvideo.grid(row=0, column=0, columnspan=7, sticky="ew")
         self.Listboxvideo.bind('<<ListboxSelect>>',self.curselected_video)
 
-        self.Buttonaddvideo = tk.Button(self.frame,text="Add", command= lambda: MainWindow.load_video_and_frame(self))
+        self.Buttonaddvideo = tk.Button(self.frame, text="Add", command=lambda: MainWindow.load_video_and_frame(self))
         self.Buttonaddvideo.grid(row=1, column=0, sticky="ew")
 
-        self.ButtonPlayVideo = tk.Button(self.frame,text="Play", command= lambda: [MainWindow.update_image(self), button_play_video_toggle(self.ButtonPlayVideo)])
-        self.ButtonPlayVideo.grid(row=1, column=1 ,columnspan=1, sticky="ew")
+        self.ButtonPlayVideo = tk.Button(self.frame, text="Play", command=lambda: [MainWindow.update_image(self), button_play_video_toggle(self.ButtonPlayVideo)])
+        self.ButtonPlayVideo.grid(row=1, column=1, columnspan=1, sticky="ew")
 
-        self.Button3 = tk.Button(self.frame,text="Clear")
+        self.Button3 = tk.Button(self.frame, text="Clear")
         self.Button3.grid(row=1, column=2, sticky="ew")
 
         self.ListboxDetector = tk.Listbox(self.frame)
@@ -72,51 +74,51 @@ class MainWindow(tk.Frame):
         self.ButtonLine = tk.Button(self.frame, text="Line", command= lambda: button_information_line(self.ButtonLine, self.statepanel))
         self.ButtonLine.grid(row=3, column=0, sticky="ew")
 
-        self.ButtonPoly = tk.Button(self.frame, text="Polygon", command= lambda: button_information_polygon(self.ButtonPoly, self.statepanel))
+        self.ButtonPoly = tk.Button(self.frame, text="Polygon", command=lambda: button_information_polygon(self.ButtonPoly, self.statepanel))
         self.ButtonPoly.grid(row=3, column=1, sticky="ew")
 
-        self.Button5 = tk.Button(self.frame,text="Rename")
+        self.Button5 = tk.Button(self.frame, text="Rename")
         self.Button5.grid(row=3, column=2, sticky="ew")
 
-        self.ButtonDeleteDetector = tk.Button(self.frame,text="Remove", command= lambda: MainWindow.delete_selected_detector(self))
+        self.ButtonDeleteDetector = tk.Button(self.frame, text="Remove", command= lambda: MainWindow.delete_selected_detector(self))
         self.ButtonDeleteDetector.grid(row=3, column=3, sticky="ew")
 
-        self.ButtonDisplayTracks = tk.Button(self.frame,width= 10, text="show tracks", command= lambda: [button_display_tracks_toggle(self.ButtonDisplayTracks), self.draw_from_dict()])
+        self.ButtonDisplayTracks = tk.Button(self.frame, width=10, text="show tracks", command=lambda: [button_display_tracks_toggle(self.ButtonDisplayTracks), self.draw_from_dict()])
         self.ButtonDisplayTracks.grid(row=3, column=4, sticky="ew")
 
-        self.Button9 = tk.Button(self.frame,text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector,self.ListboxMovement, self.flow_dict["Detectors"],self.polygondetectors, self.flow_dict["Movements"], self.ListBoxMovement) )
+        self.Button9 = tk.Button(self.frame, text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector, self.ListboxMovement, self.flow_dict["Detectors"], self.polygondetectors, self.flow_dict["Movements"], self.ListBoxMovement) )
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame,text="Load tracks", command = lambda: [load_tracks(self.object_dict, self.ListboxTracks), self.draw_from_dict()])
+        self.ButtonLoadTracks = tk.Button(self.frame, text="Load tracks", command=lambda: [load_tracks(self.object_dict, self.ListboxTracks), self.draw_from_dict()])
         self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame,text="autocount" , command = lambda: [automated_counting(self.flow_dict, self.object_dict)])
+        self.ButtonLoadTracks = tk.Button(self.frame, text="autocount", command=lambda: [automated_counting(self.flow_dict, self.object_dict)])
         self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.ListBoxMovement = tk.Listbox(self.frame, width=25)
         self.ListBoxMovement.grid(row=5, column=3, columnspan=4, sticky="ew")
 
-        self.ButtonNewMovement = tk.Button(self.frame,text="New",command = lambda: new_movement(self.ListboxMovement, self.flow_dict["Movements"]))
+        self.ButtonNewMovement = tk.Button(self.frame, text="New",command=lambda: new_movement(self.ListboxMovement, self.flow_dict["Movements"]))
         self.ButtonNewMovement.grid(row=6, column=0, sticky="ew")
 
-        self.Button11 = tk.Button(self.frame,text="Rename")
+        self.Button11 = tk.Button(self.frame, text="Rename")
         self.Button11.grid(row=6, column=1, sticky="ew")
 
-        self.Button12 = tk.Button(self.frame,text="Remove")
+        self.Button12 = tk.Button(self.frame, text="Remove")
         self.Button12.grid(row=6, column=2, sticky="ew")
 
-        self.Button13 = tk.Button(self.frame,text="Clear")
+        self.Button13 = tk.Button(self.frame, text="Clear")
         self.Button13.grid(row=6, column=3, sticky="ew")
 
-        self.ButtonSaveFlow = tk.Button(self.frame,text="Save", command= lambda: save_file(self.flow_dict, self.flow_dict["Detectors"], self.flow_dict["Movements"]))
+        self.ButtonSaveFlow = tk.Button(self.frame, text="Save", command=lambda: save_file(self.flow_dict, self.flow_dict["Detectors"], self.flow_dict["Movements"]))
         self.ButtonSaveFlow.grid(row=6, column=4, sticky="ew")
 
-        self.ButtonLoadFlow = tk.Button(self.frame,text="Load", command= lambda: [load_file(self.flow_dict["Detectors"],self.flow_dict["Movements"], self.ListboxDetector, self.ListboxMovement), self.draw_from_dict()])
+        self.ButtonLoadFlow = tk.Button(self.frame, text="Load", command=lambda: [load_file(self.flow_dict["Detectors"], self.flow_dict["Movements"], self.ListboxDetector, self.ListboxMovement), self.draw_from_dict()])
         self.ButtonLoadFlow.grid(row=6, column=5, sticky="ew")
 
         self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
         self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
-        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event: curselected_movement(event, self.ListBoxMovement,self.ListboxMovement, self.flow_dict["Movements"], self.statepanel))
+        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event: curselected_movement(event, self.ListBoxMovement, self.ListboxMovement, self.flow_dict["Movements"], self.statepanel))
 
     def load_video_and_frame(self):
         """ask for videofile via dialogue
@@ -173,15 +175,15 @@ class MainWindow(tk.Frame):
         """
 
         # intager of mousewheel scroll event
-        i = 1* event.delta//120
+        i = 1*event.delta//120
 
         if i > 0:
 
-            _, frame =self.videoobject.cap.read()
+            _, frame = self.videoobject.cap.read()
 
-            self.framelist.append(frame) 
+            self.framelist.append(frame)
 
-            self.image_original = cv2.cvtColor(self.framelist[self.counter], cv2.COLOR_BGR2RGB) # to RGB
+            self.image_original = cv2.cvtColor(self.framelist[self.counter], cv2.COLOR_BGR2RGB)
 
             self.imagelist[0] = self.image_original
 
@@ -189,9 +191,7 @@ class MainWindow(tk.Frame):
 
             self.counter += 1
 
-
-        if i < 0 and self.counter >=1:
-            
+        if i < 0 and self.counter >= 1 :
             self.counter -= 1
 
             self.image_original = cv2.cvtColor(self.framelist[self.counter], cv2.COLOR_BGR2RGB) # to RGB
@@ -207,27 +207,27 @@ class MainWindow(tk.Frame):
 
         # if detectors exist in dictionary and "display tracks-button" is pressed then use the altered picture
 
-        if gui_dict["display_tracks_toggle"]== True:
+        if gui_dict["display_tracks_toggle"] is True:
 
             if self.flow_dict["Detectors"]:
                 print(bool(self.flow_dict["Detectors"]))
 
-                self.image_cache= self.imagelist[1].copy()
+                self.image_cache = self.imagelist[1].copy()
 
-            else: 
+            else:
                 self.image_cache = self.imagelist[0].copy()
                 print("this pic is used 0")
 
             for track in self.object_dict:
 
-                trackcolor = (0,0,255)       
+                trackcolor = (0, 0, 255)
 
                 if self.object_dict[track]["Class"] == "car":
-                    trackcolor = (255,0,0)
+                    trackcolor = (255, 0, 0)
                 if self.object_dict[track]["Class"] == "person":
-                    trackcolor = (0,255,0)
+                    trackcolor = (0, 255, 0)
                 if self.object_dict[track]["Class"] == "motorcycle":
-                    trackcolor = (240,248,255)
+                    trackcolor = (240, 248, 255)
 
                 pts = np.array(self.object_dict[track]["Coord"], np.int32)
 
