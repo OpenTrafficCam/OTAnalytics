@@ -1,24 +1,30 @@
 import tkinter as tk
 from tkinter.constants import END
 import cv2
-import PIL
 from PIL import Image, ImageTk
-from tkinter import Button, Toplevel, filedialog
-import json
-import ast
+from tkinter import Toplevel, filedialog
 import numpy as np
-from gui_dict import *
+from gui_dict import gui_dict, button_information_line, button_information_polygon, \
+                     button_display_tracks_toggle, button_play_video_toggle
 from sections import get_coordinates_opencv
 from movement import new_movement, add_to_movement, curselected_movement
 from sections import save_file, draw_line, load_file
 from tracks import load_tracks
 from auto_counting import automated_counting
-import time, sys
+import sys
 import math
 
 
 class MainWindow(tk.Frame):
+    """Mainwindow with initial dictionaries.
+
+    Args:
+        tk.frame ([tkinterframe]): important for the process of grouping and organizing
+        other widgets in a somehow friendly way. It works like a container,
+        which is responsible for arranging the position of other widgets.
+    """
     def __init__(self, master):
+        """Initialise window."""
         # dictionary of videoobjects
         self.videos = {}
         # dictionary of linedetectors, include id, start point, end point
@@ -39,7 +45,7 @@ class MainWindow(tk.Frame):
         self.interval = 20
         self.tracks = {}
 
-        # auxilery list for polygondetector creation/ gets deleted after polygon creation
+        # auxilery list for polygondetector creation/gets deleted after polygon creation
         self.polypoints = []
 
         # imagelist with original and altered images, zeros are placeholder
@@ -52,12 +58,19 @@ class MainWindow(tk.Frame):
 
         self.Listboxvideo = tk.Listbox(self.frame)
         self.Listboxvideo.grid(row=0, column=0, columnspan=7, sticky="ew")
-        self.Listboxvideo.bind('<<ListboxSelect>>',self.curselected_video)
+        self.Listboxvideo.bind('<<ListboxSelect>>', self.curselected_video)
 
-        self.Buttonaddvideo = tk.Button(self.frame, text="Add", command=lambda: MainWindow.load_video_and_frame(self))
+        self.Buttonaddvideo = tk.Button(self.frame, text="Add",
+                                        command=lambda:
+                                        MainWindow.load_video_and_frame(self))
+
         self.Buttonaddvideo.grid(row=1, column=0, sticky="ew")
 
-        self.ButtonPlayVideo = tk.Button(self.frame, text="Play", command=lambda: [MainWindow.update_image(self), button_play_video_toggle(self.ButtonPlayVideo)])
+        self.ButtonPlayVideo = tk.Button(self.frame, text="Play", command=lambda:
+                                         [MainWindow.update_image(self),
+                                          button_play_video_toggle(
+                                          self.ButtonPlayVideo)])
+
         self.ButtonPlayVideo.grid(row=1, column=1, columnspan=1, sticky="ew")
 
         self.Button3 = tk.Button(self.frame, text="Clear")
@@ -65,40 +78,67 @@ class MainWindow(tk.Frame):
 
         self.ListboxDetector = tk.Listbox(self.frame)
         self.ListboxDetector.grid(row=2, column=0, columnspan=3, sticky="ew")
-        self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)  
+        self.ListboxDetector.bind('<<ListboxSelect>>', self.curselected_detetector)
 
-        self.ListboxTracks = tk.Listbox(self.frame, selectmode='multiple', exportselection=False)
+        self.ListboxTracks = tk.Listbox(self.frame, selectmode='multiple',
+                                        exportselection=False)
         self.ListboxTracks.grid(row=2, column=3, columnspan=4, sticky="ew")
-        self.ListboxTracks.bind('<<ListboxSelect>>', self.curselected_track) 
+        self.ListboxTracks.bind('<<ListboxSelect>>', self.curselected_track)
 
-        self.ButtonLine = tk.Button(self.frame, text="Line", command= lambda: button_information_line(self.ButtonLine, self.statepanel))
+        self.ButtonLine = tk.Button(self.frame, text="Line", command=lambda:
+                                    button_information_line(self.ButtonLine,
+                                                            self.statepanel))
         self.ButtonLine.grid(row=3, column=0, sticky="ew")
 
-        self.ButtonPoly = tk.Button(self.frame, text="Polygon", command=lambda: button_information_polygon(self.ButtonPoly, self.statepanel))
+        self.ButtonPoly = tk.Button(self.frame, text="Polygon", command=lambda:
+                                    button_information_polygon(self.ButtonPoly,
+                                                               self.statepanel))
         self.ButtonPoly.grid(row=3, column=1, sticky="ew")
 
         self.Button5 = tk.Button(self.frame, text="Rename")
         self.Button5.grid(row=3, column=2, sticky="ew")
 
-        self.ButtonDeleteDetector = tk.Button(self.frame, text="Remove", command= lambda: MainWindow.delete_selected_detector(self))
+        self.ButtonDeleteDetector = tk.Button(self.frame, text="Remove", command=lambda:
+                                              MainWindow.delete_selected_detector(self))
         self.ButtonDeleteDetector.grid(row=3, column=3, sticky="ew")
 
-        self.ButtonDisplayTracks = tk.Button(self.frame, width=10, text="show tracks", command=lambda: [button_display_tracks_toggle(self.ButtonDisplayTracks), self.draw_from_dict()])
+        self.ButtonDisplayTracks = tk.Button(self.frame, width=10, text="show tracks",
+                                             command=lambda:
+                                             [button_display_tracks_toggle(
+                                              self.ButtonDisplayTracks),
+                                              self.draw_from_dict()])
+
         self.ButtonDisplayTracks.grid(row=3, column=4, sticky="ew")
 
-        self.Button9 = tk.Button(self.frame, text="Add to movement", command=lambda: add_to_movement(self.ListboxDetector, self.ListboxMovement, self.flow_dict["Detectors"], self.polygondetectors, self.flow_dict["Movements"], self.ListBoxMovement) )
+        self.Button9 = tk.Button(self.frame, text="Add to movement", command=lambda:
+                                 add_to_movement(self.ListboxDetector,
+                                                 self.ListboxMovement,
+                                                 self.flow_dict["Detectors"],
+                                                 self.polygondetectors,
+                                                 self.flow_dict["Movements"],
+                                                 self.ListBoxMovement))
+
         self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame, text="Load tracks", command=lambda: [load_tracks(self.object_dict, self.ListboxTracks), self.draw_from_dict()])
+        self.ButtonLoadTracks = tk.Button(self.frame, text="Load tracks",
+                                          command=lambda:
+                                          [load_tracks(self.object_dict,
+                                           self.ListboxTracks),
+                                           self.draw_from_dict()])
+
         self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame, text="autocount", command=lambda: [automated_counting(self.flow_dict, self.object_dict)])
+        self.ButtonLoadTracks = tk.Button(self.frame, text="autocount", command=lambda:
+                                          [automated_counting(self.flow_dict,
+                                           self.object_dict)])
         self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.ListBoxMovement = tk.Listbox(self.frame, width=25)
         self.ListBoxMovement.grid(row=5, column=3, columnspan=4, sticky="ew")
 
-        self.ButtonNewMovement = tk.Button(self.frame, text="New",command=lambda: new_movement(self.ListboxMovement, self.flow_dict["Movements"]))
+        self.ButtonNewMovement = tk.Button(self.frame, text="New", command=lambda:
+                                           new_movement(self.ListboxMovement,
+                                                        self.flow_dict["Movements"]))
         self.ButtonNewMovement.grid(row=6, column=0, sticky="ew")
 
         self.Button11 = tk.Button(self.frame, text="Rename")
@@ -110,15 +150,28 @@ class MainWindow(tk.Frame):
         self.Button13 = tk.Button(self.frame, text="Clear")
         self.Button13.grid(row=6, column=3, sticky="ew")
 
-        self.ButtonSaveFlow = tk.Button(self.frame, text="Save", command=lambda: save_file(self.flow_dict, self.flow_dict["Detectors"], self.flow_dict["Movements"]))
+        self.ButtonSaveFlow = tk.Button(self.frame, text="Save", command=lambda:
+                                        save_file(self.flow_dict,
+                                                  self.flow_dict["Detectors"],
+                                                  self.flow_dict["Movements"]))
         self.ButtonSaveFlow.grid(row=6, column=4, sticky="ew")
 
-        self.ButtonLoadFlow = tk.Button(self.frame, text="Load", command=lambda: [load_file(self.flow_dict["Detectors"], self.flow_dict["Movements"], self.ListboxDetector, self.ListboxMovement), self.draw_from_dict()])
+        self.ButtonLoadFlow = tk.Button(self.frame, text="Load", command=lambda:
+                                        [load_file(self.flow_dict["Detectors"],
+                                         self.flow_dict["Movements"],
+                                         self.ListboxDetector,
+                                         self.ListboxMovement),
+                                         self.draw_from_dict()])
+
         self.ButtonLoadFlow.grid(row=6, column=5, sticky="ew")
 
         self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
         self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
-        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event: curselected_movement(event, self.ListBoxMovement, self.ListboxMovement, self.flow_dict["Movements"], self.statepanel))
+        self.ListboxMovement.bind('<<ListboxSelect>>', lambda event:
+                                  curselected_movement(event, self.ListBoxMovement,
+                                                       self.ListboxMovement,
+                                                       self.flow_dict["Movements"],
+                                                       self.statepanel))
 
     def load_video_and_frame(self):
         """ask for videofile via dialogue
@@ -127,37 +180,42 @@ class MainWindow(tk.Frame):
         includes mouse motion and button press events
         """
         # opens dialog to load video file
-        video_source = filedialog.askopenfile(filetypes=[("Videofiles", '*.mkv'), ("Videofiles", '*.mp4')])       
+        video_source = filedialog.askopenfile(filetypes=[("Videofiles", '*.mkv'),
+                                              ("Videofiles", '*.mp4')])
         video_source = video_source.name
         video_name = video_source.split('/')[-1]
 
-        self.statepanel = StatePanel(self.frame, 7,0,sticky="w", columnspan=8)
+        self.statepanel = StatePanel(self.frame, 7, 0, sticky="w", columnspan=8)
         self.statepanel.update("statepanel initialized")
 
         # creates Videoobject
         # key is the name of the object
         self.videos[video_name] = Video(video_source)
         self.videoobject = self.videos[video_name]
-    
+
         # creates image from video
-        self.image_original = cv2.cvtColor(self.videoobject.cap.read()[1], cv2.COLOR_BGR2RGB) # to RGB
+        self.image_original = cv2.cvtColor(self.videoobject.cap.read()[1],
+                                           cv2.COLOR_BGR2RGB)  # to RGB
         # copy is important or else original image will be changed
-        self.image = Image.fromarray(self.image_original.copy()) # to PIL format
-        self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
+        self.image = Image.fromarray(self.image_original.copy())  # to PIL format
+        self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
         self.imagelist[0] = self.image_original
 
         # puts image on canvas
-        self.canvas = tk.Canvas(self.frame, width=self.videoobject.width, height=self.videoobject.height, bg="white")
-        #prevents canvas from scrolling
-        self.canvas.configure(scrollregion=(0,0,self.videoobject.width,self.videoobject.height))
-        self.canvas.bind("<ButtonPress-1>", lambda event: get_coordinates_opencv(event,self.linepoints, self.canvas))
-        self.canvas.bind("<B1-Motion>",self.draw_line_with_mousedrag)
+        self.canvas = tk.Canvas(self.frame, width=self.videoobject.width,
+                                height=self.videoobject.height, bg="white")
+        # prevents canvas from scrolling
+        self.canvas.configure(scrollregion=(0, 0, self.videoobject.width,
+                              self.videoobject.height))
+        self.canvas.bind("<ButtonPress-1>", lambda event: get_coordinates_opencv(event,
+                         self.linepoints, self.canvas))
+        self.canvas.bind("<B1-Motion>", self.draw_line_with_mousedrag)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
-        self.canvas.bind("<MouseWheel>",  lambda event: self.scroll_through_video(event))
+        self.canvas.bind("<MouseWheel>", lambda event: self.scroll_through_video(event))
         self.canvas.bind("<ButtonPress-2>")
 
-        self.canvas.grid(row= 0,rowspan=7,column=7, sticky="n")
+        self.canvas.grid(row=0, rowspan=7, column=7, sticky="n")
 
         # puts the image from the videosourse on canvas
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
@@ -183,7 +241,8 @@ class MainWindow(tk.Frame):
 
             self.framelist.append(frame)
 
-            self.image_original = cv2.cvtColor(self.framelist[self.counter], cv2.COLOR_BGR2RGB)
+            self.image_original = cv2.cvtColor(self.framelist[self.counter],
+                                               cv2.COLOR_BGR2RGB)
 
             self.imagelist[0] = self.image_original
 
@@ -191,21 +250,23 @@ class MainWindow(tk.Frame):
 
             self.counter += 1
 
-        if i < 0 and self.counter >= 1 :
+        if i < 0 and self.counter >= 1:
             self.counter -= 1
 
-            self.image_original = cv2.cvtColor(self.framelist[self.counter], cv2.COLOR_BGR2RGB) # to RGB
+            self.image_original = cv2.cvtColor(
+                self.framelist[self.counter], cv2.COLOR_BGR2RGB)  # to RGB
 
             self.imagelist[0] = self.image_original
 
             self.draw_from_dict()
 
-        #prints size of images
+        # prints size of images
         print(sys.getsizeof(self.framelist))
-    
-    def draw_tracks_from_dict(self):
 
-        # if detectors exist in dictionary and "display tracks-button" is pressed then use the altered picture
+    def draw_tracks_from_dict(self):
+        """Draws tracks using distinct dictionary."""
+        # if detectors exist in dictionary and "display tracks-button"
+        # is pressed then use the altered picture
 
         if gui_dict["display_tracks_toggle"] is True:
 
@@ -233,28 +294,20 @@ class MainWindow(tk.Frame):
 
                 pts = pts.reshape((-1, 1, 2))
 
-                self.image = cv2.polylines(self.image_cache, [pts], False,color= trackcolor, thickness=2 )
+                self.image = cv2.polylines(self.image_cache, [pts], False,
+                                           color=trackcolor, thickness=2)
 
                 self.imagelist[1] = self.image_cache
-            
-                self.image = Image.fromarray(self.image_cache) # to PIL format
-                self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+                self.image = Image.fromarray(self.image_cache)  # to PIL format
+                self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
-                self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+                self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
     def curselected_track(self, event):
-        """draws on or more selected tracks on canvas
-
-        Args:
-            event Listboxmultiselection: all highlighted object_ids will be displayed on canvas as colored tracks
-            corresponding to vehicle class
-        """
-
+        """Draws on or more selected tracks on canvas."""
         self.draw_from_dict()
-        
-
         self.widget = event.widget
-        multiselection=self.widget.curselection()
+        multiselection = self.widget.curselection()
 
         selectionlist = []
 
@@ -262,74 +315,77 @@ class MainWindow(tk.Frame):
             entry = self.widget.get(selection)
             selectionlist.append(entry)
 
-        #TODO ZUSAMMENFASSEN!!     
+        # TODO ZUSAMMENFASSEN!!
 
         for object_id in selectionlist:
 
-            trackcolor = (0,0,255)       
+            trackcolor = (0, 0, 255)
 
             if self.object_dict[object_id]["Class"] == "car":
-                trackcolor = (255,0,0)
+                trackcolor = (255, 0, 0)
             if self.object_dict[object_id]["Class"] == "person":
-                trackcolor = (0,255,0)
+                trackcolor = (0, 255, 0)
             if self.object_dict[object_id]["Class"] == "motorcycle":
-                trackcolor = (240,248,255)
-
+                trackcolor = (240, 248, 255)
 
             pts = np.array(self.object_dict[object_id]["Coord"], np.int32)
 
             pts = pts.reshape((-1, 1, 2))
 
-            self.image = cv2.polylines(self.image_cache, [pts], False,color= trackcolor, thickness=2 )
+            self.image = cv2.polylines(
+                self.image_cache, [pts], False, color=trackcolor, thickness=2)
 
             self.imagelist[1] = self.image_cache
-        
-            self.image = Image.fromarray(self.image_cache) # to PIL format
-            self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+            self.image = Image.fromarray(self.image_cache)  # to PIL format
+            self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
-            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
-
+            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
     def draw_line_with_mousedrag(self, event):
+        """Lets the user use click and drag to draw a line.
 
-        if gui_dict["linedetector_toggle"] == True:
+        Args:
+            event (event): click on canvas represents the event
+        """
+        if gui_dict["linedetector_toggle"] is True:
 
             self.end_x = int(self.canvas.canvasx(event.x))
             self.end_y = int(self.canvas.canvasy(event.y))
 
             self.linepoints[1] = (self.end_x, self.end_y)
 
-
             w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
             if event.x > 0.9*w:
-                self.canvas.xview_scroll(1, 'units') 
+                self.canvas.xview_scroll(1, 'units')
             elif event.x < 0.1*w:
                 self.canvas.xview_scroll(-1, 'units')
             if event.y > 0.9*h:
-                self.canvas.yview_scroll(1, 'units') 
+                self.canvas.yview_scroll(1, 'units')
             elif event.y < 0.1*h:
                 self.canvas.yview_scroll(-1, 'units')
 
-            self.image = draw_line(self.flow_dict["Detectors"], self.imagelist, self.linepoints)
+            self.image = draw_line(
+                self.flow_dict["Detectors"], self.imagelist, self.linepoints)
 
-            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
     def on_button_release(self, event):
-        if gui_dict["linedetector_toggle"] == True and len(self.linepoints)==2:
+        """Creates toplevel window to enter detector name."""
+        if gui_dict["linedetector_toggle"] is True and len(self.linepoints) == 2:
 
-        # creates window to insert name of detector
-        #if self.new_linedetector_creation_buttonClicked == True:
-
+            # creates window to insert name of detector
+            # if self.new_linedetector_creation_buttonClicked == True:
             self.new_detector_creation = Toplevel()
             self.new_detector_creation.title("Create new section")
-            self.detector_name_entry = tk.Entry(self.new_detector_creation, textvariable="Sectionname")
-            self.detector_name_entry.grid(row=1, column=0, sticky="w",pady=10, padx=10)
+            self.detector_name_entry = tk.Entry(self.new_detector_creation,
+                                                textvariable="Sectionname")
+            self.detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
             self.detector_name_entry.delete(0, END)
-            self.add_section = tk.Button(self.new_detector_creation,text="Add section", command= self.recieve_detectorname)
-            self.add_section.grid( row=1, column=1, sticky="w", pady=10, padx=10)
-        
+            self.add_section = tk.Button(self.new_detector_creation, text="Add section",
+                                         command=self.recieve_detectorname)
+            self.add_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
             self.new_detector_creation.protocol("WM_DELETE_WINDOW",  self.on_close)
-            #makes the background window unavailable
+            # makes the background window unavailable
             self.new_detector_creation.grab_set()
 
     def curselected_detetector(self, event):
@@ -340,165 +396,171 @@ class MainWindow(tk.Frame):
         """
 
         self.widget = event.widget
-        self.selection=self.widget.curselection()
+        self.selection = self.widget.curselection()
 
-        detector_name = self.widget.get(self.selection[0])    
+        detector_name = self.widget.get(self.selection[0])
 
         for dict_key in self.flow_dict["Detectors"].keys():
 
             if detector_name == dict_key:
 
-                self.flow_dict["Detectors"][detector_name]["color"] = (0,0,255)
+                self.flow_dict["Detectors"][detector_name]["color"] = (0, 0, 255)
 
             else:
-                self.flow_dict["Detectors"][dict_key]["color"] = (255,0,0)
-
+                self.flow_dict["Detectors"][dict_key]["color"] = (255, 0, 0)
 
         self.draw_from_dict()
 
     def on_close(self):
-        """deletes polygon or line on canvas if no name is entered and toplevelwindow is closed
-        """
-
-        #if self.new_linedetector_creation_buttonClicked == True:
+        """Deletes polygon or line on canvas if entered string is none."""
+        # if self.new_linedetector_creation_buttonClicked == True:
         if self.detector_name_entry.get() == "":
 
             self.draw_from_dict()
 
-       
         self.new_detector_creation.destroy()
 
-
     def recieve_detectorname(self):
-        #TODO outsource this function
+        # TODO outsource this function
         # takes the new created section and adds it to the listbox
 
         detector_name = self.detector_name_entry.get()
 
-        if gui_dict["linedetector_toggle"] == True:
-            
-            self.flow_dict["Detectors"][detector_name]= {'type': 'line', 'start_x': self.linepoints[0][0], 'start_y': self.linepoints[0][1], 'end_x': self.linepoints[1][0], 'end_y': self.linepoints[1][1], 'color': (255,0,0)}
+        if gui_dict["linedetector_toggle"] is True:
+            self.flow_dict["Detectors"][detector_name] = {
+                'type': 'line',
+                'start_x': self.linepoints[0][0],
+                'start_y': self.linepoints[0][1],
+                'end_x': self.linepoints[1][0],
+                'end_y': self.linepoints[1][1],
+                'color': (255, 0, 0)}
 
         self.draw_from_dict()
 
-        self.ListboxDetector.insert(0,detector_name)
+        self.ListboxDetector.insert(0, detector_name)
 
         self.new_detector_creation.destroy()
 
     def delete_selected_detector(self):
-        #gets selection from listbox
+        # gets selection from listbox
         # delete from dict and re draw detectors on canvas
-        detector_name=self.ListboxDetector.get(self.ListboxDetector.curselection())
+        detector_name = self.ListboxDetector.get(self.ListboxDetector.curselection())
 
-       
-        if gui_dict["linedetector_toggle"] == True: #WRONG      
+        if gui_dict["linedetector_toggle"] is True:  # WRONG
 
-            self.ListboxDetector.delete(self.ListboxDetector.curselection())    
+            self.ListboxDetector.delete(self.ListboxDetector.curselection())
 
             del self.flow_dict["Detectors"][detector_name]
 
-            #check if detetector is in movement and delete as well
-       
-            for movement in self.flow_dict["Movements"]: 
+            # check if detetector is in movement and delete as well
+
+            for movement in self.flow_dict["Movements"]:
                 if detector_name in self.flow_dict["Movements"][movement]:
                     self.flow_dict["Movements"][movement].remove(detector_name)
 
                     # BUG
-                    if self.ListboxMovement.get(self.ListboxMovement.curselection()) == movement:
+                    if self.ListboxMovement.get(
+                       self.ListboxMovement.curselection()) == movement:
 
-                        self.ListBoxMovement.delete(0,'end')
+                        self.ListBoxMovement.delete(0, 'end')
 
                         for detector_name in self.flow_dict["Movements"][movement]:
                             self.ListBoxMovement.insert(0, detector_name)
 
-        
         if not self.flow_dict["Detectors"]:
-        # deletes polygon
-                self.image = Image.fromarray(self.imagelist[0].copy()) # to PIL format
-                self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
+            # deletes polygon
+            self.image = Image.fromarray(self.imagelist[0].copy())  # to PIL format
+            self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
-                self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
         self.draw_from_dict()
-        
 
     def curselected_video(self, event):
-        """Selected video from Listboxvideo-Listbox gets displayed on canvas
+        """Selected video from Listboxvideo-Listbox gets displayed on canvas.
 
         Args:
             event (Listselection): Event is the selection via mousepress
         """
         # return selected videoname, puts frame of selected image on canvas
         self.widget = event.widget
-        self.selection=self.widget.curselection()
+        self.selection = self.widget.curselection()
 
         video_name = self.widget.get(self.selection[0])
 
-        #print(video_name)
+        # print(video_name)
         self.videoobject = self.videos[video_name]
 
         # creates image from video
-        self.image = cv2.cvtColor(self.videoobject.cap.read()[-1], cv2.COLOR_BGR2RGB) # to RGB
-        self.image = Image.fromarray(self.image) # to PIL format
-        self.image = ImageTk.PhotoImage(self.image) # to ImageTk format
+        self.image = cv2.cvtColor(self.videoobject.cap.read()[-1],
+                                  cv2.COLOR_BGR2RGB)  # to RGB
+        self.image = Image.fromarray(self.image)  # to PIL format
+        self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
-    
+
     def draw_from_dict(self):
 
-        m = [0,1]
+        m = [0, 1]
 
-        #takes original picture
-        self.image_cache= self.imagelist[0].copy()
+        # takes original picture
+        self.image_cache = self.imagelist[0].copy()
 
         if self.flow_dict["Detectors"]:
 
             for linedetectors in self.flow_dict["Detectors"]:
 
+                start_x = self.flow_dict["Detectors"][linedetectors]["start_x"]
+                start_y = self.flow_dict["Detectors"][linedetectors]["start_y"]
+                end_x = self.flow_dict["Detectors"][linedetectors]["end_x"]
+                end_y = self.flow_dict["Detectors"][linedetectors]["end_y"]
+                color = self.flow_dict["Detectors"][linedetectors]["color"]
 
-                    start_x = self.flow_dict["Detectors"][linedetectors]["start_x"]
-                    start_y = self.flow_dict["Detectors"][linedetectors]["start_y"]
-                    end_x = self.flow_dict["Detectors"][linedetectors]["end_x"]
-                    end_y = self.flow_dict["Detectors"][linedetectors]["end_y"]
-                    color = self.flow_dict["Detectors"][linedetectors]["color"]
+                self.image_cache = cv2.line(self.image_cache, (start_x, start_y),
+                                            (end_x, end_y), color, 3)
 
-                    self.image_cache = cv2.line(self.image_cache,(start_x,start_y),(end_x,end_y),color,3)
+                m[0] = math.ceil(((start_x+end_x)/2))
+                m[1] = math.ceil(((start_y+end_y)/2))
 
-                    m[0] = math.ceil(((start_x+end_x)/2))
-                    m[1] = math.ceil(((start_y+end_y)/2))
+                d = math.ceil((math.sqrt((end_x-start_x)**2+(end_y-start_y)**2)))
+                d = math.ceil(d/2)
 
-                    d = math.ceil((math.sqrt((end_x-start_x)**2+(end_y-start_y)**2)))
-                    d = math.ceil(d/2)
+                angle = math.degrees((math.atan2((end_y-start_y), (end_x-start_x))))
 
-                    angle =math.degrees((math.atan2((end_y-start_y), (end_x-start_x))))
+                self.image_cache = cv2.ellipse(self.image_cache, (m[0], m[1]),
+                                               (d, 50), angle, 0, 360,
+                                               (255, 0, 0), 3)
 
+                self.imagelist[1] = self.image_cache
+                self.image = Image.fromarray(self.image_cache)  # to PIL format
+                self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
-                    self.image_cache = cv2.ellipse(self.image_cache,(m[0],m[1]),(d, 50), angle, 0,360 ,(255,0,0),3)
-                    self.imagelist[1] = self.image_cache
-                
-                    self.image = Image.fromarray(self.image_cache) # to PIL format
-                    self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
-
-                    self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+                self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
         else:
-            self.image = Image.fromarray(self.image_cache) # to PIL format
-            self.image = ImageTk.PhotoImage(self.image) # to ImageTk format 
-            self.canvas.create_image(0, 0, image = self.image, anchor = tk.NW)
+            self.image = Image.fromarray(self.image_cache)  # to PIL format
+            self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
             print("dic is empty")
 
         self.draw_tracks_from_dict()
 
- 
+
 class Video:
+    """Videoclass that gets created on importing video."""
     # objekt which contains relevant information of the video
     def __init__(self, filepath) -> None:
+        """Initial class information from videofile.
 
-        #self.id = id
+        Args:
+            filepath ([string]): string representaition of filepath
+        """
+
+        # self.id = id
         self.filepath = filepath
         self.filename = filepath.split('/')[-1]
 
-        #opens video source
+        # opens video source
         self.cap = cv2.VideoCapture(self.filepath)
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
 
@@ -508,31 +570,61 @@ class Video:
 
 
 class StatePanel:
+    """Statepanel that contains usefull information."""
     # initialize StatePanel
     def __init__(self, window, row, column, sticky, columnspan):
+        """Initial class information.
+
+        Args:
+            window ([tkinter Frame]): window where statepanel ist shown.
+            row ([tk row]): [row number]
+            column ([tk column]): [column number]
+            sticky ([arg]): [text alignment]
+            columnspan ([arg]): [button span]
+        """
         self.scrollbar = tk.Scrollbar(window)
-        self.text = tk.Text(window, height=4, width=150, yscrollcommand=self.scrollbar.set, state="disabled")
+        self.text = tk.Text(window, height=4, width=150,
+                            yscrollcommand=self.scrollbar.set,
+                            state="disabled")
         self.scrollbar.config(command=self.text.yview)
-        self.scrollbar.grid(row=row, column=column, columnspan=2, padx='5', pady='3', sticky='e')
-        self.text.grid(row=row, column=column, padx='5', pady='3', sticky=sticky, columnspan=columnspan)
-    # new information 
+        self.scrollbar.grid(row=row, column=column, columnspan=2, padx='5', pady='3',
+                            sticky='e')
+        self.text.grid(row=row, column=column, padx='5', pady='3',
+                       sticky=sticky, columnspan=columnspan)
+
     def update(self, text):
+        """Function to update statepanel with wanted text.
+
+        Args:
+            text ([string]): [text to be shown]
+        """
         self.text.config(state="normal")
         self.text.delete("1.0", "end")
         self.text.insert(tk.END, str(text))
         self.text.see("end")
         self.text.config(state="disabled")
-    # change position
+
     def move(self, row, column, sticky, columnspan=2):
-        self.scrollbar.grid(row=row, column=column, padx='5', pady='3', sticky='e')
-        self.text.grid(row=row, column=column, padx='5', pady='3', sticky=sticky, columnspan=columnspan)
+        """Scroll thru statepanel text.
+
+        Args:
+            row ([tk row]): [row number]
+            column ([tk column]): [column number]
+            sticky ([arg]): [text alignment]
+            columnspan (int, optional): [description]. Defaults to 2.
+        """
+        self.scrollbar.grid(row=row, column=column, padx='5', pady='3',
+                            sticky='e')
+        self.text.grid(row=row, column=column, padx='5', pady='3', sticky=sticky,
+                       columnspan=columnspan)
 
 
 def main():
+    """Main function."""
     root = tk.Tk()
-    app = MainWindow(root)
+    MainWindow(root)
     root.mainloop()
-    
+
+
 if __name__ == '__main__':
     main()
-

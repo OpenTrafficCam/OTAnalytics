@@ -20,7 +20,9 @@ def dic_to_detector_dataframe(detector_dic):
     """
     # change dic to dataframe
     detector_df = pd.DataFrame.from_dict(
-        {("Detectors", j): detector_dic["Detectors"][j]for j in detector_dic["Detectors"].keys()}, orient='index')
+        {("Detectors", j):
+         detector_dic["Detectors"][j]for j in
+         detector_dic["Detectors"].keys()}, orient='index')
 
     # drops first multilevel index
     detector_df.index = detector_df.index.droplevel(0)
@@ -29,8 +31,8 @@ def dic_to_detector_dataframe(detector_dic):
     detector_df["geometry"] = detector_df.apply(
         lambda coordinates:
         LineString([(coordinates['start_x'], coordinates['start_y']),
-        (coordinates['end_x'], coordinates['end_y'])]), axis=1)
-        
+                    (coordinates['end_x'], coordinates['end_y'])]), axis=1)
+
     return detector_df
 
 
