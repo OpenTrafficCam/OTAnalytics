@@ -1,18 +1,20 @@
-import tkinter as tk
-from tkinter.constants import END
-import cv2
-from PIL import Image, ImageTk
-from tkinter import Toplevel, filedialog
-import numpy as np
-from gui_dict import gui_dict, button_information_line, button_information_polygon, \
-                     button_display_tracks_toggle, button_play_video_toggle
-from sections import get_coordinates_opencv
-from movement import new_movement, add_to_movement, curselected_movement
-from sections import save_file, draw_line, load_file
-from tracks import load_tracks
-from auto_counting import automated_counting
-import sys
 import math
+import sys
+import tkinter as tk
+from tkinter import Toplevel, filedialog
+from tkinter.constants import END
+
+import cv2
+import numpy as np
+from PIL import Image, ImageTk
+
+from auto_counting import automated_counting
+from gui_dict import (button_display_tracks_toggle, button_information_line,
+                      button_information_polygon, button_play_video_toggle,
+                      gui_dict)
+from movement import add_to_movement, curselected_movement, new_movement
+from sections import draw_line, get_coordinates_opencv, load_file, save_file
+from tracks import load_tracks
 
 
 class MainWindow(tk.Frame):
@@ -209,7 +211,7 @@ class MainWindow(tk.Frame):
         self.canvas.configure(scrollregion=(0, 0, self.videoobject.width,
                               self.videoobject.height))
         self.canvas.bind("<ButtonPress-1>", lambda event: get_coordinates_opencv(event,
-                         self.linepoints, self.canvas))
+                         self.linepoints, self.polypoints, self.canvas))
         self.canvas.bind("<B1-Motion>", self.draw_line_with_mousedrag)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
         self.canvas.bind("<MouseWheel>", lambda event: self.scroll_through_video(event))

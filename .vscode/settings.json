@@ -6,5 +6,6 @@
     "python.analysis.extraPaths": [
         "./OTAnalytics"
     ],
-    "python.languageServer": "Pylance"
+    "python.languageServer": "Pylance",
+    "git.ignoreLimitWarning": true
 }
