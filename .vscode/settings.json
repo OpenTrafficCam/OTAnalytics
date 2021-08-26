@@ -7,5 +7,12 @@
         "./OTAnalytics"
     ],
     "python.languageServer": "Pylance",
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "files.exclude": {
+        "**/*.pyc": {"when": "$(basename).py"},
+        "**/__pycache__": true,
+        }
+
+    
 }
+
