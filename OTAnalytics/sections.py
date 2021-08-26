@@ -47,16 +47,19 @@ def draw_line(linedetectors, imagelist, linepoints):
         if linedetectors or gui_dict["display_tracks_toggle"]:
             image_cache = cv2.line(imagelist[1].copy(), linepoints[0], linepoints[1],
                                    (255, 0, 0), 5)
+            image = Image.fromarray(image_cache)  # to PIL format
+            image = ImageTk.PhotoImage(image)  # to ImageTk format
 
         else:
             image_cache = cv2.line(imagelist[0].copy(), linepoints[0], linepoints[1],
                                    (255, 0, 0), 5)
             image = Image.fromarray(image_cache)  # to PIL format
             image = ImageTk.PhotoImage(image)  # to ImageTk format
-            return image
 
-        if gui_dict["polygondetector_toggle"] is True:
-            pass
+        return image
+
+    if gui_dict["polygondetector_toggle"] is True:
+        pass
 
 
 def load_file(linedetectors, movement_dict, ListboxDetector, ListboxMovement):

@@ -1,0 +1,62 @@
+{
+    "Detectors": {
+        "dect1": {
+            "type": "line",
+            "start_x": 47,
+            "start_y": 210,
+            "end_x": 244,
+            "end_y": 381,
+            "color": [
+                255,
+                0,
+                0
+            ]
+        },
+        "dect2": {
+            "type": "line",
+            "start_x": 349,
+            "start_y": 120,
+            "end_x": 49,
+            "end_y": 200,
+            "color": [
+                255,
+                0,
+                0
+            ]
+        },
+        "dect3": {
+            "type": "line",
+            "start_x": 570,
+            "start_y": 217,
+            "end_x": 282,
+            "end_y": 410,
+            "color": [
+                255,
+                0,
+                0
+            ]
+        },
+        "dect4": {
+            "type": "line",
+            "start_x": 427,
+            "start_y": 117,
+            "end_x": 587,
+            "end_y": 201,
+            "color": [
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    "Movements": {
+        "mov1": [
+            "dect1",
+            "dect2"
+        ],
+        "mov2": [
+            "dect3",
+            "dect4"
+        ]
+    }
+}

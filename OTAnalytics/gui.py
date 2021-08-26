@@ -234,7 +234,7 @@ class MainWindow(tk.Frame):
             event ([mousewheel]): mousewheel up and mouswheel down
         """
 
-        # intager of mousewheel scroll event
+        # integer of mousewheel scroll event
         i = 1*event.delta//120
 
         if i > 0:
