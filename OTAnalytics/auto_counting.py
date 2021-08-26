@@ -1,14 +1,16 @@
 import geopandas as gpd
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 import pandas as pd
 from gui_dict import gui_dict
 from tkinter import filedialog
 
 # TODO: check if tracks and crossed sections belong to certain movement
 
+d = {}
+
 
 def dic_to_detector_dataframe(detector_dic):
-    """creates a dataframe from detector dictionary,
+    """creates a dataframe from detector/flow dictionary,
     creates column with LineString-objects for the calculation of
     lineintersection with tracks
 
@@ -60,6 +62,9 @@ def dic_to_object_dataframe(object_dict):
     object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1)
 
+    object_df_validated_copy["start_point_geometry"] = object_df_validated_copy.apply(
+        lambda pointtuples: Point(pointtuples["Coord"][0]), axis=1)
+
     return object_df_validated_copy
 
 
@@ -75,21 +80,48 @@ def calculate_intersections(detector_df, object_df_validated_copy):
         dataframe: with columnheads (detectors) and boolvalue if track(row),
         intersected detector
     """
-    # creates a geoseries from column(geometry) with shapely obeject
+    # creates a geoseries from column(geometry) with shapely object
     track_geometry = gpd.GeoSeries(object_df_validated_copy.geometry)
-
-    # iterrates over every detectors and returns bool value for
+    track_start_geometry = gpd.GeoSeries(object_df_validated_copy.start_point_geometry)
+    
+    # iterates over every detectors and returns bool value for
     # intersection with every track from geoseries
-    for index2, detector in detector_df.iterrows():
+    for index, detector in detector_df.iterrows():
 
         # distinct shapely geometry
         detector_shapely_geometry = detector.geometry
 
+        # columnwise comparison
         bool_intersect = track_geometry.intersects(detector_shapely_geometry)
 
-        object_df_validated_copy[index2] = bool_intersect
+        # returns coordinates from intersections
+        point_geometry = track_geometry.intersection(detector_shapely_geometry)
+
+        object_df_validated_copy[index+"intersectcoordinates"] = point_geometry
+        object_df_validated_copy[index] = bool_intersect
+
+    for index, detector in detector_df.iterrows():
+        intersection_series = gpd.GeoSeries(object_df_validated_copy[index+"intersectcoordinates"])
+
+        distance = track_start_geometry.distance(intersection_series, align=True)
+
+        object_df_validated_copy[index+"_distance"] = distance
 
     return object_df_validated_copy
+
+
+def assign_movement(movement_dic, object_df_validated_copy):
+
+    object_df_validated_copy = object_df_validated_copy.iloc[:,16:]
+
+    object_dic = object_df_validated_copy.to_dict('index')
+
+    print(object_dic)
+
+    # TODO drop Nan, Sort ascending, compare if keys exist at the right index
+
+
+    # print(movement_dic[1])
 
 
 def safe_to_csv(process_object):
@@ -106,7 +138,7 @@ def safe_to_csv(process_object):
     file_path.close
 
 
-def automated_counting(detector_dict, object_dict):
+def automated_counting(flow_dic, object_dict):
     """calls previous funtions
 
     Args:
@@ -114,9 +146,10 @@ def automated_counting(detector_dict, object_dict):
         object_dict (dictionary): dictionary with obejcts (at least 3 detections)
     """
 
-    if gui_dict["tracks_imported"] and detector_dict:
-        detector_dataframe = dic_to_detector_dataframe(detector_dict)
-        object_dataframe = dic_to_object_dataframe(object_dict)
-        processed_object = calculate_intersections(detector_dataframe, object_dataframe)
+    if gui_dict["tracks_imported"] and flow_dic:
+        detector_dataframe = dic_to_detector_dataframe(flow_dic)
+        object_df_validated_copy = dic_to_object_dataframe(object_dict)
+        processed_object = calculate_intersections(detector_dataframe, object_df_validated_copy)
+        assign_movement(flow_dic, processed_object)
 
         safe_to_csv(processed_object)

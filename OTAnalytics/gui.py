@@ -130,10 +130,10 @@ class MainWindow(tk.Frame):
 
         self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
 
-        self.ButtonLoadTracks = tk.Button(self.frame, text="autocount", command=lambda:
-                                          [automated_counting(self.flow_dict,
-                                           self.object_dict)])
-        self.ButtonLoadTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
+        self.ButtonAutocount = tk.Button(self.frame, text="autocount", command=lambda:
+                                         [automated_counting(self.flow_dict,
+                                          self.object_dict)])
+        self.ButtonAutocount.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.ListBoxMovement = tk.Listbox(self.frame, width=25)
         self.ListBoxMovement.grid(row=5, column=3, columnspan=4, sticky="ew")
