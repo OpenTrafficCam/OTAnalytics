@@ -68,13 +68,15 @@ def load_file(linedetectors, movement_dict, ListboxDetector, ListboxMovement):
     files = open(filepath.name, "r")
     files = files.read()
 
-    loaded_dict = json.loads(files)
+    flow_dict = json.loads(files)
 
-    linedetectors.update(loaded_dict["Detectors"])
-    movement_dict.update(loaded_dict["Movements"])
+    linedetectors.update(flow_dict["Detectors"])
+    movement_dict.update(flow_dict["Movements"])
 
     # resets polypoints list or else creation of new polygon leads to bug
     # self.polypoints = []
+
+    print(flow_dict)
 
     for movement in movement_dict:
         ListboxMovement.insert(0, movement)
