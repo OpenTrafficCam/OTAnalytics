@@ -16,33 +16,33 @@ from operator import getitem
 
 #%%
 
-linedetectors = {}
-movement_dict = {}
+# linedetectors = {}
+# movement_dict = {}
 
 
-d = {}
+# d = {}
 
 
-detector_dic = open("C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//combined.OTflow", "r")
-object_dic = open("C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//object_dic.json", "r")
+# detector_dic = open("C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//combined.OTflow", "r")
+# object_dic = open("C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//object_dic.json", "r")
 
-files = open(detector_dic.name, "r")
-files = files.read()
+# files = open(detector_dic.name, "r")
+# files = files.read()
 
-flow_dic = json.loads(files)
+# flow_dic = json.loads(files)
+# # use this
+# linedetectors.update(flow_dic["Detectors"])
+# movement_dict.update(flow_dic["Movements"])
 
-linedetectors.update(flow_dic["Detectors"])
-movement_dict.update(flow_dic["Movements"])
+# files = open(object_dic.name, "r")
+# files = files.read()
 
-files = open(object_dic.name, "r")
-files = files.read()
-
-object_dic = json.loads(files)
+# object_dic = json.loads(files)
 
 
 # %%
 
-def dic_to_detector_dataframe(flow_dic):
+def dic_to_detector_dataframe(linedetectors):
     """creates a dataframe from detector/flow dictionary, # TODO change to use linedetector dic that gets updated when importing flow data
     creates column with LineString-objects for the calculation of
     lineintersection with tracks
@@ -56,8 +56,8 @@ def dic_to_detector_dataframe(flow_dic):
     # change dic to dataframe
     detector_df = pd.DataFrame.from_dict(
         {("Detectors", j):
-         flow_dic["Detectors"][j]for j in
-         flow_dic["Detectors"].keys()}, orient='index')
+         linedetectors[j]for j in
+         linedetectors.keys()}, orient='index')
 
     # drops first multilevel index
     detector_df.index = detector_df.index.droplevel(0)
@@ -68,11 +68,9 @@ def dic_to_detector_dataframe(flow_dic):
         LineString([(coordinates['start_x'], coordinates['start_y']),
                     (coordinates['end_x'], coordinates['end_y'])]), axis=1)
 
-
     return detector_df
 # %%
 
-detector_df = dic_to_detector_dataframe(flow_dic) 
 
 # %%
 
@@ -103,12 +101,9 @@ def dic_to_object_dataframe(object_dic):
     object_df_validated_copy["start_point_geometry"] = object_df_validated_copy.apply(
         lambda pointtuples: Point(pointtuples["Coord"][0]), axis=1)
 
-    print(object_df_validated_copy)
 
     return object_df_validated_copy
 # %%
-
-object_df_validated_copy = dic_to_object_dataframe(object_dic)
 
 # %%
 
@@ -152,24 +147,23 @@ def calculate_intersections(detector_df, object_df_validated_copy):
 
         object_df_validated_copy[index+"_distance"] = distance
 
-    print(object_df_validated_copy)
-
     return object_df_validated_copy
 
 # %%
 
 
-object_df_validated_copy = calculate_intersections(detector_df, object_df_validated_copy)
-
 
 # %% 
 
 
-def assign_movement(object_df_validated_copy):
+def assign_movement(movement_dict , object_df_validated_copy):
 
-    object_df_validated_copy = object_df_validated_copy.iloc[:, 13:] # 13 or 16 very buggy and i dont know why
+    object_df_intersections = object_df_validated_copy.iloc[:, 14:] # 13 or 16 very buggy and i dont know why
 
-    object_dic = object_df_validated_copy.to_dict('index')
+    object_dic = object_df_intersections.to_dict('index')
+
+    print(object_dic)
+
 
     for nested_dic in object_dic:
 
@@ -183,7 +177,14 @@ def assign_movement(object_df_validated_copy):
         # compare with movement dictionary
 
         for movement_list in movement_dict:
-        
+
+            print("_____________")
+            print(nested_dic)
+            print(sorted_calculated_movement)
+            print("-------------")
+            print(movement_dict[movement_list])
+            print("_____________")
+       
             if movement_dict[movement_list] == sorted_calculated_movement:
 
                 print("yes")
@@ -191,6 +192,8 @@ def assign_movement(object_df_validated_copy):
                 break
 
     print(object_df_validated_copy)
+
+    return object_df_validated_copy
       
 
     # TODO drop Nan, Sort ascending, compare if keys exist at the right index
@@ -198,7 +201,6 @@ def assign_movement(object_df_validated_copy):
 # %%
 
 
-assign_movement(object_df_validated_copy)
 
 # %%
 
@@ -215,8 +217,8 @@ def safe_to_csv(process_object):
     file_path.write(autocount_csv_file)
     file_path.close
 
-
-def automated_counting(flow_dic, object_dict):
+# %%
+def automated_counting(movement_dict, linedetectors_dict, object_dict):
     """calls previous funtions
 
     Args:
@@ -224,14 +226,16 @@ def automated_counting(flow_dic, object_dict):
         object_dict (dictionary): dictionary with obejcts (at least 3 detections)
     """
 
-    if gui_dict["tracks_imported"] and flow_dic:
-        detector_dataframe = dic_to_detector_dataframe(flow_dic)
+    if gui_dict["tracks_imported"] and linedetectors_dict and movement_dict:
+        detector_dataframe = dic_to_detector_dataframe(linedetectors_dict)
         object_df_validated_copy = dic_to_object_dataframe(object_dict)
         processed_object = calculate_intersections(detector_dataframe,
                                                    object_df_validated_copy)
 
-        assign_movement(flow_dic, processed_object)
+        # TODO doesnt return right dataframe
 
-        safe_to_csv(processed_object)
+        new_object = assign_movement(movement_dict, processed_object)
+
+        safe_to_csv(new_object)
 
 # %%

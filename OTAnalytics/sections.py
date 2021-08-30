@@ -29,15 +29,15 @@ def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
         print(polygonpoints)
 
 
-def save_file(combined_dic, linedetectors, movement_dict):
+def save_file(flow_dict, linedetectors, movement_dict):
     files = [('Files', '*.OTflow')]
     file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
     a_file = open(file.name, "w")
-    combined_dic["Detectors"] = linedetectors
-    combined_dic["Movements"] = movement_dict
+    flow_dict["Detectors"] = linedetectors
+    flow_dict["Movements"] = movement_dict
 
     # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
-    json.dump(combined_dic, a_file, indent=4)
+    json.dump(flow_dict, a_file, indent=4)
     a_file.close()
 
 
@@ -62,7 +62,7 @@ def draw_line(linedetectors, imagelist, linepoints):
         pass
 
 
-def load_file(linedetectors, movement_dict, ListboxDetector, ListboxMovement):
+def load_file(linedetectors, movements, ListboxDetector, ListboxMovement):
     """loads detectors from a .OTSect-File."""
     filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.OTflow')])
     files = open(filepath.name, "r")
@@ -71,14 +71,14 @@ def load_file(linedetectors, movement_dict, ListboxDetector, ListboxMovement):
     flow_dict = json.loads(files)
 
     linedetectors.update(flow_dict["Detectors"])
-    movement_dict.update(flow_dict["Movements"])
+    movements.update(flow_dict["Movements"])
 
     # resets polypoints list or else creation of new polygon leads to bug
     # self.polypoints = []
 
     print(flow_dict)
 
-    for movement in movement_dict:
+    for movement in movements:
         ListboxMovement.insert(0, movement)
 
     for detector in linedetectors:

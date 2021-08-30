@@ -35,7 +35,10 @@ class MainWindow(tk.Frame):
         # dictionary of linedetectors, include id, start point, end point
         self.polygondetectors = {}
 
+        # only to dump detectors and movements
         self.flow_dict = {}
+
+        # updated when flow-dictionary is loaded
         self.flow_dict["Detectors"] = {}
         self.flow_dict["Movements"] = {}
         self.object_dict = {}
@@ -45,7 +48,6 @@ class MainWindow(tk.Frame):
         self.framelist = []
         self.counter = 0
         self.interval = 20
-        self.tracks = {}
 
         # auxilery list for polygondetector creation/gets deleted after polygon creation
         self.polypoints = []
@@ -108,7 +110,7 @@ class MainWindow(tk.Frame):
                                              command=lambda:
                                              [button_display_tracks_toggle(
                                               self.ButtonDisplayTracks),
-                                              self.draw_from_dict()])
+                                              self.draw_detectors_from_dict()])
 
         self.ButtonDisplayTracks.grid(row=3, column=4, sticky="ew")
 
@@ -126,12 +128,12 @@ class MainWindow(tk.Frame):
                                           command=lambda:
                                           [load_tracks(self.object_dict,
                                            self.ListboxTracks),
-                                           self.draw_from_dict()])
+                                           self.draw_detectors_from_dict()])
 
         self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
 
         self.ButtonAutocount = tk.Button(self.frame, text="autocount", command=lambda:
-                                         [automated_counting(self.flow_dict,
+                                         [automated_counting(self.flow_dict["Movements"],self.flow_dict["Detectors"],
                                           self.object_dict)])
         self.ButtonAutocount.grid(row=4, column=3, columnspan=4, sticky="ew")
 
@@ -163,7 +165,7 @@ class MainWindow(tk.Frame):
                                          self.flow_dict["Movements"],
                                          self.ListboxDetector,
                                          self.ListboxMovement),
-                                         self.draw_from_dict()])
+                                         self.draw_detectors_from_dict()])
 
         self.ButtonLoadFlow.grid(row=6, column=5, sticky="ew")
 
@@ -248,7 +250,7 @@ class MainWindow(tk.Frame):
 
             self.imagelist[0] = self.image_original
 
-            self.draw_from_dict()
+            self.draw_detectors_from_dict()
 
             self.counter += 1
 
@@ -260,7 +262,7 @@ class MainWindow(tk.Frame):
 
             self.imagelist[0] = self.image_original
 
-            self.draw_from_dict()
+            self.draw_detectors_from_dict()
 
         # prints size of images
         print(sys.getsizeof(self.framelist))
@@ -307,7 +309,7 @@ class MainWindow(tk.Frame):
 
     def curselected_track(self, event):
         """Draws on or more selected tracks on canvas."""
-        self.draw_from_dict()
+        self.draw_detectors_from_dict()
         self.widget = event.widget
         multiselection = self.widget.curselection()
 
@@ -411,14 +413,14 @@ class MainWindow(tk.Frame):
             else:
                 self.flow_dict["Detectors"][dict_key]["color"] = (255, 0, 0)
 
-        self.draw_from_dict()
+        self.draw_detectors_from_dict()
 
     def on_close(self):
         """Deletes polygon or line on canvas if entered string is none."""
         # if self.new_linedetector_creation_buttonClicked == True:
         if self.detector_name_entry.get() == "":
 
-            self.draw_from_dict()
+            self.draw_detectors_from_dict()
 
         self.new_detector_creation.destroy()
 
@@ -437,7 +439,7 @@ class MainWindow(tk.Frame):
                 'end_y': self.linepoints[1][1],
                 'color': (255, 0, 0)}
 
-        self.draw_from_dict()
+        self.draw_detectors_from_dict()
 
         self.ListboxDetector.insert(0, detector_name)
 
@@ -476,7 +478,7 @@ class MainWindow(tk.Frame):
 
             self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
-        self.draw_from_dict()
+        self.draw_detectors_from_dict()
 
     def curselected_video(self, event):
         """Selected video from Listboxvideo-Listbox gets displayed on canvas.
@@ -500,7 +502,7 @@ class MainWindow(tk.Frame):
         self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
-    def draw_from_dict(self):
+    def draw_detectors_from_dict(self):
 
         m = [0, 1]
 
