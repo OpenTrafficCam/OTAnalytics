@@ -5,7 +5,7 @@ gui_dict = {
     "polygondetector_toggle": False,
     "tracks_imported": False,
     "detections_drawn": False,
-    "display_tracks_toggle": False,
+    "display_all_tracks_toggle": False,
     "play_video": False
 }
 
@@ -57,9 +57,9 @@ def button_display_tracks_toggle(button):
     Args:
         button (tkinter button): ...
     """
-    gui_dict["display_tracks_toggle"] = not gui_dict["display_tracks_toggle"]
+    gui_dict["display_all_tracks_toggle"] = not gui_dict["display_all_tracks_toggle"]
 
-    if gui_dict["display_tracks_toggle"] is True:
+    if gui_dict["display_all_tracks_toggle"] is True:
         button.config(text="hide tracks")
     else:
         button.config(text="show tracks")

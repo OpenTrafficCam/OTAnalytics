@@ -44,7 +44,7 @@ def save_file(flow_dict, linedetectors, movement_dict):
 def draw_line(linedetectors, imagelist, linepoints):
 
     if gui_dict["linedetector_toggle"] is True:
-        if linedetectors or gui_dict["display_tracks_toggle"]:
+        if linedetectors or gui_dict["display_all_tracks_toggle"]:
             image_cache = cv2.line(imagelist[1].copy(), linepoints[0], linepoints[1],
                                    (255, 0, 0), 5)
             image = Image.fromarray(image_cache)  # to PIL format

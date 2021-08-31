@@ -14,7 +14,8 @@ from gui_dict import (button_display_tracks_toggle, button_information_line,
                       gui_dict)
 from movement import add_to_movement, curselected_movement, new_movement
 from sections import draw_line, get_coordinates_opencv, load_file, save_file
-from tracks import load_tracks
+from tracks import load_tracks, draw_bounding_box
+import timeit
 
 
 class MainWindow(tk.Frame):
@@ -44,8 +45,11 @@ class MainWindow(tk.Frame):
         self.object_dict = {}
         self.videoobject = None
 
+        self.raw_detections = {}
+
         # list to scroll through frames
         self.framelist = []
+        self.selectionlist = []
         self.counter = 0
         self.interval = 20
 
@@ -126,7 +130,7 @@ class MainWindow(tk.Frame):
 
         self.ButtonLoadTracks = tk.Button(self.frame, text="Load tracks",
                                           command=lambda:
-                                          [load_tracks(self.object_dict,
+                                          [load_tracks(self.object_dict, self.raw_detections,
                                            self.ListboxTracks),
                                            self.draw_detectors_from_dict()])
 
@@ -243,6 +247,8 @@ class MainWindow(tk.Frame):
 
             _, frame = self.videoobject.cap.read()
 
+            print(frame)
+
             self.framelist.append(frame)
 
             self.image_original = cv2.cvtColor(self.framelist[self.counter],
@@ -252,7 +258,14 @@ class MainWindow(tk.Frame):
 
             self.draw_detectors_from_dict()
 
+            #self.image_cache = draw_bounding_box(self.raw_detections, str(self.counter+1), self.image_original)#works so far
+
             self.counter += 1
+
+            self.image = Image.fromarray(self.image_cache)  # to PIL format
+            self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+
+            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
         if i < 0 and self.counter >= 1:
             self.counter -= 1
@@ -265,24 +278,25 @@ class MainWindow(tk.Frame):
             self.draw_detectors_from_dict()
 
         # prints size of images
-        print(sys.getsizeof(self.framelist))
+        #print(sys.getsizeof(self.framelist))
 
     def draw_tracks_from_dict(self):
         """Draws tracks using distinct dictionary."""
         # if detectors exist in dictionary and "display tracks-button"
         # is pressed then use the altered picture
 
-        if gui_dict["display_tracks_toggle"] is True:
+        if gui_dict["display_all_tracks_toggle"] is True:
 
-            if self.flow_dict["Detectors"]:
-                print(bool(self.flow_dict["Detectors"]))
+            # if self.flow_dict["Detectors"]:
+            #     print(bool(self.flow_dict["Detectors"]))
 
-                self.image_cache = self.imagelist[1].copy()
+            #     self.image_cache = self.imagelist[1].copy()
 
-            else:
-                self.image_cache = self.imagelist[0].copy()
-                print("this pic is used 0")
+            # else:
+            #     self.image_cache = self.imagelist[0].copy()
+            #     print("this pic is used 0")
 
+            
             for track in self.object_dict:
 
                 trackcolor = (0, 0, 255)
@@ -294,34 +308,71 @@ class MainWindow(tk.Frame):
                 if self.object_dict[track]["Class"] == "motorcycle":
                     trackcolor = (240, 248, 255)
 
+                
                 pts = np.array(self.object_dict[track]["Coord"], np.int32)
 
                 pts = pts.reshape((-1, 1, 2))
-
+                
                 self.image = cv2.polylines(self.image_cache, [pts], False,
                                            color=trackcolor, thickness=2)
-
                 self.imagelist[1] = self.image_cache
                 self.image = Image.fromarray(self.image_cache)  # to PIL format
                 self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
                 self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
+        # else:
+        #     if self.flow_dict["Detectors"]:
+
+        #         print(bool(self.flow_dict["Detectors"]))
+
+        #         self.image_cache = self.imagelist[1].copy()
+
+        #     else:
+        #         self.image_cache = self.imagelist[0].copy()
+        #         print("this pic is used 0")
+
+        else:
+            if self.selectionlist:
+                for track in self.selectionlist:
+                    trackcolor = (0, 0, 255)
+
+                    if self.object_dict[track]["Class"] == "car":
+                        trackcolor = (255, 0, 0)
+                    if self.object_dict[track]["Class"] == "person":
+                        trackcolor = (0, 255, 0)
+                    if self.object_dict[track]["Class"] == "motorcycle":
+                        trackcolor = (240, 248, 255)
+
+                    pts = np.array(self.object_dict[track]["Coord"], np.int32)
+
+                    pts = pts.reshape((-1, 1, 2))
+
+                    self.image = cv2.polylines(self.image_cache, [pts], False,
+                                            color=trackcolor, thickness=2)
+
+                    self.imagelist[1] = self.image_cache
+                    self.image = Image.fromarray(self.image_cache)  # to PIL format
+                    self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+
+                    self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+
     def curselected_track(self, event):
         """Draws on or more selected tracks on canvas."""
+
         self.draw_detectors_from_dict()
         self.widget = event.widget
         multiselection = self.widget.curselection()
 
-        selectionlist = []
+        self.selectionlist = []
 
         for selection in multiselection:
             entry = self.widget.get(selection)
-            selectionlist.append(entry)
+            self.selectionlist.append(entry)
 
         # TODO ZUSAMMENFASSEN!!
 
-        for object_id in selectionlist:
+        for object_id in self.selectionlist:
 
             trackcolor = (0, 0, 255)
 
@@ -522,6 +573,7 @@ class MainWindow(tk.Frame):
                 self.image_cache = cv2.line(self.image_cache, (start_x, start_y),
                                             (end_x, end_y), color, 3)
 
+                # draws ellipse around detectors
                 m[0] = math.ceil(((start_x+end_x)/2))
                 m[1] = math.ceil(((start_y+end_y)/2))
 
@@ -534,7 +586,6 @@ class MainWindow(tk.Frame):
                                                (d, 50), angle, 0, 360,
                                                (255, 0, 0), 3)
 
-                self.imagelist[1] = self.image_cache
                 self.image = Image.fromarray(self.image_cache)  # to PIL format
                 self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
@@ -545,10 +596,14 @@ class MainWindow(tk.Frame):
             self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
             self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
-            print("dic is empty")
-
         self.draw_tracks_from_dict()
 
+    def create_canvas_picture():
+        # TODO 
+        # draw detector from dic
+        # draw tracks
+        # use image_cache to transforn to PIL image and so on
+        pass
 
 class Video:
     """Videoclass that gets created on importing video."""
