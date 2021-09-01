@@ -2,6 +2,7 @@ from gui_dict import gui_dict
 import json
 from tkinter import filedialog
 import cv2
+import numpy as np
 
 
 def load_tracks(object_dict,raw_detections, ListboxTracks):
@@ -14,7 +15,7 @@ def load_tracks(object_dict,raw_detections, ListboxTracks):
 
     loaded_dict = json.loads(files)
 
-    detections = {}
+    #detections = {}
 
     raw_detections.update(loaded_dict["data"])
 
@@ -44,6 +45,58 @@ def load_tracks(object_dict,raw_detections, ListboxTracks):
     gui_dict["tracks_imported"] = True
 
 
+def draw_tracks(selectionlist, object_dict, np_image):
+    
+    if gui_dict["display_all_tracks_toggle"] is True:
+
+        for track in object_dict:
+
+                trackcolor = (0, 0, 255)
+
+                if object_dict[track]["Class"] == "car":
+                    trackcolor = (255, 0, 0)
+                if object_dict[track]["Class"] == "person":
+                    trackcolor = (0, 255, 0)
+                if object_dict[track]["Class"] == "motorcycle":
+                    trackcolor = (240, 248, 255)
+
+                
+                pts = np.array(object_dict[track]["Coord"], np.int32)
+
+                pts = pts.reshape((-1, 1, 2))
+                
+                np_image = cv2.polylines(np_image, [pts], False,
+                                           color=trackcolor, thickness=2)
+
+        return np_image
+
+
+    elif selectionlist:
+
+        for object_id in selectionlist:
+
+            trackcolor = (0, 0, 255)
+
+            if object_dict[object_id]["Class"] == "car":
+                trackcolor = (255, 0, 0)
+            if object_dict[object_id]["Class"] == "person":
+                trackcolor = (0, 255, 0)
+            if object_dict[object_id]["Class"] == "motorcycle":
+                trackcolor = (240, 248, 255)
+
+            pts = np.array(object_dict[object_id]["Coord"], np.int32)
+
+            pts = pts.reshape((-1, 1, 2))
+
+            np_image = cv2.polylines(
+                np_image, [pts], False, color=trackcolor, thickness=2)
+
+        return np_image
+
+    else:
+        return np_image
+
+
 def save_object_dic(object_dict):
     # experimental function / not necessary for end product
 
@@ -52,23 +105,28 @@ def save_object_dic(object_dict):
 
 def draw_bounding_box(raw_detections, frame, image):
 
-    image_cache = image
+    if raw_detections:
 
-    for detection in raw_detections[frame]:
+        image_cache = image
 
-        x_start = int(raw_detections[frame][detection]["x"]-30)
-        y_start = int(raw_detections[frame][detection]["y"]-30)
+        for detection in raw_detections[frame]:
 
-        x_end = int(raw_detections[frame][detection]["x"]+30)
-        y_end = int(raw_detections[frame][detection]["y"]+30)
+            x_start = int(raw_detections[frame][detection]["x"]-30)
+            y_start = int(raw_detections[frame][detection]["y"]-30)
+
+            x_end = int(raw_detections[frame][detection]["x"]+30)
+            y_end = int(raw_detections[frame][detection]["y"]+30)
 
 
 
-        image_cache = cv2.rectangle(image_cache, (x_start,y_start), (x_end,y_end ), (255, 0, 0), 2)
+            image_cache = cv2.rectangle(image_cache, (x_start,y_start), (x_end,y_end ), (255, 0, 0), 2)
 
-        print(raw_detections[frame][detection])
+            print(raw_detections[frame][detection])
 
-    return image
+        return image
 
+    else:
+
+        pass
 
 

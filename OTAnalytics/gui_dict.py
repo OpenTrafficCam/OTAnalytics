@@ -59,10 +59,13 @@ def button_display_tracks_toggle(button):
     """
     gui_dict["display_all_tracks_toggle"] = not gui_dict["display_all_tracks_toggle"]
 
+    print(gui_dict["display_all_tracks_toggle"])
+
     if gui_dict["display_all_tracks_toggle"] is True:
         button.config(text="hide tracks")
     else:
         button.config(text="show tracks")
+
 
 
 def button_play_video_toggle(button):

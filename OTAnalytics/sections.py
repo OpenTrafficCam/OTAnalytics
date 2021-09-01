@@ -41,20 +41,20 @@ def save_file(flow_dict, linedetectors, movement_dict):
     a_file.close()
 
 
-def draw_line(linedetectors, imagelist, linepoints):
+def draw_line(np_image, linepoints):
 
     if gui_dict["linedetector_toggle"] is True:
-        if linedetectors or gui_dict["display_all_tracks_toggle"]:
-            image_cache = cv2.line(imagelist[1].copy(), linepoints[0], linepoints[1],
-                                   (255, 0, 0), 5)
-            image = Image.fromarray(image_cache)  # to PIL format
-            image = ImageTk.PhotoImage(image)  # to ImageTk format
+        #if linedetectors or gui_dict["display_all_tracks_toggle"]:
+        np_image = cv2.line(np_image, linepoints[0], linepoints[1],
+                                (255, 0, 0), 5)
+        image = Image.fromarray(np_image)  # to PIL format
+        image = ImageTk.PhotoImage(image)  # to ImageTk format
 
-        else:
-            image_cache = cv2.line(imagelist[0].copy(), linepoints[0], linepoints[1],
-                                   (255, 0, 0), 5)
-            image = Image.fromarray(image_cache)  # to PIL format
-            image = ImageTk.PhotoImage(image)  # to ImageTk format
+        # else:
+        #     image_cache = cv2.line(imagelist[0].copy(), linepoints[0], linepoints[1],
+        #                            (255, 0, 0), 5)
+        #     image = Image.fromarray(image_cache)  # to PIL format
+        #     image = ImageTk.PhotoImage(image)  # to ImageTk format
 
         return image
 

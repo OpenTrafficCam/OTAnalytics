@@ -14,7 +14,7 @@ from gui_dict import (button_display_tracks_toggle, button_information_line,
                       gui_dict)
 from movement import add_to_movement, curselected_movement, new_movement
 from sections import draw_line, get_coordinates_opencv, load_file, save_file
-from tracks import load_tracks, draw_bounding_box
+from tracks import load_tracks, draw_tracks, draw_bounding_box
 import timeit
 
 
@@ -114,7 +114,7 @@ class MainWindow(tk.Frame):
                                              command=lambda:
                                              [button_display_tracks_toggle(
                                               self.ButtonDisplayTracks),
-                                              self.draw_detectors_from_dict()])
+                                              self.create_canvas_picture()])
 
         self.ButtonDisplayTracks.grid(row=3, column=4, sticky="ew")
 
@@ -169,7 +169,7 @@ class MainWindow(tk.Frame):
                                          self.flow_dict["Movements"],
                                          self.ListboxDetector,
                                          self.ListboxMovement),
-                                         self.draw_detectors_from_dict()])
+                                         self.create_canvas_picture()])
 
         self.ButtonLoadFlow.grid(row=6, column=5, sticky="ew")
 
@@ -204,8 +204,10 @@ class MainWindow(tk.Frame):
         # creates image from video
         self.image_original = cv2.cvtColor(self.videoobject.cap.read()[1],
                                            cv2.COLOR_BGR2RGB)  # to RGB
+       
         # copy is important or else original image will be changed
         self.image = Image.fromarray(self.image_original.copy())  # to PIL format
+
         self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
         self.imagelist[0] = self.image_original
@@ -256,16 +258,12 @@ class MainWindow(tk.Frame):
 
             self.imagelist[0] = self.image_original
 
-            self.draw_detectors_from_dict()
+            draw_bounding_box(self.raw_detections, str(self.counter+1), self.image_original)
 
-            #self.image_cache = draw_bounding_box(self.raw_detections, str(self.counter+1), self.image_original)#works so far
+            self.create_canvas_picture()
+
 
             self.counter += 1
-
-            self.image = Image.fromarray(self.image_cache)  # to PIL format
-            self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
-
-            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
         if i < 0 and self.counter >= 1:
             self.counter -= 1
@@ -275,10 +273,12 @@ class MainWindow(tk.Frame):
 
             self.imagelist[0] = self.image_original
 
-            self.draw_detectors_from_dict()
+            draw_bounding_box(self.raw_detections, str(self.counter+1), self.image_original)
+
+            self.create_canvas_picture()
 
         # prints size of images
-        #print(sys.getsizeof(self.framelist))
+        print(sys.getsizeof(self.framelist))
 
     def draw_tracks_from_dict(self):
         """Draws tracks using distinct dictionary."""
@@ -295,6 +295,8 @@ class MainWindow(tk.Frame):
             # else:
             #     self.image_cache = self.imagelist[0].copy()
             #     print("this pic is used 0")
+
+            #self.imagelist[0] = 
 
             
             for track in self.object_dict:
@@ -357,10 +359,10 @@ class MainWindow(tk.Frame):
 
                     self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
-    def curselected_track(self, event):
-        """Draws on or more selected tracks on canvas."""
+    def curselected_track(self,  event):
+        """Draws one or more selected tracks on canvas."""
 
-        self.draw_detectors_from_dict()
+        #self.draw_detectors_from_dict()
         self.widget = event.widget
         multiselection = self.widget.curselection()
 
@@ -370,31 +372,32 @@ class MainWindow(tk.Frame):
             entry = self.widget.get(selection)
             self.selectionlist.append(entry)
 
-        # TODO ZUSAMMENFASSEN!!
+        self.create_canvas_picture()
+        # # TODO ZUSAMMENFASSEN!!
 
-        for object_id in self.selectionlist:
+        # for object_id in self.selectionlist:
 
-            trackcolor = (0, 0, 255)
+        #     trackcolor = (0, 0, 255)
 
-            if self.object_dict[object_id]["Class"] == "car":
-                trackcolor = (255, 0, 0)
-            if self.object_dict[object_id]["Class"] == "person":
-                trackcolor = (0, 255, 0)
-            if self.object_dict[object_id]["Class"] == "motorcycle":
-                trackcolor = (240, 248, 255)
+        #     if self.object_dict[object_id]["Class"] == "car":
+        #         trackcolor = (255, 0, 0)
+        #     if self.object_dict[object_id]["Class"] == "person":
+        #         trackcolor = (0, 255, 0)
+        #     if self.object_dict[object_id]["Class"] == "motorcycle":
+        #         trackcolor = (240, 248, 255)
 
-            pts = np.array(self.object_dict[object_id]["Coord"], np.int32)
+        #     pts = np.array(self.object_dict[object_id]["Coord"], np.int32)
 
-            pts = pts.reshape((-1, 1, 2))
+        #     pts = pts.reshape((-1, 1, 2))
 
-            self.image = cv2.polylines(
-                self.image_cache, [pts], False, color=trackcolor, thickness=2)
+        #     np_image = cv2.polylines(
+        #         np_image, [pts], False, color=trackcolor, thickness=2)
 
-            self.imagelist[1] = self.image_cache
-            self.image = Image.fromarray(self.image_cache)  # to PIL format
-            self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+        #     self.imagelist[1] = self.image_cache
+        #     self.image = Image.fromarray(self.image_cache)  # to PIL format
+        #     self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
-            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+        #     self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
     def draw_line_with_mousedrag(self, event):
         """Lets the user use click and drag to draw a line.
@@ -419,8 +422,12 @@ class MainWindow(tk.Frame):
             elif event.y < 0.1*h:
                 self.canvas.yview_scroll(-1, 'units')
 
+            image = self.create_canvas_picture()
+
+            print(type(image))
+
             self.image = draw_line(
-                self.flow_dict["Detectors"], self.imagelist, self.linepoints)
+                image, self.linepoints)
 
             self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
@@ -464,14 +471,14 @@ class MainWindow(tk.Frame):
             else:
                 self.flow_dict["Detectors"][dict_key]["color"] = (255, 0, 0)
 
-        self.draw_detectors_from_dict()
+        self.create_canvas_picture()
 
     def on_close(self):
         """Deletes polygon or line on canvas if entered string is none."""
         # if self.new_linedetector_creation_buttonClicked == True:
         if self.detector_name_entry.get() == "":
 
-            self.draw_detectors_from_dict()
+            self.create_canvas_picture()
 
         self.new_detector_creation.destroy()
 
@@ -490,7 +497,7 @@ class MainWindow(tk.Frame):
                 'end_y': self.linepoints[1][1],
                 'color': (255, 0, 0)}
 
-        self.draw_detectors_from_dict()
+        self.create_canvas_picture()
 
         self.ListboxDetector.insert(0, detector_name)
 
@@ -522,14 +529,14 @@ class MainWindow(tk.Frame):
                         for detector_name in self.flow_dict["Movements"][movement]:
                             self.ListBoxMovement.insert(0, detector_name)
 
-        if not self.flow_dict["Detectors"]:
-            # deletes polygon
-            self.image = Image.fromarray(self.imagelist[0].copy())  # to PIL format
-            self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+        # if not self.flow_dict["Detectors"]:
+        #     # deletes polygon
+        #     self.image = Image.fromarray(self.imagelist[0].copy())  # to PIL format
+        #     self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
-            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+        #     self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
-        self.draw_detectors_from_dict()
+        self.create_canvas_picture()
 
     def curselected_video(self, event):
         """Selected video from Listboxvideo-Listbox gets displayed on canvas.
@@ -553,12 +560,12 @@ class MainWindow(tk.Frame):
         self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
-    def draw_detectors_from_dict(self):
+    def draw_detectors_from_dict(self, np_image):
 
         m = [0, 1]
 
         # takes original picture
-        self.image_cache = self.imagelist[0].copy()
+        # np_image = self.image_originale
 
         if self.flow_dict["Detectors"]:
 
@@ -570,7 +577,7 @@ class MainWindow(tk.Frame):
                 end_y = self.flow_dict["Detectors"][linedetectors]["end_y"]
                 color = self.flow_dict["Detectors"][linedetectors]["color"]
 
-                self.image_cache = cv2.line(self.image_cache, (start_x, start_y),
+                np_image = cv2.line(np_image, (start_x, start_y),
                                             (end_x, end_y), color, 3)
 
                 # draws ellipse around detectors
@@ -582,28 +589,47 @@ class MainWindow(tk.Frame):
 
                 angle = math.degrees((math.atan2((end_y-start_y), (end_x-start_x))))
 
-                self.image_cache = cv2.ellipse(self.image_cache, (m[0], m[1]),
+                np_image = cv2.ellipse(np_image, (m[0], m[1]),
                                                (d, 50), angle, 0, 360,
                                                (255, 0, 0), 3)
 
-                self.image = Image.fromarray(self.image_cache)  # to PIL format
-                self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+            return np_image
 
-                self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+                #self.image = Image.fromarray(self.image_cache)  # to PIL format
+                #self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+
+                #self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
         else:
-            self.image = Image.fromarray(self.image_cache)  # to PIL format
-            self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
-            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+            return np_image
+            # self.image = Image.fromarray(self.image_cache)  # to PIL format
+            # self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+            # self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
-        self.draw_tracks_from_dict()
+        #self.draw_tracks_from_dict()
 
-    def create_canvas_picture():
-        # TODO 
-        # draw detector from dic
+    def create_canvas_picture(self):
+        # TODO wsfsdf
+
+        np_image = self.imagelist[0].copy()
+
+        print(type(np_image))
+
+        np_image = self.draw_detectors_from_dict(np_image)
+
+        np_image = draw_tracks(self.selectionlist, self.object_dict, np_image)
+
+
+        # here draw tracks
+
+        self.image = Image.fromarray(np_image)  # to PIL format
+        self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+
+        self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+
         # draw tracks
         # use image_cache to transforn to PIL image and so on
-        pass
+        return np_image
 
 class Video:
     """Videoclass that gets created on importing video."""
