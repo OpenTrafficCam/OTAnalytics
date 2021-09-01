@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 
-def load_tracks(object_dict,raw_detections, ListboxTracks):
+def load_tracks(object_dict , raw_detections , ListboxTracks):
     """loads detectors from a .Track-File and converts into displayable format
     """
 

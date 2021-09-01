@@ -25,7 +25,7 @@ def new_movement(ListboxMovement, movement_dict):
 def recieve_movement_name(movement_name_entry, ListboxMovement,
                           movement_dict, new_movement_creation):
     movement_name = movement_name_entry.get()
-    ListboxMovement.insert(0, movement_name)
+    ListboxMovement.insert(END, movement_name)
     movement_dict[movement_name] = []
 
     new_movement_creation.destroy()
@@ -51,15 +51,17 @@ def add_to_movement(Listbox, ListboxMovement, linedetectors,
 
     if detector_name in linedetectors:
 
+        print(detector_name)
+
         movement_dict[movement_name].append(detector_name)
 
     else:
         movement_dict[movement_name].update({detector_name:
                                              polygondetectors[detector_name]})
+    
+    detector_name = detector_name+" #"+str(movement_dict[movement_name].index(detector_name)+1)
 
-    # self.movement_dict[self.movement_name].append(detector_name)
-
-    Listbox4.insert(0, detector_name)
+    Listbox4.insert(END, detector_name)
 
 
 def curselected_movement(event, Listbox4, ListboxMovement, movement_dict, statepanel):
@@ -71,6 +73,7 @@ def curselected_movement(event, Listbox4, ListboxMovement, movement_dict, statep
     movement_name = ListboxMovement.get(movement_selection[0])
 
     for detector_name in movement_dict[movement_name]:
-        Listbox4.insert(0, detector_name)
+        detector_name = detector_name+" #"+str(movement_dict[movement_name].index(detector_name)+1)
+        Listbox4.insert(END, detector_name)
 
     statepanel.update(statepanel_txt["Add_movement_information"])

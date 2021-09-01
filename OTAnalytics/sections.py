@@ -4,6 +4,7 @@ import cv2
 from PIL import Image, ImageTk
 import json
 from tkinter import filedialog
+from tkinter.constants import END
 
 
 def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
@@ -79,9 +80,8 @@ def load_file(linedetectors, movements, ListboxDetector, ListboxMovement):
     print(flow_dict)
 
     for movement in movements:
-        ListboxMovement.insert(0, movement)
+        ListboxMovement.insert(END, movement)
 
     for detector in linedetectors:
-        ListboxDetector.insert(0, detector)
+        ListboxDetector.insert(END, detector)
 
-    ListboxMovement.select_set(0)

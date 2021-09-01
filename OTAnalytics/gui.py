@@ -3,6 +3,7 @@ import sys
 import tkinter as tk
 from tkinter import Toplevel, filedialog
 from tkinter.constants import END
+import time
 
 import cv2
 import numpy as np
@@ -75,9 +76,8 @@ class MainWindow(tk.Frame):
         self.Buttonaddvideo.grid(row=1, column=0, sticky="ew")
 
         self.ButtonPlayVideo = tk.Button(self.frame, text="Play", command=lambda:
-                                         [MainWindow.update_image(self),
-                                          button_play_video_toggle(
-                                          self.ButtonPlayVideo)])
+                                         [button_play_video_toggle(
+                                          self.ButtonPlayVideo), self.play_video()])
 
         self.ButtonPlayVideo.grid(row=1, column=1, columnspan=1, sticky="ew")
 
@@ -130,19 +130,21 @@ class MainWindow(tk.Frame):
 
         self.ButtonLoadTracks = tk.Button(self.frame, text="Load tracks",
                                           command=lambda:
-                                          [load_tracks(self.object_dict, self.raw_detections,
+                                          [load_tracks(self.object_dict,
+                                           self.raw_detections,
                                            self.ListboxTracks),
                                            self.draw_detectors_from_dict()])
 
         self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
 
         self.ButtonAutocount = tk.Button(self.frame, text="autocount", command=lambda:
-                                         [automated_counting(self.flow_dict["Movements"],self.flow_dict["Detectors"],
-                                          self.object_dict)])
+                                        [automated_counting(self.flow_dict["Movements"],
+                                         self.flow_dict["Detectors"],
+                                         self.object_dict)])
         self.ButtonAutocount.grid(row=4, column=3, columnspan=4, sticky="ew")
 
-        self.ListBoxMovement = tk.Listbox(self.frame, width=25)
-        self.ListBoxMovement.grid(row=5, column=3, columnspan=4, sticky="ew")
+        self.ListBoxMovement_detector = tk.Listbox(self.frame, width=25)
+        self.ListBoxMovement_detector.grid(row=5, column=3, columnspan=4, sticky="ew")
 
         self.ButtonNewMovement = tk.Button(self.frame, text="New", command=lambda:
                                            new_movement(self.ListboxMovement,
@@ -176,10 +178,11 @@ class MainWindow(tk.Frame):
         self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
         self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
         self.ListboxMovement.bind('<<ListboxSelect>>', lambda event:
-                                  curselected_movement(event, self.ListBoxMovement,
-                                                       self.ListboxMovement,
-                                                       self.flow_dict["Movements"],
-                                                       self.statepanel))
+                                curselected_movement(event,
+                                self.ListBoxMovement_detector,
+                                self.ListboxMovement,
+                                self.flow_dict["Movements"],
+                                self.statepanel))
 
     def load_video_and_frame(self):
         """ask for videofile via dialogue
@@ -194,7 +197,7 @@ class MainWindow(tk.Frame):
         video_name = video_source.split('/')[-1]
 
         self.statepanel = StatePanel(self.frame, 7, 0, sticky="w", columnspan=8)
-        self.statepanel.update("statepanel initialized")
+        self.statepanel.update_statepanel("statepanel initialized")
 
         # creates Videoobject
         # key is the name of the object
@@ -373,31 +376,6 @@ class MainWindow(tk.Frame):
             self.selectionlist.append(entry)
 
         self.create_canvas_picture()
-        # # TODO ZUSAMMENFASSEN!!
-
-        # for object_id in self.selectionlist:
-
-        #     trackcolor = (0, 0, 255)
-
-        #     if self.object_dict[object_id]["Class"] == "car":
-        #         trackcolor = (255, 0, 0)
-        #     if self.object_dict[object_id]["Class"] == "person":
-        #         trackcolor = (0, 255, 0)
-        #     if self.object_dict[object_id]["Class"] == "motorcycle":
-        #         trackcolor = (240, 248, 255)
-
-        #     pts = np.array(self.object_dict[object_id]["Coord"], np.int32)
-
-        #     pts = pts.reshape((-1, 1, 2))
-
-        #     np_image = cv2.polylines(
-        #         np_image, [pts], False, color=trackcolor, thickness=2)
-
-        #     self.imagelist[1] = self.image_cache
-        #     self.image = Image.fromarray(self.image_cache)  # to PIL format
-        #     self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
-
-        #     self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
     def draw_line_with_mousedrag(self, event):
         """Lets the user use click and drag to draw a line.
@@ -475,10 +453,7 @@ class MainWindow(tk.Frame):
 
     def on_close(self):
         """Deletes polygon or line on canvas if entered string is none."""
-        # if self.new_linedetector_creation_buttonClicked == True:
-        if self.detector_name_entry.get() == "":
-
-            self.create_canvas_picture()
+        self.create_canvas_picture()
 
         self.new_detector_creation.destroy()
 
@@ -631,6 +606,41 @@ class MainWindow(tk.Frame):
         # use image_cache to transforn to PIL image and so on
         return np_image
 
+    def play_video(self):
+        """Play video on button press
+        """
+        frame_delay = 1/self.videoobject.fps
+
+        print(frame_delay)
+
+        while gui_dict["play_video"] is True:
+
+            time.sleep(frame_delay)
+
+            _, frame = self.videoobject.cap.read()
+
+            print(frame)
+
+            self.framelist.append(frame)
+
+            self.image_original = cv2.cvtColor(self.framelist[self.counter],
+                                                cv2.COLOR_BGR2RGB)
+
+            self.imagelist[0] = self.image_original
+
+            draw_bounding_box(self.raw_detections, str(self.counter+1), self.image_original)
+
+            self.create_canvas_picture()
+
+            self.canvas.update()
+
+            self.ButtonPlayVideo.update()
+
+            self.counter += 1
+
+
+
+
 class Video:
     """Videoclass that gets created on importing video."""
     # objekt which contains relevant information of the video
@@ -677,7 +687,7 @@ class StatePanel:
         self.text.grid(row=row, column=column, padx='5', pady='3',
                        sticky=sticky, columnspan=columnspan)
 
-    def update(self, text):
+    def update_statepanel(self, text):
         """Function to update statepanel with wanted text.
 
         Args:

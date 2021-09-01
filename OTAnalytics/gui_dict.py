@@ -9,7 +9,7 @@ gui_dict = {
     "play_video": False
 }
 
-statepanel_txt = {"Linedetector_information": "press and drag mouse to create a line\n \
+statepanel_txt = {"Linedetector_information": "press and drag mouse to create a line \
                   Button needs to be toggled to remove sections",
                   "Add_movement_information": "select and add section while \
                   movement is highlighted"}
@@ -79,6 +79,6 @@ def button_play_video_toggle(button):
     print(gui_dict["play_video"])
 
     if gui_dict["play_video"] is True:
-        button.config(text="Play")
-    else:
         button.config(text="Stop")
+    else:
+        button.config(text="Play")
