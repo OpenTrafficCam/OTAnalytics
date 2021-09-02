@@ -133,14 +133,15 @@ class MainWindow(tk.Frame):
                                           [load_tracks(self.object_dict,
                                            self.raw_detections,
                                            self.ListboxTracks),
-                                           self.draw_detectors_from_dict()])
+                                           self.create_canvas_picture()])
 
         self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
 
         self.ButtonAutocount = tk.Button(self.frame, text="autocount", command=lambda:
-                                        [automated_counting(self.flow_dict["Movements"],
-                                         self.flow_dict["Detectors"],
-                                         self.object_dict)])
+                                         [automated_counting(self.flow_dict[
+                                          "Movements"],
+                                          self.flow_dict["Detectors"],
+                                          self.object_dict)])
         self.ButtonAutocount.grid(row=4, column=3, columnspan=4, sticky="ew")
 
         self.ListBoxMovement_detector = tk.Listbox(self.frame, width=25)
@@ -178,11 +179,11 @@ class MainWindow(tk.Frame):
         self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
         self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
         self.ListboxMovement.bind('<<ListboxSelect>>', lambda event:
-                                curselected_movement(event,
-                                self.ListBoxMovement_detector,
-                                self.ListboxMovement,
-                                self.flow_dict["Movements"],
-                                self.statepanel))
+                                  curselected_movement(event,
+                                                       self.ListBoxMovement_detector,
+                                                       self.ListboxMovement,
+                                                       self.flow_dict["Movements"],
+                                                       self.statepanel))
 
     def load_video_and_frame(self):
         """ask for videofile via dialogue
@@ -207,7 +208,7 @@ class MainWindow(tk.Frame):
         # creates image from video
         self.image_original = cv2.cvtColor(self.videoobject.cap.read()[1],
                                            cv2.COLOR_BGR2RGB)  # to RGB
-       
+
         # copy is important or else original image will be changed
         self.image = Image.fromarray(self.image_original.copy())  # to PIL format
 
@@ -261,10 +262,10 @@ class MainWindow(tk.Frame):
 
             self.imagelist[0] = self.image_original
 
-            draw_bounding_box(self.raw_detections, str(self.counter+1), self.image_original)
+            draw_bounding_box(self.raw_detections, str(self.counter+1),
+                              self.image_original)
 
             self.create_canvas_picture()
-
 
             self.counter += 1
 
@@ -276,7 +277,8 @@ class MainWindow(tk.Frame):
 
             self.imagelist[0] = self.image_original
 
-            draw_bounding_box(self.raw_detections, str(self.counter+1), self.image_original)
+            draw_bounding_box(self.raw_detections, str(self.counter+1),
+                              self.image_original)
 
             self.create_canvas_picture()
 
@@ -299,9 +301,8 @@ class MainWindow(tk.Frame):
             #     self.image_cache = self.imagelist[0].copy()
             #     print("this pic is used 0")
 
-            #self.imagelist[0] = 
+            # self.imagelist[0] =
 
-            
             for track in self.object_dict:
 
                 trackcolor = (0, 0, 255)
@@ -313,11 +314,10 @@ class MainWindow(tk.Frame):
                 if self.object_dict[track]["Class"] == "motorcycle":
                     trackcolor = (240, 248, 255)
 
-                
                 pts = np.array(self.object_dict[track]["Coord"], np.int32)
 
                 pts = pts.reshape((-1, 1, 2))
-                
+
                 self.image = cv2.polylines(self.image_cache, [pts], False,
                                            color=trackcolor, thickness=2)
                 self.imagelist[1] = self.image_cache
@@ -354,7 +354,7 @@ class MainWindow(tk.Frame):
                     pts = pts.reshape((-1, 1, 2))
 
                     self.image = cv2.polylines(self.image_cache, [pts], False,
-                                            color=trackcolor, thickness=2)
+                                               color=trackcolor, thickness=2)
 
                     self.imagelist[1] = self.image_cache
                     self.image = Image.fromarray(self.image_cache)  # to PIL format
@@ -365,7 +365,7 @@ class MainWindow(tk.Frame):
     def curselected_track(self,  event):
         """Draws one or more selected tracks on canvas."""
 
-        #self.draw_detectors_from_dict()
+        # self.draw_detectors_from_dict()
         self.widget = event.widget
         multiselection = self.widget.curselection()
 
@@ -401,8 +401,6 @@ class MainWindow(tk.Frame):
                 self.canvas.yview_scroll(-1, 'units')
 
             image = self.create_canvas_picture()
-
-            print(type(image))
 
             self.image = draw_line(
                 image, self.linepoints)

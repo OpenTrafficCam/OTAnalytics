@@ -1,15 +1,13 @@
-#%%
+# %%
 
-from math import isnan
 import geopandas as gpd
-from numpy import NaN
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, MultiPoint
+from shapely.ops import nearest_points
 import pandas as pd
 from gui_dict import gui_dict
 from tkinter import filedialog
 import json
-from collections import OrderedDict
-from operator import getitem
+import heapq
 
 
 # TODO: check if tracks and crossed sections belong to certain movement
@@ -70,6 +68,7 @@ def dic_to_detector_dataframe(linedetectors):
 
     return detector_df
 # %%
+#detector_df = dic_to_detector_dataframe(linedetectors)
 
 
 # %%
@@ -98,15 +97,20 @@ def dic_to_object_dataframe(object_dic):
     object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1)
 
-    object_df_validated_copy["start_point_geometry"] = object_df_validated_copy.apply(
-        lambda pointtuples: Point(pointtuples["Coord"][0]), axis=1)
-
+    # not necessary afer restructuring code
+    # object_df_validated_copy["start_point_geometry"] = object_df_validated_copy.apply(
+    #     lambda pointtuples: Point(pointtuples["Coord"][0]), axis=1)
 
     return object_df_validated_copy
-# %%
 
 # %%
 
+
+#object_df_validated_copy = dic_to_object_dataframe(object_dic)
+
+
+
+# %%
 def calculate_intersections(detector_df, object_df_validated_copy):
     """checks if tracks and detectors intersect, alters object_dataframe
 
@@ -121,7 +125,7 @@ def calculate_intersections(detector_df, object_df_validated_copy):
     """
     # creates a geoseries from column(geometry) with shapely object
     track_geometry = gpd.GeoSeries(object_df_validated_copy.geometry)
-    track_start_geometry = gpd.GeoSeries(object_df_validated_copy.start_point_geometry)
+    #track_start_geometry = gpd.GeoSeries(object_df_validated_copy.start_point_geometry)
     
     # iterates over every detectors and returns bool value for
     # intersection with every track from geoseries
@@ -133,76 +137,141 @@ def calculate_intersections(detector_df, object_df_validated_copy):
         # columnwise comparison
         bool_intersect = track_geometry.intersects(detector_shapely_geometry)
 
-        # returns coordinates from intersections
+        # returns coordinates from intersections as point object
         point_geometry = track_geometry.intersection(detector_shapely_geometry)
 
         object_df_validated_copy[index+"intersectcoordinates"] = point_geometry
         object_df_validated_copy[index] = bool_intersect
 
-    for index, detector in detector_df.iterrows():
-        intersection_series = gpd.GeoSeries(
-                            object_df_validated_copy[index+"intersectcoordinates"])
+    # for index, detector in detector_df.iterrows():
+    #     intersection_series = gpd.GeoSeries(
+    #                         object_df_validated_copy[index+"intersectcoordinates"])
 
-        distance = track_start_geometry.distance(intersection_series, align=True)
+    #     distance = track_start_geometry.distance(intersection_series, align=True)
 
-        object_df_validated_copy[index+"_distance"] = distance
+    #     object_df_validated_copy[index+"_distance"] = distance
 
     return object_df_validated_copy
 
 # %%
+#object_df_validated_copy  = calculate_intersections(detector_df, object_df_validated_copy)
 
 
-
-# %% 
-
-
-def assign_movement(movement_dict , object_df_validated_copy):
-
-    object_df_intersections = object_df_validated_copy.iloc[:, 14:] # 13 or 16 very buggy and i dont know why
-
-    object_dic = object_df_intersections.to_dict('index')
-
-    print(object_dic)
+# %%
 
 
-    for nested_dic in object_dic:
+def find_intersection_order(object_df_validated_copy, linedetectors):
 
+    # create necessary columns
+    object_df_validated_copy["Crossing_Gate/Second"] = ""
+    object_df_validated_copy["Movement"] = ""
+    object_df_validated_copy["Movement_name"] = ""
+
+    for object_id, j in object_df_validated_copy.iterrows():
+        for detector in linedetectors:
+           # Condition if detector was crossed by object
+            if object_df_validated_copy.loc[object_id][detector] == True:
+
+                #shapely Linestring
+                track_line = object_df_validated_copy.loc[object_id]["geometry"]
+
+                #shapely Point from intersection
+                intersection_point = object_df_validated_copy.loc[object_id][detector+"intersectcoordinates"]
+
+                line_points = map(Point, track_line.coords)
+
+                # get second nearest point(second nearest point = coordinate on linestring)
+                nearest, second_nearest = heapq.nsmallest(2, line_points, key=intersection_point.distance)
+
+                point_raw_coords = list(second_nearest.coords[0:][0])
+
+                # unaltered coord from track file
+                raw_coords = object_df_validated_copy.loc[object_id]["Coord"]
+
+                # index at which the second closest points are
+                index_number = (raw_coords.index(point_raw_coords))
+
+                # with the index number you can also get the second from gatecrossing
+                crossing_second = object_df_validated_copy.loc[object_id]["Second"][index_number]
+
+                # find all gatecrossing detector and their crossing seconds
+                if object_df_validated_copy.at[object_id, "Crossing_Gate/Second"]:
+                    object_df_validated_copy.at[object_id, "Crossing_Gate/Second"].append([detector, crossing_second])
+
+                else:
+                    object_df_validated_copy.at[object_id, "Crossing_Gate/Second"] = [[detector, crossing_second]]
+
+                # sort list by seconds (first index also determines which detector was crossed first)
+                object_df_validated_copy.at[object_id, "Crossing_Gate/Second"] = sorted(object_df_validated_copy.at[object_id, "Crossing_Gate/Second"], key=lambda x: x[1])
+
+                t = object_df_validated_copy.loc[object_id]["Crossing_Gate/Second"]
+                
+                # concattes new list and delete seconds
+                concatted_sorted_detector_list = [item for sublist in t for item in sublist]
+                del concatted_sorted_detector_list[1::2]
+
+                # list = Movement (only detectors not seconds)
+                object_df_validated_copy.at[object_id, "Movement"] = concatted_sorted_detector_list
+
+    return object_df_validated_copy
+
+    #print(object_df_validated_copy)
+
+
+                # if object_df_validated_copy.at[object_id, "Movement"]:
+
+                #     object_df_validated_copy.at[object_id, "Movement"].append(detector)
+
+                # else:
+                #     object_df_validated_copy.at[object_id, "Movement"] = [detector]
+
+
+# %%
+#oject_df_validated_copy = find_intersection_order(object_df_validated_copy, linedetectors)
+
+# %%
+
+def assign_movement(movement_dict, object_df_validated_copy):
+
+    # object_df_intersections = object_df_validated_copy.iloc[:, 14:] # 13, 14 or 16 very buggy and i dont know why
+
+    # object_dic = object_df_intersections.to_dict('index')
+
+
+    # for nested_dic in object_dic:
        
-        calculated_movement = {k: v for k, v in object_dic[nested_dic].items() if v == v}
+    #     calculated_movement = {k: v for k, v in object_dic[nested_dic].items() if v == v}
 
-        sorted_calculated_movement = sorted(calculated_movement, key=calculated_movement.get)
+    #     sorted_calculated_movement = sorted(calculated_movement, key=calculated_movement.get)
 
-        sorted_calculated_movement= [w.replace('_distance', '') for w in sorted_calculated_movement]
+    #     sorted_calculated_movement= [w.replace('_distance', '') for w in sorted_calculated_movement]
 
-        # compare with movement dictionary
+    #     # compare with movement dictionary
+
+    for object_id, j in object_df_validated_copy.iterrows():
 
         for movement_list in movement_dict:
+        
+            # if detector in movements and real movement crossing events are true, key of movement dictionary is value of cell
+            if movement_dict[movement_list] == object_df_validated_copy.loc[object_id]["Movement"]:
 
-            print("_____________")
-            print(nested_dic)
-            print(sorted_calculated_movement)
-            print("-------------")
-            print(movement_dict[movement_list])
-            print("_____________")
-       
-            if movement_dict[movement_list] == sorted_calculated_movement:
+                print(object_df_validated_copy.loc[object_id]["Movement"])
 
                 print("yes")
-                object_df_validated_copy.at[nested_dic,"Movement"] = movement_list
+                object_df_validated_copy.at[object_id, "Movement_name"] = movement_list
                 break
-
-    print(object_df_validated_copy)
 
     return object_df_validated_copy
       
 
-    # TODO drop Nan, Sort ascending, compare if keys exist at the right index
+# %%
+
+#assign_movement(movement_dict, object_df_validated_copy)
+
+
 
 # %%
 
-
-
-# %%
 
 def safe_to_csv(process_object):
     """safe dataframe as cvs and asks for filepath
@@ -232,10 +301,15 @@ def automated_counting(movement_dict, linedetectors_dict, object_dict):
         processed_object = calculate_intersections(detector_dataframe,
                                                    object_df_validated_copy)
 
+        print(processed_object)    
+
         # TODO doesnt return right dataframe
 
-        new_object = assign_movement(movement_dict, processed_object)
+        processed_object = find_intersection_order(object_df_validated_copy, linedetectors_dict)
 
-        safe_to_csv(new_object)
+
+        processed_object = assign_movement(movement_dict, processed_object)
+
+        safe_to_csv(processed_object)
 
 # %%

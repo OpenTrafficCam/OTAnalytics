@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 
-def load_tracks(object_dict , raw_detections , ListboxTracks):
+def load_tracks(object_dict, raw_detections, ListboxTracks):
     """loads detectors from a .Track-File and converts into displayable format
     """
 
@@ -15,7 +15,7 @@ def load_tracks(object_dict , raw_detections , ListboxTracks):
 
     loaded_dict = json.loads(files)
 
-    #detections = {}
+    # detections = {}
 
     raw_detections.update(loaded_dict["data"])
 
@@ -25,10 +25,13 @@ def load_tracks(object_dict , raw_detections , ListboxTracks):
                 object_dict['object_%s' % detection]["Coord"].append(
                     [raw_detections[seconds][detection]["x"],
                      raw_detections[seconds][detection]["y"]])
+
+                object_dict['object_%s' % detection]["Second"].append(int(seconds))
+
             else:
                 object_dict['object_%s' % detection] = {}
                 object_dict['object_%s' % detection]["Coord"] = []
-                object_dict['object_%s' % detection]["Second"] = int(seconds)
+                object_dict['object_%s' % detection]["Second"] = [int(seconds)]
                 object_dict['object_%s' % detection]["Class"] = raw_detections[
                                                                 seconds][detection][
                                                                 "class"]
@@ -46,30 +49,28 @@ def load_tracks(object_dict , raw_detections , ListboxTracks):
 
 
 def draw_tracks(selectionlist, object_dict, np_image):
-    
+
     if gui_dict["display_all_tracks_toggle"] is True:
 
         for track in object_dict:
 
-                trackcolor = (0, 0, 255)
+            trackcolor = (0, 0, 255)
 
-                if object_dict[track]["Class"] == "car":
-                    trackcolor = (255, 0, 0)
-                if object_dict[track]["Class"] == "person":
-                    trackcolor = (0, 255, 0)
-                if object_dict[track]["Class"] == "motorcycle":
-                    trackcolor = (240, 248, 255)
+            if object_dict[track]["Class"] == "car":
+                trackcolor = (255, 0, 0)
+            if object_dict[track]["Class"] == "person":
+                trackcolor = (0, 255, 0)
+            if object_dict[track]["Class"] == "motorcycle":
+                trackcolor = (240, 248, 255)
 
-                
-                pts = np.array(object_dict[track]["Coord"], np.int32)
+            pts = np.array(object_dict[track]["Coord"], np.int32)
 
-                pts = pts.reshape((-1, 1, 2))
-                
-                np_image = cv2.polylines(np_image, [pts], False,
-                                           color=trackcolor, thickness=2)
+            pts = pts.reshape((-1, 1, 2))
+
+            np_image = cv2.polylines(np_image, [pts], False,
+                                     color=trackcolor, thickness=2)
 
         return np_image
-
 
     elif selectionlist:
 
@@ -117,9 +118,8 @@ def draw_bounding_box(raw_detections, frame, image):
             x_end = int(raw_detections[frame][detection]["x"]+30)
             y_end = int(raw_detections[frame][detection]["y"]+30)
 
-
-
-            image_cache = cv2.rectangle(image_cache, (x_start,y_start), (x_end,y_end ), (255, 0, 0), 2)
+            image_cache = cv2.rectangle(image_cache, (x_start, y_start), (x_end, y_end),
+                                        (255, 0, 0), 2)
 
             print(raw_detections[frame][detection])
 
@@ -128,5 +128,3 @@ def draw_bounding_box(raw_detections, frame, image):
     else:
 
         pass
-
-

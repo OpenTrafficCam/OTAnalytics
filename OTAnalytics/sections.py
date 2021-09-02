@@ -45,9 +45,9 @@ def save_file(flow_dict, linedetectors, movement_dict):
 def draw_line(np_image, linepoints):
 
     if gui_dict["linedetector_toggle"] is True:
-        #if linedetectors or gui_dict["display_all_tracks_toggle"]:
+        # if linedetectors or gui_dict["display_all_tracks_toggle"]:
         np_image = cv2.line(np_image, linepoints[0], linepoints[1],
-                                (255, 0, 0), 5)
+                            (255, 0, 0), 5)
         image = Image.fromarray(np_image)  # to PIL format
         image = ImageTk.PhotoImage(image)  # to ImageTk format
 
@@ -84,4 +84,3 @@ def load_file(linedetectors, movements, ListboxDetector, ListboxMovement):
 
     for detector in linedetectors:
         ListboxDetector.insert(END, detector)
-

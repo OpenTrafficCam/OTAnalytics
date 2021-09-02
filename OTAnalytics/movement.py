@@ -76,4 +76,4 @@ def curselected_movement(event, Listbox4, ListboxMovement, movement_dict, statep
         detector_name = detector_name+" #"+str(movement_dict[movement_name].index(detector_name)+1)
         Listbox4.insert(END, detector_name)
 
-    statepanel.update(statepanel_txt["Add_movement_information"])
+    statepanel.update_statepanel(statepanel_txt["Add_movement_information"])
