@@ -119,11 +119,25 @@ def draw_bounding_box(raw_detections, frame, image):
 
         for detection in raw_detections[frame]:
 
-            x_start = int(raw_detections[frame][detection]["x"] - 30)
-            y_start = int(raw_detections[frame][detection]["y"] - 30)
+            x_start = int(
+                raw_detections[frame][detection]["x"]
+                - raw_detections[frame][detection]["w"] / 2
+            )
 
-            x_end = int(raw_detections[frame][detection]["x"] + 30)
-            y_end = int(raw_detections[frame][detection]["y"] + 30)
+            y_start = int(
+                raw_detections[frame][detection]["y"]
+                - raw_detections[frame][detection]["h"] / 2
+            )
+
+            x_end = int(
+                raw_detections[frame][detection]["x"]
+                + raw_detections[frame][detection]["w"] / 2
+            )
+
+            y_end = int(
+                raw_detections[frame][detection]["y"]
+                + raw_detections[frame][detection]["h"] / 2
+            )
 
             image_cache = cv2.rectangle(
                 image_cache, (x_start, y_start), (x_end, y_end), (0, 255, 0), 2
