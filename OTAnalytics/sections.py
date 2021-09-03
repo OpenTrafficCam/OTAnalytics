@@ -1,5 +1,6 @@
 from gui_dict import gui_dict
 import cv2
+
 # import tkinter as tk
 from PIL import Image, ImageTk
 import json
@@ -15,7 +16,7 @@ def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
         linepoints ([list]): cache of linepoints
         polygonpoints ([list]): [description]
         canvas ([type]): [description]
-        """
+    """
     if gui_dict["linedetector_toggle"]:
         #  uses mouseevents to get coordinates (left button)
         start_x = int(canvas.canvasx(event.x))
@@ -31,7 +32,7 @@ def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
 
 
 def save_file(flow_dict, linedetectors, movement_dict):
-    files = [('Files', '*.OTflow')]
+    files = [("Files", "*.OTflow")]
     file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
     a_file = open(file.name, "w")
     flow_dict["Detectors"] = linedetectors
@@ -46,8 +47,7 @@ def draw_line(np_image, linepoints):
 
     if gui_dict["linedetector_toggle"] is True:
         # if linedetectors or gui_dict["display_all_tracks_toggle"]:
-        np_image = cv2.line(np_image, linepoints[0], linepoints[1],
-                            (255, 0, 0), 5)
+        np_image = cv2.line(np_image, linepoints[0], linepoints[1], (173, 255, 47), 3)
         image = Image.fromarray(np_image)  # to PIL format
         image = ImageTk.PhotoImage(image)  # to ImageTk format
 
@@ -65,7 +65,7 @@ def draw_line(np_image, linepoints):
 
 def load_file(linedetectors, movements, ListboxDetector, ListboxMovement):
     """loads detectors from a .OTSect-File."""
-    filepath = filedialog.askopenfile(filetypes=[("Detectors", '*.OTflow')])
+    filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
     files = open(filepath.name, "r")
     files = files.read()
 
