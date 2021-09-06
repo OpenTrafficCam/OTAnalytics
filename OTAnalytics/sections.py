@@ -5,6 +5,7 @@ import cv2
 from PIL import Image, ImageTk
 import json
 from tkinter import filedialog
+import numpy as np
 from tkinter.constants import END
 
 
@@ -43,7 +44,7 @@ def save_file(flow_dict, linedetectors, movement_dict):
     a_file.close()
 
 
-def draw_line(np_image, linepoints):
+def draw_line(np_image, linepoints, polygonpoints):
 
     if gui_dict["linedetector_toggle"] is True:
         # if linedetectors or gui_dict["display_all_tracks_toggle"]:
@@ -57,10 +58,15 @@ def draw_line(np_image, linepoints):
         #     image = Image.fromarray(image_cache)  # to PIL format
         #     image = ImageTk.PhotoImage(image)  # to ImageTk format
 
-        return image
-
     if gui_dict["polygondetector_toggle"] is True:
-        pass
+
+        print(gui_dict["polygondetector_toggle"])
+
+        np_image = cv2.line(np_image, polygonpoints, (173, 255, 47), 3)
+        image = Image.fromarray(np_image)  # to PIL format
+        image = ImageTk.PhotoImage(image)  # to ImageTk format
+
+    return image
 
 
 def load_file(linedetectors, movements, ListboxDetector, ListboxMovement):

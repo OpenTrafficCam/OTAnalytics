@@ -34,7 +34,7 @@ def button_information_line(button, statepanel):
         statepanel.update(statepanel_txt["Linedetector_information"])
     else:
         button.config(text="Line")
-        statepanel.update("")
+        statepanel.update_statepanel("")
 
 
 def button_information_polygon(button, statepanel):
@@ -51,7 +51,7 @@ def button_information_polygon(button, statepanel):
         and gui_dict["linedetector_toggle"] is False
     ):
         button.config(text="Finish")
-        statepanel.update(
+        statepanel.update_statepanel(
             "left click to create new polyogon \
         corner\nmiddle button to delete previous corner\nright click to close polygon"
         )
