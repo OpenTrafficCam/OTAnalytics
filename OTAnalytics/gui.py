@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import Toplevel, filedialog
 from tkinter.constants import END
 import time
+import keyboard
 
 import cv2
 import numpy as np
@@ -18,7 +19,12 @@ from gui_dict import (
     gui_dict,
 )
 from movement import add_to_movement, curselected_movement, new_movement
-from sections import draw_line, get_coordinates_opencv, load_file, save_file
+from sections import (
+    draw_line,
+    get_coordinates_opencv,
+    load_file,
+    save_file,
+)
 from tracks import load_tracks, draw_tracks, draw_bounding_box
 
 
@@ -37,7 +43,7 @@ class MainWindow(tk.Frame):
         self.videos = {}
         # dictionary of linedetectors, include id, start point, end point
         self.linepoints = [(0, 0), (0, 0)]
-        self.polygonpoints = []
+        # self.polygonpoints = []
         # dictionary of linedetectors, include id, start point, end point
         self.polygondetectors = {}
 
@@ -108,7 +114,9 @@ class MainWindow(tk.Frame):
         self.ButtonLine = tk.Button(
             self.frame,
             text="Line",
-            command=lambda: button_information_line(self.ButtonLine, self.statepanel),
+            command=lambda: button_information_line(
+                self.ButtonLine, self.ButtonPoly, self.statepanel
+            ),
         )
         self.ButtonLine.grid(row=3, column=0, sticky="ew")
 
@@ -116,7 +124,7 @@ class MainWindow(tk.Frame):
             self.frame,
             text="Polygon",
             command=lambda: button_information_polygon(
-                self.ButtonPoly, self.statepanel
+                self.ButtonPoly, self.ButtonLine, self.statepanel
             ),
         )
         self.ButtonPoly.grid(row=3, column=1, sticky="ew")
@@ -288,14 +296,20 @@ class MainWindow(tk.Frame):
         )
         self.canvas.bind(
             "<ButtonPress-1>",
-            lambda event: get_coordinates_opencv(
-                event, self.linepoints, self.polypoints, self.canvas
-            ),
+            lambda event: [
+                get_coordinates_opencv(
+                    event, self.linepoints, self.polypoints, self.canvas
+                ),
+                self.draw_polygon(False),
+            ],
         )
         self.canvas.bind("<B1-Motion>", self.draw_line_with_mousedrag)
-        self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
+        # self.canvas.bind("<ButtonRelease-1>", self.finish_detector_creation)
         self.canvas.bind("<MouseWheel>", lambda event: self.scroll_through_video(event))
-        self.canvas.bind("<ButtonPress-2>")
+        self.canvas.bind("<ButtonPress-2>", lambda event: self.draw_polygon(True))
+        self.canvas.bind("<ButtonPress-3>", lambda event: self.undo_polygon_point())
+        keyboard.add_hotkey("enter", lambda: self.finish_detector_creation())
+        keyboard.add_hotkey("escape", lambda: self.kill_creation_process())
 
         self.canvas.grid(row=0, rowspan=7, column=7, sticky="n")
 
@@ -313,6 +327,8 @@ class MainWindow(tk.Frame):
         Args:
             event ([mousewheel]): mousewheel up and mouswheel down
         """
+        # deletes polypoint, if process of creating detector is aborted
+        self.polypoints = []
 
         # integer of mousewheel scroll event
         i = 1 * event.delta // 120
@@ -479,9 +495,13 @@ class MainWindow(tk.Frame):
 
             self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
-    def on_button_release(self, event):
+    def finish_detector_creation(self):
         """Creates toplevel window to enter detector name."""
-        if gui_dict["linedetector_toggle"] is True and len(self.linepoints) == 2:
+        if (
+            gui_dict["linedetector_toggle"] is True
+            and len(self.linepoints) == 2
+            or gui_dict["polygondetector_toggle"]
+        ):
 
             # creates window to insert name of detector
             # if self.new_linedetector_creation_buttonClicked == True:
@@ -527,7 +547,7 @@ class MainWindow(tk.Frame):
 
     def on_close(self):
         """Deletes polygon or line on canvas if entered string is none."""
-        self.create_canvas_picture()
+        # self.create_canvas_picture()
 
         self.new_detector_creation.destroy()
 
@@ -544,6 +564,13 @@ class MainWindow(tk.Frame):
                 "start_y": self.linepoints[0][1],
                 "end_x": self.linepoints[1][0],
                 "end_y": self.linepoints[1][1],
+                "color": (173, 255, 47),
+            }
+
+        if gui_dict["polygondetector_toggle"] is True:
+            self.flow_dict["Detectors"][detector_name] = {
+                "type": "polygon",
+                "points": self.polypoints,
                 "color": (173, 255, 47),
             }
 
@@ -615,24 +642,36 @@ class MainWindow(tk.Frame):
 
     def draw_detectors_from_dict(self, np_image):
 
-        m = [0, 1]
+        # m = [0, 1]
 
         # takes original picture
         # np_image = self.image_originale
 
+        Line = "line"
+
         if self.flow_dict["Detectors"]:
 
-            for linedetectors in self.flow_dict["Detectors"]:
+            for detector in self.flow_dict["Detectors"]:
+                if self.flow_dict["Detectors"][detector]["type"] == Line:
+                    start_x = self.flow_dict["Detectors"][detector]["start_x"]
+                    start_y = self.flow_dict["Detectors"][detector]["start_y"]
+                    end_x = self.flow_dict["Detectors"][detector]["end_x"]
+                    end_y = self.flow_dict["Detectors"][detector]["end_y"]
+                    color = self.flow_dict["Detectors"][detector]["color"]
 
-                start_x = self.flow_dict["Detectors"][linedetectors]["start_x"]
-                start_y = self.flow_dict["Detectors"][linedetectors]["start_y"]
-                end_x = self.flow_dict["Detectors"][linedetectors]["end_x"]
-                end_y = self.flow_dict["Detectors"][linedetectors]["end_y"]
-                color = self.flow_dict["Detectors"][linedetectors]["color"]
+                    np_image = cv2.line(
+                        np_image, (start_x, start_y), (end_x, end_y), color, 3
+                    )
 
-                np_image = cv2.line(
-                    np_image, (start_x, start_y), (end_x, end_y), color, 3
-                )
+                else:
+                    polypoints = self.flow_dict["Detectors"][detector]["points"]
+                    color = self.flow_dict["Detectors"][detector]["color"]
+
+                    list_of_tuples = [list(elem) for elem in polypoints]
+                    pts = np.array(list_of_tuples, np.int32)
+                    pts = pts.reshape((-1, 1, 2))
+
+                    np_image = cv2.polylines(np_image, [pts], True, color, 2)
 
                 # TODO ASK IF ELLIPSE AROUND SECTION IS USEFUL
 
@@ -645,25 +684,23 @@ class MainWindow(tk.Frame):
                 # )
                 # d = math.ceil(d / 2)
 
-                # angle = math.degrees((math.atan2((end_y - start_y), (end_x - start_x))))
+                # angle = math.degrees((math.atan2((end_y - start_y),
+                #  (end_x - start_x))))
 
                 # np_image = cv2.ellipse(
                 #     np_image, (m[0], m[1]), (d, 50), angle, 0, 360, (255, 0, 0), 3
                 # )
 
-            return np_image
+                # indent if necessary again
+                # self.image = Image.fromarray(self.image_cache)  # to PIL format
+                # self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
-            # indent if necessary again
-            # self.image = Image.fromarray(self.image_cache)  # to PIL format
-            # self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+                # self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
-            # self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
-
-        else:
-            return np_image
-            # self.image = Image.fromarray(self.image_cache)  # to PIL format
-            # self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
-            # self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+        return np_image
+        # self.image = Image.fromarray(self.image_cache)  # to PIL format
+        # self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+        # self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
         # self.draw_tracks_from_dict()
 
@@ -722,6 +759,37 @@ class MainWindow(tk.Frame):
             self.ButtonPlayVideo.update()
 
             self.counter += 1
+
+    def draw_polygon(self, closing):
+
+        if gui_dict["polygondetector_toggle"] is True:
+
+            image = self.create_canvas_picture()
+
+            list_of_tuples = [list(elem) for elem in self.polypoints]
+
+            print(gui_dict["polygondetector_toggle"])
+
+            pts = np.array(list_of_tuples, np.int32)
+            pts = pts.reshape((-1, 1, 2))
+
+            np_image = cv2.polylines(image, [pts], closing, (255, 255, 0), 2)
+
+            image = Image.fromarray(np_image)  # to PIL format
+            self.image = ImageTk.PhotoImage(image)  # to ImageTk format
+
+            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+
+    def undo_polygon_point(self):
+
+        del self.polypoints[-1]
+
+        self.draw_polygon(False)
+
+    def kill_creation_process(self):
+        self.polypoints = []
+
+        self.create_canvas_picture()
 
 
 class Video:

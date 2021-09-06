@@ -17,7 +17,7 @@ statepanel_txt = {
 }
 
 
-def button_information_line(button, statepanel):
+def button_information_line(button_linedetector, button_polygondetector, statepanel):
     """Prints information on the statepanel when Linedetector button is pressed.
 
     Args:
@@ -26,18 +26,20 @@ def button_information_line(button, statepanel):
     """
     gui_dict["linedetector_toggle"] = not gui_dict["linedetector_toggle"]
 
-    if (
-        gui_dict["linedetector_toggle"] is True
-        and gui_dict["polygondetector_toggle"] is False
-    ):
-        button.config(text="Finish")
-        statepanel.update(statepanel_txt["Linedetector_information"])
+    gui_dict["polygondetector_toggle"] = False
+
+    if gui_dict["linedetector_toggle"]:
+        button_linedetector.config(text="Finish")
+        button_polygondetector.config(text="Polygon")
+        statepanel.update_statepanel(statepanel_txt["Linedetector_information"])
     else:
-        button.config(text="Line")
+        button_linedetector.config(text="Line")
         statepanel.update_statepanel("")
 
 
-def button_information_polygon(button, statepanel):
+def button_information_polygon(
+    button_polygondetector, button_linedetetector, statepanel
+):
     """Prints information on the statepanel when Polygondetector button is pressed.
 
     Args:
@@ -46,17 +48,18 @@ def button_information_polygon(button, statepanel):
     """
 
     gui_dict["polygondetector_toggle"] = not gui_dict["polygondetector_toggle"]
-    if (
-        gui_dict["polygondetector_toggle"] is True
-        and gui_dict["linedetector_toggle"] is False
-    ):
-        button.config(text="Finish")
+
+    gui_dict["linedetector_toggle"] = False
+
+    if gui_dict["polygondetector_toggle"]:
+        button_polygondetector.config(text="Finish")
+        button_linedetetector.config(text="Line")
         statepanel.update_statepanel(
             "left click to create new polyogon \
-        corner\nmiddle button to delete previous corner\nright click to close polygon"
+        corner\nright button to delete previous corner\nwheelbutton click to close polygon\nEnter to finish creation process"
         )
     else:
-        button.config(text="Polygon")
+        button_polygondetector.config(text="Polygon")
 
 
 def button_display_tracks_toggle(button):
@@ -69,7 +72,7 @@ def button_display_tracks_toggle(button):
 
     print(gui_dict["display_all_tracks_toggle"])
 
-    if gui_dict["display_all_tracks_toggle"] is True:
+    if gui_dict["display_all_tracks_toggle"]:
         button.config(text="hide tracks")
     else:
         button.config(text="show tracks")
@@ -85,7 +88,7 @@ def button_play_video_toggle(button):
 
     print(gui_dict["play_video"])
 
-    if gui_dict["play_video"] is True:
+    if gui_dict["play_video"]:
         button.config(text="Stop")
     else:
         button.config(text="Play")

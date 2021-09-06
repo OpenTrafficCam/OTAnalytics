@@ -5,8 +5,9 @@ import cv2
 from PIL import Image, ImageTk
 import json
 from tkinter import filedialog
-import numpy as np
 from tkinter.constants import END
+import tkinter as tk
+import numpy as np
 
 
 def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
@@ -29,22 +30,36 @@ def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
         start_x = int(canvas.canvasx(event.x))
         start_y = int(canvas.canvasy(event.y))
         polygonpoints.append((start_x, start_y))
-        print(polygonpoints)
+
 
 
 def save_file(flow_dict, linedetectors, movement_dict):
     files = [("Files", "*.OTflow")]
     file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
-    a_file = open(file.name, "w")
-    flow_dict["Detectors"] = linedetectors
-    flow_dict["Movements"] = movement_dict
+    with open(file.name, "w") as a_file:
+        flow_dict["Detectors"] = linedetectors
+        flow_dict["Movements"] = movement_dict
 
-    # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
-    json.dump(flow_dict, a_file, indent=4)
-    a_file.close()
+        # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
+        json.dump(flow_dict, a_file, indent=4)
 
 
-def draw_line(np_image, linepoints, polygonpoints):
+# def draw_polygon(np_image, polygonpoints, canvas):
+
+#     if gui_dict["polygondetector_toggle"] is True:
+
+#         print(gui_dict["polygondetector_toggle"])
+
+#         pts = np.array(polygonpoints, np.int32)
+#         pts = pts.reshape((-1, 1, 2))
+
+#         np_image = cv2.polylines(np_image, pts, True, (0, 255, 255))
+
+#         return np_image
+
+
+
+def draw_line(np_image, linepoints):
 
     if gui_dict["linedetector_toggle"] is True:
         # if linedetectors or gui_dict["display_all_tracks_toggle"]:
@@ -58,13 +73,13 @@ def draw_line(np_image, linepoints, polygonpoints):
         #     image = Image.fromarray(image_cache)  # to PIL format
         #     image = ImageTk.PhotoImage(image)  # to ImageTk format
 
-    if gui_dict["polygondetector_toggle"] is True:
+        # if gui_dict["polygondetector_toggle"] is True:
 
-        print(gui_dict["polygondetector_toggle"])
+        #     print(gui_dict["polygondetector_toggle"])
 
-        np_image = cv2.line(np_image, polygonpoints, (173, 255, 47), 3)
-        image = Image.fromarray(np_image)  # to PIL format
-        image = ImageTk.PhotoImage(image)  # to ImageTk format
+        #     np_image = cv2.line(np_image, polygonpoints, (173, 255, 47), 3)
+        #     image = Image.fromarray(np_image)  # to PIL format
+        #     image = ImageTk.PhotoImage(image)  # to ImageTk format
 
     return image
 
