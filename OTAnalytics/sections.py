@@ -6,8 +6,6 @@ from PIL import Image, ImageTk
 import json
 from tkinter import filedialog
 from tkinter.constants import END
-import tkinter as tk
-import numpy as np
 
 
 def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
@@ -32,16 +30,15 @@ def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
         polygonpoints.append((start_x, start_y))
 
 
-
-def save_file(flow_dict, linedetectors, movement_dict):
+def save_file(flow_dict):
     files = [("Files", "*.OTflow")]
     file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
-    with open(file.name, "w") as a_file:
-        flow_dict["Detectors"] = linedetectors
-        flow_dict["Movements"] = movement_dict
+    # with open(file.name, "w") as a_file:
+    #     flow_dict["Detectors"] = detectors
+    #     flow_dict["Movements"] = movement_dict
 
-        # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
-        json.dump(flow_dict, a_file, indent=4)
+    # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
+    json.dump(flow_dict, file, indent=4)
 
 
 # def draw_polygon(np_image, polygonpoints, canvas):
@@ -56,7 +53,6 @@ def save_file(flow_dict, linedetectors, movement_dict):
 #         np_image = cv2.polylines(np_image, pts, True, (0, 255, 255))
 
 #         return np_image
-
 
 
 def draw_line(np_image, linepoints):
@@ -84,7 +80,7 @@ def draw_line(np_image, linepoints):
     return image
 
 
-def load_file(linedetectors, movements, ListboxDetector, ListboxMovement):
+def load_file(detectors, movements, ListboxDetector, ListboxMovement):
     """loads detectors from a .OTSect-File."""
     filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
     files = open(filepath.name, "r")
@@ -92,16 +88,14 @@ def load_file(linedetectors, movements, ListboxDetector, ListboxMovement):
 
     flow_dict = json.loads(files)
 
-    linedetectors.update(flow_dict["Detectors"])
+    detectors.update(flow_dict["Detectors"])
     movements.update(flow_dict["Movements"])
 
     # resets polypoints list or else creation of new polygon leads to bug
     # self.polypoints = []
 
-    print(flow_dict)
-
     for movement in movements:
         ListboxMovement.insert(END, movement)
 
-    for detector in linedetectors:
+    for detector in detectors:
         ListboxDetector.insert(END, detector)

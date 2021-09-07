@@ -215,9 +215,7 @@ class MainWindow(tk.Frame):
         self.ButtonSaveFlow = tk.Button(
             self.frame,
             text="Save",
-            command=lambda: save_file(
-                self.flow_dict, self.flow_dict["Detectors"], self.flow_dict["Movements"]
-            ),
+            command=lambda: save_file(self.flow_dict),
         )
         self.ButtonSaveFlow.grid(row=6, column=4, sticky="ew")
 
@@ -766,6 +764,8 @@ class MainWindow(tk.Frame):
 
             image = self.create_canvas_picture()
 
+            overlay = image.copy()
+
             list_of_tuples = [list(elem) for elem in self.polypoints]
 
             print(gui_dict["polygondetector_toggle"])
@@ -773,7 +773,18 @@ class MainWindow(tk.Frame):
             pts = np.array(list_of_tuples, np.int32)
             pts = pts.reshape((-1, 1, 2))
 
-            np_image = cv2.polylines(image, [pts], closing, (255, 255, 0), 2)
+            if closing is False:
+
+                np_image = cv2.polylines(image, [pts], closing, (255, 255, 0), 2)
+
+            else:
+
+                np_image = cv2.fillPoly(overlay, [pts], (255, 255, 0))
+                opacity = 0.4
+                np_image = cv2.addWeighted(
+                    overlay, opacity, image, 1 - opacity, 0, image
+                )
+                np_image = cv2.polylines(image, [pts], closing, (255, 255, 0), 2)
 
             image = Image.fromarray(np_image)  # to PIL format
             self.image = ImageTk.PhotoImage(image)  # to ImageTk format

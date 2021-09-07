@@ -1,7 +1,7 @@
 # %%
 
 import geopandas as gpd
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, Polygon
 import pandas as pd
 from gui_dict import gui_dict
 from tkinter import filedialog
@@ -13,22 +13,28 @@ import heapq
 
 # %%
 
-# linedetectors = {}
+# detectors = {}
 # movement_dict = {}
 
 
 # d = {}
 
 
-# detector_dic = open("C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//combined.OTflow", "r")
-# object_dic = open("C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//object_dic.json", "r")
+# detector_dic = open(
+#     "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//line_poly_move_test.OTflow",
+#     "r",
+# )
+# object_dic = open(
+#     "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//object_dic.json",
+#     "r",
+# )
 
 # files = open(detector_dic.name, "r")
 # files = files.read()
 
 # flow_dic = json.loads(files)
 # # use this
-# linedetectors.update(flow_dic["Detectors"])
+# detectors.update(flow_dic["Detectors"])
 # movement_dict.update(flow_dic["Movements"])
 
 # files = open(object_dic.name, "r")
@@ -40,7 +46,7 @@ import heapq
 # %%
 
 
-def dic_to_detector_dataframe(linedetectors):
+def dic_to_detector_dataframe(detectors):
     """creates a dataframe from detector/flow dictionary, # TODO change to use
     linedetector dic that gets updated when importing flow data
     creates column with LineString-objects for the calculation of
@@ -54,7 +60,7 @@ def dic_to_detector_dataframe(linedetectors):
     """
     # change dic to dataframe
     detector_df = pd.DataFrame.from_dict(
-        {("Detectors", j): linedetectors[j] for j in linedetectors.keys()},
+        {("Detectors", j): detectors[j] for j in detectors.keys()},
         orient="index",
     )
 
@@ -68,7 +74,9 @@ def dic_to_detector_dataframe(linedetectors):
                 (coordinates["start_x"], coordinates["start_y"]),
                 (coordinates["end_x"], coordinates["end_y"]),
             ]
-        ),
+        )
+        if coordinates["type"] == "line"
+        else Polygon(coordinates["points"]),
         axis=1,
     )
 
@@ -77,8 +85,8 @@ def dic_to_detector_dataframe(linedetectors):
 
 # %%
 
-# detector_df = dic_to_detector_dataframe(linedetectors)
-
+# detector_df = dic_to_detector_dataframe(detectors)
+# print(detector_df)
 
 # %%
 
@@ -153,6 +161,8 @@ def calculate_intersections(detector_df, object_df_validated_copy):
         # returns coordinates from intersections as point object
         point_geometry = track_geometry.intersection(detector_shapely_geometry)
 
+        print(point_geometry)
+
         object_df_validated_copy[index + "intersectcoordinates"] = point_geometry
         object_df_validated_copy[index] = bool_intersect
 
@@ -168,14 +178,15 @@ def calculate_intersections(detector_df, object_df_validated_copy):
 
 
 # %%
-# object_df_validated_copy  = calculate_intersections(
-# detector_df, object_df_validated_copy)
+# object_df_validated_copy = calculate_intersections(
+#     detector_df, object_df_validated_copy
+# )
 
 
 # %%
 
 
-def find_intersection_order(fps, object_df_validated_copy, linedetectors):
+def find_intersection_order(fps, object_df_validated_copy, detectors):
     """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name)
 
     Second find nearest point (second nearest point) on Linestring compared
@@ -200,7 +211,7 @@ def find_intersection_order(fps, object_df_validated_copy, linedetectors):
     object_df_validated_copy["Time_crossing_exit"] = ""
 
     for object_id, row in object_df_validated_copy.iterrows():
-        for detector in linedetectors:
+        for detector in detectors:
             # Condition if detector was crossed by objecttrack
             # Dont change to "is True"!!
             if object_df_validated_copy.loc[object_id][detector] == True:
@@ -289,7 +300,9 @@ def find_intersection_order(fps, object_df_validated_copy, linedetectors):
 
 # %%
 # oject_df_validated_copy = find_intersection_order(
-# object_df_validated_copy, linedetectors)
+#     20, object_df_validated_copy, detectors
+# )
+
 
 # %%
 
@@ -371,6 +384,7 @@ def safe_to_csv(process_object):
     file_path.close
 
 
+# %%
 # %%
 
 
