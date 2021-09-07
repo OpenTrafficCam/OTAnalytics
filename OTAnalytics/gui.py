@@ -371,85 +371,6 @@ class MainWindow(tk.Frame):
         # prints size of images
         print(sys.getsizeof(self.framelist))
 
-    def draw_tracks_from_dict(self):
-        """Draws tracks using distinct dictionary."""
-        # if detectors exist in dictionary and "display tracks-button"
-        # is pressed then use the altered picture
-
-        if gui_dict["display_all_tracks_toggle"] is True:
-
-            # if self.flow_dict["Detectors"]:
-            #     print(bool(self.flow_dict["Detectors"]))
-
-            #     self.image_cache = self.imagelist[1].copy()
-
-            # else:
-            #     self.image_cache = self.imagelist[0].copy()
-            #     print("this pic is used 0")
-
-            # self.imagelist[0] =
-
-            for track in self.object_dict:
-
-                trackcolor = (0, 0, 255)
-
-                if self.object_dict[track]["Class"] == "car":
-                    trackcolor = (255, 0, 0)
-                if self.object_dict[track]["Class"] == "person":
-                    trackcolor = (0, 255, 0)
-                if self.object_dict[track]["Class"] == "motorcycle":
-                    trackcolor = (240, 248, 255)
-
-                pts = np.array(self.object_dict[track]["Coord"], np.int32)
-
-                pts = pts.reshape((-1, 1, 2))
-
-                self.image = cv2.polylines(
-                    self.image_cache, [pts], False, color=trackcolor, thickness=2
-                )
-                self.imagelist[1] = self.image_cache
-                self.image = Image.fromarray(self.image_cache)  # to PIL format
-                self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
-
-                self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
-
-        # else:
-        #     if self.flow_dict["Detectors"]:
-
-        #         print(bool(self.flow_dict["Detectors"]))
-
-        #         self.image_cache = self.imagelist[1].copy()
-
-        #     else:
-        #         self.image_cache = self.imagelist[0].copy()
-        #         print("this pic is used 0")
-
-        else:
-            if self.selectionlist:
-                for track in self.selectionlist:
-                    trackcolor = (0, 0, 255)
-
-                    if self.object_dict[track]["Class"] == "car":
-                        trackcolor = (255, 0, 0)
-                    if self.object_dict[track]["Class"] == "person":
-                        trackcolor = (0, 255, 0)
-                    if self.object_dict[track]["Class"] == "motorcycle":
-                        trackcolor = (240, 248, 255)
-
-                    pts = np.array(self.object_dict[track]["Coord"], np.int32)
-
-                    pts = pts.reshape((-1, 1, 2))
-
-                    self.image = cv2.polylines(
-                        self.image_cache, [pts], False, color=trackcolor, thickness=2
-                    )
-
-                    self.imagelist[1] = self.image_cache
-                    self.image = Image.fromarray(self.image_cache)  # to PIL format
-                    self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
-
-                    self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
-
     def curselected_track(self, event):
         """Draws one or more selected tracks on canvas."""
 
@@ -662,6 +583,11 @@ class MainWindow(tk.Frame):
                     )
 
                 else:
+
+                    # dont know why
+                    image = np_image
+                    overlay = image.copy()
+
                     polypoints = self.flow_dict["Detectors"][detector]["points"]
                     color = self.flow_dict["Detectors"][detector]["color"]
 
@@ -669,6 +595,10 @@ class MainWindow(tk.Frame):
                     pts = np.array(list_of_tuples, np.int32)
                     pts = pts.reshape((-1, 1, 2))
 
+                    np_image = cv2.fillPoly(overlay, [pts], (255, 255, 0))
+
+                    opacity = 0.4
+                    np_image = cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0)
                     np_image = cv2.polylines(np_image, [pts], True, color, 2)
 
                 # TODO ASK IF ELLIPSE AROUND SECTION IS USEFUL
