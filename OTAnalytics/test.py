@@ -1,8 +1,26 @@
-old_list = [[0,5,'f'], [4,2,'t'],[9,4,'afsd']]
+import tkinter as tk
 
-#let's assume we want to sort lists by last value ( old_list[2] )
-new_list = sorted(old_list, key=lambda x: x[1])
+root = tk.Tk()
 
-#Resulst of new_list will be:
+cv = tk.Canvas(root, height=800, width=800)
+cv.pack()
 
-print(new_list)
+def onclick(event):
+    item = cv.find_closest(event.x, event.y)
+
+    current_color = cv.itemcget(item, 'fill')
+
+    if current_color == 'black':
+        cv.itemconfig(item, fill='white')
+
+    else:
+        cv.itemconfig(item, fill='black')
+
+
+cv.bind('<Button-1>', onclick)
+
+cv.create_line(50, 50, 60, 60, width=2)
+
+cv. create_rectangle(80, 80, 100, 100)
+
+root.mainloop()

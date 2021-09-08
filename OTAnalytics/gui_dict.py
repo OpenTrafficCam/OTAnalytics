@@ -1,5 +1,8 @@
 """Dictionary with helpfull bool-toggles."""
 
+from tkinter.constants import FALSE
+
+
 gui_dict = {
     "linedetector_toggle": False,
     "polygondetector_toggle": False,
@@ -7,6 +10,7 @@ gui_dict = {
     "detections_drawn": False,
     "display_all_tracks_toggle": False,
     "play_video": False,
+    "counting_mode": False,
 }
 
 statepanel_txt = {
@@ -60,6 +64,21 @@ def button_information_polygon(
         )
     else:
         button_polygondetector.config(text="Polygon")
+
+
+def button_manuel_count(button_manuel_count):
+
+    gui_dict["counting_mode"] = not gui_dict["counting_mode"]
+
+    print(gui_dict["counting_mode"])
+
+    if gui_dict["counting_mode"] is False:
+
+        button_manuel_count.config(text="mancount", background="SystemButtonFace")
+
+    else:
+
+        button_manuel_count.config(text="mc-active", background="red")
 
 
 def button_display_tracks_toggle(button):

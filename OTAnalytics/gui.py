@@ -11,11 +11,19 @@ import numpy as np
 from PIL import Image, ImageTk
 
 from auto_counting import automated_counting
+
+from counting import (
+    select_detector_on_canvas,
+    count_vehicle_process,
+    vehicle_class_capture,
+    finish_counting,
+)
 from gui_dict import (
     button_display_tracks_toggle,
     button_information_line,
     button_information_polygon,
     button_play_video_toggle,
+    button_manuel_count,
     gui_dict,
 )
 from movement import add_to_movement, curselected_movement, new_movement
@@ -57,6 +65,7 @@ class MainWindow(tk.Frame):
         self.videoobject = None
 
         self.raw_detections = {}
+        self.mousclick_points = []
 
         # list to scroll through frames
         self.framelist = []
@@ -189,7 +198,17 @@ class MainWindow(tk.Frame):
                 )
             ],
         )
-        self.ButtonAutocount.grid(row=4, column=3, columnspan=4, sticky="ew")
+        self.ButtonAutocount.grid(row=4, column=3, columnspan=1, sticky="ew")
+
+        self.ButtonMancount = tk.Button(
+            self.frame,
+            text="mancount",
+            command=lambda: button_manuel_count(
+                self.ButtonMancount,
+            ),
+        )
+
+        self.ButtonMancount.grid(row=4, column=4, columnspan=1, sticky="ew")
 
         self.ListBoxMovement_detector = tk.Listbox(self.frame, width=25)
         self.ListBoxMovement_detector.grid(row=5, column=3, columnspan=4, sticky="ew")
@@ -299,9 +318,18 @@ class MainWindow(tk.Frame):
                     event, self.linepoints, self.polypoints, self.canvas
                 ),
                 self.draw_polygon(False),
+                count_vehicle_process(
+                    event,
+                    self.canvas,
+                    self.flow_dict["Detectors"],
+                    self.mousclick_points,
+                ),
+                self.create_canvas_picture(),
             ],
         )
-        self.canvas.bind("<B1-Motion>", self.draw_line_with_mousedrag)
+        self.canvas.bind(
+            "<B1-Motion>", lambda event: self.draw_line_with_mousedrag(event)
+        )
         # self.canvas.bind("<ButtonRelease-1>", self.finish_detector_creation)
         self.canvas.bind("<MouseWheel>", lambda event: self.scroll_through_video(event))
         self.canvas.bind("<ButtonPress-2>", lambda event: self.draw_polygon(True))
@@ -385,6 +413,10 @@ class MainWindow(tk.Frame):
             self.selectionlist.append(entry)
 
         self.create_canvas_picture()
+
+    def left_button_click(self, event, canvas):
+
+        select_detector_on_canvas(event, canvas)
 
     def draw_line_with_mousedrag(self, event):
         """Lets the user use click and drag to draw a line.
@@ -626,11 +658,24 @@ class MainWindow(tk.Frame):
                 # self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
         return np_image
-        # self.image = Image.fromarray(self.image_cache)  # to PIL format
-        # self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
-        # self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
-        # self.draw_tracks_from_dict()
+    def draw_vehicle_direction(self, np_image):
+
+        print(self.mousclick_points)
+
+        if gui_dict["counting_mode"] is True and len(self.mousclick_points) == 2:
+
+            np_image = cv2.line(
+                np_image,
+                self.mousclick_points[0],
+                self.mousclick_points[1],
+                (255, 102, 102),
+                2,
+            )
+
+            self.mousclick_points = []
+
+        return np_image
 
     def create_canvas_picture(self):
         # TODO wsfsdf
@@ -643,7 +688,9 @@ class MainWindow(tk.Frame):
 
         np_image = draw_tracks(self.selectionlist, self.object_dict, np_image)
 
-        # here draw tracks
+        finish_counting(self.mousclick_points, self.statepanel, self.canvas)
+
+        np_image = self.draw_vehicle_direction(np_image)
 
         self.image = Image.fromarray(np_image)  # to PIL format
         self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
