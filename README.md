@@ -7,3 +7,18 @@ Check out the [documentation](https://opentrafficcam.org/OTAnalytics) for detail
 We appreciate your support in the form of both code and comments. First, please have a look at the [contribute](https://opentrafficcam.org/contribute) section of the OpenTrafficCam documentation.
 
 This software is licensed under the [GPL-3.0 License](LICENSE)
+
+## Prequesites
+
+1. Python 3.9.x (add to PATH while installation)
+2. CUDA (if detection should run on GPU)
+3. Microsoft Visual C++ 14.0 or greater (Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+## Installation
+
+1. Clone this repository
+
+
+## License
+
+This software is licensed under the [GPL-3.0 License](LICENSE)
