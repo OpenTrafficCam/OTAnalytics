@@ -1,5 +1,5 @@
 cd ..
 call venv\Scripts\activate
-cd OTVision
+cd OTAnalytics
 python gui.py
 timeout /T 10
