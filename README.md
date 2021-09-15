@@ -7,3 +7,7 @@ Check out the [documentation](https://opentrafficcam.org/OTAnalytics) for detail
 We appreciate your support in the form of both code and comments. First, please have a look at the [contribute](https://opentrafficcam.org/contribute) section of the OpenTrafficCam documentation.
 
 This software is licensed under the [GPL-3.0 License](LICENSE)
+
+## Prequesites
+
+## Installation
