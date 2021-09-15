@@ -324,7 +324,7 @@ class MainWindow(tk.Frame):
                     self.flow_dict["Detectors"],
                     self.mousclick_points,
                 ),
-                self.create_canvas_picture(),
+                # self.create_canvas_picture(),
             ],
         )
         self.canvas.bind(
@@ -675,6 +675,8 @@ class MainWindow(tk.Frame):
 
             self.mousclick_points = []
 
+            gui_dict["during_counting_process"] = True
+
         return np_image
 
     def create_canvas_picture(self):
@@ -688,14 +690,14 @@ class MainWindow(tk.Frame):
 
         np_image = draw_tracks(self.selectionlist, self.object_dict, np_image)
 
-        finish_counting(self.mousclick_points, self.statepanel, self.canvas)
-
         np_image = self.draw_vehicle_direction(np_image)
 
         self.image = Image.fromarray(np_image)  # to PIL format
         self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
 
         self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+
+        finish_counting(self.mousclick_points, self.statepanel, self.canvas)
 
         # draw tracks
         # use image_cache to transforn to PIL image and so on

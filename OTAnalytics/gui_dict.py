@@ -11,6 +11,7 @@ gui_dict = {
     "display_all_tracks_toggle": False,
     "play_video": False,
     "counting_mode": False,
+    "during_counting_process": False,
 }
 
 statepanel_txt = {

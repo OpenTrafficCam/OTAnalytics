@@ -97,13 +97,15 @@ def vehicle_class_capture(statepanel, canvas):
         if keyboard.read_key() == "1":
             print("You pressed 1")
             break
+    statepanel.update_statepanel("Count next vehicle")
 
 
 def finish_counting(mousclick_points, statepanel, canvas):
-    print(mousclick_points)
-    if gui_dict["counting_mode"] and len(mousclick_points) == 1:
+    if gui_dict["counting_mode"] and gui_dict["during_counting_process"]:
 
         vehicle_class_capture(statepanel, canvas)
+
+        gui_dict["during_counting_process"] = False
 
 
 # %%
