@@ -2,7 +2,7 @@ import math  # important for drawing ellipse with open cv
 import sys
 import tkinter as tk
 from tkinter import Toplevel, filedialog
-from tkinter.constants import END
+from tkinter.constants import END, HORIZONTAL
 import time
 import keyboard
 
@@ -280,7 +280,7 @@ class MainWindow(tk.Frame):
         video_source = video_source.name
         video_name = video_source.split("/")[-1]
 
-        self.statepanel = StatePanel(self.frame, 7, 0, sticky="w", columnspan=8)
+        self.statepanel = StatePanel(self.frame, 7, 0, sticky="w", columnspan=6)
         self.statepanel.update_statepanel("statepanel initialized")
 
         # creates Videoobject
@@ -307,6 +307,7 @@ class MainWindow(tk.Frame):
             height=self.videoobject.height,
             bg="white",
         )
+
         # prevents canvas from scrolling
         self.canvas.configure(
             scrollregion=(0, 0, self.videoobject.width, self.videoobject.height)
@@ -342,6 +343,14 @@ class MainWindow(tk.Frame):
         # puts the image from the videosourse on canvas
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
+        self.slider = tk.Scale(
+            self.frame,
+            from_=0,
+            to=self.videoobject.totalframecount - 1,
+            orient=HORIZONTAL,
+        )
+        self.slider.grid(row=7, column=7, sticky="wen")
+
         # fills listbox with added video
         filename = self.videoobject.filename
 
@@ -361,9 +370,9 @@ class MainWindow(tk.Frame):
 
         if i > 0:
 
-            _, frame = self.videoobject.cap.read()
+            print(self.counter)
 
-            print(frame)
+            _, frame = self.videoobject.cap.read()
 
             self.framelist.append(frame)
 
@@ -379,10 +388,17 @@ class MainWindow(tk.Frame):
 
             self.create_canvas_picture()
 
+            self.slider.set(self.counter)
+
             self.counter += 1
 
         if i < 0 and self.counter >= 1:
+
+            print(self.counter)
+
             self.counter -= 1
+
+            self.slider.set(self.counter)
 
             self.image_original = cv2.cvtColor(
                 self.framelist[self.counter], cv2.COLOR_BGR2RGB
@@ -661,8 +677,6 @@ class MainWindow(tk.Frame):
 
     def draw_vehicle_direction(self, np_image):
 
-        print(self.mousclick_points)
-
         if gui_dict["counting_mode"] is True and len(self.mousclick_points) == 2:
 
             np_image = cv2.line(
@@ -683,8 +697,6 @@ class MainWindow(tk.Frame):
         # TODO wsfsdf
 
         np_image = self.imagelist[0].copy()
-
-        print(type(np_image))
 
         np_image = self.draw_detectors_from_dict(np_image)
 
@@ -805,6 +817,11 @@ class Video:
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
+        self.totalframecount = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        print(self.totalframecount)
+        print(type(self.totalframecount))
+
 
 class StatePanel:
     """Statepanel that contains usefull information."""
@@ -823,14 +840,14 @@ class StatePanel:
         self.scrollbar = tk.Scrollbar(window)
         self.text = tk.Text(
             window,
-            height=4,
-            width=150,
+            height=3,
+            width=50,
             yscrollcommand=self.scrollbar.set,
             state="disabled",
         )
         self.scrollbar.config(command=self.text.yview)
         self.scrollbar.grid(
-            row=row, column=column, columnspan=2, padx="5", pady="3", sticky="e"
+            row=row, column=column, columnspan=2, padx="5", pady="3", sticky="w"
         )
         self.text.grid(
             row=row,
