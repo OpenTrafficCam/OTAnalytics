@@ -332,7 +332,7 @@ class MainWindow(tk.Frame):
             "<B1-Motion>", lambda event: self.draw_line_with_mousedrag(event)
         )
         # self.canvas.bind("<ButtonRelease-1>", self.finish_detector_creation)
-        self.canvas.bind("<MouseWheel>", lambda event: self.scroll_through_video(event))
+        self.canvas.bind("<MouseWheel>", lambda event: self.mouse_scroll_video(event))
         self.canvas.bind("<ButtonPress-2>", lambda event: self.draw_polygon(True))
         self.canvas.bind("<ButtonPress-3>", lambda event: self.undo_polygon_point())
         keyboard.add_hotkey("enter", lambda: self.finish_detector_creation())
@@ -348,6 +348,9 @@ class MainWindow(tk.Frame):
             from_=0,
             to=self.videoobject.totalframecount - 1,
             orient=HORIZONTAL,
+            command=lambda event: self.scroll_video(
+                int(event)
+            ),  # event is the slided number/ gets triggered through mousescroll
         )
         self.slider.grid(row=7, column=7, sticky="wen")
 
@@ -356,7 +359,21 @@ class MainWindow(tk.Frame):
 
         self.Listboxvideo.insert(0, filename)
 
-    def scroll_through_video(self, event):
+    def scroll_video(self, counter):
+
+        _, frame = self.videoobject.cap.read()
+
+        self.framelist.append(frame)
+
+        self.image_original = cv2.cvtColor(self.framelist[counter], cv2.COLOR_BGR2RGB)
+
+        self.imagelist[0] = self.image_original
+
+        draw_bounding_box(self.raw_detections, str(counter + 1), self.image_original)
+
+        self.create_canvas_picture()
+
+    def mouse_scroll_video(self, event):
         """lets you scroll through the video with the mousewheel
 
         Args:
@@ -368,25 +385,9 @@ class MainWindow(tk.Frame):
         # integer of mousewheel scroll event
         i = 1 * event.delta // 120
 
-        if i > 0:
+        if i > 0 and self.counter < self.videoobject.totalframecount:
 
-            print(self.counter)
-
-            _, frame = self.videoobject.cap.read()
-
-            self.framelist.append(frame)
-
-            self.image_original = cv2.cvtColor(
-                self.framelist[self.counter], cv2.COLOR_BGR2RGB
-            )
-
-            self.imagelist[0] = self.image_original
-
-            draw_bounding_box(
-                self.raw_detections, str(self.counter + 1), self.image_original
-            )
-
-            self.create_canvas_picture()
+            self.scroll_video(self.counter)
 
             self.slider.set(self.counter)
 
@@ -394,26 +395,14 @@ class MainWindow(tk.Frame):
 
         if i < 0 and self.counter >= 1:
 
-            print(self.counter)
-
             self.counter -= 1
 
             self.slider.set(self.counter)
 
-            self.image_original = cv2.cvtColor(
-                self.framelist[self.counter], cv2.COLOR_BGR2RGB
-            )  # to RGB
-
-            self.imagelist[0] = self.image_original
-
-            draw_bounding_box(
-                self.raw_detections, str(self.counter + 1), self.image_original
-            )
-
-            self.create_canvas_picture()
+            self.scroll_video(self.counter)
 
         # prints size of images
-        print(sys.getsizeof(self.framelist))
+        # print(sys.getsizeof(self.framelist))
 
     def curselected_track(self, event):
         """Draws one or more selected tracks on canvas."""
@@ -726,8 +715,6 @@ class MainWindow(tk.Frame):
             time.sleep(frame_delay)
 
             _, frame = self.videoobject.cap.read()
-
-            print(frame)
 
             self.framelist.append(frame)
 
