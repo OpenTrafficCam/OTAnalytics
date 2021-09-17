@@ -143,8 +143,6 @@ def draw_bounding_box(raw_detections, frame, image):
                 image_cache, (x_start, y_start), (x_end, y_end), (0, 255, 0), 2
             )
 
-            print(raw_detections.keys())
-
         return image
 
     else:

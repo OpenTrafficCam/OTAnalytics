@@ -10,8 +10,10 @@ gui_dict = {
     "detections_drawn": False,
     "display_all_tracks_toggle": False,
     "play_video": False,
+    "rewind_video": False,
     "counting_mode": False,
     "during_counting_process": False,
+    "mousescroll_active": False,
 }
 
 statepanel_txt = {
@@ -71,8 +73,6 @@ def button_manuel_count(button_manuel_count):
 
     gui_dict["counting_mode"] = not gui_dict["counting_mode"]
 
-    print(gui_dict["counting_mode"])
-
     if gui_dict["counting_mode"] is False:
 
         button_manuel_count.config(text="mancount", background="SystemButtonFace")
@@ -90,15 +90,13 @@ def button_display_tracks_toggle(button):
     """
     gui_dict["display_all_tracks_toggle"] = not gui_dict["display_all_tracks_toggle"]
 
-    print(gui_dict["display_all_tracks_toggle"])
-
     if gui_dict["display_all_tracks_toggle"]:
         button.config(text="hide tracks")
     else:
         button.config(text="show tracks")
 
 
-def button_play_video_toggle(button):
+def button_play_video_toggle(button_play, button_rewind):
     """Summary.
 
     Args:
@@ -109,6 +107,24 @@ def button_play_video_toggle(button):
     print(gui_dict["play_video"])
 
     if gui_dict["play_video"]:
-        button.config(text="Stop")
+        button_play.config(text="Stop")
+        button_rewind.config(text="Rewind")
     else:
-        button.config(text="Play")
+        button_play.config(text="Play")
+
+
+def button_rewind_video_toggle(button_play, button_rewind):
+    """Summary.
+
+    Args:
+        button ([type]): [description]
+    """
+    gui_dict["rewind_video"] = not gui_dict["rewind_video"]
+
+    print(gui_dict["rewind_video"])
+
+    if gui_dict["rewind_video"]:
+        button_rewind.config(text="Stop")
+        button_play.config(text="Play")
+    else:
+        button_rewind.config(text="Rewind")

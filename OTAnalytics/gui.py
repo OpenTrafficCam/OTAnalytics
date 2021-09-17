@@ -1,7 +1,7 @@
 import math  # important for drawing ellipse with open cv
 import sys
 import tkinter as tk
-from tkinter import Toplevel, filedialog
+from tkinter import Event, Toplevel, filedialog
 from tkinter.constants import END, HORIZONTAL
 import time
 import keyboard
@@ -23,6 +23,7 @@ from gui_dict import (
     button_information_line,
     button_information_polygon,
     button_play_video_toggle,
+    button_rewind_video_toggle,
     button_manuel_count,
     gui_dict,
 )
@@ -79,6 +80,8 @@ class MainWindow(tk.Frame):
         # imagelist with original and altered images, zeros are placeholder
         self.imagelist = [0, 0]
 
+        self.value = tk.DoubleVar()
+
         self.master = master
         self.frame = tk.Frame(self.master)
         self.frame.grid()
@@ -100,15 +103,27 @@ class MainWindow(tk.Frame):
             self.frame,
             text="Play",
             command=lambda: [
-                button_play_video_toggle(self.ButtonPlayVideo),
+                button_play_video_toggle(self.ButtonPlayVideo, self.ButtonRewindVideo),
                 self.play_video(),
             ],
         )
-
         self.ButtonPlayVideo.grid(row=1, column=1, columnspan=1, sticky="ew")
 
+        self.ButtonRewindVideo = tk.Button(
+            self.frame,
+            text="Rewind",
+            command=lambda: [
+                button_rewind_video_toggle(
+                    self.ButtonPlayVideo, self.ButtonRewindVideo
+                ),
+                self.rewind_video(),
+            ],
+        )
+
+        self.ButtonRewindVideo.grid(row=1, column=2, columnspan=1, sticky="ew")
+
         self.Button3 = tk.Button(self.frame, text="Clear")
-        self.Button3.grid(row=1, column=2, sticky="ew")
+        self.Button3.grid(row=1, column=3, sticky="ew")
 
         self.ListboxDetector = tk.Listbox(self.frame)
         self.ListboxDetector.grid(row=2, column=0, columnspan=3, sticky="ew")
@@ -184,7 +199,7 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        self.ButtonLoadTracks.grid(row=1, column=3, columnspan=4, sticky="ew")
+        self.ButtonLoadTracks.grid(row=1, column=4, columnspan=3, sticky="ew")
 
         self.ButtonAutocount = tk.Button(
             self.frame,
@@ -345,13 +360,15 @@ class MainWindow(tk.Frame):
 
         self.slider = tk.Scale(
             self.frame,
+            variable=self.value,
             from_=0,
             to=self.videoobject.totalframecount - 1,
             orient=HORIZONTAL,
-            command=lambda event: self.scroll_video(
+            command=lambda event: self.slider_scroll(
                 int(event)
-            ),  # event is the slided number/ gets triggered through mousescroll
+            ),  # event is the slided number/ gets triggered through mousescroll/ slows down videoplay
         )
+
         self.slider.grid(row=7, column=7, sticky="wen")
 
         # fills listbox with added video
@@ -373,6 +390,11 @@ class MainWindow(tk.Frame):
 
         self.create_canvas_picture()
 
+    def slider_scroll(self, counter):
+        self.counter = counter
+
+        self.scroll_video(self.counter)
+
     def mouse_scroll_video(self, event):
         """lets you scroll through the video with the mousewheel
 
@@ -389,7 +411,7 @@ class MainWindow(tk.Frame):
 
             self.scroll_video(self.counter)
 
-            self.slider.set(self.counter)
+            self.value.set(self.counter)
 
             self.counter += 1
 
@@ -397,7 +419,7 @@ class MainWindow(tk.Frame):
 
             self.counter -= 1
 
-            self.slider.set(self.counter)
+            self.value.set(self.counter)
 
             self.scroll_video(self.counter)
 
@@ -710,6 +732,8 @@ class MainWindow(tk.Frame):
 
         print(frame_delay)
 
+        gui_dict["rewind_video"] = False
+
         while gui_dict["play_video"] is True:
 
             time.sleep(frame_delay)
@@ -735,6 +759,42 @@ class MainWindow(tk.Frame):
             self.ButtonPlayVideo.update()
 
             self.counter += 1
+
+            self.slider.set(self.counter)
+
+    def rewind_video(self):
+
+        frame_delay = 1 / self.videoobject.fps
+
+        gui_dict["play_video"] = False
+
+        while gui_dict["rewind_video"] is True:
+
+            time.sleep(frame_delay)
+
+            # _, frame = self.videoobject.cap.read()
+
+            # self.framelist.append(frame)
+
+            self.image_original = cv2.cvtColor(
+                self.framelist[self.counter], cv2.COLOR_BGR2RGB
+            )
+
+            self.imagelist[0] = self.image_original
+
+            draw_bounding_box(
+                self.raw_detections, str(self.counter + 1), self.image_original
+            )
+
+            self.create_canvas_picture()
+
+            self.canvas.update()
+
+            self.ButtonPlayVideo.update()
+
+            self.counter -= 1
+
+            self.slider.set(self.counter)
 
     def draw_polygon(self, closing):
 
