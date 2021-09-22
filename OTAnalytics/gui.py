@@ -240,8 +240,12 @@ class MainWindow(tk.Frame):
         self.Button11 = tk.Button(self.frame, text="Rename")
         self.Button11.grid(row=6, column=1, sticky="ew")
 
-        self.Button12 = tk.Button(self.frame, text="Remove")
-        self.Button12.grid(row=6, column=2, sticky="ew")
+        self.ButtonRemoveMovement = tk.Button(
+            self.frame,
+            text="Remove",
+            command=lambda: MainWindow.delete_selected_movement(self),
+        )
+        self.ButtonRemoveMovement.grid(row=6, column=2, sticky="ew")
 
         self.Button13 = tk.Button(self.frame, text="Clear")
         self.Button13.grid(row=6, column=3, sticky="ew")
@@ -575,25 +579,28 @@ class MainWindow(tk.Frame):
                 if detector_name in self.flow_dict["Movements"][movement]:
                     self.flow_dict["Movements"][movement].remove(detector_name)
 
-                    # BUG
-                    if (
-                        self.ListboxMovement.get(self.ListboxMovement.curselection())
-                        == movement
-                    ):
+        elif gui_dict["polygondetector_toggle"] is True:
 
-                        self.ListBoxMovement.delete(0, "end")
+            self.ListboxDetector.delete(self.ListboxDetector.curselection())
 
-                        for detector_name in self.flow_dict["Movements"][movement]:
-                            self.ListBoxMovement.insert(0, detector_name)
+            del self.flow_dict["Detectors"][detector_name]
 
-        # if not self.flow_dict["Detectors"]:
-        #     # deletes polygon
-        #     self.image = Image.fromarray(self.imagelist[0].copy())  # to PIL format
-        #     self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+            # check if detetector is in movement and delete as well
 
-        #     self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+            for movement in self.flow_dict["Movements"]:
+                if detector_name in self.flow_dict["Movements"][movement]:
+                    self.flow_dict["Movements"][movement].remove(detector_name)
 
         self.create_canvas_picture()
+
+    def delete_selected_movement(self):
+        movement_name = self.ListboxMovement.get(self.ListboxMovement.curselection())
+
+        self.ListboxMovement.delete(self.ListboxMovement.curselection())
+
+        del self.flow_dict["Movements"][movement_name]
+
+        print(self.flow_dict["Movements"])
 
     def curselected_video(self, event):
         """Selected video from Listboxvideo-Listbox gets displayed on canvas.
