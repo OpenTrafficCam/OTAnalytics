@@ -1,3 +1,4 @@
+from numpy.typing import _32Bit
 from gui_dict import gui_dict
 import json
 from tkinter import filedialog
@@ -112,12 +113,35 @@ def save_object_dic(object_dict):
 
 
 def draw_bounding_box(raw_detections, frame, image):
+    """draws bounding box in every frame
+
+    Args:
+        raw_detections ([type]): [description]
+        frame ([int]): index of frame
+        image ([type]): image to draw on
+
+    Returns:
+        [type]: returns manipulated image
+    """
 
     if raw_detections:
 
         image_cache = image
 
         for detection in raw_detections[frame]:
+
+            class_txt = raw_detections[frame][detection]["class"]
+
+            confidence_txt = str(raw_detections[frame][detection]["conf"])
+
+            anno_txt = class_txt + " " + confidence_txt
+
+            if (raw_detections[frame][detection]["w"] / 100) < 0.3:
+                fontscale = 0.3
+            elif (raw_detections[frame][detection]["w"] / 100) > 0.5:
+                fontscale = 0.5
+            else:
+                fontscale = raw_detections[frame][detection]["w"] / 100
 
             x_start = int(
                 raw_detections[frame][detection]["x"]
@@ -140,7 +164,17 @@ def draw_bounding_box(raw_detections, frame, image):
             )
 
             image_cache = cv2.rectangle(
-                image_cache, (x_start, y_start), (x_end, y_end), (0, 255, 0), 2
+                image_cache, (x_start, y_start), (x_end, y_end), (255, 50, 50), 1
+            )
+
+            image = cv2.putText(
+                image_cache,
+                anno_txt,
+                (x_start, y_start - 2),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                fontscale,
+                (255, 50, 50),
+                1,
             )
 
         return image

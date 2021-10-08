@@ -217,7 +217,7 @@ class MainWindow(tk.Frame):
 
         self.ButtonMancount = tk.Button(
             self.frame,
-            text="mancount",
+            text="count",
             command=lambda: button_manuel_count(
                 self.ButtonMancount,
             ),
