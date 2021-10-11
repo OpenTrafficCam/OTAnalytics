@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import Event, Toplevel, filedialog
 from tkinter.constants import END, HORIZONTAL
 import time
+from typing import Counter
 import keyboard
 
 import cv2
@@ -71,7 +72,7 @@ class MainWindow(tk.Frame):
         # list to scroll through frames
         self.framelist = []
         self.selectionlist = []
-        self.counter = 0
+        self.counter = 1
         self.interval = 20
 
         # auxilery list for polygondetector creation/gets deleted after polygon creation
@@ -80,6 +81,7 @@ class MainWindow(tk.Frame):
         # imagelist with original and altered images, zeros are placeholder
         self.imagelist = [0, 0]
 
+        # number of frame in the video
         self.value = tk.DoubleVar()
 
         self.master = master
@@ -365,8 +367,8 @@ class MainWindow(tk.Frame):
         self.slider = tk.Scale(
             self.frame,
             variable=self.value,
-            from_=0,
-            to=self.videoobject.totalframecount - 1,
+            from_=1,
+            to=self.videoobject.totalframecount,
             orient=HORIZONTAL,
             command=lambda event: self.slider_scroll(
                 int(event)
@@ -386,11 +388,13 @@ class MainWindow(tk.Frame):
 
         self.framelist.append(frame)
 
-        self.image_original = cv2.cvtColor(self.framelist[counter], cv2.COLOR_BGR2RGB)
+        self.image_original = cv2.cvtColor(
+            self.framelist[counter - 2], cv2.COLOR_BGR2RGB
+        )
 
         self.imagelist[0] = self.image_original
 
-        draw_bounding_box(self.raw_detections, str(counter + 1), self.image_original)
+        draw_bounding_box(self.raw_detections, str(counter), self.image_original)
 
         self.create_canvas_picture()
 
@@ -413,19 +417,23 @@ class MainWindow(tk.Frame):
 
         if i > 0 and self.counter < self.videoobject.totalframecount:
 
-            self.scroll_video(self.counter)
+            self.counter += 1
 
             self.value.set(self.counter)
 
-            self.counter += 1
+            self.scroll_video(self.counter)
 
-        if i < 0 and self.counter >= 1:
+            print(self.counter)
+
+        if i < 0 and self.counter > 1:
+
+            self.scroll_video(self.counter)
 
             self.counter -= 1
 
             self.value.set(self.counter)
 
-            self.scroll_video(self.counter)
+            print(self.counter)
 
         # prints size of images
         # print(sys.getsizeof(self.framelist))
@@ -741,7 +749,10 @@ class MainWindow(tk.Frame):
 
         gui_dict["rewind_video"] = False
 
-        while gui_dict["play_video"] is True:
+        while (
+            gui_dict["play_video"] is True
+            and self.counter < self.videoobject.totalframecount
+        ):
 
             time.sleep(frame_delay)
 
@@ -750,7 +761,7 @@ class MainWindow(tk.Frame):
             self.framelist.append(frame)
 
             self.image_original = cv2.cvtColor(
-                self.framelist[self.counter], cv2.COLOR_BGR2RGB
+                self.framelist[self.counter - 1], cv2.COLOR_BGR2RGB
             )
 
             self.imagelist[0] = self.image_original
@@ -769,13 +780,15 @@ class MainWindow(tk.Frame):
 
             self.slider.set(self.counter)
 
+            print(self.counter)
+
     def rewind_video(self):
 
         frame_delay = 1 / self.videoobject.fps
 
         gui_dict["play_video"] = False
 
-        while gui_dict["rewind_video"] is True:
+        while gui_dict["rewind_video"] is True and self.counter > 1:
 
             time.sleep(frame_delay)
 
@@ -784,7 +797,7 @@ class MainWindow(tk.Frame):
             # self.framelist.append(frame)
 
             self.image_original = cv2.cvtColor(
-                self.framelist[self.counter], cv2.COLOR_BGR2RGB
+                self.framelist[self.counter - 2], cv2.COLOR_BGR2RGB
             )
 
             self.imagelist[0] = self.image_original
@@ -799,9 +812,11 @@ class MainWindow(tk.Frame):
 
             self.ButtonPlayVideo.update()
 
-            self.counter -= 1
+            if self.counter > 1:
 
-            self.slider.set(self.counter)
+                self.counter -= 1
+
+                self.slider.set(self.counter)
 
     def draw_polygon(self, closing):
 

@@ -132,9 +132,9 @@ def draw_bounding_box(raw_detections, frame, image):
 
             class_txt = raw_detections[frame][detection]["class"]
 
-            confidence_txt = str(raw_detections[frame][detection]["conf"])
+            confidence_txt = round((raw_detections[frame][detection]["conf"]), 2)
 
-            anno_txt = class_txt + " " + confidence_txt
+            anno_txt = class_txt + " " + str(confidence_txt)
 
             if (raw_detections[frame][detection]["w"] / 100) < 0.3:
                 fontscale = 0.3
@@ -163,9 +163,24 @@ def draw_bounding_box(raw_detections, frame, image):
                 + raw_detections[frame][detection]["h"] / 2
             )
 
-            image_cache = cv2.rectangle(
-                image_cache, (x_start, y_start), (x_end, y_end), (255, 50, 50), 1
+            cv2.rectangle(
+                image_cache, (x_start, y_start), (x_end, y_end), (255, 50, 50), 2
             )
+
+            #einkommentieren  für 
+            # text_size, _ = cv2.getTextSize(
+            #     anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1
+            # )
+
+            # text_w, text_h = text_size
+
+            # cv2.rectangle(
+            #     image_cache,
+            #     (x_start, y_start - 2),
+            #     (x_start + text_w, y_start - text_h),
+            #     (0, 0, 0),
+            #     -1,
+            #)
 
             image = cv2.putText(
                 image_cache,
