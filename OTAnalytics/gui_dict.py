@@ -14,6 +14,16 @@ gui_dict = {
     "counting_mode": False,
     "during_counting_process": False,
     "mousescroll_active": False,
+    "display_bb": False,
+}
+
+color_dict = {
+    "car": (89, 101, 212),
+    "bicycle": (73, 166, 91),
+    "truck": (97, 198, 212),
+    "motorcycle": (148, 52, 137),
+    "person": (214, 107, 88),
+    "bus": (179, 177, 68),
 }
 
 statepanel_txt = {
@@ -92,6 +102,20 @@ def button_display_tracks_toggle(button):
         button.config(text="hide tracks")
     else:
         button.config(text="show tracks")
+
+
+def button_display_bb(button):
+    """Toggles the display of trajectories.
+
+    Args:
+        button (tkinter button): ...
+    """
+    gui_dict["display_bb"] = not gui_dict["display_bb"]
+
+    if gui_dict["display_bb"]:
+        button.config(text="hide bb")
+    else:
+        button.config(text="show bb")
 
 
 def button_play_video_toggle(button_play, button_rewind):

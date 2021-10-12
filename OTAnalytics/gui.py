@@ -20,6 +20,7 @@ from counting import (
     finish_counting,
 )
 from gui_dict import (
+    button_display_bb,
     button_display_tracks_toggle,
     button_information_line,
     button_information_polygon,
@@ -89,8 +90,12 @@ class MainWindow(tk.Frame):
         self.frame.grid()
         self.master.title("OTAnalytics")
 
-        self.Listboxvideo = tk.Listbox(self.frame)
-        self.Listboxvideo.grid(row=0, column=0, columnspan=7, sticky="ew")
+        self.videolabel = tk.Label(
+            self.frame, text="Videos and Tracks", fg="white", bg="#37483E"
+        )
+        self.videolabel.grid(row=0, column=0, columnspan=7, sticky="ew")
+        self.Listboxvideo = tk.Listbox(self.frame, height=3)
+        self.Listboxvideo.grid(row=1, column=0, columnspan=7, sticky="ew")
         self.Listboxvideo.bind("<<ListboxSelect>>", self.curselected_video)
 
         self.Buttonaddvideo = tk.Button(
@@ -99,7 +104,7 @@ class MainWindow(tk.Frame):
             command=lambda: MainWindow.load_video_and_frame(self),
         )
 
-        self.Buttonaddvideo.grid(row=1, column=0, sticky="ew")
+        self.Buttonaddvideo.grid(row=2, column=0, sticky="ew")
 
         self.ButtonPlayVideo = tk.Button(
             self.frame,
@@ -109,7 +114,7 @@ class MainWindow(tk.Frame):
                 self.play_video(),
             ],
         )
-        self.ButtonPlayVideo.grid(row=1, column=1, columnspan=1, sticky="ew")
+        self.ButtonPlayVideo.grid(row=2, column=1, columnspan=1, sticky="ew")
 
         self.ButtonRewindVideo = tk.Button(
             self.frame,
@@ -122,19 +127,24 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        self.ButtonRewindVideo.grid(row=1, column=2, columnspan=1, sticky="ew")
+        self.ButtonRewindVideo.grid(row=2, column=2, columnspan=1, sticky="ew")
 
         self.Button3 = tk.Button(self.frame, text="Clear")
-        self.Button3.grid(row=1, column=3, sticky="ew")
+        self.Button3.grid(row=2, column=3, sticky="ew")
 
-        self.ListboxDetector = tk.Listbox(self.frame)
-        self.ListboxDetector.grid(row=2, column=0, columnspan=3, sticky="ew")
+        self.detectionlabel = tk.Label(
+            self.frame, text="Sections and Objects", fg="white", bg="#37483E"
+        )
+        self.detectionlabel.grid(row=3, column=0, columnspan=7, sticky="ew")
+
+        self.ListboxDetector = tk.Listbox(self.frame, height=8)
+        self.ListboxDetector.grid(row=4, column=0, columnspan=3, sticky="ew")
         self.ListboxDetector.bind("<<ListboxSelect>>", self.curselected_detetector)
 
         self.ListboxTracks = tk.Listbox(
-            self.frame, selectmode="multiple", exportselection=False
+            self.frame, selectmode="multiple", exportselection=False, height=8
         )
-        self.ListboxTracks.grid(row=2, column=3, columnspan=4, sticky="ew")
+        self.ListboxTracks.grid(row=4, column=3, columnspan=4, sticky="ew")
         self.ListboxTracks.bind("<<ListboxSelect>>", self.curselected_track)
 
         self.ButtonLine = tk.Button(
@@ -144,7 +154,7 @@ class MainWindow(tk.Frame):
                 self.ButtonLine, self.ButtonPoly, self.statepanel
             ),
         )
-        self.ButtonLine.grid(row=3, column=0, sticky="ew")
+        self.ButtonLine.grid(row=5, column=0, sticky="ew")
 
         self.ButtonPoly = tk.Button(
             self.frame,
@@ -153,21 +163,20 @@ class MainWindow(tk.Frame):
                 self.ButtonPoly, self.ButtonLine, self.statepanel
             ),
         )
-        self.ButtonPoly.grid(row=3, column=1, sticky="ew")
+        self.ButtonPoly.grid(row=5, column=1, sticky="ew")
 
         self.Button5 = tk.Button(self.frame, text="Rename")
-        self.Button5.grid(row=3, column=2, sticky="ew")
+        self.Button5.grid(row=5, column=2, sticky="ew")
 
         self.ButtonDeleteDetector = tk.Button(
             self.frame,
             text="Remove",
             command=lambda: MainWindow.delete_selected_detector(self),
         )
-        self.ButtonDeleteDetector.grid(row=3, column=3, sticky="ew")
+        self.ButtonDeleteDetector.grid(row=5, column=3, sticky="ew")
 
         self.ButtonDisplayTracks = tk.Button(
             self.frame,
-            width=10,
             text="show tracks",
             command=lambda: [
                 button_display_tracks_toggle(self.ButtonDisplayTracks),
@@ -175,9 +184,20 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        self.ButtonDisplayTracks.grid(row=3, column=4, sticky="ew")
+        self.ButtonDisplayTracks.grid(row=5, column=4, sticky="ew")
 
-        self.Button9 = tk.Button(
+        self.ButtonDisplayBB = tk.Button(
+            self.frame,
+            text="show bb",
+            command=lambda: [
+                button_display_bb(self.ButtonDisplayBB),
+                self.create_canvas_picture(),
+            ],
+        )
+
+        self.ButtonDisplayBB.grid(row=5, column=5, sticky="ew")
+
+        self.Buttonaddtomovement = tk.Button(
             self.frame,
             text="Add to movement",
             command=lambda: add_to_movement(
@@ -190,7 +210,7 @@ class MainWindow(tk.Frame):
             ),
         )
 
-        self.Button9.grid(row=4, column=0, columnspan=3, sticky="ew")
+        self.Buttonaddtomovement.grid(row=6, column=0, columnspan=3, sticky="ew")
 
         self.ButtonLoadTracks = tk.Button(
             self.frame,
@@ -201,7 +221,7 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        self.ButtonLoadTracks.grid(row=1, column=4, columnspan=3, sticky="ew")
+        self.ButtonLoadTracks.grid(row=2, column=4, columnspan=3, sticky="ew")
 
         self.ButtonAutocount = tk.Button(
             self.frame,
@@ -215,7 +235,7 @@ class MainWindow(tk.Frame):
                 )
             ],
         )
-        self.ButtonAutocount.grid(row=4, column=3, columnspan=1, sticky="ew")
+        self.ButtonAutocount.grid(row=6, column=3, columnspan=1, sticky="ew")
 
         self.ButtonMancount = tk.Button(
             self.frame,
@@ -225,10 +245,15 @@ class MainWindow(tk.Frame):
             ),
         )
 
-        self.ButtonMancount.grid(row=4, column=4, columnspan=1, sticky="ew")
+        self.ButtonMancount.grid(row=6, column=4, columnspan=2, sticky="ew")
+
+        self.movementlabel = tk.Label(
+            self.frame, text="Movements", fg="white", bg="#37483E"
+        )
+        self.movementlabel.grid(row=7, column=0, columnspan=7, sticky="ew")
 
         self.ListBoxMovement_detector = tk.Listbox(self.frame, width=25)
-        self.ListBoxMovement_detector.grid(row=5, column=3, columnspan=4, sticky="ew")
+        self.ListBoxMovement_detector.grid(row=8, column=3, columnspan=4, sticky="ew")
 
         self.ButtonNewMovement = tk.Button(
             self.frame,
@@ -237,27 +262,27 @@ class MainWindow(tk.Frame):
                 self.ListboxMovement, self.flow_dict["Movements"]
             ),
         )
-        self.ButtonNewMovement.grid(row=6, column=0, sticky="ew")
+        self.ButtonNewMovement.grid(row=9, column=0, sticky="ew")
 
         self.Button11 = tk.Button(self.frame, text="Rename")
-        self.Button11.grid(row=6, column=1, sticky="ew")
+        self.Button11.grid(row=9, column=1, sticky="ew")
 
         self.ButtonRemoveMovement = tk.Button(
             self.frame,
             text="Remove",
             command=lambda: MainWindow.delete_selected_movement(self),
         )
-        self.ButtonRemoveMovement.grid(row=6, column=2, sticky="ew")
+        self.ButtonRemoveMovement.grid(row=9, column=2, sticky="ew")
 
         self.Button13 = tk.Button(self.frame, text="Clear")
-        self.Button13.grid(row=6, column=3, sticky="ew")
+        self.Button13.grid(row=9, column=3, sticky="ew")
 
         self.ButtonSaveFlow = tk.Button(
             self.frame,
             text="Save",
             command=lambda: save_file(self.flow_dict),
         )
-        self.ButtonSaveFlow.grid(row=6, column=4, sticky="ew")
+        self.ButtonSaveFlow.grid(row=9, column=4, sticky="ew")
 
         self.ButtonLoadFlow = tk.Button(
             self.frame,
@@ -273,10 +298,10 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        self.ButtonLoadFlow.grid(row=6, column=5, sticky="ew")
+        self.ButtonLoadFlow.grid(row=9, column=5, sticky="ew")
 
         self.ListboxMovement = tk.Listbox(self.frame, width=25, exportselection=False)
-        self.ListboxMovement.grid(row=5, column=0, columnspan=3, sticky="ew")
+        self.ListboxMovement.grid(row=8, column=0, columnspan=3, sticky="ew")
         self.ListboxMovement.bind(
             "<<ListboxSelect>>",
             lambda event: curselected_movement(
@@ -301,7 +326,9 @@ class MainWindow(tk.Frame):
         video_source = video_source.name
         video_name = video_source.split("/")[-1]
 
-        self.statepanel = StatePanel(self.frame, 7, 0, sticky="w", columnspan=6)
+        self.statepanel = StatePanel(
+            self.frame, 10, 0, sticky="nswe", rowspan=2, columnspan=6
+        )
         self.statepanel.update_statepanel("statepanel initialized")
 
         # creates Videoobject
@@ -359,7 +386,7 @@ class MainWindow(tk.Frame):
         keyboard.add_hotkey("enter", lambda: self.finish_detector_creation())
         keyboard.add_hotkey("escape", lambda: self.kill_creation_process())
 
-        self.canvas.grid(row=0, rowspan=7, column=7, sticky="n")
+        self.canvas.grid(row=0, rowspan=15, column=7, sticky="n")
 
         # puts the image from the videosourse on canvas
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
@@ -375,7 +402,7 @@ class MainWindow(tk.Frame):
             ),  # event is the slided number/ gets triggered through mousescroll/ slows down videoplay
         )
 
-        self.slider.grid(row=7, column=7, sticky="wen")
+        self.slider.grid(row=11, column=7, sticky="wen")
 
         # fills listbox with added video
         filename = self.videoobject.filename
@@ -502,6 +529,7 @@ class MainWindow(tk.Frame):
             )
             self.detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
             self.detector_name_entry.delete(0, END)
+            self.detector_name_entry.focus()
             self.add_section = tk.Button(
                 self.new_detector_creation,
                 text="Add section",
@@ -528,10 +556,10 @@ class MainWindow(tk.Frame):
 
             if detector_name == dict_key:
 
-                self.flow_dict["Detectors"][detector_name]["color"] = (0, 0, 255)
+                self.flow_dict["Detectors"][detector_name]["color"] = (200, 0, 0)
 
             else:
-                self.flow_dict["Detectors"][dict_key]["color"] = (173, 255, 47)
+                self.flow_dict["Detectors"][dict_key]["color"] = (200, 125, 125)
 
         self.create_canvas_picture()
 
@@ -554,14 +582,14 @@ class MainWindow(tk.Frame):
                 "start_y": self.linepoints[0][1],
                 "end_x": self.linepoints[1][0],
                 "end_y": self.linepoints[1][1],
-                "color": (173, 255, 47),
+                "color": (200, 125, 125),
             }
 
         if gui_dict["polygondetector_toggle"] is True:
             self.flow_dict["Detectors"][detector_name] = {
                 "type": "polygon",
                 "points": self.polypoints,
-                "color": (173, 255, 47),
+                "color": (200, 125, 125),
             }
 
         self.create_canvas_picture()
@@ -669,7 +697,7 @@ class MainWindow(tk.Frame):
                     pts = np.array(list_of_tuples, np.int32)
                     pts = pts.reshape((-1, 1, 2))
 
-                    np_image = cv2.fillPoly(overlay, [pts], (255, 255, 0))
+                    np_image = cv2.fillPoly(overlay, [pts], (200, 125, 125))
 
                     opacity = 0.4
                     np_image = cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0)
@@ -820,7 +848,7 @@ class MainWindow(tk.Frame):
 
     def draw_polygon(self, closing):
 
-        if gui_dict["polygondetector_toggle"] is True:
+        if gui_dict["polygondetector_toggle"]:
 
             image = self.create_canvas_picture()
 
@@ -835,16 +863,16 @@ class MainWindow(tk.Frame):
 
             if closing is False:
 
-                np_image = cv2.polylines(image, [pts], closing, (255, 255, 0), 2)
+                np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
 
             else:
 
-                np_image = cv2.fillPoly(overlay, [pts], (255, 255, 0))
+                np_image = cv2.fillPoly(overlay, [pts], (200, 125, 125))
                 opacity = 0.4
                 np_image = cv2.addWeighted(
                     overlay, opacity, image, 1 - opacity, 0, image
                 )
-                np_image = cv2.polylines(image, [pts], closing, (255, 255, 0), 2)
+                np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
 
             image = Image.fromarray(np_image)  # to PIL format
             self.image = ImageTk.PhotoImage(image)  # to ImageTk format
@@ -896,7 +924,7 @@ class StatePanel:
     """Statepanel that contains usefull information."""
 
     # initialize StatePanel
-    def __init__(self, window, row, column, sticky, columnspan):
+    def __init__(self, window, row, column, sticky, rowspan, columnspan):
         """Initial class information.
 
         Args:
@@ -924,6 +952,7 @@ class StatePanel:
             padx="5",
             pady="3",
             sticky=sticky,
+            rowspan=rowspan,
             columnspan=columnspan,
         )
 

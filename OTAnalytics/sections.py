@@ -57,9 +57,9 @@ def save_file(flow_dict):
 
 def draw_line(np_image, linepoints):
 
-    if gui_dict["linedetector_toggle"] is True:
+    if gui_dict["linedetector_toggle"]:
         # if linedetectors or gui_dict["display_all_tracks_toggle"]:
-        np_image = cv2.line(np_image, linepoints[0], linepoints[1], (173, 255, 47), 3)
+        np_image = cv2.line(np_image, linepoints[0], linepoints[1], (200, 125, 125), 3)
         image = Image.fromarray(np_image)  # to PIL format
         image = ImageTk.PhotoImage(image)  # to ImageTk format
 

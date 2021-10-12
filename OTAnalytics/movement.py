@@ -14,6 +14,7 @@ def new_movement(ListboxMovement, movement_dict):
     movement_name_entry = tk.Entry(new_movement_creation, textvariable="Movement")
     movement_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
     movement_name_entry.delete(0, END)
+    movement_name_entry.focus()
     add_movement = tk.Button(
         new_movement_creation,
         text="Add movement",
