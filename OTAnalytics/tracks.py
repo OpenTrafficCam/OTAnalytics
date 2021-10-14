@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 
-def load_tracks(object_dict, raw_detections, ListboxTracks):
+def load_tracks(object_dict, object_live_track, raw_detections, ListboxTracks):
     """loads detectors from a .Track-File and converts into displayable format"""
 
     filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.ottrk")])
@@ -44,7 +44,6 @@ def load_tracks(object_dict, raw_detections, ListboxTracks):
                         raw_detections[frame][detection]["y"],
                     ]
                 )
-
     for object in list(object_dict.keys()):
 
         ListboxTracks.insert("end", object)
@@ -82,6 +81,7 @@ def draw_tracks(selectionlist, object_dict, np_image):
             try:
                 trackcolor = color_dict[object_dict[object_id]["Class"]]
             except:
+
                 trackcolor = (0, 0, 255)
 
             pts = np.array(object_dict[object_id]["Coord"], np.int32)
@@ -104,6 +104,43 @@ def save_object_dic(object_dict):
     json.dump(object_dict, open("object_dic.json", "w"), indent=4)
 
 
+def draw_tracks_live(object_dict, object_live_track, frame, raw_detections, np_image):
+
+    if raw_detections and gui_dict["play_video"]:
+
+        for object in object_dict.keys():
+
+            if frame in object_dict[object]["Frame"]:
+
+                if not object_live_track[object]:
+                    object_live_track[object] = [
+                        object_dict[object]["Coord"][
+                            object_dict[object]["Frame"].index(frame)
+                        ]
+                    ]
+
+                elif frame < object_dict[object]["Frame"][-1]:
+                    print(frame)
+                    nextframeindex = object_dict[object]["Frame"].index(frame)
+                    object_live_track[object].append(
+                        object_dict[object]["Coord"][nextframeindex]
+                    )
+
+                    trackcolor = color_dict[object_dict[object]["Class"]]
+
+                    pts = np.array(object_live_track[object], np.int32)
+
+                    pts = pts.reshape((-1, 1, 2))
+
+                    np_image = cv2.polylines(
+                        np_image, [pts], False, color=trackcolor, thickness=2
+                    )
+                else:
+                    object_live_track[object] = []
+
+    return np_image
+
+
 def draw_bounding_box(raw_detections, frame, image):
     """draws bounding box in every frame
 
@@ -116,84 +153,90 @@ def draw_bounding_box(raw_detections, frame, image):
         [type]: returns manipulated image
     """
     if gui_dict["display_bb"]:
-        if raw_detections:
+        try:
+            if raw_detections:
 
-            image_cache = image
+                image_cache = image
 
-            for detection in raw_detections[frame]:
-                if raw_detections[frame][detection]["class"] in color_dict.keys():
+                for detection in raw_detections[frame]:
+                    if raw_detections[frame][detection]["class"] in color_dict.keys():
 
-                    class_txt = raw_detections[frame][detection]["class"]
+                        class_txt = raw_detections[frame][detection]["class"]
 
-                    confidence_txt = "{:.2f}".format(
-                        (raw_detections[frame][detection]["conf"])
-                    )
+                        confidence_txt = "{:.2f}".format(
+                            (raw_detections[frame][detection]["conf"])
+                        )
 
-                    anno_txt = class_txt + " " + str(confidence_txt)
+                        anno_txt = class_txt + " " + str(confidence_txt)
 
-                    if (raw_detections[frame][detection]["w"] / 100) < 0.3:
-                        fontscale = 0.3
-                    elif (raw_detections[frame][detection]["w"] / 100) > 0.5:
-                        fontscale = 0.5
-                    else:
-                        fontscale = raw_detections[frame][detection]["w"] / 100
+                        if (raw_detections[frame][detection]["w"] / 100) < 0.3:
+                            fontscale = 0.3
+                        elif (raw_detections[frame][detection]["w"] / 100) > 0.5:
+                            fontscale = 0.5
+                        else:
+                            fontscale = raw_detections[frame][detection]["w"] / 100
 
-                    x_start = int(
-                        raw_detections[frame][detection]["x"]
-                        - raw_detections[frame][detection]["w"] / 2
-                    )
+                        x_start = int(
+                            raw_detections[frame][detection]["x"]
+                            - raw_detections[frame][detection]["w"] / 2
+                        )
 
-                    y_start = int(
-                        raw_detections[frame][detection]["y"]
-                        - raw_detections[frame][detection]["h"] / 2
-                    )
+                        y_start = int(
+                            raw_detections[frame][detection]["y"]
+                            - raw_detections[frame][detection]["h"] / 2
+                        )
 
-                    x_end = int(
-                        raw_detections[frame][detection]["x"]
-                        + raw_detections[frame][detection]["w"] / 2
-                    )
+                        x_end = int(
+                            raw_detections[frame][detection]["x"]
+                            + raw_detections[frame][detection]["w"] / 2
+                        )
 
-                    y_end = int(
-                        raw_detections[frame][detection]["y"]
-                        + raw_detections[frame][detection]["h"] / 2
-                    )
+                        y_end = int(
+                            raw_detections[frame][detection]["y"]
+                            + raw_detections[frame][detection]["h"] / 2
+                        )
 
-                    try:
-                        bbcolor = color_dict[raw_detections[frame][detection]["class"]]
-                    except:
-                        bbcolor = (0, 0, 255)
+                        try:
+                            bbcolor = color_dict[
+                                raw_detections[frame][detection]["class"]
+                            ]
 
-                    cv2.rectangle(
-                        image_cache, (x_start, y_start), (x_end, y_end), bbcolor, 2
-                    )
+                        except ValueError:
+                            bbcolor = (0, 0, 255)
 
-                    # einkommentieren  für
-                    text_size, _ = cv2.getTextSize(
-                        anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1
-                    )
+                        cv2.rectangle(
+                            image_cache, (x_start, y_start), (x_end, y_end), bbcolor, 2
+                        )
 
-                    text_w, text_h = text_size
+                        # einkommentieren  für
+                        text_size, _ = cv2.getTextSize(
+                            anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1
+                        )
 
-                    cv2.rectangle(
-                        image_cache,
-                        (x_start - 1, y_start - 1),
-                        (x_start + text_w + 2, y_start - text_h - 2),
-                        bbcolor,
-                        -1,
-                    )
+                        text_w, text_h = text_size
 
-                    image = cv2.putText(
-                        image_cache,
-                        anno_txt,
-                        (x_start, y_start - 2),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        fontscale,
-                        (255, 255, 255),
-                        1,
-                    )
+                        cv2.rectangle(
+                            image_cache,
+                            (x_start - 1, y_start - 1),
+                            (x_start + text_w + 2, y_start - text_h - 2),
+                            bbcolor,
+                            -1,
+                        )
 
+                        image = cv2.putText(
+                            image_cache,
+                            anno_txt,
+                            (x_start, y_start - 2),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            fontscale,
+                            (255, 255, 255),
+                            1,
+                        )
+
+                return image
+
+            else:
+
+                return image
+        except:
             return image
-
-        else:
-
-            pass

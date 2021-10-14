@@ -36,7 +36,7 @@ from sections import (
     load_file,
     save_file,
 )
-from tracks import load_tracks, draw_tracks, draw_bounding_box
+from tracks import load_tracks, draw_tracks, draw_bounding_box, draw_tracks_live
 
 
 class MainWindow(tk.Frame):
@@ -65,6 +65,7 @@ class MainWindow(tk.Frame):
         self.flow_dict["Detectors"] = {}
         self.flow_dict["Movements"] = {}
         self.object_dict = {}
+        self.object_live_track = {}
         self.videoobject = None
 
         self.raw_detections = {}
@@ -73,7 +74,7 @@ class MainWindow(tk.Frame):
         # list to scroll through frames
         self.framelist = []
         self.selectionlist = []
-        self.counter = 1
+        self.counter = 0
         self.interval = 20
 
         # auxilery list for polygondetector creation/gets deleted after polygon creation
@@ -216,7 +217,12 @@ class MainWindow(tk.Frame):
             self.frame,
             text="Load tracks",
             command=lambda: [
-                load_tracks(self.object_dict, self.raw_detections, self.ListboxTracks),
+                load_tracks(
+                    self.object_dict,
+                    self.object_live_track,
+                    self.raw_detections,
+                    self.ListboxTracks,
+                ),
                 self.create_canvas_picture(),
             ],
         )
@@ -394,8 +400,8 @@ class MainWindow(tk.Frame):
         self.slider = tk.Scale(
             self.frame,
             variable=self.value,
-            from_=1,
-            to=self.videoobject.totalframecount,
+            from_=0,
+            to=self.videoobject.totalframecount - 1,
             orient=HORIZONTAL,
             command=lambda event: self.slider_scroll(
                 int(event)
@@ -409,20 +415,22 @@ class MainWindow(tk.Frame):
 
         self.Listboxvideo.insert(0, filename)
 
-    def scroll_video(self, counter):
+    def scroll_video(self):
         if not gui_dict["play_video"] and not gui_dict["rewind_video"]:
+
+            self.videoobject.cap.set(1, self.counter)
 
             _, frame = self.videoobject.cap.read()
 
-            self.framelist.append(frame)
+            # self.framelist.append(frame)
 
-            self.image_original = cv2.cvtColor(
-                self.framelist[counter - 2], cv2.COLOR_BGR2RGB
-            )
+            self.image_original = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             self.imagelist[0] = self.image_original
 
-            draw_bounding_box(self.raw_detections, str(counter), self.image_original)
+            draw_bounding_box(
+                self.raw_detections, str(self.counter), self.image_original
+            )
 
             self.create_canvas_picture()
 
@@ -431,7 +439,7 @@ class MainWindow(tk.Frame):
 
             self.counter = counter
 
-            self.scroll_video(self.counter)
+            self.scroll_video()
 
     def mouse_scroll_video(self, event):
         """lets you scroll through the video with the mousewheel
@@ -447,25 +455,21 @@ class MainWindow(tk.Frame):
             # integer of mousewheel scroll event
             i = 1 * event.delta // 120
 
-            if i > 0 and self.counter < self.videoobject.totalframecount:
+            if i > 0 and self.counter < (self.videoobject.totalframecount):
+
+                self.value.set(self.counter)
+
+                self.scroll_video()
 
                 self.counter += 1
 
-                self.value.set(self.counter)
-
-                self.scroll_video(self.counter)
-
-                print(self.counter)
-
             if i < 0 and self.counter > 1:
-
-                self.scroll_video(self.counter)
 
                 self.counter -= 1
 
-                self.value.set(self.counter)
+                self.scroll_video()
 
-                print(self.counter)
+                self.value.set(self.counter)
 
             # prints size of images
             # print(sys.getsizeof(self.framelist))
@@ -548,7 +552,6 @@ class MainWindow(tk.Frame):
             self.new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
             # makes the background window unavailable
             self.new_detector_creation.grab_set()
-            print(self.new_detector_creation.state())
 
     def curselected_detetector(self, event):
         """Re draws detectors, where the selected detectors has different color
@@ -769,6 +772,14 @@ class MainWindow(tk.Frame):
 
         np_image = draw_tracks(self.selectionlist, self.object_dict, np_image)
 
+        draw_tracks_live(
+            self.object_dict,
+            self.object_live_track,
+            self.counter,
+            self.raw_detections,
+            np_image,
+        )
+
         np_image = self.draw_vehicle_direction(np_image)
 
         self.image = Image.fromarray(np_image)  # to PIL format
@@ -786,7 +797,10 @@ class MainWindow(tk.Frame):
         """Play video on button press"""
         frame_delay = 1 / self.videoobject.fps
 
-        print(frame_delay)
+        if self.object_dict:
+            for object in list(self.object_dict.keys()):
+
+                self.object_live_track[object] = []
 
         gui_dict["rewind_video"] = False
 
@@ -797,18 +811,16 @@ class MainWindow(tk.Frame):
 
             time.sleep(frame_delay)
 
+            self.videoobject.cap.set(1, self.counter)
+
             _, frame = self.videoobject.cap.read()
 
-            self.framelist.append(frame)
-
-            self.image_original = cv2.cvtColor(
-                self.framelist[self.counter - 1], cv2.COLOR_BGR2RGB
-            )
+            self.image_original = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             self.imagelist[0] = self.image_original
 
             draw_bounding_box(
-                self.raw_detections, str(self.counter + 1), self.image_original
+                self.raw_detections, str(self.counter), self.image_original
             )
 
             self.create_canvas_picture()
@@ -817,11 +829,13 @@ class MainWindow(tk.Frame):
 
             self.ButtonPlayVideo.update()
 
-            self.counter += 1
+            if self.counter < self.videoobject.totalframecount - 1:
+                self.counter += 1
+
+            else:
+                gui_dict["play_video"] = False
 
             self.slider.set(self.counter)
-
-            print(self.counter)
 
     def rewind_video(self):
 
@@ -833,18 +847,16 @@ class MainWindow(tk.Frame):
 
             time.sleep(frame_delay)
 
-            # _, frame = self.videoobject.cap.read()
+            self.videoobject.cap.set(1, self.counter)
 
-            # self.framelist.append(frame)
+            _, frame = self.videoobject.cap.read()
 
-            self.image_original = cv2.cvtColor(
-                self.framelist[self.counter - 2], cv2.COLOR_BGR2RGB
-            )
+            self.image_original = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             self.imagelist[0] = self.image_original
 
             draw_bounding_box(
-                self.raw_detections, str(self.counter + 1), self.image_original
+                self.raw_detections, str(self.counter), self.image_original
             )
 
             self.create_canvas_picture()
@@ -853,9 +865,11 @@ class MainWindow(tk.Frame):
 
             self.ButtonPlayVideo.update()
 
-            if self.counter > 1:
+            if self.counter >= 1:
 
                 self.counter -= 1
+
+                print(self.counter)
 
                 self.slider.set(self.counter)
 
@@ -928,9 +942,6 @@ class Video:
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
         self.totalframecount = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-        print(self.totalframecount)
-        print(type(self.totalframecount))
 
 
 class StatePanel:
