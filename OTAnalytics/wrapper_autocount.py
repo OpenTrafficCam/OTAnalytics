@@ -1,56 +1,58 @@
-# %%
-
 import geopandas as gpd
 from shapely.geometry import LineString, Point, Polygon
 import pandas as pd
-from gui_dict import gui_dict
 from tkinter import filedialog
 import json
 import heapq
 
 
-# TODO: check if tracks and crossed sections belong to certain movement
-
-# %%
-
-detectors_dic = {}
-movement_dic = {}
+# dictionary for detectors and movements
 
 
-d = {}
+def load_tracks(object_dic, raw_detections, class_dic):
+    """loads detectors from a .Track-File and converts into displayable format"""
+
+    filepath = "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data/trackdata.ottrk"
+    files = open(filepath, "r")
+    files = files.read()
+
+    track_file = json.loads(files)
+
+    # detections = {}
+
+    # TODO shorten
+    raw_detections.update(track_file["data"])
+
+    for frame in raw_detections:
+        for detection in raw_detections[frame]:
+            if "object_" + str(detection) in object_dic.keys():
+                object_dic["object_%s" % detection]["Coord"].append(
+                    [
+                        raw_detections[frame][detection]["x"],
+                        raw_detections[frame][detection]["y"],
+                    ]
+                )
+
+                object_dic["object_%s" % detection]["Frame"].append(int(frame))
+
+            elif raw_detections[frame][detection]["class"] in class_dic.keys():
+                object_dic["object_%s" % detection] = {}
+                object_dic["object_%s" % detection]["Coord"] = []
+                object_dic["object_%s" % detection]["Frame"] = [int(frame)]
+                object_dic["object_%s" % detection]["Class"] = raw_detections[frame][
+                    detection
+                ]["class"]
+                object_dic["object_%s" % detection]["Coord"].append(
+                    [
+                        raw_detections[frame][detection]["x"],
+                        raw_detections[frame][detection]["y"],
+                    ]
+                )
+
+    return object_dic
 
 
-flow_dic = open(
-    "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//multiple_line_detectors.OTflow",
-    "r",
-)
-object_dic = open(
-    "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//object_dic.json",
-    "r",
-)
-
-files = open(flow_dic.name, "r")
-files = files.read()
-
-flow_dic = json.loads(files)
-# use this
-detectors_dic.update(flow_dic["Detectors"])
-movement_dic.update(flow_dic["Movements"])
-
-
-files = open(object_dic.name, "r")
-files = files.read()
-
-object_dic = json.loads(files)
-
-# print(object_dic)
-# print(detectors)
-
-
-# %%
-
-
-def dic_to_detector_dataframe(detectors_dict):
+def dic_to_detector_dataframe(detectors_dic):
     """creates a dataframe from detector/flow dictionary, # TODO change to use
     linedetector dic that gets updated when importing flow data
     creates column with LineString-objects for the calculation of
@@ -64,7 +66,7 @@ def dic_to_detector_dataframe(detectors_dict):
     """
     # change dic to dataframe
     detector_df = pd.DataFrame.from_dict(
-        {("Detectors", j): detectors_dict[j] for j in detectors_dict.keys()},
+        {("Detectors", j): detectors_dic[j] for j in detectors_dic.keys()},
         orient="index",
     )
 
@@ -87,14 +89,6 @@ def dic_to_detector_dataframe(detectors_dict):
     return detector_df
 
 
-# %%
-
-detector_df = dic_to_detector_dataframe(detectors_dic)
-# print(detector_df)
-
-# %%
-
-
 def dic_to_object_dataframe(object_dic):
     """creates a dataframe from object dictionary, creates column with Polygon-objects.
     Args:
@@ -104,7 +98,7 @@ def dic_to_object_dataframe(object_dic):
         dataframe: dictionary with information of object
     """
 
-    # count number of coordinates (if the count is less then 2,
+    # count number of coordinates (if the count is less then 3,
     # geopandas cant create Polygon)
     for object in object_dic:
         object_dic[object]["Coord_count"] = len(object_dic[object]["Coord"])
@@ -113,7 +107,7 @@ def dic_to_object_dataframe(object_dic):
 
     object_df_validated = object_df.loc[object_df["Coord_count"] >= 2]
 
-    # better copy so apply function wont give an error msg
+    # better copy so apply function wont give an error msg/ is copy because coord_count is filtered
     object_df_validated_copy = object_df_validated.copy()
 
     object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
@@ -127,12 +121,6 @@ def dic_to_object_dataframe(object_dic):
     return object_df_validated_copy
 
 
-# %%
-
-object_df_validated_copy = dic_to_object_dataframe(object_dic)
-
-
-# %%
 def calculate_intersections(detector_df, object_df_validated_copy):
     """checks if tracks and detectors intersect, alters object_dataframe
 
@@ -179,16 +167,7 @@ def calculate_intersections(detector_df, object_df_validated_copy):
     return object_df_validated_copy
 
 
-# %%
-object_df_validated_copy = calculate_intersections(
-    detector_df, object_df_validated_copy
-)
-
-
-# %%
-
-
-def find_intersection_order(fps, object_df_validated_copy, detector_dict):
+def find_intersection_order(object_df_validated_copy, detector_dict, fps=25):
     """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name)
 
     Second find nearest point (second nearest point) on Linestring compared
@@ -300,15 +279,6 @@ def find_intersection_order(fps, object_df_validated_copy, detector_dict):
     return object_df_validated_copy
 
 
-# %%
-object_df_validated_copy = find_intersection_order(
-    20, object_df_validated_copy, detectors_dic
-)
-
-
-# %%
-
-
 def assign_movement(movement_dict, object_df_validated_copy):
     """Compares movements and associated detectors with sorted crossing list
 
@@ -340,12 +310,7 @@ def assign_movement(movement_dict, object_df_validated_copy):
     return object_df_validated_copy
 
 
-# %%
-object_df_validated_copy = assign_movement(movement_dic, object_df_validated_copy)
-
-
-# %%
-def safe_to_csv(process_object):
+def safe_to_exl(process_object):
     """safe dataframe as cvs and asks for filepath
 
     Args:
@@ -356,68 +321,62 @@ def safe_to_csv(process_object):
         defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx")]
     )
     process_object.to_excel(file_path)
-    # file_path.write(autocount_csv_file)
-    # file_path.close
 
 
-# %%
+def main():
+    """Main function."""
+    detectors_dic = {}
+    movement_dic = {}
+    object_dic = {}
+    raw_detection = {}
 
+    class_dic = {
+        "car": (89, 101, 212),
+        "bicycle": (73, 166, 91),
+        "truck": (97, 198, 212),
+        "motorcycle": (148, 52, 137),
+        "person": (214, 107, 88),
+        "bus": (179, 177, 68),
+    }
 
-def clean_dataframe(object_df_validated_copy):
+    # open .OTflow
 
-    cleaned_automated_counting = object_df_validated_copy.loc[
-        :,
-        [
-            "Class",
-            "Movement",
-            "Movement_name",
-            "Time_crossing_entrace",
-            "Time_crossing_exit",
-        ],
-    ]
-
-    return cleaned_automated_counting
-
-
-# %%
-
-
-def automated_counting(fps, movement_dic, detector_dic, object_dic):
-    """calls previous funtions
-
-    Args:
-        detector_dict (dictionary): dictionary with detectors
-        object_dict (dictionary): dictionary with obejcts (at least 3 detections)
-
-    """
-
-    # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
-    detector_dataframe = dic_to_detector_dataframe(detector_dic)
-    object_df_validated_copy = dic_to_object_dataframe(object_dic)
-    processed_object = calculate_intersections(
-        detector_dataframe, object_df_validated_copy
+    flow_dic = open(
+        "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//multiple_line_detectors.OTflow",
+        "r",
     )
 
-    print("succesfull")
+    files = open(flow_dic.name, "r")
+    files = files.read()
 
-    # TODO doesnt return right dataframe
+    print(flow_dic)
 
-    processed_object = find_intersection_order(fps, processed_object, detector_dic)
-    processed_object = assign_movement(movement_dic, processed_object)
-    cleaned_object_dataframe = clean_dataframe(processed_object)
+    flow_dic = json.loads(files)
 
-    safe_to_csv(cleaned_object_dataframe)
+    detectors_dic.update(flow_dic["Detectors"])
+    movement_dic.update(flow_dic["Movements"])
 
-    return cleaned_object_dataframe
+    # open object json
+
+    # create objects from trackfile ottrk
+    object_dic = load_tracks(object_dic, raw_detection, class_dic)
+
+    detector_df = dic_to_detector_dataframe(detectors_dic)
+
+    object_df_validated_copy = dic_to_object_dataframe(object_dic)
+
+    object_df_validated_copy = calculate_intersections(
+        detector_df, object_df_validated_copy
+    )
+
+    object_df_validated_copy = find_intersection_order(
+        object_df_validated_copy, detectors_dic, fps=25
+    )
+
+    object_df_validated_copy = assign_movement(movement_dic, object_df_validated_copy)
+
+    safe_to_exl(object_df_validated_copy)
 
 
-# %%
-
-# cleaned_object_dataframe = automated_counting(
-#     25, movement_dic, detectors_dic, object_dic
-# )
-
-# print(cleaned_object_dataframe)
-
-
-# %%
+if __name__ == "__main__":
+    main()

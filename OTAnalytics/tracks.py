@@ -47,7 +47,7 @@ def load_tracks(object_dict, raw_detections, ListboxTracks):
 
     for object in list(object_dict.keys()):
 
-        ListboxTracks.insert(0, object)
+        ListboxTracks.insert("end", object)
 
     save_object_dic(object_dict)
 
@@ -157,8 +157,6 @@ def draw_bounding_box(raw_detections, frame, image):
                         raw_detections[frame][detection]["y"]
                         + raw_detections[frame][detection]["h"] / 2
                     )
-
-                    print(color_dict)
 
                     try:
                         bbcolor = color_dict[raw_detections[frame][detection]["class"]]

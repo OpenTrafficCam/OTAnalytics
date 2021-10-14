@@ -410,25 +410,28 @@ class MainWindow(tk.Frame):
         self.Listboxvideo.insert(0, filename)
 
     def scroll_video(self, counter):
+        if not gui_dict["play_video"] and not gui_dict["rewind_video"]:
 
-        _, frame = self.videoobject.cap.read()
+            _, frame = self.videoobject.cap.read()
 
-        self.framelist.append(frame)
+            self.framelist.append(frame)
 
-        self.image_original = cv2.cvtColor(
-            self.framelist[counter - 2], cv2.COLOR_BGR2RGB
-        )
+            self.image_original = cv2.cvtColor(
+                self.framelist[counter - 2], cv2.COLOR_BGR2RGB
+            )
 
-        self.imagelist[0] = self.image_original
+            self.imagelist[0] = self.image_original
 
-        draw_bounding_box(self.raw_detections, str(counter), self.image_original)
+            draw_bounding_box(self.raw_detections, str(counter), self.image_original)
 
-        self.create_canvas_picture()
+            self.create_canvas_picture()
 
     def slider_scroll(self, counter):
-        self.counter = counter
+        if not gui_dict["play_video"] and not gui_dict["rewind_video"]:
 
-        self.scroll_video(self.counter)
+            self.counter = counter
+
+            self.scroll_video(self.counter)
 
     def mouse_scroll_video(self, event):
         """lets you scroll through the video with the mousewheel
@@ -439,31 +442,33 @@ class MainWindow(tk.Frame):
         # deletes polypoint, if process of creating detector is aborted
         self.polypoints = []
 
-        # integer of mousewheel scroll event
-        i = 1 * event.delta // 120
+        if not gui_dict["play_video"] and not gui_dict["rewind_video"]:
 
-        if i > 0 and self.counter < self.videoobject.totalframecount:
+            # integer of mousewheel scroll event
+            i = 1 * event.delta // 120
 
-            self.counter += 1
+            if i > 0 and self.counter < self.videoobject.totalframecount:
 
-            self.value.set(self.counter)
+                self.counter += 1
 
-            self.scroll_video(self.counter)
+                self.value.set(self.counter)
 
-            print(self.counter)
+                self.scroll_video(self.counter)
 
-        if i < 0 and self.counter > 1:
+                print(self.counter)
 
-            self.scroll_video(self.counter)
+            if i < 0 and self.counter > 1:
 
-            self.counter -= 1
+                self.scroll_video(self.counter)
 
-            self.value.set(self.counter)
+                self.counter -= 1
 
-            print(self.counter)
+                self.value.set(self.counter)
 
-        # prints size of images
-        # print(sys.getsizeof(self.framelist))
+                print(self.counter)
+
+            # prints size of images
+            # print(sys.getsizeof(self.framelist))
 
     def curselected_track(self, event):
         """Draws one or more selected tracks on canvas."""
