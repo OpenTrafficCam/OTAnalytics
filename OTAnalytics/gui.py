@@ -528,6 +528,9 @@ class MainWindow(tk.Frame):
             # creates window to insert name of detector
             # if self.new_linedetector_creation_buttonClicked == True:
             self.new_detector_creation = Toplevel()
+            keyboard.remove_hotkey("enter")
+            keyboard.remove_hotkey("escape")
+
             self.new_detector_creation.title("Create new section")
             self.detector_name_entry = tk.Entry(
                 self.new_detector_creation, textvariable="Sectionname"
@@ -535,6 +538,7 @@ class MainWindow(tk.Frame):
             self.detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
             self.detector_name_entry.delete(0, END)
             self.detector_name_entry.focus()
+
             self.add_section = tk.Button(
                 self.new_detector_creation,
                 text="Add section",
@@ -544,6 +548,7 @@ class MainWindow(tk.Frame):
             self.new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
             # makes the background window unavailable
             self.new_detector_creation.grab_set()
+            print(self.new_detector_creation.state())
 
     def curselected_detetector(self, event):
         """Re draws detectors, where the selected detectors has different color
@@ -571,6 +576,9 @@ class MainWindow(tk.Frame):
     def on_close(self):
         """Deletes polygon or line on canvas if entered string is none."""
         # self.create_canvas_picture()
+
+        keyboard.add_hotkey("enter", lambda: self.finish_detector_creation())
+        keyboard.add_hotkey("escape", lambda: self.kill_creation_process())
 
         self.new_detector_creation.destroy()
 
@@ -601,7 +609,7 @@ class MainWindow(tk.Frame):
 
         self.ListboxDetector.insert(0, detector_name)
 
-        self.new_detector_creation.destroy()
+        self.on_close()
 
     def delete_selected_detector(self):
         # gets selection from listbox
