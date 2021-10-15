@@ -15,6 +15,7 @@ gui_dict = {
     "during_counting_process": False,
     "mousescroll_active": False,
     "display_bb": False,
+    "display_live_track": False,
 }
 
 color_dict = {
@@ -142,10 +143,17 @@ def button_rewind_video_toggle(button_play, button_rewind):
     """
     gui_dict["rewind_video"] = not gui_dict["rewind_video"]
 
-    print(gui_dict["rewind_video"])
-
     if gui_dict["rewind_video"]:
         button_rewind.config(text="Stop")
         button_play.config(text="Play")
     else:
         button_rewind.config(text="Rewind")
+
+def button_display_live_track(button_display_tracks):
+
+    gui_dict["display_live_track"] = not gui_dict["display_live_track"]
+
+    if gui_dict["display_live_track"]:
+        button_display_tracks.config(text="Stop Livetrack")
+    else:
+        button_display_tracks.config(text="Livetrack")

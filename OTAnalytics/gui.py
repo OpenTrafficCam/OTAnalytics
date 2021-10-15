@@ -1,10 +1,7 @@
-import math  # important for drawing ellipse with open cv
-import sys
 import tkinter as tk
-from tkinter import Event, Toplevel, filedialog
+from tkinter import Toplevel, filedialog
 from tkinter.constants import END, HORIZONTAL
 import time
-from typing import Counter
 import keyboard
 
 import cv2
@@ -16,7 +13,6 @@ from auto_counting import automated_counting
 from counting import (
     select_detector_on_canvas,
     count_vehicle_process,
-    vehicle_class_capture,
     finish_counting,
 )
 from gui_dict import (
@@ -27,6 +23,7 @@ from gui_dict import (
     button_play_video_toggle,
     button_rewind_video_toggle,
     button_manuel_count,
+    button_display_live_track,
     gui_dict,
 )
 from movement import add_to_movement, curselected_movement, new_movement
@@ -37,6 +34,8 @@ from sections import (
     save_file,
 )
 from tracks import load_tracks, draw_tracks, draw_bounding_box, draw_tracks_live
+
+print("test")
 
 
 class MainWindow(tk.Frame):
@@ -166,15 +165,12 @@ class MainWindow(tk.Frame):
         )
         self.ButtonPoly.grid(row=5, column=1, sticky="ew")
 
-        self.Button5 = tk.Button(self.frame, text="Rename")
-        self.Button5.grid(row=5, column=2, sticky="ew")
-
         self.ButtonDeleteDetector = tk.Button(
             self.frame,
             text="Remove",
             command=lambda: MainWindow.delete_selected_detector(self),
         )
-        self.ButtonDeleteDetector.grid(row=5, column=3, sticky="ew")
+        self.ButtonDeleteDetector.grid(row=5, column=2, sticky="ew")
 
         self.ButtonDisplayTracks = tk.Button(
             self.frame,
@@ -185,7 +181,7 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        self.ButtonDisplayTracks.grid(row=5, column=4, sticky="ew")
+        self.ButtonDisplayTracks.grid(row=5, column=3, sticky="ew")
 
         self.ButtonDisplayBB = tk.Button(
             self.frame,
@@ -197,6 +193,17 @@ class MainWindow(tk.Frame):
         )
 
         self.ButtonDisplayBB.grid(row=5, column=5, sticky="ew")
+
+        self.ButtonDisplayLiveTrack = tk.Button(
+            self.frame,
+            text="Livetrack",
+            command=lambda: [
+                button_display_live_track(self.ButtonDisplayLiveTrack),
+                self.create_canvas_picture(),
+            ],
+        )
+
+        self.ButtonDisplayLiveTrack.grid(row=5, column=4, sticky="ew")
 
         self.Buttonaddtomovement = tk.Button(
             self.frame,
@@ -405,7 +412,8 @@ class MainWindow(tk.Frame):
             orient=HORIZONTAL,
             command=lambda event: self.slider_scroll(
                 int(event)
-            ),  # event is the slided number/ gets triggered through mousescroll/ slows down videoplay
+            ),  # event is the slided number/ gets triggered through mousescroll/
+            # slows down videoplay
         )
 
         self.slider.grid(row=11, column=7, sticky="wen")
@@ -427,10 +435,6 @@ class MainWindow(tk.Frame):
             self.image_original = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             self.imagelist[0] = self.image_original
-
-            draw_bounding_box(
-                self.raw_detections, str(self.counter), self.image_original
-            )
 
             self.create_canvas_picture()
 
@@ -770,8 +774,6 @@ class MainWindow(tk.Frame):
 
         np_image = self.draw_detectors_from_dict(np_image)
 
-        np_image = draw_tracks(self.selectionlist, self.object_dict, np_image)
-
         draw_tracks_live(
             self.object_dict,
             self.object_live_track,
@@ -780,7 +782,11 @@ class MainWindow(tk.Frame):
             np_image,
         )
 
-        np_image = self.draw_vehicle_direction(np_image)
+        draw_bounding_box(self.raw_detections, str(self.counter + 1), np_image)
+
+        draw_tracks(self.selectionlist, self.object_dict, np_image)
+
+        # self.draw_vehicle_direction(np_image)
 
         self.image = Image.fromarray(np_image)  # to PIL format
         self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
@@ -819,10 +825,6 @@ class MainWindow(tk.Frame):
 
             self.imagelist[0] = self.image_original
 
-            draw_bounding_box(
-                self.raw_detections, str(self.counter), self.image_original
-            )
-
             self.create_canvas_picture()
 
             self.canvas.update()
@@ -854,10 +856,6 @@ class MainWindow(tk.Frame):
             self.image_original = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             self.imagelist[0] = self.image_original
-
-            draw_bounding_box(
-                self.raw_detections, str(self.counter), self.image_original
-            )
 
             self.create_canvas_picture()
 

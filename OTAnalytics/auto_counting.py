@@ -11,41 +11,6 @@ import heapq
 
 # TODO: check if tracks and crossed sections belong to certain movement
 
-# %%
-
-detectors_dic = {}
-movement_dic = {}
-
-
-d = {}
-
-
-flow_dic = open(
-    "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//multiple_line_detectors.OTflow",
-    "r",
-)
-object_dic = open(
-    "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//object_dic.json",
-    "r",
-)
-
-files = open(flow_dic.name, "r")
-files = files.read()
-
-flow_dic = json.loads(files)
-# use this
-detectors_dic.update(flow_dic["Detectors"])
-movement_dic.update(flow_dic["Movements"])
-
-
-files = open(object_dic.name, "r")
-files = files.read()
-
-object_dic = json.loads(files)
-
-# print(object_dic)
-# print(detectors)
-
 
 # %%
 
@@ -89,7 +54,6 @@ def dic_to_detector_dataframe(detectors_dict):
 
 # %%
 
-detector_df = dic_to_detector_dataframe(detectors_dic)
 # print(detector_df)
 
 # %%
@@ -128,8 +92,6 @@ def dic_to_object_dataframe(object_dic):
 
 
 # %%
-
-object_df_validated_copy = dic_to_object_dataframe(object_dic)
 
 
 # %%
@@ -180,9 +142,6 @@ def calculate_intersections(detector_df, object_df_validated_copy):
 
 
 # %%
-object_df_validated_copy = calculate_intersections(
-    detector_df, object_df_validated_copy
-)
 
 
 # %%
@@ -301,9 +260,6 @@ def find_intersection_order(fps, object_df_validated_copy, detector_dict):
 
 
 # %%
-object_df_validated_copy = find_intersection_order(
-    20, object_df_validated_copy, detectors_dic
-)
 
 
 # %%
@@ -341,7 +297,6 @@ def assign_movement(movement_dict, object_df_validated_copy):
 
 
 # %%
-object_df_validated_copy = assign_movement(movement_dic, object_df_validated_copy)
 
 
 # %%
@@ -412,12 +367,5 @@ def automated_counting(fps, movement_dic, detector_dic, object_dic):
 
 
 # %%
-
-# cleaned_object_dataframe = automated_counting(
-#     25, movement_dic, detectors_dic, object_dic
-# )
-
-# print(cleaned_object_dataframe)
-
 
 # %%

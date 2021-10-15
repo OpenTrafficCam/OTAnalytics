@@ -106,7 +106,7 @@ def save_object_dic(object_dict):
 
 def draw_tracks_live(object_dict, object_live_track, frame, raw_detections, np_image):
 
-    if raw_detections and gui_dict["play_video"]:
+    if raw_detections and gui_dict["play_video"] and gui_dict["display_live_track"]:
 
         for object in object_dict.keys():
 
@@ -240,3 +240,5 @@ def draw_bounding_box(raw_detections, frame, image):
                 return image
         except:
             return image
+    else:
+        return image
