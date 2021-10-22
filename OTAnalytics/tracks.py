@@ -47,6 +47,8 @@ def load_tracks(object_dict, object_live_track, raw_detections, ListboxTracks):
     for object in list(object_dict.keys()):
 
         ListboxTracks.insert("end", object)
+        # initialize Tracks to draw live
+        object_live_track[object] = []
 
     save_object_dic(object_dict)
 
@@ -120,7 +122,7 @@ def draw_tracks_live(object_dict, object_live_track, frame, raw_detections, np_i
                     ]
 
                 elif frame < object_dict[object]["Frame"][-1]:
-                    print(frame)
+
                     nextframeindex = object_dict[object]["Frame"].index(frame)
                     object_live_track[object].append(
                         object_dict[object]["Coord"][nextframeindex]
@@ -135,8 +137,10 @@ def draw_tracks_live(object_dict, object_live_track, frame, raw_detections, np_i
                     np_image = cv2.polylines(
                         np_image, [pts], False, color=trackcolor, thickness=2
                     )
-                else:
-                    object_live_track[object] = []
+                # else:
+                # not necessary
+                #     #if track is drawn completly => erase from canvas
+                #     object_live_track[object] = []
 
     return np_image
 

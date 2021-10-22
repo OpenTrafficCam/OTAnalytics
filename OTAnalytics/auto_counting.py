@@ -3,9 +3,7 @@
 import geopandas as gpd
 from shapely.geometry import LineString, Point, Polygon
 import pandas as pd
-from gui_dict import gui_dict
 from tkinter import filedialog
-import json
 import heapq
 
 

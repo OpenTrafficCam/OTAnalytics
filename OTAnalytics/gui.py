@@ -803,10 +803,9 @@ class MainWindow(tk.Frame):
         """Play video on button press"""
         frame_delay = 1 / self.videoobject.fps
 
-        if self.object_dict:
-            for object in list(self.object_dict.keys()):
+        for object in list(self.object_dict.keys()):
 
-                self.object_live_track[object] = []
+            self.object_live_track[object] = []
 
         gui_dict["rewind_video"] = False
 
