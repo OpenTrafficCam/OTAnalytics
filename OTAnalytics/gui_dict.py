@@ -78,6 +78,11 @@ def button_information_polygon(
 
 
 def button_manuel_count(button_manuel_count):
+    """Button to toggle manuel count
+
+    Args:
+        button_manuel_count (tkinter): ...
+    """
 
     gui_dict["counting_mode"] = not gui_dict["counting_mode"]
 
@@ -119,10 +124,10 @@ def button_display_bb(button):
 
 
 def button_play_video_toggle(button_play, button_rewind):
-    """Summary.
+    """Toggle video play function
 
     Args:
-        button ([type]): [description]
+        button (tkinter button): ...
     """
     gui_dict["play_video"] = not gui_dict["play_video"]
 
@@ -139,7 +144,7 @@ def button_rewind_video_toggle(button_play, button_rewind):
     """Summary.
 
     Args:
-        button ([type]): [description]
+        button (tkinter button): ...
     """
     gui_dict["rewind_video"] = not gui_dict["rewind_video"]
 
@@ -149,7 +154,13 @@ def button_rewind_video_toggle(button_play, button_rewind):
     else:
         button_rewind.config(text="Rewind")
 
+
 def button_display_live_track(button_display_tracks):
+    """Summary.
+
+    Args:
+        button (tkinter button): ...
+    """
 
     gui_dict["display_live_track"] = not gui_dict["display_live_track"]
 

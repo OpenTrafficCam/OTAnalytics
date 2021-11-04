@@ -1,4 +1,3 @@
-from numpy.typing import _32Bit
 from gui_dict import gui_dict, color_dict
 import json
 from tkinter import filedialog

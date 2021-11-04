@@ -298,7 +298,7 @@ def assign_movement(movement_dict, object_df_validated_copy):
 
 
 # %%
-def safe_to_csv(process_object):
+def safe_to_exl(process_object):
     """safe dataframe as cvs and asks for filepath
 
     Args:
@@ -317,6 +317,14 @@ def safe_to_csv(process_object):
 
 
 def clean_dataframe(object_df_validated_copy):
+    """deletes unnecessary columns
+
+    Args:
+        object_df_validated_copy (dataframe): dataframe of validated object tracking
+
+    Returns:
+        dataframe: returns cleaned dataframe
+    """
 
     cleaned_automated_counting = object_df_validated_copy.loc[
         :,
@@ -359,7 +367,7 @@ def automated_counting(fps, movement_dic, detector_dic, object_dic):
     processed_object = assign_movement(movement_dic, processed_object)
     cleaned_object_dataframe = clean_dataframe(processed_object)
 
-    safe_to_csv(cleaned_object_dataframe)
+    safe_to_exl(cleaned_object_dataframe)
 
     return cleaned_object_dataframe
 
