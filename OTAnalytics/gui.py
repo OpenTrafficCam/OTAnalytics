@@ -35,8 +35,6 @@ from sections import (
 )
 from tracks import load_tracks, draw_tracks, draw_bounding_box, draw_tracks_live
 
-print("test")
-
 
 class MainWindow(tk.Frame):
     """Mainwindow with initial dictionaries.

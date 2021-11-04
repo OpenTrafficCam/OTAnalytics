@@ -1,0 +1,53 @@
+{
+    "Detectors": {
+        "Gate1": {
+            "type": "line",
+            "start_x": 294,
+            "start_y": 533,
+            "end_x": 718,
+            "end_y": 145,
+            "color": [
+                200,
+                125,
+                125
+            ]
+        },
+        "Gate2": {
+            "type": "line",
+            "start_x": 746,
+            "start_y": 131,
+            "end_x": 336,
+            "end_y": 100,
+            "color": [
+                200,
+                125,
+                125
+            ]
+        },
+        "Gate3": {
+            "type": "line",
+            "start_x": 337,
+            "start_y": 107,
+            "end_x": 33,
+            "end_y": 186,
+            "color": [
+                200,
+                125,
+                125
+            ]
+        },
+        "Gate0": {
+            "type": "line",
+            "start_x": 17,
+            "start_y": 196,
+            "end_x": 277,
+            "end_y": 546,
+            "color": [
+                200,
+                125,
+                125
+            ]
+        }
+    },
+    "Movements": {}
+}
