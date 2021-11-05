@@ -6,12 +6,12 @@ from tkinter.constants import END
 from gui_dict import statepanel_txt
 
 
-def new_movement(listboxmovement, movement_dict):
+def new_movement(listbox_movement, movement_dict):
     """Creates new movement and adds it to the movement listbox.
 
     Args:
-        listboxmovement ([type]): [description]
-        movement_dict ([type]): [description]
+        listbox_movement ([type]): tkinter listbox to display created movements
+        movement_dict ([type]): dictionary with movements, second key in flow file
     """
     new_movement_creation = Toplevel()
 
@@ -24,7 +24,7 @@ def new_movement(listboxmovement, movement_dict):
         new_movement_creation,
         text="Add movement",
         command=lambda: recieve_movement_name(
-            movement_name_entry, listboxmovement, movement_dict, new_movement_creation
+            movement_name_entry, listbox_movement, movement_dict, new_movement_creation
         ),
     )
     add_movement.grid(row=1, column=1, sticky="w", pady=10, padx=10)
@@ -32,33 +32,38 @@ def new_movement(listboxmovement, movement_dict):
 
 
 def recieve_movement_name(
-    movement_name_entry, listboxmovement, movement_dict, new_movement_creation
+    movement_name_entry, listbox_movement, movement_dict, new_movement_creation
 ):
     movement_name = movement_name_entry.get()
-    listboxmovement.insert(END, movement_name)
+    listbox_movement.insert(END, movement_name)
     movement_dict[movement_name] = []
 
     new_movement_creation.destroy()
 
 
 def add_to_movement(
-    listbox, listboxmovement, linedetectors, polygondetectors, movement_dict, Listbox4
+    listbox,
+    listbox_movement,
+    linedetectors,
+    polygondetectors,
+    movement_dict,
+    listbox_movement_detector,
 ):
     """Possible to add detectors and sections to the selected movement.
 
     Args:
-        Listbox ([type]): [description]
-        listboxmovement ([type]): [description]
+        listbox ([type]): [description]
+        listbox_movement ([type]): [description]
         linedetectors ([type]): [description]
         polygondetectors ([type]): [description]
         movement_dict ([type]): [description]
-        Listbox4 ([type]): [description]
+        listbox_movement_detector ([type]): [description]
     """
     detector_selection = listbox.curselection()
     detector_name = listbox.get(detector_selection[0])
 
-    movement_selection = listboxmovement.curselection()
-    movement_name = listboxmovement.get(movement_selection[0])
+    movement_selection = listbox_movement.curselection()
+    movement_name = listbox_movement.get(movement_selection[0])
 
     if detector_name in linedetectors:
 
@@ -77,16 +82,18 @@ def add_to_movement(
         + str(movement_dict[movement_name].index(detector_name) + 1)
     )
 
-    Listbox4.insert(END, detector_name)
+    listbox_movement_detector.insert(END, detector_name)
 
 
-def curselected_movement(event, Listbox4, listboxmovement, movement_dict, statepanel):
+def curselected_movement(
+    event, listbox_movement_detector, listbox_movement, movement_dict, statepanel
+):
     # shows detectors and sections belonging to selected movement
 
-    Listbox4.delete(0, "end")
+    listbox_movement_detector.delete(0, "end")
 
-    movement_selection = listboxmovement.curselection()
-    movement_name = listboxmovement.get(movement_selection[0])
+    movement_selection = listbox_movement.curselection()
+    movement_name = listbox_movement.get(movement_selection[0])
 
     for detector_name in movement_dict[movement_name]:
         detector_name = (
@@ -95,6 +102,6 @@ def curselected_movement(event, Listbox4, listboxmovement, movement_dict, statep
             + str(movement_dict[movement_name].index(detector_name) + 1)
         )
 
-        Listbox4.insert(END, detector_name)
+        listbox_movement_detector.insert(END, detector_name)
 
     statepanel.update_statepanel(statepanel_txt["Add_movement_information"])

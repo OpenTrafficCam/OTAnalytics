@@ -1,6 +1,6 @@
 {
     "Detectors": {
-        "Gate1": {
+        "sued": {
             "type": "line",
             "start_x": 294,
             "start_y": 533,
@@ -12,7 +12,7 @@
                 125
             ]
         },
-        "Gate2": {
+        "west": {
             "type": "line",
             "start_x": 746,
             "start_y": 131,
@@ -24,7 +24,7 @@
                 125
             ]
         },
-        "Gate3": {
+        "nord": {
             "type": "line",
             "start_x": 337,
             "start_y": 107,
@@ -36,7 +36,7 @@
                 125
             ]
         },
-        "Gate0": {
+        "ost": {
             "type": "line",
             "start_x": 17,
             "start_y": 196,
@@ -44,10 +44,19 @@
             "end_y": 546,
             "color": [
                 200,
-                125,
-                125
+                0,
+                0
             ]
         }
     },
-    "Movements": {}
+    "Movements": {
+        "SN": [
+            "sued",
+            "nord"
+        ],
+        "WO": [
+            "west",
+            "ost"
+        ]
+    }
 }

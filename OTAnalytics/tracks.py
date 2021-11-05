@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 
-def load_tracks(object_dict, object_live_track, raw_detections, ListboxTracks):
+def load_tracks(object_dict, object_live_track, raw_detections, listboxtracks):
     """loads detectors from a .Track-File and converts into displayable format"""
 
     filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.ottrk")])
@@ -45,7 +45,7 @@ def load_tracks(object_dict, object_live_track, raw_detections, ListboxTracks):
                 )
     for object in list(object_dict.keys()):
 
-        ListboxTracks.insert("end", object)
+        listboxtracks.insert("end", object)
         # initialize Tracks to draw live
         object_live_track[object] = []
 
@@ -153,7 +153,7 @@ def draw_bounding_box(raw_detections, frame, image):
         image ([type]): image to draw on
 
     Returns:
-        [type]: returns manipulated image
+       np_image: returns manipulated image
     """
     if gui_dict["display_bb"]:
         try:

@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageTk
 
-from auto_counting import automated_counting
+from auto_counting import create_setting_window
 
 from counting import (
     select_detector_on_canvas,
@@ -236,7 +236,7 @@ class MainWindow(tk.Frame):
             self.frame,
             text="autocount",
             command=lambda: [
-                automated_counting(
+                create_setting_window(
                     self.videoobject.fps,
                     self.flow_dict["Movements"],
                     self.flow_dict["Detectors"],
@@ -924,11 +924,6 @@ class Video:
 
     # objekt which contains relevant information of the video
     def __init__(self, filepath) -> None:
-        """Initial class information from videofile.
-
-        Args:
-            filepath ([string]): string representaition of filepath
-        """
 
         # self.id = id
         self.filepath = filepath
