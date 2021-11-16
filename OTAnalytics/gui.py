@@ -388,7 +388,6 @@ class MainWindow(tk.Frame):
         self.canvas.bind(
             "<B1-Motion>", lambda event: self.draw_line_with_mousedrag(event)
         )
-        # self.canvas.bind("<ButtonRelease-1>", self.finish_detector_creation)
         self.canvas.bind("<MouseWheel>", lambda event: self.mouse_scroll_video(event))
         self.canvas.bind("<ButtonPress-2>", lambda event: self.draw_polygon(True))
         self.canvas.bind("<ButtonPress-3>", lambda event: self.undo_polygon_point())

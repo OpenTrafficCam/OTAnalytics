@@ -1,6 +1,8 @@
 # %%
 
-import tkinter
+from time import strftime
+from tkinter import *
+from tkinter import ttk
 from typing import Text
 import geopandas as gpd
 from shapely.geometry import LineString, Point, Polygon
@@ -71,29 +73,29 @@ def dic_to_object_dataframe(object_dic):
         dataframe: dictionary with information of object
     """
 
-    # count number of coordinates (if the count is less then 2,
+    # count number of coordinates (if the count is less then 3,
     # geopandas cant create Polygon)
     for object in object_dic:
         object_dic[object]["Coord_count"] = len(object_dic[object]["Coord"])
+        object_dic[object]["first_appearance_frame"] = object_dic[object]["Frame"][0]
+        object_dic[object]["last_appearance_frame"] = object_dic[object]["Frame"][-1]
 
     object_df = pd.DataFrame.from_dict(object_dic, orient="index")
 
-    # to validate tracks, object must occur in at least 2 frames
-    object_validated_df = object_df.loc[object_df["Coord_count"] >= 2]
+    object_df_validated = object_df.loc[object_df["Coord_count"] >= 2]
 
-    # better copy so apply function wont give an error msg(sliced dataframe)
-    object_validated_df = object_validated_df.copy()
+    # better copy so apply function wont give an error msg/ is copy because coord_count is filtered
+    object_df_validated_copy = object_df_validated.copy()
 
-    # create geometry column with linestring for every object
-    object_validated_df["geometry"] = object_validated_df.apply(
+    object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1
     )
 
     # not necessary afer restructuring code
-    # object_validated_df["start_point_geometry"] = object_validated_df.apply(
+    # object_df_validated_copy["start_point_geometry"] = object_df_validated_copy.apply(
     #     lambda pointtuples: Point(pointtuples["Coord"][0]), axis=1)
 
-    return object_validated_df
+    return object_df_validated_copy
 
 
 # %%
@@ -319,6 +321,34 @@ def safe_to_exl(process_object):
 
 
 # %%
+def time_calculation_dataframe(timedelta_entry, fps, object_validated_df):
+
+    entry_timedelta = timedelta_entry.get()
+
+    # time_list = entry_timedelta.split(":", 3)
+
+    # hour, min, second = time_list
+
+    # print(hour, min, second)
+
+    # print(entry_timedelta)
+
+    object_validated_df["first_appearance_time"] = pd.to_datetime(
+        (object_validated_df["first_appearance_frame"] / fps), unit="s"
+    ) + pd.Timedelta(entry_timedelta)
+    object_validated_df["last_appearance_time"] = pd.to_datetime(
+        (object_validated_df["last_appearance_frame"] / fps), unit="s"
+    ) + pd.Timedelta(entry_timedelta)
+
+    object_validated_df["first_appearance_time"] = object_validated_df[
+        "first_appearance_time"
+    ].dt.strftime("%H:%M:%S")
+
+    object_validated_df["last_appearance_time"] = object_validated_df[
+        "last_appearance_time"
+    ].dt.strftime("%H:%M:%S")
+
+    return object_validated_df
 
 
 def clean_dataframe(object_validated_df):
@@ -330,25 +360,67 @@ def clean_dataframe(object_validated_df):
     Returns:
         dataframe: returns cleaned dataframe
     """
+    # List hast to be tuple or string in order to be groupby
+    object_validated_df["Movement"] = object_validated_df["Movement"].apply(str)
 
-    cleaned_automated_counting = object_validated_df.loc[
+    return object_validated_df.loc[
         :,
         [
             "Class",
             "Movement",
             "Movement_name",
+            "first_appearance_frame",
+            "first_appearance_time",
+            "last_appearance_frame",
+            "last_appearance_time",
             "Time_crossing_entrace",
             "Time_crossing_exit",
         ],
     ]
 
-    return cleaned_automated_counting
+
+def resample_dataframe(entry_intervall, object_validated_df):
+
+    entry_intervall_time = str(entry_intervall.get())
+
+    print(entry_intervall_time)
+    print(type(entry_intervall))
+
+    if entry_intervall_time not in ["0", "None"]:
+
+        object_validated_df["Datetime"] = pd.to_datetime(
+            object_validated_df["first_appearance_time"]
+        )
+
+        object_validated_df = object_validated_df.set_index("Datetime")
+
+        object_validated_df = (
+            object_validated_df.groupby(
+                by=[
+                    pd.Grouper(freq=str(entry_intervall_time) + "T"),
+                    "Class",
+                    "Movement",
+                    "Movement_name",
+                ],
+                dropna=False,
+            )
+            .size()
+            .reset_index(name="counts")
+        )
+
+        object_validated_df["Datetime"] = object_validated_df["Datetime"].dt.strftime(
+            "%H:%M:%S"
+        )
+
+    return object_validated_df
 
 
 # %%
 
 
-def automated_counting(entry_button, fps, movement_dic, detector_dic, object_dic):
+def automated_counting(
+    entry_timedelta, entry_intervall, fps, movement_dic, detector_dic, object_dic
+):
     """calls previous funtions
 
     Args:
@@ -368,22 +440,20 @@ def automated_counting(entry_button, fps, movement_dic, detector_dic, object_dic
 
     processed_object = find_intersection_order(fps, processed_object, detector_dic)
     processed_object = assign_movement(movement_dic, processed_object)
+
+    processed_object = time_calculation_dataframe(
+        entry_timedelta, fps, processed_object
+    )
+
     cleaned_object_dataframe = clean_dataframe(processed_object)
 
-    resample_dataframe(entry_button, cleaned_object_dataframe)
+    cleaned_resampled_object_df = resample_dataframe(
+        entry_intervall, cleaned_object_dataframe
+    )
 
-    safe_to_exl(cleaned_object_dataframe)
+    safe_to_exl(cleaned_resampled_object_df)
 
-    return cleaned_object_dataframe
-
-
-def resample_dataframe(time_entry,timeintervall_entry ,cleaned_object_dataframe):
-    startingtime = time_entry.get()
-    timeintervall= timeintervall_entry.get()
-
-
-
-    pass
+    return cleaned_resampled_object_df
 
 
 def create_setting_window(fps, movement_dic, detector_dic, object_dic):
@@ -392,39 +462,33 @@ def create_setting_window(fps, movement_dic, detector_dic, object_dic):
 
     toplevelwindow.title("Settings for autocount")
 
-    time_entry_header = Label(toplevelwindow, text="Starttime (hh:mm)", width=20)
-    time_entry_header.grid(row=0, column=0, sticky="w")
+    time_entry_header = Label(toplevelwindow, text="Record start time")
+    time_entry_header.grid(row=0, column=0, columnspan=5, sticky="w")
 
-    time_entry = Entry(toplevelwindow, width=20)
+    time_entry = Entry(toplevelwindow, width=8)
 
     time_entry.grid(row=1, column=0, sticky="w", pady=5, padx=5)
     time_entry.focus()
+    time_entry.insert(0, "00:00:00")
 
-    time_entry.insert(0, "00:00")
+    timeintervall_entry_header = Label(toplevelwindow, text="Timeintervall (min)")
+    timeintervall_entry_header.grid(row=2, column=0, columnspan=5, sticky="w")
 
-    timeintervall_entry_header = Label(
-        toplevelwindow, text="Timeintervall", width=20
-    )
-    timeintervall_entry_header.grid(row=2, column=0, sticky="w", padx=5, pady=5)
-
-    timeintervall_entry = Entry(toplevelwindow, width=20)
+    timeintervall_entry = Entry(toplevelwindow, width=8)
     timeintervall_entry.grid(row=3, column=0, sticky="w", pady=5, padx=5)
-    timeintervall_entry.focus()
-
-    timeintervall_entry.insert(0, "0")
+    timeintervall_entry.insert(0, "None")
 
     toplevelwindow_button = Button(
         toplevelwindow,
-        text="Create file",
-        command=lambda: automated_counting(fps, movement_dic, detector_dic, object_dic),
+        text="Save file",
+        command=lambda: automated_counting(
+            time_entry, timeintervall_entry, fps, movement_dic, detector_dic, object_dic
+        ),
     )
-    toplevelwindow_button.grid(row=4, column=0, sticky="w", pady=5, padx=5)
+    toplevelwindow_button.grid(
+        row=4, columnspan=5, column=0, sticky="w", pady=5, padx=5
+    )
+
     toplevelwindow.protocol("WM_DELETE_WINDOW")
     # makes the background window unavailable
     toplevelwindow.grab_set()
-
-
-
-# %%
-
-# %%

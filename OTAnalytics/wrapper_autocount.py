@@ -4,6 +4,7 @@ import pandas as pd
 from tkinter import filedialog
 import json
 import heapq
+import numpy as np
 
 
 # dictionary for detectors and movements
@@ -12,7 +13,7 @@ import heapq
 def load_tracks(object_dic, raw_detections, class_dic):
     """loads detectors from a .Track-File and converts into displayable format"""
 
-    filepath = "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data/trackdata.ottrk"
+    filepath = "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/test-data/input/radeberg_trackfile-px.ottrk"
     files = open(filepath, "r")
     files = files.read()
 
@@ -102,6 +103,8 @@ def dic_to_object_dataframe(object_dic):
     # geopandas cant create Polygon)
     for object in object_dic:
         object_dic[object]["Coord_count"] = len(object_dic[object]["Coord"])
+        object_dic[object]["first_appearance_frame"] = object_dic[object]["Frame"][0]
+        object_dic[object]["last_appearance_frame"] = object_dic[object]["Frame"][-1]
 
     object_df = pd.DataFrame.from_dict(object_dic, orient="index")
 
@@ -292,8 +295,6 @@ def assign_movement(movement_dict, object_df_validated_copy):
 
     for object_id, j in object_df_validated_copy.iterrows():
 
-        print("working...on " + str(object_id))
-
         for movement_list in movement_dict:
 
             # if detector in movements and real movement crossing events are true,
@@ -308,6 +309,82 @@ def assign_movement(movement_dict, object_df_validated_copy):
                 break
 
     return object_df_validated_copy
+
+
+def time_calculation_dataframe(fps, object_validated_df):
+
+    object_validated_df["first_appearance_time"] = pd.to_datetime(
+        (object_validated_df["first_appearance_frame"] / fps), unit="s"
+    )
+    object_validated_df["last_appearance_time"] = pd.to_datetime(
+        (object_validated_df["last_appearance_frame"] / fps), unit="s"
+    )
+
+    object_validated_df["first_appearance_time"] = object_validated_df[
+        "first_appearance_time"
+    ].dt.strftime("%H:%M:%S")
+
+    object_validated_df["last_appearance_time"] = object_validated_df[
+        "last_appearance_time"
+    ].dt.strftime("%H:%M:%S")
+
+    return object_validated_df
+
+
+def clean_dataframe(object_validated_df):
+    """deletes unnecessary columns
+
+    Args:
+        object_validated_df (dataframe): dataframe of validated object tracking
+
+    Returns:
+        dataframe: returns cleaned dataframe
+
+    """
+
+    # TODO List to Tuple Movement
+    object_validated_df["Movement"] = object_validated_df["Movement"].apply(str)
+
+    print(object_validated_df)
+
+    return object_validated_df.loc[
+        :,
+        [
+            "Class",
+            "Movement",
+            "Movement_name",
+            "first_appearance_frame",
+            "first_appearance_time",
+            "last_appearance_frame",
+            "last_appearance_time",
+            "Time_crossing_entrace",
+            "Time_crossing_exit",
+        ],
+    ]
+
+
+def resample_dataframe(object_validated_df):
+
+    object_validated_df["Datetime"] = pd.to_datetime(
+        object_validated_df["first_appearance_time"]
+    )
+
+    object_validated_df = object_validated_df.set_index("Datetime")
+
+    object_validated_df = object_validated_df.replace(r"^\s*$", np.nan, regex=True)
+
+    print(object_validated_df)
+
+    object_validated_df = (
+        object_validated_df.groupby(
+            by=[pd.Grouper(freq="5T"), "Class", "Movement", "Movement_name"],
+            dropna=False,
+        )
+        .size()
+        .reset_index(name="counts")
+    )
+
+    return object_validated_df
 
 
 def safe_to_exl(process_object):
@@ -342,14 +419,12 @@ def main():
     # open .OTflow
 
     flow_dic = open(
-        "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data//multiple_line_detectors.OTflow",
+        "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/test-data/input/radeberg_sectionfile-px.OTflow",
         "r",
     )
 
     files = open(flow_dic.name, "r")
     files = files.read()
-
-    print(flow_dic)
 
     flow_dic = json.loads(files)
 
@@ -374,6 +449,12 @@ def main():
     )
 
     object_df_validated_copy = assign_movement(movement_dic, object_df_validated_copy)
+
+    object_df_validated_copy = time_calculation_dataframe(25, object_df_validated_copy)
+
+    object_df_validated_copy = clean_dataframe(object_df_validated_copy)
+
+    object_df_validated_copy = resample_dataframe(object_df_validated_copy)
 
     safe_to_exl(object_df_validated_copy)
 
