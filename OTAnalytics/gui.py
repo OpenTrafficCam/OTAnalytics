@@ -40,7 +40,7 @@ class MainWindow(tk.Frame):
     """Mainwindow with initial dictionaries.
 
     Args:
-        tk.frame ([tkinterframe]): important for the process of grouping and organizing
+        tk.frame (tkinterframe): important for the process of grouping and organizing
         other widgets in a somehow friendly way. It works like a container,
         which is responsible for arranging the position of other widgets.
     """
@@ -85,19 +85,19 @@ class MainWindow(tk.Frame):
             self.frame, text="Videos and Tracks", fg="white", bg="#37483E"
         )
         self.videolabel.grid(row=0, column=0, columnspan=7, sticky="ew")
-        self.listboxvideo = tk.Listbox(self.frame, height=3)
-        self.listboxvideo.grid(row=1, column=0, columnspan=7, sticky="ew")
-        self.listboxvideo.bind("<<ListboxSelect>>", self.curselected_video)
+        self.listbox_video = tk.Listbox(self.frame, height=3)
+        self.listbox_video.grid(row=1, column=0, columnspan=7, sticky="ew")
+        self.listbox_video.bind("<<ListboxSelect>>", self.curselected_video)
 
-        self.buttonaddvideo = tk.Button(
+        self.button_addvideo = tk.Button(
             self.frame,
             text="Add",
             command=lambda: MainWindow.load_video_and_frame(self),
         )
 
-        self.buttonaddvideo.grid(row=2, column=0, sticky="ew")
+        self.button_addvideo.grid(row=2, column=0, sticky="ew")
 
-        self.buttonplayvideo = tk.Button(
+        self.button_playvideo = tk.Button(
             self.frame,
             text="Play",
             command=lambda: [
@@ -105,56 +105,56 @@ class MainWindow(tk.Frame):
                 self.play_video(),
             ],
         )
-        self.buttonplayvideo.grid(row=2, column=1, columnspan=1, sticky="ew")
+        self.button_playvideo.grid(row=2, column=1, columnspan=1, sticky="ew")
 
-        self.buttonrewindvideo = tk.Button(
+        self.button_rewindvideo = tk.Button(
             self.frame,
             text="Rewind",
             command=lambda: [
                 button_rewind_video_toggle(
-                    self.buttonrewindvideo, self.buttonplayvideo
+                    self.button_rewindvideo, self.buttonplayvideo
                 ),
                 self.rewind_video(),
             ],
         )
 
-        self.buttonrewindvideo.grid(row=2, column=2, columnspan=1, sticky="ew")
+        self.button_rewindvideo.grid(row=2, column=2, columnspan=1, sticky="ew")
 
-        self.buttonclear = tk.Button(self.frame, text="Clear")
-        self.buttonclear.grid(row=2, column=3, sticky="ew")
+        self.button_clear = tk.Button(self.frame, text="Clear")
+        self.button_clear.grid(row=2, column=3, sticky="ew")
 
         self.detectionlabel = tk.Label(
             self.frame, text="Sections and Objects", fg="white", bg="#37483E"
         )
         self.detectionlabel.grid(row=3, column=0, columnspan=7, sticky="ew")
 
-        self.listboxdetector = tk.Listbox(self.frame, height=8)
-        self.listboxdetector.grid(row=4, column=0, columnspan=3, sticky="ew")
-        self.listboxdetector.bind("<<ListboxSelect>>", self.curselected_detetector)
+        self.listbox_detector = tk.Listbox(self.frame, height=8)
+        self.listbox_detector.grid(row=4, column=0, columnspan=3, sticky="ew")
+        self.listbox_detector.bind("<<ListboxSelect>>", self.curselected_detetector)
 
-        self.listboxtracks = tk.Listbox(
+        self.listbox_tracks = tk.Listbox(
             self.frame, selectmode="multiple", exportselection=False, height=8
         )
-        self.listboxtracks.grid(row=4, column=3, columnspan=4, sticky="ew")
-        self.listboxtracks.bind("<<ListboxSelect>>", self.curselected_track)
+        self.listbox_tracks.grid(row=4, column=3, columnspan=4, sticky="ew")
+        self.listbox_tracks.bind("<<ListboxSelect>>", self.curselected_track)
 
-        self.buttonline = tk.Button(
+        self.button_line = tk.Button(
             self.frame,
             text="Line",
             command=lambda: button_information_line(
-                self.buttonline, self.buttonpoly, self.statepanel
+                self.button_line, self.button_poly, self.statepanel
             ),
         )
-        self.buttonline.grid(row=5, column=0, sticky="ew")
+        self.button_line.grid(row=5, column=0, sticky="ew")
 
-        self.buttonpoly = tk.Button(
+        self.button_poly = tk.Button(
             self.frame,
             text="Polygon",
             command=lambda: button_information_polygon(
-                self.buttonpoly, self.buttonline, self.statepanel
+                self.button_poly, self.button_line, self.statepanel
             ),
         )
-        self.buttonpoly.grid(row=5, column=1, sticky="ew")
+        self.button_poly.grid(row=5, column=1, sticky="ew")
 
         self.button_delete_detector = tk.Button(
             self.frame,
@@ -200,7 +200,7 @@ class MainWindow(tk.Frame):
             self.frame,
             text="Add to movement",
             command=lambda: add_to_movement(
-                self.listboxdetector,
+                self.listbox_detector,
                 self.listbox_movement,
                 self.flow_dict["Detectors"],
                 self.flow_dict["Movements"],
@@ -218,7 +218,7 @@ class MainWindow(tk.Frame):
                     self.object_dict,
                     self.object_live_track,
                     self.raw_detections,
-                    self.listboxtracks,
+                    self.listbox_tracks,
                 ),
                 self.create_canvas_picture(),
             ],
@@ -267,8 +267,8 @@ class MainWindow(tk.Frame):
         )
         self.button_new_movement.grid(row=9, column=0, sticky="ew")
 
-        self.Button11 = tk.Button(self.frame, text="Rename")
-        self.Button11.grid(row=9, column=1, sticky="ew")
+        self.button_rename = tk.Button(self.frame, text="Rename")
+        self.button_rename.grid(row=9, column=1, sticky="ew")
 
         self.button_remove_movement = tk.Button(
             self.frame,
@@ -277,17 +277,17 @@ class MainWindow(tk.Frame):
         )
         self.button_remove_movement.grid(row=9, column=2, sticky="ew")
 
-        self.Button13 = tk.Button(self.frame, text="Clear")
-        self.Button13.grid(row=9, column=3, sticky="ew")
+        self.button_remove = tk.Button(self.frame, text="Clear")
+        self.button_remove.grid(row=9, column=3, sticky="ew")
 
-        self.ButtonSaveFlow = tk.Button(
+        self.button_save_flow = tk.Button(
             self.frame,
             text="Save",
             command=lambda: save_file(self.flow_dict),
         )
-        self.ButtonSaveFlow.grid(row=9, column=4, sticky="ew")
+        self.button_save_flow.grid(row=9, column=4, sticky="ew")
 
-        self.ButtonLoadFlow = tk.Button(
+        self.button_load_flow = tk.Button(
             self.frame,
             text="Load",
             command=lambda: [
@@ -301,7 +301,7 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        self.ButtonLoadFlow.grid(row=9, column=5, sticky="ew")
+        self.button_load_flow.grid(row=9, column=5, sticky="ew")
 
         self.listbox_movement = tk.Listbox(self.frame, width=25, exportselection=False)
         self.listbox_movement.grid(row=8, column=0, columnspan=3, sticky="ew")
@@ -463,9 +463,6 @@ class MainWindow(tk.Frame):
                 self.scroll_video()
 
                 self.value.set(self.counter)
-
-            # prints size of images
-            # print(sys.getsizeof(self.framelist))
 
     def curselected_track(self, event):
         """Draws one or more selected tracks on canvas."""
