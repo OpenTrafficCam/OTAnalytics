@@ -52,15 +52,10 @@ class MainWindow(tk.Frame):
         # dictionary of linedetectors, include id, start point, end point
         self.linepoints = [(0, 0), (0, 0)]
         # self.polygonpoints = []
-        # dictionary of linedetectors, include id, start point, end point
-        self.polygondetectors = {}
 
         # only to dump detectors and movements
-        self.flow_dict = {}
+        self.flow_dict = {"Detectors": {}, "Movements": {}}
 
-        # updated when flow-dictionary is loaded
-        self.flow_dict["Detectors"] = {}
-        self.flow_dict["Movements"] = {}
         self.object_dict = {}
         self.object_live_track = {}
         self.videoobject = None
@@ -68,8 +63,6 @@ class MainWindow(tk.Frame):
         self.raw_detections = {}
         self.mousclick_points = []
 
-        # list to scroll through frames
-        self.framelist = []
         self.selectionlist = []
         self.counter = 0
         self.interval = 20
@@ -108,22 +101,24 @@ class MainWindow(tk.Frame):
             self.frame,
             text="Play",
             command=lambda: [
-                button_play_video_toggle(self.buttonplayvideo, self.buttonplayvideo),
+                button_play_video_toggle(self.buttonplayvideo, self.buttonrewindvideo),
                 self.play_video(),
             ],
         )
         self.buttonplayvideo.grid(row=2, column=1, columnspan=1, sticky="ew")
 
-        self.buttonplayvideo = tk.Button(
+        self.buttonrewindvideo = tk.Button(
             self.frame,
             text="Rewind",
             command=lambda: [
-                button_rewind_video_toggle(self.buttonplayvideo, self.buttonplayvideo),
+                button_rewind_video_toggle(
+                    self.buttonrewindvideo, self.buttonplayvideo
+                ),
                 self.rewind_video(),
             ],
         )
 
-        self.buttonplayvideo.grid(row=2, column=2, columnspan=1, sticky="ew")
+        self.buttonrewindvideo.grid(row=2, column=2, columnspan=1, sticky="ew")
 
         self.buttonclear = tk.Button(self.frame, text="Clear")
         self.buttonclear.grid(row=2, column=3, sticky="ew")
@@ -208,7 +203,6 @@ class MainWindow(tk.Frame):
                 self.listboxdetector,
                 self.listbox_movement,
                 self.flow_dict["Detectors"],
-                self.polygondetectors,
                 self.flow_dict["Movements"],
                 self.listbox_movement_detector,
             ),
@@ -441,10 +435,10 @@ class MainWindow(tk.Frame):
             self.scroll_video()
 
     def mouse_scroll_video(self, event):
-        """lets you scroll through the video with the mousewheel
+        """Navigate through video with mousewheel.
 
         Args:
-            event ([mousewheel]): mousewheel up and mouswheel down
+            event (mousewheel event): mousewheel up and mouswheel down
         """
         # deletes polypoint, if process of creating detector is aborted
         self.polypoints = []
@@ -614,6 +608,7 @@ class MainWindow(tk.Frame):
         self.on_close()
 
     def delete_selected_detector(self):
+        """Deletes in listbox selected detector."""
         # gets selection from listbox
         # delete from dict and re draw detectors on canvas
         detector_name = self.listboxdetector.get(self.listboxdetector.curselection())
@@ -677,6 +672,13 @@ class MainWindow(tk.Frame):
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
     def draw_detectors_from_dict(self, np_image):
+        """Draws detectors on every frame.
+
+        Args:
+            np_image (array): image as numpy array
+
+        Returns:
+            np_image (array): returns manipulated image"""
 
         # m = [0, 1]
 
@@ -745,6 +747,7 @@ class MainWindow(tk.Frame):
         return np_image
 
     def draw_vehicle_direction(self, np_image):
+        """UNUSED FUNCTION!"""
 
         if gui_dict["counting_mode"] is True and len(self.mousclick_points) == 2:
 
@@ -763,6 +766,12 @@ class MainWindow(tk.Frame):
         return np_image
 
     def create_canvas_picture(self):
+        """Takes manipulated np image and converts it into PIL and TKimage to plot on canvas.
+        This functions represents last step of image alteration.
+
+        Returns:
+            np_image (array):
+        """
         # TODO wsfsdf
 
         np_image = self.imagelist[0].copy()
@@ -790,12 +799,10 @@ class MainWindow(tk.Frame):
 
         finish_counting(self.mousclick_points, self.statepanel, self.canvas)
 
-        # draw tracks
-        # use image_cache to transforn to PIL image and so on
         return np_image
 
     def play_video(self):
-        """Play video on button press"""
+        """Play video on button press."""
         frame_delay = 1 / self.videoobject.fps
 
         for object in list(self.object_dict.keys()):
@@ -803,6 +810,8 @@ class MainWindow(tk.Frame):
             self.object_live_track[object] = []
 
         gui_dict["rewind_video"] = False
+
+        print(self.object_live_track)
 
         while (
             gui_dict["play_video"] is True
@@ -834,7 +843,7 @@ class MainWindow(tk.Frame):
             self.slider.set(self.counter)
 
     def rewind_video(self):
-        """rewinds video framewise"""
+        """Rewinds video framewise."""
 
         frame_delay = 1 / self.videoobject.fps
 
@@ -867,52 +876,49 @@ class MainWindow(tk.Frame):
                 self.slider.set(self.counter)
 
     def draw_polygon(self, closing):
-        """draws a polygon on canvas
+        """Draws a polygon on canvas.
 
         Args:
             closing (bool): if true create polygon else continue drawing
         """
 
-        if gui_dict["polygondetector_toggle"]:
+        if not gui_dict["polygondetector_toggle"]:
 
-            image = self.create_canvas_picture()
+            return
 
-            overlay = image.copy()
+        image = self.create_canvas_picture()
 
-            list_of_tuples = [list(elem) for elem in self.polypoints]
+        overlay = image.copy()
 
-            print(gui_dict["polygondetector_toggle"])
+        list_of_tuples = [list(elem) for elem in self.polypoints]
 
-            pts = np.array(list_of_tuples, np.int32)
-            pts = pts.reshape((-1, 1, 2))
+        print(gui_dict["polygondetector_toggle"])
 
-            if closing is False:
+        pts = np.array(list_of_tuples, np.int32)
+        pts = pts.reshape((-1, 1, 2))
 
-                np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
+        if closing is not False:
 
-            else:
+            np_image = cv2.fillPoly(overlay, [pts], (200, 125, 125))
+            opacity = 0.4
+            np_image = cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0, image)
+        np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
 
-                np_image = cv2.fillPoly(overlay, [pts], (200, 125, 125))
-                opacity = 0.4
-                np_image = cv2.addWeighted(
-                    overlay, opacity, image, 1 - opacity, 0, image
-                )
-                np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
+        image = Image.fromarray(np_image)  # to PIL format
+        self.image = ImageTk.PhotoImage(image)  # to ImageTk format
 
-            image = Image.fromarray(np_image)  # to PIL format
-            self.image = ImageTk.PhotoImage(image)  # to ImageTk format
-
-            self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
+        self.canvas.create_image(0, 0, image=self.image, anchor=tk.NW)
 
     def undo_polygon_point(self):
-        """deletes last point and redraws polygon"""
+        """Deletes last point and redraws polygon"""
 
         del self.polypoints[-1]
 
         self.draw_polygon(False)
 
     def kill_creation_process(self):
-        """abort creation process"""
+        """Abort creation process and deletes list of points"""
+        # empties list with points to create polygon
         self.polypoints = []
 
         self.create_canvas_picture()
@@ -922,7 +928,7 @@ class Video:
     """Videoclass that gets created on importing video."""
 
     # objekt which contains relevant information of the video
-    def __init__(self, filepath) -> None:
+    def __init__(self, filepath):
 
         # self.id = id
         self.filepath = filepath
@@ -988,7 +994,7 @@ class StatePanel:
         self.text.config(state="disabled")
 
     def move(self, row, column, sticky, columnspan=2):
-        """Scroll thru statepanel text.
+        """Scroll up and down statepaneltext.
 
         Args:
             row ([tk row]): [row number]

@@ -1,16 +1,10 @@
-# %%
-
 from time import strftime
 from tkinter import *
-from tkinter import ttk
-from typing import Text
 import geopandas as gpd
 from shapely.geometry import LineString, Point, Polygon
 import pandas as pd
 from tkinter import Toplevel, filedialog, Entry, Button, Label
 import heapq
-import keyboard
-from tkinter.constants import END
 
 
 # TODO: check if tracks and crossed sections belong to certain movement
@@ -57,13 +51,6 @@ def dic_to_detector_dataframe(detectors_dict):
     return detector_df
 
 
-# %%
-
-# print(detector_df)
-
-# %%
-
-
 def dic_to_object_dataframe(object_dic):
     """creates a dataframe from object dictionary, creates column with Polygon-objects.
     Args:
@@ -84,7 +71,8 @@ def dic_to_object_dataframe(object_dic):
 
     object_df_validated = object_df.loc[object_df["Coord_count"] >= 2]
 
-    # better copy so apply function wont give an error msg/ is copy because coord_count is filtered
+    # better copy so apply function wont give an error msg/ is copy because coord_count
+    # is filtered
     object_df_validated_copy = object_df_validated.copy()
 
     object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
@@ -96,9 +84,6 @@ def dic_to_object_dataframe(object_dic):
     #     lambda pointtuples: Point(pointtuples["Coord"][0]), axis=1)
 
     return object_df_validated_copy
-
-
-# %%
 
 
 # %%
@@ -148,26 +133,20 @@ def calculate_intersections(detector_df, object_validated_df):
     return object_validated_df
 
 
-# %%
-
-
-# %%
-
-
 def find_intersection_order(fps, object_validated_df, detector_dict):
     """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name)
 
     Second find nearest point (second nearest point) on Linestring compared
-    with intersection
+    with intersection.
 
-    third get index of that coordinate
+    Third get index of that coordinate and compare order.
 
 
     Args:
-        object_validated_df ([type]): dataframe
-        linedetectors ([type]): dictionary
+        object_validated_df (dataframe): Objectdataframe
+        detector_dict (dictionary): dictionary with detectors
     Returns:
-        [type]: [description]
+        Dataframe: With newly calculated columns
     """
 
     # create necessary columns
@@ -271,7 +250,7 @@ def find_intersection_order(fps, object_validated_df, detector_dict):
 
 
 def assign_movement(movement_dict, object_validated_df):
-    """Compares movements and associated detectors with sorted crossing list
+    """Compares movements and associated detectors with sorted crossing list.
 
     Args:
         movement_dict ([dictionary]): dictionary with movements
@@ -306,7 +285,7 @@ def assign_movement(movement_dict, object_validated_df):
 
 # %%
 def safe_to_exl(process_object):
-    """safe dataframe as cvs and asks for filepath
+    """Safe dataframe as cvs and asks for filepath.
 
     Args:
         process_object (datafrane): dataframe with object information

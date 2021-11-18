@@ -44,12 +44,11 @@ def recieve_movement_name(
 def add_to_movement(
     listbox,
     listbox_movement,
-    linedetectors,
-    polygondetectors,
+    detectors,
     movement_dict,
     listbox_movement_detector,
 ):
-    """Possible to add detectors and sections to the selected movement.
+    """Define movement with select polygon or linedetector.
 
     Args:
         listbox ([type]): [description]
@@ -65,16 +64,11 @@ def add_to_movement(
     movement_selection = listbox_movement.curselection()
     movement_name = listbox_movement.get(movement_selection[0])
 
-    if detector_name in linedetectors:
+    if detector_name in detectors:
 
         print(detector_name)
 
         movement_dict[movement_name].append(detector_name)
-
-    else:
-        movement_dict[movement_name].update(
-            {detector_name: polygondetectors[detector_name]}
-        )
 
     detector_name = (
         detector_name
@@ -88,6 +82,15 @@ def add_to_movement(
 def curselected_movement(
     event, listbox_movement_detector, listbox_movement, movement_dict, statepanel
 ):
+    """[summary]
+
+    Args:
+        event ([type]): [description]
+        listbox_movement_detector ([type]): [description]
+        listbox_movement ([type]): [description]
+        movement_dict ([type]): [description]
+        statepanel ([type]): [description]
+    """
     # shows detectors and sections belonging to selected movement
 
     listbox_movement_detector.delete(0, "end")

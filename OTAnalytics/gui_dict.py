@@ -1,8 +1,3 @@
-"""Dictionary with helpfull bool-toggles."""
-
-from tkinter.constants import FALSE
-
-
 gui_dict = {
     "linedetector_toggle": False,
     "polygondetector_toggle": False,
@@ -140,7 +135,7 @@ def button_play_video_toggle(button_play, button_rewind):
         button_play.config(text="Play")
 
 
-def button_rewind_video_toggle(button_play, button_rewind):
+def button_rewind_video_toggle(button_rewind, button_play):
     """Summary.
 
     Args:

@@ -31,6 +31,12 @@ def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
 
 
 def save_file(flow_dict):
+    """Save created dictionary with detectors
+    and movements.
+
+    Args:
+        flow_dict (dictionary): Dictionary with necessary information for reuse.
+    """
     files = [("Files", "*.OTflow")]
     file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
     # with open(file.name, "w") as a_file:
@@ -41,41 +47,22 @@ def save_file(flow_dict):
     json.dump(flow_dict, file, indent=4)
 
 
-# def draw_polygon(np_image, polygonpoints, canvas):
-
-#     if gui_dict["polygondetector_toggle"] is True:
-
-#         print(gui_dict["polygondetector_toggle"])
-
-#         pts = np.array(polygonpoints, np.int32)
-#         pts = pts.reshape((-1, 1, 2))
-
-#         np_image = cv2.polylines(np_image, pts, True, (0, 255, 255))
-
-#         return np_image
-
-
 def draw_line(np_image, linepoints):
+    """Livedrawing of linedetector during creationprocess.
+
+    Args:
+        np_image (array): image as numpy array
+        linepoints ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
 
     if gui_dict["linedetector_toggle"]:
         # if linedetectors or gui_dict["display_all_tracks_toggle"]:
         np_image = cv2.line(np_image, linepoints[0], linepoints[1], (200, 125, 125), 3)
         image = Image.fromarray(np_image)  # to PIL format
         image = ImageTk.PhotoImage(image)  # to ImageTk format
-
-        # else:
-        #     image_cache = cv2.line(imagelist[0].copy(), linepoints[0], linepoints[1],
-        #                            (255, 0, 0), 5)
-        #     image = Image.fromarray(image_cache)  # to PIL format
-        #     image = ImageTk.PhotoImage(image)  # to ImageTk format
-
-        # if gui_dict["polygondetector_toggle"] is True:
-
-        #     print(gui_dict["polygondetector_toggle"])
-
-        #     np_image = cv2.line(np_image, polygonpoints, (173, 255, 47), 3)
-        #     image = Image.fromarray(np_image)  # to PIL format
-        #     image = ImageTk.PhotoImage(image)  # to ImageTk format
 
     return image
 
