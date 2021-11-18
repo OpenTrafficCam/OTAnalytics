@@ -7,10 +7,10 @@ import heapq
 
 
 def dic_to_detector_dataframe(detectors_dict):
-    """creates a dataframe from detector/flow dictionary, # TODO change to use
+    """Creates a dataframe from detector/flow dictionary, # TODO change to use
     linedetector dic that gets updated when importing flow data
     creates column with LineString-objects for the calculation of
-    lineintersection with tracks
+    lineintersection with tracks.
 
     Args:
         detector_dic (dictionary): dictionary with detectors and movements, detector
@@ -46,6 +46,7 @@ def dic_to_detector_dataframe(detectors_dict):
 
 def dic_to_object_dataframe(object_dic):
     """Creates a dataframe from object dictionary, creates column with Polygon-objects.
+
     Args:
         object_dict (dictionary): dictionary with information of object
 
