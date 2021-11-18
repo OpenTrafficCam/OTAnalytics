@@ -119,14 +119,12 @@ def button_display_bb(button):
 
 
 def button_play_video_toggle(button_play, button_rewind):
-    """Toggle video play function
+    """Toggle video play function.
 
     Args:
         button (tkinter button): ...
     """
     gui_dict["play_video"] = not gui_dict["play_video"]
-
-    print(gui_dict["play_video"])
 
     if gui_dict["play_video"]:
         button_play.config(text="Stop")

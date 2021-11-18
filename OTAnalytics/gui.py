@@ -646,8 +646,6 @@ class MainWindow(tk.Frame):
 
         del self.flow_dict["Movements"][movement_name]
 
-        print(self.flow_dict["Movements"])
-
     def curselected_video(self, event):
         """Selected video from listboxvideo-Listbox gets displayed on canvas.
 
@@ -811,8 +809,6 @@ class MainWindow(tk.Frame):
 
         gui_dict["rewind_video"] = False
 
-        print(self.object_live_track)
-
         while (
             gui_dict["play_video"] is True
             and self.counter < self.videoobject.totalframecount
@@ -871,8 +867,6 @@ class MainWindow(tk.Frame):
 
                 self.counter -= 1
 
-                print(self.counter)
-
                 self.slider.set(self.counter)
 
     def draw_polygon(self, closing):
@@ -891,8 +885,6 @@ class MainWindow(tk.Frame):
         overlay = image.copy()
 
         list_of_tuples = [list(elem) for elem in self.polypoints]
-
-        print(gui_dict["polygondetector_toggle"])
 
         pts = np.array(list_of_tuples, np.int32)
         pts = pts.reshape((-1, 1, 2))
