@@ -10,5 +10,6 @@ venv.bak/
 
 # testcode
 
+OTAnalytics\OTAnalytics\counting.py
 OTAnalytics\test.py
 

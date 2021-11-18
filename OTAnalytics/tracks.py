@@ -1,8 +1,10 @@
-from gui_dict import gui_dict, color_dict
 import json
 from tkinter import filedialog
+
 import cv2
 import numpy as np
+
+from gui_dict import color_dict, gui_dict
 
 
 def load_tracks(object_dict, object_live_track, raw_detections, listboxtracks):
@@ -107,8 +109,9 @@ def draw_tracks(selectionlist, object_dict, np_image):
 def save_object_dic(object_dict):
     """Saves dictionary.
 
-    Args: object_dict (dictionary)): Dictionary with objects as keys corresponding frames-
-    and coordslist
+    Args: object_dict (dictionary)): Dictionary with objects as keys corresponding
+    frames- and coordslist
+
     """
     # experimental function / not necessary for end product
 

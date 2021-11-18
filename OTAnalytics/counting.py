@@ -1,8 +1,4 @@
-import cv2
 import numpy as np
-import json
-import tkinter as tk
-from PIL import Image, ImageTk
 import keyboard
 
 # UNUSED

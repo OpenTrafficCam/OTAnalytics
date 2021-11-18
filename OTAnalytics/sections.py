@@ -1,11 +1,11 @@
-from gui_dict import gui_dict
-import cv2
-
-# import tkinter as tk
-from PIL import Image, ImageTk
 import json
 from tkinter import filedialog
 from tkinter.constants import END
+
+import cv2
+from PIL import Image, ImageTk
+
+from gui_dict import gui_dict
 
 
 def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):

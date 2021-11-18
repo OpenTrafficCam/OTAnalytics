@@ -1,8 +1,6 @@
-from tkinter import Toplevel
 import tkinter as tk
+from tkinter import Toplevel
 from tkinter.constants import END
-
-# import json
 from gui_dict import statepanel_txt
 
 

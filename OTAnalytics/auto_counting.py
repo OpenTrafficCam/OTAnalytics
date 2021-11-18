@@ -1,4 +1,3 @@
-from time import strftime
 import geopandas as gpd
 from shapely.geometry import LineString, Point, Polygon
 import pandas as pd

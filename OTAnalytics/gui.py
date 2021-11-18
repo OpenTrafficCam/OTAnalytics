@@ -1,39 +1,29 @@
+import time
 import tkinter as tk
 from tkinter import Toplevel, filedialog
 from tkinter.constants import END, HORIZONTAL
-import time
-import keyboard
 
 import cv2
+import keyboard
 import numpy as np
 from PIL import Image, ImageTk
 
 from auto_counting import create_setting_window
-
-from counting import (
-    select_detector_on_canvas,
-    count_vehicle_process,
-    finish_counting,
-)
+from counting import count_vehicle_process, finish_counting, select_detector_on_canvas
 from gui_dict import (
     button_display_bb,
+    button_display_live_track,
     button_display_tracks_toggle,
     button_information_line,
     button_information_polygon,
+    button_manuel_count,
     button_play_video_toggle,
     button_rewind_video_toggle,
-    button_manuel_count,
-    button_display_live_track,
     gui_dict,
 )
 from movement import add_to_movement, curselected_movement, new_movement
-from sections import (
-    draw_line,
-    get_coordinates_opencv,
-    load_file,
-    save_file,
-)
-from tracks import load_tracks, draw_tracks, draw_bounding_box, draw_tracks_live
+from sections import draw_line, get_coordinates_opencv, load_file, save_file
+from tracks import draw_bounding_box, draw_tracks, draw_tracks_live, load_tracks
 
 
 class MainWindow(tk.Frame):
