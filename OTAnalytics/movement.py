@@ -82,14 +82,14 @@ def add_to_movement(
 def curselected_movement(
     event, listbox_movement_detector, listbox_movement, movement_dict, statepanel
 ):
-    """[summary]
+    """Display all detectors the selected movement consists off.
 
     Args:
-        event ([type]): [description]
-        listbox_movement_detector ([type]): [description]
-        listbox_movement ([type]): [description]
-        movement_dict ([type]): [description]
-        statepanel ([type]): [description]
+        event (listboxselection): Event to trigger function
+        listbox_movement_detector (listbox): Listbox withe detectors
+        listbox_movement (listbox): Listbox with movements
+        movement_dict (dictionary): Dictionary with movements
+        statepanel (textbox): Statepaneltextbox
     """
     # shows detectors and sections belonging to selected movement
 
