@@ -101,7 +101,9 @@ class MainWindow(tk.Frame):
             self.frame,
             text="Play",
             command=lambda: [
-                button_play_video_toggle(self.buttonplayvideo, self.buttonrewindvideo),
+                button_play_video_toggle(
+                    self.button_playvideo, self.button_rewindvideo
+                ),
                 self.play_video(),
             ],
         )
@@ -112,7 +114,7 @@ class MainWindow(tk.Frame):
             text="Rewind",
             command=lambda: [
                 button_rewind_video_toggle(
-                    self.button_rewindvideo, self.buttonplayvideo
+                    self.button_rewindvideo, self.button_playvideo
                 ),
                 self.rewind_video(),
             ],
@@ -294,7 +296,7 @@ class MainWindow(tk.Frame):
                 load_file(
                     self.flow_dict["Detectors"],
                     self.flow_dict["Movements"],
-                    self.listboxdetector,
+                    self.listbox_detector,
                     self.listbox_movement,
                 ),
                 self.create_canvas_picture(),
@@ -410,7 +412,7 @@ class MainWindow(tk.Frame):
         # fills listbox with added video
         filename = self.videoobject.filename
 
-        self.listboxvideo.insert(0, filename)
+        self.listbox_video.insert(0, filename)
 
     def scroll_video(self):
         if not gui_dict["play_video"] and not gui_dict["rewind_video"]:
@@ -487,7 +489,7 @@ class MainWindow(tk.Frame):
         """Lets the user use click and drag to draw a line.
 
         Args:
-            event (event): click on canvas represents the event
+            event (event): click on canvas triggers event
         """
         if gui_dict["linedetector_toggle"] is True:
             self.end_x = int(self.canvas.canvasx(event.x))
@@ -608,11 +610,11 @@ class MainWindow(tk.Frame):
         """Deletes in listbox selected detector."""
         # gets selection from listbox
         # delete from dict and re draw detectors on canvas
-        detector_name = self.listboxdetector.get(self.listboxdetector.curselection())
+        detector_name = self.listbox_detector.get(self.listbox_detector.curselection())
 
         if gui_dict["linedetector_toggle"] is True:  # WRONG
 
-            self.listboxdetector.delete(self.listboxdetector.curselection())
+            self.listbox_detector.delete(self.listbox_detector.curselection())
 
             del self.flow_dict["Detectors"][detector_name]
 
@@ -624,7 +626,7 @@ class MainWindow(tk.Frame):
 
         elif gui_dict["polygondetector_toggle"] is True:
 
-            self.listboxdetector.delete(self.listboxdetector.curselection())
+            self.listbox_detector.delete(self.listbox_detector.curselection())
 
             del self.flow_dict["Detectors"][detector_name]
 
@@ -825,7 +827,7 @@ class MainWindow(tk.Frame):
 
             self.canvas.update()
 
-            self.buttonplayvideo.update()
+            self.button_playvideo.update()
 
             if self.counter < self.videoobject.totalframecount - 1:
                 self.counter += 1
@@ -1000,6 +1002,18 @@ class StatePanel:
             sticky=sticky,
             columnspan=columnspan,
         )
+
+
+class InfoWindow:
+    def __init__(self, windowtitle, infotext):
+        self.window = tk.Tk()
+        self.window.title(windowtitle)
+        self.window.geometry("300x200")
+        self.label = tk.Label(self.window, text=infotext)
+        self.label.grid(column=0, row=0)
+
+        self.button = tk.Button(self.window)
+        self.button.grid(column=0, row=1)
 
 
 def main():

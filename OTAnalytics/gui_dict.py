@@ -1,3 +1,7 @@
+import tkinter as tk
+
+from numpy.lib.utils import info
+
 gui_dict = {
     "linedetector_toggle": False,
     "polygondetector_toggle": False,
