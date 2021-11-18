@@ -1,16 +1,9 @@
 from time import strftime
-from tkinter import *
 import geopandas as gpd
 from shapely.geometry import LineString, Point, Polygon
 import pandas as pd
 from tkinter import Toplevel, filedialog, Entry, Button, Label
 import heapq
-
-
-# TODO: check if tracks and crossed sections belong to certain movement
-
-
-# %%
 
 
 def dic_to_detector_dataframe(detectors_dict):
@@ -52,9 +45,9 @@ def dic_to_detector_dataframe(detectors_dict):
 
 
 def dic_to_object_dataframe(object_dic):
-    """creates a dataframe from object dictionary, creates column with Polygon-objects.
+    """Creates a dataframe from object dictionary, creates column with Polygon-objects.
     Args:
-        object_dict ([dictionary]): dictionary with information of object
+        object_dict (dictionary): dictionary with information of object
 
     Returns:
         dataframe: dictionary with information of object
@@ -88,7 +81,7 @@ def dic_to_object_dataframe(object_dic):
 
 # %%
 def calculate_intersections(detector_df, object_validated_df):
-    """checks if tracks and detectors intersect, alters object_dataframe
+    """Checks if tracks and detectors intersect, alters object_dataframe.
 
     Args:
         detector_df (dataframe): dataframe with detectors
@@ -134,7 +127,7 @@ def calculate_intersections(detector_df, object_validated_df):
 
 
 def find_intersection_order(fps, object_validated_df, detector_dict):
-    """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name)
+    """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name).
 
     Second find nearest point (second nearest point) on Linestring compared
     with intersection.
@@ -331,7 +324,7 @@ def time_calculation_dataframe(timedelta_entry, fps, object_validated_df):
 
 
 def clean_dataframe(object_validated_df):
-    """deletes unnecessary columns
+    """Deletes unnecessary columns.
 
     Args:
         object_validated_df (dataframe): dataframe of validated object tracking
@@ -359,11 +352,16 @@ def clean_dataframe(object_validated_df):
 
 
 def resample_dataframe(entry_intervall, object_validated_df):
+    """Groups and timeresamples dataframe.
 
+    Args:
+        entry_intervall (integer): timeinterval in which grouped data is summed up
+        object_validated_df (dataframe): Dataframe
+
+    Returns:
+        dataframe: Returns grouped and resampled dataframe
+    """
     entry_intervall_time = str(entry_intervall.get())
-
-    print(entry_intervall_time)
-    print(type(entry_intervall))
 
     if entry_intervall_time not in ["0", "None"]:
 
@@ -394,17 +392,14 @@ def resample_dataframe(entry_intervall, object_validated_df):
     return object_validated_df
 
 
-# %%
-
-
 def automated_counting(
     entry_timedelta, entry_intervall, fps, movement_dic, detector_dic, object_dic
 ):
-    """calls previous funtions
+    """Calls previous funtions for better readability.
 
     Args:
         detector_dict (dictionary): dictionary with detectors
-        object_dict (dictionary): dictionary with obejcts (at least 3 detections)
+        object_dict (dictionary): dictionary with objects (at least 3 detections)
 
     """
 
@@ -436,6 +431,15 @@ def automated_counting(
 
 
 def create_setting_window(fps, movement_dic, detector_dic, object_dic):
+    """Creates window with button to resample dataframe and two
+    inputfields to enter starting time and timeintervall.
+
+    Args:
+        fps (int): Videoframes per seconds
+        movement_dic (dictionary): dictionary with movements
+        detector_dic (dictionary): dictionary with detectors
+        object_dic (dictionary): dictionary with objects
+    """
     # creates window to insert autocount time and groupby time
     toplevelwindow = Toplevel()
 
