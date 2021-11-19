@@ -1,8 +1,9 @@
-import geopandas as gpd
-from shapely.geometry import LineString, Point, Polygon
-import pandas as pd
-from tkinter import Toplevel, filedialog, Entry, Button, Label
 import heapq
+from tkinter import Button, Entry, Label, Toplevel, filedialog
+
+import geopandas as gpd
+import pandas as pd
+from shapely.geometry import LineString, Point, Polygon
 
 
 def dic_to_detector_dataframe(detectors_dict):

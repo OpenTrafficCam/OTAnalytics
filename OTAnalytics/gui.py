@@ -157,7 +157,7 @@ class MainWindow(tk.Frame):
 
         self.button_display_tracks = tk.Button(
             self.frame,
-            text="show tracks",
+            text="Show tracks",
             command=lambda: [
                 button_display_tracks_toggle(self.button_display_tracks),
                 self.create_canvas_picture(),
@@ -168,7 +168,7 @@ class MainWindow(tk.Frame):
 
         self.button_display_boundingbox = tk.Button(
             self.frame,
-            text="show bb",
+            text="Show bb",
             command=lambda: [
                 button_display_bb(self.button_display_boundingbox),
                 self.create_canvas_picture(),
@@ -850,7 +850,7 @@ class MainWindow(tk.Frame):
 
             self.canvas.update()
 
-            self.buttonplayvideo.update()
+            self.button_playvideo.update()
 
             if self.counter >= 1:
 
@@ -934,11 +934,11 @@ class StatePanel:
         """Initial class information.
 
         Args:
-            window ([tkinter Frame]): window where statepanel ist shown.
-            row ([tk row]): [row number]
-            column ([tk column]): [column number]
-            sticky ([arg]): [text alignment]
-            columnspan ([arg]): [button span]
+            window (tkinter Frame): window where statepanel ist shown.
+            row (tk row): row number
+            column (tk column): column number
+            sticky (arg): text alignment
+            columnspan (arg): button span
         """
         self.scrollbar = tk.Scrollbar(window)
         self.text = tk.Text(
