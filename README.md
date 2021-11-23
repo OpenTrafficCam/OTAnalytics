@@ -17,6 +17,6 @@ We appreciate your support in the form of both code and comments. First, please 
 2. Click on .\OTAnalytics\Install.bat (a venv will be created and packages from requirements.txt will be installed
 3. Click on .\OTAnalytics\OTAnalytics.bat (venv will be activated and OTVision gui will be started)
 
-# License
+## License
 
 This software is licensed under the [GPL-3.0 License](LICENSE)
