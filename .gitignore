@@ -12,4 +12,6 @@ venv.bak/
 
 OTAnalytics\OTAnalytics\counting.py
 OTAnalytics\test.py
+OTAnalytics\counting.py
+OTAnalytics\wrapper_autocount.py
 
