@@ -15,12 +15,12 @@ from counting import (
 from gui_dict import (
     button_display_bb,
     button_display_live_track,
-    button_play_video_toggle,
-    button_rewind_video_toggle,
+    button_display_tracks_toggle,
     button_information_line,
     button_information_polygon,
-    button_display_tracks_toggle,
     button_manuel_count,
+    button_play_video_toggle,
+    button_rewind_video_toggle,
     gui_dict,
 )
 from movement import add_to_movement, curselected_movement, new_movement

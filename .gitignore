@@ -10,8 +10,8 @@ venv.bak/
 
 # testcode
 
-OTAnalytics\test.py
-OTAnalytics\counting.py
-OTAnalytics\wrapper_autocount.py
+test.py
+counting.py
+wrapper_autocount.py
 
-OTAnalytics\pyproject.toml
+pyproject.toml
