@@ -3,9 +3,8 @@ from tkinter import filedialog
 from tkinter.constants import END
 
 import cv2
-from PIL import Image, ImageTk
-
 from gui_dict import gui_dict
+from PIL import Image, ImageTk
 
 
 def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):

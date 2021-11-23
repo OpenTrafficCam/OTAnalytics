@@ -3,7 +3,6 @@ from tkinter import filedialog
 
 import cv2
 import numpy as np
-
 from gui_dict import color_dict, gui_dict
 
 

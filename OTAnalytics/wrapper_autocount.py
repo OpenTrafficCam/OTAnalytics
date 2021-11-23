@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
 
-# dictionary for detectors and movements
-
 
 def load_tracks(object_dic, raw_detections, class_dic):
     """loads detectors from a .Track-File and converts into displayable format"""

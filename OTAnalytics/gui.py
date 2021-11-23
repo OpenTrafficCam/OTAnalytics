@@ -6,24 +6,26 @@ from tkinter.constants import END, HORIZONTAL
 import cv2
 import keyboard
 import numpy as np
-from PIL import Image, ImageTk
-
 from auto_counting import create_setting_window
-from counting import count_vehicle_process, finish_counting, select_detector_on_canvas
+from counting import (
+    count_vehicle_process,
+    finish_counting,
+    select_detector_on_canvas,
+)
 from gui_dict import (
     button_display_bb,
     button_display_live_track,
-    button_display_tracks_toggle,
-    button_information_line,
-    button_information_polygon,
-    button_manuel_count,
-    button_play_video_toggle,
-    button_rewind_video_toggle,
     gui_dict,
 )
 from movement import add_to_movement, curselected_movement, new_movement
+from PIL import Image, ImageTk
 from sections import draw_line, get_coordinates_opencv, load_file, save_file
-from tracks import draw_bounding_box, draw_tracks, draw_tracks_live, load_tracks
+from tracks import (
+    draw_bounding_box,
+    draw_tracks,
+    draw_tracks_live,
+    load_tracks,
+)
 
 
 class MainWindow(tk.Frame):
