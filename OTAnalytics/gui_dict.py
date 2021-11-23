@@ -23,7 +23,8 @@ color_dict = {
 }
 
 statepanel_txt = {
-    "Linedetector_information": "press and drag mouse to create a line\nbutton needs to be toggled to remove sections",
+    "Linedetector_information": "press and drag mouse to create a line\nbutton needs to"
+    + " be toggled to remove sections",
     "Add_movement_information": "select and add section while movement is highlighted",
 }
 
@@ -66,7 +67,8 @@ def button_information_polygon(
         button_polygondetector.config(text="Finish")
         button_linedetetector.config(text="Line")
         statepanel.update_statepanel(
-            "left click to create new polyogoncorner\nright button to delete previous corner\nwheelclick to close polygon\nenter to finish creation process"
+            "left click to create new polyogoncorner\nright button to delete previous"
+            + " corner\nwheelclick to close polygon\nenter to finish creation process"
         )
     else:
         button_polygondetector.config(text="Polygon")

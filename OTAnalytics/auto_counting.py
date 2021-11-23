@@ -155,7 +155,7 @@ def find_intersection_order(fps, object_validated_df, detector_dict):
         for detector in detector_dict:
             # Condition if detector was crossed by objecttrack
             # Dont change to "is True"!! (True is the content of row/column)
-            if object_validated_df.loc[object_id][detector] == True:
+            if object_validated_df.loc[object_id][detector]:
 
                 # shapely Linestring
                 track_line = object_validated_df.loc[object_id]["geometry"]

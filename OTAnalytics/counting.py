@@ -1,10 +1,10 @@
-import numpy as np
 import keyboard
+import numpy as np
+
+from gui_dict import gui_dict
 
 # UNUSED
 
-
-from gui_dict import gui_dict
 
 # detectors = {}
 # movement_dict = {}

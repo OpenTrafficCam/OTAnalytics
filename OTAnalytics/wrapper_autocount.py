@@ -13,7 +13,10 @@ import numpy as np
 def load_tracks(object_dic, raw_detections, class_dic):
     """loads detectors from a .Track-File and converts into displayable format"""
 
-    filepath = "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/test-data/input/radeberg_trackfile-px.ottrk"
+    filepath = (
+        "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/test-data/"
+        + "input/radeberg_trackfile-px.ottrk"
+    )
     files = open(filepath, "r")
     files = files.read()
 
@@ -110,7 +113,8 @@ def dic_to_object_dataframe(object_dic):
 
     object_df_validated = object_df.loc[object_df["Coord_count"] >= 2]
 
-    # better copy so apply function wont give an error msg/ is copy because coord_count is filtered
+    # better copy so apply function wont give an error msg/ is copy
+    # because coord_count is filtered
     object_df_validated_copy = object_df_validated.copy()
 
     object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
@@ -198,7 +202,7 @@ def find_intersection_order(object_df_validated_copy, detector_dict, fps=25):
         for detector in detector_dict:
             #         # Condition if detector was crossed by objecttrack
             #         # Dont change to "is True"!!
-            if object_df_validated_copy.loc[object_id][detector] == True:
+            if object_df_validated_copy.loc[object_id][detector]:
 
                 # shapely Linestring
                 track_line = object_df_validated_copy.loc[object_id]["geometry"]
@@ -290,7 +294,8 @@ def assign_movement(movement_dict, object_df_validated_copy):
         object_df_validated_copy ([dataframe]): validated object dataframe
 
     Returns:
-        object_df_validated_copy ([dataframe]): validated object dataframe with movements
+        object_df_validated_copy ([dataframe]):
+        validated object dataframe with movements
     """
 
     for object_id, j in object_df_validated_copy.iterrows():
@@ -419,7 +424,9 @@ def main():
     # open .OTflow
 
     flow_dic = open(
-        "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/test-data/input/radeberg_sectionfile-px.OTflow",
+        "C:/Users/Goerner/Desktop/code/OpenTrafficCam/"
+        + "OTAnalytics/tests/test-data/input/"
+        + "radeberg_sectionfile-px.OTflow",
         "r",
     )
 
