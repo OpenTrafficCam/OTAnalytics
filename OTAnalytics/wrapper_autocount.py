@@ -1,11 +1,11 @@
-import geopandas as gpd
-from shapely.geometry import LineString, Point, Polygon
-import pandas as pd
-from tkinter import filedialog
-import json
 import heapq
-import numpy as np
+import json
+from tkinter import filedialog
 
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+from shapely.geometry import LineString, Point, Polygon
 
 # dictionary for detectors and movements
 
