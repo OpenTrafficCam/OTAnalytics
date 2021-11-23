@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import Toplevel
 from tkinter.constants import END
+
 from gui_dict import statepanel_txt
 
 
