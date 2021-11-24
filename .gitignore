@@ -15,3 +15,7 @@ counting.py
 wrapper_autocount.py
 
 pyproject.toml
+
+# cache 
+
+__pycache__/

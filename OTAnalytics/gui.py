@@ -1017,6 +1017,7 @@ class InfoWindow:
 def main():
     """Main function."""
     root = tk.Tk()
+    root.iconbitmap(r"OTAnalytics\gui\OTC.ico")
     MainWindow(root)
     root.mainloop()
 
