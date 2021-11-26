@@ -9,7 +9,7 @@ from gui_dict import color_dict, gui_dict
 def load_tracks(object_dict, object_live_track, raw_detections, listboxtracks):
     """loads detectors from a .Track-File and converts into displayable format"""
 
-    filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.ottrk")])
+    filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
     files = open(filepath.name, "r")
     files = files.read()
 
@@ -49,7 +49,7 @@ def load_tracks(object_dict, object_live_track, raw_detections, listboxtracks):
         # initialize Tracks to draw live
         object_live_track[object] = []
 
-    save_object_dic(object_dict)
+    # save_object_dic(object_dict)
 
     gui_dict["tracks_imported"] = True
 

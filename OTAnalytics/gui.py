@@ -329,6 +329,8 @@ class MainWindow(tk.Frame):
         video_source = video_source.name
         video_name = video_source.split("/")[-1]
 
+        print(video_source)
+
         self.statepanel = StatePanel(
             self.frame, 10, 0, sticky="nswe", rowspan=2, columnspan=6
         )
@@ -347,7 +349,9 @@ class MainWindow(tk.Frame):
         # copy is important or else original image will be changed
         self.image = Image.fromarray(self.image_original.copy())  # to PIL format
 
-        self.image = ImageTk.PhotoImage(self.image)  # to ImageTk format
+        self.image = ImageTk.PhotoImage(
+            self.image,
+        )  # to ImageTk format
 
         self.imagelist[0] = self.image_original
 

@@ -1,0 +1,31 @@
+<mxfile host="65bd71144e">
+    <diagram id="O72J0MGp-GKvUqN4uzEu" name="Page-1">
+        <mxGraphModel dx="239" dy="433" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="Class Canvas" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="360" y="80" width="200" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="+ clickedX: int&lt;br&gt;+ clickedY: int" style="whiteSpace=wrap;html=1;align=left;spacingLeft=10;" vertex="1" parent="1">
+                    <mxGeometry x="360" y="120" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="- get_cordinates_cv(event): clieckedX, clickedY&amp;nbsp;&lt;br&gt;+ display_image(video)" style="whiteSpace=wrap;html=1;align=left;spacingLeft=10;" vertex="1" parent="1">
+                    <mxGeometry x="360" y="180" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="" style="group" vertex="1" connectable="0" parent="1">
+                    <mxGeometry x="100" y="90" width="200" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="Class Videoobject" style="whiteSpace=wrap;html=1;" vertex="1" parent="12">
+                    <mxGeometry width="200" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="+filepath: string&lt;br&gt;+filename: string&lt;br&gt;+cap:&lt;br&gt;+fps: int&lt;br&gt;+width: int&lt;br&gt;+height: int&lt;br&gt;+totalframecount: int" style="whiteSpace=wrap;html=1;align=left;spacingLeft=10;" vertex="1" parent="12">
+                    <mxGeometry y="40" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="- get_cordinates_cv(event): clieckedX, clickedY&amp;nbsp;&lt;br&gt;+ display_image(video)" style="whiteSpace=wrap;html=1;align=left;spacingLeft=10;" vertex="1" parent="12">
+                    <mxGeometry y="160" width="200" height="70" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

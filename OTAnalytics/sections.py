@@ -3,30 +3,10 @@ from tkinter import filedialog
 from tkinter.constants import END
 
 import cv2
+from canvas_class import OtcCanvas
 from gui_dict import gui_dict
 from PIL import Image, ImageTk
-
-
-def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
-    """Saves coordinates from canvas event to linepoint list.
-
-    Args:
-        event ([type]): [description]
-        linepoints ([list]): cache of linepoints
-        polygonpoints ([list]): [description]
-        canvas ([type]): [description]
-    """
-    if gui_dict["linedetector_toggle"]:
-        #  uses mouseevents to get coordinates (left button)
-        start_x = int(canvas.canvasx(event.x))
-        start_y = int(canvas.canvasy(event.y))
-        linepoints[0] = (start_x, start_y)
-
-    if gui_dict["polygondetector_toggle"]:
-        # uses mouseevents to get coordinates (left button)
-        start_x = int(canvas.canvasx(event.x))
-        start_y = int(canvas.canvasy(event.y))
-        polygonpoints.append((start_x, start_y))
+import numpy as np
 
 
 def save_file(flow_dict):
@@ -46,24 +26,34 @@ def save_file(flow_dict):
     json.dump(flow_dict, file, indent=4)
 
 
-def draw_line(np_image, linepoints):
-    """Livedrawing of linedetector during creationprocess.
+def draw_line_section(np_image, startpoint, endpoint):
+
+    return cv2.line(np_image, startpoint, endpoint, (200, 125, 125), 3)
+
+
+def draw_polygon(np_image, polypoints, points):
+    """Draws a polygon on canvas.
 
     Args:
-        np_image (array): image as numpy array
-        linepoints ([type]): [description]
+        closing (bool): if true create polygon else continue drawing
 
-    Returns:
-        [type]: [description]
     """
+    image = np_image
+    # overlay = image.copy()
 
-    if gui_dict["linedetector_toggle"]:
-        # if linedetectors or gui_dict["display_all_tracks_toggle"]:
-        np_image = cv2.line(np_image, linepoints[0], linepoints[1], (200, 125, 125), 3)
-        image = Image.fromarray(np_image)  # to PIL format
-        image = ImageTk.PhotoImage(image)  # to ImageTk format
+    polypoints.append(points)
 
-    return image
+    list_of_tuples = [list(elem) for elem in polypoints]
+
+    pts = np.array(list_of_tuples, np.int32)
+    pts = pts.reshape((-1, 1, 2))
+
+    # if closing is not False:
+
+    #     np_image = cv2.fillPoly(overlay, [pts], (200, 125, 125))
+    #     opacity = 0.4
+    #     np_image = cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0, image)
+    return cv2.polylines(image, [pts], False, (200, 125, 125), 2)
 
 
 def load_file(detectors, movements, ListboxDetector, ListboxMovement):

@@ -1,18 +1,16 @@
-import pandas as pd
+import tkinter
 
-df_count = pd.read_excel(r"C:\Users\Goerner\Desktop\test1.xlsx")
 
-print(df_count)
+class App:
+    def __init__(self):
+        ...  # some code
+        window_button = tkinter.Button(
+            universe_window,
+            text="0",
+            font=(font, font_size_small),
+            command=self.get_number,
+        )
+        window_button.place(x=654, y=310)
 
-df_count["Datetime"] = pd.to_datetime(df_count["first_appearance_time"])
-df_count = df_count.set_index("Datetime")
-
-df_count = (
-    df_count.groupby(
-        [pd.Grouper(freq="5T"), "Class", "Movement", "Movement_name"], dropna=False
-    )
-    .size()
-    .reset_index(name="counts")
-)
-
-print(df_count)
+    def get_number(self):
+        self.value = Get_Number("Display_Commands", "0")
