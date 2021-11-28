@@ -29,13 +29,12 @@ class OtcCanvas(tk.Canvas):
         #  uses mouseevents to get coordinates (left button)
         self.clicked_coordinateX = int(self.canvasx(event.x))
         self.clicked_coordinateY = int(self.canvasy(event.y))
-        print(self.clicked_coordinateX)
 
     def drag_recieve_coordinates(self, event):
         self.dragged_coordinateX = int(self.canvasx(event.x))
         self.dragged_coordinateY = int(self.canvasy(event.y))
 
-        # self.linepoints[1] = (self.dragged_coordinateX, self.dragged_coordinateY)
+        self.linepoints[1] = (self.dragged_coordinateX, self.dragged_coordinateY)
 
         w, h = self.winfo_width(), self.winfo_height()
         if event.x > 0.9 * w:
@@ -55,13 +54,9 @@ class OtcCanvas(tk.Canvas):
 
         videoobject.current_frame += i
 
-        current_image = videoobject.get_frame()
-
-        self.create_image(0, 0, anchor=tk.NW, image=current_image)
-
-        self.slider_value.set(videoobject.current_frame)
-
     def slider_scroll(self, event, hand_slide, videoobject):
+
+        # TODO if video plays dont call get frame!
 
         self.slider_value = hand_slide
 

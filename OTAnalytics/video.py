@@ -43,29 +43,19 @@ class Video:
 
         self.current_frame = 0
 
-    def get_frame(self):
+    def get_frame(self, np_image):
 
         # when imported set current frame to 0
         self.cap.set(1, self.current_frame)
 
         self.np_image = cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2RGB)  # to RGB
 
-        print(type(self.np_image))
+        if np_image:
+
+            return self.np_image
 
         # copy is important or else original image will be changed
         image = Image.fromarray(self.np_image.copy())  # to PIL format
-
-        # The variable photo is a local variable which gets garbage collected after the
-        # class is instantiated. Save a reference to the photo
-        self.image = ImageTk.PhotoImage(image)  # to ImageTk format
-
-        print("creating image worked")
-
-        return self.image
-
-    def recieve_altered_frame(self, np_image):
-        # copy is important or else original image will be changed
-        image = Image.fromarray(np_image.copy())  # to PIL format
 
         # The variable photo is a local variable which gets garbage collected after the
         # class is instantiated. Save a reference to the photo
