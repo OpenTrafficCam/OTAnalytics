@@ -5,6 +5,9 @@ import time
 from tracks2 import load_tracks
 from tkinter.constants import END, HORIZONTAL
 from image_alteration import manipulate_image
+import keyboard
+from sections import add_section
+from PIL import Image, ImageTk
 
 
 class MainWindow(tk.Frame):
@@ -23,6 +26,8 @@ class MainWindow(tk.Frame):
         self.frame.grid()
         self.master.title("OTAnalytics")
 
+        self.flow_dict = {"Detectors": {}, "Movements": {}}
+
         videolabel = tk.Label(
             master=self.frame, text="Videos and Tracks", fg="white", bg="#37483E"
         )
@@ -31,8 +36,14 @@ class MainWindow(tk.Frame):
         self.listbox_video.grid(row=1, column=0, columnspan=7, sticky="ew")
         self.listbox_video.bind("<<ListboxSelect>>")
 
+        # hotkeys
+        keyboard.add_hotkey(
+            "enter",
+            lambda: SectionEntryWindow(self.flow_dict, master=master),
+        )
+
         button_addvideo = tk.Button(
-            self.frame, text="Add", command=self.get_videoobject
+            self.frame, text="Add", command=lambda: self.create_canvas_and_videoobject()
         )
 
         button_addvideo.grid(row=2, column=0, sticky="ew")
@@ -107,7 +118,7 @@ class MainWindow(tk.Frame):
 
         self.button_display_livetracks.grid(row=5, column=4, sticky="ew")
 
-    def get_videoobject(self):
+    def create_canvas_and_videoobject(self):
         # load video object
 
         global videoobject
@@ -115,7 +126,7 @@ class MainWindow(tk.Frame):
 
         videoobject = load_video_and_frame()
 
-        first_frame = videoobject.get_frame()
+        first_frame = videoobject.get_frame(np_image=False)
 
         # create canvas from videoobect
         maincanvas = OtcCanvas(
@@ -128,18 +139,40 @@ class MainWindow(tk.Frame):
 
         maincanvas.bind(
             "<MouseWheel>",
-            lambda event: maincanvas.scroll_through_video(event, videoobject),
+            lambda event: [
+                maincanvas.scroll_through_video(event, videoobject),
+                manipulate_image(videoobject, maincanvas, self.flow_dict),
+            ],
         )
 
         maincanvas.bind(
-            "<ButtonPress-1>", lambda event: maincanvas.click_recieve_coorinates(event)
+            "<ButtonPress-1>",
+            lambda event: [
+                maincanvas.click_recieve_coorinates(event),
+            ],
+        )
+
+        maincanvas.bind(
+            "<ButtonPress-2>",
+            lambda event: [
+                # maincanvas.click_recieve_coorinates(event),
+                manipulate_image(maincanvas, videoobject, closing=True),
+            ],
         )
 
         maincanvas.bind(
             "<B1-Motion>",
             lambda event: [
                 maincanvas.drag_recieve_coordinates(event),
-                manipulate_image(event, maincanvas, videoobject),
+                manipulate_image(videoobject, maincanvas, self.flow_dict),
+            ],
+        )
+
+        maincanvas.bind(
+            "<ButtonPress-3>",
+            lambda event: [
+                maincanvas.click_recieve_coorinates(event),
+                manipulate_image(videoobject, maincanvas, closing=True, undo=True),
             ],
         )
 
@@ -148,18 +181,18 @@ class MainWindow(tk.Frame):
 
         self.listbox_video.insert(0, videoobject.filename)
 
-        self.slider = tk.Scale(
-            self.frame,
-            variable=maincanvas.slider_value,
-            from_=0,
-            to=videoobject.totalframecount - 1,
-            orient=HORIZONTAL,
-            command=lambda event: maincanvas.slider_scroll(
-                event, int(event), videoobject
-            ),  # event is the slided number/ gets triggered through mousescroll/
-        )
+        # self.slider = tk.Scale(
+        #     self.frame,
+        #     variable=maincanvas.slider_value,
+        #     from_=0,
+        #     to=videoobject.totalframecount - 1,
+        #     orient=HORIZONTAL,
+        #     command=lambda event: maincanvas.slider_scroll(
+        #         event, int(event), videoobject
+        #     ),  # event is the slided number/ gets triggered through mousescroll/
+        # )
 
-        self.slider.grid(row=11, column=7, sticky="wen")
+        # self.slider.grid(row=11, column=7, sticky="wen")
 
     def play_video(self, i):
         # play and rewind
@@ -168,15 +201,14 @@ class MainWindow(tk.Frame):
 
             time.sleep(videoobject.frame_delay)
 
-            current_frame = videoobject.get_frame()
+            manipulate_image(videoobject, maincanvas, self.flow_dict)
 
-            maincanvas.create_image(0, 0, anchor=tk.NW, image=current_frame)
-            maincanvas.update()
+            # maincanvas.update()
+
+            videoobject.current_frame += 1
 
             # slows down programm
-            self.slider.set(videoobject.current_frame)
-
-            videoobject.current_frame += i
+            # self.slider.set(videoobject.current_frame)
 
     def get_tracks(self):
 
@@ -187,6 +219,32 @@ class MainWindow(tk.Frame):
             self.listbox_tracks.insert("end", object)
             # initialize Tracks to draw live
             # object_live_track[object] = []
+
+
+class SectionEntryWindow(tk.Toplevel):
+    def __init__(self, flow_dictionary, **kwargs):
+        super().__init__(**kwargs)
+
+        self.detector_name_entry = tk.Entry(self)
+
+        self.detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
+        self.detector_name_entry.focus()
+
+        self.add_section = tk.Button(
+            self,
+            text="Add section",
+            command=lambda: add_section(
+                maincanvas, flow_dictionary, self.detector_name_entry
+            ),
+        )
+        self.add_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
+        # makes the background window unavailable
+        self.grab_set()
+
+
+def create_section_entry_window(flow_dictionary, master):
+
+    SectionEntryWindow(flow_dictionary, master=master)
 
 
 def main():
