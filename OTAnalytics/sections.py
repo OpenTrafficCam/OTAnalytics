@@ -28,8 +28,6 @@ def get_coordinates_opencv(event, linepoints, polygonpoints, canvas):
         start_y = int(canvas.canvasy(event.y))
         polygonpoints.append((start_x, start_y))
 
-from image_alteration import manipulate_image
-
 
 def save_file(flow_dict):
     """Save created dictionary with detectors
@@ -48,23 +46,8 @@ def save_file(flow_dict):
     json.dump(flow_dict, file, indent=4)
 
 
-<<<<<<< Updated upstream
 def draw_line(np_image, linepoints):
     """Livedrawing of linedetector during creationprocess.
-=======
-def draw_line_section(event, video, canvas):
-
-    startpoint = (canvas.clicked_coordinateX, canvas.clicked_coordinateY)
-    endpoint = (canvas.dragged_coordinateX, canvas.dragged_coordinateY)
-
-    np_image = cv2.line(video.np_image.copy(), startpoint, endpoint, (200, 125, 125), 3)
-
-    manipulate_image(np_image, canvas)
-
-
-def draw_polygon(np_image, polypoints, points, adding_points, closing, undo):
-    """Draws a polygon on canvas.
->>>>>>> Stashed changes
 
     Args:
         np_image (array): image as numpy array
