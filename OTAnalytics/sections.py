@@ -9,6 +9,8 @@ from gui_dict import gui_dict
 from PIL import Image, ImageTk
 import numpy as np
 
+from image_alteration import manipulate_image
+
 
 def save_file(flow_dict):
     """Save created dictionary with detectors
@@ -27,30 +29,47 @@ def save_file(flow_dict):
     json.dump(flow_dict, file, indent=4)
 
 
-def draw_line_section(np_image, startpoint, endpoint):
+def draw_line(event, video, canvas):
 
-    return cv2.line(np_image, startpoint, endpoint, (200, 125, 125), 3)
+    np_image = video.np_image.copy()
+
+    if not gui_dict["linedetector_toggle"]:
+
+        return
+
+    np_image = cv2.line(
+        np_image, canvas.points[0], canvas.points[1], (200, 125, 125), 3
+    )
+
+    manipulate_image(np_image, video, canvas)
 
 
-def draw_polygon(np_image, polypoints, points, adding_points, closing, undo):
+def draw_polygon(event, video, canvas, adding_points=False, closing=False, undo=False):
     """Draws a polygon on canvas.
 
     Args:
         closing (bool): if true create polygon else continue drawing
 
     """
-    image = np_image
+    # TODO here function manipulate image to draw everything from:
+    # flow_dict, tracks....
+
+    if not gui_dict["polygondetector_toggle"]:
+
+        return
+
+    image = video.np_image.copy()
     overlay = image.copy()
 
     if undo:
 
-        del polypoints[-1]
+        del canvas.polygon_points[-1]
 
     if adding_points:
 
-        polypoints.append(points)
+        canvas.polygon_points.append(canvas.points[0])
 
-    list_of_tuples = [list(elem) for elem in polypoints]
+    list_of_tuples = [list(elem) for elem in canvas.polygon_points]
 
     pts = np.array(list_of_tuples, np.int32)
     pts = pts.reshape((-1, 1, 2))
@@ -61,7 +80,9 @@ def draw_polygon(np_image, polypoints, points, adding_points, closing, undo):
         opacity = 0.4
         np_image = cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0, image)
 
-    return cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
+    np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
+
+    manipulate_image(np_image, video, canvas)
 
 
 def add_section(maincanvas, flow_dict, entrywidget):

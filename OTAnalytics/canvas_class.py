@@ -12,12 +12,12 @@ class OtcCanvas(tk.Canvas):
         self.bind("<ButtonPress-2>")
         self.bind("<ButtonPress-3>")
 
-        self.polypoints = []
-
         self.slider_value = tk.DoubleVar()
-        self.linepoints = [(0, 0), (0, 0)]
+        # self.linepoints = [(0, 0), (0, 0)]
+        self.points = [(0, 0), (0, 0)]
+        self.polygon_points = []
 
-    def click_recieve_coorinates(self, event):
+    def click_recieve_coorinates(self, event, list_index):
         """Saves coordinates from canvas event to linepoint list.
 
         Args:
@@ -27,26 +27,32 @@ class OtcCanvas(tk.Canvas):
             canvas ([type]): [description]
         """
         #  uses mouseevents to get coordinates (left button)
-        self.clicked_coordinateX = int(self.canvasx(event.x))
-        self.clicked_coordinateY = int(self.canvasy(event.y))
+        self.coordinateX = int(self.canvasx(event.x))
+        self.coordinateY = int(self.canvasy(event.y))
 
-    def drag_recieve_coordinates(self, event):
-        self.dragged_coordinateX = int(self.canvasx(event.x))
-        self.dragged_coordinateY = int(self.canvasy(event.y))
+        self.points[list_index] = (
+            self.coordinateX,
+            self.coordinateY,
+        )
+        print(self.points)
 
-        self.linepoints[1] = (self.dragged_coordinateX, self.dragged_coordinateY)
+    # def drag_recieve_coordinates(self, event):
+    #     self.dragged_coordinateX = int(self.canvasx(event.x))
+    #     self.dragged_coordinateY = int(self.canvasy(event.y))
 
-        w, h = self.winfo_width(), self.winfo_height()
-        if event.x > 0.9 * w:
-            self.xview_scroll(1, "units")
-        elif event.x < 0.1 * w:
-            self.xview_scroll(-1, "units")
-        if event.y > 0.9 * h:
-            self.yview_scroll(1, "units")
-        elif event.y < 0.1 * h:
-            self.yview_scroll(-1, "units")
+    #     self.linepoints[1] = (self.dragged_coordinateX, self.dragged_coordinateY)
 
-        print(self.dragged_coordinateX)
+    #     w, h = self.winfo_width(), self.winfo_height()
+    #     if event.x > 0.9 * w:
+    #         self.xview_scroll(1, "units")
+    #     elif event.x < 0.1 * w:
+    #         self.xview_scroll(-1, "units")
+    #     if event.y > 0.9 * h:
+    #         self.yview_scroll(1, "units")
+    #     elif event.y < 0.1 * h:
+    #         self.yview_scroll(-1, "units")
+
+    #     print(self.dragged_coordinateX)
 
     def scroll_through_video(self, event, videoobject):
 

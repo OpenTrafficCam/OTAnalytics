@@ -6,7 +6,7 @@ from tracks2 import load_tracks
 from tkinter.constants import END, HORIZONTAL
 from image_alteration import manipulate_image
 import keyboard
-from sections import add_section
+from sections import add_section, draw_polygon, draw_line
 from PIL import Image, ImageTk
 
 
@@ -148,31 +148,45 @@ class MainWindow(tk.Frame):
         maincanvas.bind(
             "<ButtonPress-1>",
             lambda event: [
-                maincanvas.click_recieve_coorinates(event),
+                maincanvas.click_recieve_coorinates(event, 0),
+                draw_polygon(
+                    event,
+                    videoobject,
+                    maincanvas,
+                    adding_points=True,
+                ),
             ],
         )
 
         maincanvas.bind(
             "<ButtonPress-2>",
             lambda event: [
-                # maincanvas.click_recieve_coorinates(event),
-                manipulate_image(maincanvas, videoobject, closing=True),
+                draw_polygon(
+                    event,
+                    videoobject,
+                    maincanvas,
+                    undo=True,
+                )
             ],
         )
 
         maincanvas.bind(
             "<B1-Motion>",
             lambda event: [
-                maincanvas.drag_recieve_coordinates(event),
-                manipulate_image(videoobject, maincanvas, self.flow_dict),
+                maincanvas.click_recieve_coorinates(event, 1),
+                draw_line(event, videoobject, maincanvas),
             ],
         )
 
         maincanvas.bind(
             "<ButtonPress-3>",
             lambda event: [
-                maincanvas.click_recieve_coorinates(event),
-                manipulate_image(videoobject, maincanvas, closing=True, undo=True),
+                draw_polygon(
+                    event,
+                    videoobject,
+                    maincanvas,
+                    closing=True,
+                )
             ],
         )
 
