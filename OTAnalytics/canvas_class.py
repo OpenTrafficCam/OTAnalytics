@@ -54,13 +54,7 @@ class OtcCanvas(tk.Canvas):
 
     #     print(self.dragged_coordinateX)
 
-    def scroll_through_video(self, event, videoobject):
-
-        i = 1 * event.delta // 120
-
-        videoobject.current_frame += i
-
-    def slider_scroll(self, event, hand_slide, videoobject):
+    def slider_scroll(self, hand_slide, videoobject):
 
         # TODO if video plays dont call get frame!
 

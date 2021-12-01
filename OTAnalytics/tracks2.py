@@ -3,7 +3,7 @@ from tkinter import filedialog
 
 import cv2
 import numpy as np
-from gui_dict import color_dict, gui_dict
+from gui_helper import color_dict, button_bool
 
 
 def load_tracks():
@@ -45,11 +45,6 @@ def load_tracks():
                         raw_detections[frame][detection]["y"],
                     ]
                 )
-    gui_dict["tracks_imported"] = True
+    button_bool["tracks_imported"] = True
 
     return raw_detections, tracks
-
-
-def draw_section(np_image, startpoint, endpoint):
-
-    return cv2.line(np_image, startpoint, endpoint, (200, 125, 125), 3)

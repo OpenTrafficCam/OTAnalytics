@@ -2,11 +2,10 @@ import json
 from tkinter import Toplevel, filedialog, mainloop
 from tkinter.constants import END
 import tkinter as tk
+from gui_helper import button_bool
 
 import cv2
 from canvas_class import OtcCanvas
-from gui_dict import gui_dict
-from PIL import Image, ImageTk
 import numpy as np
 
 from image_alteration import manipulate_image
@@ -29,11 +28,11 @@ def save_file(flow_dict):
     json.dump(flow_dict, file, indent=4)
 
 
-def draw_line(event, video, canvas):
+def draw_line(event, video, canvas, flowdictionary, selectionlist, tracks):
 
     np_image = video.np_image.copy()
 
-    if not gui_dict["linedetector_toggle"]:
+    if not button_bool["linedetector_toggle"]:
 
         return
 
@@ -41,7 +40,7 @@ def draw_line(event, video, canvas):
         np_image, canvas.points[0], canvas.points[1], (200, 125, 125), 3
     )
 
-    manipulate_image(np_image, video, canvas)
+    manipulate_image(np_image, video, canvas, flowdictionary, selectionlist, tracks)
 
 
 def draw_polygon(event, video, canvas, adding_points=False, closing=False, undo=False):
@@ -54,7 +53,7 @@ def draw_polygon(event, video, canvas, adding_points=False, closing=False, undo=
     # TODO here function manipulate image to draw everything from:
     # flow_dict, tracks....
 
-    if not gui_dict["polygondetector_toggle"]:
+    if not button_bool["polygondetector_toggle"]:
 
         return
 
@@ -85,32 +84,13 @@ def draw_polygon(event, video, canvas, adding_points=False, closing=False, undo=
     manipulate_image(np_image, video, canvas)
 
 
-def add_section(maincanvas, flow_dict, entrywidget):
-
-    if gui_dict["linedetector_toggle"] is True:
-        detector_name = entrywidget.get()
-
-        print(maincanvas.linepoints)
-
-        flow_dict["Detectors"][detector_name] = {
-            "type": "line",
-            "start_x": maincanvas.linepoints[0][0],
-            "start_y": maincanvas.linepoints[0][1],
-            "end_x": maincanvas.linepoints[1][0],
-            "end_y": maincanvas.linepoints[1][1],
-            "color": (200, 125, 125),
-        }
-
-    print(flow_dict)
-
-
-def load_file(detectors, movements, ListboxDetector, ListboxMovement):
-    """loads detectors from a .OTSect-File."""
+def load_flowfile():
+    """loads detectors from a .OTflow-File."""
     filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
     files = open(filepath.name, "r")
     files = files.read()
 
-    flow_dict = json.loads(files)
+    return json.loads(files)
 
     detectors.update(flow_dict["Detectors"])
     movements.update(flow_dict["Movements"])
@@ -123,52 +103,3 @@ def load_file(detectors, movements, ListboxDetector, ListboxMovement):
 
     for detector in detectors:
         ListboxDetector.insert(END, detector)
-
-
-def draw_detectors_from_dict(np_image, flow_dict):
-    """Draws detectors on every frame.
-
-    Args:
-        np_image (array): image as numpy array
-
-    Returns:
-        np_image (array): returns manipulated image"""
-
-    if flow_dict["Detectors"]:
-
-        Line = "line"
-
-        for detector in flow_dict["Detectors"]:
-            if flow_dict["Detectors"][detector]["type"] == Line:
-                start_x = flow_dict["Detectors"][detector]["start_x"]
-                start_y = flow_dict["Detectors"][detector]["start_y"]
-                end_x = flow_dict["Detectors"][detector]["end_x"]
-                end_y = flow_dict["Detectors"][detector]["end_y"]
-                color = flow_dict["Detectors"][detector]["color"]
-
-                np_image = cv2.line(
-                    np_image, (start_x, start_y), (end_x, end_y), color, 3
-                )
-
-            else:
-
-                # dont know why
-                image = np_image
-                overlay = image.copy()
-
-                polypoints = flow_dict["Detectors"][detector]["points"]
-                color = flow_dict["Detectors"][detector]["color"]
-
-                list_of_tuples = [list(elem) for elem in polypoints]
-                pts = np.array(list_of_tuples, np.int32)
-                pts = pts.reshape((-1, 1, 2))
-
-                np_image = cv2.fillPoly(overlay, [pts], (200, 125, 125))
-
-                opacity = 0.4
-                np_image = cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0)
-                np_image = cv2.polylines(np_image, [pts], True, color, 2)
-
-        print(flow_dict)
-
-    return np_image

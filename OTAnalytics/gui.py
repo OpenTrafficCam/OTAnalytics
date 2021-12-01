@@ -25,7 +25,7 @@ from gui_dict import (
 )
 from movement import add_to_movement, curselected_movement, new_movement
 from PIL import Image, ImageTk
-from sections import draw_line, get_coordinates_opencv, load_file, save_file
+from sections import draw_line, load_file, save_file
 from tracks import (
     draw_bounding_box,
     draw_tracks,

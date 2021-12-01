@@ -1,4 +1,6 @@
 import tkinter as tk
+
+from cv2 import FileNode_FLOW
 from canvas_class import OtcCanvas
 from video import load_video_and_frame
 import time
@@ -6,8 +8,9 @@ from tracks2 import load_tracks
 from tkinter.constants import END, HORIZONTAL
 from image_alteration import manipulate_image
 import keyboard
-from sections import add_section, draw_polygon, draw_line
+from sections import draw_polygon, draw_line, load_flowfile
 from PIL import Image, ImageTk
+from gui_helper import button_bool, button_play_video_toggle, button_rewind_video_toggle
 
 
 class MainWindow(tk.Frame):
@@ -27,6 +30,8 @@ class MainWindow(tk.Frame):
         self.master.title("OTAnalytics")
 
         self.flow_dict = {"Detectors": {}, "Movements": {}}
+        self.selectionlist = []
+        self.tracks = []
 
         videolabel = tk.Label(
             master=self.frame, text="Videos and Tracks", fg="white", bg="#37483E"
@@ -36,12 +41,6 @@ class MainWindow(tk.Frame):
         self.listbox_video.grid(row=1, column=0, columnspan=7, sticky="ew")
         self.listbox_video.bind("<<ListboxSelect>>")
 
-        # hotkeys
-        keyboard.add_hotkey(
-            "enter",
-            lambda: SectionEntryWindow(self.flow_dict, master=master),
-        )
-
         button_addvideo = tk.Button(
             self.frame, text="Add", command=lambda: self.create_canvas_and_videoobject()
         )
@@ -49,12 +48,22 @@ class MainWindow(tk.Frame):
         button_addvideo.grid(row=2, column=0, sticky="ew")
 
         button_playvideo = tk.Button(
-            self.frame, text="Play", command=lambda: self.play_video(1)
+            self.frame,
+            text="Play",
+            command=lambda: [
+                button_play_video_toggle(button_playvideo, button_rewindvideo),
+                self.play_video(),
+            ],
         )
         button_playvideo.grid(row=2, column=1, columnspan=1, sticky="ew")
 
         button_rewindvideo = tk.Button(
-            self.frame, text="Rewind", command=lambda: self.play_video(-1)
+            self.frame,
+            text="Rewind",
+            command=lambda: [
+                button_rewind_video_toggle(button_rewindvideo, button_playvideo),
+                self.rewind_video(),
+            ],
         )
 
         button_rewindvideo.grid(row=2, column=2, columnspan=1, sticky="ew")
@@ -72,15 +81,13 @@ class MainWindow(tk.Frame):
         )
         detectionlabel.grid(row=3, column=0, columnspan=7, sticky="ew")
 
-        listbox_detector = tk.Listbox(self.frame, height=8)
-        listbox_detector.grid(row=4, column=0, columnspan=3, sticky="ew")
-        listbox_detector.bind("<<ListboxSelect>>")
+        self.listbox_detector = tk.Listbox(self.frame, height=8)
+        self.listbox_detector.grid(row=4, column=0, columnspan=3, sticky="ew")
 
         self.listbox_tracks = tk.Listbox(
             self.frame, selectmode="multiple", exportselection=False, height=8
         )
         self.listbox_tracks.grid(row=4, column=3, columnspan=4, sticky="ew")
-        self.listbox_tracks.bind("<<ListboxSelect>>")
 
         self.button_line = tk.Button(
             self.frame,
@@ -128,6 +135,14 @@ class MainWindow(tk.Frame):
 
         first_frame = videoobject.get_frame(np_image=False)
 
+        # hotkeys
+        keyboard.add_hotkey(
+            "enter",
+            lambda: self.create_entry_window(
+                maincanvas, videoobject, self.flow_dict, master=self.master
+            ),
+        )
+
         # create canvas from videoobect
         maincanvas = OtcCanvas(
             self.frame,
@@ -140,8 +155,7 @@ class MainWindow(tk.Frame):
         maincanvas.bind(
             "<MouseWheel>",
             lambda event: [
-                maincanvas.scroll_through_video(event, videoobject),
-                manipulate_image(videoobject, maincanvas, self.flow_dict),
+                self.scroll_through_video(event),
             ],
         )
 
@@ -174,7 +188,14 @@ class MainWindow(tk.Frame):
             "<B1-Motion>",
             lambda event: [
                 maincanvas.click_recieve_coorinates(event, 1),
-                draw_line(event, videoobject, maincanvas),
+                draw_line(
+                    event,
+                    videoobject,
+                    maincanvas,
+                    self.flow_dict,
+                    self.selectionlist,
+                    self.tracks,
+                ),
             ],
         )
 
@@ -188,6 +209,12 @@ class MainWindow(tk.Frame):
                     closing=True,
                 )
             ],
+        )
+        self.listbox_tracks.bind(
+            "<<ListboxSelect>>",
+            lambda event: self.create_track_selection(
+                event,
+            ),
         )
 
         maincanvas.grid(row=0, rowspan=6, column=7, sticky="n")
@@ -204,25 +231,79 @@ class MainWindow(tk.Frame):
         #     command=lambda event: maincanvas.slider_scroll(
         #         event, int(event), videoobject
         #     ),  # event is the slided number/ gets triggered through mousescroll/
+
         # )
 
         # self.slider.grid(row=11, column=7, sticky="wen")
 
-    def play_video(self, i):
+    def play_video(self):
         # play and rewind
 
-        while True and videoobject.current_frame < videoobject.totalframecount:
+        while (
+            button_bool["play_video"]
+            and videoobject.current_frame < videoobject.totalframecount
+        ):
 
             time.sleep(videoobject.frame_delay)
 
-            manipulate_image(videoobject, maincanvas, self.flow_dict)
-
-            # maincanvas.update()
-
             videoobject.current_frame += 1
+
+            np_image = videoobject.get_frame(np_image=True)
+
+            manipulate_image(
+                np_image,
+                videoobject,
+                maincanvas,
+                self.flow_dict,
+                self.selectionlist,
+                self.tracks,
+            )
 
             # slows down programm
             # self.slider.set(videoobject.current_frame)
+
+    def rewind_video(self):
+        # play and rewind
+
+        while (
+            button_bool["rewind_video"]
+            and videoobject.current_frame < videoobject.totalframecount
+        ):
+
+            time.sleep(videoobject.frame_delay)
+
+            videoobject.current_frame += -1
+
+            np_image = videoobject.get_frame(np_image=True)
+
+            manipulate_image(
+                np_image,
+                videoobject,
+                maincanvas,
+                self.flow_dict,
+                self.selectionlist,
+                self.tracks,
+            )
+
+            # slows down programm
+            # self.slider.set(videoobject.current_frame)
+
+    def scroll_through_video(self, event):
+
+        i = 1 * event.delta // 120
+
+        videoobject.current_frame += i
+
+        np_image = videoobject.get_frame(np_image=True)
+
+        manipulate_image(
+            np_image,
+            videoobject,
+            maincanvas,
+            self.flow_dict,
+            self.selectionlist,
+            self.tracks,
+        )
 
     def get_tracks(self):
 
@@ -234,31 +315,95 @@ class MainWindow(tk.Frame):
             # initialize Tracks to draw live
             # object_live_track[object] = []
 
+    def get_detectors(self):
+
+        self.flow_dict = load_flowfile()
+
+        print(self.flow_dict)
+
+        manipulate_image(
+            videoobject.np_image.copy(),
+            videoobject,
+            maincanvas,
+            self.flow_dict,
+            self.selectionlist,
+            self.tracks,
+        )
+
+    def create_track_selection(self, event):
+        """Draws one or more selected tracks on canvas."""
+        # self.draw_detectors_from_dict()
+        self.widget = event.widget
+        multiselection = self.widget.curselection()
+
+        self.selectionlist = []
+
+        for selection in multiselection:
+            entry = self.widget.get(selection)
+            self.selectionlist.append(entry)
+
+        manipulate_image(
+            videoobject.np_image.copy(),
+            videoobject,
+            maincanvas,
+            self.flow_dict,
+            self.selectionlist,
+            self.tracks,
+        )
+
+    def create_entry_window(self, canvas, video, flow_dict, **kwargs):
+        SectionEntryWindow(flow_dict, canvas, video, **kwargs)
+
 
 class SectionEntryWindow(tk.Toplevel):
-    def __init__(self, flow_dictionary, **kwargs):
+    def __init__(self, flow_dictionary, canvas, video, **kwargs):
         super().__init__(**kwargs)
+
+        # keyboard.remove_hotkey("enter")
 
         self.detector_name_entry = tk.Entry(self)
 
         self.detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
         self.detector_name_entry.focus()
 
-        self.add_section = tk.Button(
+        self.safe_section = tk.Button(
             self,
             text="Add section",
-            command=lambda: add_section(
-                maincanvas, flow_dictionary, self.detector_name_entry
-            ),
+            command=lambda: [
+                self.add_section(canvas, flow_dictionary, self.detector_name_entry),
+                manipulate_image(video.np_image.copy(), video, canvas, flow_dictionary),
+            ],
         )
-        self.add_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
+
+        self.safe_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
         # makes the background window unavailable
+        # self.protocol("WM_DELETE_WINDOW", MainWindow.on_close)
         self.grab_set()
 
+    def add_section(self, maincanvas, flow_dict, entrywidget):
 
-def create_section_entry_window(flow_dictionary, master):
+        if button_bool["linedetector_toggle"] is True:
+            detector_name = entrywidget.get()
 
-    SectionEntryWindow(flow_dictionary, master=master)
+            print(maincanvas.points)
+
+            flow_dict["Detectors"][detector_name] = {
+                "type": "line",
+                "start_x": maincanvas.points[0][0],
+                "start_y": maincanvas.points[0][1],
+                "end_x": maincanvas.points[1][0],
+                "end_y": maincanvas.points[1][1],
+                "color": (200, 125, 125),
+            }
+
+        if button_bool["polygondetector_toggle"] is True:
+            flow_dict["Detectors"][detector_name] = {
+                "type": "polygon",
+                "points": maincanvas.poly_points,
+                "color": (200, 125, 125),
+            }
+
+        print(flow_dict)
 
 
 def main():
