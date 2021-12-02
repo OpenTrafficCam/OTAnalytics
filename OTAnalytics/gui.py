@@ -250,9 +250,7 @@ class MainWindow(tk.Frame):
 
         self.button_manuel_count.grid(row=6, column=4, columnspan=2, sticky="ew")
 
-        self.movementlabel = tk.Label(
-            self.frame, text="Movements", fg="white", bg="#37483E"
-        )
+        self.movementlabel = tk.Label()
         self.movementlabel.grid(row=7, column=0, columnspan=7, sticky="ew")
 
         self.listbox_movement_detector = tk.Listbox(self.frame, width=25)

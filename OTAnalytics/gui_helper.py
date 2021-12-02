@@ -1,5 +1,5 @@
 button_bool = {
-    "linedetector_toggle": True,
+    "linedetector_toggle": False,
     "polygondetector_toggle": False,
     "tracks_imported": False,
     "detections_drawn": False,
@@ -23,6 +23,12 @@ color_dict = {
     "bus": (179, 177, 68),
 }
 
+statepanel_txt = {
+    "Linedetector_information": "press and drag mouse to create a line\nbutton needs to"
+    + " be toggled to remove sections",
+    "Add_movement_information": "select and add section while movement is highlighted",
+}
+
 
 def button_play_video_toggle(button_play, button_rewind):
     """Toggle video play function.
@@ -41,7 +47,7 @@ def button_play_video_toggle(button_play, button_rewind):
     print("test")
 
 
-def button_rewind_video_toggle(button_rewind, button_play):
+def button_rewind_switch(button_rewind, button_play):
     """Summary.
 
     Args:
@@ -54,3 +60,65 @@ def button_rewind_video_toggle(button_rewind, button_play):
         button_play.config(text="Play")
     else:
         button_rewind.config(text="Rewind")
+
+
+def button_line_switch(button_linedetector, button_polygondetector, statepanel):
+    """Prints information on the statepanel when Linedetector button is pressed.
+
+    Args:
+        button ([tkinter button]): simple button
+        statepanel ([textfield]): shows information
+    """
+    button_bool["linedetector_toggle"] = not button_bool["linedetector_toggle"]
+
+    button_bool["polygondetector_toggle"] = False
+
+    if button_bool["linedetector_toggle"]:
+        button_linedetector.config(text="Finish")
+        button_polygondetector.config(text="Polygon")
+        statepanel.update_statepanel(statepanel_txt["Linedetector_information"])
+    else:
+        button_linedetector.config(text="Line")
+        statepanel.update_statepanel("")
+
+
+def button_polygon_switch(button_polygondetector, button_linedetector, statepanel):
+    """Prints information on the statepanel when Polygondetector button is pressed.
+
+    Args:
+        button ([tkinter button]): simple button
+        statepanel ([textfield]): shows information
+    """
+    print(button_bool["polygondetector_toggle"])
+
+    button_bool["polygondetector_toggle"] = not button_bool["polygondetector_toggle"]
+
+    button_bool["linedetector_toggle"] = False
+
+    if button_bool["polygondetector_toggle"]:
+        button_polygondetector.config(text="Finish")
+        button_linedetector.config(text="Line")
+        statepanel.update_statepanel(
+            "left click to create new polyogoncorner\nright button to delete previous"
+            + " corner\nwheelclick to close polygon\nenter to finish creation process"
+        )
+    else:
+        button_polygondetector.config(text="Polygon")
+
+
+def button_display_tracks_switch(button_display_tracks):
+    """Toggles the display of trajectories.
+
+    Args:
+        button (tkinter button): ...
+    """
+    print(button_bool["display_all_tracks_toggle"])
+
+    button_bool["display_all_tracks_toggle"] = not button_bool[
+        "display_all_tracks_toggle"
+    ]
+
+    if button_bool["display_all_tracks_toggle"]:
+        button_display_tracks.config(text="hide tracks")
+    else:
+        button_display_tracks.config(text="show tracks")

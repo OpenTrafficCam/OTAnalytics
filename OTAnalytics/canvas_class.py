@@ -17,7 +17,7 @@ class OtcCanvas(tk.Canvas):
         self.points = [(0, 0), (0, 0)]
         self.polygon_points = []
 
-    def click_recieve_coorinates(self, event, list_index):
+    def click_recieve_coordinates(self, event, list_index):
         """Saves coordinates from canvas event to linepoint list.
 
         Args:

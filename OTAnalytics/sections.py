@@ -43,16 +43,23 @@ def draw_line(event, video, canvas, flowdictionary, selectionlist, tracks):
     manipulate_image(np_image, video, canvas, flowdictionary, selectionlist, tracks)
 
 
-def draw_polygon(event, video, canvas, adding_points=False, closing=False, undo=False):
+def draw_polygon(
+    event,
+    video,
+    canvas,
+    flowdictionary,
+    selectionlist,
+    tracks,
+    adding_points=False,
+    closing=False,
+    undo=False,
+):
     """Draws a polygon on canvas.
 
     Args:
         closing (bool): if true create polygon else continue drawing
 
     """
-    # TODO here function manipulate image to draw everything from:
-    # flow_dict, tracks....
-
     if not button_bool["polygondetector_toggle"]:
 
         return
@@ -81,7 +88,7 @@ def draw_polygon(event, video, canvas, adding_points=False, closing=False, undo=
 
     np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
 
-    manipulate_image(np_image, video, canvas)
+    manipulate_image(np_image, video, canvas, flowdictionary, selectionlist, tracks)
 
 
 def load_flowfile():
@@ -92,14 +99,23 @@ def load_flowfile():
 
     return json.loads(files)
 
-    detectors.update(flow_dict["Detectors"])
-    movements.update(flow_dict["Movements"])
 
-    # resets polypoints list or else creation of new polygon leads to bug
-    # self.polypoints = []
+def dump_to_flowdictionary(canvas, flowdictionary, detector_name):
 
-    for movement in movements:
-        ListboxMovement.insert(END, movement)
+    if button_bool["linedetector_toggle"] is True:
 
-    for detector in detectors:
-        ListboxDetector.insert(END, detector)
+        flowdictionary["Detectors"][detector_name] = {
+            "type": "line",
+            "start_x": canvas.points[0][0],
+            "start_y": canvas.points[0][1],
+            "end_x": canvas.points[1][0],
+            "end_y": canvas.points[1][1],
+            "color": (200, 125, 125),
+        }
+
+    if button_bool["polygondetector_toggle"] is True:
+        flowdictionary["Detectors"][detector_name] = {
+            "type": "polygon",
+            "points": canvas.polygon_points,
+            "color": (200, 125, 125),
+        }

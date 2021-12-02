@@ -67,7 +67,7 @@ def draw_tracks(selectionlist, object_dict, np_image):
         np_image (array): manipulated array
     """
 
-    if gui_dict["display_all_tracks_toggle"] is True:
+    if ["display_all_tracks_toggle"] is True:
 
         for track in object_dict:
 
