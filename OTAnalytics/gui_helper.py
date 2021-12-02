@@ -30,7 +30,7 @@ statepanel_txt = {
 }
 
 
-def button_play_video_toggle(button_play, button_rewind):
+def button_play_video_switch(button_play, button_rewind):
     """Toggle video play function.
 
     Args:
@@ -122,3 +122,32 @@ def button_display_tracks_switch(button_display_tracks):
         button_display_tracks.config(text="hide tracks")
     else:
         button_display_tracks.config(text="show tracks")
+
+
+def button_display_bb_switch(button_display_bb):
+    """Toggles the display of trajectories.
+
+    Args:
+        button (tkinter button): ...
+    """
+    button_bool["display_bb"] = not button_bool["display_bb"]
+
+    if button_bool["display_bb"]:
+        button_display_bb.config(text="hide bb")
+    else:
+        button_display_bb.config(text="show bb")
+
+
+def button_display_live_track_switch(button_display_tracks):
+    """Summary.
+
+    Args:
+        button (tkinter button): ...
+    """
+
+    button_bool["display_live_track"] = not button_bool["display_live_track"]
+
+    if button_bool["display_live_track"]:
+        button_display_tracks.config(text="Stop Livetrack")
+    else:
+        button_display_tracks.config(text="Livetrack")

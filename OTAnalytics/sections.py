@@ -11,7 +11,7 @@ import numpy as np
 from image_alteration import manipulate_image
 
 
-def save_file(flow_dict):
+def save_flowfile(flowdictionary):
     """Save created dictionary with detectors
     and movements.
 
@@ -25,10 +25,12 @@ def save_file(flow_dict):
     #     flow_dict["Movements"] = movement_dict
 
     # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
-    json.dump(flow_dict, file, indent=4)
+    json.dump(flowdictionary, file, indent=4)
 
 
-def draw_line(event, video, canvas, flowdictionary, selectionlist, tracks):
+def draw_line(
+    event, video, canvas, flowdictionary, selectionlist, tracks, raw_detection
+):
 
     np_image = video.np_image.copy()
 
@@ -40,7 +42,9 @@ def draw_line(event, video, canvas, flowdictionary, selectionlist, tracks):
         np_image, canvas.points[0], canvas.points[1], (200, 125, 125), 3
     )
 
-    manipulate_image(np_image, video, canvas, flowdictionary, selectionlist, tracks)
+    manipulate_image(
+        np_image, video, canvas, flowdictionary, selectionlist, tracks, raw_detection
+    )
 
 
 def draw_polygon(

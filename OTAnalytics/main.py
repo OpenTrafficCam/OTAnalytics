@@ -1,19 +1,29 @@
 import tkinter as tk
+from auto_counting import create_setting_window
 
 from canvas_class import OtcCanvas
 from statepanel_class import StatePanel
 from video import load_video_and_frame
 import time
-from tracks2 import load_tracks
-from tkinter.constants import END, HORIZONTAL
+from tracks import load_tracks
+from tkinter.constants import END
 from image_alteration import manipulate_image
 import keyboard
-from sections import draw_polygon, draw_line, dump_to_flowdictionary, load_flowfile
+from sections import (
+    draw_polygon,
+    draw_line,
+    dump_to_flowdictionary,
+    load_flowfile,
+    save_flowfile,
+)
 from gui_helper import (
     button_bool,
+    button_display_bb_switch,
+    button_display_live_track_switch,
+    statepanel_txt,
     button_display_tracks_switch,
     button_line_switch,
-    button_play_video_toggle,
+    button_play_video_switch,
     button_polygon_switch,
     button_rewind_switch,
 )
@@ -37,9 +47,9 @@ class MainWindow(tk.Frame):
 
         self.flow_dict = {"Detectors": {}, "Movements": {}}
         self.selectionlist = []
-        self.tracks = []
-        maincanvas = None
-        videoobject = None
+        self.raw_detection = {}
+        self.tracks = {}
+        self.tracks_life = {}
 
         self.statepanelobject = StatePanel(
             self.frame, 10, 0, sticky="nswe", rowspan=2, columnspan=6
@@ -49,9 +59,8 @@ class MainWindow(tk.Frame):
             master=self.frame, text="Videos and Tracks", fg="white", bg="#37483E"
         )
         videolabel.grid(row=0, column=0, columnspan=7, sticky="ew")
-        self.listbox_video = tk.Listbox(self.frame, height=3)
+        self.listbox_video = tk.Listbox(self.frame, height=3, exportselection=False)
         self.listbox_video.grid(row=1, column=0, columnspan=7, sticky="ew")
-        self.listbox_video.bind("<<ListboxSelect>>")
 
         button_addvideo = tk.Button(
             self.frame, text="Add", command=lambda: self.create_canvas_and_videoobject()
@@ -63,7 +72,7 @@ class MainWindow(tk.Frame):
             self.frame,
             text="Play",
             command=lambda: [
-                button_play_video_toggle(button_playvideo, button_rewindvideo),
+                button_play_video_switch(button_playvideo, button_rewindvideo),
                 self.play_video(),
             ],
         )
@@ -120,8 +129,7 @@ class MainWindow(tk.Frame):
         button_poly.grid(row=5, column=1, sticky="ew")
 
         button_delete_detector = tk.Button(
-            self.frame,
-            text="Remove",
+            self.frame, text="Remove", command=lambda: self.delete_section()
         )
         button_delete_detector.grid(row=5, column=2, sticky="ew")
 
@@ -132,29 +140,28 @@ class MainWindow(tk.Frame):
 
         self.button_display_tracks.grid(row=5, column=3, sticky="ew")
 
-        button_display_boundingbox = tk.Button(self.frame, text="Show bb")
+        self.button_display_boundingbox = tk.Button(self.frame, text="Show bb")
 
-        button_display_boundingbox.grid(row=5, column=5, sticky="ew")
+        self.button_display_boundingbox.grid(row=5, column=5, sticky="ew")
 
-        button_display_livetracks = tk.Button(
-            self.frame,
-            text="Livetrack",
+        self.button_display_livetracks = tk.Button(
+            self.frame, text="Livetrack", command=lambda: self.display_tracks_live()
         )
 
-        button_display_livetracks.grid(row=5, column=4, sticky="ew")
+        self.button_display_livetracks.grid(row=5, column=4, sticky="ew")
 
-        button_add_to_movement = tk.Button(
+        self.button_add_to_movement = tk.Button(
             self.frame,
             text="Add to movement",
         )
 
-        button_add_to_movement.grid(row=6, column=0, columnspan=3, sticky="ew")
+        self.button_add_to_movement.grid(row=6, column=0, columnspan=3, sticky="ew")
 
-        button_autocount = tk.Button(
+        self.button_autocount = tk.Button(
             self.frame,
             text="autocount",
         )
-        button_autocount.grid(row=6, column=3, columnspan=1, sticky="ew")
+        self.button_autocount.grid(row=6, column=3, columnspan=1, sticky="ew")
 
         movementlabel = tk.Label(self.frame, text="Movements", fg="white", bg="#37483E")
         movementlabel.grid(row=7, column=0, columnspan=7, sticky="ew")
@@ -162,14 +169,16 @@ class MainWindow(tk.Frame):
         self.listbox_movement = tk.Listbox(self.frame, width=25, exportselection=False)
         self.listbox_movement.grid(row=8, column=0, columnspan=3, sticky="ew")
 
-        self.listbox_movement_detector = tk.Listbox(self.frame, width=25)
+        self.listbox_movement_detector = tk.Listbox(
+            self.frame, width=25, exportselection=False
+        )
         self.listbox_movement_detector.grid(row=8, column=3, columnspan=4, sticky="ew")
 
-        button_new_movement = tk.Button(
+        self.button_new_movement = tk.Button(
             self.frame,
             text="New",
         )
-        button_new_movement.grid(row=9, column=0, sticky="ew")
+        self.button_new_movement.grid(row=9, column=0, sticky="ew")
 
         button_rename = tk.Button(self.frame, text="Rename")
         button_rename.grid(row=9, column=1, sticky="ew")
@@ -184,8 +193,7 @@ class MainWindow(tk.Frame):
         button_remove.grid(row=9, column=3, sticky="ew")
 
         button_save_flow = tk.Button(
-            self.frame,
-            text="Save",
+            self.frame, text="Save", command=lambda: save_flowfile(self.flow_dict)
         )
         button_save_flow.grid(row=9, column=4, sticky="ew")
 
@@ -208,7 +216,7 @@ class MainWindow(tk.Frame):
         # hotkeys
         keyboard.add_hotkey(
             "enter",
-            lambda: self.create_entry_window(),
+            lambda: self.create_section_entry_window(),
         )
 
         # create canvas from videoobect
@@ -230,7 +238,7 @@ class MainWindow(tk.Frame):
         maincanvas.bind(
             "<ButtonPress-1>",
             lambda event: [
-                maincanvas.click_recieve_coordinates(event, 0),
+                maincanvas.click_receive_coordinates(event, 0),
                 draw_polygon(
                     event,
                     videoobject,
@@ -261,7 +269,7 @@ class MainWindow(tk.Frame):
         maincanvas.bind(
             "<B1-Motion>",
             lambda event: [
-                maincanvas.click_recieve_coordinates(event, 1),
+                maincanvas.click_receive_coordinates(event, 1),
                 draw_line(
                     event,
                     videoobject,
@@ -269,6 +277,7 @@ class MainWindow(tk.Frame):
                     self.flow_dict,
                     self.selectionlist,
                     self.tracks,
+                    self.raw_detection,
                 ),
             ],
         )
@@ -298,11 +307,28 @@ class MainWindow(tk.Frame):
         )
 
         self.listbox_movement.bind(
-            "<<ListboxSelect>>",
+            "<<ListboxSelect>>", lambda event: self.listbox_movement_selection(event)
         )
 
         self.button_display_tracks.bind(
             "<ButtonRelease-1>", lambda event: self.display_all_tracks()
+        )
+        self.button_display_boundingbox.bind(
+            "<ButtonRelease-1>", lambda event: self.display_boundingbox()
+        )
+
+        self.button_new_movement.bind(
+            "<ButtonRelease-1>", lambda event: self.create_movement_entry_window()
+        )
+        self.button_add_to_movement.bind(
+            "<ButtonRelease-1>", lambda event: self.add_to_movement()
+        )
+
+        self.button_autocount.bind(
+            "<ButtonRelease-1>",
+            lambda event: [
+                create_setting_window(videoobject.fps, self.flow_dict, self.tracks)
+            ],
         )
 
         maincanvas.grid(row=0, rowspan=6, column=7, sticky="n")
@@ -326,6 +352,10 @@ class MainWindow(tk.Frame):
 
     def play_video(self):
         # play and rewind
+        for object in list(self.tracks.keys()):
+
+            # tracks disappear when videoplaying is stopped
+            self.tracks_life[object] = []
 
         while (
             button_bool["play_video"]
@@ -345,6 +375,8 @@ class MainWindow(tk.Frame):
                 self.flow_dict,
                 self.selectionlist,
                 self.tracks,
+                self.tracks_life,
+                self.raw_detection,
             )
 
             # slows down programm
@@ -371,6 +403,8 @@ class MainWindow(tk.Frame):
                 self.flow_dict,
                 self.selectionlist,
                 self.tracks,
+                self.tracks_life,
+                self.raw_detection,
             )
 
             # slows down programm
@@ -391,11 +425,13 @@ class MainWindow(tk.Frame):
             self.flow_dict,
             self.selectionlist,
             self.tracks,
+            self.tracks_life,
+            self.raw_detection,
         )
 
     def get_tracks(self):
 
-        self.rawdetection, self.tracks = load_tracks()
+        self.raw_detection, self.tracks = load_tracks()
 
         for object in list(self.tracks.keys()):
 
@@ -414,6 +450,8 @@ class MainWindow(tk.Frame):
             self.flow_dict,
             self.selectionlist,
             self.tracks,
+            self.tracks_life,
+            self.raw_detection,
         )
 
         for movement in self.flow_dict["Movements"]:
@@ -441,6 +479,8 @@ class MainWindow(tk.Frame):
             self.flow_dict,
             self.selectionlist,
             self.tracks,
+            self.tracks_life,
+            self.raw_detection,
         )
 
     def listbox_detector_selection(self, event):
@@ -451,9 +491,8 @@ class MainWindow(tk.Frame):
         """
 
         widget = event.widget
-        selection = widget.curselection()
 
-        detector_name = widget.get(selection[0])
+        detector_name = widget.get(widget.curselection())
 
         for dict_key in self.flow_dict["Detectors"].keys():
 
@@ -471,6 +510,8 @@ class MainWindow(tk.Frame):
             self.flow_dict,
             self.selectionlist,
             self.tracks,
+            self.tracks_life,
+            self.raw_detection,
         )
 
     def display_all_tracks(self):
@@ -484,9 +525,28 @@ class MainWindow(tk.Frame):
             self.flow_dict,
             self.selectionlist,
             self.tracks,
+            self.tracks_life,
+            self.raw_detection,
         )
 
-    def create_entry_window(self):
+    def display_boundingbox(self):
+        button_display_bb_switch(self.button_display_boundingbox)
+
+        manipulate_image(
+            videoobject.np_image.copy(),
+            videoobject,
+            maincanvas,
+            self.flow_dict,
+            self.selectionlist,
+            self.tracks,
+            self.tracks_life,
+            self.raw_detection,
+        )
+
+    def display_tracks_live(self):
+        button_display_live_track_switch(self.button_display_livetracks)
+
+    def create_section_entry_window(self):
         new_detector_creation = tk.Toplevel()
         detector_name_entry = tk.Entry(master=new_detector_creation)
 
@@ -506,6 +566,31 @@ class MainWindow(tk.Frame):
         # self.protocol("WM_DELETE_WINDOW", MainWindow.on_close)
         new_detector_creation.grab_set()
 
+    def create_movement_entry_window(self):
+        """Creates new movement and adds it to the movement listbox.
+
+        Args:
+            listbox_movement ([type]): tkinter listbox to display created movements
+            movement_dict ([type]): dictionary with movements, second key in flow file
+        """
+        new_movement_creation = tk.Toplevel()
+
+        new_movement_creation.title("Create new movement")
+        movement_name_entry = tk.Entry(new_movement_creation, textvariable="Movement")
+        movement_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
+        movement_name_entry.delete(0, END)
+        movement_name_entry.focus()
+        add_movement = tk.Button(
+            new_movement_creation,
+            text="Add movement",
+            command=lambda: self.new_movement(
+                maincanvas, self.flow_dict, movement_name_entry
+            ),
+        )
+        add_movement.grid(row=1, column=1, sticky="w", pady=10, padx=10)
+        new_movement_creation.protocol("WM_DELETE_WINDOW")
+        new_movement_creation.grab_set()
+
     def add_section(self, maincanvas, flow_dict, entrywidget):
 
         detector_name = entrywidget.get()
@@ -514,6 +599,13 @@ class MainWindow(tk.Frame):
 
         self.listbox_detector.insert(0, detector_name)
 
+    def new_movement(self, maincanvas, flow_dict, entrywidget):
+        movement_name = entrywidget.get()
+
+        flow_dict["Movements"][movement_name] = []
+
+        self.listbox_movement.insert(0, movement_name)
+
         manipulate_image(
             videoobject.np_image.copy(),
             videoobject,
@@ -521,6 +613,85 @@ class MainWindow(tk.Frame):
             self.flow_dict,
             self.selectionlist,
             self.tracks,
+            self.tracks_life,
+            self.raw_detection,
+        )
+
+    def delete_section(self):
+
+        detector_name = self.listbox_detector.get(self.listbox_detector.curselection())
+
+        self.listbox_detector.delete(self.listbox_detector.curselection())
+
+        del self.flow_dict["Detectors"][detector_name]
+
+        manipulate_image(
+            videoobject.np_image.copy(),
+            videoobject,
+            maincanvas,
+            self.flow_dict,
+            self.selectionlist,
+            self.tracks,
+            self.tracks_life,
+            self.raw_detection,
+        )
+
+    def add_to_movement(self):
+
+        """Define movement with select polygon or linedetector.
+
+        Args:
+            listbox ([type]): [description]
+            listbox_movement ([type]): [description]
+            linedetectors ([type]): [description]
+            polygondetectors ([type]): [description]
+            movement_dict ([type]): [description]
+            listbox_movement_detector ([type]): [description]
+        """
+        detector_name = self.listbox_detector.get(self.listbox_detector.curselection())
+        movement_name = self.listbox_movement.get(self.listbox_movement.curselection())
+
+        self.flow_dict["Movements"][movement_name].append(detector_name)
+
+        detector_name = (
+            detector_name
+            + " #"
+            + str(self.flow_dict["Movements"][movement_name].index(detector_name) + 1)
+        )
+
+        self.listbox_movement_detector.insert(END, detector_name)
+
+        print(self.flow_dict)
+
+    def listbox_movement_selection(self, event):
+        """Display all detectors the selected movement consists off.
+
+        Args:
+            event (listboxselection): Event to trigger function
+            listbox_movement_detector (listbox): Listbox withe detectors
+            listbox_movement (listbox): Listbox with movements
+            movement_dict (dictionary): Dictionary with movements
+            statepanel (textbox): Statepaneltextbox
+        """
+        # shows detectors and sections belonging to selected movement
+
+        self.listbox_movement_detector.delete(0, "end")
+
+        movement_name = self.listbox_movement.get(self.listbox_movement.curselection())
+
+        for detector_name in self.flow_dict["Movements"][movement_name]:
+            detector_name = (
+                detector_name
+                + " #"
+                + str(
+                    self.flow_dict["Movements"][movement_name].index(detector_name) + 1
+                )
+            )
+
+            self.listbox_movement_detector.insert(END, detector_name)
+
+        self.statepanelobject.update_statepanel(
+            statepanel_txt["Add_movement_information"]
         )
 
 
