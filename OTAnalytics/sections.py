@@ -1,11 +1,8 @@
 import json
-from tkinter import Toplevel, filedialog, mainloop
-from tkinter.constants import END
-import tkinter as tk
+from tkinter import filedialog
 from gui_helper import button_bool
 
 import cv2
-from canvas_class import OtcCanvas
 import numpy as np
 
 from image_alteration import manipulate_image
