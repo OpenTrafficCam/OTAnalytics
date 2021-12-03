@@ -51,6 +51,8 @@ class MainWindow(tk.Frame):
         self.tracks = {}
         self.tracks_life = {}
 
+        self.slider_value = tk.DoubleVar
+
         self.statepanelobject = StatePanel(
             self.frame, 10, 0, sticky="nsew", rowspan=2, columnspan=6
         )
@@ -340,9 +342,7 @@ class MainWindow(tk.Frame):
             from_=0,
             to=videoobject.totalframecount - 1,
             orient=HORIZONTAL,
-            command=lambda event: maincanvas.slider_scroll(
-                event, int(event), videoobject
-            ),
+            command=lambda event: self.slider_scroll(int(event)),
         )
 
         self.slider.grid(row=11, column=7, sticky="wen")
@@ -377,7 +377,7 @@ class MainWindow(tk.Frame):
             )
 
             # slows down programm
-            # self.slider.set(videoobject.current_frame)
+            self.slider.set(videoobject.current_frame)
 
     def rewind_video(self):
         # play and rewind
@@ -404,8 +404,8 @@ class MainWindow(tk.Frame):
                 self.raw_detection,
             )
 
-            # slows down programm
-            # self.slider.set(videoobject.current_frame)
+            # slows down program
+            self.slider.set(videoobject.current_frame)
 
     def scroll_through_video(self, event):
 
@@ -425,6 +425,23 @@ class MainWindow(tk.Frame):
             self.tracks_life,
             self.raw_detection,
         )
+
+    def slider_scroll(self, slider_number):
+
+        if not button_bool["play_video"]:
+            videoobject.current_frame = slider_number
+
+            np_image = videoobject.get_frame(np_image=True)
+            manipulate_image(
+                np_image,
+                videoobject,
+                maincanvas,
+                self.flow_dict,
+                self.selectionlist,
+                self.tracks,
+                self.tracks_life,
+                self.raw_detection,
+            )
 
     def get_tracks(self):
 
