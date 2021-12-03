@@ -52,7 +52,7 @@ class MainWindow(tk.Frame):
         self.tracks_life = {}
 
         self.statepanelobject = StatePanel(
-            self.frame, 10, 0, sticky="nsew", rowspan=1, columnspan=6
+            self.frame, 10, 0, sticky="nsew", rowspan=2, columnspan=6
         )
 
         videolabel = tk.Label(
@@ -329,7 +329,7 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        maincanvas.grid(row=0, rowspan=10, column=7, sticky="nwe")
+        maincanvas.grid(row=0, rowspan=15, column=7, sticky="n")
         maincanvas.create_image(0, 0, anchor=tk.NW, image=first_frame)
 
         self.listbox_video.insert(0, videoobject.filename)
@@ -345,7 +345,7 @@ class MainWindow(tk.Frame):
             ),
         )
 
-        self.slider.grid(row=10, column=7, sticky="wen")
+        self.slider.grid(row=11, column=7, sticky="wen")
 
     def play_video(self):
         # play and rewind
