@@ -4,7 +4,7 @@ import tkinter as tk
 
 
 class OtcCanvas(tk.Canvas):
-    def __init__(self, parent, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.bind("<ButtonPress-2>")

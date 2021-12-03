@@ -6,7 +6,7 @@ from statepanel_class import StatePanel
 from video import load_video_and_frame
 import time
 from tracks import load_tracks
-from tkinter.constants import END
+from tkinter.constants import END, HORIZONTAL
 from image_alteration import manipulate_image
 import keyboard
 from sections import (
@@ -52,7 +52,7 @@ class MainWindow(tk.Frame):
         self.tracks_life = {}
 
         self.statepanelobject = StatePanel(
-            self.frame, 10, 0, sticky="nswe", rowspan=2, columnspan=6
+            self.frame, 10, 0, sticky="nsew", rowspan=1, columnspan=6
         )
 
         videolabel = tk.Label(
@@ -219,11 +219,9 @@ class MainWindow(tk.Frame):
             lambda: self.create_section_entry_window(),
         )
 
-        # create canvas from videoobect
+        # create canvas from videoobject
         maincanvas = OtcCanvas(
-            self.frame,
-            width=videoobject.width,
-            height=videoobject.height,
+            width=videoobject.width, height=videoobject.height, master=self.frame
         )
 
         maincanvas.configure(scrollregion=(0, 0, videoobject.width, videoobject.height))
@@ -331,24 +329,23 @@ class MainWindow(tk.Frame):
             ],
         )
 
-        maincanvas.grid(row=0, rowspan=6, column=7, sticky="n")
+        maincanvas.grid(row=0, rowspan=10, column=7, sticky="nwe")
         maincanvas.create_image(0, 0, anchor=tk.NW, image=first_frame)
 
         self.listbox_video.insert(0, videoobject.filename)
 
-        # self.slider = tk.Scale(
-        #     self.frame,
-        #     variable=maincanvas.slider_value,
-        #     from_=0,
-        #     to=videoobject.totalframecount - 1,
-        #     orient=HORIZONTAL,
-        #     command=lambda event: maincanvas.slider_scroll(
-        #         event, int(event), videoobject
-        #     ),  # event is the slided number/ gets triggered through mousescroll/
+        self.slider = tk.Scale(
+            self.frame,
+            variable=maincanvas.slider_value,
+            from_=0,
+            to=videoobject.totalframecount - 1,
+            orient=HORIZONTAL,
+            command=lambda event: maincanvas.slider_scroll(
+                event, int(event), videoobject
+            ),
+        )
 
-        # )
-
-        # self.slider.grid(row=11, column=7, sticky="wen")
+        self.slider.grid(row=10, column=7, sticky="wen")
 
     def play_video(self):
         # play and rewind
