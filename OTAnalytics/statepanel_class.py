@@ -52,7 +52,7 @@ class StatePanel:
         """Function to update statepanel with wanted text.
 
         Args:
-            text ([string]): [text to be shown]
+            text (string): Text to be shown.
         """
         self.text.config(state="normal")
         self.text.delete("1.0", "end")
@@ -64,10 +64,10 @@ class StatePanel:
         """Scroll up and down statepaneltext.
 
         Args:
-            row ([tk row]): [row number]
-            column ([tk column]): [column number]
-            sticky ([arg]): [text alignment]
-            columnspan (int, optional): [description]. Defaults to 2.
+            row (tk.row): Grid.rownumber.
+            column (tk.column): Grid.columnnumber.
+            sticky (arg): Expensionsarguments.
+            columnspan (int, optional): Columndimensionspan.
         """
         self.scrollbar.grid(row=row, column=column, padx="5", pady="3", sticky="e")
         self.text.grid(

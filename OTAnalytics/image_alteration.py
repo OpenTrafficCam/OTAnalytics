@@ -1,8 +1,10 @@
 import tkinter as tk
-from gui_helper import button_bool, color_dict
+
 import cv2
-from PIL import Image, ImageTk
 import numpy as np
+from PIL import Image, ImageTk
+
+from gui_helper import button_bool, color_dict
 
 
 def manipulate_image(
@@ -15,6 +17,22 @@ def manipulate_image(
     tracks_live,
     raw_detections,
 ):
+    """Function to draw sections, tracks and bounding boxes on a given numpy image.
+    Image is converted to photo image and plotted on tkinter canvas object.
+
+    Args:
+        np_image (numpy_array): Numpy image from videoobject or opencv function.
+        video (object): Videoobject with important attributes for image manipulation.
+        canvas (tkinter.canvas): Canvas to draw photo on.
+        flowdictionary (dictionary): Dictionary with sections and movements.
+        selectionlist (list): List created from selection of tracks in listboxwidget.
+        tracks (dictionary): Dictionary with track coords and frames.
+        tracks_live (dictionary): Dictionary with track coords from
+        current and last twenty frames.
+        raw_detections (dictionary): Dictionary with raw detections from OpenVision.
+    """
+    if np_image is None:
+        np_image = video.np_image.copy()
 
     np_image = draw_detectors_from_dict(np_image, flowdictionary)
 
@@ -50,10 +68,10 @@ def draw_detectors_from_dict(np_image, flowdictionary):
     """Draws detectors on every frame.
 
     Args:
-        np_image (array): image as numpy array
+        np_image (numpy_array): image as numpy array
 
     Returns:
-        np_image (array): returns manipulated image"""
+        np_image (numpy_array): returns manipulated image"""
 
     if flowdictionary["Detectors"]:
 
@@ -94,16 +112,15 @@ def draw_detectors_from_dict(np_image, flowdictionary):
 
 
 def draw_tracks(np_image, selectionlist, tracks):
-    """Draw from listbox selected objecttracks.
+    """Draw selected tracks.
 
     Args:
-        selectionlist (list): list with selected objects
-        object_dict (dictionary): dictionary with objects as keys corresponding frames-
-        and coordslist.
-        np_image (array): arraylike image object
+        np_image (numpy_array): Numpy image from videoobject or opencv function.
+        selectionlist (list): List created from selection of tracks in listboxwidget.
+        tracks (dictionary): Dictionary with track coords and frames.
 
     Returns:
-        np_image (array): manipulated array
+        np_image (numpy_array): manipulated array
     """
     print(button_bool["display_all_tracks_toggle"])
 
@@ -149,12 +166,12 @@ def draw_bounding_box(np_image, raw_detections, frame):
     """Draws bounding boxes in every frame.
 
     Args:
-        raw_detections (dictionary): inputfile with detections from OTVision
-        frame (int): index of frame
-        image (array): Arraylike image to draw on
+        raw_detections (dictionary): Inputfile with detections from OTVision.
+        frame (int): Current frame as index.
+        np_image (numpy_image): Arraylike image to draw on.
 
     Returns:
-       np_image: returns manipulated image
+       np_image: Returns manipulated image.
     """
     if not button_bool["display_bb"]:
         return np_image
@@ -211,7 +228,6 @@ def draw_bounding_box(np_image, raw_detections, frame):
                         image_cache, (x_start, y_start), (x_end, y_end), bbcolor, 2
                     )
 
-                    # einkommentieren  für
                     text_size, _ = cv2.getTextSize(
                         anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1
                     )
@@ -248,9 +264,9 @@ def draw_tracks_live(np_image, tracks, raw_detections, track_live, frame):
     Args:
         object_dict (dictionary): resampled raw detections
         object_live_track (dictionary): dictionary with framewiselive coordinates
-        frame (integer): current video frame
+        frame (int): current video frame
         raw_detections (dictionary): input file with all detections
-        np_image : arraylike image object
+        np_image (numpy_array) : arraylike image object
 
     Returns:
         np_image: returns manipulated image
@@ -276,6 +292,9 @@ def draw_tracks_live(np_image, tracks, raw_detections, track_live, frame):
                     nextframeindex = tracks[object]["Frame"].index(frame)
                     track_live[object].append(tracks[object]["Coord"][nextframeindex])
 
+                    if len(track_live[object]) >= 20:
+                        track_live[object].pop(0)
+
                     trackcolor = color_dict[tracks[object]["Class"]]
 
                     pts = np.array(track_live[object], np.int32)
@@ -287,7 +306,7 @@ def draw_tracks_live(np_image, tracks, raw_detections, track_live, frame):
                     )
                 # else:
                 # not necessary
-                #     #if track is drawn completly => erase from canvas
+                #     #if track is drawn completely => erase from canvas
                 #     object_live_track[object] = []
 
     return np_image

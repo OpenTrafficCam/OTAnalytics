@@ -1,39 +1,40 @@
-import tkinter as tk
-from auto_counting import create_setting_window
-
-from canvas_class import OtcCanvas
-from statepanel_class import StatePanel
-from video import load_video_and_frame
 import time
-from tracks import load_tracks
+import tkinter as tk
 from tkinter.constants import END, HORIZONTAL
-from image_alteration import manipulate_image
+
 import keyboard
-from sections import (
-    draw_polygon,
-    draw_line,
-    dump_to_flowdictionary,
-    load_flowfile,
-    save_flowfile,
-)
+
+from auto_counting import create_setting_window
+from canvas_class import OtcCanvas
 from gui_helper import (
     button_bool,
     button_display_bb_switch,
     button_display_live_track_switch,
-    statepanel_txt,
     button_display_tracks_switch,
     button_line_switch,
     button_play_video_switch,
     button_polygon_switch,
     button_rewind_switch,
+    statepanel_txt,
 )
+from image_alteration import manipulate_image
+from sections import (
+    draw_line,
+    draw_polygon,
+    dump_to_flowdictionary,
+    load_flowfile,
+    save_flowfile,
+)
+from statepanel_class import StatePanel
+from tracks import load_tracks
+from video import load_video_and_frame
 
 
 class MainWindow(tk.Frame):
     """Mainwindow with initial dictionaries.
 
     Args:
-        tk.frame (tkinterframe): important for the process of grouping and organizing
+        tk.frame (tkinter.frame): important for the process of grouping and organizing
         other widgets in a somehow friendly way. It works like a container,
         which is responsible for arranging the position of other widgets.
     """
@@ -47,9 +48,9 @@ class MainWindow(tk.Frame):
 
         self.flow_dict = {"Detectors": {}, "Movements": {}}
         self.selectionlist = []
-        self.raw_detection = {}
+        self.raw_detections = []
         self.tracks = {}
-        self.tracks_life = {}
+        self.tracks_live = {}
 
         self.slider_value = tk.DoubleVar
 
@@ -246,6 +247,8 @@ class MainWindow(tk.Frame):
                     self.flow_dict,
                     self.selectionlist,
                     self.tracks,
+                    self.tracks_live,
+                    self.raw_detections,
                     adding_points=True,
                 ),
             ],
@@ -277,7 +280,8 @@ class MainWindow(tk.Frame):
                     self.flow_dict,
                     self.selectionlist,
                     self.tracks,
-                    self.raw_detection,
+                    self.tracks_live,
+                    self.raw_detections,
                 ),
             ],
         )
@@ -292,6 +296,8 @@ class MainWindow(tk.Frame):
                     self.flow_dict,
                     self.selectionlist,
                     self.tracks,
+                    self.tracks_live,
+                    self.raw_detections,
                     closing=True,
                 )
             ],
@@ -348,11 +354,11 @@ class MainWindow(tk.Frame):
         self.slider.grid(row=11, column=7, sticky="wen")
 
     def play_video(self):
-        # play and rewind
+        """Function to play video."""
         for object in list(self.tracks.keys()):
 
             # tracks disappear when videoplaying is stopped
-            self.tracks_life[object] = []
+            self.tracks_live[object] = []
 
         while (
             button_bool["play_video"]
@@ -365,23 +371,12 @@ class MainWindow(tk.Frame):
 
             np_image = videoobject.get_frame(np_image=True)
 
-            manipulate_image(
-                np_image,
-                videoobject,
-                maincanvas,
-                self.flow_dict,
-                self.selectionlist,
-                self.tracks,
-                self.tracks_life,
-                self.raw_detection,
-            )
+            self.manipulate_image_refactor(np_image=np_image)
 
-            # slows down programm
             self.slider.set(videoobject.current_frame)
 
     def rewind_video(self):
-        # play and rewind
-
+        """Function  to rewind video."""
         while (
             button_bool["rewind_video"]
             and videoobject.current_frame < videoobject.totalframecount
@@ -393,59 +388,41 @@ class MainWindow(tk.Frame):
 
             np_image = videoobject.get_frame(np_image=True)
 
-            manipulate_image(
-                np_image,
-                videoobject,
-                maincanvas,
-                self.flow_dict,
-                self.selectionlist,
-                self.tracks,
-                self.tracks_life,
-                self.raw_detection,
-            )
-
+            self.manipulate_image_refactor(np_image=np_image)
             # slows down program
             self.slider.set(videoobject.current_frame)
 
     def scroll_through_video(self, event):
+        """Scroll through video with mousewheel.
 
+        Args:
+            event (tkinter.event): Mousewheelscroll.
+        """
         i = 1 * event.delta // 120
 
         videoobject.current_frame += i
 
         np_image = videoobject.get_frame(np_image=True)
 
-        manipulate_image(
-            np_image,
-            videoobject,
-            maincanvas,
-            self.flow_dict,
-            self.selectionlist,
-            self.tracks,
-            self.tracks_life,
-            self.raw_detection,
-        )
+        self.manipulate_image_refactor(np_image=np_image)
 
     def slider_scroll(self, slider_number):
+        """Slides through video with tkinter slider.
 
-        if not button_bool["play_video"]:
+        Args:
+            slider_number (int): Represents current videoframe.
+        """
+
+        if not button_bool["play_video"] and not button_bool["rewind_video"]:
             videoobject.current_frame = slider_number
 
             np_image = videoobject.get_frame(np_image=True)
-            manipulate_image(
-                np_image,
-                videoobject,
-                maincanvas,
-                self.flow_dict,
-                self.selectionlist,
-                self.tracks,
-                self.tracks_life,
-                self.raw_detection,
-            )
+
+            self.manipulate_image_refactor(np_image=np_image)
 
     def get_tracks(self):
-
-        self.raw_detection, self.tracks = load_tracks()
+        """Calls load_tracks-function and inserts tracks into listboxwdidget."""
+        self.raw_detections, self.tracks = load_tracks()
 
         for object in list(self.tracks.keys()):
 
@@ -454,19 +431,10 @@ class MainWindow(tk.Frame):
             # object_live_track[object] = []
 
     def get_detectors(self):
-
+        """Calls load_flowfile-function and inserts sections to listboxwidget."""
         self.flow_dict = load_flowfile()
 
-        manipulate_image(
-            videoobject.np_image.copy(),
-            videoobject,
-            maincanvas,
-            self.flow_dict,
-            self.selectionlist,
-            self.tracks,
-            self.tracks_life,
-            self.raw_detection,
-        )
+        self.manipulate_image_refactor()
 
         for movement in self.flow_dict["Movements"]:
             self.listbox_movement.insert(END, movement)
@@ -475,7 +443,11 @@ class MainWindow(tk.Frame):
             self.listbox_detector.insert(END, detector)
 
     def listbox_track_selection(self, event):
-        """Draws one or more selected tracks on canvas."""
+        """Draws one or more selected tracks on canvas.
+
+        Args:
+            event (tkinter.event): Trackselection from listbox.
+        """
         # self.draw_detectors_from_dict()
         widget = event.widget
         multiselection = widget.curselection()
@@ -486,22 +458,13 @@ class MainWindow(tk.Frame):
             entry = widget.get(selection)
             self.selectionlist.append(entry)
 
-        manipulate_image(
-            videoobject.np_image.copy(),
-            videoobject,
-            maincanvas,
-            self.flow_dict,
-            self.selectionlist,
-            self.tracks,
-            self.tracks_life,
-            self.raw_detection,
-        )
+        self.manipulate_image_refactor()
 
     def listbox_detector_selection(self, event):
         """Re draws detectors, where the selected detectors has different color
 
         Args:
-            event (Listboxselection): single listboxselection
+            event (tkinter.event): Section selection from  listbox.
         """
 
         widget = event.widget
@@ -517,50 +480,27 @@ class MainWindow(tk.Frame):
             else:
                 self.flow_dict["Detectors"][dict_key]["color"] = (200, 125, 125)
 
-        manipulate_image(
-            videoobject.np_image.copy(),
-            videoobject,
-            maincanvas,
-            self.flow_dict,
-            self.selectionlist,
-            self.tracks,
-            self.tracks_life,
-            self.raw_detection,
-        )
+        self.manipulate_image_refactor()
 
     def display_all_tracks(self):
+        """Changes boolvalue and displays all tracks on canvas."""
 
         button_display_tracks_switch(self.button_display_tracks)
 
-        manipulate_image(
-            videoobject.np_image.copy(),
-            videoobject,
-            maincanvas,
-            self.flow_dict,
-            self.selectionlist,
-            self.tracks,
-            self.tracks_life,
-            self.raw_detection,
-        )
+        self.manipulate_image_refactor()
 
     def display_boundingbox(self):
+        """Changes boolvalue and displays boundingboxes on canvas."""
         button_display_bb_switch(self.button_display_boundingbox)
 
-        manipulate_image(
-            videoobject.np_image.copy(),
-            videoobject,
-            maincanvas,
-            self.flow_dict,
-            self.selectionlist,
-            self.tracks,
-            self.tracks_life,
-            self.raw_detection,
-        )
+        self.manipulate_image_refactor()
 
     def display_tracks_live(self):
+        """Changes boolvalue and displays tracks while playing video."""
         button_display_live_track_switch(self.button_display_livetracks)
 
     def create_section_entry_window(self):
+        """Creates toplevel window to name sections."""
         new_detector_creation = tk.Toplevel()
         detector_name_entry = tk.Entry(master=new_detector_creation)
 
@@ -581,12 +521,8 @@ class MainWindow(tk.Frame):
         new_detector_creation.grab_set()
 
     def create_movement_entry_window(self):
-        """Creates new movement and adds it to the movement listbox.
+        """Creates toplevel window to name movements."""
 
-        Args:
-            listbox_movement ([type]): tkinter listbox to display created movements
-            movement_dict ([type]): dictionary with movements, second key in flow file
-        """
         new_movement_creation = tk.Toplevel()
 
         new_movement_creation.title("Create new movement")
@@ -606,6 +542,13 @@ class MainWindow(tk.Frame):
         new_movement_creation.grab_set()
 
     def add_section(self, maincanvas, flow_dict, entrywidget):
+        """Saves created section to flowfile.
+
+        Args:
+            maincanvas (tkinter.canvas): needed to hand over canvas coordinates.
+            flow_dict (dictionary): Dictionary with sections and movements.
+            entrywidget (tkinter.widget): Entrywidget to put in sectionname.
+        """
 
         detector_name = entrywidget.get()
 
@@ -613,25 +556,23 @@ class MainWindow(tk.Frame):
 
         self.listbox_detector.insert(0, detector_name)
 
-    def new_movement(self, maincanvas, flow_dict, entrywidget):
+    def new_movement(self, flow_dict, entrywidget):
+        """Saves created movement to flowfile.
+
+        Args:
+            flow_dict (dictionary): Dictionary with sections and movements.
+            entrywidget (tkinter.widget): Entrywidget to put in movementname.
+        """
         movement_name = entrywidget.get()
 
         flow_dict["Movements"][movement_name] = []
 
         self.listbox_movement.insert(0, movement_name)
 
-        manipulate_image(
-            videoobject.np_image.copy(),
-            videoobject,
-            maincanvas,
-            self.flow_dict,
-            self.selectionlist,
-            self.tracks,
-            self.tracks_life,
-            self.raw_detection,
-        )
+        self.manipulate_image_refactor()
 
     def delete_section(self):
+        """Deletes selected section  from flowfile and listboxwidget."""
 
         detector_name = self.listbox_detector.get(self.listbox_detector.curselection())
 
@@ -639,29 +580,10 @@ class MainWindow(tk.Frame):
 
         del self.flow_dict["Detectors"][detector_name]
 
-        manipulate_image(
-            videoobject.np_image.copy(),
-            videoobject,
-            maincanvas,
-            self.flow_dict,
-            self.selectionlist,
-            self.tracks,
-            self.tracks_life,
-            self.raw_detection,
-        )
+        self.manipulate_image_refactor()
 
     def add_to_movement(self):
-
-        """Define movement with select polygon or linedetector.
-
-        Args:
-            listbox ([type]): [description]
-            listbox_movement ([type]): [description]
-            linedetectors ([type]): [description]
-            polygondetectors ([type]): [description]
-            movement_dict ([type]): [description]
-            listbox_movement_detector ([type]): [description]
-        """
+        """Adds selected section to selected movement."""
         detector_name = self.listbox_detector.get(self.listbox_detector.curselection())
         movement_name = self.listbox_movement.get(self.listbox_movement.curselection())
 
@@ -675,17 +597,11 @@ class MainWindow(tk.Frame):
 
         self.listbox_movement_detector.insert(END, detector_name)
 
-        print(self.flow_dict)
-
     def listbox_movement_selection(self, event):
-        """Display all detectors the selected movement consists off.
+        """Displays corresponding sections when movement is selected.
 
         Args:
-            event (listboxselection): Event to trigger function
-            listbox_movement_detector (listbox): Listbox withe detectors
-            listbox_movement (listbox): Listbox with movements
-            movement_dict (dictionary): Dictionary with movements
-            statepanel (textbox): Statepaneltextbox
+            event (tkinter.event): Movement selection from listboxwidget.
         """
         # shows detectors and sections belonging to selected movement
 
@@ -706,6 +622,18 @@ class MainWindow(tk.Frame):
 
         self.statepanelobject.update_statepanel(
             statepanel_txt["Add_movement_information"]
+        )
+
+    def manipulate_image_refactor(self, np_image=None):
+        manipulate_image(
+            np_image,
+            videoobject,
+            maincanvas,
+            self.flow_dict,
+            self.selectionlist,
+            self.tracks,
+            self.tracks_live,
+            self.raw_detections,
         )
 
 

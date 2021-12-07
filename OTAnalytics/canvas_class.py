@@ -1,5 +1,3 @@
-# works
-
 import tkinter as tk
 
 
@@ -19,10 +17,8 @@ class OtcCanvas(tk.Canvas):
         """Saves coordinates from canvas event to linepoint list.
 
         Args:
-            event ([type]): [description]
-            linepoints ([list]): cache of linepoints
-            polygonpoints ([list]): [description]
-            canvas ([type]): [description]
+            event (tkinter.event): Click on canvas triggers event.
+            list_index (index):
         """
         #  uses mouseevents to get coordinates (left button)
         self.coordinateX = int(self.canvasx(event.x))
@@ -34,6 +30,12 @@ class OtcCanvas(tk.Canvas):
         )
 
     def slider_scroll(self, hand_slide, videoobject):
+        """Scroll through video with slider.
+
+        Args:
+            hand_slide (int): Slidervalue.
+            videoobject (class): Videoobject.
+        """
 
         # TODO if video plays don't call get frame!
 

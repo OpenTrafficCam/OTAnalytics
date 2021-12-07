@@ -13,11 +13,10 @@ def dic_to_detector_dataframe(flowdictionary):
     lineintersection with tracks.
 
     Args:
-        detector_dic (dictionary): dictionary with detectors and movements, detector
-        dictionary represents first key of flow dictionary
+        flowdictionary (dictionary): Dictionary with sections and movements.
 
     Returns:
-        dataframe: dataframe with essential information
+        detector_df: Dataframe with sections.
     """
     # change dic to dataframe
     detector_df = pd.DataFrame.from_dict(
@@ -51,10 +50,10 @@ def dic_to_object_dataframe(tracks):
     """Creates a dataframe from object dictionary, creates column with Polygon-objects.
 
     Args:
-        object_dict (dictionary): dictionary with information of object
+        object_dict (dictionary): Dictionary with information of tracks.
 
     Returns:
-        dataframe: dictionary with information of object
+        dataframe: Dictionary with information of object.
     """
 
     # count number of coordinates (if the count is less then 3,
@@ -89,7 +88,7 @@ def calculate_intersections(detector_df, object_validated_df):
 
     Args:
         detector_df (dataframe): dataframe with detectors
-        object_validated_df (dataframe): copy of slice of valudated objects
+        object_validated_df (dataframe): copy of slice of valuedated objects
         (at least 3 detections)
 
     Returns:
@@ -140,17 +139,17 @@ def find_intersection_order(fps, object_validated_df, flowdictionary):
 
 
     Args:
-        object_validated_df (dataframe): Objectdataframe
-        detector_dict (dictionary): dictionary with detectors
+        object_validated_df (dataframe): Tracks with at least two coordinates.
+        detector_dict (dictionary): Dictionary with detectors.
     Returns:
-        Dataframe: With newly calculated columns
+        Dataframe: With newly calculated columns.
     """
 
     # create necessary columns
     object_validated_df["Crossing_Gate/Frame"] = ""
     object_validated_df["Movement"] = ""
     object_validated_df["Movement_name"] = ""
-    object_validated_df["Time_crossing_entrace"] = ""
+    object_validated_df["Time_crossing_entrance"] = ""
     object_validated_df["Time_crossing_exit"] = ""
 
     for object_id, row in object_validated_df.iterrows():
@@ -211,18 +210,18 @@ def find_intersection_order(fps, object_validated_df, flowdictionary):
 
                 t = object_validated_df.loc[object_id]["Crossing_Gate/Frame"]
 
-                # concattes new list and delete seconds
+                # concates new list and delete seconds
                 concatted_sorted_detector_list = [
                     item for sublist in t for item in sublist
                 ]
                 # deletes extra brackets (list)
                 del concatted_sorted_detector_list[1::2]
 
-                object_validated_df.at[object_id, "Time_crossing_entrace"] = (
+                object_validated_df.at[object_id, "Time_crossing_entrance"] = (
                     object_validated_df.at[object_id, "Crossing_Gate/Frame"][0][1] / fps
                 )
 
-                if object_validated_df.at[object_id, "Time_crossing_entrace"] != (
+                if object_validated_df.at[object_id, "Time_crossing_entrance"] != (
                     object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
                     / fps
                 ):
@@ -247,11 +246,11 @@ def assign_movement(flowdictionary, object_validated_df):
     """Compares movements and associated detectors with sorted crossing list.
 
     Args:
-        movement_dict ([dictionary]): dictionary with movements
-        object_validated_df ([dataframe]): validated object dataframe
+        flowdictionary (dictionary): Dictionary with sections and movements.
+        object_validated_df (dataframe): Dateframe with valuedated tracks.
 
     Returns:
-        object_validated_df ([dataframe]): validated object dataframe with movements
+        dataframe: Dataframe wth assigned movement to tracks.
     """
 
     for object_id, j in object_validated_df.iterrows():
@@ -279,29 +278,30 @@ def safe_to_exl(process_object):
     """Safe dataframe as cvs and asks for filepath.
 
     Args:
-        process_object (datafrane): dataframe with object information
+        process_object (dataframe): Dataframe with object information.
     """
 
     file_path = filedialog.asksaveasfilename(
         defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx")]
     )
     process_object.to_excel(file_path)
-    # file_path.write(autocount_csv_file)
-    # file_path.close
 
 
 # %%
 def time_calculation_dataframe(timedelta_entry, fps, object_validated_df):
+    """Creates columns with time, calculated from frame and fps.
+
+    Args:
+        timedelta_entry (int): Time between two  frames.
+        fps (int): Frames per seconds.
+        object_validated_df (dataframe): Dataframe with tracks.
+
+    Returns:
+        dataframe: Dataframe with tracks and new created columns with
+        information in timeformat.
+    """
 
     entry_timedelta = timedelta_entry.get()
-
-    # time_list = entry_timedelta.split(":", 3)
-
-    # hour, min, second = time_list
-
-    # print(hour, min, second)
-
-    # print(entry_timedelta)
 
     object_validated_df["first_appearance_time"] = pd.to_datetime(
         (object_validated_df["first_appearance_frame"] / fps), unit="s"
@@ -343,7 +343,7 @@ def clean_dataframe(object_validated_df):
             "first_appearance_time",
             "last_appearance_frame",
             "last_appearance_time",
-            "Time_crossing_entrace",
+            "Time_crossing_entrance",
             "Time_crossing_exit",
         ],
     ]
@@ -394,9 +394,12 @@ def automated_counting(entry_timedelta, entry_interval, fps, flowdictionary, tra
     """Calls previous functions for better readability.
 
     Args:
-        detector_dict (dictionary): dictionary with detectors
-        object_dict (dictionary): dictionary with objects (at least 3 detections)
-
+        timedelta_entry (int): Time between two  frames.
+        fps (int): Frames per seconds.
+        flowdictionary (dictionary): Dictionary with sections and movements.
+        tracks (dictionary): Dictionary with tracks.
+    Returns:
+        (dataframe): Dateframe with counted vehicles and further information.
     """
 
     # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
@@ -429,10 +432,9 @@ def create_setting_window(fps, flowdictionary, tracks):
     inputfields to enter starting time and timeinterval.
 
     Args:
-        fps (int): Videoframes per seconds
-        movement_dic (dictionary): dictionary with movements
-        detector_dic (dictionary): dictionary with detectors
-        object_dic (dictionary): dictionary with objects
+        fps (int): Frames per second.
+        flowdictionary (dictionary): Dictionary with sections and movements.
+        tracks (dictionary): Dictionary with tracks.
     """
     # creates window to insert autocount time and groupby time
     toplevelwindow = Toplevel()

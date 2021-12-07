@@ -1,10 +1,10 @@
 import json
 from tkinter import filedialog
-from gui_helper import button_bool
 
 import cv2
 import numpy as np
 
+from gui_helper import button_bool
 from image_alteration import manipulate_image
 
 
@@ -13,7 +13,7 @@ def save_flowfile(flowdictionary):
     and movements.
 
     Args:
-        flow_dict (dictionary): Dictionary with necessary information for reuse.
+        flow_dict (dictionary): Dictionary with sections and movements.
     """
     files = [("Files", "*.OTflow")]
     file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
@@ -26,8 +26,16 @@ def save_flowfile(flowdictionary):
 
 
 def draw_line(
-    event, video, canvas, flowdictionary, selectionlist, tracks, raw_detection
+    event,
+    video,
+    canvas,
+    flowdictionary,
+    selectionlist,
+    tracks,
+    tracks_live,
+    raw_detection,
 ):
+    """Draws line on canvas"""
 
     np_image = video.np_image.copy()
 
@@ -40,7 +48,14 @@ def draw_line(
     )
 
     manipulate_image(
-        np_image, video, canvas, flowdictionary, selectionlist, tracks, raw_detection
+        np_image,
+        video,
+        canvas,
+        flowdictionary,
+        selectionlist,
+        tracks,
+        tracks_live,
+        raw_detection,
     )
 
 
@@ -51,6 +66,8 @@ def draw_polygon(
     flowdictionary,
     selectionlist,
     tracks,
+    tracks_live,
+    raw_detections,
     adding_points=False,
     closing=False,
     undo=False,
@@ -58,8 +75,7 @@ def draw_polygon(
     """Draws a polygon on canvas.
 
     Args:
-        closing (bool): if true create polygon else continue drawing
-
+        closing (bool): If true create polygon else polyline.
     """
     if not button_bool["polygondetector_toggle"]:
 
@@ -89,11 +105,20 @@ def draw_polygon(
 
     np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
 
-    manipulate_image(np_image, video, canvas, flowdictionary, selectionlist, tracks)
+    manipulate_image(
+        np_image,
+        video,
+        canvas,
+        flowdictionary,
+        selectionlist,
+        tracks,
+        tracks_live,
+        raw_detections,
+    )
 
 
 def load_flowfile():
-    """loads detectors from a .OTflow-File."""
+    """Loads sections from a .OTflow-File."""
     filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
     files = open(filepath.name, "r")
     files = files.read()
@@ -102,6 +127,13 @@ def load_flowfile():
 
 
 def dump_to_flowdictionary(canvas, flowdictionary, detector_name):
+    """Saves sections to flowdictionary.
+
+    Args:
+        canvas (tkinter.canvas): Cancvas that hand out clicked coordinates.
+        flow_dict (dictionary): Dictionary with sections and movements.
+        detector_name (String): Entrywidgetinput, functions as key of dictionary.
+    """
 
     if button_bool["linedetector_toggle"] is True:
 

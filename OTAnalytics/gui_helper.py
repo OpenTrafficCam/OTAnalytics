@@ -34,7 +34,7 @@ def button_play_video_switch(button_play, button_rewind):
     """Toggle video play function.
 
     Args:
-        button (tkinter button): ...
+        button (tkinter.button): play and rewind button.
     """
     button_bool["play_video"] = not button_bool["play_video"]
 
@@ -48,10 +48,10 @@ def button_play_video_switch(button_play, button_rewind):
 
 
 def button_rewind_switch(button_rewind, button_play):
-    """Summary.
+    """Toggle video rewind function.
 
     Args:
-        button (tkinter button): ...
+        button (tkinter button): play and rewind button.
     """
     button_bool["rewind_video"] = not button_bool["rewind_video"]
 
@@ -63,11 +63,11 @@ def button_rewind_switch(button_rewind, button_play):
 
 
 def button_line_switch(button_linedetector, button_polygondetector, statepanel):
-    """Prints information on the statepanel when Linedetector button is pressed.
+    """Prints information on the statepanel when linedetector button is pressed.
 
     Args:
-        button ([tkinter button]): simple button
-        statepanel ([textfield]): shows information
+        button (tkinter button): Buttons.
+        statepanel (textfield.class): Shows information.
     """
     button_bool["linedetector_toggle"] = not button_bool["linedetector_toggle"]
 
@@ -86,10 +86,9 @@ def button_polygon_switch(button_polygondetector, button_linedetector, statepane
     """Prints information on the statepanel when Polygondetector button is pressed.
 
     Args:
-        button ([tkinter button]): simple button
-        statepanel ([textfield]): shows information
+        button (tkinter button): Buttons.
+        statepanel (textfield.class): Shows information.
     """
-    print(button_bool["polygondetector_toggle"])
 
     button_bool["polygondetector_toggle"] = not button_bool["polygondetector_toggle"]
 
@@ -99,7 +98,7 @@ def button_polygon_switch(button_polygondetector, button_linedetector, statepane
         button_polygondetector.config(text="Finish")
         button_linedetector.config(text="Line")
         statepanel.update_statepanel(
-            "left click to create new polyogoncorner\nright button to delete previous"
+            "left click to create new polygoncorner\nright button to delete previous"
             + " corner\nwheelclick to close polygon\nenter to finish creation process"
         )
     else:
@@ -110,7 +109,7 @@ def button_display_tracks_switch(button_display_tracks):
     """Toggles the display of trajectories.
 
     Args:
-        button (tkinter button): ...
+        button (tkinter button): Button.
     """
     print(button_bool["display_all_tracks_toggle"])
 
@@ -128,7 +127,7 @@ def button_display_bb_switch(button_display_bb):
     """Toggles the display of trajectories.
 
     Args:
-        button (tkinter button): ...
+        button (tkinter button): Button.
     """
     button_bool["display_bb"] = not button_bool["display_bb"]
 
@@ -139,10 +138,10 @@ def button_display_bb_switch(button_display_bb):
 
 
 def button_display_live_track_switch(button_display_tracks):
-    """Summary.
+    """Toggles the live-display of trajectories while playing video.
 
     Args:
-        button (tkinter button): ...
+        button (tkinter button): Buttons.
     """
 
     button_bool["display_live_track"] = not button_bool["display_live_track"]
