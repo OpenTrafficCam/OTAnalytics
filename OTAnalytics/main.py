@@ -502,6 +502,10 @@ class MainWindow(tk.Frame):
     def create_section_entry_window(self):
         """Creates toplevel window to name sections."""
         new_detector_creation = tk.Toplevel()
+
+        # removes hotkey so "enter" won't trigger
+        keyboard.remove_hotkey("enter")
+
         detector_name_entry = tk.Entry(master=new_detector_creation)
 
         detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
@@ -516,8 +520,8 @@ class MainWindow(tk.Frame):
         )
 
         safe_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
         # makes the background window unavailable
-        # self.protocol("WM_DELETE_WINDOW", MainWindow.on_close)
         new_detector_creation.grab_set()
 
     def create_movement_entry_window(self):
@@ -540,6 +544,13 @@ class MainWindow(tk.Frame):
         add_movement.grid(row=1, column=1, sticky="w", pady=10, padx=10)
         new_movement_creation.protocol("WM_DELETE_WINDOW")
         new_movement_creation.grab_set()
+
+    def on_close(self):
+        # hotkeys
+        keyboard.add_hotkey(
+            "enter",
+            lambda: self.create_section_entry_window(),
+        )
 
     def add_section(self, maincanvas, flow_dict, entrywidget):
         """Saves created section to flowfile.
