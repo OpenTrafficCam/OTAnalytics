@@ -1,6 +1,7 @@
+from tkinter import filedialog
+
 import cv2
 from PIL import Image, ImageTk
-from tkinter import filedialog
 
 
 def load_video_and_frame():
