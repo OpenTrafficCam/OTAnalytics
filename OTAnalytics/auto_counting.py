@@ -156,7 +156,7 @@ def find_intersection_order(fps, object_validated_df, flowdictionary):
         # use dict
         for detector in flowdictionary["Detectors"]:
             # Condition if detector was crossed by objecttrack
-            # Dont change to "is True"!! (True is the content of row/column)
+            # Don't change to "is True"!! (True is the content of row/column)
             if object_validated_df.loc[object_id][detector]:
 
                 # shapely Linestring
@@ -252,7 +252,7 @@ def assign_movement(flowdictionary, object_validated_df):
     Returns:
         dataframe: Dataframe wth assigned movement to tracks.
     """
-
+    # TODO delete iteration ==> jupyter nb
     for object_id, j in object_validated_df.iterrows():
 
         print("working...on " + str(object_id))

@@ -22,7 +22,7 @@ def load_video_and_frame():
 class Video:
     """Videoclass that gets created on importing video."""
 
-    # objekt which contains relevant information of the video
+    # object which contains relevant information of the video
     def __init__(self, filepath):
 
         # self.id = id
@@ -44,12 +44,25 @@ class Video:
 
         self.current_frame = 0
 
+        # self.buffercount = 0
+
+        self.frame_list = {}
+
+        self.buffer_video()
+
     def get_frame(self, np_image):
 
         # when imported set current frame to 0
-        self.cap.set(1, self.current_frame)
+        # self.cap.set(1, self.current_frame)
 
-        self.np_image = cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2RGB)  # to RGB
+        if self.current_frame not in self.frame_list:
+            self.buffer_video()
+
+        print("Frame: " + str(self.current_frame))
+
+        self.np_image = cv2.cvtColor(
+            self.frame_list[self.current_frame], cv2.COLOR_BGR2RGB
+        )  # to RGB
 
         if np_image:
 
@@ -65,3 +78,25 @@ class Video:
         print("creating image worked")
 
         return self.ph_image
+
+    def buffer_video(self):
+
+        self.frame_list = {}
+
+        print("buffering video")
+
+        self.buffercount = int(self.current_frame / 500)
+
+        self.cap.set(1, self.buffercount * 500)
+
+        # buffer next 500 frames to play video
+        for i in range(self.buffercount * 500, (self.buffercount + 1) * 500):
+            ret, frame = self.cap.read()
+            self.frame_list[i] = frame
+
+        self.cap.set(1, self.buffercount * 500)
+
+        # buffer previous 500 frames to rewind video
+        for i in range(self.buffercount * 500, (self.buffercount - 1) * 500):
+            ret, frame = self.cap.read()
+            self.frame_list[i] = frame
