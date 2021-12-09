@@ -110,15 +110,18 @@ class MainWindow(tk.Frame):
         self.listbox_detector.grid(row=4, column=0, columnspan=3, sticky="nsew")
 
         self.style = ttk.Style()
+
+        self.style.theme_use("default")
         self.style.configure(
-            "mystyle.Treeview", highlightthickness=0, bd=0, font=("Calibri", 11)
+            "Treeview", highlightthickness=0, bd=0, font=("Calibri", 11)
         )
 
         self.listbox_tree = ttk.Treeview(
-            self.frame, style="mystyle.Treeview", height=8, selectmode="extended"
+            self.frame, style="Treeview", height=8, selectmode="extended"
         )
+
         self.listbox_tree["columns"] = ("ID", "Class")
-        self.listbox_tree["show"] = "headings"
+
         self.listbox_tree.column("ID", anchor=CENTER, width=25)
         self.listbox_tree.column("Class", anchor="w", width=50)
         self.listbox_tree_scrollbar = ttk.Scrollbar(
@@ -128,6 +131,7 @@ class MainWindow(tk.Frame):
         self.listbox_tree.heading("ID", text="ID", anchor=CENTER)
         self.listbox_tree.heading("Class", text="Class", anchor=CENTER)
 
+        self.listbox_tree["show"] = "headings"
         self.listbox_tree.grid(row=4, column=3, columnspan=3, sticky="ew")
         self.listbox_tree_scrollbar.grid(row=4, column=6, sticky="ns")
 
@@ -441,7 +445,7 @@ class MainWindow(tk.Frame):
 
         for id, object in enumerate(list(self.tracks.keys())):
             self.listbox_tree.insert(
-                parent="", index=id, values=(object, list(self.tracks[object]["Class"]))
+                parent="", index=id, values=(object, (self.tracks[object]["Class"]))
             )
 
         # initialize Tracks to draw live
