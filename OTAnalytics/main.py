@@ -1,6 +1,7 @@
 import time
 import tkinter as tk
-from tkinter.constants import END, HORIZONTAL
+from tkinter.constants import CENTER, END, HORIZONTAL, LEFT
+from tkinter import ttk
 
 import keyboard
 
@@ -106,12 +107,31 @@ class MainWindow(tk.Frame):
         detectionlabel.grid(row=3, column=0, columnspan=7, sticky="ew")
 
         self.listbox_detector = tk.Listbox(self.frame, height=8)
-        self.listbox_detector.grid(row=4, column=0, columnspan=3, sticky="ew")
+        self.listbox_detector.grid(row=4, column=0, columnspan=3, sticky="nsew")
 
-        self.listbox_tracks = tk.Listbox(
-            self.frame, selectmode="multiple", exportselection=False, height=8
+        self.style = ttk.Style()
+        self.style.configure(
+            "mystyle.Treeview", highlightthickness=0, bd=0, font=("Calibri", 11)
         )
-        self.listbox_tracks.grid(row=4, column=3, columnspan=4, sticky="ew")
+
+        self.listbox_tree = ttk.Treeview(
+            self.frame, style="mystyle.Treeview", height=8, selectmode="extended"
+        )
+        self.listbox_tree["columns"] = ("ID", "Class")
+        self.listbox_tree["show"] = "headings"
+        self.listbox_tree.column("ID", anchor=CENTER, width=25)
+        self.listbox_tree.column("Class", anchor="w", width=50)
+        self.listbox_tree_scrollbar = ttk.Scrollbar(
+            self.frame, orient="vertical", command=self.listbox_tree.yview
+        )
+
+        self.listbox_tree.heading("ID", text="ID", anchor=CENTER)
+        self.listbox_tree.heading("Class", text="Class", anchor=CENTER)
+
+        self.listbox_tree.grid(row=4, column=3, columnspan=3, sticky="ew")
+        self.listbox_tree_scrollbar.grid(row=4, column=6, sticky="ns")
+
+        self.listbox_tree.configure(yscrollcommand=self.listbox_tree_scrollbar.set)
 
         button_line = tk.Button(
             self.frame,
@@ -145,7 +165,7 @@ class MainWindow(tk.Frame):
 
         self.button_display_boundingbox = tk.Button(self.frame, text="Show bb")
 
-        self.button_display_boundingbox.grid(row=5, column=5, sticky="ew")
+        self.button_display_boundingbox.grid(row=5, columnspan=2, column=5, sticky="ew")
 
         self.button_display_livetracks = tk.Button(
             self.frame, text="Livetrack", command=lambda: self.display_tracks_live()
@@ -204,7 +224,7 @@ class MainWindow(tk.Frame):
             self.frame, text="Load", command=lambda: self.get_detectors()
         )
 
-        button_load_flow.grid(row=9, column=5, sticky="ew")
+        button_load_flow.grid(row=9, columnspan=2, column=5, sticky="ew")
 
     def create_canvas_and_videoobject(self):
         # load video object
@@ -302,12 +322,7 @@ class MainWindow(tk.Frame):
                 )
             ],
         )
-        self.listbox_tracks.bind(
-            "<<ListboxSelect>>",
-            lambda event: self.listbox_track_selection(
-                event,
-            ),
-        )
+        self.listbox_tree.bind("<<TreeviewSelect>>", self.listbox_track_selection)
         self.listbox_detector.bind(
             "<<ListboxSelect>>", lambda event: self.listbox_detector_selection(event)
         )
@@ -424,11 +439,13 @@ class MainWindow(tk.Frame):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
         self.raw_detections, self.tracks = load_tracks()
 
-        for object in list(self.tracks.keys()):
+        for id, object in enumerate(list(self.tracks.keys())):
+            self.listbox_tree.insert(
+                parent="", index=id, values=(object, list(self.tracks[object]["Class"]))
+            )
 
-            self.listbox_tracks.insert("end", object)
-            # initialize Tracks to draw live
-            # object_live_track[object] = []
+        # initialize Tracks to draw live
+        # object_live_track[object] = []
 
     def get_detectors(self):
         """Calls load_flowfile-function and inserts sections to listboxwidget."""
@@ -443,20 +460,12 @@ class MainWindow(tk.Frame):
             self.listbox_detector.insert(END, detector)
 
     def listbox_track_selection(self, event):
-        """Draws one or more selected tracks on canvas.
-
-        Args:
-            event (tkinter.event): Trackselection from listbox.
-        """
-        # self.draw_detectors_from_dict()
-        widget = event.widget
-        multiselection = widget.curselection()
-
+        """Draws one or more selected tracks on canvas."""
         self.selectionlist = []
 
-        for selection in multiselection:
-            entry = widget.get(selection)
-            self.selectionlist.append(entry)
+        for item in self.listbox_tree.selection():
+            item_text = self.listbox_tree.item(item, "values")
+            self.selectionlist.append(item_text[0])
 
         self.manipulate_image_refactor()
 
@@ -520,7 +529,7 @@ class MainWindow(tk.Frame):
         )
 
         safe_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
         # makes the background window unavailable
         new_detector_creation.grab_set()
 
