@@ -1,11 +1,24 @@
 import heapq
 import json
+import time
 from tkinter import filedialog
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
+
+
+def func_to_get_item(list):
+
+    return list[0], list[-1]
+
+
+def create_coords(track_dictionary, row):
+
+    for dict in track_dictionary:
+        if row["object"].isin(dict.keys()):
+            row["object"].append(dict[row["object"]])
 
 
 def load_tracks(object_dic, raw_detections, class_dic):
@@ -20,13 +33,13 @@ def load_tracks(object_dic, raw_detections, class_dic):
 
     track_file = json.loads(files)
 
-    # detections = {}
-
-    # TODO shorten
     raw_detections.update(track_file["data"])
 
+    starttime = time.time()
+
     for frame in raw_detections:
-        for detection in raw_detections[frame]:
+        # copy so pop throws no runtime exceptions
+        for detection in raw_detections[frame].copy():
             if "object_" + str(detection) in object_dic.keys():
                 object_dic["object_%s" % detection]["Coord"].append(
                     [
@@ -37,9 +50,11 @@ def load_tracks(object_dic, raw_detections, class_dic):
 
                 object_dic["object_%s" % detection]["Frame"].append(int(frame))
 
+                # maybe slower
+                raw_detections[frame].pop(detection, None)
+
             elif raw_detections[frame][detection]["class"] in class_dic.keys():
-                object_dic["object_%s" % detection] = {}
-                object_dic["object_%s" % detection]["Coord"] = []
+                object_dic["object_%s" % detection] = {"Coord": []}
                 object_dic["object_%s" % detection]["Frame"] = [int(frame)]
                 object_dic["object_%s" % detection]["Class"] = raw_detections[frame][
                     detection
@@ -50,6 +65,12 @@ def load_tracks(object_dic, raw_detections, class_dic):
                         raw_detections[frame][detection]["y"],
                     ]
                 )
+                # maybe slower
+                raw_detections[frame].pop(detection, None)
+
+    endtime = time.time()
+
+    print(endtime - starttime)
 
     return object_dic
 
@@ -102,12 +123,14 @@ def dic_to_object_dataframe(object_dic):
 
     # count number of coordinates (if the count is less then 3,
     # geopandas cant create Polygon)
-    for object in object_dic:
-        object_dic[object]["Coord_count"] = len(object_dic[object]["Coord"])
-        object_dic[object]["first_appearance_frame"] = object_dic[object]["Frame"][0]
-        object_dic[object]["last_appearance_frame"] = object_dic[object]["Frame"][-1]
 
     object_df = pd.DataFrame.from_dict(object_dic, orient="index")
+
+    object_df["Coord_count"] = np.vectorize(len)(object_df["Coord"])
+    (
+        object_df["first_appearance_frame"],
+        object_df["last_appearance_frame"],
+    ) = np.vectorize(func_to_get_item)(object_df["Frame"])
 
     object_df_validated = object_df.loc[object_df["Coord_count"] >= 2]
 
@@ -118,10 +141,6 @@ def dic_to_object_dataframe(object_dic):
     object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1
     )
-
-    # not necessary afer restructuring code
-    # object_df_validated_copy["start_point_geometry"] = object_df_validated_copy.apply(
-    #     lambda pointtuples: Point(pointtuples["Coord"][0]), axis=1)
 
     return object_df_validated_copy
 
@@ -147,6 +166,7 @@ def calculate_intersections(detector_df, object_df_validated_copy):
 
     # iterates over every detectors and returns bool value for
     # intersection with every track from geoseries
+
     for index, detector in detector_df.iterrows():
 
         # distinct shapely geometry
@@ -195,11 +215,11 @@ def find_intersection_order(object_df_validated_copy, detector_dict, fps=25):
     object_df_validated_copy["Time_crossing_entrace"] = ""
     object_df_validated_copy["Time_crossing_exit"] = ""
 
+    starttime = time.time()
     for object_id, row in object_df_validated_copy.iterrows():
         # use dict
         for detector in detector_dict:
-            #         # Condition if detector was crossed by objecttrack
-            #         # Dont change to "is True"!!
+            # Condition if detector was crossed by objecttrack
             if object_df_validated_copy.loc[object_id][detector]:
 
                 # shapely Linestring
@@ -219,7 +239,7 @@ def find_intersection_order(object_df_validated_copy, detector_dict, fps=25):
                     2, line_points, key=intersection_point.distance
                 )
 
-                point_raw_coords = list(second_nearest.coords[0:][0])
+                point_raw_coords = list(second_nearest.coords[:][0])
 
                 # unaltered coord from track file
                 raw_coords = object_df_validated_copy.loc[object_id]["Coord"]
@@ -281,6 +301,10 @@ def find_intersection_order(object_df_validated_copy, detector_dict, fps=25):
                     object_id, "Movement"
                 ] = concatted_sorted_detector_list
 
+    endtime = time.time()
+
+    print("Find intersection: " + str(endtime - starttime))
+
     return object_df_validated_copy
 
 
@@ -295,6 +319,10 @@ def assign_movement(movement_dict, object_df_validated_copy):
         object_df_validated_copy ([dataframe]):
         validated object dataframe with movements
     """
+
+    object_df_validated_copy.loc[
+        object_df_validated_copy["Movement"].isin(movement_dict)
+    ]
 
     for object_id, j in object_df_validated_copy.iterrows():
 
@@ -348,8 +376,6 @@ def clean_dataframe(object_validated_df):
     # TODO List to Tuple Movement
     object_validated_df["Movement"] = object_validated_df["Movement"].apply(str)
 
-    print(object_validated_df)
-
     return object_validated_df.loc[
         :,
         [
@@ -375,8 +401,6 @@ def resample_dataframe(object_validated_df):
     object_validated_df = object_validated_df.set_index("Datetime")
 
     object_validated_df = object_validated_df.replace(r"^\s*$", np.nan, regex=True)
-
-    print(object_validated_df)
 
     object_validated_df = (
         object_validated_df.groupby(
@@ -405,6 +429,9 @@ def safe_to_exl(process_object):
 
 def main():
     """Main function."""
+
+    starttime = time.time()
+
     detectors_dic = {}
     movement_dic = {}
     object_dic = {}
@@ -460,6 +487,10 @@ def main():
     object_df_validated_copy = clean_dataframe(object_df_validated_copy)
 
     object_df_validated_copy = resample_dataframe(object_df_validated_copy)
+
+    endtime = time.time()
+
+    print("Gesamtzeit:" + str(endtime - starttime))
 
     safe_to_exl(object_df_validated_copy)
 

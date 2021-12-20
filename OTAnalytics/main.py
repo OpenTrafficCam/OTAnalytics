@@ -106,36 +106,41 @@ class MainWindow(tk.Frame):
         )
         detectionlabel.grid(row=3, column=0, columnspan=7, sticky="ew")
 
-        self.listbox_detector = tk.Listbox(self.frame, height=8)
-        self.listbox_detector.grid(row=4, column=0, columnspan=3, sticky="nsew")
-
         self.style = ttk.Style()
-
         self.style.theme_use("default")
         self.style.configure(
             "Treeview", highlightthickness=0, bd=0, font=("Calibri", 11)
         )
 
-        self.listbox_tree = ttk.Treeview(
+        self.treeview_sections = ttk.Treeview(
+            self.frame, style="Treeview", height=8, selectmode="browse"
+        )
+        self.treeview_sections["columns"] = "Section"
+        self.treeview_sections.column("Section", anchor=CENTER, width=50)
+        self.treeview_sections.heading("Section", text="Section", anchor=CENTER)
+        self.treeview_sections["show"] = "headings"
+        self.treeview_sections.grid(row=4, column=0, columnspan=3, sticky="nsew")
+
+        self.treeview_tracks = ttk.Treeview(
             self.frame, style="Treeview", height=8, selectmode="extended"
         )
 
-        self.listbox_tree["columns"] = ("ID", "Class")
+        self.treeview_tracks["columns"] = ("ID", "Class")
 
-        self.listbox_tree.column("ID", anchor=CENTER, width=25)
-        self.listbox_tree.column("Class", anchor="w", width=50)
+        self.treeview_tracks.column("ID", anchor=CENTER, width=25)
+        self.treeview_tracks.column("Class", anchor="w", width=50)
         self.listbox_tree_scrollbar = ttk.Scrollbar(
-            self.frame, orient="vertical", command=self.listbox_tree.yview
+            self.frame, orient="vertical", command=self.treeview_tracks.yview
         )
 
-        self.listbox_tree.heading("ID", text="ID", anchor=CENTER)
-        self.listbox_tree.heading("Class", text="Class", anchor=CENTER)
+        self.treeview_tracks.heading("ID", text="ID", anchor=CENTER)
+        self.treeview_tracks.heading("Class", text="Class", anchor=CENTER)
 
-        self.listbox_tree["show"] = "headings"
-        self.listbox_tree.grid(row=4, column=3, columnspan=3, sticky="ew")
+        self.treeview_tracks["show"] = "headings"
+        self.treeview_tracks.grid(row=4, column=3, columnspan=3, sticky="ew")
         self.listbox_tree_scrollbar.grid(row=4, column=6, sticky="ns")
 
-        self.listbox_tree.configure(yscrollcommand=self.listbox_tree_scrollbar.set)
+        self.treeview_tracks.configure(yscrollcommand=self.listbox_tree_scrollbar.set)
 
         button_line = tk.Button(
             self.frame,
@@ -326,9 +331,9 @@ class MainWindow(tk.Frame):
                 )
             ],
         )
-        self.listbox_tree.bind("<<TreeviewSelect>>", self.listbox_track_selection)
-        self.listbox_detector.bind(
-            "<<ListboxSelect>>", lambda event: self.listbox_detector_selection(event)
+        self.treeview_tracks.bind("<<TreeviewSelect>>", self.listbox_track_selection)
+        self.treeview_sections.bind(
+            "<<TreeviewSelect>>", self.listbox_detector_selection
         )
 
         self.listbox_movement.bind(
@@ -444,7 +449,7 @@ class MainWindow(tk.Frame):
         self.raw_detections, self.tracks = load_tracks()
 
         for id, object in enumerate(list(self.tracks.keys())):
-            self.listbox_tree.insert(
+            self.treeview_tracks.insert(
                 parent="", index=id, values=(object, (self.tracks[object]["Class"]))
             )
 
@@ -460,15 +465,15 @@ class MainWindow(tk.Frame):
         for movement in self.flow_dict["Movements"]:
             self.listbox_movement.insert(END, movement)
 
-        for detector in self.flow_dict["Detectors"]:
-            self.listbox_detector.insert(END, detector)
+        for id, detector in enumerate(self.flow_dict["Detectors"]):
+            self.treeview_sections.insert(parent="", index=id, values=detector)
 
     def listbox_track_selection(self, event):
         """Draws one or more selected tracks on canvas."""
         self.selectionlist = []
 
-        for item in self.listbox_tree.selection():
-            item_text = self.listbox_tree.item(item, "values")
+        for item in self.treeview_tracks.selection():
+            item_text = self.treeview_tracks.item(item, "values")
             self.selectionlist.append(item_text[0])
 
         self.manipulate_image_refactor()
@@ -480,9 +485,8 @@ class MainWindow(tk.Frame):
             event (tkinter.event): Section selection from  listbox.
         """
 
-        widget = event.widget
-
-        detector_name = widget.get(widget.curselection())
+        item = self.treeview_sections.selection()
+        detector_name = self.treeview_sections.item(item, "values")[0]
 
         for dict_key in self.flow_dict["Detectors"].keys():
 
@@ -514,18 +518,18 @@ class MainWindow(tk.Frame):
 
     def create_section_entry_window(self):
         """Creates toplevel window to name sections."""
-        new_detector_creation = tk.Toplevel()
+        self.new_detector_creation = tk.Toplevel()
 
         # removes hotkey so "enter" won't trigger
         keyboard.remove_hotkey("enter")
 
-        detector_name_entry = tk.Entry(master=new_detector_creation)
+        detector_name_entry = tk.Entry(master=self.new_detector_creation)
 
         detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
         detector_name_entry.focus()
 
         safe_section = tk.Button(
-            master=new_detector_creation,
+            master=self.new_detector_creation,
             text="Add section",
             command=lambda: self.add_section(
                 maincanvas, self.flow_dict, detector_name_entry
@@ -533,9 +537,9 @@ class MainWindow(tk.Frame):
         )
 
         safe_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
-        new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
         # makes the background window unavailable
-        new_detector_creation.grab_set()
+        self.new_detector_creation.grab_set()
 
     def create_movement_entry_window(self):
         """Creates toplevel window to name movements."""
@@ -564,6 +568,7 @@ class MainWindow(tk.Frame):
             "enter",
             lambda: self.create_section_entry_window(),
         )
+        self.new_detector_creation.destroy()
 
     def add_section(self, maincanvas, flow_dict, entrywidget):
         """Saves created section to flowfile.
@@ -578,7 +583,7 @@ class MainWindow(tk.Frame):
 
         dump_to_flowdictionary(maincanvas, flow_dict, detector_name)
 
-        self.listbox_detector.insert(0, detector_name)
+        self.treeview_sections.insert(parent="", index="end", values=detector_name)
 
     def new_movement(self, flow_dict, entrywidget):
         """Saves created movement to flowfile.
@@ -598,9 +603,10 @@ class MainWindow(tk.Frame):
     def delete_section(self):
         """Deletes selected section  from flowfile and listboxwidget."""
 
-        detector_name = self.listbox_detector.get(self.listbox_detector.curselection())
+        item = self.treeview_sections.selection()
+        detector_name = self.treeview_sections.item(item, "values")[0]
 
-        self.listbox_detector.delete(self.listbox_detector.curselection())
+        self.treeview_sections.delete(item)
 
         del self.flow_dict["Detectors"][detector_name]
 
@@ -608,7 +614,9 @@ class MainWindow(tk.Frame):
 
     def add_to_movement(self):
         """Adds selected section to selected movement."""
-        detector_name = self.listbox_detector.get(self.listbox_detector.curselection())
+        item = self.treeview_sections.selection()
+        detector_name = self.treeview_sections.item(item, "values")[0]
+
         movement_name = self.listbox_movement.get(self.listbox_movement.curselection())
 
         self.flow_dict["Movements"][movement_name].append(detector_name)
