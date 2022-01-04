@@ -11,6 +11,7 @@ button_bool = {
     "mousescroll_active": False,
     "display_bb": False,
     "display_live_track": False,
+    "slider": False,
 }
 
 
@@ -43,8 +44,6 @@ def button_play_video_switch(button_play, button_rewind):
         button_rewind.config(text="Rewind")
     else:
         button_play.config(text="Play")
-
-    print("test")
 
 
 def button_rewind_switch(button_rewind, button_play):

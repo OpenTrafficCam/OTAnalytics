@@ -8,9 +8,6 @@ from threading import Thread
 import sys
 import time
 
-
-import numpy as np
-
 if sys.version_info >= (3, 0):
     from queue import Queue
 
@@ -28,11 +25,11 @@ def load_video_and_frame():
     filepath = video_source.name
     print("filepath: " + filepath)
 
-    return Video(filepath, queue_size=128)
+    return Video(filepath)
 
 
 class FileVideoStream:
-    def __init__(self, path, transform=None, queue_size=128):
+    def __init__(self, path, transform=None):
         # initialize the file video stream along with the boolean
         # used to indicate if the thread should be stopped or not
         self.stream = cv2.VideoCapture(path)
@@ -41,21 +38,37 @@ class FileVideoStream:
 
         # initialize the queue used to store frames read from
         # the video file
+        self.new_q()
+        # initialize thread
+        self.new_thread_forward()
+
+    def new_q(self, queue_size=128):
         self.Q = Queue(maxsize=queue_size)
-        # intialize thread
-        self.thread = Thread(target=self.update, args=())
+
+        print("new Queue initiated")
+
+    def new_thread_forward(self):
+        self.thread = Thread(target=lambda: self.update(1), args=())
+        self.thread.daemon = True
+
+    def new_thread_backward(self):
+        self.thread = Thread(target=lambda: self.update(-1), args=())
         self.thread.daemon = True
 
     def start(self):
         # start a thread to read frames from the file video stream
         self.thread.start()
+        self.stopped = False
+        print("Thread started")
         return self
 
-    def update(self):
+    def update(self, direction):
+        print("update thread")
         # keep looping infinitely
         while True:
             # if the thread indicator variable is set, stop the
             # thread
+
             if self.stopped:
                 break
 
@@ -89,7 +102,8 @@ class FileVideoStream:
             else:
                 time.sleep(0.1)  # Rest for 10ms, we have a full queue
 
-        self.stream.release()
+        # self.stream.release()
+        print("Thread stopped")
 
     def read(self):
         # return next frame in the queue
@@ -102,7 +116,8 @@ class FileVideoStream:
         return self.more() or not self.stopped
 
     def more(self):
-        # return True if there are still frames in the queue. If stream is not stopped, try to wait a moment
+        # return True if there are still frames in the queue.
+        # If stream is not stopped try to wait a moment
         tries = 0
         while self.Q.qsize() == 0 and not self.stopped and tries < 5:
             time.sleep(0.1)
@@ -113,8 +128,10 @@ class FileVideoStream:
     def stop(self):
         # indicate that the thread should be stopped
         self.stopped = True
-        # wait until stream resources are released (producer thread might be still grabbing frame)
+        # wait until stream resources are released
+        # (producer thread might be still grabbing frame)
         self.thread.join()
+        print("Thread killed")
 
 
 class Video(FileVideoStream):
@@ -150,14 +167,7 @@ class Video(FileVideoStream):
         # when imported set current frame to 0
         # self.cap.set(1, self.current_frame)
 
-        # if self.current_frame not in self.frame_list:
-        #     self.buffer_video()
-
         print("Frame: " + str(self.current_frame))
-
-        self.stream.set(1, self.current_frame)
-
-        # self.set(1, self.current_frame)
 
         frame = self.read()
 
@@ -178,20 +188,14 @@ class Video(FileVideoStream):
 
         return self.ph_image
 
+    def set_frame(self):
 
-# path = "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/test-data/input/radeberg.mp4"
+        self.stream.set(1, self.current_frame)
 
-# video = Video(path)
+        ret, frame = self.stream.read()
 
-# print(video.fps)
+        print("Cap set:" + str(ret))
 
-# while video.more():
+        self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-#     frame = video.read()
-
-#     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-#     cv2.imshow("Frame", frame)
-#     time.sleep(video.frame_delay)
-
-#     cv2.waitKey(1)
+        return self.np_image

@@ -1,6 +1,6 @@
 import time
 import tkinter as tk
-from tkinter.constants import CENTER, END, HORIZONTAL, LEFT
+from tkinter.constants import CENTER, END, HORIZONTAL
 from tkinter import ttk
 
 import keyboard
@@ -375,7 +375,60 @@ class MainWindow(tk.Frame):
             command=lambda event: self.slider_scroll(int(event)),
         )
 
+        self.slider.bind("<ButtonPress-1>", self.slider_pressed)
+        self.slider.bind("<ButtonRelease-1>", self.slider_released)
+
         self.slider.grid(row=11, column=7, sticky="wen")
+
+    def slider_pressed(self, event):
+        """
+        Args:
+            event (Sliderbutton is pressed): When slider is pressed, thread that updates
+            queue with frames stops and gets terminated.
+        """
+
+        button_bool["slider"] = True
+
+        videoobject.stop()
+
+        print(videoobject.stopped)
+
+    def slider_released(self, event):
+        """
+        Args:
+            event (Sliderbutton is pressed): When slider is pressed, thread that updates
+            queue with frames stops and gets terminated.
+        """
+
+        button_bool["slider"] = False
+
+        videoobject.new_q()
+
+        videoobject.new_thread_forward()
+
+        videoobject.start()
+
+        time.sleep(1)
+
+    def slider_scroll(self, slider_number):
+        """Slides through video with tkinter slider.
+
+        Args:
+            slider_number (int): Represents current videoframe.
+        """
+
+        if (
+            not button_bool["play_video"]
+            and not button_bool["rewind_video"]
+            and button_bool["slider"]
+        ):
+            videoobject.current_frame = slider_number
+
+            np_image = videoobject.set_frame()
+
+            print("not passed")
+
+            self.manipulate_image_refactor(np_image=np_image)
 
     def play_video(self):
         """Function to play video."""
@@ -401,6 +454,15 @@ class MainWindow(tk.Frame):
 
     def rewind_video(self):
         """Function  to rewind video."""
+
+        # stop old thread
+        videoobject.stop()
+        videoobject.new_q()
+        videoobject.new_thread_backward()
+        videoobject.start()
+
+        time.sleep(1)
+
         while (
             button_bool["rewind_video"]
             and videoobject.current_frame < videoobject.totalframecount
@@ -429,20 +491,6 @@ class MainWindow(tk.Frame):
         np_image = videoobject.get_frame(np_image=True)
 
         self.manipulate_image_refactor(np_image=np_image)
-
-    def slider_scroll(self, slider_number):
-        """Slides through video with tkinter slider.
-
-        Args:
-            slider_number (int): Represents current videoframe.
-        """
-
-        if not button_bool["play_video"] and not button_bool["rewind_video"]:
-            videoobject.current_frame = slider_number
-
-            np_image = videoobject.get_frame(np_image=True)
-
-            self.manipulate_image_refactor(np_image=np_image)
 
     def get_tracks(self):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
