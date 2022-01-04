@@ -42,6 +42,7 @@ class FileVideoStream:
         self.new_q()
         # initialize thread
         self.new_thread_forward()
+        self.new_thread_backward()
 
     def new_q(self, queue_size=128):
         self.Q = Queue(maxsize=queue_size)
@@ -49,18 +50,27 @@ class FileVideoStream:
         print("new Queue initiated")
 
     def new_thread_forward(self):
-        self.thread = Thread(target=lambda: self.update(1), args=())
-        self.thread.daemon = True
+        self.thread_forward = Thread(target=lambda: self.update(1), args=())
+        self.thread_forward.daemon = True
 
     def new_thread_backward(self):
-        self.thread = Thread(target=lambda: self.update(-1), args=())
-        self.thread.daemon = True
+        self.thread_backward = Thread(target=lambda: self.update(-1), args=())
+        self.thread_backward.daemon = True
 
-    def start(self):
+    def start_thread_backward(self):
         # start a thread to read frames from the file video stream
-        self.thread.start()
+        self.thread_backward.start()
         self.stopped = False
-        print("Thread started")
+        print("Thread_backward started")
+
+        return self
+
+    def start_thread_forward(self):
+        # start a thread to read frames from the file video stream
+        self.thread_forward.start()
+        self.stopped = False
+        print("Thread_forward started")
+
         return self
 
     def update(self, direction):
@@ -71,8 +81,8 @@ class FileVideoStream:
         self.stream.set(1, self.current_frame)
 
         while True:
-            # if the thread indicator variable is set, stop the
-            # thread
+            # if the thread indicator variable is set,
+            # stop the thread
 
             if self.stopped:
                 break
@@ -135,13 +145,21 @@ class FileVideoStream:
 
         return self.Q.qsize() > 0
 
-    def stop(self):
+    def stop_thread_forward(self):
         # indicate that the thread should be stopped
         self.stopped = True
         # wait until stream resources are released
         # (producer thread might be still grabbing frame)
-        self.thread.join()
-        print("Thread killed")
+        self.thread_forward.join()
+        print("thread_forward killed")
+
+    def stop_thread_backward(self):
+        # indicate that the thread should be stopped
+        self.stopped = True
+        # wait until stream resources are released
+        # (producer thread might be still grabbing frame)
+        self.thread_backward.join()
+        print("thread_backward killed")
 
 
 class Video(FileVideoStream):
@@ -154,7 +172,7 @@ class Video(FileVideoStream):
         self.filename = filepath.split("/")[-1]
 
         # start a thread to read frames from the file video stream
-        self.start()
+        self.start_thread_forward()
         time.sleep(1)
 
         # opens video source

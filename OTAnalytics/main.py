@@ -433,7 +433,10 @@ class MainWindow(tk.Frame):
     def play_video(self):
         """Function to play video."""
 
-        videoobject.stop()
+        try:
+            videoobject.stop_thread_backward()
+        except:
+            print("No backwardthread alive")
 
         for object in list(self.tracks.keys()):
 
@@ -445,10 +448,10 @@ class MainWindow(tk.Frame):
             and videoobject.current_frame < videoobject.totalframecount
         ):
 
-            if not videoobject.thread.is_alive():
+            if not videoobject.thread_forward.is_alive():
                 videoobject.new_q()
                 videoobject.new_thread_forward()
-                videoobject.start()
+                videoobject.start_thread_forward()
                 time.sleep(0.1)
 
             time.sleep(videoobject.frame_delay)
@@ -465,17 +468,17 @@ class MainWindow(tk.Frame):
         """Function  to rewind video."""
 
         # stop old thread
-        videoobject.stop()
+
+        videoobject.stop_thread_forward()
 
         while (
             button_bool["rewind_video"]
             and videoobject.current_frame < videoobject.totalframecount
             and videoobject.current_frame > 0
         ):
-            if not videoobject.thread.is_alive():
+            if not videoobject.thread_backward.is_alive():
                 videoobject.new_q()
-                videoobject.new_thread_backward()
-                videoobject.start()
+                videoobject.start_thread_backward()
                 time.sleep(0.1)
 
             time.sleep(videoobject.frame_delay)
