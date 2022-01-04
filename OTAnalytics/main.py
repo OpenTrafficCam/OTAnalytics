@@ -389,9 +389,9 @@ class MainWindow(tk.Frame):
 
         button_bool["slider"] = True
 
-        videoobject.stop()
+        # videoobject.stop()
 
-        print(videoobject.stopped)
+        # print(videoobject.stopped)
 
     def slider_released(self, event):
         """
@@ -402,13 +402,13 @@ class MainWindow(tk.Frame):
 
         button_bool["slider"] = False
 
-        videoobject.new_q()
+        # videoobject.new_q()
 
-        videoobject.new_thread_forward()
+        # videoobject.new_thread_forward()
 
-        videoobject.start()
+        # videoobject.start()
 
-        time.sleep(1)
+        # time.sleep(1)
 
     def slider_scroll(self, slider_number):
         """Slides through video with tkinter slider.
@@ -432,6 +432,9 @@ class MainWindow(tk.Frame):
 
     def play_video(self):
         """Function to play video."""
+
+        videoobject.stop()
+
         for object in list(self.tracks.keys()):
 
             # tracks disappear when videoplaying is stopped
@@ -441,6 +444,12 @@ class MainWindow(tk.Frame):
             button_bool["play_video"]
             and videoobject.current_frame < videoobject.totalframecount
         ):
+
+            if not videoobject.thread.is_alive():
+                videoobject.new_q()
+                videoobject.new_thread_forward()
+                videoobject.start()
+                time.sleep(0.1)
 
             time.sleep(videoobject.frame_delay)
 
@@ -457,20 +466,21 @@ class MainWindow(tk.Frame):
 
         # stop old thread
         videoobject.stop()
-        videoobject.new_q()
-        videoobject.new_thread_backward()
-        videoobject.start()
-
-        time.sleep(1)
 
         while (
             button_bool["rewind_video"]
             and videoobject.current_frame < videoobject.totalframecount
+            and videoobject.current_frame > 0
         ):
+            if not videoobject.thread.is_alive():
+                videoobject.new_q()
+                videoobject.new_thread_backward()
+                videoobject.start()
+                time.sleep(0.1)
 
             time.sleep(videoobject.frame_delay)
 
-            videoobject.current_frame += -1
+            videoobject.current_frame -= 1
 
             np_image = videoobject.get_frame(np_image=True)
 

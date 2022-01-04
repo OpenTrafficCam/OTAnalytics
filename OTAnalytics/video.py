@@ -35,6 +35,7 @@ class FileVideoStream:
         self.stream = cv2.VideoCapture(path)
         self.stopped = False
         self.transform = transform
+        self.current_frame = 0
 
         # initialize the queue used to store frames read from
         # the video file
@@ -65,6 +66,10 @@ class FileVideoStream:
     def update(self, direction):
         print("update thread")
         # keep looping infinitely
+        backward_looper = self.current_frame
+
+        self.stream.set(1, self.current_frame)
+
         while True:
             # if the thread indicator variable is set, stop the
             # thread
@@ -74,6 +79,11 @@ class FileVideoStream:
 
             # otherwise, ensure the queue has room in it
             if not self.Q.full():
+                if direction == -1 and backward_looper > 0:
+                    backward_looper = backward_looper - 1
+                    # set cap to read previous frame
+                    self.stream.set(1, backward_looper)
+
                 # read the next frame from the file
                 (grabbed, frame) = self.stream.read()
 
@@ -159,8 +169,6 @@ class Video(FileVideoStream):
 
         # time between two frames
         self.frame_delay = 1 / self.fps
-
-        self.current_frame = 0
 
     def get_frame(self, np_image):
 
