@@ -173,7 +173,7 @@ class Video(FileVideoStream):
 
         # start a thread to read frames from the file video stream
         self.start_thread_forward()
-        time.sleep(1)
+        time.sleep(0.1)
 
         # opens video source
         # self.cap = cv2.VideoCapture(self.filepath)
@@ -193,7 +193,7 @@ class Video(FileVideoStream):
         # when imported set current frame to 0
         # self.cap.set(1, self.current_frame)
 
-        print("Frame: " + str(self.current_frame))
+        # print("Frame: " + str(self.current_frame))
 
         frame = self.read()
 
@@ -220,7 +220,7 @@ class Video(FileVideoStream):
 
         ret, frame = self.stream.read()
 
-        print("Cap set:" + str(ret))
+        # print("Cap set:" + str(ret))
 
         self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
