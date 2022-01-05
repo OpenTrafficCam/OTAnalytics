@@ -39,9 +39,7 @@ def manipulate_image(
     if button_bool["tracks_imported"]:
         np_image = draw_tracks(np_image, selectionlist, tracks)
 
-        np_image = draw_bounding_box(
-            np_image, raw_detections, str(video.current_frame + 1)
-        )
+        np_image = draw_bounding_box(np_image, raw_detections, str(video.current_frame))
 
         np_image = draw_tracks_live(
             np_image,
