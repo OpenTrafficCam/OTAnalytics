@@ -120,8 +120,6 @@ def draw_tracks(np_image, selectionlist, tracks):
     Returns:
         np_image (numpy_array): manipulated array
     """
-    print(button_bool["display_all_tracks_toggle"])
-
     if button_bool["display_all_tracks_toggle"] is True:
 
         for track in tracks:

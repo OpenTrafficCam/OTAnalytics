@@ -389,10 +389,6 @@ class MainWindow(tk.Frame):
 
         button_bool["slider"] = True
 
-        # videoobject.stop()
-
-        # print(videoobject.stopped)
-
     def slider_released(self, event):
         """
         Args:
@@ -401,14 +397,6 @@ class MainWindow(tk.Frame):
         """
 
         button_bool["slider"] = False
-
-        # videoobject.new_q()
-
-        # videoobject.new_thread_forward()
-
-        # videoobject.start()
-
-        # time.sleep(1)
 
     def slider_scroll(self, slider_number):
         """Slides through video with tkinter slider.
@@ -426,16 +414,14 @@ class MainWindow(tk.Frame):
 
             np_image = videoobject.set_frame()
 
-            print("not passed")
-
             self.manipulate_image_refactor(np_image=np_image)
 
     def play_video(self):
         """Function to play video."""
-
+        # TODO workaround to not use try except
         try:
             videoobject.stop_thread_backward()
-        except:
+        except Exception:
             print("No backwardthread alive")
 
         for object in list(self.tracks.keys()):
@@ -452,7 +438,7 @@ class MainWindow(tk.Frame):
                 videoobject.new_q()
                 videoobject.new_thread_forward()
                 videoobject.start_thread_forward()
-                time.sleep(0.1)
+                # time.sleep(0.1)
 
             time.sleep(videoobject.frame_delay)
 
@@ -478,8 +464,9 @@ class MainWindow(tk.Frame):
         ):
             if not videoobject.thread_backward.is_alive():
                 videoobject.new_q()
+                videoobject.new_thread_backward()
                 videoobject.start_thread_backward()
-                time.sleep(0.1)
+                # time.sleep(0.1)
 
             time.sleep(videoobject.frame_delay)
 

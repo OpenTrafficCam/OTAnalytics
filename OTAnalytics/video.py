@@ -220,8 +220,6 @@ class Video(FileVideoStream):
 
         ret, frame = self.stream.read()
 
-        # print("Cap set:" + str(ret))
-
         self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         return self.np_image

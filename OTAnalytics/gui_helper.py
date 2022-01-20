@@ -110,8 +110,6 @@ def button_display_tracks_switch(button_display_tracks):
     Args:
         button (tkinter button): Button.
     """
-    print(button_bool["display_all_tracks_toggle"])
-
     button_bool["display_all_tracks_toggle"] = not button_bool[
         "display_all_tracks_toggle"
     ]
