@@ -39,6 +39,10 @@ def button_play_video_switch(button_play, button_rewind):
     """
     button_bool["play_video"] = not button_bool["play_video"]
 
+    button_bool["rewind_video"] = False
+
+    print(button_bool["play_video"])
+
     if button_bool["play_video"]:
         button_play.config(text="Stop")
         button_rewind.config(text="Rewind")
@@ -53,6 +57,8 @@ def button_rewind_switch(button_rewind, button_play):
         button (tkinter button): play and rewind button.
     """
     button_bool["rewind_video"] = not button_bool["rewind_video"]
+
+    button_bool["play_video"] = False
 
     if button_bool["rewind_video"]:
         button_rewind.config(text="Stop")

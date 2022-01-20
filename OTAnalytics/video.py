@@ -152,6 +152,7 @@ class FileVideoStream:
         # (producer thread might be still grabbing frame)
         self.thread_forward.join()
         print("thread_forward killed")
+        time.sleep(0.1)
 
     def stop_thread_backward(self):
         # indicate that the thread should be stopped
@@ -160,6 +161,7 @@ class FileVideoStream:
         # (producer thread might be still grabbing frame)
         self.thread_backward.join()
         print("thread_backward killed")
+        time.sleep(0.1)
 
 
 class Video(FileVideoStream):
