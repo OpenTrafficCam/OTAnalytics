@@ -77,6 +77,7 @@ class MainWindow(tk.Frame):
             text="Play",
             command=lambda: [
                 button_play_video_switch(button_playvideo, button_rewindvideo),
+                self.delete_polygon_points(),
                 self.play_video(),
             ],
         )
@@ -87,6 +88,7 @@ class MainWindow(tk.Frame):
             text="Rewind",
             command=lambda: [
                 button_rewind_switch(button_rewindvideo, button_playvideo),
+                self.delete_polygon_points(),
                 self.rewind_video(),
             ],
         )
@@ -395,6 +397,7 @@ class MainWindow(tk.Frame):
             event (Sliderbutton is pressed): When slider is pressed, thread that updates
             queue with frames stops and gets terminated.
         """
+        self.delete_polygon_points()
 
         button_bool["slider"] = False
 
@@ -478,7 +481,7 @@ class MainWindow(tk.Frame):
             # slows down program
             self.slider.set(videoobject.current_frame)
 
-    def scroll_through_video(self, event):
+    def scroll_through_video(self, event):  # sourcery skip: min-max-identity
         """Scroll through video with mousewheel.
 
         Args:
@@ -488,7 +491,13 @@ class MainWindow(tk.Frame):
 
         videoobject.current_frame += i
 
-        np_image = videoobject.get_frame(np_image=True)
+        videoobject.current_frame = max(videoobject.current_frame, 0)
+
+        self.delete_polygon_points()
+
+        print(videoobject.current_frame)
+
+        np_image = videoobject.set_frame()
 
         self.manipulate_image_refactor(np_image=np_image)
 
@@ -566,28 +575,33 @@ class MainWindow(tk.Frame):
 
     def create_section_entry_window(self):
         """Creates toplevel window to name sections."""
-        self.new_detector_creation = tk.Toplevel()
 
-        # removes hotkey so "enter" won't trigger
-        keyboard.remove_hotkey("enter")
+        # only if line or polygon creation is activate
+        if button_bool["linedetector_toggle"] or button_bool["polygondetector_toggle"]:
 
-        detector_name_entry = tk.Entry(master=self.new_detector_creation)
+            self.new_detector_creation = tk.Toplevel()
 
-        detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
-        detector_name_entry.focus()
+            # removes hotkey so "enter" won't trigger
+            keyboard.remove_hotkey("enter")
 
-        safe_section = tk.Button(
-            master=self.new_detector_creation,
-            text="Add section",
-            command=lambda: self.add_section(
-                maincanvas, self.flow_dict, detector_name_entry
-            ),
-        )
+            detector_name_entry = tk.Entry(master=self.new_detector_creation)
 
-        safe_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
-        self.new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
-        # makes the background window unavailable
-        self.new_detector_creation.grab_set()
+            detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
+            detector_name_entry.focus()
+
+            safe_section = tk.Button(
+                master=self.new_detector_creation,
+                text="Add section",
+                command=lambda: [
+                    self.add_section(maincanvas, self.flow_dict, detector_name_entry),
+                    self.on_close(),
+                ],
+            )
+
+            safe_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
+            self.new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
+            # makes the background window unavailable
+            self.new_detector_creation.grab_set()
 
     def create_movement_entry_window(self):
         """Creates toplevel window to name movements."""
@@ -602,9 +616,7 @@ class MainWindow(tk.Frame):
         add_movement = tk.Button(
             new_movement_creation,
             text="Add movement",
-            command=lambda: self.new_movement(
-                maincanvas, self.flow_dict, movement_name_entry
-            ),
+            command=lambda: self.new_movement(self.flow_dict, movement_name_entry),
         )
         add_movement.grid(row=1, column=1, sticky="w", pady=10, padx=10)
         new_movement_creation.protocol("WM_DELETE_WINDOW")
@@ -617,6 +629,10 @@ class MainWindow(tk.Frame):
             lambda: self.create_section_entry_window(),
         )
         self.new_detector_creation.destroy()
+
+        self.delete_polygon_points()
+
+        self.manipulate_image_refactor()
 
     def add_section(self, maincanvas, flow_dict, entrywidget):
         """Saves created section to flowfile.
@@ -658,7 +674,18 @@ class MainWindow(tk.Frame):
 
         del self.flow_dict["Detectors"][detector_name]
 
+        for key in self.flow_dict["Movements"]:
+            for value in self.flow_dict["Movements"][key]:
+                print(self.flow_dict["Movements"][key])
+                if detector_name in self.flow_dict["Movements"][key]:
+                    self.flow_dict["Movements"][key].remove(detector_name)
+
         self.manipulate_image_refactor()
+
+    def delete_polygon_points(self):
+        """delete list of polygon points after scrolling, sliding, playing, rewinding"""
+        if maincanvas.polygon_points:
+            maincanvas.polygon_points = []
 
     def add_to_movement(self):
         """Adds selected section to selected movement."""

@@ -103,8 +103,8 @@ def button_polygon_switch(button_polygondetector, button_linedetector, statepane
         button_polygondetector.config(text="Finish")
         button_linedetector.config(text="Line")
         statepanel.update_statepanel(
-            "left click to create new polygoncorner\nright button to delete previous"
-            + " corner\nwheelclick to close polygon\nenter to finish creation process"
+            "left click to create new polygoncorner\nmousewheelbutton to undo"
+            + " corner\nrightclock to close polygon\nenter to finish creation process"
         )
     else:
         button_polygondetector.config(text="Polygon")
