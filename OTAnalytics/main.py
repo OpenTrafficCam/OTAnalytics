@@ -117,6 +117,7 @@ class MainWindow(tk.Frame):
         self.treeview_sections = ttk.Treeview(
             self.frame, style="Treeview", height=8, selectmode="browse"
         )
+
         self.treeview_sections["columns"] = "Section"
         self.treeview_sections.column("Section", anchor=CENTER, width=50)
         self.treeview_sections.heading("Section", text="Section", anchor=CENTER)
@@ -334,6 +335,12 @@ class MainWindow(tk.Frame):
             ],
         )
         self.treeview_tracks.bind("<<TreeviewSelect>>", self.listbox_track_selection)
+
+        # self.treeview_tracks.bind(
+        #     "Button-Release-3",
+        #     lambda event: self.treeview_deselect(self.treeview_tracks),
+        # )
+
         self.treeview_sections.bind(
             "<<TreeviewSelect>>", self.listbox_detector_selection
         )
@@ -381,6 +388,10 @@ class MainWindow(tk.Frame):
         self.slider.bind("<ButtonRelease-1>", self.slider_released)
 
         self.slider.grid(row=11, column=7, sticky="wen")
+
+    def treeview_deselect(self, treeview):
+        for item in treeview.selection():
+            treeview.selection_remove(item)
 
     def slider_pressed(self, event):
         """

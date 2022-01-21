@@ -75,10 +75,6 @@ def dic_to_object_dataframe(tracks):
         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1
     )
 
-    # not necessary after restructuring code
-    # object_df_validated_copy["start_point_geometry"] = object_df_validated_copy.apply(
-    #     lambda pointtuples: Point(pointtuples["Coord"][0]), axis=1)
-
     return object_df_validated_copy
 
 
@@ -99,9 +95,6 @@ def calculate_intersections(detector_df, object_validated_df):
 
     track_geometry = gpd.GeoSeries(object_validated_df.geometry)
 
-    # track_start_geometry = gpd.GeoSeries(
-    # object_validated_df.start_point_geometry)
-
     # iterates over every detectors and returns bool value for
     # intersection with every track from geoseries
     for index, detector in detector_df.iterrows():
@@ -117,14 +110,6 @@ def calculate_intersections(detector_df, object_validated_df):
 
         object_validated_df[index + "intersectcoordinates"] = point_geometry
         object_validated_df[index] = bool_intersect
-
-    # for index, detector in detector_df.iterrows():
-    #     intersection_series = gpd.GeoSeries(
-    #                         object_validated_df[index+"intersectcoordinates"])
-
-    #     distance = track_start_geometry.distance(intersection_series, align=True)
-
-    #     object_validated_df[index+"_distance"] = distance
 
     return object_validated_df
 
