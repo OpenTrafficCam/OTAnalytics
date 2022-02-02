@@ -1,10 +1,8 @@
-import tkinter as tk
-
+import tkinter
 import cv2
 import numpy as np
-from PIL import Image, ImageTk
-
 from gui_helper import button_bool, color_dict
+from PIL import Image, ImageTk
 
 
 def manipulate_image(
@@ -57,7 +55,7 @@ def manipulate_image(
     # photo is attribute of video
     video.ph_image = ImageTk.PhotoImage(image)
 
-    canvas.create_image(0, 0, anchor=tk.NW, image=video.ph_image)
+    canvas.create_image(0, 0, anchor=tkinter.NW, image=video.ph_image)
 
     canvas.update()
 

@@ -1,12 +1,10 @@
+import sys
+import time
+from threading import Thread
 from tkinter import filedialog
 
 import cv2
 from PIL import Image, ImageTk
-
-# import the necessary packages
-from threading import Thread
-import sys
-import time
 
 if sys.version_info >= (3, 0):
     from queue import Queue

@@ -1,10 +1,10 @@
 import time
 import tkinter as tk
-from tkinter.constants import CENTER, END, HORIZONTAL
 from tkinter import ttk
+from tkinter.constants import CENTER, END, HORIZONTAL
+
 
 import keyboard
-
 from auto_counting import create_setting_window
 from canvas_class import OtcCanvas
 from gui_helper import (
