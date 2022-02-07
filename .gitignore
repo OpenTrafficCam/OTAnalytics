@@ -8,6 +8,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# test data
+tests/data/output
+
 # testcode
 
 test.py
@@ -19,6 +22,7 @@ pyproject.toml
 # cache 
 
 __pycache__/
+*.pyc 
 *.py[cod]
 file_name.csv
 .gitignore
