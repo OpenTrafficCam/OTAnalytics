@@ -33,6 +33,7 @@ def manipulate_image(
     if np_image is None:
         np_image = video.np_image.copy()
 
+    # TODO: #59 Draw detectors on top of all elements
     np_image = draw_detectors_from_dict(np_image, flowdictionary)
 
     if button_bool["tracks_imported"]:

@@ -655,6 +655,7 @@ class MainWindow(tk.Frame):
 
         detector_name = entrywidget.get()
 
+        # TODO: #67 Prevent duplicate section names
         dump_to_flowdictionary(maincanvas, flow_dict, detector_name)
 
         self.treeview_sections.insert(parent="", index="end", values=detector_name)
@@ -757,7 +758,7 @@ class MainWindow(tk.Frame):
 def main():
     """Main function."""
     root = tk.Tk()
-    root.iconbitmap(r"OTAnalytics\gui\OTC.ico")
+    # root.iconbitmap(r"OTAnalytics\gui\OTC.ico")  # BUG: #57 Fix Icon import
     MainWindow(master=root)
     root.mainloop()
 
