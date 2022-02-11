@@ -52,6 +52,13 @@ class MainWindow(tk.Frame):
         self.tracks = {}
         self.tracks_live = {}
 
+        # Treeview style
+        self.style = ttk.Style()
+        self.style.theme_use("default")
+        self.style.configure(
+            "Treeview", highlightthickness=0, bd=0, font=("Calibri", 11)
+        )
+
         self.slider_value = tk.DoubleVar
 
         self.statepanelobject = StatePanel(
@@ -62,8 +69,24 @@ class MainWindow(tk.Frame):
             master=self.frame, text="Videos and Tracks", fg="white", bg="#37483E"
         )
         videolabel.grid(row=0, column=0, columnspan=7, sticky="ew")
-        self.listbox_video = tk.Listbox(self.frame, height=3, exportselection=False)
-        self.listbox_video.grid(row=1, column=0, columnspan=7, sticky="ew")
+
+        # Treeview Videos
+        self.treeview_video = ttk.Treeview(
+            self.frame, style="Treeview", height=3, selectmode="browse"
+        )
+        self.treeview_video["columns"] = ("Video", "Trackfile", "Flowfile")
+        self.treeview_video.column("Video", anchor=CENTER, width=200)
+        self.treeview_video.column("Trackfile", anchor="w", width=10)
+        self.treeview_video.column("Flowfile", anchor="w", width=10)
+        self.treeview_video.heading("Video", text="Video", anchor=CENTER)
+        self.treeview_video.heading("Trackfile", text="Trackfile", anchor=CENTER)
+        self.treeview_video.heading("Flowfile", text="Flowfile", anchor=CENTER)
+
+        self.treeview_video["show"] = "headings"
+        self.treeview_video.grid(row=1, column=0, columnspan=7, sticky="ew")
+
+        # self.listbox_video = tk.Listbox(self.frame, height=3, exportselection=False)
+        # self.listbox_video.grid(row=1, column=0, columnspan=7, sticky="ew")
 
         button_addvideo = tk.Button(
             self.frame, text="Add", command=lambda: self.create_canvas_and_videoobject()
@@ -106,12 +129,6 @@ class MainWindow(tk.Frame):
             self.frame, text="Sections and Objects", fg="white", bg="#37483E"
         )
         detectionlabel.grid(row=3, column=0, columnspan=7, sticky="ew")
-
-        self.style = ttk.Style()
-        self.style.theme_use("default")
-        self.style.configure(
-            "Treeview", highlightthickness=0, bd=0, font=("Calibri", 11)
-        )
 
         self.treeview_sections = ttk.Treeview(
             self.frame, style="Treeview", height=8, selectmode="browse"
@@ -243,7 +260,7 @@ class MainWindow(tk.Frame):
         global videoobject
         global maincanvas
 
-        videoobject = load_video_and_frame()
+        videoobject, checkbox = load_video_and_frame()
 
         first_frame = videoobject.get_frame(np_image=False)
 
@@ -372,7 +389,9 @@ class MainWindow(tk.Frame):
         maincanvas.grid(row=0, rowspan=15, column=7, sticky="n")
         maincanvas.create_image(0, 0, anchor=tk.NW, image=first_frame)
 
-        self.listbox_video.insert(0, videoobject.filename)
+        self.treeview_video.insert("", tk.END, values=(videoobject.filename, checkbox))
+
+        # self.listbox_video.insert(0, videoobject.filename)
 
         self.slider = tk.Scale(
             self.frame,

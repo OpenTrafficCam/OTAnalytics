@@ -2,6 +2,7 @@ import sys
 import time
 from threading import Thread
 from tkinter import filedialog
+from tkinter import ttk
 
 import cv2
 from PIL import Image, ImageTk
@@ -23,7 +24,9 @@ def load_video_and_frame():
     filepath = video_source.name
     print("filepath: " + filepath)
 
-    return Video(filepath)
+    checkbox = ttk.Checkbutton
+
+    return Video(filepath), checkbox
 
 
 class FileVideoStream:
