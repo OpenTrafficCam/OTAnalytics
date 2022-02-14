@@ -27,7 +27,7 @@ from sections import (
 )
 from statepanel_class import StatePanel
 from tracks import load_tracks
-from video import load_video_and_frame
+from Video.video import load_video_and_frame
 
 
 class MainWindow(tk.Frame):
