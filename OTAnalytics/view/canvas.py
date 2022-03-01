@@ -94,5 +94,5 @@ class SliderFrame(tk.Frame):
 
         self.slider.pack(fill="x")
 
-    def delete_slider(self):
-        del self.slider
+    def destroy_slider(self):
+        self.slider.destroy()

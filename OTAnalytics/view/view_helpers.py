@@ -117,8 +117,6 @@ class FrameFiles(tk.Frame):
         )
         config.videoobject = Video(video_source.name)
 
-        config.sliderobject.create_slider()
-
         path = get_dir(video_source.name)
 
         self.add_files_to_dict(path)
@@ -138,6 +136,8 @@ class FrameFiles(tk.Frame):
         config.maincanvas.configure(
             width=config.videoobject.width, height=config.videoobject.height
         )
+
+        config.sliderobject.create_slider()
 
         config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
 
@@ -253,4 +253,4 @@ class FrameFiles(tk.Frame):
 
         config.maincanvas.configure(width=0, height=0)
 
-        config.sliderobject.destroy()
+        config.sliderobject.destroy_slider()
