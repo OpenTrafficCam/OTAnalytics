@@ -3,7 +3,7 @@ from tkinter import filedialog
 
 import cv2
 import numpy as np
-from gui_helper import button_bool
+from view.gui_helper import button_bool
 from image_alteration import manipulate_image
 
 

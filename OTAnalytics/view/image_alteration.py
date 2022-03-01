@@ -2,19 +2,19 @@ import tkinter
 
 import cv2
 import numpy as np
-from view.gui_helper import button_bool, color_dict
+from gui_helper import button_bool, color_dict
 from PIL import Image, ImageTk
+import config
+import file_helper
 
 
 def manipulate_image(
-    np_image,
-    video,
-    canvas,
-    flowdictionary,
-    selectionlist,
-    tracks,
-    tracks_live,
-    raw_detections,
+    np_image=None,
+    flowdictionary=None,
+    selectionlist=None,
+    tracks=None,
+    tracks_live=None,
+    raw_detections=None,
 ):
     """Function to draw sections, tracks and bounding boxes on a given numpy image.
     Image is converted to photo image and plotted on tkinter canvas object.
@@ -31,22 +31,24 @@ def manipulate_image(
         raw_detections (dictionary): Dictionary with raw detections from OpenVision.
     """
     if np_image is None:
-        np_image = video.np_image.copy()
+        np_image = config.videoobject.np_image.copy()
 
     # TODO: #59 Draw detectors on top of all elements
-    np_image = draw_detectors_from_dict(np_image, flowdictionary)
+    np_image = draw_detectors_from_dict(np_image, flowdictionary=file_helper.flow_dict)
 
     if button_bool["tracks_imported"]:
         np_image = draw_tracks(np_image, selectionlist, tracks)
 
-        np_image = draw_bounding_box(np_image, raw_detections, str(video.current_frame))
+        np_image = draw_bounding_box(
+            np_image, raw_detections, str(config.videoobject.current_frame)
+        )
 
         np_image = draw_tracks_live(
             np_image,
             tracks,
             raw_detections,
             tracks_live,
-            video.current_frame,
+            config.videoobject.current_frame,
         )
 
     # copy is important or else original image will be changed
@@ -55,11 +57,15 @@ def manipulate_image(
     # The variable photo is a local variable which gets garbage collected after the
     # class is instantiated. Save a reference to the photo
     # photo is attribute of video
-    video.ph_image = ImageTk.PhotoImage(image)
+    config.videoobject.ph_image = ImageTk.PhotoImage(image)
 
-    canvas.create_image(0, 0, anchor=tkinter.NW, image=video.ph_image)
+    print(type(config.videoobject.ph_image))
 
-    canvas.update()
+    config.maincanvas.create_image(
+        0, 0, anchor=tkinter.NW, image=config.videoobject.ph_image
+    )
+
+    config.maincanvas.update()
 
 
 def draw_detectors_from_dict(np_image, flowdictionary):

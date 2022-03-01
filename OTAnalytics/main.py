@@ -5,18 +5,19 @@ from tkinter.constants import CENTER, END, HORIZONTAL
 
 import keyboard
 from auto_counting import create_setting_window
-from canvas_class import OtcCanvas
-from gui_helper import (
-    button_bool,
-    button_display_bb_switch,
-    button_display_live_track_switch,
-    button_display_tracks_switch,
-    button_line_switch,
-    button_play_video_switch,
-    button_polygon_switch,
-    button_rewind_switch,
-    statepanel_txt,
-)
+from view.canvas import OtcCanvas
+
+# from view.helpers.gui_helper import (
+#     button_bool,
+#     button_display_bb_switch,
+#     button_display_live_track_switch,
+#     button_display_tracks_switch,
+#     button_line_switch,
+#     button_play_video_switch,
+#     button_polygon_switch,
+#     button_rewind_switch,
+#     statepanel_txt,
+# )
 from image_alteration import manipulate_image
 from sections import (
     draw_line,
@@ -27,7 +28,7 @@ from sections import (
 )
 from statepanel_class import StatePanel
 from tracks import load_tracks
-from Video.video import load_video_and_frame
+from video import load_video_and_frame
 
 
 class MainWindow(tk.Frame):
@@ -389,7 +390,7 @@ class MainWindow(tk.Frame):
         maincanvas.grid(row=0, rowspan=15, column=7, sticky="n")
         maincanvas.create_image(0, 0, anchor=tk.NW, image=first_frame)
 
-        self.treeview_video.insert("", tk.END, values=(videoobject.filename, checkbox))
+        self.treeview_video.insert("", tk.END, values=(videoobject.filename))
 
         # self.listbox_video.insert(0, videoobject.filename)
 
