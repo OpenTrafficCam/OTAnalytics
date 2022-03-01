@@ -97,7 +97,9 @@ class FrameFiles(tk.Frame):
 
         # Clear Video
         self.button_remove_video = tk.Button(
-            master=self.frame_control, text="Remove video", command=self.remove_selected
+            master=self.frame_control,
+            text="Remove video",
+            command=lambda: [self.remove_video()],
         )
         self.button_remove_video.grid(row=0, column=3, sticky="ew")
 
@@ -126,6 +128,8 @@ class FrameFiles(tk.Frame):
         self.update_files_dict_values(path)
 
         self.update_tree_files()
+
+        print(self.files_dict)
 
     def _add_canvas_frame(self):
 
@@ -176,9 +180,6 @@ class FrameFiles(tk.Frame):
                     file_values["ottrk_file"],
                 ),
             )
-
-    def remove_selected(self):
-        pass
 
     def play_video(self):
         """Function to play video."""
@@ -243,3 +244,13 @@ class FrameFiles(tk.Frame):
             image_alteration.manipulate_image(np_image=np_image)
             # slows down program
             config.sliderobject.slider.set(config.videoobject.current_frame)
+
+    def remove_video(self):
+        for item in self.tree_files.selection():
+            # item_text = self.tree_files.item(item, "values")
+
+            self.tree_files.delete(item)
+
+        config.maincanvas.configure(width=0, height=0)
+
+        config.sliderobject.destroy()

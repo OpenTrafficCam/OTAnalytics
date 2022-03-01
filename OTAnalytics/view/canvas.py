@@ -93,3 +93,6 @@ class SliderFrame(tk.Frame):
         # self.slider.bind("<ButtonRelease-1>", self.slider_released)
 
         self.slider.pack(fill="x")
+
+    def delete_slider(self):
+        del self.slider
