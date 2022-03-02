@@ -11,8 +11,8 @@ import file_helper
 def manipulate_image(
     np_image=None,
     flowdictionary=None,
-    selectionlist=None,
-    tracks=None,
+    selectionlist=file_helper.selectionlist,
+    tracks=file_helper.tracks,
     tracks_live=None,
     raw_detections=None,
 ):
@@ -34,22 +34,28 @@ def manipulate_image(
         np_image = config.videoobject.np_image.copy()
 
     # TODO: #59 Draw detectors on top of all elements
-    np_image = draw_detectors_from_dict(np_image, flowdictionary=file_helper.flow_dict)
+    # np_image = draw_detectors_from_dict(np_image, flowdictionary=file_helper.flow_dict)
+
+    print("tracks imported:" + str(button_bool["tracks_imported"]))
 
     if button_bool["tracks_imported"]:
-        np_image = draw_tracks(np_image, selectionlist, tracks)
 
-        np_image = draw_bounding_box(
-            np_image, raw_detections, str(config.videoobject.current_frame)
+        np_image = draw_tracks(
+            np_image, selectionlist=file_helper.selectionlist, tracks=file_helper.tracks
         )
+        print(np_image)
 
-        np_image = draw_tracks_live(
-            np_image,
-            tracks,
-            raw_detections,
-            tracks_live,
-            config.videoobject.current_frame,
-        )
+        # np_image = draw_bounding_box(
+        #     np_image, raw_detections, str(config.videoobject.current_frame)
+        # )
+
+        # np_image = draw_tracks_live(
+        #     np_image,
+        #     tracks,
+        #     raw_detections,
+        #     tracks_live,
+        #     config.videoobject.current_frame,
+        # )
 
     # copy is important or else original image will be changed
     image = Image.fromarray(np_image)  # to PIL format

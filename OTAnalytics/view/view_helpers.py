@@ -7,6 +7,7 @@ from gui_helper import button_play_video_switch, button_rewind_switch, button_bo
 from video import Video
 from file_helper import *
 import config
+import file_helper
 
 
 import image_alteration
@@ -103,12 +104,6 @@ class FrameFiles(tk.Frame):
         )
         self.button_remove_video.grid(row=0, column=3, sticky="ew")
 
-        # load Trackfile
-        self.button_load_tracks = tk.Button(
-            master=self.frame_control, text="Load trackfile"
-        )
-        self.button_load_tracks.grid(row=0, column=4, sticky="ew")
-
     def _add_file(self):
 
         # load video object
@@ -189,7 +184,7 @@ class FrameFiles(tk.Frame):
         except Exception:
             print("No backwardthread alive")
 
-        for object in list(tracks.keys()):
+        for object in list(file_helper.tracks.keys()):
 
             # tracks disappear when videoplaying is stopped
             self.tracks_live[object] = []

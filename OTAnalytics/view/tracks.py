@@ -1,7 +1,8 @@
 import json
 from tkinter import filedialog
 
-from view.gui_helper import button_bool, color_dict
+from gui_helper import button_bool, color_dict
+import image_alteration
 
 
 def load_tracks():
@@ -10,6 +11,8 @@ def load_tracks():
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
     files = open(filepath.name, "r")
     files = files.read()
+
+    tracks = {}
 
     loaded_dict = json.loads(files)
 
