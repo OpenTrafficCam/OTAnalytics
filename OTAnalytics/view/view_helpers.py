@@ -187,7 +187,7 @@ class FrameFiles(tk.Frame):
         for object in list(file_helper.tracks.keys()):
 
             # tracks disappear when videoplaying is stopped
-            self.tracks_live[object] = []
+            file_helper.tracks_live[object] = []
 
         while (
             button_bool["play_video"]

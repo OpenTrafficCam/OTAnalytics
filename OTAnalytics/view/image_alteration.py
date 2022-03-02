@@ -13,7 +13,7 @@ def manipulate_image(
     flowdictionary=None,
     selectionlist=file_helper.selectionlist,
     tracks=file_helper.tracks,
-    tracks_live=None,
+    tracks_live=file_helper.tracks_live,
     raw_detections=None,
 ):
     """Function to draw sections, tracks and bounding boxes on a given numpy image.
@@ -43,19 +43,20 @@ def manipulate_image(
         np_image = draw_tracks(
             np_image, selectionlist=file_helper.selectionlist, tracks=file_helper.tracks
         )
-        print(np_image)
 
-        # np_image = draw_bounding_box(
-        #     np_image, raw_detections, str(config.videoobject.current_frame)
-        # )
+        np_image = draw_bounding_box(
+            np_image,
+            str(config.videoobject.current_frame),
+            raw_detections=file_helper.raw_detections,
+        )
 
-        # np_image = draw_tracks_live(
-        #     np_image,
-        #     tracks,
-        #     raw_detections,
-        #     tracks_live,
-        #     config.videoobject.current_frame,
-        # )
+        np_image = draw_tracks_live(
+            np_image,
+            config.videoobject.current_frame,
+            tracks=file_helper.tracks,
+            raw_detections=file_helper.raw_detections,
+            track_live=file_helper.tracks_live,
+        )
 
     # copy is important or else original image will be changed
     image = Image.fromarray(np_image)  # to PIL format
@@ -170,7 +171,7 @@ def draw_tracks(np_image, selectionlist, tracks):
     return np_image
 
 
-def draw_bounding_box(np_image, raw_detections, frame):
+def draw_bounding_box(np_image, frame, raw_detections):
     """Draws bounding boxes in every frame.
 
     Args:
@@ -266,7 +267,7 @@ def draw_bounding_box(np_image, raw_detections, frame):
         return image
 
 
-def draw_tracks_live(np_image, tracks, raw_detections, track_live, frame):
+def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
     """Draw tracks while playing video
 
     Args:

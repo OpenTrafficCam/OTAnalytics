@@ -3,7 +3,11 @@ import tkinter.ttk as ttk
 from tracks import load_tracks
 import file_helper
 import image_alteration
-from gui_helper import button_display_tracks_switch
+from gui_helper import (
+    button_display_tracks_switch,
+    button_display_live_track_switch,
+    button_display_bb_switch,
+)
 
 
 class FrameObject(tk.Frame):
@@ -54,6 +58,10 @@ class FrameObject(tk.Frame):
         self.button_show_livetracks = tk.Button(
             master=self.frame_control_objects,
             text="Show livetrack",
+            command=lambda: [
+                button_display_live_track_switch(self.button_show_livetracks),
+                image_alteration.manipulate_image(),
+            ],
         )
         self.button_show_livetracks.grid(row=0, column=2, sticky="ew")
 
@@ -61,6 +69,10 @@ class FrameObject(tk.Frame):
         self.button_show_bounding_boxes = tk.Button(
             master=self.frame_control_objects,
             text="Show bounding boxes",
+            command=lambda: [
+                button_display_bb_switch(self.button_show_bounding_boxes),
+                image_alteration.manipulate_image(),
+            ],
         )
         self.button_show_bounding_boxes.grid(row=0, column=3, sticky="ew")
 
