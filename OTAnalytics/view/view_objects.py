@@ -35,6 +35,8 @@ class FrameObject(tk.Frame):
         self.frame_control_objects = tk.Frame(master=self)
         self.frame_control_objects.grid()
 
+        self.tree_objects.bind("<<TreeviewSelect>>", self.treeobject_selection)
+
         # Load tracks
         self.button_load_tracks = tk.Button(
             master=self.frame_control_objects,
@@ -89,5 +91,17 @@ class FrameObject(tk.Frame):
 
         for id, object in enumerate(list(file_helper.tracks.keys())):
             self.tree_objects.insert(parent="", index="end", text=id, values=object)
+
+        image_alteration.manipulate_image()
+
+    def treeobject_selection(self, event):
+        """Draws one or more selected tracks on canvas."""
+        file_helper.selectionlist = []
+
+        for item in self.tree_objects.selection():
+            item_text = self.tree_objects.item(item, "values")
+            file_helper.selectionlist.append(item_text[0])
+
+            print(file_helper.selectionlist)
 
         image_alteration.manipulate_image()
