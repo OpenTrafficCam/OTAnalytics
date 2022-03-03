@@ -1,5 +1,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
+import image_alteration
+import file_helper
 
 
 class FrameMovements(tk.Frame):
@@ -30,6 +32,7 @@ class FrameMovements(tk.Frame):
         self.button_new_movement = tk.Button(
             master=self.frame_controls,
             text="New movement",
+            command=self.create_movement_entry_window,
         )
         self.button_new_movement.grid(row=0, column=0, sticky="ew")
 
@@ -67,3 +70,37 @@ class FrameMovements(tk.Frame):
             text="Load",
         )
         self.button_clear.grid(row=0, column=5, sticky="ew")
+
+    def new_movement(self, entrywidget):
+        """Saves created movement to flowfile.
+
+        Args:
+            flow_dict (dictionary): Dictionary with sections and movements.
+            entrywidget (tkinter.widget): Entrywidget to put in movementname.
+        """
+        movement_name = entrywidget.get()
+
+        file_helper.flow_dict["Movements"][movement_name] = []
+
+        self.tree_movements.insert(parent="", index="end", text=movement_name)
+
+        entrywidget.delete(0, tk.END)
+
+    def create_movement_entry_window(self):
+        """Creates toplevel window to name movements."""
+
+        new_movement_creation = tk.Toplevel()
+
+        new_movement_creation.title("Create new movement")
+        movement_name_entry = tk.Entry(new_movement_creation, textvariable="Movement")
+        movement_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
+        movement_name_entry.delete(0, tk.END)
+        movement_name_entry.focus()
+        add_movement = tk.Button(
+            new_movement_creation,
+            text="Add movement",
+            command=lambda: self.new_movement(movement_name_entry),
+        )
+        add_movement.grid(row=1, column=1, sticky="w", pady=10, padx=10)
+        new_movement_creation.protocol("WM_DELETE_WINDOW")
+        new_movement_creation.grab_set()
