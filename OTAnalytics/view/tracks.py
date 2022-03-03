@@ -2,7 +2,6 @@ import json
 from tkinter import filedialog
 
 from gui_helper import button_bool, color_dict
-import image_alteration
 
 
 def load_tracks():

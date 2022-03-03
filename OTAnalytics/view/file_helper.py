@@ -19,6 +19,7 @@
 import os
 import re
 
+
 flow_dict = {"Detectors": {}, "Movements": {}}
 selectionlist = []
 raw_detections = []

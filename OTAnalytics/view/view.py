@@ -66,6 +66,20 @@ class test_gui(tk.Tk):
             **{"padx": 10, "pady": 10}, row=3, column=0, sticky="ew"
         )
 
+        # Load flow_dict
+        self.button_load_flowfile = tk.Button(
+            master=self.frame_controll_panel, text="Load", command=self.import_flowfile
+        )
+        self.button_load_flowfile.grid(row=4, column=0, sticky="ew")
+
+        # Add save flow_dict
+        self.button_save_flowfile = tk.Button(
+            master=self.frame_controll_panel,
+            text="Save",
+            command=sections.save_flowfile,
+        )
+        self.button_save_flowfile.grid(row=4, column=1, sticky="ew")
+
     def create_section_entry_window(self):
         """Creates toplevel window to name sections."""
 
@@ -125,6 +139,22 @@ class test_gui(tk.Tk):
         self.frame_sections.tree_sections.insert(
             parent="", index="end", text=detector_name
         )
+
+    def import_flowfile(self):
+        """Calls load_flowfile-function and inserts sections to listboxwidget."""
+        file_helper.flow_dict = sections.load_flowfile()
+
+        image_alteration.manipulate_image()
+
+        for movement in file_helper.flow_dict["Movements"]:
+            self.frame_movements.tree_movements.insert(
+                parent="", index="end", text=movement
+            )
+
+        for detector in file_helper.flow_dict["Detectors"]:
+            self.frame_sections.tree_sections.insert(
+                parent="", index="end", text=detector
+            )
 
 
 def main():

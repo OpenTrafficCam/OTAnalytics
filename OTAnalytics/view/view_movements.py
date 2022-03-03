@@ -2,7 +2,6 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import image_alteration
 import file_helper
-from sections import save_flowfile
 
 
 class FrameMovements(tk.Frame):
@@ -56,19 +55,6 @@ class FrameMovements(tk.Frame):
             text="Clear",
         )
         self.button_clear.grid(row=0, column=2, sticky="ew")
-
-        # Add save flow_dict
-        self.button_save_flowfile = tk.Button(
-            master=self.frame_controls, text="Save", command=save_flowfile
-        )
-        self.button_save_flowfile.grid(row=0, column=3, sticky="ew")
-
-        # Add to movement
-        self.button_load_flowfile = tk.Button(
-            master=self.frame_controls,
-            text="Load",
-        )
-        self.button_clear.grid(row=0, column=4, sticky="ew")
 
     def new_movement(self, entrywidget):
         """Saves created movement to flowfile.
