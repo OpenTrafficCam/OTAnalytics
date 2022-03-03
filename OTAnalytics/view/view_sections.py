@@ -51,6 +51,7 @@ class FrameSection(tk.Frame):
         self.button_remove = tk.Button(
             master=self.frame_control_section,
             text="Remove",
+            command=self.delete_section,
         )
         self.button_remove.grid(row=0, column=2)
 
@@ -81,5 +82,23 @@ class FrameSection(tk.Frame):
 
             else:
                 file_helper.flow_dict["Detectors"][dict_key]["color"] = (200, 125, 125)
+
+        image_alteration.manipulate_image()
+
+    def delete_section(self):
+        """Deletes selected section  from flowfile and listboxwidget."""
+
+        item = self.tree_sections.selection()
+        detector_name = self.tree_sections.item(item, "text")
+
+        self.tree_sections.delete(item)
+
+        del file_helper.flow_dict["Detectors"][detector_name]
+
+        for key in file_helper.flow_dict["Movements"]:
+            for value in file_helper.flow_dict["Movements"][key]:
+                print(file_helper.flow_dict["Movements"][key])
+                if detector_name in file_helper.flow_dict["Movements"][key]:
+                    file_helper.flow_dict["Movements"][key].remove(detector_name)
 
         image_alteration.manipulate_image()
