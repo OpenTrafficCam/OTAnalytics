@@ -9,7 +9,7 @@ import config
 import file_helper
 
 
-def save_flowfile(flowdictionary):
+def save_flowfile():
     """Save created dictionary with detectors
     and movements.
 
@@ -23,7 +23,7 @@ def save_flowfile(flowdictionary):
     #     flow_dict["Movements"] = movement_dict
 
     # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
-    json.dump(flowdictionary, file, indent=4)
+    json.dump(file_helper.flow_dict, file, indent=4)
 
 
 def draw_line(

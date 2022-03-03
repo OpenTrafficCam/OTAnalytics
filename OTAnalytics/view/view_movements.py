@@ -2,6 +2,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import image_alteration
 import file_helper
+from sections import save_flowfile
 
 
 class FrameMovements(tk.Frame):
@@ -36,39 +37,38 @@ class FrameMovements(tk.Frame):
         )
         self.button_new_movement.grid(row=0, column=0, sticky="ew")
 
-        # rename movement
-        self.button_rename_movement = tk.Button(
-            master=self.frame_controls,
-            text="Rename",
-        )
-        self.button_rename_movement.grid(row=0, column=1, sticky="ew")
+        # # rename movement
+        # self.button_rename_movement = tk.Button(
+        #     master=self.frame_controls,
+        #     text="Rename",
+        # )
+        # self.button_rename_movement.grid(row=0, column=1, sticky="ew")
 
-        # Rename movement
+        # remove movement
         self.button_remove_movement = tk.Button(
             master=self.frame_controls, text="Remove", command=self.delete_movement
         )
-        self.button_remove_movement.grid(row=0, column=2, sticky="ew")
+        self.button_remove_movement.grid(row=0, column=1, sticky="ew")
 
         # clear movement
         self.button_clear = tk.Button(
             master=self.frame_controls,
             text="Clear",
         )
-        self.button_clear.grid(row=0, column=3, sticky="ew")
+        self.button_clear.grid(row=0, column=2, sticky="ew")
 
         # Add save flow_dict
         self.button_save_flowfile = tk.Button(
-            master=self.frame_controls,
-            text="Save",
+            master=self.frame_controls, text="Save", command=save_flowfile
         )
-        self.button_remove_movement.grid(row=0, column=4, sticky="ew")
+        self.button_save_flowfile.grid(row=0, column=3, sticky="ew")
 
         # Add to movement
         self.button_load_flowfile = tk.Button(
             master=self.frame_controls,
             text="Load",
         )
-        self.button_clear.grid(row=0, column=5, sticky="ew")
+        self.button_clear.grid(row=0, column=4, sticky="ew")
 
     def new_movement(self, entrywidget):
         """Saves created movement to flowfile.
