@@ -4,9 +4,11 @@ from tkinter import Button, Entry, Label, Toplevel, filedialog
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
+import file_helper
+import config
 
 
-def dic_to_detector_dataframe(flowdictionary):
+def dic_to_detector_dataframe():
     """Creates a dataframe from detector/flow dictionary, # TODO change to use
     linedetector dic that gets updated when importing flow data
     creates column with LineString-objects for the calculation of
@@ -21,8 +23,8 @@ def dic_to_detector_dataframe(flowdictionary):
     # change dic to dataframe
     detector_df = pd.DataFrame.from_dict(
         {
-            ("Detectors", j): flowdictionary["Detectors"][j]
-            for j in flowdictionary["Detectors"].keys()
+            ("Detectors", j): file_helper.flow_dict["Detectors"][j]
+            for j in file_helper.flow_dict["Detectors"].keys()
         },
         orient="index",
     )
@@ -46,7 +48,7 @@ def dic_to_detector_dataframe(flowdictionary):
     return detector_df
 
 
-def dic_to_object_dataframe(tracks):
+def dic_to_object_dataframe():
     """Creates a dataframe from object dictionary, creates column with Polygon-objects.
 
     Args:
@@ -58,12 +60,18 @@ def dic_to_object_dataframe(tracks):
 
     # count number of coordinates (if the count is less then 3,
     # geopandas cant create Polygon)
-    for object in tracks:
-        tracks[object]["Coord_count"] = len(tracks[object]["Coord"])
-        tracks[object]["first_appearance_frame"] = tracks[object]["Frame"][0]
-        tracks[object]["last_appearance_frame"] = tracks[object]["Frame"][-1]
+    for object in file_helper.tracks:
+        file_helper.tracks[object]["Coord_count"] = len(
+            file_helper.tracks[object]["Coord"]
+        )
+        file_helper.tracks[object]["first_appearance_frame"] = file_helper.tracks[
+            object
+        ]["Frame"][0]
+        file_helper.tracks[object]["last_appearance_frame"] = file_helper.tracks[
+            object
+        ]["Frame"][-1]
 
-    object_df = pd.DataFrame.from_dict(tracks, orient="index")
+    object_df = pd.DataFrame.from_dict(file_helper.tracks, orient="index")
 
     object_df_validated = object_df.loc[object_df["Coord_count"] >= 2]
 
@@ -114,7 +122,7 @@ def calculate_intersections(detector_df, object_validated_df):
     return object_validated_df
 
 
-def find_intersection_order(fps, object_validated_df, flowdictionary):
+def find_intersection_order(object_validated_df):
     """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name).
 
     Second find nearest point (second nearest point) on Linestring compared
@@ -139,7 +147,7 @@ def find_intersection_order(fps, object_validated_df, flowdictionary):
 
     for object_id, row in object_validated_df.iterrows():
         # use dict
-        for detector in flowdictionary["Detectors"]:
+        for detector in file_helper.flow_dict["Detectors"]:
             # Condition if detector was crossed by objecttrack
             # Don't change to "is True"!! (True is the content of row/column)
             if object_validated_df.loc[object_id][detector]:
@@ -203,17 +211,18 @@ def find_intersection_order(fps, object_validated_df, flowdictionary):
                 del concatted_sorted_detector_list[1::2]
 
                 object_validated_df.at[object_id, "Time_crossing_entrance"] = (
-                    object_validated_df.at[object_id, "Crossing_Gate/Frame"][0][1] / fps
+                    object_validated_df.at[object_id, "Crossing_Gate/Frame"][0][1]
+                    / config.videoobject.fps
                 )
 
                 if object_validated_df.at[object_id, "Time_crossing_entrance"] != (
                     object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                    / fps
+                    / config.videoobject.fps
                 ):
 
                     object_validated_df.at[object_id, "Time_crossing_exit"] = (
                         object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                        / fps
+                        / config.videoobject.fps
                     )
 
                 # list = Movement (only detectors not seconds)
@@ -227,7 +236,7 @@ def find_intersection_order(fps, object_validated_df, flowdictionary):
 # %%
 
 
-def assign_movement(flowdictionary, object_validated_df):
+def assign_movement(object_validated_df):
     """Compares movements and associated detectors with sorted crossing list.
 
     Args:
@@ -242,12 +251,12 @@ def assign_movement(flowdictionary, object_validated_df):
 
         print("working...on " + str(object_id))
 
-        for movement_list in flowdictionary["Movements"]:
+        for movement_list in file_helper.flow_dict["Movements"]:
 
             # if detector in movements and real movement crossing events are true,
             #  key of movement dictionary is value of cell
             if (
-                flowdictionary["Movements"][movement_list]
+                file_helper.flow_dict["Movements"][movement_list]
                 == object_validated_df.loc[object_id]["Movement"]
             ):
 
@@ -273,7 +282,7 @@ def safe_to_exl(process_object):
 
 
 # %%
-def time_calculation_dataframe(timedelta_entry, fps, object_validated_df):
+def time_calculation_dataframe(timedelta_entry, object_validated_df):
     """Creates columns with time, calculated from frame and fps.
 
     Args:
@@ -289,10 +298,12 @@ def time_calculation_dataframe(timedelta_entry, fps, object_validated_df):
     entry_timedelta = timedelta_entry.get()
 
     object_validated_df["first_appearance_time"] = pd.to_datetime(
-        (object_validated_df["first_appearance_frame"] / fps), unit="s"
+        (object_validated_df["first_appearance_frame"] / config.videoobject.fps),
+        unit="s",
     ) + pd.Timedelta(entry_timedelta)
     object_validated_df["last_appearance_time"] = pd.to_datetime(
-        (object_validated_df["last_appearance_frame"] / fps), unit="s"
+        (object_validated_df["last_appearance_frame"] / config.videoobject.fps),
+        unit="s",
     ) + pd.Timedelta(entry_timedelta)
 
     object_validated_df["first_appearance_time"] = object_validated_df[
@@ -375,7 +386,7 @@ def resample_dataframe(entry_interval, object_validated_df):
     return object_validated_df
 
 
-def automated_counting(entry_timedelta, entry_interval, fps, flowdictionary, tracks):
+def automated_counting(entry_timedelta, entry_interval):
     """Calls previous functions for better readability.
 
     Args:
@@ -388,18 +399,16 @@ def automated_counting(entry_timedelta, entry_interval, fps, flowdictionary, tra
     """
 
     # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
-    detector_df = dic_to_detector_dataframe(flowdictionary)
-    object_validated_df = dic_to_object_dataframe(tracks)
+    detector_df = dic_to_detector_dataframe()
+    object_validated_df = dic_to_object_dataframe()
     processed_object = calculate_intersections(detector_df, object_validated_df)
 
     print(" successful ")
 
-    processed_object = find_intersection_order(fps, processed_object, flowdictionary)
-    processed_object = assign_movement(flowdictionary, processed_object)
+    processed_object = find_intersection_order(processed_object)
+    processed_object = assign_movement(processed_object)
 
-    processed_object = time_calculation_dataframe(
-        entry_timedelta, fps, processed_object
-    )
+    processed_object = time_calculation_dataframe(entry_timedelta, processed_object)
 
     cleaned_object_dataframe = clean_dataframe(processed_object)
 
@@ -412,7 +421,7 @@ def automated_counting(entry_timedelta, entry_interval, fps, flowdictionary, tra
     return cleaned_resampled_object_df
 
 
-def create_setting_window(fps, flowdictionary, tracks):
+def create_setting_window():
     """Creates window with button to resample dataframe and two
     inputfields to enter starting time and timeinterval.
 
@@ -445,9 +454,7 @@ def create_setting_window(fps, flowdictionary, tracks):
     toplevelwindow_button = Button(
         toplevelwindow,
         text="Save file",
-        command=lambda: automated_counting(
-            time_entry, timeinterval_entry, fps, flowdictionary, tracks
-        ),
+        command=lambda: automated_counting(time_entry, timeinterval_entry),
     )
     toplevelwindow_button.grid(
         row=4, columnspan=5, column=0, sticky="w", pady=5, padx=5

@@ -79,24 +79,6 @@ class OtcCanvas(tk.Canvas):
 
         print(self.points)
 
-    def slider_scroll(self, slider_number):
-        """Slides through video with tkinter slider.
-
-        Args:
-            slider_number (int): Represents current videoframe.
-        """
-
-        if (
-            not button_bool["play_video"]
-            and not button_bool["rewind_video"]
-            and button_bool["slider"]
-        ):
-            config.videoobject.current_frame = slider_number
-
-            np_image = config.videoobject.set_frame()
-
-            image_alteration.manipulate_image(np_image=np_image)
-
     def delete_polygon_points(self):
         """delete list of polygon points after scrolling, sliding, playing, rewinding"""
         if self.polygon_points:
@@ -134,13 +116,51 @@ class SliderFrame(tk.Frame):
             from_=0,
             to=config.videoobject.totalframecount - 1,
             orient=tk.HORIZONTAL,
-            command=lambda event: config.maincanvas.slider_scroll(int(event)),
+            command=lambda event: self.slider_scroll(int(event)),
         )
 
-        # self.slider.bind("<ButtonPress-1>", self.slider_pressed)
-        # self.slider.bind("<ButtonRelease-1>", self.slider_released)
+        self.slider.bind("<ButtonPress-1>", self.slider_pressed)
+        self.slider.bind("<ButtonRelease-1>", self.slider_released)
 
         self.slider.pack(fill="x")
 
     def destroy_slider(self):
         self.slider.destroy()
+
+    def slider_pressed(self, event):
+        """
+        Args:
+            event (Sliderbutton is pressed): When slider is pressed, thread that updates
+            queue with frames stops and gets terminated.
+        """
+
+        button_bool["slider"] = True
+
+    def slider_released(self, event):
+        """
+        Args:
+            event (Sliderbutton is pressed): When slider is pressed, thread that updates
+            queue with frames stops and gets terminated.
+        """
+        config.maincanvas.delete_polygon_points()
+
+        button_bool["slider"] = False
+
+    def slider_scroll(self, slider_number):
+        """Slides through video with tkinter slider.
+
+        Args:
+            slider_number (int): Represents current videoframe.
+        """
+        print(button_bool["slider"])
+
+        if (
+            not button_bool["play_video"]
+            and not button_bool["rewind_video"]
+            and button_bool["slider"]
+        ):
+            config.videoobject.current_frame = slider_number
+
+            np_image = config.videoobject.set_frame()
+
+            image_alteration.manipulate_image(np_image=np_image)

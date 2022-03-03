@@ -78,8 +78,6 @@ class FrameSection(tk.Frame):
 
                 file_helper.flow_dict["Detectors"][detector_name]["color"] = (200, 0, 0)
 
-                print("worked")
-
             else:
                 file_helper.flow_dict["Detectors"][dict_key]["color"] = (200, 125, 125)
 

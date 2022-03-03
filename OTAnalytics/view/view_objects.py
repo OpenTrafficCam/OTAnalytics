@@ -8,6 +8,8 @@ from gui_helper import (
     button_display_live_track_switch,
     button_display_bb_switch,
 )
+import auto_counting
+import config
 
 
 class FrameObject(tk.Frame):
@@ -82,6 +84,7 @@ class FrameObject(tk.Frame):
         self.button_autocount = tk.Button(
             master=self.frame_control_objects,
             text="autocount",
+            command=auto_counting.create_setting_window,
         )
         self.button_autocount.grid(row=1, column=0, columnspan=4, sticky="ew")
 
