@@ -10,11 +10,6 @@ import file_helper
 
 def manipulate_image(
     np_image=None,
-    flowdictionary=None,
-    selectionlist=file_helper.selectionlist,
-    tracks=file_helper.tracks,
-    tracks_live=file_helper.tracks_live,
-    raw_detections=None,
 ):
     """Function to draw sections, tracks and bounding boxes on a given numpy image.
     Image is converted to photo image and plotted on tkinter canvas object.
@@ -34,7 +29,7 @@ def manipulate_image(
         np_image = config.videoobject.np_image.copy()
 
     # TODO: #59 Draw detectors on top of all elements
-    # np_image = draw_detectors_from_dict(np_image, flowdictionary=file_helper.flow_dict)
+    np_image = draw_detectors_from_dict(np_image)
 
     print("tracks imported:" + str(button_bool["tracks_imported"]))
 
@@ -66,8 +61,6 @@ def manipulate_image(
     # photo is attribute of video
     config.videoobject.ph_image = ImageTk.PhotoImage(image)
 
-    print(type(config.videoobject.ph_image))
-
     config.maincanvas.create_image(
         0, 0, anchor=tkinter.NW, image=config.videoobject.ph_image
     )
@@ -75,7 +68,7 @@ def manipulate_image(
     config.maincanvas.update()
 
 
-def draw_detectors_from_dict(np_image, flowdictionary):
+def draw_detectors_from_dict(np_image):
     """Draws detectors on every frame.
 
     Args:
@@ -84,17 +77,17 @@ def draw_detectors_from_dict(np_image, flowdictionary):
     Returns:
         np_image (numpy_array): returns manipulated image"""
 
-    if flowdictionary["Detectors"]:
+    if file_helper.flow_dict["Detectors"]:
 
         Line = "line"
 
-        for detector in flowdictionary["Detectors"]:
-            if flowdictionary["Detectors"][detector]["type"] == Line:
-                start_x = flowdictionary["Detectors"][detector]["start_x"]
-                start_y = flowdictionary["Detectors"][detector]["start_y"]
-                end_x = flowdictionary["Detectors"][detector]["end_x"]
-                end_y = flowdictionary["Detectors"][detector]["end_y"]
-                color = flowdictionary["Detectors"][detector]["color"]
+        for detector in file_helper.flow_dict["Detectors"]:
+            if file_helper.flow_dict["Detectors"][detector]["type"] == Line:
+                start_x = file_helper.flow_dict["Detectors"][detector]["start_x"]
+                start_y = file_helper.flow_dict["Detectors"][detector]["start_y"]
+                end_x = file_helper.flow_dict["Detectors"][detector]["end_x"]
+                end_y = file_helper.flow_dict["Detectors"][detector]["end_y"]
+                color = file_helper.flow_dict["Detectors"][detector]["color"]
 
                 np_image = cv2.line(
                     np_image, (start_x, start_y), (end_x, end_y), color, 3
@@ -106,8 +99,8 @@ def draw_detectors_from_dict(np_image, flowdictionary):
                 image = np_image
                 overlay = image.copy()
 
-                polypoints = flowdictionary["Detectors"][detector]["points"]
-                color = flowdictionary["Detectors"][detector]["color"]
+                polypoints = file_helper.flow_dict["Detectors"][detector]["points"]
+                color = file_helper.flow_dict["Detectors"][detector]["color"]
 
                 list_of_tuples = [list(elem) for elem in polypoints]
                 pts = np.array(list_of_tuples, np.int32)

@@ -2,6 +2,7 @@ import tkinter as tk
 import config
 from gui_helper import button_bool
 import image_alteration
+import sections
 
 
 class OtcCanvas(tk.Canvas):
@@ -14,6 +15,51 @@ class OtcCanvas(tk.Canvas):
         # self.linepoints = [(0, 0), (0, 0)]
         self.points = [(0, 0), (0, 0)]
         self.polygon_points = []
+
+        self.bind(
+            "<B1-Motion>",
+            lambda event: [
+                self.click_receive_coordinates(event, 1),
+                sections.draw_line(
+                    event,
+                ),
+            ],
+        )
+
+        self.bind(
+            "<ButtonPress-1>",
+            lambda event: [
+                self.click_receive_coordinates(event, 0),
+                sections.draw_polygon(
+                    event,
+                    adding_points=True,
+                ),
+            ],
+        )
+        self.bind(
+            "<ButtonPress-2>",
+            lambda event: [
+                sections.draw_polygon(
+                    event,
+                    undo=True,
+                )
+            ],
+        )
+
+        self.bind(
+            "<ButtonPress-3>",
+            lambda event: [
+                sections.draw_polygon(
+                    event,
+                    closing=True,
+                )
+            ],
+        )
+
+    def delete_polygon_points(self):
+        """delete list of polygon points after scrolling, sliding, playing, rewinding"""
+        if self.polygon_points:
+            self.polygon_points = []
 
     def click_receive_coordinates(self, event, list_index):
         """Saves coordinates from canvas event to linepoint list.
@@ -30,6 +76,8 @@ class OtcCanvas(tk.Canvas):
             self.coordinateX,
             self.coordinateY,
         )
+
+        print(self.points)
 
     def slider_scroll(self, slider_number):
         """Slides through video with tkinter slider.

@@ -67,7 +67,7 @@ def button_rewind_switch(button_rewind, button_play):
         button_rewind.config(text="Rewind")
 
 
-def button_line_switch(button_linedetector, button_polygondetector, statepanel):
+def button_line_switch(button_linedetector, button_polygondetector):
     """Prints information on the statepanel when linedetector button is pressed.
 
     Args:
@@ -81,13 +81,13 @@ def button_line_switch(button_linedetector, button_polygondetector, statepanel):
     if button_bool["linedetector_toggle"]:
         button_linedetector.config(text="Finish")
         button_polygondetector.config(text="Polygon")
-        statepanel.update_statepanel(statepanel_txt["Linedetector_information"])
+        # statepanel.update_statepanel(statepanel_txt["Linedetector_information"])
     else:
         button_linedetector.config(text="Line")
-        statepanel.update_statepanel("")
+        # statepanel.update_statepanel("")
 
 
-def button_polygon_switch(button_polygondetector, button_linedetector, statepanel):
+def button_polygon_switch(button_polygondetector, button_linedetector):
     """Prints information on the statepanel when Polygondetector button is pressed.
 
     Args:
@@ -102,10 +102,10 @@ def button_polygon_switch(button_polygondetector, button_linedetector, statepane
     if button_bool["polygondetector_toggle"]:
         button_polygondetector.config(text="Finish")
         button_linedetector.config(text="Line")
-        statepanel.update_statepanel(
-            "left click to create new polygoncorner\nmousewheelbutton to undo"
-            + " corner\nrightclock to close polygon\nenter to finish creation process"
-        )
+        # statepanel.update_statepanel(
+        #     "left click to create new polygoncorner\nmousewheelbutton to undo"
+        #     + " corner\nrightclock to close polygon\nenter to finish creation process"
+        # )
     else:
         button_polygondetector.config(text="Polygon")
 

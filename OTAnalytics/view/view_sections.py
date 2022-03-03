@@ -1,5 +1,8 @@
 import tkinter as tk
 import tkinter.ttk as ttk
+from gui_helper import button_line_switch, button_polygon_switch
+import file_helper
+import image_alteration
 
 
 class FrameSection(tk.Frame):
@@ -11,6 +14,8 @@ class FrameSection(tk.Frame):
         # Files treeview
         self.tree_sections = ttk.Treeview(master=self.frame_tree, height=3)
         self.tree_sections.pack(fill="x")
+
+        self.tree_sections.bind("<<TreeviewSelect>>", self.tree_detector_selection)
 
         tree_files_cols = {
             "#0": "Section",
@@ -28,6 +33,7 @@ class FrameSection(tk.Frame):
         self.button_line = tk.Button(
             master=self.frame_control_section,
             text="Line",
+            command=lambda: button_line_switch(self.button_line, self.button_polygon),
         )
         self.button_line.grid(row=0, column=0)
 
@@ -35,6 +41,9 @@ class FrameSection(tk.Frame):
         self.button_polygon = tk.Button(
             master=self.frame_control_section,
             text="Polygon",
+            command=lambda: button_polygon_switch(
+                self.button_polygon, self.button_line
+            ),
         )
         self.button_polygon.grid(row=0, column=1)
 
@@ -51,3 +60,26 @@ class FrameSection(tk.Frame):
             text="Add to movement",
         )
         self.button_add_movement.grid(row=1, column=0, columnspan=3, sticky="ew")
+
+    def tree_detector_selection(self, event):
+        """Re draws detectors, where the selected detectors has different color
+
+        Args:
+            event (tkinter.event): Section selection from  listbox.
+        """
+
+        item = self.tree_sections.selection()
+        detector_name = self.tree_sections.item(item, "text")
+
+        for dict_key in file_helper.flow_dict["Detectors"].keys():
+
+            if detector_name == dict_key:
+
+                file_helper.flow_dict["Detectors"][detector_name]["color"] = (200, 0, 0)
+
+                print("worked")
+
+            else:
+                file_helper.flow_dict["Detectors"][dict_key]["color"] = (200, 125, 125)
+
+        image_alteration.manipulate_image()
