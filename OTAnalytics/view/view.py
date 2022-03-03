@@ -101,7 +101,6 @@ class test_gui(tk.Tk):
                 text="Add section",
                 command=lambda: [
                     self.add_section(detector_name_entry),
-                    self.on_close(),
                 ],
             )
 
@@ -133,12 +132,21 @@ class test_gui(tk.Tk):
 
         detector_name = entrywidget.get()
 
-        # TODO: #67 Prevent duplicate section names
-        sections.dump_to_flowdictionary(detector_name)
+        if detector_name in file_helper.flow_dict["Detectors"].keys():
+            tk.messagebox.showinfo(
+                title="Warning", message="Sectionname already exists"
+            )
 
-        self.frame_sections.tree_sections.insert(
-            parent="", index="end", text=detector_name
-        )
+        else:
+
+            # TODO: #67 Prevent duplicate section names
+            sections.dump_to_flowdictionary(detector_name)
+
+            self.frame_sections.tree_sections.insert(
+                parent="", index="end", text=detector_name
+            )
+
+            self.on_close(),
 
     def import_flowfile(self):
         """Calls load_flowfile-function and inserts sections to listboxwidget."""

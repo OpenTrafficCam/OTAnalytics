@@ -7,6 +7,7 @@ from gui_helper import button_bool
 import image_alteration
 import config
 import file_helper
+from tkinter import messagebox
 
 
 def save_flowfile():
