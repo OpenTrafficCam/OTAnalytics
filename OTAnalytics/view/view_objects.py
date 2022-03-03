@@ -88,10 +88,6 @@ class FrameObject(tk.Frame):
         file_helper.raw_detections, file_helper.tracks = load_tracks()
 
         for id, object in enumerate(list(file_helper.tracks.keys())):
-            self.tree_objects.insert(
-                parent="",
-                index=id,
-                values=(object, (file_helper.tracks[object]["Class"])),
-            )
+            self.tree_objects.insert(parent="", index="end", text=id, values=object)
 
         image_alteration.manipulate_image()
