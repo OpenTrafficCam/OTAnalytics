@@ -45,8 +45,7 @@ class FrameMovements(tk.Frame):
 
         # Rename movement
         self.button_remove_movement = tk.Button(
-            master=self.frame_controls,
-            text="Remove",
+            master=self.frame_controls, text="Remove", command=self.delete_movement
         )
         self.button_remove_movement.grid(row=0, column=2, sticky="ew")
 
@@ -104,3 +103,13 @@ class FrameMovements(tk.Frame):
         add_movement.grid(row=1, column=1, sticky="w", pady=10, padx=10)
         new_movement_creation.protocol("WM_DELETE_WINDOW")
         new_movement_creation.grab_set()
+
+    def delete_movement(self):
+        """Deletes selected section  from flowfile and listboxwidget."""
+
+        item = self.tree_movements.selection()
+        movement_name = self.tree_movements.item(item, "text")
+
+        self.tree_movements.delete(item)
+
+        del file_helper.flow_dict["Movements"][movement_name]

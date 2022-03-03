@@ -119,8 +119,6 @@ class test_gui(tk.Tk):
 
         detector_name = entrywidget.get()
 
-        print(detector_name)
-
         # TODO: #67 Prevent duplicate section names
         sections.dump_to_flowdictionary(detector_name)
 
