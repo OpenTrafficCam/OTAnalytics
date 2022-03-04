@@ -65,11 +65,18 @@ class FrameMovements(tk.Frame):
         """
         movement_name = entrywidget.get()
 
-        file_helper.flow_dict["Movements"][movement_name] = []
+        if movement_name in file_helper.flow_dict["Movements"].keys():
+            tk.messagebox.showinfo(
+                title="Warning", message="Movementname already exists"
+            )
 
-        self.tree_movements.insert(parent="", index="end", text=movement_name)
+        else:
 
-        entrywidget.delete(0, tk.END)
+            file_helper.flow_dict["Movements"][movement_name] = []
+
+            self.tree_movements.insert(parent="", index="end", text=movement_name)
+
+            entrywidget.delete(0, tk.END)
 
     def create_movement_entry_window(self):
         """Creates toplevel window to name movements."""
