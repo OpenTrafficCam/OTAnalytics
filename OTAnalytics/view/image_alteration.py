@@ -36,7 +36,9 @@ def manipulate_image(
     if button_bool["tracks_imported"]:
 
         np_image = draw_tracks(
-            np_image, selectionlist=file_helper.selectionlist, tracks=file_helper.tracks
+            np_image,
+            selectionlist=file_helper.selectionlist_objects,
+            tracks=file_helper.tracks,
         )
 
         np_image = draw_bounding_box(

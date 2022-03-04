@@ -21,7 +21,8 @@ import re
 
 
 flow_dict = {"Detectors": {}, "Movements": {}}
-selectionlist = []
+selectionlist_objects = []
+selectionlist_sections = []
 raw_detections = []
 tracks = {}
 tracks_live = {}

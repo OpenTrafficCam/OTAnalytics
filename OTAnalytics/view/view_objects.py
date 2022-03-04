@@ -99,12 +99,10 @@ class FrameObject(tk.Frame):
 
     def treeobject_selection(self, event):
         """Draws one or more selected tracks on canvas."""
-        file_helper.selectionlist = []
+        file_helper.selectionlist_objects = []
 
         for item in self.tree_objects.selection():
             item_text = self.tree_objects.item(item, "values")
-            file_helper.selectionlist.append(item_text[0])
-
-            print(file_helper.selectionlist)
+            file_helper.selectionlist_objects.append(item_text[0])
 
         image_alteration.manipulate_image()

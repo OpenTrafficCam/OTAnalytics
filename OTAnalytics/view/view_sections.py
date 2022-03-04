@@ -69,17 +69,31 @@ class FrameSection(tk.Frame):
             event (tkinter.event): Section selection from  listbox.
         """
 
-        item = self.tree_sections.selection()
-        detector_name = self.tree_sections.item(item, "text")
+        file_helper.selectionlist_sections = []
+
+        for item in self.tree_sections.selection():
+            detector_name = self.tree_sections.item(item, "text")
+            file_helper.selectionlist_sections.append(detector_name)
+
+        # item = self.tree_sections.selection()
+        # detector_name = self.tree_sections.item(item, "text")
 
         for dict_key in file_helper.flow_dict["Detectors"].keys():
 
-            if detector_name == dict_key:
+            if dict_key in file_helper.selectionlist_sections:
 
-                file_helper.flow_dict["Detectors"][detector_name]["color"] = (200, 0, 0)
+                file_helper.flow_dict["Detectors"][dict_key]["color"] = (
+                    200,
+                    0,
+                    0,
+                )
 
             else:
-                file_helper.flow_dict["Detectors"][dict_key]["color"] = (200, 125, 125)
+                file_helper.flow_dict["Detectors"][dict_key]["color"] = (
+                    200,
+                    125,
+                    125,
+                )
 
         image_alteration.manipulate_image()
 
