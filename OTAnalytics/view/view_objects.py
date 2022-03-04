@@ -9,7 +9,6 @@ from gui_helper import (
     button_display_bb_switch,
 )
 import auto_counting
-import config
 
 
 class FrameObject(tk.Frame):

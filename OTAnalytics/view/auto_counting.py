@@ -6,6 +6,7 @@ import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
 import file_helper
 import config
+from gui_helper import info_message
 
 
 def dic_to_detector_dataframe():
@@ -297,14 +298,20 @@ def time_calculation_dataframe(timedelta_entry, object_validated_df):
 
     entry_timedelta = timedelta_entry.get()
 
-    object_validated_df["first_appearance_time"] = pd.to_datetime(
-        (object_validated_df["first_appearance_frame"] / config.videoobject.fps),
-        unit="s",
-    ) + pd.Timedelta(entry_timedelta)
-    object_validated_df["last_appearance_time"] = pd.to_datetime(
-        (object_validated_df["last_appearance_frame"] / config.videoobject.fps),
-        unit="s",
-    ) + pd.Timedelta(entry_timedelta)
+    object_validated_df["first_appearance_time"] = (
+        pd.to_datetime(
+            (object_validated_df["first_appearance_frame"] / config.videoobject.fps),
+            unit="s",
+        )
+        + pd.Timedelta(entry_timedelta)
+    )
+    object_validated_df["last_appearance_time"] = (
+        pd.to_datetime(
+            (object_validated_df["last_appearance_frame"] / config.videoobject.fps),
+            unit="s",
+        )
+        + pd.Timedelta(entry_timedelta)
+    )
 
     object_validated_df["first_appearance_time"] = object_validated_df[
         "first_appearance_time"
@@ -430,6 +437,12 @@ def create_setting_window():
         flowdictionary (dictionary): Dictionary with sections and movements.
         tracks (dictionary): Dictionary with tracks.
     """
+
+    if not file_helper.tracks:
+        info_message("Warning", "Please import tracks first!")
+
+        return
+
     # creates window to insert autocount time and groupby time
     toplevelwindow = Toplevel()
 
