@@ -50,7 +50,8 @@ class FrameObject(tk.Frame):
         # Show tracks
         self.button_show_tracks = tk.Button(
             master=self.frame_control_objects,
-            text="Show tracks",
+            width=12,
+            text="Hide tracks",
             command=lambda: [
                 button_display_tracks_switch(self.button_show_tracks),
                 image_alteration.manipulate_image(),
@@ -61,7 +62,8 @@ class FrameObject(tk.Frame):
         # Show Livetrack
         self.button_show_livetracks = tk.Button(
             master=self.frame_control_objects,
-            text="Show livetrack",
+            width=12,
+            text="Livetrack",
             command=lambda: [
                 button_display_live_track_switch(self.button_show_livetracks),
                 image_alteration.manipulate_image(),
@@ -72,7 +74,8 @@ class FrameObject(tk.Frame):
         # Show bounding boxes
         self.button_show_bounding_boxes = tk.Button(
             master=self.frame_control_objects,
-            text="Show bounding boxes",
+            width=12,
+            text="Show bb",
             command=lambda: [
                 button_display_bb_switch(self.button_show_bounding_boxes),
                 image_alteration.manipulate_image(),

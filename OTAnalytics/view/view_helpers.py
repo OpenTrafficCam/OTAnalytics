@@ -64,6 +64,7 @@ class FrameFiles(tk.Frame):
         # Add Video
         self.button_add_video = tk.Button(
             master=self.frame_control,
+            width=12,
             text="Add video",
             command=self.load_video_and_add_frame,
         )
@@ -72,7 +73,8 @@ class FrameFiles(tk.Frame):
         # Play Video
         self.button_play_video = tk.Button(
             master=self.frame_control,
-            text="Play video",
+            width=12,
+            text="Play",
             command=lambda: [
                 button_play_video_switch(
                     self.button_play_video, self.button_rewind_video
@@ -86,7 +88,8 @@ class FrameFiles(tk.Frame):
         # Rewind Video
         self.button_rewind_video = tk.Button(
             master=self.frame_control,
-            text="Rewind video",
+            width=12,
+            text="Rewind",
             command=lambda: [
                 button_rewind_switch(self.button_rewind_video, self.button_play_video),
                 config.maincanvas.delete_polygon_points(),
@@ -99,6 +102,7 @@ class FrameFiles(tk.Frame):
         # Clear Video
         self.button_remove_video = tk.Button(
             master=self.frame_control,
+            width=12,
             text="Remove video",
             command=lambda: [self.remove_video()],
         )

@@ -77,13 +77,6 @@ class OtcCanvas(tk.Canvas):
             self.coordinateY,
         )
 
-        print(self.points)
-
-    def delete_polygon_points(self):
-        """delete list of polygon points after scrolling, sliding, playing, rewinding"""
-        if self.polygon_points:
-            self.polygon_points = []
-
 
 class CanvasFrame(tk.Frame):
     def __init__(self, **kwargs):

@@ -1,6 +1,6 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-import image_alteration
+from gui_helper import info_message
 import file_helper
 
 
@@ -104,6 +104,11 @@ class FrameMovements(tk.Frame):
         item = self.tree_movements.selection()
         movement_name = self.tree_movements.item(item, "text")
 
+        if not movement_name:
+            info_message("Warning", "Please select movement you wish to delete!")
+
+            return
+
         self.tree_movements.delete(item)
 
         del file_helper.flow_dict["Movements"][movement_name]
@@ -113,35 +118,36 @@ class FrameMovements(tk.Frame):
         item = self.tree_movements.selection()
         movement_name = self.tree_movements.item(item, "text")
 
-        if movement_name:
+        if not movement_name:
+            info_message("Warning", "Please select movement you wish to rename!")
 
-            self.item = self.tree_movements.selection()
-            movement_name = self.tree_movements.item(self.item, "text")
+            return
 
-            self.rename_movement_creation = tk.Toplevel()
+        self.item = self.tree_movements.selection()
+        movement_name = self.tree_movements.item(self.item, "text")
 
-            self.rename_movement_creation.title("Rename movement")
-            movement_name_entry = tk.Entry(
-                self.rename_movement_creation, textvariable="Movement"
-            )
+        self.rename_movement_creation = tk.Toplevel()
 
-            # delete old text
-            movement_name_entry.delete(0, tk.END)
+        self.rename_movement_creation.title("Rename movement")
+        movement_name_entry = tk.Entry(
+            self.rename_movement_creation, textvariable="Movement"
+        )
 
-            # insert text from selection
-            movement_name_entry.insert(0, movement_name)
-            movement_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
-            movement_name_entry.focus()
-            rename_movement = tk.Button(
-                self.rename_movement_creation,
-                text="rename movement",
-                command=lambda: self.rename_movement(
-                    movement_name, movement_name_entry
-                ),
-            )
-            rename_movement.grid(row=1, column=1, sticky="w", pady=10, padx=10)
-            self.rename_movement_creation.protocol("WM_DELETE_WINDOW")
-            self.rename_movement_creation.grab_set()
+        # delete old text
+        movement_name_entry.delete(0, tk.END)
+
+        # insert text from selection
+        movement_name_entry.insert(0, movement_name)
+        movement_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
+        movement_name_entry.focus()
+        rename_movement = tk.Button(
+            self.rename_movement_creation,
+            text="rename movement",
+            command=lambda: self.rename_movement(movement_name, movement_name_entry),
+        )
+        rename_movement.grid(row=1, column=1, sticky="w", pady=10, padx=10)
+        self.rename_movement_creation.protocol("WM_DELETE_WINDOW")
+        self.rename_movement_creation.grab_set()
 
     def rename_movement(self, old_movement_name, entrywidget):
 

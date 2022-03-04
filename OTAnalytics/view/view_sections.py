@@ -1,6 +1,6 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from gui_helper import button_line_switch, button_polygon_switch
+from gui_helper import button_line_switch, button_polygon_switch, info_message
 import file_helper
 import image_alteration
 
@@ -32,6 +32,7 @@ class FrameSection(tk.Frame):
         # Add Line-Section
         self.button_line = tk.Button(
             master=self.frame_control_section,
+            width=12,
             text="Line",
             command=lambda: button_line_switch(self.button_line, self.button_polygon),
         )
@@ -40,6 +41,7 @@ class FrameSection(tk.Frame):
         # Add Polygon-Section
         self.button_polygon = tk.Button(
             master=self.frame_control_section,
+            width=12,
             text="Polygon",
             command=lambda: button_polygon_switch(
                 self.button_polygon, self.button_line
@@ -50,6 +52,7 @@ class FrameSection(tk.Frame):
         # Add Polygon-Section
         self.button_remove = tk.Button(
             master=self.frame_control_section,
+            width=12,
             text="Remove",
             command=self.delete_section,
         )
@@ -74,9 +77,6 @@ class FrameSection(tk.Frame):
         for item in self.tree_sections.selection():
             detector_name = self.tree_sections.item(item, "text")
             file_helper.selectionlist_sections.append(detector_name)
-
-        # item = self.tree_sections.selection()
-        # detector_name = self.tree_sections.item(item, "text")
 
         for dict_key in file_helper.flow_dict["Detectors"].keys():
 
@@ -103,16 +103,18 @@ class FrameSection(tk.Frame):
         item = self.tree_sections.selection()
         detector_name = self.tree_sections.item(item, "text")
 
+        if not detector_name:
+            info_message("Warning", "Please select detector you wish to delete!")
+
+            return
+
         self.tree_sections.delete(item)
 
         del file_helper.flow_dict["Detectors"][detector_name]
 
         for key in file_helper.flow_dict["Movements"]:
             for value in file_helper.flow_dict["Movements"][key]:
-                print(file_helper.flow_dict["Movements"][key])
                 if detector_name in file_helper.flow_dict["Movements"][key]:
                     file_helper.flow_dict["Movements"][key].remove(detector_name)
-
-        print(file_helper.flow_dict)
 
         image_alteration.manipulate_image()

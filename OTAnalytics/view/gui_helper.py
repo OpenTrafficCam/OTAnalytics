@@ -1,3 +1,6 @@
+from tkinter import messagebox
+import file_helper
+
 button_bool = {
     "linedetector_toggle": False,
     "polygondetector_toggle": False,
@@ -116,14 +119,21 @@ def button_display_tracks_switch(button_display_tracks):
     Args:
         button (tkinter button): Button.
     """
+
+    if not file_helper.tracks:
+
+        info_message("Warning", "No tracks imported")
+
+        return
+
     button_bool["display_all_tracks_toggle"] = not button_bool[
         "display_all_tracks_toggle"
     ]
 
     if button_bool["display_all_tracks_toggle"]:
-        button_display_tracks.config(text="hide tracks")
+        button_display_tracks.config(text="Hide tracks")
     else:
-        button_display_tracks.config(text="show tracks")
+        button_display_tracks.config(text="Show tracks")
 
 
 def button_display_bb_switch(button_display_bb):
@@ -132,12 +142,18 @@ def button_display_bb_switch(button_display_bb):
     Args:
         button (tkinter button): Button.
     """
+    if not file_helper.tracks:
+
+        info_message("Warning", "No tracks imported")
+
+        return
+
     button_bool["display_bb"] = not button_bool["display_bb"]
 
     if button_bool["display_bb"]:
-        button_display_bb.config(text="hide bb")
+        button_display_bb.config(text="Hide bb")
     else:
-        button_display_bb.config(text="show bb")
+        button_display_bb.config(text="Show bb")
 
 
 def button_display_live_track_switch(button_display_tracks):
@@ -147,9 +163,20 @@ def button_display_live_track_switch(button_display_tracks):
         button (tkinter button): Buttons.
     """
 
+    if not file_helper.tracks:
+
+        info_message("Warning", "No tracks imported!")
+
+        return
+
     button_bool["display_live_track"] = not button_bool["display_live_track"]
 
     if button_bool["display_live_track"]:
         button_display_tracks.config(text="Stop Livetrack")
     else:
         button_display_tracks.config(text="Livetrack")
+
+
+def info_message(title, text):
+
+    messagebox.showinfo(title=title, message=text)
