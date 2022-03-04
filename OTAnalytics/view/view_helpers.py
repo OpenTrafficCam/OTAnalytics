@@ -202,7 +202,7 @@ class FrameFiles(tk.Frame):
 
             config.videoobject.current_frame += 1
 
-            np_image = config.videoobject.get_frame(np_image=True)
+            np_image = config.videoobject.get_frame(np_image=True).copy()
 
             image_alteration.manipulate_image(np_image=np_image)
 

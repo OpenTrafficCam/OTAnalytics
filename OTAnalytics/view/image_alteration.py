@@ -28,6 +28,8 @@ def manipulate_image(
     if np_image is None:
         np_image = config.videoobject.np_image.copy()
 
+        print("test")
+
     if button_bool["tracks_imported"]:
 
         np_image = draw_tracks(
