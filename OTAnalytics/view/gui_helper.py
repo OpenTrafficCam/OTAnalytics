@@ -1,5 +1,6 @@
 from tkinter import messagebox
 import file_helper
+import config
 
 button_bool = {
     "linedetector_toggle": False,
@@ -44,7 +45,10 @@ def button_play_video_switch(button_play, button_rewind):
 
     button_bool["rewind_video"] = False
 
-    print(button_bool["play_video"])
+    if not config.videoobject:
+        info_message("Warning", "Please import video first!")
+
+        return
 
     if button_bool["play_video"]:
         button_play.config(text="Stop")
@@ -59,6 +63,11 @@ def button_rewind_switch(button_rewind, button_play):
     Args:
         button (tkinter button): play and rewind button.
     """
+    if not config.videoobject:
+        info_message("Warning", "Please import video first!")
+
+        return
+
     button_bool["rewind_video"] = not button_bool["rewind_video"]
 
     button_bool["play_video"] = False
