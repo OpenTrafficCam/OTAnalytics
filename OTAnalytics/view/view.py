@@ -78,7 +78,15 @@ class test_gui(tk.Tk):
             text="Save",
             command=sections.save_flowfile,
         )
-        self.button_save_flowfile.grid(row=4, column=1, sticky="ew")
+        self.button_save_flowfile.grid(row=5, column=0, sticky="ew")
+
+        # Add clear all
+        self.button_save_flowfile = tk.Button(
+            master=self.frame_controll_panel,
+            text="Clear all",
+            command=self.clear_treeviews,
+        )
+        self.button_save_flowfile.grid(row=6, column=0, sticky="ew")
 
     def create_section_entry_window(self):
         """Creates toplevel window to name sections."""
@@ -163,6 +171,18 @@ class test_gui(tk.Tk):
             self.frame_sections.tree_sections.insert(
                 parent="", index="end", text=detector
             )
+
+    def clear_treeviews(self):
+        for i in self.frame_sections.tree_sections.get_children():
+            self.frame_sections.tree_sections.delete(i)
+
+        for i in self.frame_objects.tree_objects.get_children():
+            self.frame_objects.tree_objects.delete(i)
+
+        for i in self.frame_movements.tree_movements.get_children():
+            self.frame_movements.tree_movements.delete(i)
+
+        file_helper.re_initialize()
 
 
 def main():

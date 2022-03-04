@@ -122,8 +122,6 @@ class FrameFiles(tk.Frame):
 
         self.update_tree_files()
 
-        print(self.files_dict)
-
     def _add_canvas_frame(self):
 
         image = config.videoobject.get_frame(np_image=False)

@@ -16,7 +16,7 @@ class FrameObject(tk.Frame):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.frame_tree = tk.Frame(master=self)
-        self.frame_tree.grid()
+        self.frame_tree.pack(fill="x")
 
         # Files treeview
         self.tree_objects = ttk.Treeview(master=self.frame_tree, height=3)
@@ -35,7 +35,7 @@ class FrameObject(tk.Frame):
         )
 
         self.frame_control_objects = tk.Frame(master=self)
-        self.frame_control_objects.grid()
+        self.frame_control_objects.pack(fill="x")
 
         self.tree_objects.bind("<<TreeviewSelect>>", self.treeobject_selection)
 

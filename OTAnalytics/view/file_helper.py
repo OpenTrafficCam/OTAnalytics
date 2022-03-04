@@ -87,3 +87,11 @@ def check_fileexistence(path, otflow_patthern, ottrk_pattern):
                 ottrk_file = file
 
     return otflow_file, ottrk_file
+
+
+def re_initialize():
+    global flow_dict, raw_detections, tracks
+
+    flow_dict = {"Detectors": {}, "Movements": {}}
+    raw_detections = []
+    tracks = {}
