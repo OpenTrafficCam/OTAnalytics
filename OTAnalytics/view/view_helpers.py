@@ -5,9 +5,8 @@ import tkinter.ttk as ttk
 
 from gui_helper import button_play_video_switch, button_rewind_switch, button_bool
 from video import Video
-from file_helper import *
-import config
 import file_helper
+import config
 
 
 import image_alteration
@@ -116,11 +115,13 @@ class FrameFiles(tk.Frame):
         )
         config.videoobject = Video(video_source.name)
 
-        path = get_dir(video_source.name)
+        path = file_helper.get_dir(video_source.name)
 
         self.add_files_to_dict(path)
 
-        self.files_dict[path]["video_name"] = get_filename(video_source.name)
+        self.files_dict[path]["video_name"] = file_helper.get_filename(
+            video_source.name
+        )
 
         self.update_files_dict_values(path)
 
@@ -148,11 +149,11 @@ class FrameFiles(tk.Frame):
 
     def update_files_dict_values(self, path):
 
-        otflow_pattern, ottrk_pattern = create_pattern(
+        otflow_pattern, ottrk_pattern = file_helper.create_pattern(
             self.files_dict[path]["video_name"]
         )
 
-        otflow_file, ottrk_file = check_fileexistence(
+        otflow_file, ottrk_file = file_helper.check_fileexistence(
             path, otflow_pattern, ottrk_pattern
         )
         TRUE_SYMBOL = "\u2705"  # "\u2713"  # "\u2714"
