@@ -113,4 +113,6 @@ class FrameSection(tk.Frame):
                 if detector_name in file_helper.flow_dict["Movements"][key]:
                     file_helper.flow_dict["Movements"][key].remove(detector_name)
 
+        print(file_helper.flow_dict)
+
         image_alteration.manipulate_image()

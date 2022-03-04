@@ -28,11 +28,6 @@ def manipulate_image(
     if np_image is None:
         np_image = config.videoobject.np_image.copy()
 
-    # TODO: #59 Draw detectors on top of all elements
-    np_image = draw_detectors_from_dict(np_image)
-
-    print("tracks imported:" + str(button_bool["tracks_imported"]))
-
     if button_bool["tracks_imported"]:
 
         np_image = draw_tracks(
@@ -54,6 +49,9 @@ def manipulate_image(
             raw_detections=file_helper.raw_detections,
             track_live=file_helper.tracks_live,
         )
+
+    # TODO: #59 Draw detectors on top of all elements
+    np_image = draw_detectors_from_dict(np_image)
 
     # copy is important or else original image will be changed
     image = Image.fromarray(np_image)  # to PIL format
