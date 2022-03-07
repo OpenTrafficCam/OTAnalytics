@@ -18,6 +18,7 @@
 
 import os
 import re
+from itertools import chain, combinations
 
 
 flow_dict = {"Detectors": {}, "Movements": {}}
@@ -95,3 +96,8 @@ def re_initialize():
     flow_dict = {"Detectors": {}, "Movements": {}}
     raw_detections = []
     tracks = {}
+
+
+def powerset(iterable):
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))

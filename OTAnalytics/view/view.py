@@ -4,7 +4,7 @@ from view_helpers import FrameFiles
 from canvas import CanvasFrame
 from view_sections import FrameSection
 from view_objects import FrameObject
-from gui_helper import button_bool
+from gui_helper import button_bool, info_message
 import keyboard
 import config
 import file_helper
@@ -87,6 +87,11 @@ class test_gui(tk.Tk):
             command=self.clear_treeviews,
         )
         self.button_save_flowfile.grid(row=6, column=0, sticky="ew")
+
+        # bind function to button (function effects to treeview)
+        self.frame_sections.button_add_section_to_movement.configure(
+            command=self.add_section_to_movement
+        )
 
     def create_section_entry_window(self):
         """Creates toplevel window to name sections."""
@@ -183,6 +188,31 @@ class test_gui(tk.Tk):
             self.frame_movements.tree_movements.delete(i)
 
         file_helper.re_initialize()
+
+    def add_section_to_movement(self):
+        """Adds selected section to selected movement."""
+        item = self.frame_sections.tree_sections.selection()
+        detector_name = self.frame_sections.tree_sections.item(item, "text")
+
+        item = self.frame_movements.tree_movements.selection()
+        movement_name = self.frame_movements.tree_movements.item(item, "text")
+
+        if not detector_name or not movement_name:
+            info_message("Warning", "Please select section and movements")
+
+            return
+
+        file_helper.flow_dict["Movements"][movement_name].append(detector_name)
+
+        print(file_helper.flow_dict["Movements"])
+
+        # detector_name = (
+        #     detector_name
+        #     + " #"
+        #     + str(self.flow_dict["Movements"][movement_name].index(detector_name) + 1)
+        # )
+
+        self.frame_movements.tree_movements.insert(detector_name, "values")
 
 
 def main():

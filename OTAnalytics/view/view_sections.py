@@ -59,11 +59,13 @@ class FrameSection(tk.Frame):
         self.button_remove.grid(row=0, column=2)
 
         # Add to movement
-        self.button_add_movement = tk.Button(
+        self.button_add_section_to_movement = tk.Button(
             master=self.frame_control_section,
             text="Add to movement",
         )
-        self.button_add_movement.grid(row=1, column=0, columnspan=3, sticky="ew")
+        self.button_add_section_to_movement.grid(
+            row=1, column=0, columnspan=3, sticky="ew"
+        )
 
     def tree_detector_selection(self, event):
         """Re draws detectors, where the selected detectors has different color
