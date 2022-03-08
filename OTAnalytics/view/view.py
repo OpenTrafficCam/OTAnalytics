@@ -10,6 +10,7 @@ import config
 import file_helper
 import image_alteration
 import sections
+import json
 
 
 class test_gui(tk.Tk):
@@ -213,6 +214,26 @@ class test_gui(tk.Tk):
         # )
 
         self.frame_movements.tree_movements.insert(detector_name, "values")
+
+    def ask_to_import(self, path, otflow_file, ottrk_file):
+        if self.frame_files.files_dict[path]["otflow_file"] == "\u2705":
+
+            response = tk.messagebox.askquestion(
+                title="Files detected",
+                message="Do you want to import existent flowfile?",
+            )
+
+            if response == "yes":
+
+                filepath = f"{path}/{otflow_file}"
+
+                files = open(filepath, "r")
+                files = files.read()
+
+                file_helper.flow_dict = json.loads(files)
+
+            else:
+                print("response was false")
 
 
 def main():

@@ -2,6 +2,8 @@ from tkinter import messagebox
 import file_helper
 import config
 
+# TODO Create statepanelclass
+
 button_bool = {
     "linedetector_toggle": False,
     "polygondetector_toggle": False,

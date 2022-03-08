@@ -1,3 +1,4 @@
+import json
 import time
 import tkinter as tk
 from tkinter import filedialog
@@ -7,7 +8,6 @@ from gui_helper import button_play_video_switch, button_rewind_switch, button_bo
 from video import Video
 import file_helper
 import config
-
 
 import image_alteration
 
@@ -129,7 +129,7 @@ class FrameFiles(tk.Frame):
 
     def _add_canvas_frame(self):
 
-        image = config.videoobject.get_frame(np_image=False)
+        np_image = config.videoobject.get_frame(np_image=True)
 
         config.maincanvas.configure(
             width=config.videoobject.width, height=config.videoobject.height
@@ -137,7 +137,9 @@ class FrameFiles(tk.Frame):
 
         config.sliderobject.create_slider()
 
-        config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
+        # config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
+
+        image_alteration.manipulate_image(np_image)
 
     def load_video_and_add_frame(self):
 
@@ -153,18 +155,16 @@ class FrameFiles(tk.Frame):
             self.files_dict[path]["video_name"]
         )
 
-        otflow_file, ottrk_file = file_helper.check_fileexistence(
-            path, otflow_pattern, ottrk_pattern
-        )
+        file_helper.check_fileexistence(path, otflow_pattern, ottrk_pattern)
         TRUE_SYMBOL = "\u2705"  # "\u2713"  # "\u2714"
         FALSE_SYMBOL = "\u274E"  # "\u2717"  # "\u2718"
 
         self.files_dict[path]["otflow_file"] = (
-            TRUE_SYMBOL if otflow_file else FALSE_SYMBOL
+            TRUE_SYMBOL if bool(file_helper.otflow_file) else FALSE_SYMBOL
         )
 
         self.files_dict[path]["ottrk_file"] = (
-            TRUE_SYMBOL if ottrk_file else FALSE_SYMBOL
+            TRUE_SYMBOL if bool(file_helper.ottrk_file) else FALSE_SYMBOL
         )
 
     def update_tree_files(self):
@@ -174,8 +174,8 @@ class FrameFiles(tk.Frame):
                 index="end",
                 text=file_values["video_name"],
                 values=(
-                    file_values["otflow_file"],
                     file_values["ottrk_file"],
+                    file_values["otflow_file"],
                 ),
             )
 

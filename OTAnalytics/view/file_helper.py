@@ -27,6 +27,8 @@ selectionlist_sections = []
 raw_detections = []
 tracks = {}
 tracks_live = {}
+otflow_file = None
+ottrk_file = None
 
 
 def get_dir(path: str):
@@ -74,12 +76,14 @@ def create_pattern(videofilename):
     return otflow_pattern, ottrk_pattern
 
 
-def check_fileexistence(path, otflow_patthern, ottrk_pattern):
+def check_fileexistence(path, otflow_pattern, ottrk_pattern):
     # sourcery skip: use-fstring-for-concatenation
+    global otflow_file
+    global ottrk_file
 
     for root, dirs, files in os.walk(path):
         for file in files:
-            if bool(re.search(otflow_patthern, file)):
+            if bool(re.search(otflow_pattern, file)):
 
                 otflow_file = file
 
@@ -87,7 +91,7 @@ def check_fileexistence(path, otflow_patthern, ottrk_pattern):
 
                 ottrk_file = file
 
-    return otflow_file, ottrk_file
+    # return otflow_file, ottrk_file
 
 
 def re_initialize():
