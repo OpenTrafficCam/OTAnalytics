@@ -240,6 +240,8 @@ class test_gui(tk.Tk):
 
         file_helper.re_initialize()
 
+        image_alteration.manipulate_image()
+
     def add_section_to_movement(self):
         """Adds selected section to selected movement."""
         item = self.frame_sections.tree_sections.selection()

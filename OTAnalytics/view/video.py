@@ -182,8 +182,13 @@ class Video(FileVideoStream):
         self.fps = self.stream.get(cv2.CAP_PROP_FPS)
 
         # retrieve dimensions of video
-        self.width = self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.height = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        self.videowidth = self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.videoheight = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+        self.video_size_factor = self.videowidth / self.videoheight
+
+        self.width = 800
+        self.height = 600
 
         self.totalframecount = int(self.stream.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -198,6 +203,8 @@ class Video(FileVideoStream):
         # print("Frame: " + str(self.current_frame))
 
         frame = self.read()
+
+        frame = cv2.resize(frame, (800, 600))
 
         self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # to RGB
 
