@@ -4,7 +4,12 @@ import tkinter as tk
 from tkinter import filedialog
 import tkinter.ttk as ttk
 
-from gui_helper import button_play_video_switch, button_rewind_switch, button_bool
+from gui_helper import (
+    button_play_video_switch,
+    button_rewind_switch,
+    button_bool,
+    info_message,
+)
 from video import Video
 import file_helper
 import config
@@ -236,6 +241,15 @@ class FrameFiles(tk.Frame):
             config.sliderobject.slider.set(config.videoobject.current_frame)
 
     def remove_video(self):
+
+        item = self.tree_files.selection()
+        video_name = self.tree_files.item(item, "text")
+
+        if not video_name:
+            info_message("Warning", "Please select video you wish to delete!")
+
+            return
+
         for item in self.tree_files.selection():
             # item_text = self.tree_files.item(item, "values")
 
