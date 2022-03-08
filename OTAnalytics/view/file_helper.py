@@ -57,21 +57,27 @@ def get_filename(path: str):
 def create_pattern(videofilename):
 
     file_pattern = re.split(r"\_", videofilename)
+    otflow_pattern = None
+    ottrk_pattern = None
 
-    otflow_pattern = (
-        f"^{file_pattern[0]}\\_" + r"\w{4}\_" + file_pattern[2][:4] + ".*otflow"
-    )
+    try:
 
-    ottrk_pattern = (
-        r"^"
-        + file_pattern[0]
-        + r"\_"
-        + r"\w{4}\_"
-        + file_pattern[2]
-        + r"\_"
-        + file_pattern[3][:8]
-        + ".*ottrk"
-    )
+        otflow_pattern = (
+            f"^{file_pattern[0]}\\_" + r"\w{4}\_" + file_pattern[2][:4] + ".*otflow"
+        )
+
+        ottrk_pattern = (
+            r"^"
+            + file_pattern[0]
+            + r"\_"
+            + r"\w{4}\_"
+            + file_pattern[2]
+            + r"\_"
+            + file_pattern[3][:8]
+            + ".*ottrk"
+        )
+    except Exception:
+        return otflow_pattern, ottrk_pattern
 
     return otflow_pattern, ottrk_pattern
 
@@ -90,8 +96,6 @@ def check_fileexistence(path, otflow_pattern, ottrk_pattern):
             elif bool(re.search(ottrk_pattern, file)):
 
                 ottrk_file = file
-
-    # return otflow_file, ottrk_file
 
 
 def re_initialize():

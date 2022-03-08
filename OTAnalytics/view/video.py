@@ -22,7 +22,6 @@ def load_video_and_frame():
         filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
     )
     filepath = video_source.name
-    print("filepath: " + filepath)
 
     checkbox = ttk.Checkbutton
 

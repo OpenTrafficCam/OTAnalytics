@@ -1,4 +1,3 @@
-import json
 import time
 import tkinter as tk
 from tkinter import filedialog
@@ -152,7 +151,9 @@ class FrameFiles(tk.Frame):
             self.files_dict[path]["video_name"]
         )
 
-        file_helper.check_fileexistence(path, otflow_pattern, ottrk_pattern)
+        if ottrk_pattern is not None and ottrk_pattern is not None:
+            file_helper.check_fileexistence(path, otflow_pattern, ottrk_pattern)
+
         TRUE_SYMBOL = "\u2705"  # "\u2713"  # "\u2714"
         FALSE_SYMBOL = "\u274E"  # "\u2717"  # "\u2718"
 
