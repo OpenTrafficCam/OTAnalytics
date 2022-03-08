@@ -65,7 +65,6 @@ class FrameFiles(tk.Frame):
             master=self.frame_control,
             width=12,
             text="Add video",
-            command=self.load_video_and_add_frame,
         )
         self.button_add_video.grid(row=0, column=0, sticky="ew")
 
@@ -107,7 +106,7 @@ class FrameFiles(tk.Frame):
         )
         self.button_remove_video.grid(row=0, column=3, sticky="ew")
 
-    def _add_file(self):
+    def add_file(self):
 
         # load video object
         video_source = filedialog.askopenfile(
@@ -127,9 +126,9 @@ class FrameFiles(tk.Frame):
 
         self.update_tree_files()
 
-    def _add_canvas_frame(self):
+    def add_canvas_frame(self):
 
-        np_image = config.videoobject.get_frame(np_image=True)
+        image = config.videoobject.get_frame(np_image=False)
 
         config.maincanvas.configure(
             width=config.videoobject.width, height=config.videoobject.height
@@ -137,14 +136,7 @@ class FrameFiles(tk.Frame):
 
         config.sliderobject.create_slider()
 
-        # config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
-
-        image_alteration.manipulate_image(np_image)
-
-    def load_video_and_add_frame(self):
-
-        self._add_file()
-        self._add_canvas_frame()
+        config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
 
     def add_files_to_dict(self, path):
         self.files_dict[path] = {}

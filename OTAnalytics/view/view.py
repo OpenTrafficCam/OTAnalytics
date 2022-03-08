@@ -11,6 +11,7 @@ import file_helper
 import image_alteration
 import sections
 import json
+from tracks import load_and_convert
 
 
 class test_gui(tk.Tk):
@@ -94,6 +95,10 @@ class test_gui(tk.Tk):
             command=self.add_section_to_movement
         )
 
+        self.frame_files.button_add_video.configure(
+            command=self.load_video_and_add_frame
+        )
+
     def create_section_entry_window(self):
         """Creates toplevel window to name sections."""
 
@@ -162,21 +167,66 @@ class test_gui(tk.Tk):
 
             self.on_close(),
 
+    def load_video_and_add_frame(self):
+
+        self.frame_files.add_file()
+        self.frame_files.add_canvas_frame()
+        self.ask_to_import()
+
+        image_alteration.manipulate_image()
+
+    def ask_to_import(self):
+
+        path = list(self.frame_files.files_dict.keys())[-1]
+
+        if self.frame_files.files_dict[path]["otflow_file"] == "\u2705":
+
+            response_flowfile = tk.messagebox.askquestion(
+                title="Otflowfile detected",
+                message="Do you want to import existent flowfile?",
+            )
+
+            if response_flowfile == "yes":
+
+                filepath = f"{path}/{file_helper.otflow_file}"
+
+                files = open(filepath, "r")
+                files = files.read()
+
+                file_helper.flow_dict = json.loads(files)
+
+        if self.frame_files.files_dict[path]["ottrk_file"] == "\u2705":
+
+            response_track_file = tk.messagebox.askquestion(
+                title="Ottrackfile detected",
+                message="Do you want to import existent trackfile?",
+            )
+
+            if response_track_file == "yes":
+
+                filepath = f"{path}/{file_helper.ottrk_file}"
+
+                files = open(filepath, "r")
+                files = files.read()
+
+                file_helper.raw_detections, file_helper.tracks = load_and_convert(
+                    autoimport=True, filepath=files
+                )
+
+            for id, object in enumerate(list(file_helper.tracks.keys())):
+                self.frame_objects.tree_objects.insert(
+                    parent="", index="end", text=id, values=object
+                )
+
+        self.fill_tree_views(option=3)
+
     def import_flowfile(self):
         """Calls load_flowfile-function and inserts sections to listboxwidget."""
         file_helper.flow_dict = sections.load_flowfile()
 
         image_alteration.manipulate_image()
 
-        for movement in file_helper.flow_dict["Movements"]:
-            self.frame_movements.tree_movements.insert(
-                parent="", index="end", text=movement
-            )
-
-        for detector in file_helper.flow_dict["Detectors"]:
-            self.frame_sections.tree_sections.insert(
-                parent="", index="end", text=detector
-            )
+        self.fill_tree_views(option=3)
 
     def clear_treeviews(self):
         for i in self.frame_sections.tree_sections.get_children():
@@ -205,35 +255,20 @@ class test_gui(tk.Tk):
 
         file_helper.flow_dict["Movements"][movement_name].append(detector_name)
 
-        print(file_helper.flow_dict["Movements"])
-
-        # detector_name = (
-        #     detector_name
-        #     + " #"
-        #     + str(self.flow_dict["Movements"][movement_name].index(detector_name) + 1)
-        # )
-
         self.frame_movements.tree_movements.insert(detector_name, "values")
 
-    def ask_to_import(self, path, otflow_file, ottrk_file):
-        if self.frame_files.files_dict[path]["otflow_file"] == "\u2705":
+    def fill_tree_views(self, option):
 
-            response = tk.messagebox.askquestion(
-                title="Files detected",
-                message="Do you want to import existent flowfile?",
-            )
-
-            if response == "yes":
-
-                filepath = f"{path}/{otflow_file}"
-
-                files = open(filepath, "r")
-                files = files.read()
-
-                file_helper.flow_dict = json.loads(files)
-
-            else:
-                print("response was false")
+        if option in [1, 3]:
+            for movement in file_helper.flow_dict["Movements"]:
+                self.frame_movements.tree_movements.insert(
+                    parent="", index="end", text=movement
+                )
+        if option in [2, 3]:
+            for detector in file_helper.flow_dict["Detectors"]:
+                self.frame_sections.tree_sections.insert(
+                    parent="", index="end", text=detector
+                )
 
 
 def main():

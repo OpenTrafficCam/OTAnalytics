@@ -4,16 +4,22 @@ from tkinter import filedialog
 from gui_helper import button_bool, color_dict
 
 
-def load_tracks():
-    """loads detectors from a .Track-File and converts into displayable format"""
+def load_trackfile():
 
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
     files = open(filepath.name, "r")
-    files = files.read()
+    return files.read()
+
+
+def load_and_convert(autoimport=False, filepath=None):
+    """loads detectors from a .Track-File and converts into displayable format"""
+
+    if not autoimport:
+        filepath = load_trackfile()
 
     tracks = {}
 
-    loaded_dict = json.loads(files)
+    loaded_dict = json.loads(filepath)
 
     # raw detections from OTVision
     raw_detections = loaded_dict["data"]

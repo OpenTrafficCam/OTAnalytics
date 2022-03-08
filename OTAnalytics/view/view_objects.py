@@ -1,6 +1,6 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from tracks import load_tracks
+from tracks import load_and_convert
 import file_helper
 import image_alteration
 from gui_helper import (
@@ -92,7 +92,7 @@ class FrameObject(tk.Frame):
 
     def add_tracks(self):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
-        file_helper.raw_detections, file_helper.tracks = load_tracks()
+        file_helper.raw_detections, file_helper.tracks = load_and_convert()
 
         for id, object in enumerate(list(file_helper.tracks.keys())):
             self.tree_objects.insert(parent="", index="end", text=id, values=object)
