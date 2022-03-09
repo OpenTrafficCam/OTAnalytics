@@ -33,8 +33,6 @@ def draw_line(
 
     np_image = config.videoobject.np_image.copy()
 
-    print("test")
-
     if not button_bool["linedetector_toggle"]:
 
         return

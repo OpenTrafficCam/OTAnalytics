@@ -198,8 +198,15 @@ class Video(FileVideoStream):
         # compute factors for resizing video and files
         if self.videowidth != self.width or self.videoheight != self.height:
             self.need_for_resize = True
-            self.x_resize_factor = self.width / self.videowidth
+
+            #
             self.y_resize_factor = self.height / self.videoheight
+            print(self.y_resize_factor)
+            self.width = int(self.videowidth * self.y_resize_factor)
+
+            self.x_resize_factor = self.width / self.videowidth
+
+            print(self.width)
         else:
             self.x_resize_factor = 1
             self.y_resize_factor = 1

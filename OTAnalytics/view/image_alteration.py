@@ -28,8 +28,6 @@ def manipulate_image(
     if np_image is None:
         np_image = config.videoobject.np_image.copy()
 
-        print("test")
-
     if button_bool["tracks_imported"]:
 
         np_image = draw_tracks(
@@ -229,7 +227,17 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         bbcolor = (0, 0, 255)
 
                     cv2.rectangle(
-                        image_cache, (x_start, y_start), (x_end, y_end), bbcolor, 2
+                        image_cache,
+                        (
+                            int(x_start * config.videoobject.x_resize_factor),
+                            int(y_start * config.videoobject.y_resize_factor),
+                        ),
+                        (
+                            int(x_end * config.videoobject.x_resize_factor),
+                            int(y_end * config.videoobject.y_resize_factor),
+                        ),
+                        bbcolor,
+                        2,
                     )
 
                     text_size, _ = cv2.getTextSize(
@@ -240,8 +248,18 @@ def draw_bounding_box(np_image, frame, raw_detections):
 
                     cv2.rectangle(
                         image_cache,
-                        (x_start - 1, y_start - 1),
-                        (x_start + text_w + 2, y_start - text_h - 2),
+                        (
+                            int(x_start * config.videoobject.x_resize_factor) - 1,
+                            int(y_start * config.videoobject.y_resize_factor) - 1,
+                        ),
+                        (
+                            int(x_start * config.videoobject.x_resize_factor)
+                            + text_w
+                            + 2,
+                            int(y_start * config.videoobject.y_resize_factor)
+                            - text_h
+                            - 2,
+                        ),
                         bbcolor,
                         -1,
                     )
@@ -249,7 +267,10 @@ def draw_bounding_box(np_image, frame, raw_detections):
                     image = cv2.putText(
                         image_cache,
                         anno_txt,
-                        (x_start, y_start - 2),
+                        (
+                            int(x_start * config.videoobject.x_resize_factor),
+                            int(y_start * config.videoobject.y_resize_factor) - 2,
+                        ),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         fontscale,
                         (255, 255, 255),

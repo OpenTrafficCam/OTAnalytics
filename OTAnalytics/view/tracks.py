@@ -12,7 +12,7 @@ def load_trackfile():
 
 
 def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
-    """loads detectors from a .Track-File and converts into displayable format"""
+    """loads detections from Track-File and converts into displayable format"""
 
     if not autoimport:
         filepath = load_trackfile()

@@ -158,8 +158,6 @@ class FrameMovements(tk.Frame):
                 movement_new_name
             ] = file_helper.flow_dict["Movements"].pop(old_movement_name)
 
-            print(file_helper.flow_dict["Movements"])
-
             self.tree_movements.item(self.item, text=movement_new_name)
 
             self.rename_movement_creation.destroy()

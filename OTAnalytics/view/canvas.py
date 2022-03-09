@@ -145,7 +145,6 @@ class SliderFrame(tk.Frame):
         Args:
             slider_number (int): Represents current videoframe.
         """
-        print(button_bool["slider"])
 
         if (
             not button_bool["play_video"]

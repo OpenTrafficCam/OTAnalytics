@@ -279,6 +279,7 @@ class test_gui(tk.Tk):
 def main():
     """Main function."""
     app = test_gui()
+    app.resizable(False, False)
     app.mainloop()
 
 
