@@ -210,7 +210,10 @@ class test_gui(tk.Tk):
                 files = files.read()
 
                 file_helper.raw_detections, file_helper.tracks = load_and_convert(
-                    autoimport=True, filepath=files
+                    x_factor=config.videoobject.x_resize_factor,
+                    y_factor=config.videoobject.y_resize_factor,
+                    autoimport=True,
+                    filepath=files,
                 )
 
             for id, object in enumerate(list(file_helper.tracks.keys())):

@@ -11,7 +11,7 @@ def load_trackfile():
     return files.read()
 
 
-def load_and_convert(autoimport=False, filepath=None):
+def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
     """loads detectors from a .Track-File and converts into displayable format"""
 
     if not autoimport:
@@ -26,27 +26,27 @@ def load_and_convert(autoimport=False, filepath=None):
 
     for frame in raw_detections:
         for detection in raw_detections[frame]:
-            if "object_" + str(detection) in tracks.keys():
+            if f"object_{str(detection)}" in tracks:
                 tracks["object_%s" % detection]["Coord"].append(
                     [
-                        raw_detections[frame][detection]["x"],
-                        raw_detections[frame][detection]["y"],
+                        raw_detections[frame][detection]["x"] * x_factor,
+                        raw_detections[frame][detection]["y"] * y_factor,
                     ]
                 )
 
                 tracks["object_%s" % detection]["Frame"].append(int(frame))
 
             elif raw_detections[frame][detection]["class"] in color_dict.keys():
-                tracks["object_%s" % detection] = {}
-                tracks["object_%s" % detection]["Coord"] = []
-                tracks["object_%s" % detection]["Frame"] = [int(frame)]
-                tracks["object_%s" % detection]["Class"] = raw_detections[frame][
-                    detection
-                ]["class"]
+                tracks["object_%s" % detection] = {
+                    "Coord": [],
+                    "Frame": [int(frame)],
+                    "Class": raw_detections[frame][detection]["class"],
+                }
+
                 tracks["object_%s" % detection]["Coord"].append(
                     [
-                        raw_detections[frame][detection]["x"],
-                        raw_detections[frame][detection]["y"],
+                        raw_detections[frame][detection]["x"] * x_factor,
+                        raw_detections[frame][detection]["y"] * y_factor,
                     ]
                 )
     button_bool["tracks_imported"] = True

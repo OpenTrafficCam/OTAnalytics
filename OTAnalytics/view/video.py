@@ -195,6 +195,15 @@ class Video(FileVideoStream):
         # time between two frames
         self.frame_delay = 1 / self.fps
 
+        # compute factors for resizing video and files
+        if self.videowidth != self.width or self.videoheight != self.height:
+            self.need_for_resize = True
+            self.x_resize_factor = self.width / self.videowidth
+            self.y_resize_factor = self.height / self.videoheight
+        else:
+            self.x_resize_factor = 1
+            self.y_resize_factor = 1
+
     def get_frame(self, np_image):
 
         # when imported set current frame to 0
@@ -204,7 +213,7 @@ class Video(FileVideoStream):
 
         frame = self.read()
 
-        frame = cv2.resize(frame, (800, 600))
+        frame = cv2.resize(frame, (self.width, self.height))
 
         self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # to RGB
 

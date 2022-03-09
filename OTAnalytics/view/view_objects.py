@@ -8,7 +8,9 @@ from gui_helper import (
     button_display_live_track_switch,
     button_display_bb_switch,
 )
+
 import auto_counting
+import config
 
 
 class FrameObject(tk.Frame):
@@ -92,7 +94,10 @@ class FrameObject(tk.Frame):
 
     def add_tracks(self):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
-        file_helper.raw_detections, file_helper.tracks = load_and_convert()
+        file_helper.raw_detections, file_helper.tracks = load_and_convert(
+            x_factor=config.videoobject.x_resize_factor,
+            y_factor=config.videoobject.y_resize_factor,
+        )
 
         for id, object in enumerate(list(file_helper.tracks.keys())):
             self.tree_objects.insert(parent="", index="end", text=id, values=object)
