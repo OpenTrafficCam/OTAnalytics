@@ -3,10 +3,10 @@ from tkinter import filedialog
 
 import cv2
 import numpy as np
-from gui_helper import button_bool
-import image_alteration
-import config
-import file_helper
+from view.helpers.gui_helper import button_bool
+import view.image_alteration
+import view.config
+import helpers.file_helper as file_helper
 
 
 def save_flowfile():
@@ -31,7 +31,7 @@ def draw_line(
 ):
     """Draws line on canvas"""
 
-    np_image = config.videoobject.np_image.copy()
+    np_image = view.config.videoobject.np_image.copy()
 
     if not button_bool["linedetector_toggle"]:
 
@@ -39,13 +39,13 @@ def draw_line(
 
     np_image = cv2.line(
         np_image,
-        config.maincanvas.points[0],
-        config.maincanvas.points[1],
+        view.config.maincanvas.points[0],
+        view.config.maincanvas.points[1],
         (200, 125, 125),
         3,
     )
 
-    image_alteration.manipulate_image(np_image=np_image)
+    view.image_alteration.manipulate_image(np_image=np_image)
 
 
 def draw_polygon(
@@ -63,18 +63,18 @@ def draw_polygon(
 
         return
 
-    image = config.videoobject.np_image.copy()
+    image = view.config.videoobject.np_image.copy()
     overlay = image.copy()
 
     if undo:
 
-        del config.maincanvas.polygon_points[-1]
+        del view.config.maincanvas.polygon_points[-1]
 
     if adding_points:
 
-        config.maincanvas.polygon_points.append(config.maincanvas.points[0])
+        view.config.maincanvas.polygon_points.append(view.config.maincanvas.points[0])
 
-    list_of_tuples = [list(elem) for elem in config.maincanvas.polygon_points]
+    list_of_tuples = [list(elem) for elem in view.config.maincanvas.polygon_points]
 
     pts = np.array(list_of_tuples, np.int32)
     pts = pts.reshape((-1, 1, 2))
@@ -87,7 +87,7 @@ def draw_polygon(
 
     np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
 
-    image_alteration.manipulate_image(np_image=np_image)
+    view.image_alteration.manipulate_image(np_image=np_image)
 
 
 def load_flowfile():
@@ -112,16 +112,16 @@ def dump_to_flowdictionary(detector_name):
 
         file_helper.flow_dict["Detectors"][detector_name] = {
             "type": "line",
-            "start_x": config.maincanvas.points[0][0],
-            "start_y": config.maincanvas.points[0][1],
-            "end_x": config.maincanvas.points[1][0],
-            "end_y": config.maincanvas.points[1][1],
+            "start_x": view.config.maincanvas.points[0][0],
+            "start_y": view.config.maincanvas.points[0][1],
+            "end_x": view.config.maincanvas.points[1][0],
+            "end_y": view.config.maincanvas.points[1][1],
             "color": (200, 125, 125),
         }
 
     if button_bool["polygondetector_toggle"] is True:
         file_helper.flow_dict["Detectors"][detector_name] = {
             "type": "polygon",
-            "points": config.maincanvas.polygon_points,
+            "points": view.config.maincanvas.polygon_points,
             "color": (200, 125, 125),
         }

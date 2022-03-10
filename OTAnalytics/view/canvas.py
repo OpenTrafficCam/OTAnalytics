@@ -1,8 +1,8 @@
 import tkinter as tk
-import config
-from gui_helper import button_bool
-import image_alteration
-import sections
+from view.helpers.gui_helper import button_bool
+import view.image_alteration
+import view.config
+import view.sections
 
 
 class OtcCanvas(tk.Canvas):
@@ -20,7 +20,7 @@ class OtcCanvas(tk.Canvas):
             "<B1-Motion>",
             lambda event: [
                 self.click_receive_coordinates(event, 1),
-                sections.draw_line(
+                view.sections.draw_line(
                     event,
                 ),
             ],
@@ -30,7 +30,7 @@ class OtcCanvas(tk.Canvas):
             "<ButtonPress-1>",
             lambda event: [
                 self.click_receive_coordinates(event, 0),
-                sections.draw_polygon(
+                view.sections.draw_polygon(
                     event,
                     adding_points=True,
                 ),
@@ -39,7 +39,7 @@ class OtcCanvas(tk.Canvas):
         self.bind(
             "<ButtonPress-2>",
             lambda event: [
-                sections.draw_polygon(
+                view.sections.draw_polygon(
                     event,
                     undo=True,
                 )
@@ -49,7 +49,7 @@ class OtcCanvas(tk.Canvas):
         self.bind(
             "<ButtonPress-3>",
             lambda event: [
-                sections.draw_polygon(
+                view.sections.draw_polygon(
                     event,
                     closing=True,
                 )
@@ -85,11 +85,11 @@ class CanvasFrame(tk.Frame):
         self.frame_canvas = tk.Frame(master=self)
         self.frame_canvas.pack(fill="x")
 
-        config.maincanvas = OtcCanvas(master=self.frame_canvas, width=0, height=0)
-        config.maincanvas.pack()
+        view.config.maincanvas = OtcCanvas(master=self.frame_canvas, width=0, height=0)
+        view.config.maincanvas.pack()
 
-        config.sliderobject = SliderFrame(master=self.frame_canvas)
-        config.sliderobject.pack(fill="x")
+        view.config.sliderobject = SliderFrame(master=self.frame_canvas)
+        view.config.sliderobject.pack(fill="x")
 
 
 class SliderFrame(tk.Frame):
@@ -107,7 +107,7 @@ class SliderFrame(tk.Frame):
             master=self.frame_slider,
             variable=self.slider_value,
             from_=0,
-            to=config.videoobject.totalframecount - 1,
+            to=view.config.videoobject.totalframecount - 1,
             orient=tk.HORIZONTAL,
             command=lambda event: self.slider_scroll(int(event)),
         )
@@ -135,7 +135,7 @@ class SliderFrame(tk.Frame):
             event (Sliderbutton is pressed): When slider is pressed, thread that updates
             queue with frames stops and gets terminated.
         """
-        config.maincanvas.delete_polygon_points()
+        view.config.maincanvas.delete_polygon_points()
 
         button_bool["slider"] = False
 
@@ -151,8 +151,8 @@ class SliderFrame(tk.Frame):
             and not button_bool["rewind_video"]
             and button_bool["slider"]
         ):
-            config.videoobject.current_frame = slider_number
+            view.config.videoobject.current_frame = slider_number
 
-            np_image = config.videoobject.set_frame()
+            np_image = view.config.videoobject.set_frame()
 
-            image_alteration.manipulate_image(np_image=np_image)
+            view.image_alteration.manipulate_image(np_image=np_image)

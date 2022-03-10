@@ -1,7 +1,7 @@
 import json
 from tkinter import filedialog
 
-from gui_helper import button_bool, color_dict
+from view.helpers.gui_helper import button_bool, color_dict
 
 
 def load_trackfile():

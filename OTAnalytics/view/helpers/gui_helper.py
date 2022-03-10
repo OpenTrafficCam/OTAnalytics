@@ -1,6 +1,6 @@
 from tkinter import messagebox
-import file_helper
-import config
+import helpers.file_helper as file_helper
+import view.config
 
 # TODO Create statepanelclass
 
@@ -47,16 +47,16 @@ def button_play_video_switch(button_play, button_rewind):
 
     button_bool["rewind_video"] = False
 
-    if not config.videoobject:
+    if not view.config.videoobject:
         info_message("Warning", "Please import video first!")
 
         return
 
     if button_bool["play_video"]:
-        button_play.config(text="Stop")
-        button_rewind.config(text="Rewind")
+        button_play.configure(text="Stop")
+        button_rewind.configure(text="Rewind")
     else:
-        button_play.config(text="Play")
+        button_play.configure(text="Play")
 
 
 def button_rewind_switch(button_rewind, button_play):
@@ -65,7 +65,7 @@ def button_rewind_switch(button_rewind, button_play):
     Args:
         button (tkinter button): play and rewind button.
     """
-    if not config.videoobject:
+    if not view.config.videoobject:
         info_message("Warning", "Please import video first!")
 
         return
@@ -75,10 +75,10 @@ def button_rewind_switch(button_rewind, button_play):
     button_bool["play_video"] = False
 
     if button_bool["rewind_video"]:
-        button_rewind.config(text="Stop")
-        button_play.config(text="Play")
+        button_rewind.configure(text="Stop")
+        button_play.configure(text="Play")
     else:
-        button_rewind.config(text="Rewind")
+        button_rewind.configure(text="Rewind")
 
 
 def button_line_switch(button_linedetector, button_polygondetector):
@@ -93,11 +93,11 @@ def button_line_switch(button_linedetector, button_polygondetector):
     button_bool["polygondetector_toggle"] = False
 
     if button_bool["linedetector_toggle"]:
-        button_linedetector.config(text="Finish")
-        button_polygondetector.config(text="Polygon")
+        button_linedetector.configure(text="Finish")
+        button_polygondetector.configure(text="Polygon")
         # statepanel.update_statepanel(statepanel_txt["Linedetector_information"])
     else:
-        button_linedetector.config(text="Line")
+        button_linedetector.configure(text="Line")
         # statepanel.update_statepanel("")
 
 
@@ -114,14 +114,14 @@ def button_polygon_switch(button_polygondetector, button_linedetector):
     button_bool["linedetector_toggle"] = False
 
     if button_bool["polygondetector_toggle"]:
-        button_polygondetector.config(text="Finish")
-        button_linedetector.config(text="Line")
+        button_polygondetector.configure(text="Finish")
+        button_linedetector.configure(text="Line")
         # statepanel.update_statepanel(
         #     "left click to create new polygoncorner\nmousewheelbutton to undo"
         #     + " corner\nrightclock to close polygon\nenter to finish creation process"
         # )
     else:
-        button_polygondetector.config(text="Polygon")
+        button_polygondetector.configure(text="Polygon")
 
 
 def button_display_tracks_switch(button_display_tracks):
@@ -142,9 +142,9 @@ def button_display_tracks_switch(button_display_tracks):
     ]
 
     if button_bool["display_all_tracks_toggle"]:
-        button_display_tracks.config(text="Hide tracks")
+        button_display_tracks.configure(text="Hide tracks")
     else:
-        button_display_tracks.config(text="Show tracks")
+        button_display_tracks.configure(text="Show tracks")
 
 
 def button_display_bb_switch(button_display_bb):
@@ -162,9 +162,9 @@ def button_display_bb_switch(button_display_bb):
     button_bool["display_bb"] = not button_bool["display_bb"]
 
     if button_bool["display_bb"]:
-        button_display_bb.config(text="Hide bb")
+        button_display_bb.configure(text="Hide bb")
     else:
-        button_display_bb.config(text="Show bb")
+        button_display_bb.configure(text="Show bb")
 
 
 def button_display_live_track_switch(button_display_tracks):
@@ -183,9 +183,9 @@ def button_display_live_track_switch(button_display_tracks):
     button_bool["display_live_track"] = not button_bool["display_live_track"]
 
     if button_bool["display_live_track"]:
-        button_display_tracks.config(text="Stop Livetrack")
+        button_display_tracks.configure(text="Stop Livetrack")
     else:
-        button_display_tracks.config(text="Livetrack")
+        button_display_tracks.configure(text="Livetrack")
 
 
 def info_message(title, text):

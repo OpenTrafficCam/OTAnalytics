@@ -1,17 +1,17 @@
 import tkinter as tk
-from view_movements import FrameMovements
-from view_helpers import FrameFiles
-from canvas import CanvasFrame
-from view_sections import FrameSection
-from view_objects import FrameObject
-from gui_helper import button_bool, info_message
+from view.view_movements import FrameMovements
+from view.view_helpers import FrameFiles
+from view.canvas import CanvasFrame
+from view.view_sections import FrameSection
+from view.view_objects import FrameObject
+from view.helpers.gui_helper import button_bool, info_message
 import keyboard
-import config
-import file_helper
-import image_alteration
-import sections
+import view.config as config
+import helpers.file_helper as file_helper
+import view.image_alteration
+import view.sections
 import json
-from tracks import load_and_convert
+from view.tracks import load_and_convert
 
 
 class test_gui(tk.Tk):
@@ -78,7 +78,7 @@ class test_gui(tk.Tk):
         self.button_save_flowfile = tk.Button(
             master=self.frame_controll_panel,
             text="Save",
-            command=sections.save_flowfile,
+            command=view.sections.save_flowfile,
         )
         self.button_save_flowfile.grid(row=5, column=0, sticky="ew")
 
@@ -100,7 +100,7 @@ class test_gui(tk.Tk):
         )
 
     def create_section_entry_window(self):
-        """Creates toplevel window to name sections."""
+        """Creates toplevel window to name view.sections."""
 
         # only if line or polygon creation is activate
         if button_bool["linedetector_toggle"] or button_bool["polygondetector_toggle"]:
@@ -138,14 +138,14 @@ class test_gui(tk.Tk):
 
         config.maincanvas.delete_polygon_points()
 
-        image_alteration.manipulate_image()
+        view.image_alteration.manipulate_image()
 
     def add_section(self, entrywidget):
         """Saves created section to flowfile.
 
         Args:
             maincanvas (tkinter.canvas): needed to hand over canvas coordinates.
-            flow_dict (dictionary): Dictionary with sections and movements.
+            flow_dict (dictionary): Dictionary with view.sections and movements.
             entrywidget (tkinter.widget): Entrywidget to put in sectionname.
         """
 
@@ -159,7 +159,7 @@ class test_gui(tk.Tk):
         else:
 
             # TODO: #67 Prevent duplicate section names
-            sections.dump_to_flowdictionary(detector_name)
+            view.sections.dump_to_flowdictionary(detector_name)
 
             self.frame_sections.tree_sections.insert(
                 parent="", index="end", text=detector_name
@@ -178,7 +178,7 @@ class test_gui(tk.Tk):
         self.frame_files.add_canvas_frame()
         self.ask_to_import()
 
-        image_alteration.manipulate_image()
+        view.image_alteration.manipulate_image()
 
     def ask_to_import(self):
 
@@ -229,10 +229,10 @@ class test_gui(tk.Tk):
         self.fill_tree_views(option=3)
 
     def import_flowfile(self):
-        """Calls load_flowfile-function and inserts sections to listboxwidget."""
-        file_helper.flow_dict = sections.load_flowfile()
+        """Calls load_flowfile-function and inserts view.sections to listboxwidget."""
+        file_helper.flow_dict = view.sections.load_flowfile()
 
-        image_alteration.manipulate_image()
+        view.image_alteration.manipulate_image()
 
         self.fill_tree_views(option=3)
 
@@ -248,7 +248,7 @@ class test_gui(tk.Tk):
 
         file_helper.re_initialize()
 
-        image_alteration.manipulate_image()
+        view.image_alteration.manipulate_image()
 
     def add_section_to_movement(self):
         """Adds selected section to selected movement."""

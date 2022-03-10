@@ -1,8 +1,12 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from gui_helper import button_line_switch, button_polygon_switch, info_message
-import file_helper
-import image_alteration
+from view.helpers.gui_helper import (
+    button_line_switch,
+    button_polygon_switch,
+    info_message,
+)
+import helpers.file_helper as file_helper
+import view.image_alteration
 
 
 class FrameSection(tk.Frame):
@@ -97,7 +101,7 @@ class FrameSection(tk.Frame):
                     125,
                 )
 
-        image_alteration.manipulate_image()
+        view.image_alteration.manipulate_image()
 
     def delete_section(self):
         """Deletes selected section  from flowfile and listboxwidget."""
@@ -119,4 +123,4 @@ class FrameSection(tk.Frame):
                 if detector_name in file_helper.flow_dict["Movements"][key]:
                     file_helper.flow_dict["Movements"][key].remove(detector_name)
 
-        image_alteration.manipulate_image()
+        view.image_alteration.manipulate_image()

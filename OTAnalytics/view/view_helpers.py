@@ -3,17 +3,16 @@ import tkinter as tk
 from tkinter import filedialog
 import tkinter.ttk as ttk
 
-from gui_helper import (
+from view.helpers.gui_helper import (
     button_play_video_switch,
     button_rewind_switch,
     button_bool,
     info_message,
 )
-from video import Video
-import file_helper
-import config
-
-import image_alteration
+from view.video import Video
+import helpers.file_helper as file_helper
+import view.config
+import view.image_alteration
 
 
 class FrameFiles(tk.Frame):
@@ -81,7 +80,7 @@ class FrameFiles(tk.Frame):
                 button_play_video_switch(
                     self.button_play_video, self.button_rewind_video
                 ),
-                config.maincanvas.delete_polygon_points(),
+                view.config.maincanvas.delete_polygon_points(),
                 self.play_video(),
             ],
         )
@@ -94,7 +93,7 @@ class FrameFiles(tk.Frame):
             text="Rewind",
             command=lambda: [
                 button_rewind_switch(self.button_rewind_video, self.button_play_video),
-                config.maincanvas.delete_polygon_points(),
+                view.config.maincanvas.delete_polygon_points(),
                 self.rewind_video(),
             ],
         )
@@ -116,7 +115,7 @@ class FrameFiles(tk.Frame):
         video_source = filedialog.askopenfile(
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
-        config.videoobject = Video(video_source.name)
+        view.config.videoobject = Video(video_source.name)
 
         path = file_helper.get_dir(video_source.name)
 
@@ -132,15 +131,15 @@ class FrameFiles(tk.Frame):
 
     def add_canvas_frame(self):
 
-        image = config.videoobject.get_frame(np_image=False)
+        image = view.config.videoobject.get_frame(np_image=False)
 
-        config.maincanvas.configure(
-            width=config.videoobject.width, height=config.videoobject.height
+        view.config.maincanvas.configure(
+            width=view.config.videoobject.width, height=view.config.videoobject.height
         )
 
-        config.sliderobject.create_slider()
+        view.config.sliderobject.create_slider()
 
-        config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
+        view.config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
 
     def add_files_to_dict(self, path):
         self.files_dict[path] = {}
@@ -181,7 +180,7 @@ class FrameFiles(tk.Frame):
         """Function to play video."""
         # TODO workaround to not use try except
         try:
-            config.videoobject.stop_thread_backward()
+            view.config.videoobject.stop_thread_backward()
         except Exception:
             print("No backwardthread alive")
 
@@ -192,24 +191,25 @@ class FrameFiles(tk.Frame):
 
         while (
             button_bool["play_video"]
-            and config.videoobject.current_frame < config.videoobject.totalframecount
+            and view.config.videoobject.current_frame
+            < view.config.videoobject.totalframecount
         ):
 
-            if not config.videoobject.thread_forward.is_alive():
-                config.videoobject.new_q()
-                config.videoobject.new_thread_forward()
-                config.videoobject.start_thread_forward()
+            if not view.config.videoobject.thread_forward.is_alive():
+                view.config.videoobject.new_q()
+                view.config.videoobject.new_thread_forward()
+                view.config.videoobject.start_thread_forward()
                 # time.sleep(0.1)
 
-            time.sleep(config.videoobject.frame_delay)
+            time.sleep(view.config.videoobject.frame_delay)
 
-            config.videoobject.current_frame += 1
+            view.config.videoobject.current_frame += 1
 
-            np_image = config.videoobject.get_frame(np_image=True).copy()
+            np_image = view.config.videoobject.get_frame(np_image=True).copy()
 
-            image_alteration.manipulate_image(np_image=np_image)
+            view.image_alteration.manipulate_image(np_image=np_image)
 
-            config.sliderobject.slider.set(config.videoobject.current_frame)
+            view.config.sliderobject.slider.set(view.config.videoobject.current_frame)
 
     # TODO: Ask to autload ottrak and otflow if found!
 
@@ -218,28 +218,29 @@ class FrameFiles(tk.Frame):
 
         # stop old thread
 
-        config.videoobject.stop_thread_forward()
+        view.config.videoobject.stop_thread_forward()
 
         while (
             button_bool["rewind_video"]
-            and config.videoobject.current_frame < config.videoobject.totalframecount
-            and config.videoobject.current_frame > 0
+            and view.config.videoobject.current_frame
+            < view.config.videoobject.totalframecount
+            and view.config.videoobject.current_frame > 0
         ):
-            if not config.videoobject.thread_backward.is_alive():
-                config.videoobject.new_q()
-                config.videoobject.new_thread_backward()
-                config.videoobject.start_thread_backward()
+            if not view.config.videoobject.thread_backward.is_alive():
+                view.config.videoobject.new_q()
+                view.config.videoobject.new_thread_backward()
+                view.config.videoobject.start_thread_backward()
                 # time.sleep(0.1)
 
-            time.sleep(config.videoobject.frame_delay)
+            time.sleep(view.config.videoobject.frame_delay)
 
-            config.videoobject.current_frame -= 1
+            view.config.videoobject.current_frame -= 1
 
-            np_image = config.videoobject.get_frame(np_image=True)
+            np_image = view.config.videoobject.get_frame(np_image=True)
 
-            image_alteration.manipulate_image(np_image=np_image)
+            view.image_alteration.manipulate_image(np_image=np_image)
             # slows down program
-            config.sliderobject.slider.set(config.videoobject.current_frame)
+            view.config.sliderobject.slider.set(view.config.videoobject.current_frame)
 
     def remove_video(self):
 
@@ -256,8 +257,8 @@ class FrameFiles(tk.Frame):
 
             self.tree_files.delete(item)
 
-        config.maincanvas.configure(width=0, height=0)
+        view.config.maincanvas.configure(width=0, height=0)
 
-        config.sliderobject.destroy_slider()
+        view.config.sliderobject.destroy_slider()
 
-        config.videoobject = None
+        view.config.videoobject = None

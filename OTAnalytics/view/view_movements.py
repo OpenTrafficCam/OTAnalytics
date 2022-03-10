@@ -1,7 +1,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from gui_helper import info_message
-import file_helper
+from view.helpers.gui_helper import info_message
+import helpers.file_helper as file_helper
 
 
 class FrameMovements(tk.Frame):

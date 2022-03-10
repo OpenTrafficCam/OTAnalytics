@@ -4,9 +4,9 @@ from tkinter import Button, Entry, Label, Toplevel, filedialog
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
-import file_helper
-import config
-from gui_helper import info_message
+import helpers.file_helper as file_helper
+import view.config
+from view.helpers.gui_helper import info_message
 
 
 def dic_to_detector_dataframe():
@@ -213,17 +213,17 @@ def find_intersection_order(object_validated_df):
 
                 object_validated_df.at[object_id, "Time_crossing_entrance"] = (
                     object_validated_df.at[object_id, "Crossing_Gate/Frame"][0][1]
-                    / config.videoobject.fps
+                    / view.config.videoobject.fps
                 )
 
                 if object_validated_df.at[object_id, "Time_crossing_entrance"] != (
                     object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                    / config.videoobject.fps
+                    / view.config.videoobject.fps
                 ):
 
                     object_validated_df.at[object_id, "Time_crossing_exit"] = (
                         object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                        / config.videoobject.fps
+                        / view.config.videoobject.fps
                     )
 
                 # list = Movement (only detectors not seconds)
@@ -300,14 +300,20 @@ def time_calculation_dataframe(timedelta_entry, object_validated_df):
 
     object_validated_df["first_appearance_time"] = (
         pd.to_datetime(
-            (object_validated_df["first_appearance_frame"] / config.videoobject.fps),
+            (
+                object_validated_df["first_appearance_frame"]
+                / view.config.videoobject.fps
+            ),
             unit="s",
         )
         + pd.Timedelta(entry_timedelta)
     )
     object_validated_df["last_appearance_time"] = (
         pd.to_datetime(
-            (object_validated_df["last_appearance_frame"] / config.videoobject.fps),
+            (
+                object_validated_df["last_appearance_frame"]
+                / view.config.videoobject.fps
+            ),
             unit="s",
         )
         + pd.Timedelta(entry_timedelta)

@@ -2,10 +2,10 @@ import tkinter
 
 import cv2
 import numpy as np
-from gui_helper import button_bool, color_dict
+from view.helpers.gui_helper import button_bool, color_dict
 from PIL import Image, ImageTk
-import config
-import file_helper
+import view.config
+import helpers.file_helper as file_helper
 
 
 def manipulate_image(
@@ -26,7 +26,7 @@ def manipulate_image(
         raw_detections (dictionary): Dictionary with raw detections from OpenVision.
     """
     if np_image is None:
-        np_image = config.videoobject.np_image.copy()
+        np_image = view.config.videoobject.np_image.copy()
 
     if button_bool["tracks_imported"]:
 
@@ -38,13 +38,13 @@ def manipulate_image(
 
         np_image = draw_bounding_box(
             np_image,
-            str(config.videoobject.current_frame),
+            str(view.config.videoobject.current_frame),
             raw_detections=file_helper.raw_detections,
         )
 
         np_image = draw_tracks_live(
             np_image,
-            config.videoobject.current_frame,
+            view.config.videoobject.current_frame,
             tracks=file_helper.tracks,
             raw_detections=file_helper.raw_detections,
             track_live=file_helper.tracks_live,
@@ -59,13 +59,13 @@ def manipulate_image(
     # The variable photo is a local variable which gets garbage collected after the
     # class is instantiated. Save a reference to the photo
     # photo is attribute of video
-    config.videoobject.ph_image = ImageTk.PhotoImage(image)
+    view.config.videoobject.ph_image = ImageTk.PhotoImage(image)
 
-    config.maincanvas.create_image(
-        0, 0, anchor=tkinter.NW, image=config.videoobject.ph_image
+    view.config.maincanvas.create_image(
+        0, 0, anchor=tkinter.NW, image=view.config.videoobject.ph_image
     )
 
-    config.maincanvas.update()
+    view.config.maincanvas.update()
 
 
 def draw_detectors_from_dict(np_image):
@@ -229,12 +229,12 @@ def draw_bounding_box(np_image, frame, raw_detections):
                     cv2.rectangle(
                         image_cache,
                         (
-                            int(x_start * config.videoobject.x_resize_factor),
-                            int(y_start * config.videoobject.y_resize_factor),
+                            int(x_start * view.config.videoobject.x_resize_factor),
+                            int(y_start * view.config.videoobject.y_resize_factor),
                         ),
                         (
-                            int(x_end * config.videoobject.x_resize_factor),
-                            int(y_end * config.videoobject.y_resize_factor),
+                            int(x_end * view.config.videoobject.x_resize_factor),
+                            int(y_end * view.config.videoobject.y_resize_factor),
                         ),
                         bbcolor,
                         2,
@@ -249,14 +249,14 @@ def draw_bounding_box(np_image, frame, raw_detections):
                     cv2.rectangle(
                         image_cache,
                         (
-                            int(x_start * config.videoobject.x_resize_factor) - 1,
-                            int(y_start * config.videoobject.y_resize_factor) - 1,
+                            int(x_start * view.config.videoobject.x_resize_factor) - 1,
+                            int(y_start * view.config.videoobject.y_resize_factor) - 1,
                         ),
                         (
-                            int(x_start * config.videoobject.x_resize_factor)
+                            int(x_start * view.config.videoobject.x_resize_factor)
                             + text_w
                             + 2,
-                            int(y_start * config.videoobject.y_resize_factor)
+                            int(y_start * view.config.videoobject.y_resize_factor)
                             - text_h
                             - 2,
                         ),
@@ -268,8 +268,8 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         image_cache,
                         anno_txt,
                         (
-                            int(x_start * config.videoobject.x_resize_factor),
-                            int(y_start * config.videoobject.y_resize_factor) - 2,
+                            int(x_start * view.config.videoobject.x_resize_factor),
+                            int(y_start * view.config.videoobject.y_resize_factor) - 2,
                         ),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         fontscale,
