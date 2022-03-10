@@ -177,8 +177,7 @@ class Video(FileVideoStream):
         self.start_thread_forward()
         time.sleep(0.1)
 
-        # opens video source
-        # self.cap = cv2.VideoCapture(self.filepath)
+        # fps from videofile
         self.fps = self.stream.get(cv2.CAP_PROP_FPS)
 
         # retrieve dimensions of video
@@ -201,12 +200,10 @@ class Video(FileVideoStream):
 
             #
             self.y_resize_factor = self.height / self.videoheight
-            print(self.y_resize_factor)
             self.width = int(self.videowidth * self.y_resize_factor)
 
             self.x_resize_factor = self.width / self.videowidth
 
-            print(self.width)
         else:
             self.x_resize_factor = 1
             self.y_resize_factor = 1
@@ -235,8 +232,6 @@ class Video(FileVideoStream):
         # class is instantiated. Save a reference to the photo
         self.ph_image = ImageTk.PhotoImage(image)  # to ImageTk format
 
-        print("creating image worked")
-
         return self.ph_image
 
     def set_frame(self):
@@ -244,6 +239,8 @@ class Video(FileVideoStream):
         self.stream.set(1, self.current_frame)
 
         ret, frame = self.stream.read()
+
+        frame = cv2.resize(frame, (self.width, self.height))
 
         self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
