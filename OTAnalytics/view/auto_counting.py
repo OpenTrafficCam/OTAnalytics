@@ -117,7 +117,7 @@ def calculate_intersections(detector_df, object_validated_df):
         # returns coordinates from intersections as point object
         point_geometry = track_geometry.intersection(detector_shapely_geometry)
 
-        object_validated_df[index + "intersectcoordinates"] = point_geometry
+        object_validated_df[f"{index}intersectcoordinates"] = point_geometry
         object_validated_df[index] = bool_intersect
 
     return object_validated_df
@@ -158,7 +158,7 @@ def find_intersection_order(object_validated_df):
 
                 # shapely Point from intersection
                 intersection_point = object_validated_df.loc[object_id][
-                    detector + "intersectcoordinates"
+                    f"{detector}intersectcoordinates"
                 ]
 
                 line_points = map(Point, track_line.coords)
@@ -171,7 +171,7 @@ def find_intersection_order(object_validated_df):
                     2, line_points, key=intersection_point.distance
                 )
 
-                point_raw_coords = list(second_nearest.coords[0:][0])
+                point_raw_coords = list(second_nearest.coords[:][0])
 
                 # unaltered coord from track file
                 raw_coords = object_validated_df.loc[object_id]["Coord"]
@@ -250,7 +250,7 @@ def assign_movement(object_validated_df):
     # TODO delete iteration ==> jupyter nb
     for object_id, j in object_validated_df.iterrows():
 
-        print("working...on " + str(object_id))
+        print(f"working...on {str(object_id)}")
 
         for movement_list in file_helper.flow_dict["Movements"]:
 
@@ -375,7 +375,7 @@ def resample_dataframe(entry_interval, object_validated_df):
         object_validated_df = (
             object_validated_df.groupby(
                 by=[
-                    pd.Grouper(freq=str(entry_interval_time) + "T"),
+                    pd.Grouper(freq=f"{entry_interval_time}T"),
                     "Class",
                     "Movement",
                     "Movement_name",

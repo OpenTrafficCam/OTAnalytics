@@ -259,3 +259,5 @@ class FrameFiles(tk.Frame):
         config.maincanvas.configure(width=0, height=0)
 
         config.sliderobject.destroy_slider()
+
+        config.videoobject = None

@@ -169,6 +169,11 @@ class test_gui(tk.Tk):
 
     def load_video_and_add_frame(self):
 
+        if config.videoobject:
+            info_message("Warning", "Please remove video before adding a new one!")
+
+            return
+
         self.frame_files.add_file()
         self.frame_files.add_canvas_frame()
         self.ask_to_import()
