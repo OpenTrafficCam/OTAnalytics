@@ -99,8 +99,13 @@ class FrameObject(tk.Frame):
             y_factor=view.config.videoobject.y_resize_factor,
         )
 
-        for id, object in enumerate(list(file_helper.tracks.keys())):
-            self.tree_objects.insert(parent="", index="end", text=id, values=object)
+        for object in list(file_helper.tracks.keys()):
+            self.tree_objects.insert(
+                parent="",
+                index="end",
+                text=object,
+                values=file_helper.tracks[object]["Class"],
+            )
 
         view.image_alteration.manipulate_image()
 

@@ -2,5 +2,5 @@ cd %~dp0
 cd ..
 call venv\Scripts\activate
 cd OTAnalytics
-python main.py
+python __main__.py
 timeout /T 10
