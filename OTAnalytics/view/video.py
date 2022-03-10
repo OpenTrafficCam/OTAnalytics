@@ -122,7 +122,6 @@ class FileVideoStream:
             else:
                 time.sleep(0.1)  # Rest for 10ms, we have a full queue
 
-        # self.stream.release()
         print("Thread stopped")
 
     def read(self):
