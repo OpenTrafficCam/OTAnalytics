@@ -70,14 +70,16 @@ class gui(tk.Tk):
 
         # Load flow_dict
         self.button_load_flowfile = tk.Button(
-            master=self.frame_controll_panel, text="Load", command=self.import_flowfile
+            master=self.frame_controll_panel,
+            text="Load flowfile",
+            command=self.import_flowfile,
         )
         self.button_load_flowfile.grid(row=4, column=0, sticky="ew")
 
         # Add save flow_dict
         self.button_save_flowfile = tk.Button(
             master=self.frame_controll_panel,
-            text="Save",
+            text="Save sections and movements",
             command=view.sections.save_flowfile,
         )
         self.button_save_flowfile.grid(row=5, column=0, sticky="ew")
@@ -237,18 +239,26 @@ class gui(tk.Tk):
         self.fill_tree_views(option=3)
 
     def clear_treeviews(self):
-        for i in self.frame_sections.tree_sections.get_children():
-            self.frame_sections.tree_sections.delete(i)
+        if (
+            self.frame_sections.tree_sections.get_children()
+            or self.frame_objects.tree_objects.get_children()
+            or self.frame_movements.tree_movements.get_children()
+        ):
+            for i in self.frame_sections.tree_sections.get_children():
+                self.frame_sections.tree_sections.delete(i)
 
-        for i in self.frame_objects.tree_objects.get_children():
-            self.frame_objects.tree_objects.delete(i)
+            for i in self.frame_objects.tree_objects.get_children():
+                self.frame_objects.tree_objects.delete(i)
 
-        for i in self.frame_movements.tree_movements.get_children():
-            self.frame_movements.tree_movements.delete(i)
+            for i in self.frame_movements.tree_movements.get_children():
+                self.frame_movements.tree_movements.delete(i)
 
-        file_helper.re_initialize()
+            file_helper.re_initialize()
 
-        view.image_alteration.manipulate_image()
+            view.image_alteration.manipulate_image()
+
+        else:
+            info_message("Warning", "Nothing to clear")
 
     def add_section_to_movement(self):
         """Adds selected section to selected movement."""
@@ -263,23 +273,32 @@ class gui(tk.Tk):
 
             return
 
-        file_helper.flow_dict["Movements"][movement_name].append(detector_name)
+        if detector_name not in file_helper.flow_dict["Movements"][movement_name]:
 
-        print(file_helper.flow_dict["Movements"][movement_name])
+            file_helper.flow_dict["Movements"][movement_name].append(detector_name)
 
-        self.frame_movements.tree_movements.set(
-            item,
-            0,
-            file_helper.flow_dict["Movements"][movement_name],
-        )
+            self.frame_movements.tree_movements.set(
+                item,
+                0,
+                file_helper.flow_dict["Movements"][movement_name],
+            )
+        else:
+            info_message("Warning", "Detector already part of movement")
+
+            return
 
     def fill_tree_views(self, option):
 
         if option in [1, 3]:
             for movement in file_helper.flow_dict["Movements"]:
+                print(file_helper.flow_dict["Movements"][movement])
                 self.frame_movements.tree_movements.insert(
-                    parent="", index="end", text=movement
+                    parent="",
+                    index="end",
+                    text=movement,
+                    value=[(file_helper.flow_dict["Movements"][movement])],
                 )
+
         if option in [2, 3]:
             for detector in file_helper.flow_dict["Detectors"]:
                 self.frame_sections.tree_sections.insert(
