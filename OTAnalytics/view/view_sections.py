@@ -3,7 +3,6 @@ import tkinter.ttk as ttk
 from view.helpers.gui_helper import (
     button_line_switch,
     button_polygon_switch,
-    info_message,
 )
 import helpers.file_helper as file_helper
 import view.image_alteration
@@ -54,13 +53,12 @@ class FrameSection(tk.Frame):
         self.button_polygon.grid(row=0, column=1)
 
         # Add Polygon-Section
-        self.button_remove = tk.Button(
+        self.button_remove_section = tk.Button(
             master=self.frame_control_section,
             width=12,
             text="Remove",
-            command=self.delete_section,
         )
-        self.button_remove.grid(row=0, column=2)
+        self.button_remove_section.grid(row=0, column=2)
 
         # Add to movement
         self.button_add_section_to_movement = tk.Button(
@@ -100,27 +98,5 @@ class FrameSection(tk.Frame):
                     125,
                     125,
                 )
-
-        view.image_alteration.manipulate_image()
-
-    def delete_section(self):
-        """Deletes selected section  from flowfile and listboxwidget."""
-
-        item = self.tree_sections.selection()
-        detector_name = self.tree_sections.item(item, "text")
-
-        if not detector_name:
-            info_message("Warning", "Please select detector you wish to delete!")
-
-            return
-
-        self.tree_sections.delete(item)
-
-        del file_helper.flow_dict["Detectors"][detector_name]
-
-        for key in file_helper.flow_dict["Movements"]:
-            for value in file_helper.flow_dict["Movements"][key]:
-                if detector_name in file_helper.flow_dict["Movements"][key]:
-                    file_helper.flow_dict["Movements"][key].remove(detector_name)
 
         view.image_alteration.manipulate_image()

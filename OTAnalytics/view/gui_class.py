@@ -101,6 +101,8 @@ class gui(tk.Tk):
             command=self.load_video_and_add_frame
         )
 
+        self.frame_sections.button_remove_section.configure(command=self.delete_section)
+
     def create_section_entry_window(self):
         """Creates toplevel window to name view.sections."""
 
@@ -290,11 +292,48 @@ class gui(tk.Tk):
     def autocreate_movements_from_sections(self):
         pass
 
+    def delete_section(self):
+        """Deletes selected section  from flowfile and listboxwidget."""
+
+        itemlist = list(self.frame_sections.tree_sections.selection())
+
+        if not itemlist:
+            info_message("Warning", "Please select detector you wish to delete!")
+
+            return
+
+        for sectionitem in itemlist:
+
+            detector_name = self.frame_sections.tree_sections.item(sectionitem, "text")
+
+            self.frame_sections.tree_sections.delete(sectionitem)
+
+            del file_helper.flow_dict["Detectors"][detector_name]
+
+            for key in file_helper.flow_dict["Movements"]:
+                for value in file_helper.flow_dict["Movements"][key]:
+                    if detector_name in file_helper.flow_dict["Movements"][key]:
+                        file_helper.flow_dict["Movements"][key].remove(detector_name)
+
+            for i in self.frame_movements.tree_movements.get_children():
+                self.frame_movements.tree_movements.delete(i)
+
+            for movement in file_helper.flow_dict["Movements"]:
+
+                self.frame_movements.tree_movements.insert(
+                    parent="",
+                    index="end",
+                    text=movement,
+                    value=[(file_helper.flow_dict["Movements"][movement])],
+                )
+
+        view.image_alteration.manipulate_image()
+
     def fill_tree_views(self, option):
 
         if option in [1, 3]:
             for movement in file_helper.flow_dict["Movements"]:
-                print(file_helper.flow_dict["Movements"][movement])
+
                 self.frame_movements.tree_movements.insert(
                     parent="",
                     index="end",
