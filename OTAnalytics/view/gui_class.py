@@ -14,7 +14,7 @@ import json
 from view.tracks import load_and_convert
 
 
-class test_gui(tk.Tk):
+class gui(tk.Tk):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.title("OTAnalytics")
@@ -289,8 +289,11 @@ class test_gui(tk.Tk):
 
 def main():
     """Main function."""
-    app = test_gui()
-    app.iconbitmap("./OTAnalytics/gui/OTC.ico")
+    app = gui()
+    try:
+        app.iconbitmap("OTAnalytics\\gui\\OTC.ico")
+    except tk.TclError:
+        app.iconbitmap("OTC.ico")
     app.resizable(False, False)
     app.mainloop()
 
