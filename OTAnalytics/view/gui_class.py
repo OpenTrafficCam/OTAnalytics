@@ -287,6 +287,9 @@ class gui(tk.Tk):
 
             return
 
+    def autocreate_movements_from_sections(self):
+        pass
+
     def fill_tree_views(self, option):
 
         if option in [1, 3]:

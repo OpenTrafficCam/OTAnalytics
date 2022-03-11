@@ -101,17 +101,20 @@ class FrameMovements(tk.Frame):
     def delete_movement(self):
         """Deletes selected section  from flowfile and listboxwidget."""
 
-        item = self.tree_movements.selection()
-        movement_name = self.tree_movements.item(item, "text")
+        itemlist = list(self.tree_movements.selection())
 
-        if not movement_name:
+        if not itemlist:
             info_message("Warning", "Please select movement you wish to delete!")
 
             return
 
-        self.tree_movements.delete(item)
+        for movementitem in itemlist:
 
-        del file_helper.flow_dict["Movements"][movement_name]
+            movement_name = self.tree_movements.item(movementitem, "text")
+
+            self.tree_movements.delete(movementitem)
+
+            del file_helper.flow_dict["Movements"][movement_name]
 
     def create_movement_rename_window(self):
 
