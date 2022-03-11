@@ -290,6 +290,7 @@ class test_gui(tk.Tk):
 def main():
     """Main function."""
     app = test_gui()
+    app.iconbitmap("./OTAnalytics/gui/OTC.ico")
     app.resizable(False, False)
     app.mainloop()
 
