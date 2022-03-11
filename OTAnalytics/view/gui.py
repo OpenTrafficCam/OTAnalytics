@@ -265,7 +265,13 @@ class test_gui(tk.Tk):
 
         file_helper.flow_dict["Movements"][movement_name].append(detector_name)
 
-        self.frame_movements.tree_movements.insert(detector_name, "values")
+        print(file_helper.flow_dict["Movements"][movement_name])
+
+        self.frame_movements.tree_movements.set(
+            item,
+            0,
+            file_helper.flow_dict["Movements"][movement_name],
+        )
 
     def fill_tree_views(self, option):
 
