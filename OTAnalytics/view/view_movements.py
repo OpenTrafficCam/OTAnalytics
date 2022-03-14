@@ -57,6 +57,12 @@ class FrameMovements(tk.Frame):
         )
         self.button_rename_movement.grid(row=0, column=3, sticky="ew")
 
+        self.button_autocreate_movement = tk.Button(
+            master=self.frame_controls,
+            text="Auto",
+        )
+        self.button_autocreate_movement.grid(row=0, column=4, sticky="ew")
+
     def new_movement(self, entrywidget):
         """Saves created movement to flowfile.
 

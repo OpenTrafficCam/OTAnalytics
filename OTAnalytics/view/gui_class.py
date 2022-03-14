@@ -102,6 +102,9 @@ class gui(tk.Tk):
         )
 
         self.frame_sections.button_remove_section.configure(command=self.delete_section)
+        self.frame_movements.button_autocreate_movement.configure(
+            command=self.autocreate_movements_from_sections
+        )
 
     def create_section_entry_window(self):
         """Creates toplevel window to name view.sections."""
@@ -290,7 +293,16 @@ class gui(tk.Tk):
             return
 
     def autocreate_movements_from_sections(self):
-        pass
+        itemlist = list(self.frame_sections.tree_sections.selection())
+
+        list_of_possible_movements = list(file_helper.powerset(itemlist))
+
+        list_of_possible_movements_reversed = list(file_helper.powerset(itemlist[::-1]))
+
+        print(
+            list_of_possible_movements[len(itemlist) + 1 :],
+            list_of_possible_movements_reversed[len(itemlist) + 1 :],
+        )
 
     def delete_section(self):
         """Deletes selected section  from flowfile and listboxwidget."""
@@ -318,14 +330,7 @@ class gui(tk.Tk):
             for i in self.frame_movements.tree_movements.get_children():
                 self.frame_movements.tree_movements.delete(i)
 
-            for movement in file_helper.flow_dict["Movements"]:
-
-                self.frame_movements.tree_movements.insert(
-                    parent="",
-                    index="end",
-                    text=movement,
-                    value=[(file_helper.flow_dict["Movements"][movement])],
-                )
+            self.fill_tree_views(1)
 
         view.image_alteration.manipulate_image()
 
