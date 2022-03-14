@@ -3,7 +3,7 @@ from tkinter import filedialog
 
 import cv2
 import numpy as np
-from view.helpers.gui_helper import button_bool
+from view.helpers.gui_helper import button_bool, info_message
 import view.image_alteration
 import view.config
 import helpers.file_helper as file_helper
@@ -92,11 +92,16 @@ def draw_polygon(
 
 def load_flowfile():
     """Loads sections from a .OTflow-File."""
-    filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
-    files = open(filepath.name, "r")
-    files = files.read()
 
-    return json.loads(files)
+    if not file_helper.flow_dict["Detectors"] and not file_helper.flow_dict["Movements"]:
+        filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
+        files = open(filepath.name, "r")
+        files = files.read()
+
+        return json.loads(files)
+
+    else:
+        info_message("Warning", "Clear existing flowfile first!")
 
 
 def dump_to_flowdictionary(detector_name):

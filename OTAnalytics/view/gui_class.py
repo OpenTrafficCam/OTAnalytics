@@ -31,6 +31,7 @@ class gui(tk.Tk):
     def set_layout(
         self,
     ):
+
         self.frame_controll_panel = tk.Frame(master=self)
         self.frame_controll_panel.pack(side="left", anchor="n")
 
@@ -361,6 +362,19 @@ def main():
     except tk.TclError:
         app.iconbitmap("OTC.ico")
     app.resizable(False, False)
+    menubar = tk.Menu(app)
+    file = tk.Menu(
+        menubar,
+        tearoff=1,
+    )
+
+    file.add_command(label="New")
+    file.add_command(label="Open", command=app.import_flowfile)
+    file.add_command(label="Save as")
+    file.add_separator()
+    file.add_command(label="Exit", command=app.quit)
+    menubar.add_cascade(label="File", menu=file)
+    app.config(menu=menubar)
     app.mainloop()
 
 
