@@ -370,7 +370,7 @@ def main():
 
     file.add_command(label="New")
     file.add_command(label="Open", command=app.import_flowfile)
-    file.add_command(label="Save as")
+    file.add_command(label="Save as", command=view.sections.save_flowfile)
     file.add_separator()
     file.add_command(label="Exit", command=app.quit)
     menubar.add_cascade(label="File", menu=file)

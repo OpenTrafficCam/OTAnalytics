@@ -16,14 +16,17 @@ def save_flowfile():
     Args:
         flow_dict (dictionary): Dictionary with sections and movements.
     """
-    files = [("Files", "*.OTflow")]
-    file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
-    # with open(file.name, "w") as a_file:
-    #     flow_dict["Detectors"] = detectors
-    #     flow_dict["Movements"] = movement_dict
+    if file_helper.flow_dict["Detectors"]:
+        files = [("Files", "*.OTflow")]
+        file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
+        # with open(file.name, "w") as a_file:
+        #     flow_dict["Detectors"] = detectors
+        #     flow_dict["Movements"] = movement_dict
 
-    # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
-    json.dump(file_helper.flow_dict, file, indent=4)
+        # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
+        json.dump(file_helper.flow_dict, file, indent=4)
+    else:
+        info_message("Warning", "Nothing to save!")
 
 
 def draw_line(
@@ -93,7 +96,10 @@ def draw_polygon(
 def load_flowfile():
     """Loads sections from a .OTflow-File."""
 
-    if not file_helper.flow_dict["Detectors"] and not file_helper.flow_dict["Movements"]:
+    if (
+        not file_helper.flow_dict["Detectors"]
+        and not file_helper.flow_dict["Movements"]
+    ):
         filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
         files = open(filepath.name, "r")
         files = files.read()
