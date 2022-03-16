@@ -23,7 +23,6 @@ def save_flowfile():
         #     flow_dict["Detectors"] = detectors
         #     flow_dict["Movements"] = movement_dict
 
-        # BUG: is saved as nested dictionary in a list; empty dictionary also gets dumped
         json.dump(file_helper.flow_dict, file, indent=4)
     else:
         info_message("Warning", "Nothing to save!")

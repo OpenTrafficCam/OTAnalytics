@@ -4,7 +4,7 @@ from view.view_helpers import FrameFiles
 from view.canvas import CanvasFrame
 from view.view_sections import FrameSection
 from view.view_objects import FrameObject
-from view.helpers.gui_helper import button_bool, info_message
+from view.helpers.gui_helper import info_message
 import keyboard
 import view.config as config
 import helpers.file_helper as file_helper
