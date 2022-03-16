@@ -25,7 +25,7 @@ class gui(tk.Tk):
         # hotkeys
         keyboard.add_hotkey(
             "enter",
-            lambda: self.create_section_entry_window(),
+            lambda: self.frame_sections.create_section_entry_window(),
         )
 
     def set_layout(
@@ -95,85 +95,25 @@ class gui(tk.Tk):
 
         # bind function to button (function effects to treeview)
         self.frame_sections.button_add_section_to_movement.configure(
-            command=self.add_section_to_movement
+            command=lambda: [
+                self.frame_sections.add_section_to_movement(
+                    self.frame_movements.tree_movements
+                )
+            ]
         )
 
         self.frame_files.button_add_video.configure(
             command=self.load_video_and_add_frame
         )
 
-        self.frame_sections.button_remove_section.configure(command=self.delete_section)
+        self.frame_sections.button_remove_section.configure(
+            command=lambda: [
+                self.frame_sections.delete_section(self.frame_movements.tree_movements)
+            ]
+        )
         self.frame_movements.button_autocreate_movement.configure(
             command=self.autocreate_movements_from_sections
         )
-
-    def create_section_entry_window(self):
-        """Creates toplevel window to name view.sections."""
-
-        # only if line or polygon creation is activate
-        if button_bool["linedetector_toggle"] or button_bool["polygondetector_toggle"]:
-
-            self.new_detector_creation = tk.Toplevel()
-
-            # removes hotkey so "enter" won't trigger
-            keyboard.remove_hotkey("enter")
-
-            detector_name_entry = tk.Entry(master=self.new_detector_creation)
-
-            detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
-            detector_name_entry.focus()
-
-            safe_section = tk.Button(
-                master=self.new_detector_creation,
-                text="Add section",
-                command=lambda: [
-                    self.add_section(detector_name_entry),
-                ],
-            )
-
-            safe_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
-            self.new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
-            # makes the background window unavailable
-            self.new_detector_creation.grab_set()
-
-    def on_close(self):
-        # hotkeys
-        keyboard.add_hotkey(
-            "enter",
-            lambda: self.create_section_entry_window(),
-        )
-        self.new_detector_creation.destroy()
-
-        config.maincanvas.delete_polygon_points()
-
-        view.image_alteration.manipulate_image()
-
-    def add_section(self, entrywidget):
-        """Saves created section to flowfile.
-
-        Args:
-            maincanvas (tkinter.canvas): needed to hand over canvas coordinates.
-            flow_dict (dictionary): Dictionary with view.sections and movements.
-            entrywidget (tkinter.widget): Entrywidget to put in sectionname.
-        """
-
-        detector_name = entrywidget.get()
-
-        if detector_name in file_helper.flow_dict["Detectors"].keys():
-            tk.messagebox.showinfo(
-                title="Warning", message="Sectionname already exists"
-            )
-
-        else:
-
-            # TODO: #67 Prevent duplicate section names
-            view.sections.dump_to_flowdictionary(detector_name)
-
-            self.frame_sections.tree_sections.insert(
-                parent="", index="end", text=detector_name
-            )
-
-            self.on_close(),
 
     def load_video_and_add_frame(self):
 
@@ -187,6 +127,52 @@ class gui(tk.Tk):
         self.ask_to_import()
 
         view.image_alteration.manipulate_image()
+
+    def import_flowfile(self):
+        """Calls load_flowfile-function and inserts view.sections to listboxwidget."""
+        file_helper.flow_dict = view.sections.load_flowfile()
+
+        view.image_alteration.manipulate_image()
+
+        file_helper.fill_tree_views(
+            3,
+            self.frame_movements.tree_movements,
+            self.frame_sections.tree_sections,
+        )
+
+    def clear_treeviews(self):
+        if (
+            self.frame_sections.tree_sections.get_children()
+            or self.frame_objects.tree_objects.get_children()
+            or self.frame_movements.tree_movements.get_children()
+        ):
+            for i in self.frame_sections.tree_sections.get_children():
+                self.frame_sections.tree_sections.delete(i)
+
+            for i in self.frame_objects.tree_objects.get_children():
+                self.frame_objects.tree_objects.delete(i)
+
+            for i in self.frame_movements.tree_movements.get_children():
+                self.frame_movements.tree_movements.delete(i)
+
+            file_helper.re_initialize()
+
+            view.image_alteration.manipulate_image()
+
+        else:
+            info_message("Warning", "Nothing to clear")
+
+    def autocreate_movements_from_sections(self):
+        itemlist = list(self.frame_sections.tree_sections.selection())
+
+        list_of_possible_movements = list(file_helper.powerset(itemlist))
+
+        list_of_possible_movements_reversed = list(file_helper.powerset(itemlist[::-1]))
+
+        print(
+            list_of_possible_movements[len(itemlist) + 1 :],
+            list_of_possible_movements_reversed[len(itemlist) + 1 :],
+        )
 
     def ask_to_import(self):
 
@@ -234,124 +220,11 @@ class gui(tk.Tk):
                     parent="", index="end", text=id, values=object
                 )
 
-        self.fill_tree_views(option=3)
-
-    def import_flowfile(self):
-        """Calls load_flowfile-function and inserts view.sections to listboxwidget."""
-        file_helper.flow_dict = view.sections.load_flowfile()
-
-        view.image_alteration.manipulate_image()
-
-        self.fill_tree_views(option=3)
-
-    def clear_treeviews(self):
-        if (
-            self.frame_sections.tree_sections.get_children()
-            or self.frame_objects.tree_objects.get_children()
-            or self.frame_movements.tree_movements.get_children()
-        ):
-            for i in self.frame_sections.tree_sections.get_children():
-                self.frame_sections.tree_sections.delete(i)
-
-            for i in self.frame_objects.tree_objects.get_children():
-                self.frame_objects.tree_objects.delete(i)
-
-            for i in self.frame_movements.tree_movements.get_children():
-                self.frame_movements.tree_movements.delete(i)
-
-            file_helper.re_initialize()
-
-            view.image_alteration.manipulate_image()
-
-        else:
-            info_message("Warning", "Nothing to clear")
-
-    def add_section_to_movement(self):
-        """Adds selected section to selected movement."""
-        item = self.frame_sections.tree_sections.selection()
-        detector_name = self.frame_sections.tree_sections.item(item, "text")
-
-        item = self.frame_movements.tree_movements.selection()
-        movement_name = self.frame_movements.tree_movements.item(item, "text")
-
-        if not detector_name or not movement_name:
-            info_message("Warning", "Please select section and movements")
-
-            return
-
-        if detector_name not in file_helper.flow_dict["Movements"][movement_name]:
-
-            file_helper.flow_dict["Movements"][movement_name].append(detector_name)
-
-            self.frame_movements.tree_movements.set(
-                item,
-                0,
-                file_helper.flow_dict["Movements"][movement_name],
-            )
-        else:
-            info_message("Warning", "Detector already part of movement")
-
-            return
-
-    def autocreate_movements_from_sections(self):
-        itemlist = list(self.frame_sections.tree_sections.selection())
-
-        list_of_possible_movements = list(file_helper.powerset(itemlist))
-
-        list_of_possible_movements_reversed = list(file_helper.powerset(itemlist[::-1]))
-
-        print(
-            list_of_possible_movements[len(itemlist) + 1 :],
-            list_of_possible_movements_reversed[len(itemlist) + 1 :],
+        file_helper.fill_tree_views(
+            3,
+            self.frame_movements.tree_movements,
+            self.frame_sections.tree_sections,
         )
-
-    def delete_section(self):
-        """Deletes selected section  from flowfile and listboxwidget."""
-
-        itemlist = list(self.frame_sections.tree_sections.selection())
-
-        if not itemlist:
-            info_message("Warning", "Please select detector you wish to delete!")
-
-            return
-
-        for sectionitem in itemlist:
-
-            detector_name = self.frame_sections.tree_sections.item(sectionitem, "text")
-
-            self.frame_sections.tree_sections.delete(sectionitem)
-
-            del file_helper.flow_dict["Detectors"][detector_name]
-
-            for key in file_helper.flow_dict["Movements"]:
-                for value in file_helper.flow_dict["Movements"][key]:
-                    if detector_name in file_helper.flow_dict["Movements"][key]:
-                        file_helper.flow_dict["Movements"][key].remove(detector_name)
-
-            for i in self.frame_movements.tree_movements.get_children():
-                self.frame_movements.tree_movements.delete(i)
-
-            self.fill_tree_views(1)
-
-        view.image_alteration.manipulate_image()
-
-    def fill_tree_views(self, option):
-
-        if option in [1, 3]:
-            for movement in file_helper.flow_dict["Movements"]:
-
-                self.frame_movements.tree_movements.insert(
-                    parent="",
-                    index="end",
-                    text=movement,
-                    value=[(file_helper.flow_dict["Movements"][movement])],
-                )
-
-        if option in [2, 3]:
-            for detector in file_helper.flow_dict["Detectors"]:
-                self.frame_sections.tree_sections.insert(
-                    parent="", index="end", text=detector
-                )
 
 
 def main():

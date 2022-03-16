@@ -1,11 +1,16 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 from view.helpers.gui_helper import (
+    button_bool,
     button_line_switch,
     button_polygon_switch,
+    info_message,
 )
 import helpers.file_helper as file_helper
 import view.image_alteration
+import keyboard
+import view.config as config
+import view.sections
 
 
 class FrameSection(tk.Frame):
@@ -100,3 +105,130 @@ class FrameSection(tk.Frame):
                 )
 
         view.image_alteration.manipulate_image()
+
+    def delete_section(self, treeview_movements):
+        """Deletes selected section  from flowfile and listboxwidget."""
+
+        itemlist = list(self.tree_sections.selection())
+
+        if not itemlist:
+            info_message("Warning", "Please select detector you wish to delete!")
+
+            return
+
+        for sectionitem in itemlist:
+
+            detector_name = self.tree_sections.item(sectionitem, "text")
+
+            self.tree_sections.delete(sectionitem)
+
+            del file_helper.flow_dict["Detectors"][detector_name]
+
+            for key in file_helper.flow_dict["Movements"]:
+                for value in file_helper.flow_dict["Movements"][key]:
+                    if detector_name in file_helper.flow_dict["Movements"][key]:
+                        file_helper.flow_dict["Movements"][key].remove(detector_name)
+
+            for i in treeview_movements.get_children():
+                treeview_movements.delete(i)
+
+            file_helper.fill_tree_views(
+                1,
+                treeview_movements,
+                self.tree_sections,
+            )
+
+        view.image_alteration.manipulate_image()
+
+    def create_section_entry_window(self):
+        """Creates toplevel window to name view.sections."""
+
+        # only if line or polygon creation is activate
+        if button_bool["linedetector_toggle"] or button_bool["polygondetector_toggle"]:
+
+            self.new_detector_creation = tk.Toplevel()
+
+            # removes hotkey so "enter" won't trigger
+            keyboard.remove_hotkey("enter")
+
+            detector_name_entry = tk.Entry(master=self.new_detector_creation)
+
+            detector_name_entry.grid(row=1, column=0, sticky="w", pady=10, padx=10)
+            detector_name_entry.focus()
+
+            safe_section = tk.Button(
+                master=self.new_detector_creation,
+                text="Add section",
+                command=lambda: [
+                    self.add_section(detector_name_entry),
+                ],
+            )
+
+            safe_section.grid(row=1, column=1, sticky="w", pady=10, padx=10)
+            self.new_detector_creation.protocol("WM_DELETE_WINDOW", self.on_close)
+            # makes the background window unavailable
+            self.new_detector_creation.grab_set()
+
+    def on_close(self):
+        # hotkeys
+        keyboard.add_hotkey(
+            "enter",
+            lambda: self.create_section_entry_window(),
+        )
+        self.new_detector_creation.destroy()
+
+        config.maincanvas.delete_polygon_points()
+
+        view.image_alteration.manipulate_image()
+
+    def add_section(self, entrywidget):
+        """Saves created section to flowfile.
+
+        Args:
+            maincanvas (tkinter.canvas): needed to hand over canvas coordinates.
+            flow_dict (dictionary): Dictionary with view.sections and movements.
+            entrywidget (tkinter.widget): Entrywidget to put in sectionname.
+        """
+
+        detector_name = entrywidget.get()
+
+        if detector_name in file_helper.flow_dict["Detectors"].keys():
+            tk.messagebox.showinfo(
+                title="Warning", message="Sectionname already exists"
+            )
+
+        else:
+
+            # TODO: #67 Prevent duplicate section names
+            view.sections.dump_to_flowdictionary(detector_name)
+
+            self.tree_sections.insert(parent="", index="end", text=detector_name)
+
+            self.on_close(),
+
+    def add_section_to_movement(self, treeview_movements):
+        """Adds selected section to selected movement."""
+        item = self.tree_sections.selection()
+        detector_name = self.tree_sections.item(item, "text")
+
+        item = treeview_movements.selection()
+        movement_name = treeview_movements.item(item, "text")
+
+        if not detector_name or not movement_name:
+            info_message("Warning", "Please select section and movements")
+
+            return
+
+        if detector_name not in file_helper.flow_dict["Movements"][movement_name]:
+
+            file_helper.flow_dict["Movements"][movement_name].append(detector_name)
+
+            treeview_movements.set(
+                item,
+                0,
+                file_helper.flow_dict["Movements"][movement_name],
+            )
+        else:
+            info_message("Warning", "Detector already part of movement")
+
+            return

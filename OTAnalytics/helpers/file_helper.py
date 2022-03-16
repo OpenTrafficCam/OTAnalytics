@@ -109,3 +109,22 @@ def re_initialize():
 def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+
+
+def fill_tree_views(option, treeview_movements, treeview_sections):
+
+    global flow_dict, raw_detections, tracks
+
+    if option in [1, 3]:
+        for movement in flow_dict["Movements"]:
+
+            treeview_movements.insert(
+                parent="",
+                index="end",
+                text=movement,
+                value=[(flow_dict["Movements"][movement])],
+            )
+
+    if option in [2, 3]:
+        for detector in flow_dict["Detectors"]:
+            treeview_sections.insert(parent="", index="end", text=detector)
