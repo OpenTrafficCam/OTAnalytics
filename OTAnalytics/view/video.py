@@ -218,7 +218,10 @@ class Video(FileVideoStream):
 
         frame = cv2.resize(frame, (self.width, self.height))
 
-        self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # to RGB
+        self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+
+        # Then assign the mask to the last channel of the image
+        self.np_image[:, :, 3] = 255
 
         if np_image:
 
@@ -231,6 +234,8 @@ class Video(FileVideoStream):
         # class is instantiated. Save a reference to the photo
         self.ph_image = ImageTk.PhotoImage(image)  # to ImageTk format
 
+        self.transparent_image = None
+
         return self.ph_image
 
     def set_frame(self):
@@ -241,6 +246,9 @@ class Video(FileVideoStream):
 
         frame = cv2.resize(frame, (self.width, self.height))
 
-        self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        self.np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+
+        # Then assign the mask to the last channel of the image
+        self.np_image[:, :, 3] = 255
 
         return self.np_image

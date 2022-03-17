@@ -91,17 +91,14 @@ class FrameSection(tk.Frame):
 
             if dict_key in file_helper.selectionlist_sections:
 
-                file_helper.flow_dict["Detectors"][dict_key]["color"] = (
-                    200,
-                    0,
-                    0,
-                )
+                file_helper.flow_dict["Detectors"][dict_key]["color"] = (200, 0, 0, 255)
 
             else:
                 file_helper.flow_dict["Detectors"][dict_key]["color"] = (
                     200,
                     125,
                     125,
+                    255,
                 )
 
         view.image_alteration.manipulate_image()

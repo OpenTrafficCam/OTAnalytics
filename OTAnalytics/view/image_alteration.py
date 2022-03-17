@@ -50,15 +50,29 @@ def manipulate_image(
             track_live=file_helper.tracks_live,
         )
 
+    if button_bool["display_all_tracks_toggle"] is True:
+
+        if view.config.videoobject.transparent_image is None:
+
+            view.config.videoobject.transparent_image = draw_all_tracks(
+                tracks=file_helper.tracks
+            )
+
+        np_image = cv2.addWeighted(
+            view.config.videoobject.transparent_image, 0.5, np_image, 1, 0
+        )
+
     # TODO: #59 Draw detectors on top of all elements
     np_image = draw_detectors_from_dict(np_image)
 
     # copy is important or else original image will be changed
-    image = Image.fromarray(np_image)  # to PIL format
 
     # The variable photo is a local variable which gets garbage collected after the
     # class is instantiated. Save a reference to the photo
     # photo is attribute of video
+
+    image = Image.fromarray(np_image)  # to PIL format
+
     view.config.videoobject.ph_image = ImageTk.PhotoImage(image)
 
     view.config.maincanvas.create_image(
@@ -66,6 +80,32 @@ def manipulate_image(
     )
 
     view.config.maincanvas.update()
+
+
+def draw_all_tracks(tracks):
+
+    print("test")
+
+    np_image = np.zeros([600, 800, 4], dtype=np.uint8)
+
+    for track in tracks:
+
+        try:
+            trackcolor = color_dict[tracks[track]["Class"]] + (200,)
+        except NameError:
+            trackcolor = (
+                0,
+                0,
+                255,
+            ) + (150,)
+
+        pts = np.array(tracks[track]["Coord"], np.int32)
+
+        pts = pts.reshape((-1, 1, 2))
+
+        np_image = cv2.polylines(np_image, [pts], False, color=trackcolor, thickness=2)
+
+    return np_image
 
 
 def draw_detectors_from_dict(np_image):
@@ -126,32 +166,32 @@ def draw_tracks(np_image, selectionlist, tracks):
     Returns:
         np_image (numpy_array): manipulated array
     """
-    if button_bool["display_all_tracks_toggle"] is True:
+    # if button_bool["display_all_tracks_toggle"] is True:
 
-        for track in tracks:
+    #     for track in tracks:
 
-            try:
-                trackcolor = color_dict[tracks[track]["Class"]]
-            except NameError:
-                trackcolor = (0, 0, 255)
+    #         try:
+    #             trackcolor = color_dict[tracks[track]["Class"]]
+    #         except NameError:
+    #             trackcolor = (0, 0, 255)
 
-            pts = np.array(tracks[track]["Coord"], np.int32)
+    #         pts = np.array(tracks[track]["Coord"], np.int32)
 
-            pts = pts.reshape((-1, 1, 2))
+    #         pts = pts.reshape((-1, 1, 2))
 
-            np_image = cv2.polylines(
-                np_image, [pts], False, color=trackcolor, thickness=2
-            )
+    #         np_image = cv2.polylines(
+    #             np_image, [pts], False, color=trackcolor, thickness=2
+    #         )
 
-    elif selectionlist:
+    if selectionlist:
 
         for object_id in selectionlist:
 
             try:
-                trackcolor = color_dict[tracks[object_id]["Class"]]
+                trackcolor = color_dict[tracks[object_id]["Class"]] + (200,)
             except NameError:
 
-                trackcolor = (0, 0, 255)
+                trackcolor = (0, 0, 255, 150)
 
             pts = np.array(tracks[object_id]["Coord"], np.int32)
 
@@ -221,10 +261,12 @@ def draw_bounding_box(np_image, frame, raw_detections):
                     )
 
                     try:
-                        bbcolor = color_dict[raw_detections[frame][detection]["class"]]
+                        bbcolor = color_dict[
+                            raw_detections[frame][detection]["class"]
+                        ] + (255,)
 
                     except ValueError:
-                        bbcolor = (0, 0, 255)
+                        bbcolor = (0, 0, 255, 255)
 
                     cv2.rectangle(
                         image_cache,

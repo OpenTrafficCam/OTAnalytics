@@ -43,7 +43,7 @@ def draw_line(
         np_image,
         view.config.maincanvas.points[0],
         view.config.maincanvas.points[1],
-        (200, 125, 125),
+        (200, 125, 125, 255),
         3,
     )
 
@@ -126,12 +126,12 @@ def dump_to_flowdictionary(detector_name):
             "start_y": view.config.maincanvas.points[0][1],
             "end_x": view.config.maincanvas.points[1][0],
             "end_y": view.config.maincanvas.points[1][1],
-            "color": (200, 125, 125),
+            "color": (200, 125, 125, 255),
         }
 
     if button_bool["polygondetector_toggle"] is True:
         file_helper.flow_dict["Detectors"][detector_name] = {
             "type": "polygon",
             "points": view.config.maincanvas.polygon_points,
-            "color": (200, 125, 125),
+            "color": (200, 125, 125, 255),
         }

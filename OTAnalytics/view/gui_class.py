@@ -163,16 +163,12 @@ class gui(tk.Tk):
             info_message("Warning", "Nothing to clear")
 
     def autocreate_movements_from_sections(self):
-        itemlist = list(self.frame_sections.tree_sections.selection())
+        pass
+        # itemlist = list(self.frame_sections.tree_sections.selection())
 
-        list_of_possible_movements = list(file_helper.powerset(itemlist))
+        # list_movements = list(file_helper.powerset(itemlist))
 
-        list_of_possible_movements_reversed = list(file_helper.powerset(itemlist[::-1]))
-
-        print(
-            list_of_possible_movements[len(itemlist) + 1 :],
-            list_of_possible_movements_reversed[len(itemlist) + 1 :],
-        )
+        # listmovements_reversed = list(file_helper.powerset(itemlist[::-1]))
 
     def ask_to_import(self):
 
