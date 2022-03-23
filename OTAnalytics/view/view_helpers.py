@@ -67,7 +67,7 @@ class FrameFiles(tk.Frame):
         self.button_add_video = tk.Button(
             master=self.frame_control,
             width=12,
-            text="Add video",
+            text="Add Video",
         )
         self.button_add_video.grid(row=0, column=0, sticky="ew")
 
@@ -104,7 +104,7 @@ class FrameFiles(tk.Frame):
         self.button_remove_video = tk.Button(
             master=self.frame_control,
             width=12,
-            text="Remove video",
+            text="Remove Video",
             command=lambda: [self.remove_video()],
         )
         self.button_remove_video.grid(row=0, column=3, sticky="ew")
@@ -150,7 +150,7 @@ class FrameFiles(tk.Frame):
             self.files_dict[path]["video_name"]
         )
 
-        if ottrk_pattern is not None and ottrk_pattern is not None:
+        if ottrk_pattern is not None:
             file_helper.check_fileexistence(path, otflow_pattern, ottrk_pattern)
 
         TRUE_SYMBOL = "\u2705"  # "\u2713"  # "\u2714"

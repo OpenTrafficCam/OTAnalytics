@@ -58,15 +58,17 @@ class gui(tk.Tk):
 
         self.frame_sections = FrameSection(master=self.frame_controll_panel)
         self.frame_sections.grid(
-            **{"padx": 10, "pady": 0}, row=2, column=0, sticky="ew"
+            **{"padx": 10, "pady": 0}, row=2, column=0, sticky="new"
         )
 
         self.frame_objects = FrameObject(master=self.frame_controll_panel)
-        self.frame_objects.grid(**{"padx": 10, "pady": 0}, row=2, column=1, sticky="ew")
+        self.frame_objects.grid(
+            **{"padx": 10, "pady": 0}, row=2, column=1, sticky="new", rowspan=2
+        )
 
         self.frame_movements = FrameMovements(master=self.frame_controll_panel)
         self.frame_movements.grid(
-            **{"padx": 10, "pady": 10}, row=3, column=0, sticky="ew"
+            **{"padx": 10, "pady": 10}, row=3, column=0, sticky="new"
         )
 
         # Load flow_dict
@@ -243,8 +245,8 @@ def main():
     )
 
     file.add_command(label="New")
-    file.add_command(label="Open", command=app.import_flowfile)
-    file.add_command(label="Save as", command=view.sections.save_flowfile)
+    file.add_command(label="Import flowfile", command=app.import_flowfile)
+    file.add_command(label="Save configuration", command=view.sections.save_flowfile)
     file.add_separator()
     file.add_command(label="Exit", command=app.quit)
     menubar.add_cascade(label="File", menu=file)

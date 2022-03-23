@@ -115,13 +115,13 @@ def button_polygon_switch(button_polygondetector, button_linedetector):
 
     if button_bool["polygondetector_toggle"]:
         button_polygondetector.configure(text="Finish")
-        button_linedetector.configure(text="Line")
+        button_linedetector.configure(text="Add Line")
         # statepanel.update_statepanel(
         #     "left click to create new polygoncorner\nmousewheelbutton to undo"
         #     + " corner\nrightclock to close polygon\nenter to finish creation process"
         # )
     else:
-        button_polygondetector.configure(text="Polygon")
+        button_polygondetector.configure(text="Add Polygon")
 
 
 def button_display_tracks_switch(button_display_tracks):
@@ -142,9 +142,9 @@ def button_display_tracks_switch(button_display_tracks):
     ]
 
     if button_bool["display_all_tracks_toggle"]:
-        button_display_tracks.configure(text="Hide tracks")
+        button_display_tracks.configure(text="Hide all Tracks")
     else:
-        button_display_tracks.configure(text="Show tracks")
+        button_display_tracks.configure(text="Show all Tracks")
 
 
 def button_display_bb_switch(button_display_bb):
@@ -162,9 +162,9 @@ def button_display_bb_switch(button_display_bb):
     button_bool["display_bb"] = not button_bool["display_bb"]
 
     if button_bool["display_bb"]:
-        button_display_bb.configure(text="Hide bb")
+        button_display_bb.configure(text="Hide Bbox")
     else:
-        button_display_bb.configure(text="Show bb")
+        button_display_bb.configure(text="Show Bbox")
 
 
 def button_display_live_track_switch(button_display_tracks):

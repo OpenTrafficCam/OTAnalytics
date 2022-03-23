@@ -41,7 +41,7 @@ class FrameSection(tk.Frame):
         self.button_line = tk.Button(
             master=self.frame_control_section,
             width=12,
-            text="Line",
+            text="Add Line",
             command=lambda: button_line_switch(self.button_line, self.button_polygon),
         )
         self.button_line.grid(row=0, column=0)
@@ -50,7 +50,7 @@ class FrameSection(tk.Frame):
         self.button_polygon = tk.Button(
             master=self.frame_control_section,
             width=12,
-            text="Polygon",
+            text="Add Polygon",
             command=lambda: button_polygon_switch(
                 self.button_polygon, self.button_line
             ),

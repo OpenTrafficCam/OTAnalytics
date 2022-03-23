@@ -20,7 +20,7 @@ class FrameObject(tk.Frame):
         self.frame_tree.pack(fill="x")
 
         # Files treeview
-        self.tree_objects = ttk.Treeview(master=self.frame_tree, height=3)
+        self.tree_objects = ttk.Treeview(master=self.frame_tree, height=7)
         self.tree_objects.pack(fill="x")
 
         tree_files_cols = {"#0": "ID", "Class": "Class"}
@@ -43,7 +43,7 @@ class FrameObject(tk.Frame):
         # Load tracks
         self.button_load_tracks = tk.Button(
             master=self.frame_control_objects,
-            text="Load tracks",
+            text="Load Tracks",
             command=self.add_tracks,
         )
         self.button_load_tracks.grid(row=0, column=0, sticky="ew")
@@ -52,7 +52,7 @@ class FrameObject(tk.Frame):
         self.button_show_tracks = tk.Button(
             master=self.frame_control_objects,
             width=12,
-            text="Hide tracks",
+            text="Hide all Tracks",
             command=lambda: [
                 button_display_tracks_switch(self.button_show_tracks),
                 view.image_alteration.manipulate_image(),
@@ -76,7 +76,7 @@ class FrameObject(tk.Frame):
         self.button_show_bounding_boxes = tk.Button(
             master=self.frame_control_objects,
             width=12,
-            text="Show bb",
+            text="Show Bbox",
             command=lambda: [
                 button_display_bb_switch(self.button_show_bounding_boxes),
                 view.image_alteration.manipulate_image(),
@@ -87,7 +87,7 @@ class FrameObject(tk.Frame):
         # autocount
         self.button_autocount = tk.Button(
             master=self.frame_control_objects,
-            text="autocount",
+            text="Autocount",
             command=view.auto_counting.create_setting_window,
         )
         self.button_autocount.grid(row=1, column=0, columnspan=4, sticky="ew")
