@@ -191,7 +191,7 @@ class FrameSection(tk.Frame):
 
         if detector_name in file_helper.flow_dict["Detectors"].keys():
             tk.messagebox.showinfo(
-                title="Warning", message="Sectionname already exists"
+                title="Warning", message="Sectionname already exists!"
             )
 
         else:
@@ -212,7 +212,7 @@ class FrameSection(tk.Frame):
         movement_name = treeview_movements.item(item, "text")
 
         if not detector_name or not movement_name:
-            info_message("Warning", "Please select section and movements")
+            info_message("Warning", "Please select section and movements!")
 
             return
 
@@ -226,6 +226,6 @@ class FrameSection(tk.Frame):
                 file_helper.flow_dict["Movements"][movement_name],
             )
         else:
-            info_message("Warning", "Detector already part of movement")
+            info_message("Warning", "Detector already part of movement!")
 
             return

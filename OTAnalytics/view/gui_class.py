@@ -164,7 +164,7 @@ class gui(tk.Tk):
             view.image_alteration.manipulate_image()
 
         else:
-            info_message("Warning", "Nothing to clear")
+            info_message("Warning", "Nothing to clear!")
 
     def autocreate_movements_from_sections(self):
         pass
