@@ -74,7 +74,7 @@ class FrameMovements(tk.Frame):
 
         if movement_name in file_helper.flow_dict["Movements"].keys():
             tk.messagebox.showinfo(
-                title="Warning", message="Movementname already exists"
+                title="Warning", message="Movementname already exists!"
             )
 
         else:
