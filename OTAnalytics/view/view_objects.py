@@ -114,7 +114,7 @@ class FrameObject(tk.Frame):
         file_helper.selectionlist_objects = []
 
         for item in self.tree_objects.selection():
-            item_text = self.tree_objects.item(item, "values")
-            file_helper.selectionlist_objects.append(item_text[0])
+            item_text = self.tree_objects.item(item, "text")
+            file_helper.selectionlist_objects.append(item_text)
 
         view.image_alteration.manipulate_image()

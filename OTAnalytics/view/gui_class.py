@@ -4,7 +4,7 @@ from view.view_helpers import FrameFiles
 from view.canvas import CanvasFrame
 from view.view_sections import FrameSection
 from view.view_objects import FrameObject
-from view.helpers.gui_helper import info_message
+from view.helpers.gui_helper import info_message, button_bool
 import keyboard
 import view.config as config
 import helpers.file_helper as file_helper
@@ -157,6 +157,8 @@ class gui(tk.Tk):
 
             file_helper.re_initialize()
 
+            button_bool["tracks_imported"] = False
+
             view.image_alteration.manipulate_image()
 
         else:
@@ -213,7 +215,10 @@ class gui(tk.Tk):
 
             for id, object in enumerate(list(file_helper.tracks.keys())):
                 self.frame_objects.tree_objects.insert(
-                    parent="", index="end", text=id, values=object
+                    parent="",
+                    index="end",
+                    text=object,
+                    values=file_helper.tracks[object]["Class"],
                 )
 
         file_helper.fill_tree_views(
