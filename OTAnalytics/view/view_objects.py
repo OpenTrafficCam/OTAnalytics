@@ -20,7 +20,7 @@ class FrameObject(tk.Frame):
         self.frame_tree.pack(fill="x")
 
         # Files treeview
-        self.tree_objects = ttk.Treeview(master=self.frame_tree, height=7)
+        self.tree_objects = ttk.Treeview(master=self.frame_tree, height=9)
         self.tree_objects.pack(fill="x")
 
         tree_files_cols = {"#0": "ID", "Class": "Class"}

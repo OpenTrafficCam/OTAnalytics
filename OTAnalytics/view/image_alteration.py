@@ -362,7 +362,7 @@ def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
                     if len(track_live[object]) >= 20:
                         track_live[object].pop(0)
 
-                    trackcolor = color_dict[tracks[object]["Class"]]
+                    trackcolor = color_dict[tracks[object]["Class"]] + (255,)
 
                     pts = np.array(track_live[object], np.int32)
 
