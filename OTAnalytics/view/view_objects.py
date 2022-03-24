@@ -21,6 +21,11 @@ class FrameObject(tk.Frame):
 
         # Files treeview
         self.tree_objects = ttk.Treeview(master=self.frame_tree, height=11)
+        self.vsb = ttk.Scrollbar(
+            master=self.frame_tree, orient="vertical", command=self.tree_objects.yview
+        )
+        self.vsb.pack(side="right", fill="y")
+        self.tree_objects.configure(yscrollcommand=self.vsb.set)
         self.tree_objects.pack(fill="x")
 
         tree_files_cols = {"#0": "ID", "Class": "Class"}
