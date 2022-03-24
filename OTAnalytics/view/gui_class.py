@@ -218,7 +218,7 @@ class gui(tk.Tk):
                     filepath=files,
                 )
 
-            for id, object in enumerate(list(file_helper.tracks.keys())):
+            for object in list(file_helper.tracks.keys()):
                 self.frame_objects.tree_objects.insert(
                     parent="",
                     index="end",
