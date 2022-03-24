@@ -63,7 +63,7 @@ class gui(tk.Tk):
 
         self.frame_objects = FrameObject(master=self.frame_controll_panel)
         self.frame_objects.grid(
-            **{"padx": 10, "pady": 0}, row=2, column=1, sticky="new", rowspan=2
+            **{"padx": 10, "pady": 0}, row=2, column=1, sticky="new", rowspan=3
         )
 
         self.frame_movements = FrameMovements(master=self.frame_controll_panel)
@@ -71,29 +71,32 @@ class gui(tk.Tk):
             **{"padx": 10, "pady": 10}, row=3, column=0, sticky="new"
         )
 
-        # Load flow_dict
-        self.button_load_flowfile = tk.Button(
-            master=self.frame_controll_panel,
-            text="Load flowfile",
-            command=self.import_flowfile,
-        )
-        self.button_load_flowfile.grid(row=4, column=0, sticky="ew")
+        # # Load flow_dict
+        # self.button_load_flowfile = tk.Button(
+        #     master=self.frame_controll_panel,
+        #     text="Load flowfile",
+        #     command=self.import_flowfile,
+        # )
+        # self.button_load_flowfile.grid(row=4, column=0, sticky="ew")
 
-        # Add save flow_dict
-        self.button_save_flowfile = tk.Button(
-            master=self.frame_controll_panel,
-            text="Save sections and movements",
-            command=view.sections.save_flowfile,
-        )
-        self.button_save_flowfile.grid(row=5, column=0, sticky="ew")
+        # # Add save flow_dict
+        # self.button_save_flowfile = tk.Button(
+        #     master=self.frame_controll_panel,
+        #     text="Save sections and movements",
+        #     command=view.sections.save_flowfile,
+        # )
+        # self.button_save_flowfile.grid(row=5, column=0, sticky="ew")
 
         # Add clear all
-        self.button_save_flowfile = tk.Button(
+        self.button_clear_all = tk.Button(
             master=self.frame_controll_panel,
             text="Clear all",
             command=self.clear_treeviews,
         )
-        self.button_save_flowfile.grid(row=6, column=0, sticky="ew")
+        # pixel alignment
+        self.button_clear_all.grid(
+            **{"padx": 0, "pady": 1}, row=4, column=0, sticky="ew"
+        )
 
         # bind function to button (function effects to treeview)
         self.frame_sections.button_add_section_to_movement.configure(
@@ -244,7 +247,6 @@ def main():
         tearoff=1,
     )
 
-    file.add_command(label="New")
     file.add_command(label="Import flowfile", command=app.import_flowfile)
     file.add_command(label="Save configuration", command=view.sections.save_flowfile)
     file.add_separator()
