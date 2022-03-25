@@ -25,7 +25,7 @@ def save_flowfile():
 
         json.dump(file_helper.flow_dict, file, indent=4)
     else:
-        info_message("Warning", "Nothing to save!")
+        info_message("Warning", "Create Sections and Movements first!")
 
 
 def draw_line(
