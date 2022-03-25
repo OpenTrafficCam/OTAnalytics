@@ -15,9 +15,9 @@ import view.config
 import view.image_alteration
 
 
-class FrameFiles(tk.Frame):
+class FrameFiles(tk.LabelFrame):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(text="Files", **kwargs)
 
         # File dict
         self.files_dict = {}
@@ -26,16 +26,20 @@ class FrameFiles(tk.Frame):
 
         # Frame for treeview
         self.frame_tree = tk.Frame(master=self)
-        self.frame_tree.pack(fill="x")
-
-        self.videolabel = tk.Label(
-            master=self.frame_tree, text="Videos and Tracks", fg="white", bg="#37483E"
+        self.frame_tree.pack(
+            fill="x",
+            padx=10,
+            pady=10,
         )
-        self.videolabel.pack(fill="x")
+
+        # self.videolabel = tk.Label(
+        #     master=self.frame_tree, text="Videos and Tracks", fg="white", bg="#37483E"
+        # )
+        # self.videolabel.pack(fill="x")
 
         # Files treeview
         self.tree_files = ttk.Treeview(master=self.frame_tree, height=3)
-        self.tree_files.pack(fill="x")
+        self.tree_files.pack(fill="x", ipady=10)
 
         tree_files_cols = {
             "#0": "Video",
@@ -69,7 +73,7 @@ class FrameFiles(tk.Frame):
             width=12,
             text="Add Video",
         )
-        self.button_add_video.grid(row=0, column=0, sticky="ew")
+        self.button_add_video.grid(row=0, column=0, pady=(0, 10), sticky="ew")
 
         # Play Video
         self.button_play_video = tk.Button(
@@ -84,7 +88,7 @@ class FrameFiles(tk.Frame):
                 self.play_video(),
             ],
         )
-        self.button_play_video.grid(row=0, column=1, sticky="ew")
+        self.button_play_video.grid(row=0, column=1, pady=(0, 10), sticky="ew")
 
         # Rewind Video
         self.button_rewind_video = tk.Button(
@@ -98,7 +102,7 @@ class FrameFiles(tk.Frame):
             ],
         )
 
-        self.button_rewind_video.grid(row=0, column=2, sticky="ew")
+        self.button_rewind_video.grid(row=0, column=2, pady=(0, 10), sticky="ew")
 
         # Clear Video
         self.button_remove_video = tk.Button(
@@ -107,7 +111,7 @@ class FrameFiles(tk.Frame):
             text="Remove Video",
             command=lambda: [self.remove_video()],
         )
-        self.button_remove_video.grid(row=0, column=3, sticky="ew")
+        self.button_remove_video.grid(row=0, column=3, pady=(0, 10), sticky="ew")
 
     def add_file(self):
 
@@ -256,6 +260,8 @@ class FrameFiles(tk.Frame):
             # item_text = self.tree_files.item(item, "values")
 
             self.tree_files.delete(item)
+
+        self.file_values = []
 
         view.config.maincanvas.configure(width=0, height=0)
 

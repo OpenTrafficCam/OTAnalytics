@@ -162,9 +162,9 @@ def button_display_bb_switch(button_display_bb):
     button_bool["display_bb"] = not button_bool["display_bb"]
 
     if button_bool["display_bb"]:
-        button_display_bb.configure(text="Hide Bbox")
+        button_display_bb.configure(text="Hide Bboxes")
     else:
-        button_display_bb.configure(text="Show Bbox")
+        button_display_bb.configure(text="Show Bboxes")
 
 
 def button_display_live_track_switch(button_display_tracks):
@@ -183,9 +183,9 @@ def button_display_live_track_switch(button_display_tracks):
     button_bool["display_live_track"] = not button_bool["display_live_track"]
 
     if button_bool["display_live_track"]:
-        button_display_tracks.configure(text="Stop Livetrack")
+        button_display_tracks.configure(text="Hide Tracks")
     else:
-        button_display_tracks.configure(text="Livetrack")
+        button_display_tracks.configure(text="Show Tracks")
 
 
 def info_message(title, text):

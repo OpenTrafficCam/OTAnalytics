@@ -13,9 +13,9 @@ import view.auto_counting
 import view.config
 
 
-class FrameObject(tk.Frame):
+class FrameObject(tk.LabelFrame):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(text="Road Users", **kwargs)
         self.frame_tree = tk.Frame(master=self)
         self.frame_tree.pack(fill="x")
 
@@ -26,7 +26,11 @@ class FrameObject(tk.Frame):
         )
         self.vsb.pack(side="right", fill="y")
         self.tree_objects.configure(yscrollcommand=self.vsb.set)
-        self.tree_objects.pack(fill="x")
+        self.tree_objects.pack(
+            fill="x",
+            padx=10,
+            pady=10,
+        )
 
         tree_files_cols = {"#0": "ID", "Class": "Class"}
         self.tree_objects["columns"] = tuple(
@@ -51,7 +55,7 @@ class FrameObject(tk.Frame):
             text="Load Tracks",
             command=self.add_tracks,
         )
-        self.button_load_tracks.grid(row=0, column=0, sticky="ew")
+        self.button_load_tracks.grid(row=0, column=0, padx=(10, 0), sticky="ew")
 
         # Show tracks
         self.button_show_tracks = tk.Button(
@@ -69,7 +73,7 @@ class FrameObject(tk.Frame):
         self.button_show_livetracks = tk.Button(
             master=self.frame_control_objects,
             width=12,
-            text="Livetrack",
+            text="Show Tracks",
             command=lambda: [
                 button_display_live_track_switch(self.button_show_livetracks),
                 view.image_alteration.manipulate_image(),
@@ -81,13 +85,13 @@ class FrameObject(tk.Frame):
         self.button_show_bounding_boxes = tk.Button(
             master=self.frame_control_objects,
             width=12,
-            text="Show Bbox",
+            text="Show Bboxes",
             command=lambda: [
                 button_display_bb_switch(self.button_show_bounding_boxes),
                 view.image_alteration.manipulate_image(),
             ],
         )
-        self.button_show_bounding_boxes.grid(row=0, column=3, sticky="ew")
+        self.button_show_bounding_boxes.grid(row=0, column=3, padx=(0, 25), sticky="ew")
 
         # autocount
         self.button_autocount = tk.Button(
@@ -95,7 +99,9 @@ class FrameObject(tk.Frame):
             text="Autocount",
             command=view.auto_counting.create_setting_window,
         )
-        self.button_autocount.grid(row=1, column=0, columnspan=4, sticky="ew")
+        self.button_autocount.grid(
+            row=1, column=0, columnspan=4, padx=(10, 25), pady=(0, 12), sticky="ew"
+        )
 
     def add_tracks(self):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""

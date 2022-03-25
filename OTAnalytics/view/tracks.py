@@ -26,24 +26,24 @@ def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
 
     for frame in raw_detections:
         for detection in raw_detections[frame]:
-            if f"object_{str(detection)}" in tracks:
-                tracks["object_%s" % detection]["Coord"].append(
+            if detection in tracks:
+                tracks[detection]["Coord"].append(
                     [
                         raw_detections[frame][detection]["x"] * x_factor,
                         raw_detections[frame][detection]["y"] * y_factor,
                     ]
                 )
 
-                tracks["object_%s" % detection]["Frame"].append(int(frame))
+                tracks[detection]["Frame"].append(int(frame))
 
             elif raw_detections[frame][detection]["class"] in color_dict.keys():
-                tracks["object_%s" % detection] = {
+                tracks[detection] = {
                     "Coord": [],
                     "Frame": [int(frame)],
                     "Class": raw_detections[frame][detection]["class"],
                 }
 
-                tracks["object_%s" % detection]["Coord"].append(
+                tracks[detection]["Coord"].append(
                     [
                         raw_detections[frame][detection]["x"] * x_factor,
                         raw_detections[frame][detection]["y"] * y_factor,

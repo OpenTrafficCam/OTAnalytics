@@ -4,9 +4,9 @@ from view.helpers.gui_helper import info_message
 import helpers.file_helper as file_helper
 
 
-class FrameMovements(tk.Frame):
+class FrameMovements(tk.LabelFrame):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(text="Movement", **kwargs)
         self.frame_tree = tk.Frame(master=self)
         self.frame_tree.pack()
 
@@ -15,9 +15,13 @@ class FrameMovements(tk.Frame):
 
         # Movements treeview
         self.tree_movements = ttk.Treeview(master=self.frame_tree, height=3)
-        self.tree_movements.pack(fill="x")
+        self.tree_movements.pack(
+            fill="x",
+            padx=10,
+            pady=10,
+        )
 
-        tree_files_cols = {"#0": "Movements", "Composition": "Composition"}
+        tree_files_cols = {"#0": "Movements", "Composition": "Section Order"}
         self.tree_movements["columns"] = tuple(
             {k: v for k, v in tree_files_cols.items() if k != "#0"}.keys()
         )
@@ -34,20 +38,22 @@ class FrameMovements(tk.Frame):
             text="New movement",
             command=self.create_movement_entry_window,
         )
-        self.button_new_movement.grid(row=0, column=0, sticky="ew")
+        self.button_new_movement.grid(
+            row=0, column=0, padx=(10, 0), pady=(0, 10), sticky="ew"
+        )
 
         # remove movement
         self.button_remove_movement = tk.Button(
             master=self.frame_controls, text="Remove", command=self.delete_movement
         )
-        self.button_remove_movement.grid(row=0, column=1, sticky="ew")
+        self.button_remove_movement.grid(row=0, column=1, pady=(0, 10), sticky="ew")
 
         # clear movement
         self.button_clear = tk.Button(
             master=self.frame_controls,
             text="Clear",
         )
-        self.button_clear.grid(row=0, column=2, sticky="ew")
+        self.button_clear.grid(row=0, column=2, pady=(0, 10), sticky="ew")
 
         # # rename movement
         self.button_rename_movement = tk.Button(
@@ -55,13 +61,15 @@ class FrameMovements(tk.Frame):
             text="Rename",
             command=self.create_movement_rename_window,
         )
-        self.button_rename_movement.grid(row=0, column=3, sticky="ew")
-
-        self.button_autocreate_movement = tk.Button(
-            master=self.frame_controls,
-            text="Auto",
+        self.button_rename_movement.grid(
+            row=0, column=3, padx=(0, 10), pady=(0, 10), sticky="ew"
         )
-        self.button_autocreate_movement.grid(row=0, column=4, sticky="ew")
+
+        # self.button_autocreate_movement = tk.Button(
+        #     master=self.frame_controls,
+        #     text="Auto",
+        # )
+        # self.button_autocreate_movement.grid(row=0, column=4, sticky="ew")
 
     def new_movement(self, entrywidget):
         """Saves created movement to flowfile.

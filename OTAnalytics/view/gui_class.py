@@ -50,29 +50,29 @@ class gui(tk.Tk):
             **{"padx": 10, "pady": 10}, row=0, column=0, columnspan=2, sticky="ew"
         )
 
-        self.videolabel = tk.Label(
-            master=self.frame_controll_panel,
-            text="Sections and Objects",
-            fg="white",
-            bg="#37483E",
-        )
-        self.videolabel.grid(
-            **{"padx": 10, "pady": 10}, row=1, column=0, columnspan=2, sticky="ew"
-        )
+        # self.videolabel = tk.Label(
+        #     master=self.frame_controll_panel,
+        #     text="Sections and Objects",
+        #     fg="white",
+        #     bg="#37483E",
+        # )
+        # self.videolabel.grid(
+        #     **{"padx": 10, "pady": 10}, row=1, column=0, columnspan=2, sticky="ew"
+        # )
 
         self.frame_sections = FrameSection(master=self.frame_controll_panel)
         self.frame_sections.grid(
-            **{"padx": 10, "pady": 0}, row=2, column=0, sticky="new"
+            **{"padx": (10, 2.5), "pady": 0}, row=2, column=0, sticky="new"
         )
 
         self.frame_objects = FrameObject(master=self.frame_controll_panel)
         self.frame_objects.grid(
-            **{"padx": 10, "pady": 0}, row=2, column=1, sticky="new", rowspan=3
+            **{"padx": (2.5, 10), "pady": 0}, row=2, column=1, sticky="new", rowspan=3
         )
 
         self.frame_movements = FrameMovements(master=self.frame_controll_panel)
         self.frame_movements.grid(
-            **{"padx": 10, "pady": 10}, row=3, column=0, sticky="new"
+            **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
         )
 
         # # Load flow_dict
@@ -99,7 +99,7 @@ class gui(tk.Tk):
         )
         # pixel alignment
         self.button_clear_all.grid(
-            **{"padx": 0, "pady": 1}, row=4, column=0, sticky="ew"
+            **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
         )
 
         # bind function to button (function effects to treeview)
@@ -120,9 +120,9 @@ class gui(tk.Tk):
                 self.frame_sections.delete_section(self.frame_movements.tree_movements)
             ]
         )
-        self.frame_movements.button_autocreate_movement.configure(
-            command=self.autocreate_movements_from_sections
-        )
+        # self.frame_movements.button_autocreate_movement.configure(
+        #     command=self.autocreate_movements_from_sections
+        # )
 
     def load_video_and_add_frame(self):
 

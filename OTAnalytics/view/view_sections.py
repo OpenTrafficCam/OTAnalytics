@@ -13,15 +13,19 @@ import view.config as config
 import view.sections
 
 
-class FrameSection(tk.Frame):
+class FrameSection(tk.LabelFrame):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(text="Section", **kwargs)
         self.frame_tree = tk.Frame(master=self)
         self.frame_tree.pack(fill="x")
 
         # Files treeview
         self.tree_sections = ttk.Treeview(master=self.frame_tree, height=3)
-        self.tree_sections.pack(fill="x")
+        self.tree_sections.pack(
+            fill="x",
+            padx=10,
+            pady=10,
+        )
 
         self.tree_sections.bind("<<TreeviewSelect>>", self.tree_detector_selection)
 
@@ -44,7 +48,7 @@ class FrameSection(tk.Frame):
             text="Add Line",
             command=lambda: button_line_switch(self.button_line, self.button_polygon),
         )
-        self.button_line.grid(row=0, column=0)
+        self.button_line.grid(row=0, column=0, padx=(10, 0))
 
         # Add Polygon-Section
         self.button_polygon = tk.Button(
@@ -63,15 +67,15 @@ class FrameSection(tk.Frame):
             width=12,
             text="Remove",
         )
-        self.button_remove_section.grid(row=0, column=2)
+        self.button_remove_section.grid(row=0, column=2, padx=(0, 10), sticky="ew")
 
         # Add to movement
         self.button_add_section_to_movement = tk.Button(
             master=self.frame_control_section,
-            text="Add to movement",
+            text="Add to Movement",
         )
         self.button_add_section_to_movement.grid(
-            row=1, column=0, columnspan=3, sticky="ew"
+            row=1, column=0, columnspan=3, padx=(10, 10), pady=(0, 10), sticky="ew"
         )
 
     def tree_detector_selection(self, event):
