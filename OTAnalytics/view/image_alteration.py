@@ -52,7 +52,10 @@ def manipulate_image(
 
     if button_bool["display_all_tracks_toggle"] is True:
 
-        if view.config.videoobject.transparent_image is None:
+        if (
+            view.config.videoobject.transparent_image is None
+            and button_bool["tracks_imported"]
+        ):
 
             view.config.videoobject.transparent_image = draw_all_tracks(
                 tracks=file_helper.tracks
@@ -84,9 +87,10 @@ def manipulate_image(
 
 def draw_all_tracks(tracks):
 
-    print("test")
-
-    np_image = np.zeros([600, 800, 4], dtype=np.uint8)
+    np_image = np.zeros(
+        [view.config.videoobject.height, view.config.videoobject.width, 4],
+        dtype=np.uint8,
+    )
 
     for track in tracks:
 

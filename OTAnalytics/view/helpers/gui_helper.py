@@ -9,7 +9,7 @@ button_bool = {
     "polygondetector_toggle": False,
     "tracks_imported": False,
     "detections_drawn": False,
-    "display_all_tracks_toggle": True,
+    "display_all_tracks_toggle": False,
     "play_video": False,
     "rewind_video": False,
     "counting_mode": False,

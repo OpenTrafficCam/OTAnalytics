@@ -57,7 +57,7 @@ class FrameObject(tk.Frame):
         self.button_show_tracks = tk.Button(
             master=self.frame_control_objects,
             width=12,
-            text="Hide all Tracks",
+            text="Show all Tracks",
             command=lambda: [
                 button_display_tracks_switch(self.button_show_tracks),
                 view.image_alteration.manipulate_image(),

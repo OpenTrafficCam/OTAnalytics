@@ -4,7 +4,11 @@ from view.view_helpers import FrameFiles
 from view.canvas import CanvasFrame
 from view.view_sections import FrameSection
 from view.view_objects import FrameObject
-from view.helpers.gui_helper import info_message, button_bool
+from view.helpers.gui_helper import (
+    info_message,
+    button_bool,
+    button_display_tracks_switch,
+)
 import keyboard
 import view.config as config
 import helpers.file_helper as file_helper
@@ -217,6 +221,7 @@ class gui(tk.Tk):
                     autoimport=True,
                     filepath=files,
                 )
+                button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
             for object in list(file_helper.tracks.keys()):
                 self.frame_objects.tree_objects.insert(
