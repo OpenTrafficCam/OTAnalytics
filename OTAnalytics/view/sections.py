@@ -17,7 +17,7 @@ def save_flowfile():
         flow_dict (dictionary): Dictionary with sections and movements.
     """
     if file_helper.flow_dict["Detectors"]:
-        files = [("Files", "*.OTflow")]
+        files = [("Files", "*.otflow")]
         file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
         # with open(file.name, "w") as a_file:
         #     flow_dict["Detectors"] = detectors

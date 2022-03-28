@@ -235,7 +235,7 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         (raw_detections[frame][detection]["conf"])
                     )
 
-                    anno_txt = f"{class_txt}{detection}:{confidence_txt}"
+                    anno_txt = f"{class_txt} {confidence_txt}"  # anno_txt = f"{class_txt} {detection} {confidence_txt}"
 
                     if raw_detections[frame][detection]["w"] < 0.3 * 100:
                         fontscale = 0.3
