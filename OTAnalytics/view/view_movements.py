@@ -97,6 +97,7 @@ class FrameMovements(tk.LabelFrame):
         """Creates toplevel window to name movements."""
 
         new_movement_creation = tk.Toplevel()
+        new_movement_creation.geometry("%dx%d+%d+%d" % (260, 50, 850, 350))
 
         new_movement_creation.title("Create new movement")
         movement_name_entry = tk.Entry(new_movement_creation, textvariable="Movement")

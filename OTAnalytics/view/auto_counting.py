@@ -75,7 +75,7 @@ def dic_to_object_dataframe():
 
     object_df = pd.DataFrame.from_dict(file_helper.tracks, orient="index")
 
-    object_df_validated = object_df.loc[object_df["Coord_count"] >= 2]
+    object_df_validated = object_df.loc[object_df["Coord_count"] >= 20]
 
     # better copy so apply function wont give an error msg/ is copy because coord_count
     # is filtered

@@ -83,11 +83,11 @@ def draw_polygon(
 
     if closing:
 
-        np_image = cv2.fillPoly(overlay, [pts], (200, 125, 125))
+        np_image = cv2.fillPoly(overlay, [pts], (200, 125, 125, 200))
         opacity = 0.4
         np_image = cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0, image)
 
-    np_image = cv2.polylines(image, [pts], closing, (200, 125, 125), 2)
+    np_image = cv2.polylines(image, [pts], closing, (200, 125, 125, 255), 2)
 
     view.image_alteration.manipulate_image(np_image=np_image)
 

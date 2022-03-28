@@ -1,62 +1,120 @@
 {
     "Detectors": {
-        "sued": {
+        "Nord": {
             "type": "line",
-            "start_x": 294,
-            "start_y": 533,
-            "end_x": 718,
-            "end_y": 145,
+            "start_x": 49,
+            "start_y": 207,
+            "end_x": 361,
+            "end_y": 74,
             "color": [
                 200,
                 125,
-                125,255
+                125,
+                255
             ]
         },
-        "west": {
+        "Ost": {
             "type": "line",
-            "start_x": 746,
-            "start_y": 131,
-            "end_x": 336,
-            "end_y": 100,
+            "start_x": 709,
+            "start_y": 138,
+            "end_x": 393,
+            "end_y": 68,
             "color": [
                 200,
                 125,
-                125,255
-            ]
-        },
-        "nord": {
-            "type": "line",
-            "start_x": 337,
-            "start_y": 107,
-            "end_x": 33,
-            "end_y": 186,
-            "color": [
-                200,
                 125,
-                125,255
+                255
             ]
         },
-        "ost": {
+        "West": {
             "type": "line",
-            "start_x": 17,
-            "start_y": 196,
-            "end_x": 277,
-            "end_y": 546,
+            "start_x": 56,
+            "start_y": 208,
+            "end_x": 290,
+            "end_y": 499,
             "color": [
                 200,
                 0,
-                0,255
+                0,
+                255
+            ]
+        },
+        "Sued": {
+            "type": "polygon",
+            "points": [
+                [
+                    485,
+                    513
+                ],
+                [
+                    674,
+                    145
+                ],
+                [
+                    787,
+                    187
+                ],
+                [
+                    719,
+                    552
+                ]
+            ],
+            "color": [
+                200,
+                125,
+                125,
+                255
             ]
         }
     },
     "Movements": {
-        "SN": [
-            "sued",
-            "nord"
+        "Nord-Sued": [
+            "Nord",
+            "Sued"
         ],
-        "WO": [
-            "west",
-            "ost"
+        "Sued-Nord": [
+            "Sued",
+            "Nord"
+        ],
+        "Ost-West": [
+            "Ost",
+            "West"
+        ],
+        "West-Ost": [
+            "West",
+            "Ost"
+        ],
+        "Nord-Ost": [
+            "Nord",
+            "Ost"
+        ],
+        "Ost-Nord": [
+            "Ost",
+            "Nord"
+        ],
+        "West-Nord": [
+            "West",
+            "Nord"
+        ],
+        "Nord-West": [
+            "Nord",
+            "West"
+        ],
+        "Sued-Ost": [
+            "Sued",
+            "Ost"
+        ],
+        "Ost-Sued": [
+            "Ost",
+            "Sued"
+        ],
+        "West-Sued": [
+            "West",
+            "Sued"
+        ],
+        "Sued-West": [
+            "Sued",
+            "West"
         ]
     }
 }

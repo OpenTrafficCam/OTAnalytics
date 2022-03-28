@@ -94,10 +94,10 @@ def button_line_switch(button_linedetector, button_polygondetector):
 
     if button_bool["linedetector_toggle"]:
         button_linedetector.configure(text="Finish")
-        button_polygondetector.configure(text="Polygon")
+        button_polygondetector.configure(text="Add Polygon")
         # statepanel.update_statepanel(statepanel_txt["Linedetector_information"])
     else:
-        button_linedetector.configure(text="Line")
+        button_linedetector.configure(text="Add Line")
         # statepanel.update_statepanel("")
 
 

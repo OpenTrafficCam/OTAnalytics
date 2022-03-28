@@ -148,6 +148,7 @@ class FrameSection(tk.LabelFrame):
         if button_bool["linedetector_toggle"] or button_bool["polygondetector_toggle"]:
 
             self.new_detector_creation = tk.Toplevel()
+            self.new_detector_creation.geometry("%dx%d+%d+%d" % (250, 50, 850, 350))
 
             # removes hotkey so "enter" won't trigger
             keyboard.remove_hotkey("enter")
