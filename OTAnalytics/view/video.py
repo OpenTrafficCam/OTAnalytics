@@ -207,6 +207,8 @@ class Video(FileVideoStream):
             self.x_resize_factor = 1
             self.y_resize_factor = 1
 
+        self.initialize_empty_image()
+
     def get_frame(self, np_image):
 
         # when imported set current frame to 0
@@ -234,9 +236,10 @@ class Video(FileVideoStream):
         # class is instantiated. Save a reference to the photo
         self.ph_image = ImageTk.PhotoImage(image)  # to ImageTk format
 
-        self.transparent_image = None
-
         return self.ph_image
+
+    def initialize_empty_image(self):
+        self.transparent_image = None
 
     def set_frame(self):
 

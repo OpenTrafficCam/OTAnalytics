@@ -50,12 +50,9 @@ def manipulate_image(
             track_live=file_helper.tracks_live,
         )
 
-    if button_bool["display_all_tracks_toggle"] is True:
+    if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
 
-        if (
-            view.config.videoobject.transparent_image is None
-            and button_bool["tracks_imported"]
-        ):
+        if view.config.videoobject.transparent_image is None:
 
             view.config.videoobject.transparent_image = draw_all_tracks(
                 tracks=file_helper.tracks

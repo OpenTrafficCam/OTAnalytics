@@ -1,7 +1,7 @@
 import json
 from tkinter import filedialog
 
-from view.helpers.gui_helper import button_bool, color_dict
+from view.helpers.gui_helper import button_bool, color_dict, info_message
 
 
 def load_trackfile():
@@ -13,6 +13,9 @@ def load_trackfile():
 
 def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
     """loads detections from Track-File and converts into displayable format"""
+    if button_bool["tracks_imported"]:
+        info_message("Warning", "Track already imported")
+        return
 
     if not autoimport:
         filepath = load_trackfile()

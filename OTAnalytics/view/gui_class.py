@@ -166,6 +166,8 @@ class gui(tk.Tk):
 
             file_helper.re_initialize()
 
+            config.videoobject.initialize_empty_image()
+
             button_bool["tracks_imported"] = False
 
             view.image_alteration.manipulate_image()
@@ -188,7 +190,7 @@ class gui(tk.Tk):
         if self.frame_files.files_dict[path]["otflow_file"] == "\u2705":
 
             response_flowfile = tk.messagebox.askquestion(
-                title="Otflowfile detected",
+                title="otflowfile detected",
                 message="Do you want to import existent flowfile?",
             )
 
