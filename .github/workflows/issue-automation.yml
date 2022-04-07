@@ -1,3 +1,4 @@
+---
 name: Issue to Project
 
 on:
@@ -26,7 +27,7 @@ jobs:
           project: OTC Core Developer Weekly Meeting
           column: questions
           repo-token: ${{ secrets.GHPROJECT_TOKEN }}
-          
+
       - name: Move public bugs to Weekly-Discussion
         uses: alex-page/github-project-automation-plus@v0.8.1
         if: |
