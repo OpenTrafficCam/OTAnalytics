@@ -27,3 +27,7 @@ jobs:
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_JSCPD: false
           VALIDATE_PYTHON_BLACK: false
+
+          LINTER_RULES_PATH: /
+          PYTHON_FLAKE8_CONFIG_FILE: setup.cfg
+          PYTHON_ISORT_CONFIG_FILE: setup.cfg
