@@ -1,14 +1,11 @@
+---
 name: super-linter
 #
 # Documentation:
 # https://help.github.com/en/articles/workflow-syntax-for-github-actions
 #
 
-on:
-#   push:
-#     branches-ignore: [master]
-  pull_request:
-    branches: [master]
+on: pull_request
 
 jobs:
   build:
