@@ -61,15 +61,16 @@ class FrameMovements(tk.LabelFrame):
             text="Rename",
             command=self.create_movement_rename_window,
         )
-        self.button_rename_movement.grid(
-            row=0, column=3, padx=(0, 10), pady=(0, 10), sticky="ew"
-        )
+        self.button_rename_movement.grid(row=0, column=3, pady=(0, 10), sticky="ew")
 
-        # self.button_autocreate_movement = tk.Button(
-        #     master=self.frame_controls,
-        #     text="Auto",
-        # )
-        # self.button_autocreate_movement.grid(row=0, column=4, sticky="ew")
+        self.button_autocreate_movement = tk.Button(
+            master=self.frame_controls,
+            text="Autofill",
+            command=self.create_movement_autofill_window,
+        )
+        self.button_autocreate_movement.grid(
+            row=0, column=4, padx=(0, 10), pady=(0, 10), sticky="ew"
+        )
 
     def new_movement(self, entrywidget):
         """Saves created movement to flowfile.
@@ -184,3 +185,85 @@ class FrameMovements(tk.LabelFrame):
             tk.messagebox.showinfo(
                 title="Warning", message="Please enter a different movement name!"
             )
+
+    def create_movement_autofill_window(self):
+
+        if len(file_helper.flow_dict["Detectors"]) <= 1:
+            tk.messagebox.showinfo(
+                title="Warning", message="Please at least two sections!"
+            )
+            return
+
+        autofill_topwindow = tk.Toplevel()
+
+        textfield = tk.Label(
+            autofill_topwindow, text="Selected section will be combined to movements."
+        )
+
+        textfield.pack(
+            fill="x",
+            padx=10,
+        )
+
+        # selection treeview
+        tree_select_section = ttk.Treeview(
+            master=autofill_topwindow,
+            height=len(file_helper.flow_dict["Detectors"]),
+        )
+        tree_select_section.pack(
+            fill="x",
+            padx=10,
+        )
+
+        tree_files_cols = {"#0": "Sections"}
+        tree_select_section["columns"] = tuple(
+            {k: v for k, v in tree_files_cols.items() if k != "#0"}.keys()
+        )
+        tree_select_section.column("#0", anchor="center", width=100)
+        tree_select_section.heading("#0", text=tree_files_cols["#0"], anchor="center")
+        for detector in file_helper.flow_dict["Detectors"]:
+            tree_select_section.insert(parent="", index="end", text=detector)
+
+        autofill_button = tk.Button(
+            autofill_topwindow,
+            text="Autocreation of movements",
+            command=lambda: self.autofill_movement(tree_select_section),
+        )
+        autofill_button.pack(pady=10, padx=5)
+
+        autofill_topwindow.grab_set()
+
+    def autofill_movement(self, treeview):
+        items = treeview.selection()
+        sectionlist = [treeview.item(section, "text") for section in items]
+
+        permutation_list = file_helper.permutation_of_list(sectionlist)
+
+        for permutation in permutation_list:
+
+            if list(permutation) in file_helper.flow_dict["Movements"].values():
+                tk.messagebox.showinfo(
+                    title="Warning",
+                    message="Combination "
+                    + permutation[0]
+                    + " and "
+                    + permutation[1]
+                    + " already exists!",
+                )
+                continue
+            file_helper.flow_dict["Movements"][
+                permutation[0] + "-" + permutation[1]
+            ] = list(permutation)
+
+            self.tree_movements.insert(
+                parent="",
+                index="end",
+                text=permutation[0] + "-" + permutation[1],
+                value=[
+                    file_helper.flow_dict["Movements"][
+                        permutation[0] + "-" + permutation[1]
+                    ]
+                ],
+            )
+
+        print(file_helper.flow_dict["Movements"])

@@ -11,7 +11,7 @@ from view.helpers.gui_helper import info_message
 
 
 def dic_to_detector_dataframe():
-    """Creates a dataframe from detector/flow dictionary, # TODO change to use
+    """Creates a dataframe from detector/flow dictionary, #TODO change to use
     linedetector dic that gets updated when importing flow data
     creates column with LineString-objects for the calculation of
     lineintersection with tracks.

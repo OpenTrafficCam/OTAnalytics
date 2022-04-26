@@ -175,14 +175,6 @@ class gui(tk.Tk):
         else:
             info_message("Warning", "Nothing to clear!")
 
-    def autocreate_movements_from_sections(self):
-        pass
-        # itemlist = list(self.frame_sections.tree_sections.selection())
-
-        # list_movements = list(file_helper.powerset(itemlist))
-
-        # listmovements_reversed = list(file_helper.powerset(itemlist[::-1]))
-
     def ask_to_import(self):
 
         path = list(self.frame_files.files_dict.keys())[-1]

@@ -16,10 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# %%
 import os
 import re
-from itertools import chain, combinations
+import itertools
 
+#%%
 
 flow_dict = {"Detectors": {}, "Movements": {}}
 selectionlist_objects = []
@@ -106,19 +108,21 @@ def re_initialize():
     tracks = {}
 
 
-def powerset(iterable):
-    s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+# %%
+def permutation_of_list(selected_sections, maxpermutation=2):
+
+    return list(itertools.permutations(selected_sections, r=maxpermutation))
 
 
-def fill_tree_views(option, treeview_movements, treeview_sections):
+#%%
+def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
 
     global flow_dict, raw_detections, tracks
 
     if option in [1, 3]:
         for movement in flow_dict["Movements"]:
 
-            treeview_movements.insert(
+            tree_movements.insert(
                 parent="",
                 index="end",
                 text=movement,
@@ -127,4 +131,4 @@ def fill_tree_views(option, treeview_movements, treeview_sections):
 
     if option in [2, 3]:
         for detector in flow_dict["Detectors"]:
-            treeview_sections.insert(parent="", index="end", text=detector)
+            tree_sections.insert(parent="", index="end", text=detector)
