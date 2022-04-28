@@ -1,3 +1,4 @@
+---
 name: Remove Issue from Projects
 
 on:
@@ -18,7 +19,7 @@ jobs:
           column: To do
           repo-token: ${{ secrets.GHPROJECT_TOKEN }}
           action: delete
-          
+
       - name: Remove questions from Weekly-Discussion
         uses: alex-page/github-project-automation-plus@v0.8.1
         if: |
@@ -28,7 +29,7 @@ jobs:
           column: questions
           repo-token: ${{ secrets.GHPROJECT_TOKEN }}
           action: delete
-          
+
       - name: Remove public bugs from Weekly-Discussion
         uses: alex-page/github-project-automation-plus@v0.8.1
         if: |
@@ -38,7 +39,7 @@ jobs:
           column: public bugs
           repo-token: ${{ secrets.GHPROJECT_TOKEN }}
           action: delete
-          
+
       # Move to other column if label is present
       - name: Move questions to Weekly-Discussion
         uses: alex-page/github-project-automation-plus@v0.8.1
@@ -48,7 +49,7 @@ jobs:
           project: OTC Core Developer Weekly Meeting
           column: questions
           repo-token: ${{ secrets.GHPROJECT_TOKEN }}
-          
+
       - name: Move public bugs to Weekly-Discussion
         uses: alex-page/github-project-automation-plus@v0.8.1
         if: |
