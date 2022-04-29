@@ -50,46 +50,6 @@ def dic_to_detector_dataframe():
     return detector_df
 
 
-# def dic_to_object_dataframe():
-#     """Creates a dataframe from object dictionary, creates column with Polygon-objects.
-
-#     Args:
-#         object_dict (dictionary): Dictionary with information of tracks.
-
-#     Returns:
-#         dataframe: Dictionary with information of object.
-#     """
-
-#     # count number of coordinates (if the count is less then 3,
-#     # geopandas cant create Polygon)
-#     for object in file_helper.tracks:
-#         file_helper.tracks[object]["Coord_count"] = len(
-#             file_helper.tracks[object]["Coord"]
-#         )
-#         file_helper.tracks[object]["first_appearance_frame"] = file_helper.tracks[
-#             object
-#         ]["Frame"][0]
-#         file_helper.tracks[object]["last_appearance_frame"] = file_helper.tracks[
-#             object
-#         ]["Frame"][-1]
-
-#     object_df = pd.DataFrame.from_dict(file_helper.tracks, orient="index")
-
-#     print(object_df)
-
-#     object_df_validated = object_df.loc[object_df["Coord_count"] >= 20]
-
-#     # better copy so apply function wont give an error msg/ is copy because coord_count
-#     # is filtered
-#     object_df_validated_copy = object_df_validated.copy()
-
-#     object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
-#         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1
-#     )
-
-#     return object_df_validated_copy
-
-
 # %%
 def calculate_intersections(detector_df, object_validated_df):
     """Checks if tracks and detectors intersect, alters object_dataframe.

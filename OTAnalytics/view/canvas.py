@@ -153,6 +153,6 @@ class SliderFrame(tk.Frame):
         ):
             view.config.videoobject.current_frame = slider_number
 
-            np_image = view.config.videoobject.set_frame()
+            np_image = view.config.videoobject.set_frame().copy()
 
             view.image_alteration.manipulate_image(np_image=np_image)

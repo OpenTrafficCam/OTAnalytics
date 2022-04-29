@@ -1,5 +1,3 @@
-import time
-import timeit
 import tkinter
 
 import cv2
@@ -7,7 +5,6 @@ from django import test
 import numpy as np
 from view.helpers.gui_helper import (
     button_bool,
-    button_display_tracks_switch,
     color_dict,
 )
 from PIL import Image, ImageTk
@@ -378,6 +375,7 @@ def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
 
 
 def create_intersection_list(current_line_shape):
+    print(file_helper.selectionlist_objects)
 
     if button_bool["tracks_imported"] and button_bool["display_all_tracks_toggle"]:
 
