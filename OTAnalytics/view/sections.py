@@ -7,6 +7,7 @@ from view.helpers.gui_helper import button_bool, info_message
 import view.image_alteration
 import view.config
 import helpers.file_helper as file_helper
+from shapely.geometry import LineString
 
 
 def save_flowfile():
@@ -39,15 +40,16 @@ def draw_line(
 
         return
 
-    np_image = cv2.line(
-        np_image,
-        view.config.maincanvas.points[0],
-        view.config.maincanvas.points[1],
-        (200, 125, 125, 255),
-        3,
+    lineobject = create_LineString(
+        view.config.maincanvas.points[0], view.config.maincanvas.points[1]
     )
+    view.image_alteration.create_intersection_list(lineobject)
 
     view.image_alteration.manipulate_image(np_image=np_image)
+
+
+def create_LineString(start, end):
+    return LineString([start, end])
 
 
 def draw_polygon(

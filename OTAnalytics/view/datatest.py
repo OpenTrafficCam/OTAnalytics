@@ -1,33 +1,29 @@
 import json
-from tkinter import filedialog
 import geopandas as gpd
-import numpy as np
 from shapely.geometry import LineString, Point
 import pandas as pd
 
-from view.helpers.gui_helper import button_bool, color_dict, info_message
+
+color_dict = {
+    "car": (89, 101, 212),
+    "bicycle": (73, 166, 91),
+    "truck": (97, 198, 212),
+    "motorcycle": (148, 52, 137),
+    "person": (214, 107, 88),
+    "bus": (179, 177, 68),
+}
 
 
-def load_trackfile():
-
-    filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
-    files = open(filepath.name, "r")
-    print(filepath.name)
-    return files.read()
-
-
-def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
+def load_and_convert(x_factor=1, y_factor=1, filepath=None):
     """loads detections from Track-File and converts into displayable format"""
-    if button_bool["tracks_imported"]:
-        info_message("Warning", "Track already imported")
-        return
 
-    if not autoimport:
-        filepath = load_trackfile()
+    filepath = "C:/Users/Goerner/Desktop/code/OpenTrafficCam/OTAnalytics/tests/data/input/radeberg_FR20_2020-02-20_12-00-00.ottrk"
+    files = open(filepath, "r")
+    files = files.read()
 
     tracks = {}
 
-    loaded_dict = json.loads(filepath)
+    loaded_dict = json.loads(files)
 
     # raw detections from OTVision
     raw_detections = loaded_dict["data"]
@@ -57,7 +53,6 @@ def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
                         raw_detections[frame][detection]["y"] * y_factor,
                     ]
                 )
-    button_bool["tracks_imported"] = True
 
     tracks_df = pd.DataFrame.from_dict(tracks, orient="index")
 
@@ -69,17 +64,12 @@ def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
     tracks_df["geometry"] = tracks_df.apply(
         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1
     )
-    tracks_geoseries = gpd.GeoSeries(tracks_df["geometry"])
+    for coordinate in tracks_df["Coord"]:
 
-    tracks_df["first_appearance_frame"] = tracks_df["Frame"].apply(return_first_frame)
-    tracks_df["last_appearance_frame"] = tracks_df["Frame"].apply(return_last_frame)
+        print(coordinate)
+        print(tracks_df.Class)
 
-    return raw_detections, tracks, tracks_df, tracks_geoseries
-
-
-def return_first_frame(lst):
-    return lst[0]
+    return raw_detections, tracks
 
 
-def return_last_frame(lst):
-    return lst[-1]
+load_and_convert()

@@ -50,42 +50,44 @@ def dic_to_detector_dataframe():
     return detector_df
 
 
-def dic_to_object_dataframe():
-    """Creates a dataframe from object dictionary, creates column with Polygon-objects.
+# def dic_to_object_dataframe():
+#     """Creates a dataframe from object dictionary, creates column with Polygon-objects.
 
-    Args:
-        object_dict (dictionary): Dictionary with information of tracks.
+#     Args:
+#         object_dict (dictionary): Dictionary with information of tracks.
 
-    Returns:
-        dataframe: Dictionary with information of object.
-    """
+#     Returns:
+#         dataframe: Dictionary with information of object.
+#     """
 
-    # count number of coordinates (if the count is less then 3,
-    # geopandas cant create Polygon)
-    for object in file_helper.tracks:
-        file_helper.tracks[object]["Coord_count"] = len(
-            file_helper.tracks[object]["Coord"]
-        )
-        file_helper.tracks[object]["first_appearance_frame"] = file_helper.tracks[
-            object
-        ]["Frame"][0]
-        file_helper.tracks[object]["last_appearance_frame"] = file_helper.tracks[
-            object
-        ]["Frame"][-1]
+#     # count number of coordinates (if the count is less then 3,
+#     # geopandas cant create Polygon)
+#     for object in file_helper.tracks:
+#         file_helper.tracks[object]["Coord_count"] = len(
+#             file_helper.tracks[object]["Coord"]
+#         )
+#         file_helper.tracks[object]["first_appearance_frame"] = file_helper.tracks[
+#             object
+#         ]["Frame"][0]
+#         file_helper.tracks[object]["last_appearance_frame"] = file_helper.tracks[
+#             object
+#         ]["Frame"][-1]
 
-    object_df = pd.DataFrame.from_dict(file_helper.tracks, orient="index")
+#     object_df = pd.DataFrame.from_dict(file_helper.tracks, orient="index")
 
-    object_df_validated = object_df.loc[object_df["Coord_count"] >= 20]
+#     print(object_df)
 
-    # better copy so apply function wont give an error msg/ is copy because coord_count
-    # is filtered
-    object_df_validated_copy = object_df_validated.copy()
+#     object_df_validated = object_df.loc[object_df["Coord_count"] >= 20]
 
-    object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
-        lambda pointtuples: LineString(pointtuples["Coord"]), axis=1
-    )
+#     # better copy so apply function wont give an error msg/ is copy because coord_count
+#     # is filtered
+#     object_df_validated_copy = object_df_validated.copy()
 
-    return object_df_validated_copy
+#     object_df_validated_copy["geometry"] = object_df_validated_copy.apply(
+#         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1
+#     )
+
+#     return object_df_validated_copy
 
 
 # %%
@@ -410,8 +412,8 @@ def automated_counting(entry_timedelta, entry_interval):
 
     # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
     detector_df = dic_to_detector_dataframe()
-    object_validated_df = dic_to_object_dataframe()
-    processed_object = calculate_intersections(detector_df, object_validated_df)
+    # object_validated_df = dic_to_object_dataframe()
+    processed_object = calculate_intersections(detector_df, file_helper.tracks_df)
 
     print(" successful ")
 

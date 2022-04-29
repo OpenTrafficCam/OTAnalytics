@@ -1,8 +1,15 @@
+import time
+import timeit
 import tkinter
 
 import cv2
+from django import test
 import numpy as np
-from view.helpers.gui_helper import button_bool, color_dict
+from view.helpers.gui_helper import (
+    button_bool,
+    button_display_tracks_switch,
+    color_dict,
+)
 from PIL import Image, ImageTk
 import view.config
 import helpers.file_helper as file_helper
@@ -33,7 +40,7 @@ def manipulate_image(
         np_image = draw_tracks(
             np_image,
             selectionlist=file_helper.selectionlist_objects,
-            tracks=file_helper.tracks,
+            tracks=file_helper.tracks_df,
         )
 
         np_image = draw_bounding_box(
@@ -54,9 +61,7 @@ def manipulate_image(
 
         if view.config.videoobject.transparent_image is None:
 
-            view.config.videoobject.transparent_image = draw_all_tracks(
-                tracks=file_helper.tracks
-            )
+            view.config.videoobject.transparent_image = draw_all_tracks()
 
         np_image = cv2.addWeighted(
             view.config.videoobject.transparent_image, 0.5, np_image, 1, 0
@@ -71,6 +76,14 @@ def manipulate_image(
     # class is instantiated. Save a reference to the photo
     # photo is attribute of video
 
+    np_image = cv2.line(
+        np_image,
+        view.config.maincanvas.points[0],
+        view.config.maincanvas.points[1],
+        (200, 125, 125, 255),
+        3,
+    )
+
     image = Image.fromarray(np_image)  # to PIL format
 
     view.config.videoobject.ph_image = ImageTk.PhotoImage(image)
@@ -82,17 +95,17 @@ def manipulate_image(
     view.config.maincanvas.update()
 
 
-def draw_all_tracks(tracks):
+def draw_all_tracks():
 
     np_image = np.zeros(
         [view.config.videoobject.height, view.config.videoobject.width, 4],
         dtype=np.uint8,
     )
 
-    for track in tracks:
+    for index, track in file_helper.tracks_df.iterrows():
 
         try:
-            trackcolor = color_dict[tracks[track]["Class"]] + (200,)
+            trackcolor = color_dict[track["Class"]] + (200,)
         except NameError:
             trackcolor = (
                 0,
@@ -100,12 +113,11 @@ def draw_all_tracks(tracks):
                 255,
             ) + (150,)
 
-        pts = np.array(tracks[track]["Coord"], np.int32)
+        pts = np.array(track["Coord"], np.int32)
 
         pts = pts.reshape((-1, 1, 2))
 
         np_image = cv2.polylines(np_image, [pts], False, color=trackcolor, thickness=2)
-
     return np_image
 
 
@@ -167,34 +179,19 @@ def draw_tracks(np_image, selectionlist, tracks):
     Returns:
         np_image (numpy_array): manipulated array
     """
-    # if button_bool["display_all_tracks_toggle"] is True:
-
-    #     for track in tracks:
-
-    #         try:
-    #             trackcolor = color_dict[tracks[track]["Class"]]
-    #         except NameError:
-    #             trackcolor = (0, 0, 255)
-
-    #         pts = np.array(tracks[track]["Coord"], np.int32)
-
-    #         pts = pts.reshape((-1, 1, 2))
-
-    #         np_image = cv2.polylines(
-    #             np_image, [pts], False, color=trackcolor, thickness=2
-    #         )
 
     if selectionlist:
+        df = tracks.loc[selectionlist]
 
-        for object_id in selectionlist:
+        for index, row in df.iterrows():
 
             try:
-                trackcolor = color_dict[tracks[object_id]["Class"]] + (200,)
+                trackcolor = color_dict[row["Class"]] + (200,)
             except NameError:
 
                 trackcolor = (0, 0, 255, 150)
 
-            pts = np.array(tracks[object_id]["Coord"], np.int32)
+            pts = np.array(row["Coord"], np.int32)
 
             pts = pts.reshape((-1, 1, 2))
 
@@ -378,3 +375,14 @@ def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
                 #     object_live_track[object] = []
 
     return np_image
+
+
+def create_intersection_list(current_line_shape):
+
+    if button_bool["tracks_imported"] and button_bool["display_all_tracks_toggle"]:
+
+        intersect_series = file_helper.tracks_geoseries.intersects(current_line_shape)
+
+        file_helper.selectionlist_objects = [
+            i for i in intersect_series.index if intersect_series[i]
+        ]

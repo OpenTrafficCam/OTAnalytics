@@ -265,5 +265,3 @@ class FrameMovements(tk.LabelFrame):
                     ]
                 ],
             )
-
-        print(file_helper.flow_dict["Movements"])

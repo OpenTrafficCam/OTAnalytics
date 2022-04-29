@@ -209,7 +209,12 @@ class gui(tk.Tk):
                 files = open(filepath, "r")
                 files = files.read()
 
-                file_helper.raw_detections, file_helper.tracks = load_and_convert(
+                (
+                    file_helper.raw_detections,
+                    file_helper.tracks,
+                    file_helper.tracks_df,
+                    file_helper.tracks_geoseries,
+                ) = load_and_convert(
                     x_factor=config.videoobject.x_resize_factor,
                     y_factor=config.videoobject.y_resize_factor,
                     autoimport=True,
@@ -217,12 +222,12 @@ class gui(tk.Tk):
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-            for object in list(file_helper.tracks.keys()):
+            for index, object in file_helper.tracks_df.iterrows():
                 self.frame_objects.tree_objects.insert(
                     parent="",
                     index="end",
-                    text=object,
-                    values=file_helper.tracks[object]["Class"],
+                    text=index,
+                    values=object["Class"],
                 )
 
         file_helper.fill_tree_views(

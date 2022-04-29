@@ -20,6 +20,7 @@
 import os
 import re
 import itertools
+from shapely.geometry import LineString, Point
 
 #%%
 
@@ -28,6 +29,7 @@ selectionlist_objects = []
 selectionlist_sections = []
 raw_detections = []
 tracks = {}
+
 tracks_live = {}
 otflow_file = None
 ottrk_file = None
@@ -114,7 +116,7 @@ def permutation_of_list(selected_sections, maxpermutation=2):
     return list(itertools.permutations(selected_sections, r=maxpermutation))
 
 
-#%%
+# %%
 def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
 
     global flow_dict, raw_detections, tracks
@@ -132,3 +134,10 @@ def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
     if option in [2, 3]:
         for detector in flow_dict["Detectors"]:
             tree_sections.insert(parent="", index="end", text=detector)
+
+
+def geobject_creator(row):
+    if len(row["Coord"]) > 1:
+        return LineString(row["Coord"])
+    else:
+        return Point(row["Coord"])
