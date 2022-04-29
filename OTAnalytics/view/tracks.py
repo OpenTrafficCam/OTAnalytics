@@ -1,8 +1,7 @@
 import json
 from tkinter import filedialog
 import geopandas as gpd
-import numpy as np
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString
 import pandas as pd
 
 from view.helpers.gui_helper import button_bool, color_dict, info_message
@@ -59,7 +58,20 @@ def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
                 )
     button_bool["tracks_imported"] = True
 
-    tracks_df = pd.DataFrame.from_dict(tracks, orient="index")
+    tracks_df = create_tracks_dataframe(tracks)
+
+    tracks_geoseries = create_geoseries(tracks_df)
+
+    return raw_detections, tracks, tracks_df, tracks_geoseries
+
+
+def create_geoseries(tracks_df):
+
+    return gpd.GeoSeries(tracks_df["geometry"])
+
+
+def create_tracks_dataframe(tracks_dic):
+    tracks_df = pd.DataFrame.from_dict(tracks_dic, orient="index")
 
     tracks_df["Coord_count"] = tracks_df.apply(
         lambda pointtuples: (len(pointtuples["Coord"])), axis=1
@@ -69,12 +81,11 @@ def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
     tracks_df["geometry"] = tracks_df.apply(
         lambda pointtuples: LineString(pointtuples["Coord"]), axis=1
     )
-    tracks_geoseries = gpd.GeoSeries(tracks_df["geometry"])
 
     tracks_df["first_appearance_frame"] = tracks_df["Frame"].apply(return_first_frame)
     tracks_df["last_appearance_frame"] = tracks_df["Frame"].apply(return_last_frame)
 
-    return raw_detections, tracks, tracks_df, tracks_geoseries
+    return tracks_df
 
 
 def return_first_frame(lst):

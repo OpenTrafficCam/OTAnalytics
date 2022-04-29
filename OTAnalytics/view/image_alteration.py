@@ -1,7 +1,6 @@
 import tkinter
 
 import cv2
-from django import test
 import numpy as np
 from view.helpers.gui_helper import (
     button_bool,
@@ -73,13 +72,15 @@ def manipulate_image(
     # class is instantiated. Save a reference to the photo
     # photo is attribute of video
 
-    np_image = cv2.line(
-        np_image,
-        view.config.maincanvas.points[0],
-        view.config.maincanvas.points[1],
-        (200, 125, 125, 255),
-        3,
-    )
+    if button_bool["linedetector_toggle"]:
+
+        np_image = cv2.line(
+            np_image,
+            view.config.maincanvas.points[0],
+            view.config.maincanvas.points[1],
+            (200, 125, 125, 255),
+            3,
+        )
 
     image = Image.fromarray(np_image)  # to PIL format
 
@@ -226,7 +227,8 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         (raw_detections[frame][detection]["conf"])
                     )
 
-                    anno_txt = f"{class_txt} {confidence_txt}"  # anno_txt = f"{class_txt} {detection} {confidence_txt}"
+                    anno_txt = f"{class_txt} {confidence_txt}"
+                    # anno_txt = f"{class_txt} {detection} {confidence_txt}"
 
                     if raw_detections[frame][detection]["w"] < 0.3 * 100:
                         fontscale = 0.3
@@ -375,7 +377,6 @@ def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
 
 
 def create_intersection_list(current_line_shape):
-    print(file_helper.selectionlist_objects)
 
     if button_bool["tracks_imported"] and button_bool["display_all_tracks_toggle"]:
 

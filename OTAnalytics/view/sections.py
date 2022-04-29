@@ -94,6 +94,10 @@ def draw_polygon(
     view.image_alteration.manipulate_image(np_image=np_image)
 
 
+def create_polyline(pts):
+    pass
+
+
 def load_flowfile():
     """Loads sections from a .OTflow-File."""
 

@@ -22,7 +22,7 @@ import re
 import itertools
 from shapely.geometry import LineString, Point
 
-#%%
+# %%
 
 flow_dict = {"Detectors": {}, "Movements": {}}
 selectionlist_objects = []
