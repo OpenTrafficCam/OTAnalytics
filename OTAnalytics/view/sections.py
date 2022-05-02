@@ -29,7 +29,7 @@ def save_flowfile():
         info_message("Warning", "Create Sections and Movements first!")
 
 
-def draw_line(
+def prepare_draw_line(
     event,
 ):
     """Draws line on canvas"""
@@ -41,15 +41,24 @@ def draw_line(
         return
 
     lineobject = create_LineString(
-        view.config.maincanvas.points[0], view.config.maincanvas.points[1]
+        [view.config.maincanvas.points[0], view.config.maincanvas.points[1]]
     )
     view.image_alteration.create_intersection_list(lineobject)
 
     view.image_alteration.manipulate_image(np_image=np_image)
 
 
-def create_LineString(start, end):
-    return LineString([start, end])
+def create_LineString(pts):
+    """Creates linestring from two point coordinates.
+
+    Args:
+        start (tuple): x-y-coordintes
+        end (tuple): x-y-coordintes
+
+    Returns:
+        geoobject: Linestring geoobject to compute intersections.
+    """
+    return LineString(pts)
 
 
 def draw_polygon(
@@ -58,10 +67,13 @@ def draw_polygon(
     closing=False,
     undo=False,
 ):
-    """Draws a polygon on canvas.
+    """Draws polygon on canvas.
 
     Args:
-        closing (bool): If true create polygon else polyline.
+        event (event): mouseclick event.
+        adding_points (bool, optional): adds points of polygon to a list.
+        closing (bool, optional): closes polygon.
+        undo (bool, optional): deletes last polygon points.
     """
     if not button_bool["polygondetector_toggle"]:
 
@@ -91,15 +103,19 @@ def draw_polygon(
 
     np_image = cv2.polylines(image, [pts], closing, (200, 125, 125, 255), 2)
 
+    if len(list_of_tuples) > 1:
+        lineobject = create_LineString(list_of_tuples)
+        view.image_alteration.create_intersection_list(lineobject)
+
     view.image_alteration.manipulate_image(np_image=np_image)
 
 
-def create_polyline(pts):
-    pass
-
-
 def load_flowfile():
-    """Loads sections from a .OTflow-File."""
+    """Loads flow file.
+
+    Returns:
+        json: Return json file to read from.
+    """
 
     if (
         not file_helper.flow_dict["Detectors"]

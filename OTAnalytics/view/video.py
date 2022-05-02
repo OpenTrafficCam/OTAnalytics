@@ -61,7 +61,6 @@ class FileVideoStream:
         # start a thread to read frames from the file video stream
         self.thread_backward.start()
         self.stopped = False
-        print("Thread_backward started")
 
         return self
 
@@ -69,24 +68,16 @@ class FileVideoStream:
         # start a thread to read frames from the file video stream
         self.thread_forward.start()
         self.stopped = False
-        print("Thread_forward started")
 
         return self
 
     def update(self, direction):
-        print("update thread")
         # keep looping infinitely
         backward_looper = self.current_frame
 
         self.stream.set(1, self.current_frame)
 
-        while True:
-            # if the thread indicator variable is set,
-            # stop the thread
-
-            if self.stopped:
-                break
-
+        while not self.stopped:
             # otherwise, ensure the queue has room in it
             if not self.Q.full():
                 if direction == -1 and backward_looper > 0:
@@ -121,8 +112,6 @@ class FileVideoStream:
                 self.Q.put(frame)
             else:
                 time.sleep(0.1)  # Rest for 10ms, we have a full queue
-
-        print("Thread stopped")
 
     def read(self):
         # return next frame in the queue
@@ -210,6 +199,14 @@ class Video(FileVideoStream):
         self.initialize_empty_image()
 
     def get_frame(self, np_image):
+        """Reads frame from videostream.
+
+        Args:
+            np_image (bool): bool if return value needs to be photo or array
+
+        Returns:
+           array, photoimage: returns pil image or array
+        """
 
         # when imported set current frame to 0
         # self.cap.set(1, self.current_frame)
@@ -242,6 +239,11 @@ class Video(FileVideoStream):
         self.transparent_image = None
 
     def set_frame(self):
+        """Get frame from current video position.
+
+        Returns:
+            array: array of current image
+        """
 
         self.stream.set(1, self.current_frame)
 

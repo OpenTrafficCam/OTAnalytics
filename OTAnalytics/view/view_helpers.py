@@ -247,6 +247,7 @@ class FrameFiles(tk.LabelFrame):
             view.config.sliderobject.slider.set(view.config.videoobject.current_frame)
 
     def remove_video(self):
+        """removes videofile"""
 
         item = self.tree_files.selection()
         video_name = self.tree_files.item(item, "text")

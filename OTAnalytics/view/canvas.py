@@ -20,7 +20,7 @@ class OtcCanvas(tk.Canvas):
             "<B1-Motion>",
             lambda event: [
                 self.click_receive_coordinates(event, 1),
-                view.sections.draw_line(
+                view.sections.prepare_draw_line(
                     event,
                 ),
             ],

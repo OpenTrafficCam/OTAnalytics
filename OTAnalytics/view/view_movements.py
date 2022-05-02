@@ -234,6 +234,11 @@ class FrameMovements(tk.LabelFrame):
         autofill_topwindow.grab_set()
 
     def autofill_movement(self, treeview):
+        """Autocreates movement from sections (maxpermutation 2)
+
+        Args:
+            treeview (tkinter treeview): treeview to input movements.
+        """
         items = treeview.selection()
         sectionlist = [treeview.item(section, "text") for section in items]
 

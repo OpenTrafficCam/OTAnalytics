@@ -8,10 +8,14 @@ from view.helpers.gui_helper import button_bool, color_dict, info_message
 
 
 def load_trackfile():
+    """Loads file with objects detected in OTVision.
+
+    Returns:
+        str: filepath
+    """
 
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
     files = open(filepath.name, "r")
-    print(filepath.name)
     return files.read()
 
 
