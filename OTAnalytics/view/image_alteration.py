@@ -9,11 +9,10 @@ from view.helpers.gui_helper import (
 from PIL import Image, ImageTk
 import view.config
 import helpers.file_helper as file_helper
+from view.sections import draw_polygon
 
 
-def manipulate_image(
-    np_image=None,
-):
+def manipulate_image(np_image=None, closing=False):
     """Function to draw sections, tracks and bounding boxes on a given numpy image.
     Image is converted to photo image and plotted on tkinter canvas object.
 
@@ -81,6 +80,10 @@ def manipulate_image(
             (200, 125, 125, 255),
             3,
         )
+
+    if button_bool["polygondetector_toggle"]:
+
+        np_image = draw_polygon(np_image, closing)
 
     image = Image.fromarray(np_image)  # to PIL format
 

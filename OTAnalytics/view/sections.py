@@ -61,7 +61,7 @@ def create_LineString(pts):
     return LineString(pts)
 
 
-def draw_polygon(
+def prepare_polygon(
     event,
     adding_points=False,
     closing=False,
@@ -79,8 +79,7 @@ def draw_polygon(
 
         return
 
-    image = view.config.videoobject.np_image.copy()
-    overlay = image.copy()
+    np_image = view.config.videoobject.np_image.copy()
 
     if undo:
 
@@ -90,6 +89,19 @@ def draw_polygon(
 
         view.config.maincanvas.polygon_points.append(view.config.maincanvas.points[0])
 
+    list_of_tuples = [list(elem) for elem in view.config.maincanvas.polygon_points]
+
+    if len(list_of_tuples) > 1:
+        lineobject = create_LineString(list_of_tuples)
+        view.image_alteration.create_intersection_list(lineobject)
+
+    view.image_alteration.manipulate_image(closing=closing, np_image=np_image)
+
+
+def draw_polygon(np_image, closing):
+
+    image = np_image
+    overlay = image.copy()
     list_of_tuples = [list(elem) for elem in view.config.maincanvas.polygon_points]
 
     pts = np.array(list_of_tuples, np.int32)
@@ -103,11 +115,7 @@ def draw_polygon(
 
     np_image = cv2.polylines(image, [pts], closing, (200, 125, 125, 255), 2)
 
-    if len(list_of_tuples) > 1:
-        lineobject = create_LineString(list_of_tuples)
-        view.image_alteration.create_intersection_list(lineobject)
-
-    view.image_alteration.manipulate_image(np_image=np_image)
+    return np_image
 
 
 def load_flowfile():

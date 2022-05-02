@@ -30,7 +30,7 @@ class OtcCanvas(tk.Canvas):
             "<ButtonPress-1>",
             lambda event: [
                 self.click_receive_coordinates(event, 0),
-                view.sections.draw_polygon(
+                view.sections.prepare_polygon(
                     event,
                     adding_points=True,
                 ),
@@ -39,7 +39,7 @@ class OtcCanvas(tk.Canvas):
         self.bind(
             "<ButtonPress-2>",
             lambda event: [
-                view.sections.draw_polygon(
+                view.sections.prepare_polygon(
                     event,
                     undo=True,
                 )
@@ -49,7 +49,7 @@ class OtcCanvas(tk.Canvas):
         self.bind(
             "<ButtonPress-3>",
             lambda event: [
-                view.sections.draw_polygon(
+                view.sections.prepare_polygon(
                     event,
                     closing=True,
                 )
