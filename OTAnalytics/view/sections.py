@@ -61,6 +61,16 @@ def create_LineString(pts):
     return LineString(pts)
 
 
+def draw_line(np_image):
+    return cv2.line(
+        np_image,
+        view.config.maincanvas.points[0],
+        view.config.maincanvas.points[1],
+        (200, 125, 125, 255),
+        3,
+    )
+
+
 def prepare_polygon(
     event,
     adding_points=False,
@@ -113,9 +123,7 @@ def draw_polygon(np_image, closing):
         opacity = 0.4
         np_image = cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0, image)
 
-    np_image = cv2.polylines(image, [pts], closing, (200, 125, 125, 255), 2)
-
-    return np_image
+    return cv2.polylines(image, [pts], closing, (200, 125, 125, 255), 2)
 
 
 def load_flowfile():

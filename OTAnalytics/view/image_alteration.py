@@ -9,7 +9,7 @@ from view.helpers.gui_helper import (
 from PIL import Image, ImageTk
 import view.config
 import helpers.file_helper as file_helper
-from view.sections import draw_polygon
+from view.sections import draw_line, draw_polygon
 
 
 def manipulate_image(np_image=None, closing=False):
@@ -73,13 +73,7 @@ def manipulate_image(np_image=None, closing=False):
 
     if button_bool["linedetector_toggle"]:
 
-        np_image = cv2.line(
-            np_image,
-            view.config.maincanvas.points[0],
-            view.config.maincanvas.points[1],
-            (200, 125, 125, 255),
-            3,
-        )
+        np_image = draw_line(np_image)
 
     if button_bool["polygondetector_toggle"]:
 
