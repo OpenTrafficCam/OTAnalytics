@@ -6,5 +6,12 @@
     "python.analysis.extraPaths": [
         "./OTAnalytics"
     ],
-    "python.languageServer": "Pylance"
+    "python.languageServer": "Pylance",
+    "git.ignoreLimitWarning": true,
+    "files.exclude": {
+        "**/*.pyc": {
+            "when": "$(basename).py"
+        },
+        "**/__pycache__": true
+    }
 }

@@ -1,0 +1,31 @@
+# Environments
+
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# test data
+tests/data/output
+
+# testcode
+
+test.py
+counting.py
+wrapper_autocount.py
+
+pyproject.toml
+
+# cache 
+
+__pycache__/
+*.pyc 
+*.py[cod]
+file_name.csv
+.gitignore
+objects.csv
+OTAnalytics/counting.py
+OTAnalytics/test.ipynb

@@ -1,0 +1,10 @@
+﻿numpy ==1.19.4
+pandas==1.3.2
+openpyxl==3.0.9
+Shapely==1.7.1
+https://github.com/OpenTrafficCam/downloads/blob/master/GDAL-3.2.3-cp39-cp39-win_amd64.whl?raw=true
+https://github.com/OpenTrafficCam/downloads/blob/master/Fiona-1.8.19-cp39-cp39-win_amd64.whl?raw=true
+geopandas==0.8.2
+keyboard==0.13.5
+opencv-python==4.5.3.56
+Pillow==8.3.1
