@@ -222,13 +222,13 @@ class gui(tk.Tk):
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-            for index, object in file_helper.tracks_df.iterrows():
-                self.frame_objects.tree_objects.insert(
-                    parent="",
-                    index="end",
-                    text=index,
-                    values=object["Class"],
-                )
+                for index, object in file_helper.tracks_df.iterrows():
+                    self.frame_objects.tree_objects.insert(
+                        parent="",
+                        index="end",
+                        text=index,
+                        values=object["Class"],
+                    )
 
         file_helper.fill_tree_views(
             3,
