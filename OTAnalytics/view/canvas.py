@@ -1,7 +1,7 @@
 import tkinter as tk
 from view.helpers.gui_helper import button_bool
 import view.image_alteration
-import view.config
+import view.objectstorage
 import view.sections
 
 
@@ -87,11 +87,13 @@ class CanvasFrame(tk.Frame):
         self.frame_canvas = tk.Frame(master=self)
         self.frame_canvas.pack(fill="x")
 
-        view.config.maincanvas = OtcCanvas(master=self.frame_canvas, width=0, height=0)
-        view.config.maincanvas.pack()
+        view.objectstorage.maincanvas = OtcCanvas(
+            master=self.frame_canvas, width=0, height=0
+        )
+        view.objectstorage.maincanvas.pack()
 
-        view.config.sliderobject = SliderFrame(master=self.frame_canvas)
-        view.config.sliderobject.pack(fill="x")
+        view.objectstorage.sliderobject = SliderFrame(master=self.frame_canvas)
+        view.objectstorage.sliderobject.pack(fill="x")
 
 
 class SliderFrame(tk.Frame):
@@ -109,7 +111,7 @@ class SliderFrame(tk.Frame):
             master=self.frame_slider,
             variable=self.slider_value,
             from_=0,
-            to=view.config.videoobject.totalframecount - 1,
+            to=view.objectstorage.videoobject.totalframecount - 1,
             orient=tk.HORIZONTAL,
             command=lambda event: self.slider_scroll(int(event)),
         )
@@ -137,7 +139,7 @@ class SliderFrame(tk.Frame):
             event (Sliderbutton is pressed): When slider is pressed, thread that updates
             queue with frames stops and gets terminated.
         """
-        view.config.maincanvas.delete_polygon_points()
+        view.objectstorage.maincanvas.delete_polygon_points()
 
         button_bool["slider"] = False
 
@@ -153,8 +155,8 @@ class SliderFrame(tk.Frame):
             and not button_bool["rewind_video"]
             and button_bool["slider"]
         ):
-            view.config.videoobject.current_frame = slider_number
+            view.objectstorage.videoobject.current_frame = slider_number
 
-            np_image = view.config.videoobject.set_frame().copy()
+            np_image = view.objectstorage.videoobject.set_frame().copy()
 
             view.image_alteration.manipulate_image(np_image=np_image)

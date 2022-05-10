@@ -6,7 +6,7 @@ import itertools
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
 import helpers.file_helper as file_helper
-import view.config
+import view.objectstorage
 from view.helpers.gui_helper import info_message
 
 
@@ -172,17 +172,17 @@ def find_intersection_order(object_validated_df):
 
             object_validated_df.at[object_id, "Time_crossing_entrance"] = (
                 object_validated_df.at[object_id, "Crossing_Gate/Frame"][0][1]
-                / view.config.videoobject.fps
+                / view.objectstorage.videoobject.fps
             )
 
             if object_validated_df.at[object_id, "Time_crossing_entrance"] != (
                 object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                / view.config.videoobject.fps
+                / view.objectstorage.videoobject.fps
             ):
 
                 object_validated_df.at[object_id, "Time_crossing_exit"] = (
                     object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                    / view.config.videoobject.fps
+                    / view.objectstorage.videoobject.fps
                 )
 
             # list = Movement (only detectors not seconds)
@@ -261,7 +261,7 @@ def time_calculation_dataframe(timedelta_entry, object_validated_df):
         pd.to_datetime(
             (
                 object_validated_df["first_appearance_frame"]
-                / view.config.videoobject.fps
+                / view.objectstorage.videoobject.fps
             ),
             unit="s",
         )
@@ -271,7 +271,7 @@ def time_calculation_dataframe(timedelta_entry, object_validated_df):
         pd.to_datetime(
             (
                 object_validated_df["last_appearance_frame"]
-                / view.config.videoobject.fps
+                / view.objectstorage.videoobject.fps
             ),
             unit="s",
         )

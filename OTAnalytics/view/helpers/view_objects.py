@@ -10,7 +10,7 @@ from view.helpers.gui_helper import (
 )
 
 import count.auto_counting
-import view.config
+import view.objectstorage
 
 
 class FrameObject(tk.LabelFrame):
@@ -111,8 +111,8 @@ class FrameObject(tk.LabelFrame):
             file_helper.tracks_df,
             file_helper.tracks_geoseries,
         ) = load_and_convert(
-            x_factor=view.config.videoobject.x_resize_factor,
-            y_factor=view.config.videoobject.y_resize_factor,
+            x_factor=view.objectstorage.videoobject.x_resize_factor,
+            y_factor=view.objectstorage.videoobject.y_resize_factor,
         )
 
         for object in list(file_helper.tracks.keys()):
