@@ -62,9 +62,6 @@ def manipulate_image(np_image=None, closing=False):
             view.config.videoobject.transparent_image, 0.5, np_image, 1, 0
         )
 
-    # TODO: #59 Draw detectors on top of all elements
-    np_image = draw_detectors_from_dict(np_image)
-
     # copy is important or else original image will be changed
 
     # The variable photo is a local variable which gets garbage collected after the
@@ -78,6 +75,8 @@ def manipulate_image(np_image=None, closing=False):
     if button_bool["polygondetector_toggle"]:
 
         np_image = draw_polygon(np_image, closing)
+
+    np_image = draw_detectors_from_dict(np_image)
 
     image = Image.fromarray(np_image)  # to PIL format
 

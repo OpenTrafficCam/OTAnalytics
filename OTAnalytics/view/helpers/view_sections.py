@@ -9,7 +9,7 @@ from view.helpers.gui_helper import (
 import helpers.file_helper as file_helper
 import view.image_alteration
 import keyboard
-import view.config as config
+import view.objectstorage as objectstorage
 import view.sections
 
 
@@ -88,6 +88,7 @@ class FrameSection(tk.LabelFrame):
         file_helper.selectionlist_sections = []
 
         for item in self.tree_sections.selection():
+
             detector_name = self.tree_sections.item(item, "text")
             file_helper.selectionlist_sections.append(detector_name)
 
@@ -106,6 +107,8 @@ class FrameSection(tk.LabelFrame):
                 )
 
         view.image_alteration.manipulate_image()
+
+        print("done")
 
     def delete_section(self, treeview_movements):
         """Deletes selected section  from flowfile and listboxwidget."""
@@ -179,7 +182,7 @@ class FrameSection(tk.LabelFrame):
         )
         self.new_detector_creation.destroy()
 
-        config.maincanvas.delete_points()
+        objectstorage.maincanvas.delete_polygon_points()
 
         view.image_alteration.manipulate_image()
 

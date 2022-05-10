@@ -56,10 +56,12 @@ class OtcCanvas(tk.Canvas):
             ],
         )
 
-    def delete_polygon_points(self):
+    def delete_points(self):
         """delete list of polygon points after scrolling, sliding, playing, rewinding"""
         if self.polygon_points:
             self.polygon_points = []
+        else:
+            self.points = [(0, 0), (0, 0)]
 
     def click_receive_coordinates(self, event, list_index):
         """Saves coordinates from canvas event to linepoint list.
