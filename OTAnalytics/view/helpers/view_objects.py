@@ -1,5 +1,6 @@
 import tkinter as tk
 import tkinter.ttk as ttk
+from Data_Visualization.vizualisation import create_plot
 from view.tracks import load_and_convert
 import helpers.file_helper as file_helper
 import view.image_alteration
@@ -100,7 +101,17 @@ class FrameObject(tk.LabelFrame):
             command=count.auto_counting.create_setting_window,
         )
         self.button_autocount.grid(
-            row=1, column=0, columnspan=4, padx=(10, 25), pady=(0, 12), sticky="ew"
+            row=1, column=0, columnspan=2, padx=(10, 0), pady=(0, 12), sticky="ew"
+        )
+
+        # graphic
+        self.button_graphic = tk.Button(
+            master=self.frame_control_objects,
+            text="Display Graphics",
+            command=lambda: [create_plot(1)],
+        )
+        self.button_graphic.grid(
+            row=1, column=2, columnspan=2, padx=(0, 25), pady=(0, 12), sticky="ew"
         )
 
     def add_tracks(self):
