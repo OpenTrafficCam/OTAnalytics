@@ -1,6 +1,6 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from Data_Visualization.vizualisation import create_plot
+from Data_Visualization.vizualisation import create_graphic_setting_window
 from view.tracks import load_and_convert
 import helpers.file_helper as file_helper
 import view.image_alteration
@@ -108,7 +108,7 @@ class FrameObject(tk.LabelFrame):
         self.button_graphic = tk.Button(
             master=self.frame_control_objects,
             text="Display Graphics",
-            command=lambda: [create_plot(1)],
+            command=create_graphic_setting_window,
         )
         self.button_graphic.grid(
             row=1, column=2, columnspan=2, padx=(0, 25), pady=(0, 12), sticky="ew"
