@@ -18,7 +18,16 @@ def load_track_dataframe():
 
 
 def groupby_timeintervall(tracks_df, intervall, movement):
-    # testing ==> input when creating graphics
+    """_summary_
+
+    Args:
+        tracks_df (dataframe): Dateframe computed by autocounting module
+        intervall (int): Timeintervall to represent traffic count
+        movement (str): Movementname chosen in toplevel window.
+
+    Returns:
+        _type_: _description_
+    """
 
     if movement == "All":
 
@@ -74,6 +83,12 @@ def prepare_dataframe(intervall, movement):
 
 
 def create_plot(intervall_entry, movement_var):
+    """Creates a figure with bar and line chart.
+
+    Args:
+        intervall_entry (entry_widget): entry widget to recieve data from
+        movement_var (variable): variable from dropdown menu
+    """
 
     # uncomment when using gui
     intervall = intervall_entry.get()
