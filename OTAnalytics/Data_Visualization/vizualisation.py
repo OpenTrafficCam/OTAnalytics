@@ -1,8 +1,10 @@
-from tkinter import Button, Entry, Label, Toplevel, filedialog
+from tkinter import Button, Entry, Label, Toplevel, OptionMenu, StringVar
 
 # import helpers.file_helper as file_helper
 import pandas as pd
 import plotly.graph_objects as go
+
+import helpers.file_helper as file_helper
 
 # from view.helpers.gui_helper import info_message
 
@@ -15,10 +17,10 @@ def load_track_dataframe():
     )
 
 
-def groupby_timeintervall(tracks_df, intervall: int):
-    selection = "Sued-Ost"
+def groupby_timeintervall(tracks_df, intervall, movement):
+    # testing ==> input when creating graphics
 
-    if selection == "all":
+    if movement == "All":
 
         tracks_df_all = (
             tracks_df.groupby(
@@ -26,7 +28,7 @@ def groupby_timeintervall(tracks_df, intervall: int):
                     pd.Grouper(freq=f"{intervall}T"),
                     "Class",
                     # "Movement",
-                    "Movement_name",
+                    # "Movement_name",
                 ],
                 as_index=True,
                 dropna=False,
@@ -52,17 +54,15 @@ def groupby_timeintervall(tracks_df, intervall: int):
         )
 
         tracks_df_selected_by_movement = tracks_df_selected_by_movement.loc[
-            tracks_df_selected_by_movement["Movement_name"] == selection
+            tracks_df_selected_by_movement["Movement_name"] == movement
         ]
-        print("test")
-        print(tracks_df_selected_by_movement)
 
         return tracks_df_selected_by_movement
 
 
-def prepare_dataframe(intervall):
+def prepare_dataframe(intervall, movement):
     # groupy by time
-    df = groupby_timeintervall(load_track_dataframe(), intervall)
+    df = groupby_timeintervall(load_track_dataframe(), intervall, movement)
 
     # exclude person when summed up trafficcount
     df_summed_up_class = df.loc[df["Class"] != "person"].groupby("Datetime").sum()
@@ -73,11 +73,13 @@ def prepare_dataframe(intervall):
     return df_group_by_class, df_summed_up_class
 
 
-def create_plot(intervall):
+def create_plot(intervall_entry, movement_var):
 
     # uncomment when using gui
-    # intervall = intervall.get()
-    df_group_by_class, df_summed_up_class = prepare_dataframe(intervall)
+    intervall = intervall_entry.get()
+    movement = movement_var.get()
+
+    df_group_by_class, df_summed_up_class = prepare_dataframe(intervall, movement)
 
     fig = go.Figure()
 
@@ -112,12 +114,8 @@ def create_plot(intervall):
 
 def create_graphic_setting_window():
     """Creates window with button to resample dataframe and two
-    inputfields to enter starting time and timeinterval.
+    inputfields to enter timeinterval.
 
-    Args:
-        fps (int): Frames per second.
-        flowdictionary (dictionary): Dictionary with sections and movements.
-        tracks (dictionary): Dictionary with tracks.
     """
 
     # if not file_helper.tracks:
@@ -126,26 +124,41 @@ def create_graphic_setting_window():
     #     return
 
     # creates window to insert autocount time and groupby time
+
     toplevelwindow = Toplevel()
 
     toplevelwindow.title("Settings for graphics")
 
     intervall_entry_header = Label(toplevelwindow, text="Graphic-Settings")
-    intervall_entry_header.grid(row=0, column=0, columnspan=5, sticky="w")
+    intervall_entry_header.grid(row=0, column=0, sticky="w")
 
-    intervall_entry = Entry(toplevelwindow, width=8)
+    intervall_entry_label = Label(toplevelwindow, text="Timeintervall")
+    intervall_entry_label.grid(row=1, column=0, sticky="w")
 
-    intervall_entry.grid(row=1, column=0, sticky="w", pady=5, padx=5)
+    intervall_entry = Entry(toplevelwindow, width=4)
+
+    intervall_entry.grid(row=1, column=1, sticky="ew", pady=5, padx=5)
     intervall_entry.focus()
     intervall_entry.insert(0, "5")
+
+    movement_list = list(file_helper.flow_dict["Movements"].keys())
+
+    movement_list.append("All")
+
+    variable = StringVar(toplevelwindow)
+    variable.set(movement_list[-1])
+
+    movement_entry = OptionMenu(toplevelwindow, variable, *movement_list)
+    movement_entry.config(width=8, font=("Helvetica", 8))
+    movement_entry.grid(row=1, column=2, sticky="ew", pady=5, padx=5)
 
     toplevelwindow_button = Button(
         toplevelwindow,
         text="Create Graphic",
-        command=lambda: create_plot(intervall_entry),
+        command=lambda: create_plot(intervall_entry, variable),
     )
     toplevelwindow_button.grid(
-        row=4, columnspan=5, column=0, sticky="w", pady=5, padx=5
+        row=2, column=0, columnspan=3, sticky="ew", pady=5, padx=5
     )
 
     toplevelwindow.protocol("WM_DELETE_WINDOW")
@@ -156,4 +169,4 @@ def create_graphic_setting_window():
 if __name__ == "__main__":
 
     intervall = input("Enter your value: ")
-    create_plot(intervall)
+    create_plot(intervall, "All")
