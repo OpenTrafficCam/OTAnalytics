@@ -18,6 +18,7 @@ button_bool = {
     "display_bb": False,
     "display_live_track": False,
     "slider": False,
+    "dataframe_cleaned": False
 }
 
 

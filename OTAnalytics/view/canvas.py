@@ -139,7 +139,7 @@ class SliderFrame(tk.Frame):
             event (Sliderbutton is pressed): When slider is pressed, thread that updates
             queue with frames stops and gets terminated.
         """
-        view.objectstorage.maincanvas.delete_polygon_points()
+        view.objectstorage.maincanvas.delete_points()
 
         button_bool["slider"] = False
 

@@ -84,7 +84,7 @@ class FrameFiles(tk.LabelFrame):
                 button_play_video_switch(
                     self.button_play_video, self.button_rewind_video
                 ),
-                view.objectstorage.maincanvas.delete_polygon_points(),
+                view.objectstorage.maincanvas.delete_points(),
                 self.play_video(),
             ],
         )
@@ -97,7 +97,7 @@ class FrameFiles(tk.LabelFrame):
             text="Rewind",
             command=lambda: [
                 button_rewind_switch(self.button_rewind_video, self.button_play_video),
-                view.objectstorage.maincanvas.delete_polygon_points(),
+                view.objectstorage.maincanvas.delete_points(),
                 self.rewind_video(),
             ],
         )

@@ -8,6 +8,8 @@ from shapely.geometry import LineString, Point, Polygon
 import helpers.file_helper as file_helper
 import view.objectstorage
 from view.helpers.gui_helper import info_message
+import helpers.file_helper as file_helper
+from view.helpers.gui_helper import button_bool
 
 
 def dic_to_detector_dataframe():
@@ -209,7 +211,7 @@ def assign_movement(object_validated_df):
     # TODO delete iteration ==> jupyter nb
     for object_id, j in object_validated_df.iterrows():
 
-        print(f"working...on {str(object_id)}")
+        #print(f"working...on {str(object_id)}")
 
         for movement_list in file_helper.flow_dict["Movements"]:
 
@@ -242,11 +244,11 @@ def safe_to_exl(process_object):
 
 
 # %%
-def time_calculation_dataframe(timedelta_entry, object_validated_df):
+def time_calculation_dataframe(object_validated_df, timedelta_entry=None):
     """Creates columns with time, calculated from frame and fps.
 
     Args:
-        timedelta_entry (int): Time between two  frames.
+        timedelta_entry (int): Start time of video
         fps (int): Frames per seconds.
         object_validated_df (dataframe): Dataframe with tracks.
 
@@ -254,8 +256,13 @@ def time_calculation_dataframe(timedelta_entry, object_validated_df):
         dataframe: Dataframe with tracks and new created columns with
         information in timeformat.
     """
+    if timedelta_entry is None:
 
-    entry_timedelta = timedelta_entry.get()
+        entry_timedelta = "00:00:00"
+
+    else:
+
+        entry_timedelta = timedelta_entry.get()
 
     object_validated_df["first_appearance_time"] = (
         pd.to_datetime(
@@ -313,8 +320,11 @@ def clean_dataframe(object_validated_df):
             "last_appearance_time",
             "Time_crossing_entrance",
             "Time_crossing_exit",
-        ],
-    ]
+        ],]
+
+
+
+
 
 
 def resample_dataframe(entry_interval, object_validated_df):
@@ -358,7 +368,7 @@ def resample_dataframe(entry_interval, object_validated_df):
     return object_validated_df
 
 
-def automated_counting(entry_timedelta, entry_interval):
+def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=False):
     """Calls previous functions for better readability.
 
     Args:
@@ -369,28 +379,43 @@ def automated_counting(entry_timedelta, entry_interval):
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
+    if not button_bool["dataframe_cleaned"]:
 
-    # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
-    detector_df = dic_to_detector_dataframe()
-    # object_validated_df = dic_to_object_dataframe()
-    processed_object = calculate_intersections(detector_df, file_helper.tracks_df)
+        # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
+        detector_df = dic_to_detector_dataframe()
+        # object_validated_df = dic_to_object_dataframe()
+        processed_object = calculate_intersections(detector_df, file_helper.tracks_df)
 
-    print(" successful ")
+        print(" successful ")
 
-    processed_object = find_intersection_order(processed_object)
-    processed_object = assign_movement(processed_object)
+        processed_object = find_intersection_order(processed_object)
+        processed_object = assign_movement(processed_object)
 
-    processed_object = time_calculation_dataframe(entry_timedelta, processed_object)
+        processed_object = time_calculation_dataframe(processed_object, entry_timedelta)
 
-    cleaned_object_dataframe = clean_dataframe(processed_object)
+        file_helper.cleaned_object_dataframe = clean_dataframe(processed_object)
+    
+        button_bool["dataframe_cleaned"] = True
+
+        file_helper.cleaned_object_dataframe["Datetime"] = pd.to_datetime(
+            file_helper.cleaned_object_dataframe["first_appearance_time"]
+        )
+
+        file_helper.cleaned_object_dataframe = file_helper.cleaned_object_dataframe.set_index("Datetime")
+
+        print(file_helper.cleaned_object_dataframe)
+
+    if for_drawing:
+
+        return file_helper.cleaned_object_dataframe
 
     cleaned_resampled_object_df = resample_dataframe(
-        entry_interval, cleaned_object_dataframe
+        entry_interval, file_helper.cleaned_object_dataframe
     )
 
     safe_to_exl(cleaned_resampled_object_df)
 
-    return cleaned_resampled_object_df
+    # return cleaned_resampled_object_df
 
 
 def create_setting_window():
@@ -432,7 +457,7 @@ def create_setting_window():
     toplevelwindow_button = Button(
         toplevelwindow,
         text="Save file",
-        command=lambda: automated_counting(time_entry, timeinterval_entry),
+        command=lambda: automated_counting(timeinterval_entry, time_entry, ),
     )
     toplevelwindow_button.grid(
         row=4, columnspan=5, column=0, sticky="w", pady=5, padx=5

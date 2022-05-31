@@ -27,8 +27,13 @@ from shapely.geometry import LineString, Point
 flow_dict = {"Detectors": {}, "Movements": {}}
 selectionlist_objects = []
 selectionlist_sections = []
+# maybe necessary to incomment
+
 raw_detections = []
 tracks = {}
+
+cleaned_object_dataframe = []
+
 
 tracks_live = {}
 otflow_file = None

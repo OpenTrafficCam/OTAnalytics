@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 import helpers.file_helper as file_helper
+from count.auto_counting import automated_counting
 
 # from view.helpers.gui_helper import info_message
 
@@ -12,9 +13,7 @@ import helpers.file_helper as file_helper
 # Load data
 def load_track_dataframe():
 
-    return pd.read_pickle(
-        r"C:\Users\Goerner\Desktop\code\OpenTrafficCam\OTAnalytics\OTAnalytics\Data_Visualization\dataframe1.pkl"
-    )
+    return automated_counting(None, None, True)
 
 
 def groupby_timeintervall(tracks_df, intervall, movement):
@@ -45,6 +44,10 @@ def groupby_timeintervall(tracks_df, intervall, movement):
             .size()
             .reset_index(name="Count")
         )
+
+        tracks_df_all["Datetime"] = tracks_df_all["Datetime"].dt.strftime(
+            "%H:%M:%S"
+        )
         return tracks_df_all
 
     else:
@@ -65,6 +68,9 @@ def groupby_timeintervall(tracks_df, intervall, movement):
         tracks_df_selected_by_movement = tracks_df_selected_by_movement.loc[
             tracks_df_selected_by_movement["Movement_name"] == movement
         ]
+        tracks_df_selected_by_movement["Datetime"] = tracks_df_selected_by_movement["Datetime"].dt.strftime(
+            "%H:%M:%S"
+        )
 
         return tracks_df_selected_by_movement
 

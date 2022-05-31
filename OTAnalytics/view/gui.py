@@ -218,7 +218,7 @@ class gui(tk.Tk):
                     x_factor=objectstorage.videoobject.x_resize_factor,
                     y_factor=objectstorage.videoobject.y_resize_factor,
                     autoimport=True,
-                    filepath=files,
+                    files=files,
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
