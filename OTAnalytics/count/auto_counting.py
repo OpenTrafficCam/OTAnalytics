@@ -219,7 +219,6 @@ def assign_movement(object_validated_df):
                 == object_validated_df.loc[object_id]["Movement"]
             ):
 
-                print("yes")
                 object_validated_df.at[object_id, "Movement_name"] = movement_list
                 break
 
@@ -395,8 +394,6 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
         )
 
         file_helper.cleaned_object_dataframe = file_helper.cleaned_object_dataframe.set_index("Datetime")
-
-        print(file_helper.cleaned_object_dataframe)
 
     if for_drawing:
 

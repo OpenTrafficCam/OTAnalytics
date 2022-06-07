@@ -77,8 +77,6 @@ def groupby_timeintervall(tracks_df, intervall, movement):
             "Datetime"].dt.strftime(
             "%H:%M:%S"
         )
-        print(tracks_df_selected_by_movement)
-
         return tracks_df_selected_by_movement
 
 
