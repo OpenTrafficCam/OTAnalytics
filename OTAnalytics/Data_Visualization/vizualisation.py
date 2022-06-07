@@ -12,12 +12,17 @@ from count.auto_counting import automated_counting
 
 # Load data
 def load_track_dataframe():
+    """loads dataframe and starts counting function
+
+    Returns:
+        Dataframe: Returns dataframe with counted vehicles 
+    """
 
     return automated_counting(None, None, True)
 
 
 def groupby_timeintervall(tracks_df, intervall, movement):
-    """_summary_
+    """Takes ungrouped dataframe and groups it by movement selection, all or movement
 
     Args:
         tracks_df (dataframe): Dateframe computed by autocounting module
@@ -25,7 +30,7 @@ def groupby_timeintervall(tracks_df, intervall, movement):
         movement (str): Movementname chosen in toplevel window.
 
     Returns:
-        _type_: _description_
+        _type_: tracks df all or tracks by movement
     """
 
     if movement == "All":
@@ -72,11 +77,21 @@ def groupby_timeintervall(tracks_df, intervall, movement):
             "Datetime"].dt.strftime(
             "%H:%M:%S"
         )
+        print(tracks_df_selected_by_movement)
 
         return tracks_df_selected_by_movement
 
 
 def prepare_dataframe(intervall, movement):
+    """Sums count
+
+    Args:
+        intervall (_type_): _description_
+        movement (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     # groupy by time
     df = groupby_timeintervall(load_track_dataframe(), intervall, movement)
 
