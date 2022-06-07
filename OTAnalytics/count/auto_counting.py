@@ -8,7 +8,6 @@ from shapely.geometry import LineString, Point, Polygon
 import helpers.file_helper as file_helper
 import view.objectstorage
 from view.helpers.gui_helper import info_message
-import helpers.file_helper as file_helper
 from view.helpers.gui_helper import button_bool
 
 
@@ -211,8 +210,6 @@ def assign_movement(object_validated_df):
     # TODO delete iteration ==> jupyter nb
     for object_id, j in object_validated_df.iterrows():
 
-        #print(f"working...on {str(object_id)}")
-
         for movement_list in file_helper.flow_dict["Movements"]:
 
             # if detector in movements and real movement crossing events are true,
@@ -320,11 +317,7 @@ def clean_dataframe(object_validated_df):
             "last_appearance_time",
             "Time_crossing_entrance",
             "Time_crossing_exit",
-        ],]
-
-
-
-
+        ], ]
 
 
 def resample_dataframe(entry_interval, object_validated_df):

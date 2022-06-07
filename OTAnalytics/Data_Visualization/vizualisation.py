@@ -68,7 +68,8 @@ def groupby_timeintervall(tracks_df, intervall, movement):
         tracks_df_selected_by_movement = tracks_df_selected_by_movement.loc[
             tracks_df_selected_by_movement["Movement_name"] == movement
         ]
-        tracks_df_selected_by_movement["Datetime"] = tracks_df_selected_by_movement["Datetime"].dt.strftime(
+        tracks_df_selected_by_movement["Datetime"] = tracks_df_selected_by_movement[
+            "Datetime"].dt.strftime(
             "%H:%M:%S"
         )
 
