@@ -396,6 +396,11 @@ def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
 
 
 def create_intersection_list(current_line_shape):
+    """creates list with crossed tracks while drawing polygon or linedetectors.
+
+    Args:
+        current_line_shape (_type_): polygon or line
+    """
 
     if button_bool["tracks_imported"] and button_bool["display_all_tracks_toggle"]:
 

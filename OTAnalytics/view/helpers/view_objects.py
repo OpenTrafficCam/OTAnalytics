@@ -10,7 +10,7 @@ from view.helpers.gui_helper import (
     button_display_bb_switch,
 )
 
-import count.auto_counting
+import autocount.auto_counting
 import view.objectstorage
 
 
@@ -98,7 +98,7 @@ class FrameObject(tk.LabelFrame):
         self.button_autocount = tk.Button(
             master=self.frame_control_objects,
             text="Autocount",
-            command=count.auto_counting.create_setting_window,
+            command=autocount.auto_counting.create_setting_window,
         )
         self.button_autocount.grid(
             row=1, column=0, columnspan=2, padx=(10, 0), pady=(0, 12), sticky="ew"

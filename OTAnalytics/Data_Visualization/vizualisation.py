@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 import helpers.file_helper as file_helper
-from count.auto_counting import automated_counting
+from autocount.auto_counting import automated_counting
 
 # from view.helpers.gui_helper import info_message
 
