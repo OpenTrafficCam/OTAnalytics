@@ -22,7 +22,7 @@ def load_trackfile():
 def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     """loads detections from Track-File and converts into displayable format"""
     if button_bool["tracks_imported"]:
-        info_message("Warning", "Track already imported")
+        info_message("Warning", "Tracks already imported")
         return
 
     if not autoimport:

@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 if sys.version_info >= (3, 0):
     from queue import Queue
 
-
+#can be deleted
 def load_video_and_frame():
     """ask for videofile via dialogue
     creates canvas on masterframe with height and width from the videoobject

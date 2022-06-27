@@ -24,8 +24,6 @@ class gui(tk.Tk):
         self.title("OTAnalytics")
         self.set_layout()
 
-        self.title("OTAnalytics")
-
         # hotkeys
         keyboard.add_hotkey(
             "enter",
@@ -49,16 +47,6 @@ class gui(tk.Tk):
         self.frame_files.grid(
             **{"padx": 10, "pady": 10}, row=0, column=0, columnspan=2, sticky="ew"
         )
-
-        # self.videolabel = tk.Label(
-        #     master=self.frame_controll_panel,
-        #     text="Sections and Objects",
-        #     fg="white",
-        #     bg="#37483E",
-        # )
-        # self.videolabel.grid(
-        #     **{"padx": 10, "pady": 10}, row=1, column=0, columnspan=2, sticky="ew"
-        # )
 
         self.frame_sections = FrameSection(master=self.frame_controll_panel)
         self.frame_sections.grid(

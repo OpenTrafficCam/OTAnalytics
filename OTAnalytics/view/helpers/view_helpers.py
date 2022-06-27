@@ -32,11 +32,6 @@ class FrameFiles(tk.LabelFrame):
             pady=10,
         )
 
-        # self.videolabel = tk.Label(
-        #     master=self.frame_tree, text="Videos and Tracks", fg="white", bg="#37483E"
-        # )
-        # self.videolabel.pack(fill="x")
-
         # Files treeview
         self.tree_files = ttk.Treeview(master=self.frame_tree, height=3)
         self.tree_files.pack(fill="x", ipady=10)
