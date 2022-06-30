@@ -103,6 +103,8 @@ def find_intersection_order(object_validated_df):
         Dataframe: With newly calculated columns.
     """
 
+    eventbased_dictionary = {}
+
     # create necessary columns
     object_validated_df["Crossing_Gate/Frame"] = ""
     object_validated_df["Movement"] = ""
@@ -191,7 +193,15 @@ def find_intersection_order(object_validated_df):
                 object_id, "Movement"
             ] = concatted_sorted_detector_list
 
-    return object_validated_df
+            # start nested dictionary
+            eventbased_dictionary[int(crossing_frame)] = {}
+
+            eventbased_dictionary[int(crossing_frame)][detector+"_"+ file_helper.flow_dict["Detectors"][detector]["type"]+"_Detector"] = True
+            if f"Road_user_ID_{detector}" not in eventbased_dictionary[int(crossing_frame)]:
+                eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}"] = [object_id]
+                eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}_Class"] = object_validated_df.loc[object_id]["Class"]
+
+    return object_validated_df, eventbased_dictionary
 
 
 # %%
@@ -226,17 +236,23 @@ def assign_movement(object_validated_df):
 
 
 # %%
-def safe_to_exl(process_object):
+def safe_to_exl(dataframe_autocount, dataframe_eventbased):
     """Safe dataframe as cvs and asks for filepath.
+
 
     Args:
         process_object (dataframe): Dataframe with object information.
     """
 
-    file_path = filedialog.asksaveasfilename(
-        defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx")]
-    )
-    process_object.to_excel(file_path)
+    dataframe_list = [dataframe_autocount, dataframe_eventbased]
+    
+    for dataframe in dataframe_list:
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx")]
+        )
+        dataframe.to_excel(file_path)
+
+
 
 
 # %%
@@ -359,6 +375,30 @@ def resample_dataframe(entry_interval, object_validated_df):
 
     return object_validated_df
 
+def eventased_dictionary_to_dataframe(eventbased_dictionary):
+
+
+    eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary,orient='index')
+    eventbased_dataframe = eventbased_dataframe.sort_index(axis = 0)
+    eventbased_dataframe.reset_index(inplace=True)
+
+
+
+
+    eventbased_dataframe["seconds"] = (eventbased_dataframe["index"]/view.objectstorage.videoobject.fps)
+    print(eventbased_dataframe["seconds"])
+    eventbased_dataframe["seconds"] = eventbased_dataframe["seconds"].astype('int')
+
+    
+    eventbased_dataframe["Eventtime"] = pd.to_timedelta(eventbased_dataframe["seconds"], unit='seconds')
+    print(eventbased_dataframe["Eventtime"])
+    eventbased_dataframe["Eventtime"] = eventbased_dataframe["Eventtime"]+ view.objectstorage.videoobject.datetime_obj
+
+    eventbased_dataframe = eventbased_dataframe.set_index("Eventtime")
+    return eventbased_dataframe
+
+
+
 
 def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=False):
     """Calls previous functions for better readability.
@@ -380,7 +420,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
 
         print(" successful ")
 
-        processed_object = find_intersection_order(processed_object)
+        processed_object, file_helper.eventbased_dictionary = find_intersection_order(processed_object)
         processed_object = assign_movement(processed_object)
 
         processed_object = time_calculation_dataframe(processed_object, entry_timedelta)
@@ -394,6 +434,8 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
         )
 
         file_helper.cleaned_object_dataframe = file_helper.cleaned_object_dataframe.set_index("Datetime")
+    
+    eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary)
 
     if for_drawing:
 
@@ -403,7 +445,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
         entry_interval, file_helper.cleaned_object_dataframe
     )
 
-    safe_to_exl(cleaned_resampled_object_df)
+    safe_to_exl(cleaned_resampled_object_df, eventbased_dataframe)
 
     # return cleaned_resampled_object_df
 
