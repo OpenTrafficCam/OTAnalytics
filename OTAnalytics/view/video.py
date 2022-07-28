@@ -70,6 +70,7 @@ class FileVideoStream:
         # start a thread to read frames from the file video stream
         self.thread_forward.start()
         self.stopped = False
+        print("forward thread alive")
 
         return self
 
@@ -203,9 +204,6 @@ class Video(FileVideoStream):
         self.datetime_str = self.__get_datetime_from_filename()
         self.__get_datetime_obj()
 
-        print(self.datetime_str)
-        print(self.datetime_obj)
-        print(type(self.datetime_obj))
 
     def get_frame(self, np_image):
         """Reads frame from videostream.
@@ -218,10 +216,6 @@ class Video(FileVideoStream):
         """
 
         # when imported set current frame to 0
-        # self.cap.set(1, self.current_frame)
-
-        # print("Frame: " + str(self.current_frame))
-
         frame = self.read()
 
         frame = cv2.resize(frame, (self.width, self.height))

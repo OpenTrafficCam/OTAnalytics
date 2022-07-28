@@ -117,6 +117,7 @@ def find_intersection_order(object_validated_df):
     ):
         # Condition if detector was crossed by objecttrack
         # Don't change to "is True"!! (True is the content of row/column)
+        # TODO: Vorfiltern des Dataframe (wo Detector ==> True), dafür loops aufsplitten
         if object_validated_df.loc[object_id][detector]:
 
             # shapely Linestring
@@ -249,9 +250,9 @@ def safe_to_exl(dataframe_autocount, dataframe_eventbased):
     
     for dataframe in dataframe_list:
         file_path = filedialog.asksaveasfilename(
-            defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx")]
+            defaultextension=".csv", filetypes=[("CSV", "*.csv")]
         )
-        dataframe.to_excel(file_path)
+        dataframe.to_csv(file_path)
 
 
 
@@ -285,7 +286,6 @@ def time_calculation_dataframe(object_validated_df):
             unit="s",
         )+view.objectstorage.videoobject.datetime_obj
     
-    print(object_validated_df["first_appearance_time"])
     object_validated_df["last_appearance_time"] = pd.to_timedelta(
             (
                 object_validated_df["last_appearance_frame"]
@@ -319,7 +319,7 @@ def clean_dataframe(object_validated_df):
     """
     # List hast to be tuple or string in order to be groupby
     object_validated_df["Movement"] = object_validated_df["Movement"].apply(str)
-
+ 
     return object_validated_df.loc[
         :,
         [
@@ -348,6 +348,7 @@ def resample_dataframe(entry_interval, object_validated_df):
     entry_interval_time = str(entry_interval.get())
 
     if entry_interval_time not in ["0", "None"]:
+        print("Dataframe gets resampled")
 
         object_validated_df["Datetime"] = pd.to_datetime(
             object_validated_df["first_appearance_time"]
@@ -387,12 +388,12 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary):
 
     eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
     eventbased_dataframe = eventbased_dataframe.sort_index(axis=0)
+    eventbased_dataframe.index.set_names(["Frame"], inplace=True)
     eventbased_dataframe.reset_index(inplace=True)
-    eventbased_dataframe["seconds"] = (eventbased_dataframe["index"] /view.objectstorage.videoobject.fps)
+    eventbased_dataframe["seconds"] = (eventbased_dataframe["Frame"] /view.objectstorage.videoobject.fps)
     eventbased_dataframe["seconds"] = eventbased_dataframe["seconds"].astype('int')  
     eventbased_dataframe["Eventtime"] = pd.to_timedelta(eventbased_dataframe["seconds"], unit='seconds')
-    eventbased_dataframe["Eventtime"] = eventbased_dataframe["Eventtime"]+ view.objectstorage.videoobject.datetime_obj
-
+    eventbased_dataframe["Eventtime"] = eventbased_dataframe["Eventtime"] + view.objectstorage.videoobject.datetime_obj
     eventbased_dataframe = eventbased_dataframe.set_index("Eventtime")
     return eventbased_dataframe
 
@@ -433,8 +434,10 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     file_helper.cleaned_object_dataframe["Datetime"] = pd.to_datetime(
         file_helper.cleaned_object_dataframe["first_appearance_time"]
     )
+    file_helper.cleaned_object_dataframe.index.set_names(['Object_ID'], inplace=True)
+    file_helper.cleaned_object_dataframe.reset_index(inplace=True)
 
-    file_helper.cleaned_object_dataframe = file_helper.cleaned_object_dataframe.set_index("Datetime")
+    file_helper.cleaned_object_dataframe.set_index("Datetime" ,inplace=True)
     
     eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary)
 
@@ -445,6 +448,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     cleaned_resampled_object_df = resample_dataframe(
         entry_interval, file_helper.cleaned_object_dataframe
     )
+
 
     safe_to_exl(cleaned_resampled_object_df, eventbased_dataframe)
 

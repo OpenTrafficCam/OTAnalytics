@@ -61,9 +61,12 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
                 )
     button_bool["tracks_imported"] = True
 
+    # only valid track when more than one detection
     tracks_df = create_tracks_dataframe(tracks)
 
     tracks_geoseries = create_geoseries(tracks_df)
+
+    print(tracks_df)
 
     return raw_detections, tracks, tracks_df, tracks_geoseries
 

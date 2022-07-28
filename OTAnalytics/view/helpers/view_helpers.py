@@ -201,6 +201,7 @@ class FrameFiles(tk.LabelFrame):
                 view.objectstorage.videoobject.start_thread_forward()
                 # time.sleep(0.1)
 
+
             time.sleep(view.objectstorage.videoobject.frame_delay)
 
             view.objectstorage.videoobject.current_frame += 1
@@ -212,8 +213,6 @@ class FrameFiles(tk.LabelFrame):
             view.objectstorage.sliderobject.slider.set(
                 view.objectstorage.videoobject.current_frame
             )
-
-    # TODO: Ask to autload ottrak and otflow if found!
 
     def rewind_video(self):
         """Function  to rewind video."""

@@ -150,6 +150,7 @@ class SliderFrame(tk.Frame):
             slider_number (int): Represents current videoframe.
         """
 
+
         if (
             not button_bool["play_video"]
             and not button_bool["rewind_video"]
@@ -158,5 +159,6 @@ class SliderFrame(tk.Frame):
             view.objectstorage.videoobject.current_frame = slider_number
 
             np_image = view.objectstorage.videoobject.set_frame().copy()
+            
 
             view.image_alteration.manipulate_image(np_image=np_image)
