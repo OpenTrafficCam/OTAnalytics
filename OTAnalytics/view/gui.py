@@ -2,13 +2,8 @@ import tkinter as tk
 from view.helpers.view_movements import FrameMovements
 from view.helpers.view_helpers import FrameFiles
 from view.canvas import CanvasFrame
-<<<<<<< HEAD:OTAnalytics/view/gui_class.py
-from view.view_sections import FrameSection
-from view.view_tracks import FrameObject
-=======
 from view.helpers.view_sections import FrameSection
-from view.helpers.view_objects import FrameObject
->>>>>>> 66ae90317a3555394dff55d77bf010757ca80415:OTAnalytics/view/gui.py
+from view.view_tracks import FrameObject
 from view.helpers.gui_helper import (
     info_message,
     button_bool,
