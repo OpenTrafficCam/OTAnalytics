@@ -6,11 +6,13 @@ from tkinter import ttk
 
 import cv2
 from PIL import Image, ImageTk
+from datetime import datetime
+import re
 
 if sys.version_info >= (3, 0):
     from queue import Queue
 
-
+#can be deleted
 def load_video_and_frame():
     """ask for videofile via dialogue
     creates canvas on masterframe with height and width from the videoobject
@@ -68,6 +70,7 @@ class FileVideoStream:
         # start a thread to read frames from the file video stream
         self.thread_forward.start()
         self.stopped = False
+        print("forward thread alive")
 
         return self
 
@@ -160,6 +163,7 @@ class Video(FileVideoStream):
         super().__init__(filepath, **kwargs)
 
         self.filename = filepath.split("/")[-1]
+        print(self.filename)
 
         # start a thread to read frames from the file video stream
         self.start_thread_forward()
@@ -197,6 +201,9 @@ class Video(FileVideoStream):
             self.y_resize_factor = 1
 
         self.initialize_empty_image()
+        self.datetime_str = self.__get_datetime_from_filename()
+        self.__get_datetime_obj()
+
 
     def get_frame(self, np_image):
         """Reads frame from videostream.
@@ -209,10 +216,6 @@ class Video(FileVideoStream):
         """
 
         # when imported set current frame to 0
-        # self.cap.set(1, self.current_frame)
-
-        # print("Frame: " + str(self.current_frame))
-
         frame = self.read()
 
         frame = cv2.resize(frame, (self.width, self.height))
@@ -257,3 +260,32 @@ class Video(FileVideoStream):
         self.np_image[:, :, 3] = 255
 
         return self.np_image
+
+    def __get_datetime_from_filename(self, epoch_datetime="1970-01-01_00-00-00"):
+        """ Get date and time from file name.
+        Searches for "_yyyy-mm-dd_hh-mm-ss".
+        Returns "yyyy-mm-dd_hh-mm-ss".
+        Args:
+            filename (str): filename with expression
+            epoch_datetime (str): Unix epoch (00:00:00 on 1 January 1970)
+        Returns:
+            str: datetime
+        """
+        regex = "_([0-9]{4,4}-[0-9]{2,2}-[0-9]{2,2}_[0-9]{2,2}-[0-9]{2,2}-[0-9]{2,2})"
+        match = re.search(regex, self.filename)
+        if not match:
+            return epoch_datetime
+
+        # Assume that there is only one timestamp in the file name
+        self.datetime_str = match.group(1)  # take group withtout underscore
+
+        try:
+            datetime.strptime(self.datetime_str, "%Y-%m-%d_%H-%M-%S")
+        except ValueError:
+            return epoch_datetime
+
+        return self.datetime_str
+
+    def __get_datetime_obj(self):
+        self.datetime_obj = datetime.strptime(self.datetime_str, '%Y-%m-%d_%H-%M-%S')
+

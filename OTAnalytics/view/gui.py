@@ -1,16 +1,21 @@
 import tkinter as tk
-from view.view_movements import FrameMovements
-from view.view_helpers import FrameFiles
+from view.helpers.view_movements import FrameMovements
+from view.helpers.view_helpers import FrameFiles
 from view.canvas import CanvasFrame
+<<<<<<< HEAD:OTAnalytics/view/gui_class.py
 from view.view_sections import FrameSection
 from view.view_tracks import FrameObject
+=======
+from view.helpers.view_sections import FrameSection
+from view.helpers.view_objects import FrameObject
+>>>>>>> 66ae90317a3555394dff55d77bf010757ca80415:OTAnalytics/view/gui.py
 from view.helpers.gui_helper import (
     info_message,
     button_bool,
     button_display_tracks_switch,
 )
 import keyboard
-import view.config as config
+import view.objectstorage as objectstorage
 import helpers.file_helper as file_helper
 import view.image_alteration
 import view.sections
@@ -23,8 +28,6 @@ class gui(tk.Tk):
         super().__init__(**kwargs)
         self.title("OTAnalytics")
         self.set_layout()
-
-        self.title("OTAnalytics")
 
         # hotkeys
         keyboard.add_hotkey(
@@ -49,16 +52,6 @@ class gui(tk.Tk):
         self.frame_files.grid(
             **{"padx": 10, "pady": 10}, row=0, column=0, columnspan=2, sticky="ew"
         )
-
-        # self.videolabel = tk.Label(
-        #     master=self.frame_controll_panel,
-        #     text="Sections and Objects",
-        #     fg="white",
-        #     bg="#37483E",
-        # )
-        # self.videolabel.grid(
-        #     **{"padx": 10, "pady": 10}, row=1, column=0, columnspan=2, sticky="ew"
-        # )
 
         self.frame_sections = FrameSection(master=self.frame_controll_panel)
         self.frame_sections.grid(
@@ -126,7 +119,7 @@ class gui(tk.Tk):
 
     def load_video_and_add_frame(self):
 
-        if config.videoobject:
+        if objectstorage.videoobject:
             info_message("Warning", "Please remove video before adding a new one!")
 
             return
@@ -166,7 +159,7 @@ class gui(tk.Tk):
 
             file_helper.re_initialize()
 
-            config.videoobject.initialize_empty_image()
+            objectstorage.videoobject.initialize_empty_image()
 
             button_bool["tracks_imported"] = False
 
@@ -215,10 +208,10 @@ class gui(tk.Tk):
                     file_helper.tracks_df,
                     file_helper.tracks_geoseries,
                 ) = load_and_convert(
-                    x_factor=config.videoobject.x_resize_factor,
-                    y_factor=config.videoobject.y_resize_factor,
+                    x_factor=objectstorage.videoobject.x_resize_factor,
+                    y_factor=objectstorage.videoobject.y_resize_factor,
                     autoimport=True,
-                    filepath=files,
+                    files=files,
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 

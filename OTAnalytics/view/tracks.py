@@ -19,18 +19,17 @@ def load_trackfile():
     return files.read()
 
 
-def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
+def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     """loads detections from Track-File and converts into displayable format"""
     if button_bool["tracks_imported"]:
-        info_message("Warning", "Track already imported")
+        info_message("Warning", "Tracks already imported")
         return
 
     if not autoimport:
-        filepath = load_trackfile()
+        files = load_trackfile()
 
     tracks = {}
-
-    loaded_dict = json.loads(filepath)
+    loaded_dict = json.loads(files)
 
     # raw detections from OTVision
     raw_detections = loaded_dict["data"]
@@ -62,9 +61,12 @@ def load_and_convert(x_factor, y_factor, autoimport=False, filepath=None):
                 )
     button_bool["tracks_imported"] = True
 
+    # only valid track when more than one detection
     tracks_df = create_tracks_dataframe(tracks)
 
     tracks_geoseries = create_geoseries(tracks_df)
+
+    print(tracks_df)
 
     return raw_detections, tracks, tracks_df, tracks_geoseries
 

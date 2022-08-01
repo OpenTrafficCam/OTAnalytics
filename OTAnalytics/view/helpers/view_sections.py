@@ -9,7 +9,7 @@ from view.helpers.gui_helper import (
 import helpers.file_helper as file_helper
 import view.image_alteration
 import keyboard
-import view.config as config
+import view.objectstorage as objectstorage
 import view.sections
 
 
@@ -125,11 +125,13 @@ class FrameSection(tk.LabelFrame):
 
             del file_helper.flow_dict["Detectors"][detector_name]
 
+            #deletes detector in all movements
             for key in file_helper.flow_dict["Movements"]:
                 for value in file_helper.flow_dict["Movements"][key]:
                     if detector_name in file_helper.flow_dict["Movements"][key]:
                         file_helper.flow_dict["Movements"][key].remove(detector_name)
 
+            # update all treeview 
             for i in treeview_movements.get_children():
                 treeview_movements.delete(i)
 
@@ -179,7 +181,7 @@ class FrameSection(tk.LabelFrame):
         )
         self.new_detector_creation.destroy()
 
-        config.maincanvas.delete_polygon_points()
+        objectstorage.maincanvas.delete_points()
 
         view.image_alteration.manipulate_image()
 

@@ -6,8 +6,9 @@ import itertools
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
 import helpers.file_helper as file_helper
-import view.config
+import view.objectstorage
 from view.helpers.gui_helper import info_message
+from view.helpers.gui_helper import button_bool
 
 
 def dic_to_detector_dataframe():
@@ -102,6 +103,8 @@ def find_intersection_order(object_validated_df):
         Dataframe: With newly calculated columns.
     """
 
+    eventbased_dictionary = {}
+
     # create necessary columns
     object_validated_df["Crossing_Gate/Frame"] = ""
     object_validated_df["Movement"] = ""
@@ -114,6 +117,7 @@ def find_intersection_order(object_validated_df):
     ):
         # Condition if detector was crossed by objecttrack
         # Don't change to "is True"!! (True is the content of row/column)
+        # TODO: Vorfiltern des Dataframe (wo Detector ==> True), dafür loops aufsplitten
         if object_validated_df.loc[object_id][detector]:
 
             # shapely Linestring
@@ -172,17 +176,17 @@ def find_intersection_order(object_validated_df):
 
             object_validated_df.at[object_id, "Time_crossing_entrance"] = (
                 object_validated_df.at[object_id, "Crossing_Gate/Frame"][0][1]
-                / view.config.videoobject.fps
+                / view.objectstorage.videoobject.fps
             )
 
             if object_validated_df.at[object_id, "Time_crossing_entrance"] != (
                 object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                / view.config.videoobject.fps
+                / view.objectstorage.videoobject.fps
             ):
 
                 object_validated_df.at[object_id, "Time_crossing_exit"] = (
                     object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                    / view.config.videoobject.fps
+                    / view.objectstorage.videoobject.fps
                 )
 
             # list = Movement (only detectors not seconds)
@@ -190,11 +194,20 @@ def find_intersection_order(object_validated_df):
                 object_id, "Movement"
             ] = concatted_sorted_detector_list
 
-    return object_validated_df
+            # start nested dictionary
+            eventbased_dictionary[int(crossing_frame)] = {}
+            
+            # creates dictionary 
+
+            eventbased_dictionary[int(crossing_frame)][detector+"_"+ file_helper.flow_dict["Detectors"][detector]["type"]+"_Detector"] = True
+            if f"Road_user_ID_{detector}" not in eventbased_dictionary[int(crossing_frame)]:
+                eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}"] = [object_id]
+                eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}_Class"] = object_validated_df.loc[object_id]["Class"]
+
+    return object_validated_df, eventbased_dictionary
 
 
 # %%
-
 
 def assign_movement(object_validated_df):
     """Compares movements and associated detectors with sorted crossing list.
@@ -209,8 +222,6 @@ def assign_movement(object_validated_df):
     # TODO delete iteration ==> jupyter nb
     for object_id, j in object_validated_df.iterrows():
 
-        print(f"working...on {str(object_id)}")
-
         for movement_list in file_helper.flow_dict["Movements"]:
 
             # if detector in movements and real movement crossing events are true,
@@ -220,7 +231,6 @@ def assign_movement(object_validated_df):
                 == object_validated_df.loc[object_id]["Movement"]
             ):
 
-                print("yes")
                 object_validated_df.at[object_id, "Movement_name"] = movement_list
                 break
 
@@ -228,25 +238,31 @@ def assign_movement(object_validated_df):
 
 
 # %%
-def safe_to_exl(process_object):
+def safe_to_exl(dataframe_autocount, dataframe_eventbased):
     """Safe dataframe as cvs and asks for filepath.
+
 
     Args:
         process_object (dataframe): Dataframe with object information.
     """
 
-    file_path = filedialog.asksaveasfilename(
-        defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx")]
-    )
-    process_object.to_excel(file_path)
+    dataframe_list = [dataframe_autocount, dataframe_eventbased]
+    
+    for dataframe in dataframe_list:
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv", filetypes=[("CSV", "*.csv")]
+        )
+        dataframe.to_csv(file_path)
+
+
 
 
 # %%
-def time_calculation_dataframe(timedelta_entry, object_validated_df):
+def time_calculation_dataframe(object_validated_df):
     """Creates columns with time, calculated from frame and fps.
 
     Args:
-        timedelta_entry (int): Time between two  frames.
+        timedelta_entry (int): Start time of video
         fps (int): Frames per seconds.
         object_validated_df (dataframe): Dataframe with tracks.
 
@@ -254,37 +270,40 @@ def time_calculation_dataframe(timedelta_entry, object_validated_df):
         dataframe: Dataframe with tracks and new created columns with
         information in timeformat.
     """
+    # if timedelta_entry is None:
 
-    entry_timedelta = timedelta_entry.get()
+    #     entry_timedelta = "00:00:00"
 
-    object_validated_df["first_appearance_time"] = (
-        pd.to_datetime(
+    # else:
+
+    #     entry_timedelta = timedelta_entry.get()
+
+    object_validated_df["first_appearance_time"] = pd.to_timedelta(
             (
                 object_validated_df["first_appearance_frame"]
-                / view.config.videoobject.fps
+                / view.objectstorage.videoobject.fps
             ),
             unit="s",
-        )
-        + pd.Timedelta(entry_timedelta)
-    )
-    object_validated_df["last_appearance_time"] = (
-        pd.to_datetime(
+        )+view.objectstorage.videoobject.datetime_obj
+    
+    object_validated_df["last_appearance_time"] = pd.to_timedelta(
             (
                 object_validated_df["last_appearance_frame"]
-                / view.config.videoobject.fps
+                / view.objectstorage.videoobject.fps
             ),
             unit="s",
-        )
-        + pd.Timedelta(entry_timedelta)
-    )
+        ) + view.objectstorage.videoobject.datetime_obj
 
-    object_validated_df["first_appearance_time"] = object_validated_df[
-        "first_appearance_time"
-    ].dt.strftime("%H:%M:%S")
+    object_validated_df["first_appearance_time"] = object_validated_df["first_appearance_time"].astype('datetime64[s]')
+    object_validated_df["last_appearance_time"] = object_validated_df["last_appearance_time"].astype('datetime64[s]')   
 
-    object_validated_df["last_appearance_time"] = object_validated_df[
-        "last_appearance_time"
-    ].dt.strftime("%H:%M:%S")
+    # object_validated_df["first_appearance_time"] = object_validated_df[
+    #     "first_appearance_time"
+    # ].dt.strftime("%H:%M:%S")
+
+    # object_validated_df["last_appearance_time"] = object_validated_df[
+    #     "last_appearance_time"
+    # ].dt.strftime("%H:%M:%S")
 
     return object_validated_df
 
@@ -300,7 +319,7 @@ def clean_dataframe(object_validated_df):
     """
     # List hast to be tuple or string in order to be groupby
     object_validated_df["Movement"] = object_validated_df["Movement"].apply(str)
-
+ 
     return object_validated_df.loc[
         :,
         [
@@ -313,8 +332,7 @@ def clean_dataframe(object_validated_df):
             "last_appearance_time",
             "Time_crossing_entrance",
             "Time_crossing_exit",
-        ],
-    ]
+        ], ]
 
 
 def resample_dataframe(entry_interval, object_validated_df):
@@ -330,6 +348,7 @@ def resample_dataframe(entry_interval, object_validated_df):
     entry_interval_time = str(entry_interval.get())
 
     if entry_interval_time not in ["0", "None"]:
+        print("Dataframe gets resampled")
 
         object_validated_df["Datetime"] = pd.to_datetime(
             object_validated_df["first_appearance_time"]
@@ -357,8 +376,31 @@ def resample_dataframe(entry_interval, object_validated_df):
 
     return object_validated_df
 
+def eventased_dictionary_to_dataframe(eventbased_dictionary):
+    """_summary_
 
-def automated_counting(entry_timedelta, entry_interval):
+    Args:
+        eventbased_dictionary (dic): dictionary with frame and belonging events
+
+    Returns:
+        dataframe: dataframe with events and belonging datetime
+    """
+
+    eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
+    eventbased_dataframe = eventbased_dataframe.sort_index(axis=0)
+    eventbased_dataframe.index.set_names(["Frame"], inplace=True)
+    eventbased_dataframe.reset_index(inplace=True)
+    eventbased_dataframe["seconds"] = (eventbased_dataframe["Frame"] /view.objectstorage.videoobject.fps)
+    eventbased_dataframe["seconds"] = eventbased_dataframe["seconds"].astype('int')  
+    eventbased_dataframe["Eventtime"] = pd.to_timedelta(eventbased_dataframe["seconds"], unit='seconds')
+    eventbased_dataframe["Eventtime"] = eventbased_dataframe["Eventtime"] + view.objectstorage.videoobject.datetime_obj
+    eventbased_dataframe = eventbased_dataframe.set_index("Eventtime")
+    return eventbased_dataframe
+
+
+
+
+def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=False):
     """Calls previous functions for better readability.
 
     Args:
@@ -369,28 +411,48 @@ def automated_counting(entry_timedelta, entry_interval):
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
+    # TODO: Reduce unnecessary calculation but do calculation if 
+        # detectorfile changes
+    #if not button_bool["dataframe_cleaned"]:
 
     # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
     detector_df = dic_to_detector_dataframe()
     # object_validated_df = dic_to_object_dataframe()
-    processed_object = calculate_intersections(detector_df, file_helper.tracks_df)
+    object_with_intersection_df = calculate_intersections(detector_df, file_helper.tracks_df)
 
     print(" successful ")
 
-    processed_object = find_intersection_order(processed_object)
-    processed_object = assign_movement(processed_object)
+    object_with_intersection_df, file_helper.eventbased_dictionary = find_intersection_order(object_with_intersection_df)
+    object_with_intersection_df = assign_movement(object_with_intersection_df)
 
-    processed_object = time_calculation_dataframe(entry_timedelta, processed_object)
+    object_with_intersection_df = time_calculation_dataframe(object_with_intersection_df)
 
-    cleaned_object_dataframe = clean_dataframe(processed_object)
+    file_helper.cleaned_object_dataframe = clean_dataframe(object_with_intersection_df)
+
+    #button_bool["dataframe_cleaned"] = True
+
+    file_helper.cleaned_object_dataframe["Datetime"] = pd.to_datetime(
+        file_helper.cleaned_object_dataframe["first_appearance_time"]
+    )
+    file_helper.cleaned_object_dataframe.index.set_names(['Object_ID'], inplace=True)
+    file_helper.cleaned_object_dataframe.reset_index(inplace=True)
+
+    file_helper.cleaned_object_dataframe.set_index("Datetime" ,inplace=True)
+    
+    eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary)
+
+    if for_drawing:
+
+        return file_helper.cleaned_object_dataframe
 
     cleaned_resampled_object_df = resample_dataframe(
-        entry_interval, cleaned_object_dataframe
+        entry_interval, file_helper.cleaned_object_dataframe
     )
 
-    safe_to_exl(cleaned_resampled_object_df)
 
-    return cleaned_resampled_object_df
+    safe_to_exl(cleaned_resampled_object_df, eventbased_dataframe)
+
+    # return cleaned_resampled_object_df
 
 
 def create_setting_window():
@@ -420,7 +482,7 @@ def create_setting_window():
 
     time_entry.grid(row=1, column=0, sticky="w", pady=5, padx=5)
     time_entry.focus()
-    time_entry.insert(0, "00:00:00")
+    time_entry.insert(0, "UNUSED")
 
     timeinterval_entry_header = Label(toplevelwindow, text="Timeinterval (min)")
     timeinterval_entry_header.grid(row=2, column=0, columnspan=5, sticky="w")
@@ -432,7 +494,7 @@ def create_setting_window():
     toplevelwindow_button = Button(
         toplevelwindow,
         text="Save file",
-        command=lambda: automated_counting(time_entry, timeinterval_entry),
+        command=lambda: automated_counting(timeinterval_entry, time_entry, ),
     )
     toplevelwindow_button.grid(
         row=4, columnspan=5, column=0, sticky="w", pady=5, padx=5

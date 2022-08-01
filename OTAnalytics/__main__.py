@@ -1,4 +1,4 @@
-from view.gui_class import main
+from view.gui import main
 
 if __name__ == "__main__":
     main()
