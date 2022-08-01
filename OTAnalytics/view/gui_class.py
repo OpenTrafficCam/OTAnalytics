@@ -3,7 +3,7 @@ from view.view_movements import FrameMovements
 from view.view_helpers import FrameFiles
 from view.canvas import CanvasFrame
 from view.view_sections import FrameSection
-from view.view_objects import FrameObject
+from view.view_tracks import FrameObject
 from view.helpers.gui_helper import (
     info_message,
     button_bool,
