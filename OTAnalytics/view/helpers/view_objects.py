@@ -1,5 +1,6 @@
 import tkinter as tk
 import tkinter.ttk as ttk
+from Data_Visualization.vizualisation import create_graphic_setting_window
 from view.tracks import load_and_convert
 import helpers.file_helper as file_helper
 import view.image_alteration
@@ -9,8 +10,8 @@ from view.helpers.gui_helper import (
     button_display_bb_switch,
 )
 
-import count.auto_counting
-import view.config
+import autocount.auto_counting
+import view.objectstorage
 
 
 class FrameObject(tk.LabelFrame):
@@ -97,10 +98,20 @@ class FrameObject(tk.LabelFrame):
         self.button_autocount = tk.Button(
             master=self.frame_control_objects,
             text="Autocount",
-            command=count.auto_counting.create_setting_window,
+            command=autocount.auto_counting.create_setting_window,
         )
         self.button_autocount.grid(
-            row=1, column=0, columnspan=4, padx=(10, 25), pady=(0, 12), sticky="ew"
+            row=1, column=0, columnspan=2, padx=(10, 0), pady=(0, 12), sticky="ew"
+        )
+
+        # graphic
+        self.button_graphic = tk.Button(
+            master=self.frame_control_objects,
+            text="Display Graphics",
+            command=create_graphic_setting_window,
+        )
+        self.button_graphic.grid(
+            row=1, column=2, columnspan=2, padx=(0, 25), pady=(0, 12), sticky="ew"
         )
 
     def add_tracks(self):
@@ -111,8 +122,8 @@ class FrameObject(tk.LabelFrame):
             file_helper.tracks_df,
             file_helper.tracks_geoseries,
         ) = load_and_convert(
-            x_factor=view.config.videoobject.x_resize_factor,
-            y_factor=view.config.videoobject.y_resize_factor,
+            x_factor=view.objectstorage.videoobject.x_resize_factor,
+            y_factor=view.objectstorage.videoobject.y_resize_factor,
         )
 
         for object in list(file_helper.tracks.keys()):

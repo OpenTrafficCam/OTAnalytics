@@ -7,7 +7,7 @@ from view.helpers.gui_helper import (
     color_dict,
 )
 from PIL import Image, ImageTk
-import view.config
+import view.objectstorage
 import helpers.file_helper as file_helper
 from view.sections import draw_line, draw_polygon
 
@@ -28,7 +28,7 @@ def manipulate_image(np_image=None, closing=False):
         raw_detections (dictionary): Dictionary with raw detections from OpenVision.
     """
     if np_image is None:
-        np_image = view.config.videoobject.np_image.copy()
+        np_image = view.objectstorage.videoobject.np_image.copy()
 
     if button_bool["tracks_imported"]:
 
@@ -40,13 +40,13 @@ def manipulate_image(np_image=None, closing=False):
 
         np_image = draw_bounding_box(
             np_image,
-            str(view.config.videoobject.current_frame),
+            str(view.objectstorage.videoobject.current_frame),
             raw_detections=file_helper.raw_detections,
         )
 
         np_image = draw_tracks_live(
             np_image,
-            view.config.videoobject.current_frame,
+            view.objectstorage.videoobject.current_frame,
             tracks=file_helper.tracks,
             raw_detections=file_helper.raw_detections,
             track_live=file_helper.tracks_live,
@@ -54,16 +54,13 @@ def manipulate_image(np_image=None, closing=False):
 
     if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
 
-        if view.config.videoobject.transparent_image is None:
+        if view.objectstorage.videoobject.transparent_image is None:
 
-            view.config.videoobject.transparent_image = draw_all_tracks()
+            view.objectstorage.videoobject.transparent_image = draw_all_tracks()
 
         np_image = cv2.addWeighted(
-            view.config.videoobject.transparent_image, 0.5, np_image, 1, 0
+            view.objectstorage.videoobject.transparent_image, 0.5, np_image, 1, 0
         )
-
-    # TODO: #59 Draw detectors on top of all elements
-    np_image = draw_detectors_from_dict(np_image)
 
     # copy is important or else original image will be changed
 
@@ -79,21 +76,27 @@ def manipulate_image(np_image=None, closing=False):
 
         np_image = draw_polygon(np_image, closing)
 
+    np_image = draw_detectors_from_dict(np_image)
+
     image = Image.fromarray(np_image)  # to PIL format
 
-    view.config.videoobject.ph_image = ImageTk.PhotoImage(image)
+    view.objectstorage.videoobject.ph_image = ImageTk.PhotoImage(image)
 
-    view.config.maincanvas.create_image(
-        0, 0, anchor=tkinter.NW, image=view.config.videoobject.ph_image
+    view.objectstorage.maincanvas.create_image(
+        0, 0, anchor=tkinter.NW, image=view.objectstorage.videoobject.ph_image
     )
 
-    view.config.maincanvas.update()
+    view.objectstorage.maincanvas.update()
 
 
 def draw_all_tracks():
 
     np_image = np.zeros(
-        [view.config.videoobject.height, view.config.videoobject.width, 4],
+        [
+            view.objectstorage.videoobject.height,
+            view.objectstorage.videoobject.width,
+            4,
+        ],
         dtype=np.uint8,
     )
 
@@ -265,12 +268,16 @@ def draw_bounding_box(np_image, frame, raw_detections):
                     cv2.rectangle(
                         image_cache,
                         (
-                            int(x_start * view.config.videoobject.x_resize_factor),
-                            int(y_start * view.config.videoobject.y_resize_factor),
+                            int(
+                                x_start * view.objectstorage.videoobject.x_resize_factor
+                            ),
+                            int(
+                                y_start * view.objectstorage.videoobject.y_resize_factor
+                            ),
                         ),
                         (
-                            int(x_end * view.config.videoobject.x_resize_factor),
-                            int(y_end * view.config.videoobject.y_resize_factor),
+                            int(x_end * view.objectstorage.videoobject.x_resize_factor),
+                            int(y_end * view.objectstorage.videoobject.y_resize_factor),
                         ),
                         bbcolor,
                         2,
@@ -285,14 +292,24 @@ def draw_bounding_box(np_image, frame, raw_detections):
                     cv2.rectangle(
                         image_cache,
                         (
-                            int(x_start * view.config.videoobject.x_resize_factor) - 1,
-                            int(y_start * view.config.videoobject.y_resize_factor) - 1,
+                            int(
+                                x_start * view.objectstorage.videoobject.x_resize_factor
+                            )
+                            - 1,
+                            int(
+                                y_start * view.objectstorage.videoobject.y_resize_factor
+                            )
+                            - 1,
                         ),
                         (
-                            int(x_start * view.config.videoobject.x_resize_factor)
+                            int(
+                                x_start * view.objectstorage.videoobject.x_resize_factor
+                            )
                             + text_w
                             + 2,
-                            int(y_start * view.config.videoobject.y_resize_factor)
+                            int(
+                                y_start * view.objectstorage.videoobject.y_resize_factor
+                            )
                             - text_h
                             - 2,
                         ),
@@ -304,8 +321,13 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         image_cache,
                         anno_txt,
                         (
-                            int(x_start * view.config.videoobject.x_resize_factor),
-                            int(y_start * view.config.videoobject.y_resize_factor) - 2,
+                            int(
+                                x_start * view.objectstorage.videoobject.x_resize_factor
+                            ),
+                            int(
+                                y_start * view.objectstorage.videoobject.y_resize_factor
+                            )
+                            - 2,
                         ),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         fontscale,
@@ -374,6 +396,11 @@ def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
 
 
 def create_intersection_list(current_line_shape):
+    """creates list with crossed tracks while drawing polygon or linedetectors.
+
+    Args:
+        current_line_shape (_type_): polygon or line
+    """
 
     if button_bool["tracks_imported"] and button_bool["display_all_tracks_toggle"]:
 
