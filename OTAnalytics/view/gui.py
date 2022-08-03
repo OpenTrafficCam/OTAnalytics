@@ -1,6 +1,6 @@
 import tkinter as tk
 from view.helpers.view_movements import FrameMovements
-from view.helpers.view_helpers import FrameFiles
+from view.helpers.view_files import FrameFiles
 from view.canvas import CanvasFrame
 from view.helpers.view_sections import FrameSection
 from view.view_tracks import FrameObject
@@ -15,7 +15,7 @@ import helpers.file_helper as file_helper
 import view.image_alteration
 import view.sections
 import json
-from view.tracks import load_and_convert
+from view.tracks import load_and_convert, deload_trackfile
 
 
 class gui(tk.Tk):
@@ -63,22 +63,6 @@ class gui(tk.Tk):
             **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
         )
 
-        # # Load flow_dict
-        # self.button_load_flowfile = tk.Button(
-        #     master=self.frame_controll_panel,
-        #     text="Load flowfile",
-        #     command=self.import_flowfile,
-        # )
-        # self.button_load_flowfile.grid(row=4, column=0, sticky="ew")
-
-        # # Add save flow_dict
-        # self.button_save_flowfile = tk.Button(
-        #     master=self.frame_controll_panel,
-        #     text="Save sections and movements",
-        #     command=view.sections.save_flowfile,
-        # )
-        # self.button_save_flowfile.grid(row=5, column=0, sticky="ew")
-
         # Add clear all
         self.button_clear_all = tk.Button(
             master=self.frame_controll_panel,
@@ -88,6 +72,15 @@ class gui(tk.Tk):
         # pixel alignment
         self.button_clear_all.grid(
             **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
+        )
+
+        self.frame_files.button_remove_video.configure(
+            command=lambda: [
+                self.frame_files.remove_video(),
+                deload_trackfile(),
+                self.frame_objects.clear_treeview()
+                
+            ]
         )
 
         # bind function to button (function effects to treeview)
