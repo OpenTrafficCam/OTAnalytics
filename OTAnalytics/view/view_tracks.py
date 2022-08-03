@@ -102,6 +102,7 @@ class FrameObject(tk.LabelFrame):
                 self.clear_treeview(),
                 deload_trackfile(),
                 view.objectstorage.videoobject.initialize_empty_image(),
+                self.button_show_tracks.configure(text="Show all Tracks"),
                 view.image_alteration.manipulate_image()
                 ]
             )
