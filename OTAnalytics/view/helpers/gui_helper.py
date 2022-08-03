@@ -44,6 +44,7 @@ def reset_buttons_tracks():
     button_bool["display_all_tracks_toggle"] = False
     button_bool["display_bb"] = False
     button_bool["display_live_track"] = False
+
     
 
 def button_play_video_switch(button_play, button_rewind):
