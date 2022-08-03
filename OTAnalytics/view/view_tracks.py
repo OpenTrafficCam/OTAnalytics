@@ -98,7 +98,8 @@ class FrameObject(tk.LabelFrame):
         self.button_clear_tracks = tk.Button(
             master=self.frame_control_objects,
             width=12,
-            text="Clear Tracks", command=lambda: [
+            text="Clear Tracks",
+            command=lambda: [
                 self.clear_treeview(),
                 deload_trackfile(),
                 view.objectstorage.videoobject.initialize_empty_image(),

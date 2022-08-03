@@ -44,10 +44,6 @@ otflow_file = None
 ottrk_file = None
 
 
-    
-
-
-
 
 def get_dir(path: str):
     """removes filename from path

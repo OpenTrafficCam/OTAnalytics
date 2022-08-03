@@ -13,6 +13,8 @@ from view.video import Video
 import helpers.file_helper as file_helper
 import view.objectstorage
 import view.image_alteration
+import helpers.file_helper as file_helper
+from view.tracks import deload_trackfile
 
 
 class FrameFiles(tk.LabelFrame):
@@ -104,7 +106,7 @@ class FrameFiles(tk.LabelFrame):
             master=self.frame_control,
             width=12,
             text="Remove Video",
-            command=lambda: [self.remove_video()],
+            command=lambda: [self.remove_video(),deload_trackfile()],
         )
         self.button_remove_video.grid(row=0, column=3, pady=(0, 10), sticky="ew")
 
@@ -268,3 +270,5 @@ class FrameFiles(tk.LabelFrame):
         view.objectstorage.sliderobject.destroy_slider()
 
         view.objectstorage.videoobject = None
+
+
