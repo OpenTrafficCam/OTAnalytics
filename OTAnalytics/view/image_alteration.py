@@ -53,9 +53,12 @@ def manipulate_image(np_image=None, closing=False):
         )
 
     if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
+        print(button_bool["display_all_tracks_toggle"], button_bool["tracks_imported"])
 
         if view.objectstorage.videoobject.transparent_image is None:
 
+            # creates transparent_image and draws all tracks on it
+            #  
             view.objectstorage.videoobject.transparent_image = draw_all_tracks()
 
         np_image = cv2.addWeighted(

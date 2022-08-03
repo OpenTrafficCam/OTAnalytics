@@ -37,6 +37,14 @@ statepanel_txt = {
     "Add_movement_information": "select and add section while movement is highlighted",
 }
 
+def reset_buttons_tracks():
+    global button_bool
+    button_bool["tracks_imported"] = False
+    button_bool["detections_drawn"] = False
+    button_bool["display_all_tracks_toggle"] = False
+    button_bool["display_bb"] = False
+    button_bool["display_live_track"] = False
+    
 
 def button_play_video_switch(button_play, button_rewind):
     """Toggle video play function.

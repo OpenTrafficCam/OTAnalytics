@@ -3,8 +3,11 @@ from tkinter import filedialog
 import geopandas as gpd
 from shapely.geometry import LineString
 import pandas as pd
+import helpers.file_helper as file_helper
 
-from view.helpers.gui_helper import button_bool, color_dict, info_message
+from view.helpers.gui_helper import button_bool, color_dict, info_message, reset_buttons_tracks
+
+
 
 
 def load_trackfile():
@@ -17,6 +20,15 @@ def load_trackfile():
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
     files = open(filepath.name, "r")
     return files.read()
+
+def deload_trackfile():
+    file_helper.raw_detections = []
+    file_helper.tracks = {}
+    file_helper.tracks_df = None
+    file_helper.tracks_geoseries = None
+
+    # resets Button dictionary t everything buttonrelated to false
+    reset_buttons_tracks()
 
 
 def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
@@ -66,8 +78,6 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
 
     tracks_geoseries = create_geoseries(tracks_df)
 
-    print(tracks_df)
-
     return raw_detections, tracks, tracks_df, tracks_geoseries
 
 
@@ -92,6 +102,8 @@ def create_tracks_dataframe(tracks_dic):
     tracks_df["last_appearance_frame"] = tracks_df["Frame"].apply(return_last_frame)
 
     return tracks_df
+
+
 
 
 def return_first_frame(lst):

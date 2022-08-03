@@ -32,6 +32,8 @@ selectionlist_sections = []
 
 raw_detections = []
 tracks = {}
+tracks_df = None
+tracks_geoseries = None
 
 cleaned_object_dataframe = []
 eventbased_dictionary = {}
@@ -40,6 +42,11 @@ eventbased_dictionary = {}
 tracks_live = {}
 otflow_file = None
 ottrk_file = None
+
+
+    
+
+
 
 
 def get_dir(path: str):

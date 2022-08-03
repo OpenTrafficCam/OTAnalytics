@@ -1,7 +1,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 from Data_Visualization.vizualisation import create_graphic_setting_window
-from view.tracks import load_and_convert
+from view.tracks import load_and_convert, deload_trackfile
 import helpers.file_helper as file_helper
 import view.image_alteration
 from view.helpers.gui_helper import (
@@ -94,6 +94,19 @@ class FrameObject(tk.LabelFrame):
         )
         self.button_show_bounding_boxes.grid(row=0, column=3, padx=(0, 25), sticky="ew")
 
+        # Show clear all tracks
+        self.button_clear_tracks = tk.Button(
+            master=self.frame_control_objects,
+            width=12,
+            text="Clear Tracks", command=lambda: [
+                self.clear_treeview(),
+                deload_trackfile(),
+                view.objectstorage.videoobject.initialize_empty_image(),
+                view.image_alteration.manipulate_image()
+                ]
+            )
+        self.button_clear_tracks.grid(row=0, column=4, padx=(0, 25), sticky="ew")
+
         # autocount
         self.button_autocount = tk.Button(
             master=self.frame_control_objects,
@@ -145,3 +158,10 @@ class FrameObject(tk.LabelFrame):
             file_helper.selectionlist_objects.append(item_text)
 
         view.image_alteration.manipulate_image()
+
+    def clear_treeview(self):
+        for i in self.tree_objects.get_children():
+            self.tree_objects.delete(i)
+
+        
+
