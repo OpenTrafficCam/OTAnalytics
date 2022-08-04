@@ -14,8 +14,7 @@ import helpers.file_helper as file_helper
 import view.objectstorage
 import view.image_alteration
 import helpers.file_helper as file_helper
-from view.tracks import deload_trackfile
-from view.view_tracks import FrameObject
+
 
 
 class FrameFiles(tk.LabelFrame):

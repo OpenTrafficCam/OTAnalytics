@@ -212,27 +212,26 @@ class FrameSection(tk.LabelFrame):
 
     def add_section_to_movement(self, treeview_movements):
         """Adds selected section to selected movement."""
-        item = self.tree_sections.selection()
-        detector_name = self.tree_sections.item(item, "text")
 
-        item = treeview_movements.selection()
-        movement_name = treeview_movements.item(item, "text")
+        item_movement = treeview_movements.selection()
+        movement_name = treeview_movements.item(item_movement, "text")
 
-        if not detector_name or not movement_name:
-            info_message("Warning", "Please select section and movements!")
+        for item in self.tree_sections.selection():
+            detector_name = self.tree_sections.item(item, "text")
+            print(detector_name)
 
-            return
+            if not detector_name or not movement_name:
+                info_message("Warning", "Please select section and movements!")
+                print("test")
 
-        if detector_name not in file_helper.flow_dict["Movements"][movement_name]:
+                continue
 
-            file_helper.flow_dict["Movements"][movement_name].append(detector_name)
+            if detector_name not in file_helper.flow_dict["Movements"][movement_name]:
 
-            treeview_movements.set(
-                item,
-                0,
-                file_helper.flow_dict["Movements"][movement_name],
-            )
-        else:
-            info_message("Warning", "Detector already part of movement!")
+                file_helper.flow_dict["Movements"][movement_name].append(detector_name)
+                
 
-            return
+            else:
+                info_message("Warning", "Detector already part of movement!")
+        print(file_helper.flow_dict["Movements"][movement_name])
+        treeview_movements.set(item_movement,0,file_helper.flow_dict["Movements"][movement_name])
