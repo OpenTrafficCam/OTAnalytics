@@ -4,7 +4,6 @@ import geopandas as gpd
 from shapely.geometry import LineString
 import pandas as pd
 import helpers.file_helper as file_helper
-from helpers.config import x_factor_reference, y_factor_reference
 
 from view.helpers.gui_helper import button_bool, color_dict, info_message, reset_buttons_tracks
 
@@ -48,6 +47,9 @@ def load_and_convert(x_factor_resize, y_factor_resize, autoimport=False, files=N
     # remodels from framewise to objectwise
     # result is dic with object_id as key ==> with coords, class and frame
     raw_detections = loaded_dict["data"]
+
+    x_factor_reference = 0
+    y_factor_reference = 1
 
     for frame in raw_detections:
         for detection in raw_detections[frame]:
