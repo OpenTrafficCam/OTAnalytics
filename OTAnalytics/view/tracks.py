@@ -6,7 +6,8 @@ import pandas as pd
 import helpers.file_helper as file_helper
 
 from view.helpers.gui_helper import button_bool, color_dict, info_message, reset_buttons_tracks
-
+from helpers.config import bbox_factor_reference
+import time
 
 
 
@@ -33,6 +34,7 @@ def deload_trackfile():
 
 def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     """loads detections from Track-File and converts into displayable format"""
+    start_time = time.time()
     if button_bool["tracks_imported"]:
         info_message("Warning", "Tracks already imported")
         return
@@ -49,10 +51,11 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     for frame in raw_detections:
         for detection in raw_detections[frame]:
             if detection in tracks:
+
                 tracks[detection]["Coord"].append(
                     [
-                        raw_detections[frame][detection]["x"] * x_factor,
-                        raw_detections[frame][detection]["y"] * y_factor,
+                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks[detection]["Class"]][0]) * x_factor,
+                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks[detection]["Class"]][1]) * y_factor,
                     ]
                 )
 
@@ -67,8 +70,8 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
 
                 tracks[detection]["Coord"].append(
                     [
-                        raw_detections[frame][detection]["x"] * x_factor,
-                        raw_detections[frame][detection]["y"] * y_factor,
+                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks[detection]["Class"]][0]) * x_factor,
+                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks[detection]["Class"]][1]) * y_factor,
                     ]
                 )
     button_bool["tracks_imported"] = True
@@ -77,6 +80,10 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     tracks_df = create_tracks_dataframe(tracks)
 
     tracks_geoseries = create_geoseries(tracks_df)
+
+    print(tracks_df.info())
+
+    print("--- %s seconds ---" % (time.time() - start_time))
 
     return raw_detections, tracks, tracks_df, tracks_geoseries
 

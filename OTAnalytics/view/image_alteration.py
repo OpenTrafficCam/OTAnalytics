@@ -38,7 +38,7 @@ def manipulate_image(np_image=None, closing=False):
         np_image = draw_tracks(
             np_image,
             selectionlist=file_helper.selectionlist_objects,
-            tracks=file_helper.tracks_df,
+            tracks_df=file_helper.tracks_df,
         )
 
         np_image = draw_bounding_box(
@@ -171,7 +171,7 @@ def draw_detectors_from_dict(np_image):
     return np_image
 
 
-def draw_tracks(np_image, selectionlist, tracks):
+def draw_tracks(np_image, selectionlist, tracks_df):
     """Draw selected tracks.
 
     Args:
@@ -184,9 +184,9 @@ def draw_tracks(np_image, selectionlist, tracks):
     """
 
     if selectionlist:
-        df = tracks.loc[selectionlist]
+        tracks_df = tracks_df.loc[selectionlist]
 
-        for index, row in df.iterrows():
+        for index, row in tracks_df.iterrows():
 
             try:
                 trackcolor = color_dict[row["Class"]] + (200,)
