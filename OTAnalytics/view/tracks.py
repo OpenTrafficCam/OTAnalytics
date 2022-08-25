@@ -31,7 +31,7 @@ def deload_trackfile():
     reset_buttons_tracks()
 
 
-def load_and_convert(x_factor_resize, y_factor_resize, autoimport=False, files=None):
+def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     """loads detections from Track-File and converts into displayable format"""
     if button_bool["tracks_imported"]:
         info_message("Warning", "Tracks already imported")
@@ -44,20 +44,15 @@ def load_and_convert(x_factor_resize, y_factor_resize, autoimport=False, files=N
     loaded_dict = json.loads(files)
 
     # raw detections from OTVision
-    # remodels from framewise to objectwise
-    # result is dic with object_id as key ==> with coords, class and frame
     raw_detections = loaded_dict["data"]
-
-    x_factor_reference = 0
-    y_factor_reference = 1
 
     for frame in raw_detections:
         for detection in raw_detections[frame]:
             if detection in tracks:
                 tracks[detection]["Coord"].append(
                     [
-                        (raw_detections[frame][detection]["x"]+((raw_detections[frame][detection]["w"]/2)*x_factor_reference)) * x_factor_resize,
-                        (raw_detections[frame][detection]["y"]+((raw_detections[frame][detection]["h"]/2)*y_factor_reference)) * y_factor_resize,
+                        raw_detections[frame][detection]["x"] * x_factor,
+                        raw_detections[frame][detection]["y"] * y_factor,
                     ]
                 )
 
@@ -72,8 +67,8 @@ def load_and_convert(x_factor_resize, y_factor_resize, autoimport=False, files=N
 
                 tracks[detection]["Coord"].append(
                     [
-                        (raw_detections[frame][detection]["x"]+((raw_detections[frame][detection]["w"]/2)*x_factor_reference)) * x_factor_resize,
-                        (raw_detections[frame][detection]["y"]+((raw_detections[frame][detection]["h"]/2)*y_factor_reference)) * y_factor_resize,
+                        raw_detections[frame][detection]["x"] * x_factor,
+                        raw_detections[frame][detection]["y"] * y_factor,
                     ]
                 )
     button_bool["tracks_imported"] = True

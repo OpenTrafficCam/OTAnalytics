@@ -196,8 +196,8 @@ class gui(tk.Tk):
                     file_helper.tracks_df,
                     file_helper.tracks_geoseries,
                 ) = load_and_convert(
-                    x_factor_resize=objectstorage.videoobject.x_resize_factor,
-                    y_factor_resize=objectstorage.videoobject.y_resize_factor,
+                    x_factor=objectstorage.videoobject.x_resize_factor,
+                    y_factor=objectstorage.videoobject.y_resize_factor,
                     autoimport=True,
                     files=files,
                 )
