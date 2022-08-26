@@ -51,13 +51,20 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     for frame in raw_detections:
         for detection in raw_detections[frame]:
             if detection in tracks:
+                if tracks[detection]["Class"] not in bbox_factor_reference.keys():
+                    vehicle_class = "unclear"
+                else :
+                    vehicle_class = tracks[detection]["Class"]
+
 
                 tracks[detection]["Coord"].append(
                     [
-                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks[detection]["Class"]][0]) * x_factor,
-                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks[detection]["Class"]][1]) * y_factor,
+                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[vehicle_class][0]) * x_factor,
+                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[vehicle_class][1]) * y_factor,
                     ]
                 )
+                # if class changes during detection overwrite previous detection // BUG: DONT ASSUME CLASS IS ALWAYS RIGHT
+                tracks[detection]["Class"] = raw_detections[frame][detection]["class"]
 
                 tracks[detection]["Frame"].append(int(frame))
 
@@ -80,8 +87,6 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     tracks_df = create_tracks_dataframe(tracks)
 
     tracks_geoseries = create_geoseries(tracks_df)
-
-    print(tracks_df.info())
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
