@@ -51,7 +51,7 @@ def manipulate_image(np_image=None, closing=False):
         np_image = draw_tracks_live(
             np_image,
             view.objectstorage.videoobject.current_frame,
-            tracks=file_helper.tracks,
+            tracks=file_helper.tracks_dic,
             raw_detections=file_helper.raw_detections,
             track_live=file_helper.tracks_live,
         )
@@ -190,7 +190,7 @@ def draw_tracks(np_image, selectionlist, tracks_df):
 
             try:
                 trackcolor = color_dict[row["Class"]] + (200,)
-            except NameError:
+            except:
 
                 trackcolor = (0, 0, 255, 150)
 

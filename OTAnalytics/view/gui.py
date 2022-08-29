@@ -192,7 +192,7 @@ class gui(tk.Tk):
 
                 (
                     file_helper.raw_detections,
-                    file_helper.tracks,
+                    file_helper.tracks_dic,
                     file_helper.tracks_df,
                     file_helper.tracks_geoseries,
                 ) = load_and_convert(
