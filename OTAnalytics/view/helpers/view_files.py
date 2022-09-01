@@ -186,7 +186,7 @@ class FrameFiles(tk.LabelFrame):
         except Exception:
             print("No backwardthread alive")
 
-        for object in list(file_helper.tracks.keys()):
+        for object in list(file_helper.tracks_dic.keys()):
 
             # tracks disappear when videoplaying is stopped
             file_helper.tracks_live[object] = []

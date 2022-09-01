@@ -6,7 +6,8 @@ import pandas as pd
 import helpers.file_helper as file_helper
 
 from view.helpers.gui_helper import button_bool, color_dict, info_message, reset_buttons_tracks
-
+from helpers.config import bbox_factor_reference
+import time
 
 
 
@@ -33,6 +34,7 @@ def deload_trackfile():
 
 def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     """loads detections from Track-File and converts into displayable format"""
+    start_time = time.time()
     if button_bool["tracks_imported"]:
         info_message("Warning", "Tracks already imported")
         return
@@ -40,7 +42,7 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     if not autoimport:
         files = load_trackfile()
 
-    tracks = {}
+    tracks_dic = {}
     loaded_dict = json.loads(files)
 
     # raw detections from OTVision
@@ -48,37 +50,49 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
 
     for frame in raw_detections:
         for detection in raw_detections[frame]:
-            if detection in tracks:
-                tracks[detection]["Coord"].append(
+            if detection in tracks_dic:
+                if tracks_dic[detection]["Class"] not in bbox_factor_reference.keys():
+                    vehicle_class = "unclear"
+                else :
+                    vehicle_class = tracks_dic[detection]["Class"]
+
+
+                tracks_dic[detection]["Coord"].append(
                     [
-                        raw_detections[frame][detection]["x"] * x_factor,
-                        raw_detections[frame][detection]["y"] * y_factor,
+                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[vehicle_class][0]) * x_factor,
+                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[vehicle_class][1]) * y_factor,
                     ]
                 )
+                # if class changes during detection overwrite previous detection // BUG: DONT ASSUME CLASS IS ALWAYS RIGHT
+                tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"]
 
-                tracks[detection]["Frame"].append(int(frame))
+                tracks_dic[detection]["Frame"].append(int(frame))
 
             elif raw_detections[frame][detection]["class"] in color_dict.keys():
-                tracks[detection] = {
+                tracks_dic[detection] = {
                     "Coord": [],
                     "Frame": [int(frame)],
                     "Class": raw_detections[frame][detection]["class"],
                 }
 
-                tracks[detection]["Coord"].append(
+                tracks_dic[detection]["Coord"].append(
                     [
-                        raw_detections[frame][detection]["x"] * x_factor,
-                        raw_detections[frame][detection]["y"] * y_factor,
+                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks_dic[detection]["Class"]][0]) * x_factor,
+                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks_dic[detection]["Class"]][1]) * y_factor,
                     ]
                 )
     button_bool["tracks_imported"] = True
 
     # only valid track when more than one detection
-    tracks_df = create_tracks_dataframe(tracks)
+    tracks_df = create_tracks_dataframe(tracks_dic)
 
     tracks_geoseries = create_geoseries(tracks_df)
 
-    return raw_detections, tracks, tracks_df, tracks_geoseries
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    print(tracks_dic)
+
+    return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
 
 def create_geoseries(tracks_df):

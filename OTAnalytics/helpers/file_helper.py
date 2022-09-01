@@ -31,7 +31,7 @@ selectionlist_sections = []
 # maybe necessary to incomment
 
 raw_detections = []
-tracks = {}
+tracks_dic = {}
 tracks_df = None
 tracks_geoseries = None
 

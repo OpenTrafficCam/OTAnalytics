@@ -10,6 +10,7 @@ from PIL import Image, ImageTk
 import view.objectstorage
 import helpers.file_helper as file_helper
 from view.sections import draw_line, draw_polygon
+from helpers.config import bbox_factor_reference
 
 
 def manipulate_image(np_image=None, closing=False):
@@ -38,7 +39,7 @@ def manipulate_image(np_image=None, closing=False):
         np_image = draw_tracks(
             np_image,
             selectionlist=file_helper.selectionlist_objects,
-            tracks=file_helper.tracks_df,
+            tracks_df=file_helper.tracks_df,
         )
 
         np_image = draw_bounding_box(
@@ -50,7 +51,7 @@ def manipulate_image(np_image=None, closing=False):
         np_image = draw_tracks_live(
             np_image,
             view.objectstorage.videoobject.current_frame,
-            tracks=file_helper.tracks,
+            tracks=file_helper.tracks_dic,
             raw_detections=file_helper.raw_detections,
             track_live=file_helper.tracks_live,
         )
@@ -106,15 +107,14 @@ def draw_all_tracks():
     )
 
     for index, track in file_helper.tracks_df.iterrows():
-
         try:
             trackcolor = color_dict[track["Class"]] + (200,)
-        except NameError:
+        except:
+            print("Class not found")
             trackcolor = (
                 0,
                 0,
-                255,
-            ) + (150,)
+                255)+(150,)
 
         pts = np.array(track["Coord"], np.int32)
 
@@ -171,7 +171,7 @@ def draw_detectors_from_dict(np_image):
     return np_image
 
 
-def draw_tracks(np_image, selectionlist, tracks):
+def draw_tracks(np_image, selectionlist, tracks_df):
     """Draw selected tracks.
 
     Args:
@@ -184,13 +184,13 @@ def draw_tracks(np_image, selectionlist, tracks):
     """
 
     if selectionlist:
-        df = tracks.loc[selectionlist]
+        tracks_df = tracks_df.loc[selectionlist]
 
-        for index, row in df.iterrows():
+        for index, row in tracks_df.iterrows():
 
             try:
                 trackcolor = color_dict[row["Class"]] + (200,)
-            except NameError:
+            except:
 
                 trackcolor = (0, 0, 255, 150)
 
@@ -241,30 +241,36 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         fontscale = 0.5
                     else:
                         fontscale = raw_detections[frame][detection]["w"] / 100
+                    
+                    x = raw_detections[frame][detection]["x"]
+                    y = raw_detections[frame][detection]["y"]
+                    w = raw_detections[frame][detection]["w"]
+                    h = raw_detections[frame][detection]["h"]
+                    vehicle_class = raw_detections[frame][detection]["class"]
 
                     x_start = int(
-                        raw_detections[frame][detection]["x"]
-                        - raw_detections[frame][detection]["w"] / 2
+                        x
+                        - w / 2
                     )
 
                     y_start = int(
-                        raw_detections[frame][detection]["y"]
-                        - raw_detections[frame][detection]["h"] / 2
+                        y
+                        - h / 2
                     )
 
                     x_end = int(
-                        raw_detections[frame][detection]["x"]
-                        + raw_detections[frame][detection]["w"] / 2
+                        x
+                        + w / 2
                     )
 
                     y_end = int(
-                        raw_detections[frame][detection]["y"]
-                        + raw_detections[frame][detection]["h"] / 2
+                        y
+                        + h / 2
                     )
 
                     try:
                         bbcolor = color_dict[
-                            raw_detections[frame][detection]["class"]
+                            vehicle_class
                         ] + (255,)
 
                     except ValueError:
@@ -339,11 +345,24 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         (255, 255, 255),
                         1,
                     )
+                    draw_reference_cross(image,x, y, w, h, vehicle_class)
+
 
         return image
 
     except ImportError:
         return image
+
+
+def draw_reference_cross(image, x, y, w, h, vehicle_class):
+
+    x_reference_point = int(x - 0.5 * w + w * bbox_factor_reference[vehicle_class][0])
+    y_reference_point = int(y - 0.5 * h + h * bbox_factor_reference[vehicle_class][1])
+
+    cv2.line(image, (x_reference_point-5, y_reference_point+5), (x_reference_point+5, y_reference_point-5), (255, 0, 0, 255), 2)
+    cv2.line(image, (x_reference_point-5, y_reference_point-5), (x_reference_point+5, y_reference_point+5), (255, 0, 0, 255), 2)
+
+
 
 
 def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
