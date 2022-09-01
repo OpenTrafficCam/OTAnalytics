@@ -33,7 +33,7 @@ def deload_trackfile():
     reset_buttons_tracks()
 
 
-def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
+def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=None):
     """loads detections from Track-File and converts into displayable format"""
     start_time = time.time()
     if button_bool["tracks_imported"]:
@@ -63,8 +63,8 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
 
                 tracks_dic[detection]["Coord"].append(
                     [
-                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[vehicle_class][0]) * x_factor,
-                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[vehicle_class][1]) * y_factor,
+                        ((raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[vehicle_class][0]))*x_resize_factor,
+                        ((raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[vehicle_class][1]))*y_resize_factor
                     ]
                 )
                 # if class changes during detection overwrite previous detection // BUG: DONT ASSUME CLASS IS ALWAYS RIGHT
@@ -81,8 +81,8 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
 
                 tracks_dic[detection]["Coord"].append(
                     [
-                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks_dic[detection]["Class"]][0]) * x_factor,
-                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks_dic[detection]["Class"]][1]) * y_factor,
+                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks_dic[detection]["Class"]][0]) * x_resize_factor,
+                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks_dic[detection]["Class"]][1]) * y_resize_factor,
                     ]
                 )
     button_bool["tracks_imported"] = True
