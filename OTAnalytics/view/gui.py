@@ -190,6 +190,8 @@ class gui(tk.Tk):
                 files = open(filepath, "r")
                 files = files.read()
 
+               
+
                 (
                     file_helper.raw_detections,
                     file_helper.tracks_dic,
@@ -203,12 +205,12 @@ class gui(tk.Tk):
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-                for index, object in file_helper.tracks_df.iterrows():
+                for object in list(file_helper.tracks_dic.keys()):
                     self.frame_objects.tree_objects.insert(
                         parent="",
                         index="end",
-                        text=index,
-                        values=object["Class"],
+                        text=object,
+                        values=file_helper.tracks_dic[object]["Class"],
                     )
 
         file_helper.fill_tree_views(

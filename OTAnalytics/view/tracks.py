@@ -19,8 +19,9 @@ def load_trackfile():
     """
 
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
-    files = open(filepath.name, "r")
-    return files.read()
+    #files = open(filepath.name, "r")
+
+    return filepath.read()
 
 def deload_trackfile():
     file_helper.raw_detections = []
@@ -39,8 +40,11 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
         info_message("Warning", "Tracks already imported")
         return
 
+
     if not autoimport:
         files = load_trackfile()
+        print(type(files))
+
 
     tracks_dic = {}
     loaded_dict = json.loads(files)
@@ -89,8 +93,6 @@ def load_and_convert(x_factor, y_factor, autoimport=False, files=None):
     tracks_geoseries = create_geoseries(tracks_df)
 
     print("--- %s seconds ---" % (time.time() - start_time))
-
-    print(tracks_dic)
 
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 

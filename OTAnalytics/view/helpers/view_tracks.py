@@ -133,7 +133,7 @@ class FrameObject(tk.LabelFrame):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
         (
             file_helper.raw_detections,
-            file_helper.tracks,
+            file_helper.tracks_dic,
             file_helper.tracks_df,
             file_helper.tracks_geoseries,
         ) = load_and_convert(
@@ -141,13 +141,16 @@ class FrameObject(tk.LabelFrame):
             y_factor=view.objectstorage.videoobject.y_resize_factor,
         )
 
-        for object in list(file_helper.tracks.keys()):
+        for object in list(file_helper.tracks_dic.keys()):
             self.tree_objects.insert(
                 parent="",
                 index="end",
                 text=object,
-                values=file_helper.tracks[object]["Class"],
+                values=file_helper.tracks_dic[object]["Class"],
             )
+
+        button_display_tracks_switch(self.button_show_tracks)
+
 
         view.image_alteration.manipulate_image()
 

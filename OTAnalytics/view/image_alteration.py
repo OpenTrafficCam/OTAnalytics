@@ -33,7 +33,7 @@ def manipulate_image(np_image=None, closing=False):
 
     if np_image is None:
         np_image = view.objectstorage.videoobject.np_image.copy()
-
+        
     if button_bool["tracks_imported"]:
 
         np_image = draw_tracks(
@@ -73,6 +73,8 @@ def manipulate_image(np_image=None, closing=False):
     # The variable photo is a local variable which gets garbage collected after the
     # class is instantiated. Save a reference to the photo
     # photo is attribute of video
+
+    
 
     if button_bool["linedetector_toggle"]:
 
