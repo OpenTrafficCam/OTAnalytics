@@ -205,7 +205,7 @@ class gui(tk.Tk):
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-                for object in list(file_helper.tracks_dic.keys()):
+                for object in file_helper.tracks_df.index:
                     self.frame_objects.tree_objects.insert(
                         parent="",
                         index="end",

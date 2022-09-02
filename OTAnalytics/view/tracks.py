@@ -120,7 +120,6 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
-
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
 
@@ -143,6 +142,8 @@ def create_tracks_dataframe(tracks_dic):
 
     tracks_df["first_appearance_frame"] = tracks_df["Frame"].apply(return_first_frame)
     tracks_df["last_appearance_frame"] = tracks_df["Frame"].apply(return_last_frame)
+
+    tracks_df.reset_index()
 
     return tracks_df
 

@@ -140,8 +140,7 @@ class FrameObject(tk.LabelFrame):
             x_resize_factor=view.objectstorage.videoobject.x_resize_factor,
             y_resize_factor=view.objectstorage.videoobject.y_resize_factor,
         )
-
-        for object in list(file_helper.tracks_dic.keys()):
+        for object in file_helper.tracks_df.index:
             self.tree_objects.insert(
                 parent="",
                 index="end",
