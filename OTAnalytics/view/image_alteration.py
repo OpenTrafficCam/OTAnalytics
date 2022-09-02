@@ -50,13 +50,15 @@ def manipulate_image(np_image=None, closing=False):
         # )
         np_image = draw_bounding_box_with_df(view.objectstorage.videoobject.current_frame,np_image )
 
-        np_image = draw_tracks_live(
-            np_image,
-            view.objectstorage.videoobject.current_frame,
-            tracks=file_helper.tracks_dic,
-            raw_detections=file_helper.raw_detections,
-            track_live=file_helper.tracks_live,
-        )
+        np_image = draw_tracks_live_with_df(view.objectstorage.videoobject.current_frame,np_image)
+
+        # np_image = draw_tracks_live(
+        #     np_image,
+        #     view.objectstorage.videoobject.current_frame,
+        #     tracks=file_helper.tracks_dic,
+        #     raw_detections=file_helper.raw_detections,
+        #     track_live=file_helper.tracks_live,
+        # )
 
     if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
 
@@ -495,7 +497,30 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
     cv2.line(image, (x_reference_point-5, y_reference_point-5), (x_reference_point+5, y_reference_point+5), (255, 0, 0, 255), 2)
 
 
+def draw_tracks_live_with_df(frame, np_image):
+    #subset dataframe
+    if button_bool["tracks_imported"] and button_bool["play_video"] and button_bool["display_live_track"]:
+        df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
 
+        for index, row in df.iterrows():
+            try:
+                index_of_frame = row["Frame"].index(frame)
+                vehicle_class = row["Class"]
+                trackcolor = color_dict[vehicle_class] + (255,)
+
+                list_of_points = row["Coord"][(index_of_frame-5):index_of_frame]
+
+                pts = np.array(list_of_points, np.int32)
+
+                pts = pts.reshape((-1, 1, 2))
+
+                np_image = cv2.polylines(
+                    np_image, [pts], False, color=trackcolor, thickness=2
+                )
+            except:
+                continue
+
+    return np_image
 
 def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
     """Draw tracks while playing video
