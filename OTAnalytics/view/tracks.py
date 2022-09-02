@@ -34,7 +34,17 @@ def deload_trackfile():
 
 
 def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=None):
-    """loads detections from Track-File and converts into displayable format"""
+    """_summary_
+
+    Args:
+        x_resize_factor (int): x factor for changed width
+        y_resize_factor (int): x factor for changed width
+        autoimport (bool, optional): if autoimport, trackfile is file found in folder else ask for filepath. Defaults to False.
+        files (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
     start_time = time.time()
     if button_bool["tracks_imported"]:
         info_message("Warning", "Tracks already imported")
@@ -108,8 +118,6 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     tracks_df = create_tracks_dataframe(tracks_dic)
 
     tracks_geoseries = create_geoseries(tracks_df)
-
-    print(tracks_df)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
