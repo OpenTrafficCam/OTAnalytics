@@ -29,6 +29,7 @@ color_dict = {
     "motorcycle": (148, 52, 137),
     "person": (214, 107, 88),
     "bus": (179, 177, 68),
+    "unclear":  (255, 255, 255)
 }
 
 statepanel_txt = {

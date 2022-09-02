@@ -43,7 +43,6 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
     if not autoimport:
         files = load_trackfile()
-        print(type(files))
 
 
     tracks_dic = {}
@@ -55,11 +54,17 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     for frame in raw_detections:
         for detection in raw_detections[frame]:
             if detection in tracks_dic:
-                if tracks_dic[detection]["Class"] not in bbox_factor_reference.keys():
-                    vehicle_class = "unclear"
-                else :
-                    vehicle_class = tracks_dic[detection]["Class"]
+                # if tracks_dic[detection]["Class"] not in bbox_factor_reference.keys():
+                #     vehicle_class = "unclear"
+                # else :
+                #     vehicle_class = tracks_dic[detection]["Class"]
+                if max_confidence < raw_detections[frame][detection]["conf"]:
+    
+                    max_confidence = raw_detections[frame][detection]["conf"]
+                    vehicle_class = raw_detections[frame][detection]["class"]
 
+                    if vehicle_class not in bbox_factor_reference.keys():
+                        vehicle_class = "unclear"
 
                 tracks_dic[detection]["Coord"].append(
                     [
@@ -68,18 +73,28 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
                     ]
                 )
                 # if class changes during detection overwrite previous detection // BUG: DONT ASSUME CLASS IS ALWAYS RIGHT
-                tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"]
+                if max_confidence < raw_detections[frame][detection]["conf"]:
+    
+                    max_confidence = raw_detections[frame][detection]["conf"]
+                    tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"]
+
+                # tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"]
 
                 tracks_dic[detection]["Frame"].append(int(frame))
 
             elif raw_detections[frame][detection]["class"] in color_dict.keys():
+                vehicle_class = raw_detections[frame][detection]["class"]
+                if vehicle_class not in bbox_factor_reference.keys():
+                    vehicle_class = "unclear"
+
                 tracks_dic[detection] = {
                     "Coord": [],
                     "Frame": [int(frame)],
-                    "Class": raw_detections[frame][detection]["class"],
+                    "Class": vehicle_class,
                 }
+                max_confidence = raw_detections[frame][detection]["conf"]
 
-                
+
 
                 tracks_dic[detection]["Coord"].append(
                     [
