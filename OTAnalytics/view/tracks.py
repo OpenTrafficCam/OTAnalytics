@@ -79,6 +79,8 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
                     "Class": raw_detections[frame][detection]["class"],
                 }
 
+                
+
                 tracks_dic[detection]["Coord"].append(
                     [
                         (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks_dic[detection]["Class"]][0]) * x_resize_factor,
@@ -92,7 +94,11 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
     tracks_geoseries = create_geoseries(tracks_df)
 
+    print(tracks_df)
+
     print("--- %s seconds ---" % (time.time() - start_time))
+
+    tracks_df.to_csv('out.csv')  
 
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
