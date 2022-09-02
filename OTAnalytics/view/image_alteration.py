@@ -11,6 +11,7 @@ import view.objectstorage
 import helpers.file_helper as file_helper
 from view.sections import draw_line, draw_polygon
 from helpers.config import bbox_factor_reference
+import time
 
 
 def manipulate_image(np_image=None, closing=False):
@@ -42,11 +43,12 @@ def manipulate_image(np_image=None, closing=False):
             tracks_df=file_helper.tracks_df,
         )
 
-        np_image = draw_bounding_box(
-            np_image,
-            str(view.objectstorage.videoobject.current_frame),
-            raw_detections=file_helper.raw_detections,
-        )
+        # np_image = draw_bounding_box(
+        #     np_image,
+        #     str(view.objectstorage.videoobject.current_frame),
+        #     raw_detections=file_helper.raw_detections,
+        # )
+        np_image = draw_bounding_box_with_df(view.objectstorage.videoobject.current_frame,np_image )
 
         np_image = draw_tracks_live(
             np_image,
@@ -206,8 +208,133 @@ def draw_tracks(np_image, selectionlist, tracks_df):
 
     return np_image
 
+def draw_bounding_box_with_df(frame, np_image):
+
+    if not button_bool["display_bb"]:
+        return np_image
+    #start_time = time.time()
+
+    df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
+
+    #print(df)
+
+    for index, row in df.iterrows():
+        try:
+            index_of_frame = row["Frame"].index(frame)
+            coordinates = row["Coord"][index_of_frame]
+            width = row["Width"][index_of_frame]
+            height = row["Height"][index_of_frame]
+            vehicle_class = row["Class"]
+            confidence = row["Confidence"][index_of_frame]
+            np_image = draw_bb_from_coordinates(coordinates[0], coordinates[1], width, height, np_image, vehicle_class, confidence)
+
+        except:
+            continue
+
+
+    #print("--- %s seconds ---" % (time.time() - start_time))
+
+    return np_image
+
+    
+
+def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
+
+    x_start = int(x - w / 2)
+
+    y_start = int(y- h /2)
+
+    x_end = int(x + w /2)
+
+    y_end = int(y + h /2)
+
+    vehicle_class = vehicle_class
+
+    bbcolor = color_dict[vehicle_class] + (255,)
+
+    cv2.rectangle(
+        np_image,
+        (
+            int(
+                x_start * view.objectstorage.videoobject.x_resize_factor
+            ),
+            int(
+                y_start * view.objectstorage.videoobject.y_resize_factor
+            ),
+        ),
+        (
+            int(x_end * view.objectstorage.videoobject.x_resize_factor),
+            int(y_end * view.objectstorage.videoobject.y_resize_factor),
+        ),
+        bbcolor,
+        2,
+    )
+
+    if w < 0.3 * 100:
+        fontscale = 0.3
+    elif w > 0.5 * 100:
+        fontscale = 0.5
+    else:
+        fontscale = w / 100
+
+    class_txt = vehicle_class
+    confidence_txt = "{:.2f}".format((confidence))
+    anno_txt = f"{class_txt} {confidence_txt}"
+
+    text_size, _ = cv2.getTextSize(anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1)
+
+    text_w, text_h = text_size
+    cv2.rectangle(
+                        np_image,
+                        (
+                            int(
+                                x_start * view.objectstorage.videoobject.x_resize_factor
+                            )
+                            - 1,
+                            int(
+                                y_start * view.objectstorage.videoobject.y_resize_factor
+                            )
+                            - 1,
+                        ),
+                        (
+                            int(
+                                x_start * view.objectstorage.videoobject.x_resize_factor
+                            )
+                            + text_w
+                            + 2,
+                            int(
+                                y_start * view.objectstorage.videoobject.y_resize_factor
+                            )
+                            - text_h
+                            - 2,
+                        ),
+                        bbcolor,
+                        -1,
+                    )
+    cv2.putText(np_image,
+                        anno_txt,
+                        (
+                            int(
+                                x_start * view.objectstorage.videoobject.x_resize_factor
+                            ),
+                            int(
+                                y_start * view.objectstorage.videoobject.y_resize_factor
+                            )
+                            - 2,
+                        ),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        fontscale,
+                        (255, 255, 255),
+                        1,
+                    )
+    draw_reference_cross(np_image,x, y, w, h, vehicle_class)
+
+    return np_image
+
+
 
 def draw_bounding_box(np_image, frame, raw_detections):
+    # sourcery skip: low-code-quality
     """Draws bounding boxes in every frame.
 
     Args:
