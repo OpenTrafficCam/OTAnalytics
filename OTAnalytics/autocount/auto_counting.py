@@ -465,7 +465,7 @@ def create_setting_window():
         tracks (dictionary): Dictionary with tracks.
     """
 
-    if not file_helper.tracks:
+    if not file_helper.tracks_dic:
         info_message("Warning", "Please import tracks first!")
 
         return
