@@ -31,7 +31,7 @@ def dic_to_detector_dataframe():
         },
         orient="index",
     )
-
+    print(detector_df)
     # drops first multilevel index
     detector_df.index = detector_df.index.droplevel(0)
 
@@ -52,7 +52,7 @@ def dic_to_detector_dataframe():
 
 
 # %%
-def calculate_intersections(detector_df, object_validated_df):
+def calculate_intersections(detector_df, track_df):
     """Checks if tracks and detectors intersect, alters object_dataframe.
 
     Args:
@@ -66,7 +66,7 @@ def calculate_intersections(detector_df, object_validated_df):
     """
     # creates a geoseries from column(geometry) with shapely object
 
-    track_geometry = gpd.GeoSeries(object_validated_df.geometry)
+    track_geometry = gpd.GeoSeries(track_df.geometry)
 
     # iterates over every detectors and returns bool value for
     # intersection with every track from geoseries
@@ -81,13 +81,13 @@ def calculate_intersections(detector_df, object_validated_df):
         # returns coordinates from intersections as point object
         point_geometry = track_geometry.intersection(detector_shapely_geometry)
 
-        object_validated_df[f"{index}intersectcoordinates"] = point_geometry
-        object_validated_df[index] = bool_intersect
+        track_df[f"{index}intersectcoordinates"] = point_geometry
+        track_df[index] = bool_intersect
 
-    return object_validated_df
+    return track_df
 
 
-def find_intersection_order(object_validated_df):
+def find_intersection_order(track_df):
     """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name).
 
     Second find nearest point (second nearest point) on Linestring compared
@@ -106,25 +106,25 @@ def find_intersection_order(object_validated_df):
     eventbased_dictionary = {}
 
     # create necessary columns
-    object_validated_df["Crossing_Gate/Frame"] = ""
-    object_validated_df["Movement"] = ""
-    object_validated_df["Movement_name"] = ""
-    object_validated_df["Time_crossing_entrance"] = ""
-    object_validated_df["Time_crossing_exit"] = ""
+    track_df["Crossing_Gate/Frame"] = ""
+    track_df["Movement"] = ""
+    track_df["Movement_name"] = ""
+    track_df["Time_crossing_entrance"] = ""
+    track_df["Time_crossing_exit"] = ""
 
     for (object_id, row), detector in itertools.product(
-        object_validated_df.iterrows(), file_helper.flow_dict["Detectors"]
+        track_df.iterrows(), file_helper.flow_dict["Detectors"]
     ):
         # Condition if detector was crossed by objecttrack
         # Don't change to "is True"!! (True is the content of row/column)
         # TODO: Vorfiltern des Dataframe (wo Detector ==> True), dafür loops aufsplitten
-        if object_validated_df.loc[object_id][detector]:
+        if track_df.loc[object_id][detector]:
 
             # shapely Linestring
-            track_line = object_validated_df.loc[object_id]["geometry"]
+            track_line = track_df.loc[object_id]["geometry"]
 
             # shapely Point from intersection
-            intersection_point = object_validated_df.loc[object_id][
+            intersection_point = track_df.loc[object_id][
                 f"{detector}intersectcoordinates"
             ]
 
@@ -141,56 +141,56 @@ def find_intersection_order(object_validated_df):
             point_raw_coords = list(second_nearest.coords[:][0])
 
             # unaltered coord from track file
-            raw_coords = object_validated_df.loc[object_id]["Coord"]
+            raw_coords = track_df.loc[object_id]["Coord"]
 
             # index at which the second closest points are
             index_number = raw_coords.index(point_raw_coords)
 
             # with the index number you can also get the frame from gatecrossing
-            crossing_frame = object_validated_df.loc[object_id]["Frame"][index_number]
+            crossing_frame = track_df.loc[object_id]["Frame"][index_number]
 
             # find all gatecrossing detector and their crossing seconds
-            if object_validated_df.at[object_id, "Crossing_Gate/Frame"]:
-                object_validated_df.at[object_id, "Crossing_Gate/Frame"].append(
+            if track_df.at[object_id, "Crossing_Gate/Frame"]:
+                track_df.at[object_id, "Crossing_Gate/Frame"].append(
                     [detector, crossing_frame]
                 )
 
             else:
-                object_validated_df.at[object_id, "Crossing_Gate/Frame"] = [
+                track_df.at[object_id, "Crossing_Gate/Frame"] = [
                     [detector, crossing_frame]
                 ]
 
             # sort list by seconds (first index also determines
             # which detector was crossed first)
-            object_validated_df.at[object_id, "Crossing_Gate/Frame"] = sorted(
-                object_validated_df.at[object_id, "Crossing_Gate/Frame"],
+            track_df.at[object_id, "Crossing_Gate/Frame"] = sorted(
+                track_df.at[object_id, "Crossing_Gate/Frame"],
                 key=lambda x: x[1],
             )
 
-            t = object_validated_df.loc[object_id]["Crossing_Gate/Frame"]
+            t = track_df.loc[object_id]["Crossing_Gate/Frame"]
 
             # concates new list and delete seconds
             concatted_sorted_detector_list = [item for sublist in t for item in sublist]
             # deletes extra brackets (list)
             del concatted_sorted_detector_list[1::2]
 
-            object_validated_df.at[object_id, "Time_crossing_entrance"] = (
-                object_validated_df.at[object_id, "Crossing_Gate/Frame"][0][1]
+            track_df.at[object_id, "Time_crossing_entrance"] = (
+                track_df.at[object_id, "Crossing_Gate/Frame"][0][1]
                 / view.objectstorage.videoobject.fps
             )
 
-            if object_validated_df.at[object_id, "Time_crossing_entrance"] != (
-                object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
+            if track_df.at[object_id, "Time_crossing_entrance"] != (
+                track_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
                 / view.objectstorage.videoobject.fps
             ):
 
-                object_validated_df.at[object_id, "Time_crossing_exit"] = (
-                    object_validated_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
+                track_df.at[object_id, "Time_crossing_exit"] = (
+                    track_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
                     / view.objectstorage.videoobject.fps
                 )
 
             # list = Movement (only detectors not seconds)
-            object_validated_df.at[
+            track_df.at[
                 object_id, "Movement"
             ] = concatted_sorted_detector_list
 
@@ -202,9 +202,9 @@ def find_intersection_order(object_validated_df):
             eventbased_dictionary[int(crossing_frame)][detector+"_"+ file_helper.flow_dict["Detectors"][detector]["type"]+"_Detector"] = True
             if f"Road_user_ID_{detector}" not in eventbased_dictionary[int(crossing_frame)]:
                 eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}"] = [object_id]
-                eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}_Class"] = object_validated_df.loc[object_id]["Class"]
+                eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}_Class"] = track_df.loc[object_id]["Class"]
 
-    return object_validated_df, eventbased_dictionary
+    return track_df, eventbased_dictionary
 
 
 # %%
@@ -465,7 +465,7 @@ def create_setting_window():
         tracks (dictionary): Dictionary with tracks.
     """
 
-    if not file_helper.tracks:
+    if not button_bool["tracks_imported"]:
         info_message("Warning", "Please import tracks first!")
 
         return
