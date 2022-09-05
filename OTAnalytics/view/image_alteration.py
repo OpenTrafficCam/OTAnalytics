@@ -42,8 +42,9 @@ def manipulate_image(np_image=None, closing=False):
             selectionlist=file_helper.selectionlist_objects,
             tracks_df=file_helper.tracks_df,
         )
+        np_image = draw_bounding_box(np_image,str(view.objectstorage.videoobject.current_frame), file_helper.raw_detections)
 
-        np_image = draw_bounding_box_with_df(view.objectstorage.videoobject.current_frame,np_image )
+        #np_image = draw_bounding_box_with_df(view.objectstorage.videoobject.current_frame,np_image )
 
         np_image = draw_tracks_live_with_df(view.objectstorage.videoobject.current_frame,np_image)
 
