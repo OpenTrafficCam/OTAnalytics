@@ -9,7 +9,7 @@ bbox_factor_reference = {
     "bicycle": (0.5, 0.5),
     "truck": (0.5, 0.5),
     "motorcycle": (0.5, 0.5),
-    "person": (0.5, 0.5),
+    "person": (0.5, 1),
     "bus": (0.5, 0.5),
     "unclear": (0.5,0.5)
 }

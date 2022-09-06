@@ -119,7 +119,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
     # only valid track when more than one detection
     tracks_df = create_tracks_dataframe(tracks_dic)
-    tracks_df.to_csv("out.csv")
+    #tracks_df.to_csv("out.csv")
 
     tracks_geoseries = create_geoseries(tracks_df)
 
