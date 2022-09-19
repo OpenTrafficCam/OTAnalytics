@@ -201,13 +201,6 @@ def find_intersection_order(track_df):
             ] = concatted_sorted_detector_list
 
             # start nested dictionary
-            
-            
-            # creates dictionary 
-            # if int(crossing_frame) in eventbased_dictionary.keys():
-            #     print("Watchout duplicate Frame for event list")
-
-
             eventbased_dictionary[i] = {}
 
             eventbased_dictionary[i]["SectionID"] = detector
