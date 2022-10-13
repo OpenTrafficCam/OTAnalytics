@@ -122,6 +122,15 @@ def re_initialize():
 
 # %%
 def permutation_of_list(selected_sections, maxpermutation=2):
+    """Creates a list of all possible combination of section to create every possible movement
+
+    Args:
+        selected_sections (_type_): Sections
+        maxpermutation (int, optional): _description_. Defaults to 2.
+
+    Returns:
+        _type_: List of possible combinations of sections.
+    """
 
     return list(itertools.permutations(selected_sections, r=maxpermutation))
 
