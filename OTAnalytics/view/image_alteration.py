@@ -466,7 +466,7 @@ def draw_bounding_box(np_image, frame, raw_detections):
                     )
                     draw_reference_cross(image,x, y, w, h, vehicle_class)
 
-        return image
+            return image
 
     except ImportError:
         return np_image
