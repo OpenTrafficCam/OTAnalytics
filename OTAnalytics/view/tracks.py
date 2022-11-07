@@ -101,6 +101,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
                 tracks_dic[detection] = {
                     "Coord": [],
+                    "Coord_object_middle": [],
                     "Frame": [int(frame)],
                     "Class": vehicle_class,
                     "Width": [raw_detections[frame][detection]["w"]],

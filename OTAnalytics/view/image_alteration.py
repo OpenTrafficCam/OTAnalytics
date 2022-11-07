@@ -202,11 +202,8 @@ def draw_bounding_box_with_df(frame, np_image):
 
     if not button_bool["display_bb"]:
         return np_image
-    #start_time = time.time()
-
+        
     df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
-
-    #print(df)
 
     for index, row in df.iterrows():
         try:
@@ -221,9 +218,6 @@ def draw_bounding_box_with_df(frame, np_image):
         except:
             continue
 
-
-    #print("--- %s seconds ---" % (time.time() - start_time))
-
     return np_image
 
     
@@ -232,11 +226,12 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
 
     x_start = int(x - w / 2)
 
-    y_start = int(y- h /2)
+    y_start = int(y - h /2)
 
     x_end = int(x + w /2)
 
     y_end = int(y + h /2)
+
 
     vehicle_class = vehicle_class
 
@@ -274,6 +269,7 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
     text_size, _ = cv2.getTextSize(anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1)
 
     text_w, text_h = text_size
+    #textbox
     cv2.rectangle(
                         np_image,
                         (
@@ -337,139 +333,138 @@ def draw_bounding_box(np_image, frame, raw_detections):
     """
     if not button_bool["display_bb"]:
         return np_image
-    try:
-        if raw_detections:
 
-            image_cache = np_image
+    if raw_detections:
 
-            for detection in raw_detections[frame]:
-                if raw_detections[frame][detection]["class"] in color_dict.keys():
+        #image_cache = np_image
 
-                    class_txt = raw_detections[frame][detection]["class"]
+        for detection in raw_detections[frame]:
+            if raw_detections[frame][detection]["class"] in color_dict.keys():
 
-                    confidence_txt = "{:.2f}".format(
-                        (raw_detections[frame][detection]["conf"])
-                    )
+                class_txt = raw_detections[frame][detection]["class"]
 
-                    anno_txt = f"{class_txt} {confidence_txt}"
-                    # anno_txt = f"{class_txt} {detection} {confidence_txt}"
+                confidence_txt = "{:.2f}".format(
+                    (raw_detections[frame][detection]["conf"])
+                )
 
-                    if raw_detections[frame][detection]["w"] < 0.3 * 100:
-                        fontscale = 0.3
-                    elif raw_detections[frame][detection]["w"] > 0.5 * 100:
-                        fontscale = 0.5
-                    else:
-                        fontscale = raw_detections[frame][detection]["w"] / 100
-                    
-                    x = raw_detections[frame][detection]["x"]
-                    y = raw_detections[frame][detection]["y"]
-                    w = raw_detections[frame][detection]["w"]
-                    h = raw_detections[frame][detection]["h"]
-                    vehicle_class = raw_detections[frame][detection]["class"]
+                anno_txt = f"{class_txt} {confidence_txt}"
+                # anno_txt = f"{class_txt} {detection} {confidence_txt}"
 
-                    x_start = int(
-                        x
-                        - w / 2
-                    )
+                if raw_detections[frame][detection]["w"] < 0.3 * 100:
+                    fontscale = 0.3
+                elif raw_detections[frame][detection]["w"] > 0.5 * 100:
+                    fontscale = 0.5
+                else:
+                    fontscale = raw_detections[frame][detection]["w"] / 100
+                
+                x = raw_detections[frame][detection]["x"]
+                y = raw_detections[frame][detection]["y"]
+                w = raw_detections[frame][detection]["w"]
+                h = raw_detections[frame][detection]["h"]
+                vehicle_class = raw_detections[frame][detection]["class"]
 
-                    y_start = int(
-                        y
-                        - h / 2
-                    )
+                x_start = int(
+                    x
+                    - w / 2
+                )
 
-                    x_end = int(
-                        x
-                        + w / 2
-                    )
+                y_start = int(
+                    y
+                    - h / 2
+                )
 
-                    y_end = int(
-                        y
-                        + h / 2
-                    )
+                x_end = int(
+                    x
+                    + w / 2
+                )
 
-                    try:
-                        bbcolor = color_dict[
-                            vehicle_class
-                        ] + (255,)
+                y_end = int(
+                    y
+                    + h / 2
+                )
 
-                    except ValueError:
-                        bbcolor = (0, 0, 255, 255)
+                try:
+                    bbcolor = color_dict[
+                        vehicle_class
+                    ] + (255,)
 
-                    cv2.rectangle(
-                        image_cache,
-                        (
-                            int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
-                            ),
-                            int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
-                            ),
+                except ValueError:
+                    bbcolor = (0, 0, 255, 255)
+
+                cv2.rectangle(
+                    np_image,
+                    (
+                        int(
+                            x_start * view.objectstorage.videoobject.x_resize_factor
                         ),
-                        (
-                            int(x_end * view.objectstorage.videoobject.x_resize_factor),
-                            int(y_end * view.objectstorage.videoobject.y_resize_factor),
+                        int(
+                            y_start * view.objectstorage.videoobject.y_resize_factor
                         ),
-                        bbcolor,
-                        2,
-                    )
+                    ),
+                    (
+                        int(x_end * view.objectstorage.videoobject.x_resize_factor),
+                        int(y_end * view.objectstorage.videoobject.y_resize_factor),
+                    ),
+                    bbcolor,
+                    2,
+                )
 
-                    text_size, _ = cv2.getTextSize(
-                        anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1
-                    )
+                text_size, _ = cv2.getTextSize(
+                    anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1
+                )
 
-                    text_w, text_h = text_size
+                text_w, text_h = text_size
 
-                    cv2.rectangle(
-                        image_cache,
-                        (
-                            int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
-                            )
-                            - 1,
-                            int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
-                            )
-                            - 1,
+                cv2.rectangle(
+                    np_image,
+                    (
+                        int(
+                            x_start * view.objectstorage.videoobject.x_resize_factor
+                        )
+                        - 1,
+                        int(
+                            y_start * view.objectstorage.videoobject.y_resize_factor
+                        )
+                        - 1,
+                    ),
+                    (
+                        int(
+                            x_start * view.objectstorage.videoobject.x_resize_factor
+                        )
+                        + text_w
+                        + 2,
+                        int(
+                            y_start * view.objectstorage.videoobject.y_resize_factor
+                        )
+                        - text_h
+                        - 2,
+                    ),
+                    bbcolor,
+                    -1,
+                )
+
+                np_image = cv2.putText(
+                    np_image,
+                    anno_txt,
+                    (
+                        int(
+                            x_start * view.objectstorage.videoobject.x_resize_factor
                         ),
-                        (
-                            int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
-                            )
-                            + text_w
-                            + 2,
-                            int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
-                            )
-                            - text_h
-                            - 2,
-                        ),
-                        bbcolor,
-                        -1,
-                    )
+                        int(
+                            y_start * view.objectstorage.videoobject.y_resize_factor
+                        )
+                        - 2,
+                    ),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    fontscale,
+                    (255, 255, 255),
+                    1,
+                )
+                draw_reference_cross(np_image,x, y, w, h, vehicle_class)
 
-                    image = cv2.putText(
-                        image_cache,
-                        anno_txt,
-                        (
-                            int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
-                            ),
-                            int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
-                            )
-                            - 2,
-                        ),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        fontscale,
-                        (255, 255, 255),
-                        1,
-                    )
-                    draw_reference_cross(image,x, y, w, h, vehicle_class)
-
-            return image
-
-    except ImportError:
         return np_image
+
+    return np_image
 
 
 def draw_reference_cross(image, x, y, w, h, vehicle_class):

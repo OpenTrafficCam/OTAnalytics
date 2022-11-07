@@ -11,7 +11,7 @@ from view.helpers.gui_helper import info_message
 from view.helpers.gui_helper import button_bool
 
 
-def dic_to_detector_dataframe():
+def dataframe_from_dictionary_sections():
     """Creates a dataframe from detector/flow dictionary, #TODO change to use
     linedetector dic that gets updated when importing flow data
     creates column with LineString-objects for the calculation of
@@ -34,7 +34,7 @@ def dic_to_detector_dataframe():
     # drops first multilevel index
     detector_df.index = detector_df.index.droplevel(0)
 
-    # turn coordinates into LineString parameters
+    # turn coordinates into LineString object
     detector_df["geometry"] = detector_df.apply(
         lambda coordinates: LineString(
             [
@@ -82,8 +82,6 @@ def calculate_intersections(detector_df, tracks_df):
 
         tracks_df[f"{index}intersectcoordinates"] = point_geometry
         tracks_df[index] = bool_intersect
-
-
 
     return tracks_df
 
@@ -209,13 +207,6 @@ def find_intersection_order(track_df):
             eventbased_dictionary[i]["Frame"] = int(crossing_frame)
             eventbased_dictionary[i]["X"] = int(nearest.x)
             eventbased_dictionary[i]["Y"] = int(nearest.y)
-
-
-
-            # if object_id not in eventbased_dictionary[int(crossing_frame)]:
-            #     eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}"] = object_id
-            #     eventbased_dictionary[int(crossing_frame)][f"Road_user_ID_{detector}_Class"] = track_df.loc[object_id]["Class"]
-
 
     return track_df, eventbased_dictionary
 
@@ -428,9 +419,9 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     #if not button_bool["dataframe_cleaned"]:
 
     # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
-    detector_df = dic_to_detector_dataframe()
+    detector_df = dataframe_from_dictionary_sections()
     # object_validated_df = dic_to_object_dataframe()
-    object_with_intersection_df = calculate_intersections(detector_df, file_helper.tracks_df)
+    object_with_intersection_df = calculate_intersections(detector_df)
 
     print(" successful ")
 
