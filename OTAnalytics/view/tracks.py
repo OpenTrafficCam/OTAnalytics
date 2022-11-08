@@ -89,8 +89,8 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
                 # tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"]
 
                 tracks_dic[detection]["Frame"].append(int(frame))
-                tracks_dic[detection]["Width"].append(raw_detections[frame][detection]["w"])
-                tracks_dic[detection]["Height"].append(raw_detections[frame][detection]["h"])
+                tracks_dic[detection]["Width"].append(raw_detections[frame][detection]["w"]*x_resize_factor)
+                tracks_dic[detection]["Height"].append(raw_detections[frame][detection]["h"]*y_resize_factor)
                 tracks_dic[detection]["Confidence"].append(raw_detections[frame][detection]["conf"])
                 
 
@@ -101,11 +101,10 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
                 tracks_dic[detection] = {
                     "Coord": [],
-                    "Coord_object_middle": [],
                     "Frame": [int(frame)],
                     "Class": vehicle_class,
-                    "Width": [raw_detections[frame][detection]["w"]],
-                    "Height":[raw_detections[frame][detection]["h"]],
+                    "Width": [raw_detections[frame][detection]["w"]*x_resize_factor],
+                    "Height":[raw_detections[frame][detection]["h"]*y_resize_factor],
                     "Confidence": [raw_detections[frame][detection]["conf"]],
                     # "Max_confidence": raw_detections[frame][detection]["conf"]
                 }
@@ -116,6 +115,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
                         (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks_dic[detection]["Class"]][1]) * y_resize_factor,
                     ]
                 )
+
     button_bool["tracks_imported"] = True
 
     # only valid track when more than one detection
