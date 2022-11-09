@@ -43,7 +43,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
         files (_type_, optional): _description_. Defaults to None.
 
     Returns:
-        _type_: _description_
+        _type_: raw_detections, tracks_dic, tracks_df, tracks_geoseries
     """
     start_time = time.time()
     if button_bool["tracks_imported"]:
@@ -54,15 +54,16 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     if not autoimport:
         files = load_trackfile()
 
-
     tracks_dic = {}
     loaded_dict = json.loads(files)
+
 
     # raw detections from OTVision
     raw_detections = loaded_dict["data"]
 
     for frame in raw_detections:
         for detection in raw_detections[frame]:
+
             if detection in tracks_dic:
                 # if tracks_dic[detection]["Max_confidence"] < raw_detections[frame][detection]["conf"]:
     
@@ -116,7 +117,9 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
                     ]
                 )
 
-    button_bool["tracks_imported"] = True
+    if not tracks_dic:
+        #TODO ABORT MESSAGE
+        return None, None, None, None
 
     # only valid track when more than one detection
     tracks_df = create_tracks_dataframe(tracks_dic)
@@ -126,16 +129,20 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
+    button_bool["tracks_imported"] = True
+
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
 
 def create_geoseries(tracks_df):
 
     return gpd.GeoSeries(tracks_df["geometry"])
+    
 
 
 def create_tracks_dataframe(tracks_dic):
     tracks_df = pd.DataFrame.from_dict(tracks_dic, orient="index")
+
 
     tracks_df["Coord_count"] = tracks_df.apply(
         lambda pointtuples: (len(pointtuples["Coord"])), axis=1

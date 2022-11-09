@@ -140,6 +140,9 @@ class FrameObject(tk.LabelFrame):
             x_resize_factor=view.objectstorage.videoobject.x_resize_factor,
             y_resize_factor=view.objectstorage.videoobject.y_resize_factor,
         )
+        if file_helper.tracks_df.empty:
+            print("Importing trackfile not possible, most likely du to missing trajectories")
+            return
         for object in file_helper.tracks_df.index:
             self.tree_objects.insert(
                 parent="",
@@ -149,8 +152,6 @@ class FrameObject(tk.LabelFrame):
             )
 
         button_display_tracks_switch(self.button_show_tracks)
-
-
         view.image_alteration.manipulate_image()
 
     def treeobject_selection(self, event):

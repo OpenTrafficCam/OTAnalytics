@@ -11,7 +11,7 @@ from view.helpers.gui_helper import info_message
 from view.helpers.gui_helper import button_bool
 
 
-def dataframe_from_dictionary_sections():
+def dataframe_from_dictionary_sections(flow_dict=None):
     """Creates a dataframe from detector/flow dictionary, #TODO change to use
     linedetector dic that gets updated when importing flow data
     creates column with LineString-objects for the calculation of
@@ -23,11 +23,14 @@ def dataframe_from_dictionary_sections():
     Returns:
         detector_df: Dataframe with sections.
     """
+    if flow_dict is None:
+        flow_dict = file_helper.flow_dict["Detectors"]
+
     # change dic to dataframe
     detector_df = pd.DataFrame.from_dict(
         {
-            ("Detectors", j): file_helper.flow_dict["Detectors"][j]
-            for j in file_helper.flow_dict["Detectors"].keys()
+            ("Detectors", j): flow_dict[j]
+            for j in flow_dict.keys()
         },
         orient="index",
     )
@@ -86,7 +89,7 @@ def calculate_intersections(detector_df, tracks_df):
     return tracks_df
 
 
-def find_intersection_order(track_df):
+def find_intersection_order(track_df, flow_dict=None, fps=None):
     """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name).
 
     Second find nearest point (second nearest point) on Linestring compared
@@ -99,7 +102,7 @@ def find_intersection_order(track_df):
         object_validated_df (dataframe): Tracks with at least two coordinates.
         detector_dict (dictionary): Dictionary with detectors.
     Returns:
-        Dataframe: With newly calculated columns.
+        Dataframe: With newly calculated columns, eventbased_dictionary
     """
 
     eventbased_dictionary = {}
@@ -114,8 +117,14 @@ def find_intersection_order(track_df):
     #ID for event
     i=0
 
+    if flow_dict is None:
+        flow_dict = file_helper.flow_dict["Detectors"]
+
+    if fps is None:
+        fps = view.objectstorage.videoobject.fps
+
     for (object_id, row), detector in itertools.product(
-        track_df.iterrows(), file_helper.flow_dict["Detectors"]
+        track_df.iterrows(), flow_dict
     ):
         # Condition if detector was crossed by objecttrack
         # Don't change to "is True"!! (True is the content of row/column)
@@ -180,17 +189,17 @@ def find_intersection_order(track_df):
 
             track_df.at[object_id, "Time_crossing_entrance"] = (
                 track_df.at[object_id, "Crossing_Gate/Frame"][0][1]
-                / view.objectstorage.videoobject.fps
+                / fps
             )
 
             if track_df.at[object_id, "Time_crossing_entrance"] != (
                 track_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                / view.objectstorage.videoobject.fps
+                / fps
             ):
 
                 track_df.at[object_id, "Time_crossing_exit"] = (
                     track_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                    / view.objectstorage.videoobject.fps
+                    /fps
                 )
 
             # list = Movement (only detectors not seconds)
@@ -380,7 +389,7 @@ def resample_dataframe(entry_interval, object_validated_df):
 
     return object_validated_df
 
-def eventased_dictionary_to_dataframe(eventbased_dictionary):
+def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_obj=None):
     """_summary_
 
     Args:
@@ -389,13 +398,17 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary):
     Returns:
         dataframe: dataframe with events and belonging datetime
     """
+    if fps is None:
+        fps = view.objectstorage.videoobject.fps
+    if datetime_obj is None:
+        datetime_obj = view.objectstorage.videoobject.datetime_obj
 
     eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
     eventbased_dataframe.index.set_names(["EventID"], inplace=True)
-    eventbased_dataframe["seconds"] = (eventbased_dataframe["Frame"] /view.objectstorage.videoobject.fps)
+    eventbased_dataframe["seconds"] = (eventbased_dataframe["Frame"] /fps)
     eventbased_dataframe["seconds"] = eventbased_dataframe["seconds"].astype('int')  
     eventbased_dataframe["DateTime"] = pd.to_timedelta(eventbased_dataframe["seconds"], unit='seconds')
-    eventbased_dataframe["DateTime"] = eventbased_dataframe["DateTime"] + view.objectstorage.videoobject.datetime_obj
+    eventbased_dataframe["DateTime"] = eventbased_dataframe["DateTime"] + datetime_obj
 #    eventbased_dataframe = eventbased_dataframe.set_index("EventID")
     eventbased_dataframe.drop('seconds', axis=1, inplace=True)
     return eventbased_dataframe

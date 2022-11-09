@@ -344,7 +344,7 @@ def draw_tracks_live_with_df(frame, np_image):
                 vehicle_class = row["Class"]
                 trackcolor = color_dict[vehicle_class] + (255,)
 
-                list_of_points = row["Coord"][(index_of_frame-5):index_of_frame]
+                list_of_points = row["Coord"][(index_of_frame-40):index_of_frame]
 
                 pts = np.array(list_of_points, np.int32)
 
@@ -355,59 +355,6 @@ def draw_tracks_live_with_df(frame, np_image):
                 )
             except:
                 continue
-
-    return np_image
-
-def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
-    """Draw tracks while playing video
-
-    Args:
-        object_dict (dictionary): resampled raw detections
-        object_live_track (dictionary): dictionary with framewiselive coordinates
-        frame (int): current video frame
-        raw_detections (dictionary): input file with all detections
-        np_image (numpy_array) : arraylike image object
-
-    Returns:
-        np_image: returns manipulated image
-    """
-
-    if (
-        raw_detections
-        and button_bool["play_video"]
-        and button_bool["display_live_track"]
-    ):
-
-        for object in tracks.keys():
-
-            if frame in tracks[object]["Frame"]:
-
-                if not track_live[object]:
-                    track_live[object] = [
-                        tracks[object]["Coord"][tracks[object]["Frame"].index(frame)]
-                    ]
-
-                elif frame < tracks[object]["Frame"][-1]:
-
-                    nextframeindex = tracks[object]["Frame"].index(frame)
-                    track_live[object].append(tracks[object]["Coord"][nextframeindex])
-
-                    if len(track_live[object]) >= 20:
-                        track_live[object].pop(0)
-
-                    trackcolor = color_dict[tracks[object]["Class"]] + (255,)
-
-                    pts = np.array(track_live[object], np.int32)
-
-                    pts = pts.reshape((-1, 1, 2))
-
-                    np_image = cv2.polylines(
-                        np_image, [pts], False, color=trackcolor, thickness=2
-                    )
-                # else:
-                # not necessary
-                #     #if track is drawn completely => erase from canvas
-                #     object_live_track[object] = []
 
     return np_image
 

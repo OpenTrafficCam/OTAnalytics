@@ -249,7 +249,7 @@ class FrameFiles(tk.LabelFrame):
 
     def remove_video(self):
         """removes videofile"""
-
+        self.files_dict = {}
         item = self.tree_files.selection()
         video_name = self.tree_files.item(item, "text")
 
