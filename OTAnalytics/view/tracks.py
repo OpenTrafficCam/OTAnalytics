@@ -129,7 +129,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
-    button_bool["tracks_imported"] = True
+    #button_bool["tracks_imported"] = True
 
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
