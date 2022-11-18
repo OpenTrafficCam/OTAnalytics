@@ -9,7 +9,7 @@ from view.helpers.gui_helper import (
 import helpers.file_helper as file_helper
 import view.image_alteration
 import keyboard
-import view.objectstorage as objectstorage
+import helpers.config
 import view.sections
 
 
@@ -181,7 +181,7 @@ class FrameSection(tk.LabelFrame):
         )
         self.new_detector_creation.destroy()
 
-        objectstorage.maincanvas.delete_points()
+        helpers.config.maincanvas.delete_points()
 
         view.image_alteration.manipulate_image()
 

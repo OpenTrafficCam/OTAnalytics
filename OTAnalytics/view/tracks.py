@@ -1,14 +1,14 @@
 import json
-from tkinter import filedialog
-import geopandas as gpd
-from shapely.geometry import LineString
-import pandas as pd
-import helpers.file_helper as file_helper
-
-from view.helpers.gui_helper import button_bool, color_dict, info_message, reset_buttons_tracks
-from helpers.config import bbox_factor_reference
 import time
+from tkinter import filedialog
 
+import geopandas as gpd
+import helpers.file_helper as file_helper
+import pandas as pd
+from helpers.config import bbox_factor_reference
+from shapely.geometry import LineString
+from view.helpers.gui_helper import (button_bool, color_dict, info_message,
+                                     reset_buttons_tracks)
 
 
 def load_trackfile():
@@ -43,13 +43,13 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
         files (_type_, optional): _description_. Defaults to None.
 
     Returns:
-        _type_: raw_detections, tracks_dic, tracks_df, tracks_geoseries
+        dataframes, dictionary, tracks as geoseries: raw_detections, tracks_dic, tracks_df, tracks_geoseries
     """
     start_time = time.time()
+    
     if button_bool["tracks_imported"]:
         info_message("Warning", "Tracks already imported")
         return
-
 
     if not autoimport:
         files = load_trackfile()
@@ -61,19 +61,13 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     # raw detections from OTVision
     raw_detections = loaded_dict["data"]
 
+
     for frame in raw_detections:
         for detection in raw_detections[frame]:
 
+
             if detection in tracks_dic:
-                # if tracks_dic[detection]["Max_confidence"] < raw_detections[frame][detection]["conf"]:
-    
-                #     tracks_dic[detection]["Max_confidence"] = raw_detections[frame][detection]["conf"]
-                #     tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"]
-                #     vehicle_class = raw_detections[frame][detection]["class"]
-                #     print("ID: "+detection)
-                #     print("new Maxconf: "+ str(tracks_dic[detection]["Max_confidence"]))
-                #     print("new Class: "+ vehicle_class)
-                #     print("---------------------")
+
 
                 tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"] 
                 vehicle_class = tracks_dic[detection]["Class"]
@@ -122,14 +116,16 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
         return None, None, None, None
 
     # only valid track when more than one detection
+    # only for drawing on canvas due to better df-loc with frames
     tracks_df = create_tracks_dataframe(tracks_dic)
-    #tracks_df.to_csv("out.csv")
 
+    # creates dataframe only with geoseries
     tracks_geoseries = create_geoseries(tracks_df)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
-    #button_bool["tracks_imported"] = True
+    #change when using autoload and evaluation
+    button_bool["tracks_imported"] = True
 
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
@@ -141,6 +137,14 @@ def create_geoseries(tracks_df):
 
 
 def create_tracks_dataframe(tracks_dic):
+    """Creates dataframe from tracksdictionary 
+
+    Args:
+        tracks_dic (dictionary): dictionary with trackinformation
+
+    Returns:
+        dataframe: from dictionary with keys as columns
+    """
     tracks_df = pd.DataFrame.from_dict(tracks_dic, orient="index")
 
 

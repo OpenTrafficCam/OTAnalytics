@@ -33,7 +33,7 @@ logging.basicConfig(filename="log.txt", level=logging.INFO,
                     format="%(asctime)s %(message)s",  filemode="w")
 
 
-#create logfile
+#assign movement
 for event_csv in eventlist:
     dataframe = pd.read_csv(event_csv, index_col=0)
     dataframe['Movement'] = dataframe.apply(lambda row: assign_movement(row), axis=1)

@@ -7,7 +7,7 @@ from view.helpers.gui_helper import (
     color_dict,
 )
 from PIL import Image, ImageTk
-import view.objectstorage
+import helpers.config
 import helpers.file_helper as file_helper
 from view.sections import draw_line, draw_polygon
 from helpers.config import bbox_factor_reference
@@ -29,12 +29,14 @@ def manipulate_image(np_image=None, closing=False):
         current and last twenty frames.
         raw_detections (dictionary): Dictionary with raw detections from OpenVision.
     """
-    if not view.objectstorage.videoobject:
+    if not helpers.config.videoobject:
         return
 
     if np_image is None:
-        np_image = view.objectstorage.videoobject.np_image.copy()
-        
+        np_image = helpers.config.videoobject.np_image.copy()
+
+    np_image = draw_detectors_from_dict(np_image)
+    
     if button_bool["tracks_imported"]:
 
         np_image = draw_selected_tracks(
@@ -43,20 +45,20 @@ def manipulate_image(np_image=None, closing=False):
             tracks_df=file_helper.tracks_df,
         )
         
-        np_image = draw_bounding_box_with_df(view.objectstorage.videoobject.current_frame,np_image )
+        np_image = draw_bounding_box_with_df(helpers.config.videoobject.current_frame,np_image )
 
-        np_image = draw_tracks_live_with_df(view.objectstorage.videoobject.current_frame,np_image)
+        np_image = draw_tracks_live_with_df(helpers.config.videoobject.current_frame,np_image)
 
     if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
 
-        if view.objectstorage.videoobject.transparent_image is None:
+        if helpers.config.videoobject.transparent_image is None:
 
             # creates transparent_image and draws all tracks on it
             # so all tracks dont have to be drawn everytime
-            view.objectstorage.videoobject.transparent_image = draw_all_tracks()
+            helpers.config.videoobject.transparent_image = draw_all_tracks()
 
         np_image = cv2.addWeighted(
-            view.objectstorage.videoobject.transparent_image, 0.5, np_image, 1, 0
+            helpers.config.videoobject.transparent_image, 0.5, np_image, 1, 0
         )
 
     # copy is important or else original image will be changed
@@ -75,25 +77,23 @@ def manipulate_image(np_image=None, closing=False):
 
         np_image = draw_polygon(np_image, closing)
 
-    np_image = draw_detectors_from_dict(np_image)
-
     image = Image.fromarray(np_image)  # to PIL format
 
-    view.objectstorage.videoobject.ph_image = ImageTk.PhotoImage(image)
+    helpers.config.videoobject.ph_image = ImageTk.PhotoImage(image)
 
-    view.objectstorage.maincanvas.create_image(
-        0, 0, anchor=tkinter.NW, image=view.objectstorage.videoobject.ph_image
+    helpers.config.maincanvas.create_image(
+        0, 0, anchor=tkinter.NW, image=helpers.config.videoobject.ph_image
     )
 
-    view.objectstorage.maincanvas.update()
+    helpers.config.maincanvas.update()
 
 
 def draw_all_tracks():
 
     np_image = np.zeros(
         [
-            view.objectstorage.videoobject.height,
-            view.objectstorage.videoobject.width,
+            helpers.config.videoobject.height,
+            helpers.config.videoobject.width,
             4,
         ],
         dtype=np.uint8,
@@ -275,22 +275,22 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         np_image,
                         (
                             int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
+                                x_start * helpers.config.videoobject.x_resize_factor
                             )
                             - 1,
                             int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
+                                y_start * helpers.config.videoobject.y_resize_factor
                             )
                             - 1,
                         ),
                         (
                             int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
+                                x_start * helpers.config.videoobject.x_resize_factor
                             )
                             + text_w
                             + 2,
                             int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
+                                y_start * helpers.config.videoobject.y_resize_factor
                             )
                             - text_h
                             - 2,
@@ -302,10 +302,10 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         anno_txt,
                         (
                             int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
+                                x_start * helpers.config.videoobject.x_resize_factor
                             ),
                             int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
+                                y_start * helpers.config.videoobject.y_resize_factor
                             )
                             - 2,
                         ),
@@ -326,8 +326,8 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
     x_reference_point = int(x - 0.5 * w + w * bbox_factor_reference[vehicle_class][0])
     y_reference_point = int(y - 0.5 * h + h * bbox_factor_reference[vehicle_class][1])
 
-    x_reference_point = int(x_reference_point*view.objectstorage.videoobject.x_resize_factor)
-    y_reference_point = int(y_reference_point*view.objectstorage.videoobject.y_resize_factor)
+    x_reference_point = int(x_reference_point*helpers.config.videoobject.x_resize_factor)
+    y_reference_point = int(y_reference_point*helpers.config.videoobject.y_resize_factor)
 
     cv2.line(image, (x-5, y+5), (x+5, y-5), (255, 0, 0, 255), 2)
     cv2.line(image, (x-5, y-5), (x+5, y+5), (255, 0, 0, 255), 2)

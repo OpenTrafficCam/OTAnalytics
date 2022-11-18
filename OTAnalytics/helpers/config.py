@@ -13,3 +13,7 @@ bbox_factor_reference = {
     "bus": (0.5, 0.5),
     "unclear": (0.5,0.5)
 }
+
+maincanvas = None
+videoobject = None
+sliderobject = None

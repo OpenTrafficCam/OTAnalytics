@@ -1,6 +1,6 @@
 from tkinter import messagebox
 import helpers.file_helper as file_helper
-import view.objectstorage
+import helpers.config
 
 # TODO Create statepanelclass
 
@@ -58,7 +58,7 @@ def button_play_video_switch(button_play, button_rewind):
 
     button_bool["rewind_video"] = False
 
-    if not view.objectstorage.videoobject:
+    if not helpers.config.videoobject:
         info_message("Warning", "Please import video first!")
 
         return
@@ -76,7 +76,7 @@ def button_rewind_switch(button_rewind, button_play):
     Args:
         button (tkinter button): play and rewind button.
     """
-    if not view.objectstorage.videoobject:
+    if not helpers.config.videoobject:
         info_message("Warning", "Please import video first!")
 
         return

@@ -6,7 +6,7 @@ import itertools
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
 import helpers.file_helper as file_helper
-import view.objectstorage
+import helpers.config
 from view.helpers.gui_helper import info_message
 from view.helpers.gui_helper import button_bool
 
@@ -67,7 +67,7 @@ def calculate_intersections(detector_df, tracks_df):
         intersected detector (intersections are not ordered)
     """
     # creates a geoseries from column(geometry) with shapely object
-
+    #TODO: track_geometry already created when tracks are loaded
     track_geometry = gpd.GeoSeries(tracks_df.geometry)
 
     # iterates over every detectors and returns bool value for
@@ -121,8 +121,8 @@ def find_intersection_order(track_df, flow_dict=None, fps=None):
         flow_dict = file_helper.flow_dict["Detectors"]
 
     if fps is None:
-        fps = view.objectstorage.videoobject.fps
-
+        fps = helpers.config.videoobject.fps
+    
     for (object_id, row), detector in itertools.product(
         track_df.iterrows(), flow_dict
     ):
@@ -217,6 +217,8 @@ def find_intersection_order(track_df, flow_dict=None, fps=None):
             eventbased_dictionary[i]["X"] = int(nearest.x)
             eventbased_dictionary[i]["Y"] = int(nearest.y)
 
+    track_df.to_csv("test.csv")
+
     return track_df, eventbased_dictionary
 
 
@@ -294,18 +296,18 @@ def time_calculation_dataframe(object_validated_df):
     object_validated_df["first_appearance_time"] = pd.to_timedelta(
             (
                 object_validated_df["first_appearance_frame"]
-                / view.objectstorage.videoobject.fps
+                / helpers.config.videoobject.fps
             ),
             unit="s",
-        )+view.objectstorage.videoobject.datetime_obj
+        )+helpers.config.videoobject.datetime_obj
     
     object_validated_df["last_appearance_time"] = pd.to_timedelta(
             (
                 object_validated_df["last_appearance_frame"]
-                / view.objectstorage.videoobject.fps
+                / helpers.config.videoobject.fps
             ),
             unit="s",
-        ) + view.objectstorage.videoobject.datetime_obj
+        ) + helpers.config.videoobject.datetime_obj
 
     object_validated_df["first_appearance_time"] = object_validated_df["first_appearance_time"].astype('datetime64[s]')
     object_validated_df["last_appearance_time"] = object_validated_df["last_appearance_time"].astype('datetime64[s]')   
@@ -399,9 +401,9 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_
         dataframe: dataframe with events and belonging datetime
     """
     if fps is None:
-        fps = view.objectstorage.videoobject.fps
+        fps = helpers.config.videoobject.fps
     if datetime_obj is None:
-        datetime_obj = view.objectstorage.videoobject.datetime_obj
+        datetime_obj = helpers.config.videoobject.datetime_obj
 
     eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
     eventbased_dataframe.index.set_names(["EventID"], inplace=True)
@@ -434,7 +436,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
     detector_df = dataframe_from_dictionary_sections()
     # object_validated_df = dic_to_object_dataframe()
-    object_with_intersection_df = calculate_intersections(detector_df)
+    object_with_intersection_df = calculate_intersections(detector_df, tracks_df=file_helper.tracks_df)
 
     print(" successful ")
 
