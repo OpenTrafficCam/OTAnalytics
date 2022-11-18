@@ -2,260 +2,98 @@ import heapq
 from tkinter import Button, Entry, Label, Toplevel, filedialog
 
 import geopandas as gpd
-import itertools
+import helpers.config
+import helpers.file_helper as file_helper
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
-import helpers.file_helper as file_helper
-import helpers.config
-from view.helpers.gui_helper import info_message
-from view.helpers.gui_helper import button_bool
+from view.helpers.gui_helper import button_bool, info_message
 
 
-def dataframe_from_dictionary_sections(flow_dict=None):
-    """Creates a dataframe from detector/flow dictionary, #TODO change to use
-    linedetector dic that gets updated when importing flow data
-    creates column with LineString-objects for the calculation of
-    lineintersection with tracks.
 
-    Args:
-        flowdictionary (dictionary): Dictionary with sections and movements.
-
-    Returns:
-        detector_df: Dataframe with sections.
-    """
-    if flow_dict is None:
-        flow_dict = file_helper.flow_dict["Detectors"]
-
-    # change dic to dataframe
-    detector_df = pd.DataFrame.from_dict(
-        {
-            ("Detectors", j): flow_dict[j]
-            for j in flow_dict.keys()
-        },
-        orient="index",
-    )
-    # drops first multilevel index
-    detector_df.index = detector_df.index.droplevel(0)
-
-    # turn coordinates into LineString object
-    detector_df["geometry"] = detector_df.apply(
-        lambda coordinates: LineString(
-            [
-                (coordinates["start_x"], coordinates["start_y"]),
-                (coordinates["end_x"], coordinates["end_y"]),
-            ]
-        )
-        if coordinates["type"] == "line"
-        else Polygon(coordinates["points"]),
-        axis=1,
-    )
-
-    return detector_df
+def create_event(detector , object_id,vhc_class, nearest_x,nearest_y, frame, ):
+    print(file_helper.event_number)
+    file_helper.event_number += 1
+    file_helper.eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID" : detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
 
 
-# %%
-def calculate_intersections(detector_df, tracks_df):
-    """Checks if tracks and detectors intersect, alters object_dataframe.
+def create_section_geometry_object():
+    for detector in file_helper.flow_dict["Detectors"]:
+        x1 = file_helper.flow_dict["Detectors"][detector]["start_x"]
+        y1 = file_helper.flow_dict["Detectors"][detector]["start_y"]
+        x2 = file_helper.flow_dict["Detectors"][detector]["end_x"]
+        y2 = file_helper.flow_dict["Detectors"][detector]["end_y"]
+
+        file_helper.flow_dict["Detectors"][detector]["geometry"] = LineString([(x1,y1),(x2,y2)])
+
+def find_intersection(row):
+    """_summary_
 
     Args:
-        detector_df (dataframe): dataframe with detectors
-        object_validated_df (dataframe): copy of slice of valuedated objects
-        (at least 3 detections)
+        row (_type_): _description_
 
     Returns:
-        dataframe: with columnheads (detectors) and boolvalue if track(row),
-        intersected detector (intersections are not ordered)
-    """
-    # creates a geoseries from column(geometry) with shapely object
-    #TODO: track_geometry already created when tracks are loaded
-    track_geometry = gpd.GeoSeries(tracks_df.geometry)
-
-    # iterates over every detectors and returns bool value for
-    # intersection with every track from geoseries
-    for index, detector in detector_df.iterrows():
-
-        # distinct shapely geometry from geometry column
-        detector_shapely_geometry = detector.geometry
-
-        # columnwise comparison
-        bool_intersect = track_geometry.intersects(detector_shapely_geometry)
-
-        # returns coordinates from intersections as point object
-        point_geometry = track_geometry.intersection(detector_shapely_geometry)
-
-        tracks_df[f"{index}intersectcoordinates"] = point_geometry
-        tracks_df[index] = bool_intersect
-
-    return tracks_df
-
-
-def find_intersection_order(track_df, flow_dict=None, fps=None):
-    """First create necessary columns (Crossing_Gate/Frame; Movement; Movement_name).
-
-    Second find nearest point (second nearest point) on Linestring compared
-    with intersection.
-
-    Third get index of that coordinate and compare order.
-
-
-    Args:
-        object_validated_df (dataframe): Tracks with at least two coordinates.
-        detector_dict (dictionary): Dictionary with detectors.
-    Returns:
-        Dataframe: With newly calculated columns, eventbased_dictionary
+        _type_: _description_
     """
 
-    eventbased_dictionary = {}
+    for detector in file_helper.flow_dict["Detectors"]:
 
-    # create necessary columns
-    track_df["Crossing_Gate/Frame"] = ""
-    track_df["Crossed_Section"] = ""
-    track_df["Movement_name"] = ""
-    track_df["Time_crossing_entrance"] = ""
-    track_df["Time_crossing_exit"] = ""
+        if row.geometry.intersects(file_helper.flow_dict["Detectors"][detector]["geometry"]):
 
-    #ID for event
-    i=0
+            # returns coordinates from intersections as point object
+            point_geometry = row.geometry.intersection(file_helper.flow_dict["Detectors"][detector]["geometry"])
+            # create points from coords
+            line_points = map(Point, row.geometry.coords)
 
-    if flow_dict is None:
-        flow_dict = file_helper.flow_dict["Detectors"]
-
-    if fps is None:
-        fps = helpers.config.videoobject.fps
-    
-    for (object_id, row), detector in itertools.product(
-        track_df.iterrows(), flow_dict
-    ):
-        # Condition if detector was crossed by objecttrack
-        # Don't change to "is True"!! (True is the content of row/column)
-        # TODO: Vorfiltern des Dataframe (wo Detector ==> True), dafür loops aufsplitten
-        if track_df.loc[object_id][detector]:
-            i+=1
-
-            # shapely Linestring
-            track_line = track_df.loc[object_id]["geometry"]
-
-            # shapely Point from intersection
-            intersection_point = track_df.loc[object_id][
-                f"{detector}intersectcoordinates"
-            ]
-
-            line_points = map(Point, track_line.coords)
-
-            # get second nearest point(
-            # second nearest point = coordinate on linestring)
-            # first point is intersection
-            # nearest point is crossing on detector/ second nearest is track coord
             nearest, second_nearest = heapq.nsmallest(
-                2, line_points, key=intersection_point.distance
+                2, line_points, key=point_geometry.distance
             )
 
-            point_raw_coords = list(second_nearest.coords[:][0])
+            #function for event
+            
 
+            closest_point_to_track = list(second_nearest.coords[:][0])
 
-            # unaltered coord from track file
-            raw_coords = track_df.loc[object_id]["Coord"]
+            #index at which the second closest points are
+            index_number = row.Coord.index(closest_point_to_track)
+            if row["Crossed_Section"]:
+                row["Crossed_Section"].append(detector)
 
-            # index at which the second closest points are
-            index_number = raw_coords.index(point_raw_coords)
-
-            # with the index number you can also get the frame from gatecrossing
-            crossing_frame = track_df.loc[object_id]["Frame"][index_number]
-
-            # find all gatecrossing detector and their crossing seconds
-            if track_df.at[object_id, "Crossing_Gate/Frame"]:
-                track_df.at[object_id, "Crossing_Gate/Frame"].append(
-                    [detector, crossing_frame]
-                )
+                frame_of_crossing = row.Frame[index_number]
+                row["Crossed_Frames"].append(frame_of_crossing)
 
             else:
-                track_df.at[object_id, "Crossing_Gate/Frame"] = [
-                    [detector, crossing_frame]
-                ]
+                row["Crossed_Section"] = [detector]
 
-            # sort list by seconds (first index also determines
-            # which detector was crossed first)
-            track_df.at[object_id, "Crossing_Gate/Frame"] = sorted(
-                track_df.at[object_id, "Crossing_Gate/Frame"],
-                key=lambda x: x[1],
-            )
+                frame_of_crossing = row.Frame[index_number]
+                row["Crossed_Frames"] = [frame_of_crossing]
+            #create_event(detector,row.Index,)
+    return row
 
-            t = track_df.loc[object_id]["Crossing_Gate/Frame"]
-
-            # concates new list and delete seconds
-            concatted_sorted_detector_list = [item for sublist in t for item in sublist]
-            # deletes extra brackets (list)
-            del concatted_sorted_detector_list[1::2]
-
-            track_df.at[object_id, "Time_crossing_entrance"] = (
-                track_df.at[object_id, "Crossing_Gate/Frame"][0][1]
-                / fps
-            )
-
-            if track_df.at[object_id, "Time_crossing_entrance"] != (
-                track_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                / fps
-            ):
-
-                track_df.at[object_id, "Time_crossing_exit"] = (
-                    track_df.at[object_id, "Crossing_Gate/Frame"][-1][1]
-                    /fps
-                )
-
-            # list = Movement (only detectors not seconds)
-            track_df.at[
-                object_id, "Crossed_Section"
-            ] = concatted_sorted_detector_list
-
-            # start nested dictionary
-            eventbased_dictionary[i] = {}
-
-            eventbased_dictionary[i]["SectionID"] = detector
-            eventbased_dictionary[i]["TrackID"] = object_id
-            eventbased_dictionary[i]["Class"] = track_df.loc[object_id]["Class"]
-            eventbased_dictionary[i]["Frame"] = int(crossing_frame)
-            eventbased_dictionary[i]["X"] = int(nearest.x)
-            eventbased_dictionary[i]["Y"] = int(nearest.y)
-
-    track_df.to_csv("test.csv")
-
-    return track_df, eventbased_dictionary
-
-
-# %%
-
-def assign_movement(object_validated_df):
-    """Compares movements and associated detectors with sorted crossing list.
+def assign_movement(row):
+    """_summary_
 
     Args:
-        flowdictionary (dictionary): Dictionary with sections and movements.
-        object_validated_df (dataframe): Dateframe with valuedated tracks.
+        row (_type_): _description_
 
     Returns:
-        dataframe: Dataframe wth assigned movement to tracks.
+        _type_: _description_
     """
-    # TODO delete iteration ==> jupyter nb
-    for object_id, j in object_validated_df.iterrows():
 
-        for movement_list in file_helper.flow_dict["Movements"]:
+    if len(row.Crossed_Frames) >= 2:
 
-            # if detector in movements and real movement crossing events are true,
-            #  key of movement dictionary is value of cell
-            if (
-                file_helper.flow_dict["Movements"][movement_list]
-                == object_validated_df.loc[object_id]["Crossed_Section"]
-            ):
+        
+        
+        # sorts crossed section in depency to framesorder
+        row["Crossed_Section"] = [x for (y,x) in sorted(zip(row["Crossed_Frames"], row["Crossed_Section"]))]
+        
 
-                object_validated_df.at[object_id, "Movement_name"] = movement_list
-                break
-
-    return object_validated_df
+        #compare the list with movement dictionary
+        return [k for k, v in file_helper.flow_dict["Movements"].items() if v == row["Crossed_Section"]][0]
 
 
 # %%
-def safe_to_exl(dataframe_autocount, dataframe_eventbased):
+def safe_to_csv(dataframe_autocount, dataframe_eventbased=None):
     """Safe dataframe as cvs and asks for filepath.
-
 
     Args:
         process_object (dataframe): Dataframe with object information.
@@ -270,10 +108,8 @@ def safe_to_exl(dataframe_autocount, dataframe_eventbased):
         dataframe.to_csv(file_path)
 
 
-
-
 # %%
-def time_calculation_dataframe(object_validated_df):
+def time_calculation_dataframe(track_df):
     """Creates columns with time, calculated from frame and fps.
 
     Args:
@@ -293,37 +129,19 @@ def time_calculation_dataframe(object_validated_df):
 
     #     entry_timedelta = timedelta_entry.get()
 
-    object_validated_df["first_appearance_time"] = pd.to_timedelta(
+    track_df["first_appearance_time"] = pd.to_timedelta(
             (
-                object_validated_df["first_appearance_frame"]
+                track_df["first_appearance_frame"]
                 / helpers.config.videoobject.fps
             ),
             unit="s",
-        )+helpers.config.videoobject.datetime_obj
-    
-    object_validated_df["last_appearance_time"] = pd.to_timedelta(
-            (
-                object_validated_df["last_appearance_frame"]
-                / helpers.config.videoobject.fps
-            ),
-            unit="s",
-        ) + helpers.config.videoobject.datetime_obj
+        )+helpers.config.videoobject.datetime_obj  
 
-    object_validated_df["first_appearance_time"] = object_validated_df["first_appearance_time"].astype('datetime64[s]')
-    object_validated_df["last_appearance_time"] = object_validated_df["last_appearance_time"].astype('datetime64[s]')   
-
-    # object_validated_df["first_appearance_time"] = object_validated_df[
-    #     "first_appearance_time"
-    # ].dt.strftime("%H:%M:%S")
-
-    # object_validated_df["last_appearance_time"] = object_validated_df[
-    #     "last_appearance_time"
-    # ].dt.strftime("%H:%M:%S")
-
-    return object_validated_df
+    return track_df["first_appearance_time"].astype('datetime64[s]')
 
 
-def clean_dataframe(object_validated_df):
+
+def clean_dataframe(track_df):
     """Deletes unnecessary columns.
 
     Args:
@@ -333,24 +151,20 @@ def clean_dataframe(object_validated_df):
         dataframe: returns cleaned dataframe
     """
     # List hast to be tuple or string in order to be groupby
-    object_validated_df["Crossed_Section"] = object_validated_df["Crossed_Section"].apply(str)
+    track_df["Crossed_Section"] = track_df["Crossed_Section"].apply(str)
  
-    return object_validated_df.loc[
+    return track_df.loc[
         :,
         [
             "Class",
             "Crossed_Section",
-            "Movement_name",
-            "first_appearance_frame",
-            "first_appearance_time",
-            "last_appearance_frame",
-            "last_appearance_time",
-            "Time_crossing_entrance",
-            "Time_crossing_exit",
+            "Movement",
+            "Appearance",
+
         ], ]
 
 
-def resample_dataframe(entry_interval, object_validated_df):
+def resample_dataframe(entry_interval, track_df):
     """Groups and timeresamples dataframe.
 
     Args:
@@ -365,19 +179,19 @@ def resample_dataframe(entry_interval, object_validated_df):
     if entry_interval_time not in ["0", "None"]:
         print("Dataframe gets resampled")
 
-        object_validated_df["Datetime"] = pd.to_datetime(
-            object_validated_df["first_appearance_time"]
+        track_df["Datetime"] = pd.to_datetime(
+            track_df["Appearance"]
         )
 
-        object_validated_df = object_validated_df.set_index("Datetime")
+        track_df = track_df.set_index("Datetime")
 
-        object_validated_df = (
-            object_validated_df.groupby(
+        track_df = (
+            track_df.groupby(
                 by=[
                     pd.Grouper(freq=f"{entry_interval_time}T"),
                     "Class",
                     "Crossed_Section",
-                    "Movement_name",
+                    "Movement",
                 ],
                 dropna=False,
             )
@@ -385,11 +199,11 @@ def resample_dataframe(entry_interval, object_validated_df):
             .reset_index(name="counts")
         )
 
-        object_validated_df["Datetime"] = object_validated_df["Datetime"].dt.strftime(
-            "%H:%M:%S"
-        )
+        # track_df["Datetime"] = track_df["Datetime"].dt.strftime(
+        #     "%H:%M:%S"
+        # )
 
-    return object_validated_df
+    return track_df
 
 def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_obj=None):
     """_summary_
@@ -411,11 +225,9 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_
     eventbased_dataframe["seconds"] = eventbased_dataframe["seconds"].astype('int')  
     eventbased_dataframe["DateTime"] = pd.to_timedelta(eventbased_dataframe["seconds"], unit='seconds')
     eventbased_dataframe["DateTime"] = eventbased_dataframe["DateTime"] + datetime_obj
-#    eventbased_dataframe = eventbased_dataframe.set_index("EventID")
+#   eventbased_dataframe = eventbased_dataframe.set_index("EventID")
     eventbased_dataframe.drop('seconds', axis=1, inplace=True)
     return eventbased_dataframe
-
-
 
 
 def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=False):
@@ -429,49 +241,50 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
-    # TODO: Reduce unnecessary calculation but do calculation if 
-        # detectorfile changes
-    #if not button_bool["dataframe_cleaned"]:
+    # create necessary columns
+    file_helper.event_number = 0
+    file_helper.tracks_df ["Crossed_Section"] = ""
+    file_helper.tracks_df ["Crossed_Frames"] = ""
 
-    # if gui_dict["tracks_imported"] and detector_dic and movement_dic:
-    detector_df = dataframe_from_dictionary_sections()
-    # object_validated_df = dic_to_object_dataframe()
-    object_with_intersection_df = calculate_intersections(detector_df, tracks_df=file_helper.tracks_df)
+    create_section_geometry_object()
 
-    print(" successful ")
+    #file_helper.flow_dict["Movements"] = {"Sued-Nord": ["Sued", "Nord"], "Nord-Sued": ["Nord", "Sued"]}
+    file_helper.tracks_df = file_helper.tracks_df.apply(lambda row: find_intersection(row), axis=1)
+    file_helper.tracks_df["Movement"] = file_helper.tracks_df.apply(lambda row: assign_movement(row), axis=1)
+    file_helper.tracks_df["Appearance"] = time_calculation_dataframe(file_helper.tracks_df)
 
-    object_with_intersection_df, file_helper.eventbased_dictionary = find_intersection_order(object_with_intersection_df)
-    object_with_intersection_df = assign_movement(object_with_intersection_df)
+    tracks_df_result = clean_dataframe(file_helper.tracks_df)
 
-    object_with_intersection_df = time_calculation_dataframe(object_with_intersection_df)
 
-    file_helper.cleaned_object_dataframe = clean_dataframe(object_with_intersection_df)
+
+    # object_with_intersection_df, file_helper.eventbased_dictionary = find_intersection_order(object_with_intersection_df)
+    # object_with_intersection_df = assign_movement(object_with_intersection_df)
+
+    # object_with_intersection_df = time_calculation_dataframe(object_with_intersection_df)
+
+    # file_helper.cleaned_object_dataframe = clean_dataframe(object_with_intersection_df)
 
     #button_bool["dataframe_cleaned"] = True
 
-    file_helper.cleaned_object_dataframe["Datetime"] = pd.to_datetime(
-        file_helper.cleaned_object_dataframe["first_appearance_time"]
-    )
-    file_helper.cleaned_object_dataframe.index.set_names(['Object_ID'], inplace=True)
-    file_helper.cleaned_object_dataframe.reset_index(inplace=True)
+    # file_helper.cleaned_object_dataframe["Datetime"] = pd.to_datetime(
+    #     file_helper.cleaned_object_dataframe["first_appearance_time"]
+    # )
+    # file_helper.cleaned_object_dataframe.index.set_names(['Object_ID'], inplace=True)
+    # file_helper.cleaned_object_dataframe.reset_index(inplace=True)
 
-    file_helper.cleaned_object_dataframe.set_index("Datetime" ,inplace=True)
+    # file_helper.cleaned_object_dataframe.set_index("Datetime" ,inplace=True)
     
-    eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary)
+    # eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary)
 
     if for_drawing:
 
         return file_helper.cleaned_object_dataframe
 
-    cleaned_resampled_object_df = resample_dataframe(
-        entry_interval, file_helper.cleaned_object_dataframe
-    )
+    # cleaned_resampled_object_df = resample_dataframe(
+    #     entry_interval, file_helper.cleaned_object_dataframe
+    # )
 
-
-    safe_to_exl(cleaned_resampled_object_df, eventbased_dataframe)
-
-    # return cleaned_resampled_object_df
-
+    safe_to_csv(tracks_df_result)
 
 def create_setting_window():
     """Creates window with button to resample dataframe and two

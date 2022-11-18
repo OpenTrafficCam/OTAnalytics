@@ -38,6 +38,7 @@ tracks_geoseries = None
 cleaned_object_dataframe = []
 eventbased_dictionary = {}
 
+event_number = 1
 
 tracks_live = {}
 otflow_file = None
