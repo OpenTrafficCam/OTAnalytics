@@ -66,7 +66,7 @@ def find_intersection(row):
 
                 frame_of_crossing = row.Frame[index_number]
                 row["Crossed_Frames"] = [frame_of_crossing]
-            #create_event(detector,row.Index,)
+            create_event(detector,row.index,row.Class, nearest.x, nearest.y, frame_of_crossing )
     return row
 
 def assign_movement(row):
@@ -78,19 +78,12 @@ def assign_movement(row):
     Returns:
         _type_: _description_
     """
+    row["Crossed_Section"] = [x for (y,x) in sorted(zip(row["Crossed_Frames"], row["Crossed_Section"]))]
 
-    if len(row.Crossed_Frames) >= 2:
+    movement = [k for k, v in file_helper.flow_dict["Movements"].items() if v == row["Crossed_Section"]]
 
+    return movement[0] if movement else None
         
-        
-        # sorts crossed section in depency to framesorder
-        row["Crossed_Section"] = [x for (y,x) in sorted(zip(row["Crossed_Frames"], row["Crossed_Section"]))]
-        
-
-        #compare the list with movement dictionary
-        return [k for k, v in file_helper.flow_dict["Movements"].items() if v == row["Crossed_Section"]][0]
-
-
 # %%
 def safe_to_csv(dataframe_autocount, dataframe_eventbased=None):
     """Safe dataframe as cvs and asks for filepath.
@@ -243,12 +236,13 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     """
     # create necessary columns
     file_helper.event_number = 0
-    file_helper.tracks_df ["Crossed_Section"] = ""
-    file_helper.tracks_df ["Crossed_Frames"] = ""
+    file_helper.tracks_df["Crossed_Section"] = ""
+    file_helper.tracks_df["Crossed_Frames"] = ""
+    print(file_helper.tracks_df)
 
     create_section_geometry_object()
 
-    #file_helper.flow_dict["Movements"] = {"Sued-Nord": ["Sued", "Nord"], "Nord-Sued": ["Nord", "Sued"]}
+    file_helper.flow_dict["Movements"] = {"Sued-Nord": ["Sued", "Nord"], "Nord-Sued": ["Nord", "Sued"]}
     file_helper.tracks_df = file_helper.tracks_df.apply(lambda row: find_intersection(row), axis=1)
     file_helper.tracks_df["Movement"] = file_helper.tracks_df.apply(lambda row: assign_movement(row), axis=1)
     file_helper.tracks_df["Appearance"] = time_calculation_dataframe(file_helper.tracks_df)
