@@ -11,8 +11,9 @@ from view.helpers.gui_helper import button_bool, info_message
 
 
 def create_event(detector , object_id,vhc_class, nearest_x,nearest_y, frame, ):
-    print(file_helper.event_number)
+
     file_helper.event_number += 1
+    print(file_helper.event_number)
     file_helper.eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID" : detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
 
 
@@ -49,7 +50,7 @@ def find_intersection(row):
             )
 
             #function for event
-            
+
 
             closest_point_to_track = list(second_nearest.coords[:][0])
 
@@ -60,27 +61,28 @@ def find_intersection(row):
 
                 frame_of_crossing = row.Frame[index_number]
                 row["Crossed_Frames"].append(frame_of_crossing)
-
             else:
                 row["Crossed_Section"] = [detector]
 
                 frame_of_crossing = row.Frame[index_number]
+
                 row["Crossed_Frames"] = [frame_of_crossing]
-            create_event(detector,row.index,row.Class, nearest.x, nearest.y, frame_of_crossing )
+            create_event(detector,row.name,row.Class, nearest.x, nearest.y, frame_of_crossing)    
+
     return row
 
 def assign_movement(row):
-    """_summary_
+    """Assigns movement from from movement dic
 
     Args:
-        row (_type_): _description_
+        row (dataframe row): row from dataframe containing trajectorie information
 
     Returns:
-        _type_: _description_
+        movement_key: returns key if list of crossed sections is in movement values
     """
-    row["Crossed_Section"] = [x for (y,x) in sorted(zip(row["Crossed_Frames"], row["Crossed_Section"]))]
+    sorted_sections = [x for (y,x) in sorted(zip(row["Crossed_Frames"], row["Crossed_Section"]))]
 
-    movement = [k for k, v in file_helper.flow_dict["Movements"].items() if v == row["Crossed_Section"]]
+    movement = [k for k, v in file_helper.flow_dict["Movements"].items() if v == sorted_sections]
 
     return movement[0] if movement else None
         
@@ -238,7 +240,6 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     file_helper.event_number = 0
     file_helper.tracks_df["Crossed_Section"] = ""
     file_helper.tracks_df["Crossed_Frames"] = ""
-    print(file_helper.tracks_df)
 
     create_section_geometry_object()
 
@@ -246,6 +247,10 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     file_helper.tracks_df = file_helper.tracks_df.apply(lambda row: find_intersection(row), axis=1)
     file_helper.tracks_df["Movement"] = file_helper.tracks_df.apply(lambda row: assign_movement(row), axis=1)
     file_helper.tracks_df["Appearance"] = time_calculation_dataframe(file_helper.tracks_df)
+    print(file_helper.eventbased_dictionary)
+
+    eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary, fps=None, datetime_obj=None)
+
 
     tracks_df_result = clean_dataframe(file_helper.tracks_df)
 
@@ -278,7 +283,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     #     entry_interval, file_helper.cleaned_object_dataframe
     # )
 
-    safe_to_csv(tracks_df_result)
+    safe_to_csv(tracks_df_result, eventbased_dataframe)
 
 def create_setting_window():
     """Creates window with button to resample dataframe and two

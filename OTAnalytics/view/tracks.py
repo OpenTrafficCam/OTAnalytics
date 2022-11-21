@@ -147,7 +147,6 @@ def create_tracks_dataframe(tracks_dic):
     """
     tracks_df = pd.DataFrame.from_dict(tracks_dic, orient="index")
 
-
     tracks_df["Coord_count"] = tracks_df.apply(
         lambda pointtuples: (len(pointtuples["Coord"])), axis=1
     )
