@@ -1,7 +1,5 @@
 import heapq
 from tkinter import Button, Entry, Label, Toplevel, filedialog
-
-import geopandas as gpd
 import helpers.config
 import helpers.file_helper as file_helper
 import pandas as pd
@@ -10,11 +8,11 @@ from view.helpers.gui_helper import button_bool, info_message
 
 
 
-def create_event(detector , object_id,vhc_class, nearest_x,nearest_y, frame, ):
+def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame, ):
 
     file_helper.event_number += 1
     print(file_helper.event_number)
-    file_helper.eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID" : detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
+    file_helper.eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID": detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
 
 
 def create_section_geometry_object():
@@ -24,13 +22,13 @@ def create_section_geometry_object():
         x2 = file_helper.flow_dict["Detectors"][detector]["end_x"]
         y2 = file_helper.flow_dict["Detectors"][detector]["end_y"]
 
-        file_helper.flow_dict["Detectors"][detector]["geometry"] = LineString([(x1,y1),(x2,y2)])
+        file_helper.flow_dict["Detectors"][detector]["geometry"] = LineString([(x1, y1), (x2, y2)])
 
 def find_intersection(row):
     """_summary_
 
     Args:
-        row (_type_): _description_
+        row (dataframerow): _description_
 
     Returns:
         _type_: _description_
@@ -49,9 +47,6 @@ def find_intersection(row):
                 2, line_points, key=point_geometry.distance
             )
 
-            #function for event
-
-
             closest_point_to_track = list(second_nearest.coords[:][0])
 
             #index at which the second closest points are
@@ -67,6 +62,7 @@ def find_intersection(row):
                 frame_of_crossing = row.Frame[index_number]
 
                 row["Crossed_Frames"] = [frame_of_crossing]
+                
             create_event(detector,row.name,row.Class, nearest.x, nearest.y, frame_of_crossing)    
 
     return row
@@ -254,34 +250,10 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
 
     tracks_df_result = clean_dataframe(file_helper.tracks_df)
 
-
-
-    # object_with_intersection_df, file_helper.eventbased_dictionary = find_intersection_order(object_with_intersection_df)
-    # object_with_intersection_df = assign_movement(object_with_intersection_df)
-
-    # object_with_intersection_df = time_calculation_dataframe(object_with_intersection_df)
-
-    # file_helper.cleaned_object_dataframe = clean_dataframe(object_with_intersection_df)
-
-    #button_bool["dataframe_cleaned"] = True
-
-    # file_helper.cleaned_object_dataframe["Datetime"] = pd.to_datetime(
-    #     file_helper.cleaned_object_dataframe["first_appearance_time"]
-    # )
-    # file_helper.cleaned_object_dataframe.index.set_names(['Object_ID'], inplace=True)
-    # file_helper.cleaned_object_dataframe.reset_index(inplace=True)
-
-    # file_helper.cleaned_object_dataframe.set_index("Datetime" ,inplace=True)
-    
-    # eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary)
-
     if for_drawing:
 
         return file_helper.cleaned_object_dataframe
 
-    # cleaned_resampled_object_df = resample_dataframe(
-    #     entry_interval, file_helper.cleaned_object_dataframe
-    # )
 
     safe_to_csv(tracks_df_result, eventbased_dataframe)
 
