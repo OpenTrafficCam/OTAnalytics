@@ -7,15 +7,25 @@ from shapely.geometry import LineString, Point, Polygon
 from view.helpers.gui_helper import button_bool, info_message
 
 
+def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
+    """Creates dictionary with event information
 
-def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame, ):
+    Args:
+        detector (str): crossed section
+        object_id (int): row index / track id
+        vhc_class (str): verhicle class
+        nearest_x (int): x coordinate of crossing point
+        nearest_y (int): y coordinate of crossing point
+        frame (int): frame where crossing happend
+    """
 
     file_helper.event_number += 1
-    print(file_helper.event_number)
     file_helper.eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID": detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
 
 
 def create_section_geometry_object():
+    """_summary_
+    """
     for detector in file_helper.flow_dict["Detectors"]:
         x1 = file_helper.flow_dict["Detectors"][detector]["start_x"]
         y1 = file_helper.flow_dict["Detectors"][detector]["start_y"]
@@ -100,7 +110,7 @@ def safe_to_csv(dataframe_autocount, dataframe_eventbased=None):
 
 
 # %%
-def time_calculation_dataframe(track_df):
+def time_calculation_dataframe(track_df, fps=None, datetime_obj=None):
     """Creates columns with time, calculated from frame and fps.
 
     Args:
@@ -112,6 +122,9 @@ def time_calculation_dataframe(track_df):
         dataframe: Dataframe with tracks and new created columns with
         information in timeformat.
     """
+    if fps is None or datetime_obj is None:
+        fps = helpers.config.videoobject.fps
+        datetime_obj=helpers.config.videoobject.datetime_obj
     # if timedelta_entry is None:
 
     #     entry_timedelta = "00:00:00"
@@ -123,10 +136,10 @@ def time_calculation_dataframe(track_df):
     track_df["first_appearance_time"] = pd.to_timedelta(
             (
                 track_df["first_appearance_frame"]
-                / helpers.config.videoobject.fps
+                / fps
             ),
             unit="s",
-        )+helpers.config.videoobject.datetime_obj  
+        )+datetime_obj
 
     return track_df["first_appearance_time"].astype('datetime64[s]')
 
@@ -205,9 +218,8 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_
     Returns:
         dataframe: dataframe with events and belonging datetime
     """
-    if fps is None:
+    if fps is None or datetime_obj is None:
         fps = helpers.config.videoobject.fps
-    if datetime_obj is None:
         datetime_obj = helpers.config.videoobject.datetime_obj
 
     eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
@@ -239,14 +251,11 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
 
     create_section_geometry_object()
 
-    file_helper.flow_dict["Movements"] = {"Sued-Nord": ["Sued", "Nord"], "Nord-Sued": ["Nord", "Sued"]}
     file_helper.tracks_df = file_helper.tracks_df.apply(lambda row: find_intersection(row), axis=1)
     file_helper.tracks_df["Movement"] = file_helper.tracks_df.apply(lambda row: assign_movement(row), axis=1)
     file_helper.tracks_df["Appearance"] = time_calculation_dataframe(file_helper.tracks_df)
-    print(file_helper.eventbased_dictionary)
 
-    eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary, fps=None, datetime_obj=None)
-
+    eventbased_dataframe = eventased_dictionary_to_dataframe(fps=None, datetime_obj=None)
 
     tracks_df_result = clean_dataframe(file_helper.tracks_df)
 

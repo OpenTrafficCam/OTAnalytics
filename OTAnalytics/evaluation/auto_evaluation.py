@@ -6,12 +6,13 @@ Returns:
     csv: safe the eventbased dataframe as csv
 """
 
-
 import os
 import sys
 import re
 
 from pathlib import Path
+from shapely.geometry import LineString
+
 
 from datetime import datetime
 import logging
@@ -24,9 +25,10 @@ logging.basicConfig(filename="log.txt", level=logging.INFO,
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(os.path.dirname(__file__))
 
+import helpers.file_helper as file_helper
 import json
 from view.tracks import load_and_convert
-from autocount.auto_counting import dataframe_from_dictionary_sections, calculate_intersections, find_intersection_order, eventased_dictionary_to_dataframe
+from autocount.auto_counting import find_intersection, assign_movement,time_calculation_dataframe, eventased_dictionary_to_dataframe, clean_dataframe
 
 #%%
 # load section file
@@ -40,8 +42,20 @@ OUTPUT_DIR = (r"\\vs-grp08.zih.tu-dresden.de\otc_live\recordings\stationary\Dres
 # sectionfile creation
 sectionfile = open(FILEPATH_SECTION, "r")
 section_file = sectionfile.read()
-section_file = json.loads(section_file)
-section_df = dataframe_from_dictionary_sections(section_file["Detectors"])
+detector_dic = json.loads(section_file)
+
+def create_detector_geometry(detector_dic):
+    for detector in detector_dic["Detectors"]:
+        x1 = detector_dic["Detectors"][detector]["start_x"]
+        y1 = detector_dic["Detectors"][detector]["start_y"]
+        x2 = detector_dic["Detectors"][detector]["end_x"]
+        y2 = detector_dic["Detectors"][detector]["end_y"]
+
+        detector_dic["Detectors"][detector]["geometry"] = LineString([(x1, y1), (x2, y2)])
+
+    return detector_dic
+detector_dic = create_detector_geometry(detector_dic)
+
 
 #%%
 
@@ -96,30 +110,35 @@ def load_trackfile(filepath):
 # %%
 track_list = Path(INPUT_TRACK_DIR).glob("*.ottrk")
 
-for filepath in track_list:
-    datetime_string = datetime_str(str(filepath), epoch_datetime="1970-01-01_00-00-00")
-    datetime_obj = get_datetime_obj(datetime_string)
-    print("creating datetime from filename worked")
-    trackfile, filename = load_trackfile(filepath)
-    # Load and convert Tracks
-    _, _, tracks_df, _ = load_and_convert(x_resize_factor=1, y_resize_factor=1, autoimport=True, files=trackfile)
-
-    if tracks_df is None:
-        continue
-
-    #expand trackdataframe
-    track_df = calculate_intersections(section_df, tracks_df)
-    
-    #to get eventbased dataframe
-    track_df, eventbased_dictionary = find_intersection_order(track_df, flow_dict=section_file["Detectors"], fps=20)
-    
-    #create dataframe from event based dictionary
-    if eventbased_dictionary:
-        eventbased_df = eventased_dictionary_to_dataframe(eventbased_dictionary, fps=20, datetime_obj=datetime_obj)
-
-        eventbased_df.to_csv(f"{filename}_events.csv")
-
-#start loop
+def autoevaluate(detector_dic):
+    for filepath in track_list:
+        file_helper.flow_dict = detector_dic
 
 
-# %%
+        datetime_string = datetime_str(str(filepath), epoch_datetime="1970-01-01_00-00-00")
+        datetime_obj = get_datetime_obj(datetime_string)
+        print("creating datetime from filename worked")
+        trackfile, filename = load_trackfile(filepath)
+        # Load and convert Tracks
+        _, _, tracks_df, _ = load_and_convert(x_resize_factor=1, y_resize_factor=1, autoimport=True, files=trackfile)
+
+        # if there are not tracks due to empty file
+        if tracks_df is None:
+            continue
+
+        tracks_df["Crossed_Section"] = ""
+        tracks_df["Crossed_Frames"] = ""
+
+        #find intersection
+        tracks_df = tracks_df.apply(lambda row: find_intersection(row), axis=1)
+        tracks_df["Movement"] = tracks_df.apply(lambda row: assign_movement(row), axis=1)
+        tracks_df["Appearance"] = time_calculation_dataframe(tracks_df, 20,datetime_obj )
+
+        eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.eventbased_dictionary,20, datetime_obj)
+        tracks_df_result = clean_dataframe(tracks_df)
+
+        eventbased_dataframe.to_csv(f"{filename}_events.csv")
+        tracks_df_result.to_csv(f"{filename}_tracks.csv")
+        #create dataframe
+
+autoevaluate(detector_dic)

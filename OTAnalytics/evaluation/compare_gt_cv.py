@@ -39,7 +39,3 @@ for event_csv in eventlist:
     dataframe['Movement'] = dataframe.apply(lambda row: assign_movement(row), axis=1)
     logging.info(f"\n Working on File: {event_csv}")
     dataframe.to_csv(event_csv)
-
-
-
-
