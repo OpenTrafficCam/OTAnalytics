@@ -37,7 +37,7 @@ FILEPATH_SECTION = r"\\vs-grp08.zih.tu-dresden.de\otc_live\recordings\stationary
 INPUT_TRACK_DIR = (r"\\vs-grp08.zih.tu-dresden.de\otc_live\recordings\stationary\Dresden\Augustusbruecke_2022-09\videos\TUDCam02\Detection_Tracking_YOLOv5s\Track-files")
 OUTPUT_DIR = (r"\\vs-grp08.zih.tu-dresden.de\otc_live\recordings\stationary\Dresden\Augustusbruecke_2022-09\videos\TUDCam01\Eventfiles")
 #%%
-
+track_list = Path(INPUT_TRACK_DIR).glob("*.ottrk")
 
 # sectionfile creation
 sectionfile = open(FILEPATH_SECTION, "r")
@@ -108,7 +108,6 @@ def load_trackfile(filepath):
 
 
 # %%
-track_list = Path(INPUT_TRACK_DIR).glob("*.ottrk")
 
 def autoevaluate(detector_dic):
     for filepath in track_list:
