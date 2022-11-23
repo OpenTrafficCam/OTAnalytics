@@ -277,6 +277,7 @@ def create_setting_window():
     """
 
     if not button_bool["tracks_imported"]:
+
         info_message("Warning", "Please import tracks first!")
 
         return
