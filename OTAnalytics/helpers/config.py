@@ -5,7 +5,7 @@ E.g. (0,0) for top-left corner, (1,0) for top-right corner,
 """
 """test"""
 bbox_factor_reference = {
-    "car": (0, 0),
+    "car": (0.5, 0.5),
     "bicycle": (0.5, 0.5),
     "truck": (0.5, 0.5),
     "motorcycle": (0.5, 0.5),
@@ -13,3 +13,8 @@ bbox_factor_reference = {
     "bus": (0.5, 0.5),
     "unclear": (0.5,0.5)
 }
+
+maincanvas = None
+videoobject = None
+sliderobject = None
+

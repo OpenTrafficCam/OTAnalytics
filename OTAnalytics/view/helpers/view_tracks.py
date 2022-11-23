@@ -11,7 +11,7 @@ from view.helpers.gui_helper import (
 )
 
 import autocount.auto_counting
-import view.objectstorage
+import helpers.config
 
 
 class FrameObject(tk.LabelFrame):
@@ -102,7 +102,7 @@ class FrameObject(tk.LabelFrame):
             command=lambda: [
                 self.clear_treeview(),
                 deload_trackfile(),
-                view.objectstorage.videoobject.initialize_empty_image(),
+                helpers.config.videoobject.initialize_empty_image(),
                 self.button_show_tracks.configure(text="Show all Tracks"),
                 view.image_alteration.manipulate_image()
                 ]
@@ -137,11 +137,13 @@ class FrameObject(tk.LabelFrame):
             file_helper.tracks_df,
             file_helper.tracks_geoseries,
         ) = load_and_convert(
-            x_resize_factor=view.objectstorage.videoobject.x_resize_factor,
-            y_resize_factor=view.objectstorage.videoobject.y_resize_factor,
+            x_resize_factor=helpers.config.videoobject.x_resize_factor,
+            y_resize_factor=helpers.config.videoobject.y_resize_factor,
         )
-
-        for object in list(file_helper.tracks_dic.keys()):
+        if file_helper.tracks_df.empty:
+            print("Importing trackfile not possible, most likely du to missing trajectories")
+            return
+        for object in file_helper.tracks_df.index:
             self.tree_objects.insert(
                 parent="",
                 index="end",
@@ -150,8 +152,6 @@ class FrameObject(tk.LabelFrame):
             )
 
         button_display_tracks_switch(self.button_show_tracks)
-
-
         view.image_alteration.manipulate_image()
 
     def treeobject_selection(self, event):

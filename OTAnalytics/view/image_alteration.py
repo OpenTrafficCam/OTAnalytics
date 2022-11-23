@@ -7,10 +7,11 @@ from view.helpers.gui_helper import (
     color_dict,
 )
 from PIL import Image, ImageTk
-import view.objectstorage
+import helpers.config
 import helpers.file_helper as file_helper
 from view.sections import draw_line, draw_polygon
 from helpers.config import bbox_factor_reference
+import time
 
 
 def manipulate_image(np_image=None, closing=False):
@@ -28,44 +29,36 @@ def manipulate_image(np_image=None, closing=False):
         current and last twenty frames.
         raw_detections (dictionary): Dictionary with raw detections from OpenVision.
     """
-    if not view.objectstorage.videoobject:
+    if not helpers.config.videoobject:
         return
 
     if np_image is None:
-        np_image = view.objectstorage.videoobject.np_image.copy()
-        
+        np_image = helpers.config.videoobject.np_image.copy()
+
+    np_image = draw_detectors_from_dict(np_image)
+    
     if button_bool["tracks_imported"]:
 
-        np_image = draw_tracks(
+        np_image = draw_selected_tracks(
             np_image,
             selectionlist=file_helper.selectionlist_objects,
             tracks_df=file_helper.tracks_df,
         )
+        
+        np_image = draw_bounding_box_with_df(helpers.config.videoobject.current_frame,np_image )
 
-        np_image = draw_bounding_box(
-            np_image,
-            str(view.objectstorage.videoobject.current_frame),
-            raw_detections=file_helper.raw_detections,
-        )
-
-        np_image = draw_tracks_live(
-            np_image,
-            view.objectstorage.videoobject.current_frame,
-            tracks=file_helper.tracks_dic,
-            raw_detections=file_helper.raw_detections,
-            track_live=file_helper.tracks_live,
-        )
+        np_image = draw_tracks_live_with_df(helpers.config.videoobject.current_frame,np_image)
 
     if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
 
-        if view.objectstorage.videoobject.transparent_image is None:
+        if helpers.config.videoobject.transparent_image is None:
 
             # creates transparent_image and draws all tracks on it
             # so all tracks dont have to be drawn everytime
-            view.objectstorage.videoobject.transparent_image = draw_all_tracks()
+            helpers.config.videoobject.transparent_image = draw_all_tracks()
 
         np_image = cv2.addWeighted(
-            view.objectstorage.videoobject.transparent_image, 0.5, np_image, 1, 0
+            helpers.config.videoobject.transparent_image, 0.5, np_image, 1, 0
         )
 
     # copy is important or else original image will be changed
@@ -84,25 +77,23 @@ def manipulate_image(np_image=None, closing=False):
 
         np_image = draw_polygon(np_image, closing)
 
-    np_image = draw_detectors_from_dict(np_image)
-
     image = Image.fromarray(np_image)  # to PIL format
 
-    view.objectstorage.videoobject.ph_image = ImageTk.PhotoImage(image)
+    helpers.config.videoobject.ph_image = ImageTk.PhotoImage(image)
 
-    view.objectstorage.maincanvas.create_image(
-        0, 0, anchor=tkinter.NW, image=view.objectstorage.videoobject.ph_image
+    helpers.config.maincanvas.create_image(
+        0, 0, anchor=tkinter.NW, image=helpers.config.videoobject.ph_image
     )
 
-    view.objectstorage.maincanvas.update()
+    helpers.config.maincanvas.update()
 
 
 def draw_all_tracks():
 
     np_image = np.zeros(
         [
-            view.objectstorage.videoobject.height,
-            view.objectstorage.videoobject.width,
+            helpers.config.videoobject.height,
+            helpers.config.videoobject.width,
             4,
         ],
         dtype=np.uint8,
@@ -173,7 +164,7 @@ def draw_detectors_from_dict(np_image):
     return np_image
 
 
-def draw_tracks(np_image, selectionlist, tracks_df):
+def draw_selected_tracks(np_image, selectionlist, tracks_df):
     """Draw selected tracks.
 
     Args:
@@ -206,122 +197,100 @@ def draw_tracks(np_image, selectionlist, tracks_df):
 
     return np_image
 
+def draw_bounding_box_with_df(frame, np_image):
 
-def draw_bounding_box(np_image, frame, raw_detections):
-    """Draws bounding boxes in every frame.
-
-    Args:
-        raw_detections (dictionary): Inputfile with detections from OTVision.
-        frame (int): Current frame as index.
-        np_image (numpy_image): Arraylike image to draw on.
-
-    Returns:
-       np_image: Returns manipulated image.
-    """
     if not button_bool["display_bb"]:
         return np_image
-    try:
-        if raw_detections:
 
-            image_cache = np_image
+        
+    df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
 
-            for detection in raw_detections[frame]:
-                if raw_detections[frame][detection]["class"] in color_dict.keys():
+    for index, row in df.iterrows():
+        try:
+            index_of_frame = row["Frame"].index(frame)
+            coordinates = row["Coord"][index_of_frame]
+            width = row["Width"][index_of_frame]
+            height = row["Height"][index_of_frame]
+            vehicle_class = row["Class"]
+            confidence = row["Confidence"][index_of_frame]
+            np_image = draw_bb_from_coordinates(coordinates[0], coordinates[1], width, height, np_image, vehicle_class, confidence)
 
-                    class_txt = raw_detections[frame][detection]["class"]
+        except:
+            continue
 
-                    confidence_txt = "{:.2f}".format(
-                        (raw_detections[frame][detection]["conf"])
-                    )
+    return np_image
+    
 
-                    anno_txt = f"{class_txt} {confidence_txt}"
-                    # anno_txt = f"{class_txt} {detection} {confidence_txt}"
+def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
 
-                    if raw_detections[frame][detection]["w"] < 0.3 * 100:
-                        fontscale = 0.3
-                    elif raw_detections[frame][detection]["w"] > 0.5 * 100:
-                        fontscale = 0.5
-                    else:
-                        fontscale = raw_detections[frame][detection]["w"] / 100
-                    
-                    x = raw_detections[frame][detection]["x"]
-                    y = raw_detections[frame][detection]["y"]
-                    w = raw_detections[frame][detection]["w"]
-                    h = raw_detections[frame][detection]["h"]
-                    vehicle_class = raw_detections[frame][detection]["class"]
+    x_middle = int(x+0.5*w-w*bbox_factor_reference[vehicle_class][0])
+    y_middle = int(y+0.5*h-h*bbox_factor_reference[vehicle_class][1])
 
-                    x_start = int(
-                        x
-                        - w / 2
-                    )
+    y_start = int(y_middle-h /2)
 
-                    y_start = int(
-                        y
-                        - h / 2
-                    )
+    x_start = int(x_middle-w / 2)
 
-                    x_end = int(
-                        x
-                        + w / 2
-                    )
+    y_end = int(y_middle+h /2)
 
-                    y_end = int(
-                        y
-                        + h / 2
-                    )
+    x_end = int(x_middle+w /2)
 
-                    try:
-                        bbcolor = color_dict[
-                            vehicle_class
-                        ] + (255,)
+    vehicle_class = vehicle_class
 
-                    except ValueError:
-                        bbcolor = (0, 0, 255, 255)
+    bbcolor = color_dict[vehicle_class] + (255,)
 
-                    cv2.rectangle(
-                        image_cache,
+    cv2.rectangle(
+        np_image,
+        (
+            int(
+                x_start
+            ),
+            int(
+                y_start
+            ),
+        ),
+        (
+            int(x_end),
+            int(y_end),
+        ),
+        bbcolor,
+        2,
+    )
+
+    if w < 0.3 * 100:
+        fontscale = 0.3
+    elif w > 0.5 * 100:
+        fontscale = 0.5
+    else:
+        fontscale = w / 100
+
+    class_txt = vehicle_class
+    confidence_txt = "{:.2f}".format((confidence))
+    anno_txt = f"{class_txt} {confidence_txt}"
+
+    text_size, _ = cv2.getTextSize(anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1)
+
+    text_w, text_h = text_size
+    #textbox
+    cv2.rectangle(
+                        np_image,
                         (
                             int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
-                            ),
-                            int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
-                            ),
-                        ),
-                        (
-                            int(x_end * view.objectstorage.videoobject.x_resize_factor),
-                            int(y_end * view.objectstorage.videoobject.y_resize_factor),
-                        ),
-                        bbcolor,
-                        2,
-                    )
-
-                    text_size, _ = cv2.getTextSize(
-                        anno_txt, cv2.FONT_HERSHEY_SIMPLEX, fontscale, 1
-                    )
-
-                    text_w, text_h = text_size
-
-                    cv2.rectangle(
-                        image_cache,
-                        (
-                            int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
+                                x_start * helpers.config.videoobject.x_resize_factor
                             )
                             - 1,
                             int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
+                                y_start * helpers.config.videoobject.y_resize_factor
                             )
                             - 1,
                         ),
                         (
                             int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
+                                x_start * helpers.config.videoobject.x_resize_factor
                             )
                             + text_w
                             + 2,
                             int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
+                                y_start * helpers.config.videoobject.y_resize_factor
                             )
                             - text_h
                             - 2,
@@ -329,16 +298,14 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         bbcolor,
                         -1,
                     )
-
-                    image = cv2.putText(
-                        image_cache,
+    cv2.putText(np_image,
                         anno_txt,
                         (
                             int(
-                                x_start * view.objectstorage.videoobject.x_resize_factor
+                                x_start * helpers.config.videoobject.x_resize_factor
                             ),
                             int(
-                                y_start * view.objectstorage.videoobject.y_resize_factor
+                                y_start * helpers.config.videoobject.y_resize_factor
                             )
                             - 2,
                         ),
@@ -347,13 +314,11 @@ def draw_bounding_box(np_image, frame, raw_detections):
                         (255, 255, 255),
                         1,
                     )
-                    draw_reference_cross(image,x, y, w, h, vehicle_class)
+    draw_reference_cross(np_image,int(x), int(y), w, h, vehicle_class)
+
+    return np_image
 
 
-        return image
-
-    except ImportError:
-        return image
 
 
 def draw_reference_cross(image, x, y, w, h, vehicle_class):
@@ -361,65 +326,35 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
     x_reference_point = int(x - 0.5 * w + w * bbox_factor_reference[vehicle_class][0])
     y_reference_point = int(y - 0.5 * h + h * bbox_factor_reference[vehicle_class][1])
 
-    x_reference_point = int(x_reference_point*view.objectstorage.videoobject.x_resize_factor)
-    y_reference_point = int(y_reference_point*view.objectstorage.videoobject.y_resize_factor)
+    x_reference_point = int(x_reference_point*helpers.config.videoobject.x_resize_factor)
+    y_reference_point = int(y_reference_point*helpers.config.videoobject.y_resize_factor)
 
-    cv2.line(image, (x_reference_point-5, y_reference_point+5), (x_reference_point+5, y_reference_point-5), (255, 0, 0, 255), 2)
-    cv2.line(image, (x_reference_point-5, y_reference_point-5), (x_reference_point+5, y_reference_point+5), (255, 0, 0, 255), 2)
-
-
+    cv2.line(image, (x-5, y+5), (x+5, y-5), (255, 0, 0, 255), 2)
+    cv2.line(image, (x-5, y-5), (x+5, y+5), (255, 0, 0, 255), 2)
 
 
-def draw_tracks_live(np_image, frame, tracks, raw_detections, track_live):
-    """Draw tracks while playing video
+def draw_tracks_live_with_df(frame, np_image):
+    #subset dataframe
+    if button_bool["tracks_imported"] and button_bool["play_video"] and button_bool["display_live_track"]:
+        df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
 
-    Args:
-        object_dict (dictionary): resampled raw detections
-        object_live_track (dictionary): dictionary with framewiselive coordinates
-        frame (int): current video frame
-        raw_detections (dictionary): input file with all detections
-        np_image (numpy_array) : arraylike image object
+        for index, row in df.iterrows():
+            try:
+                index_of_frame = row["Frame"].index(frame)
+                vehicle_class = row["Class"]
+                trackcolor = color_dict[vehicle_class] + (255,)
 
-    Returns:
-        np_image: returns manipulated image
-    """
+                list_of_points = row["Coord"][(index_of_frame-40):index_of_frame]
 
-    if (
-        raw_detections
-        and button_bool["play_video"]
-        and button_bool["display_live_track"]
-    ):
+                pts = np.array(list_of_points, np.int32)
 
-        for object in tracks.keys():
+                pts = pts.reshape((-1, 1, 2))
 
-            if frame in tracks[object]["Frame"]:
-
-                if not track_live[object]:
-                    track_live[object] = [
-                        tracks[object]["Coord"][tracks[object]["Frame"].index(frame)]
-                    ]
-
-                elif frame < tracks[object]["Frame"][-1]:
-
-                    nextframeindex = tracks[object]["Frame"].index(frame)
-                    track_live[object].append(tracks[object]["Coord"][nextframeindex])
-
-                    if len(track_live[object]) >= 20:
-                        track_live[object].pop(0)
-
-                    trackcolor = color_dict[tracks[object]["Class"]] + (255,)
-
-                    pts = np.array(track_live[object], np.int32)
-
-                    pts = pts.reshape((-1, 1, 2))
-
-                    np_image = cv2.polylines(
-                        np_image, [pts], False, color=trackcolor, thickness=2
-                    )
-                # else:
-                # not necessary
-                #     #if track is drawn completely => erase from canvas
-                #     object_live_track[object] = []
+                np_image = cv2.polylines(
+                    np_image, [pts], False, color=trackcolor, thickness=2
+                )
+            except:
+                continue
 
     return np_image
 

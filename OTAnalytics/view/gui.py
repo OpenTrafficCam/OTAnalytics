@@ -10,7 +10,7 @@ from view.helpers.gui_helper import (
     button_display_tracks_switch,
 )
 import keyboard
-import view.objectstorage as objectstorage
+import helpers.config
 import helpers.file_helper as file_helper
 import view.image_alteration
 import view.sections
@@ -107,7 +107,7 @@ class gui(tk.Tk):
 
     def load_video_and_add_frame(self):
 
-        if objectstorage.videoobject:
+        if helpers.config.videoobject:
             info_message("Warning", "Please remove video before adding a new one!")
 
             return
@@ -147,7 +147,7 @@ class gui(tk.Tk):
 
             file_helper.re_initialize()
 
-            objectstorage.videoobject.initialize_empty_image()
+            helpers.config.videoobject.initialize_empty_image()
 
             button_bool["tracks_imported"] = False
 
@@ -198,14 +198,14 @@ class gui(tk.Tk):
                     file_helper.tracks_df,
                     file_helper.tracks_geoseries,
                 ) = load_and_convert(
-                    x_factor=objectstorage.videoobject.x_resize_factor,
-                    y_factor=objectstorage.videoobject.y_resize_factor,
+                    x_resize_factor=helpers.config.videoobject.x_resize_factor,
+                    y_resize_factor=helpers.config.videoobject.y_resize_factor,
                     autoimport=True,
                     files=files,
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-                for object in list(file_helper.tracks_dic.keys()):
+                for object in file_helper.tracks_df.index:
                     self.frame_objects.tree_objects.insert(
                         parent="",
                         index="end",

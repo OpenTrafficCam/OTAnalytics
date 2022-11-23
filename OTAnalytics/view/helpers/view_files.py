@@ -11,7 +11,7 @@ from view.helpers.gui_helper import (
 )
 from view.video import Video
 import helpers.file_helper as file_helper
-import view.objectstorage
+import helpers.config
 import view.image_alteration
 import helpers.file_helper as file_helper
 
@@ -81,7 +81,7 @@ class FrameFiles(tk.LabelFrame):
                 button_play_video_switch(
                     self.button_play_video, self.button_rewind_video
                 ),
-                view.objectstorage.maincanvas.delete_points(),
+                helpers.config.maincanvas.delete_points(),
                 self.play_video(),
             ],
         )
@@ -94,7 +94,7 @@ class FrameFiles(tk.LabelFrame):
             text="Rewind",
             command=lambda: [
                 button_rewind_switch(self.button_rewind_video, self.button_play_video),
-                view.objectstorage.maincanvas.delete_points(),
+                helpers.config.maincanvas.delete_points(),
                 self.rewind_video(),
             ],
         )
@@ -116,7 +116,7 @@ class FrameFiles(tk.LabelFrame):
         video_source = filedialog.askopenfile(
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
-        view.objectstorage.videoobject = Video(video_source.name)
+        helpers.config.videoobject = Video(video_source.name)
 
         path = file_helper.get_dir(video_source.name)
 
@@ -132,16 +132,16 @@ class FrameFiles(tk.LabelFrame):
 
     def add_canvas_frame(self):
 
-        image = view.objectstorage.videoobject.get_frame(np_image=False)
+        image = helpers.config.videoobject.get_frame(np_image=False)
 
-        view.objectstorage.maincanvas.configure(
-            width=view.objectstorage.videoobject.width,
-            height=view.objectstorage.videoobject.height,
+        helpers.config.maincanvas.configure(
+            width=helpers.config.videoobject.width,
+            height=helpers.config.videoobject.height,
         )
 
-        view.objectstorage.sliderobject.create_slider()
+        helpers.config.sliderobject.create_slider()
 
-        view.objectstorage.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
+        helpers.config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
 
     def add_files_to_dict(self, path):
         self.files_dict[path] = {}
@@ -182,7 +182,7 @@ class FrameFiles(tk.LabelFrame):
         """Function to play video."""
         # TODO workaround to not use try except
         try:
-            view.objectstorage.videoobject.stop_thread_backward()
+            helpers.config.videoobject.stop_thread_backward()
         except Exception:
             print("No backwardthread alive")
 
@@ -193,27 +193,27 @@ class FrameFiles(tk.LabelFrame):
 
         while (
             button_bool["play_video"]
-            and view.objectstorage.videoobject.current_frame
-            < view.objectstorage.videoobject.totalframecount
+            and helpers.config.videoobject.current_frame
+            < helpers.config.videoobject.totalframecount
         ):
 
-            if not view.objectstorage.videoobject.thread_forward.is_alive():
-                view.objectstorage.videoobject.new_q()
-                view.objectstorage.videoobject.new_thread_forward()
-                view.objectstorage.videoobject.start_thread_forward()
+            if not helpers.config.videoobject.thread_forward.is_alive():
+                helpers.config.videoobject.new_q()
+                helpers.config.videoobject.new_thread_forward()
+                helpers.config.videoobject.start_thread_forward()
                 # time.sleep(0.1)
 
 
-            time.sleep(view.objectstorage.videoobject.frame_delay)
+            time.sleep(helpers.config.videoobject.frame_delay)
 
-            view.objectstorage.videoobject.current_frame += 1
+            helpers.config.videoobject.current_frame += 1
 
-            np_image = view.objectstorage.videoobject.get_frame(np_image=True).copy()
+            np_image = helpers.config.videoobject.get_frame(np_image=True).copy()
 
             view.image_alteration.manipulate_image(np_image=np_image)
 
-            view.objectstorage.sliderobject.slider.set(
-                view.objectstorage.videoobject.current_frame
+            helpers.config.sliderobject.slider.set(
+                helpers.config.videoobject.current_frame
             )
 
     def rewind_video(self):
@@ -221,35 +221,35 @@ class FrameFiles(tk.LabelFrame):
 
         # stop old thread
 
-        view.objectstorage.videoobject.stop_thread_forward()
+        helpers.config.videoobject.stop_thread_forward()
 
         while (
             button_bool["rewind_video"]
-            and view.objectstorage.videoobject.current_frame
-            < view.objectstorage.videoobject.totalframecount
-            and view.objectstorage.videoobject.current_frame > 0
+            and helpers.config.videoobject.current_frame
+            < helpers.config.videoobject.totalframecount
+            and helpers.config.videoobject.current_frame > 0
         ):
-            if not view.objectstorage.videoobject.thread_backward.is_alive():
-                view.objectstorage.videoobject.new_q()
-                view.objectstorage.videoobject.new_thread_backward()
-                view.objectstorage.videoobject.start_thread_backward()
+            if not helpers.config.videoobject.thread_backward.is_alive():
+                helpers.config.videoobject.new_q()
+                helpers.config.videoobject.new_thread_backward()
+                helpers.config.videoobject.start_thread_backward()
                 # time.sleep(0.1)
 
-            time.sleep(view.objectstorage.videoobject.frame_delay)
+            time.sleep(helpers.config.videoobject.frame_delay)
 
-            view.objectstorage.videoobject.current_frame -= 1
+            helpers.config.videoobject.current_frame -= 1
 
-            np_image = view.objectstorage.videoobject.get_frame(np_image=True)
+            np_image = helpers.config.videoobject.get_frame(np_image=True)
 
             view.image_alteration.manipulate_image(np_image=np_image)
             # slows down program
-            view.objectstorage.sliderobject.slider.set(
-                view.objectstorage.videoobject.current_frame
+            helpers.config.sliderobject.slider.set(
+                helpers.config.videoobject.current_frame
             )
 
     def remove_video(self):
         """removes videofile"""
-
+        self.files_dict = {}
         item = self.tree_files.selection()
         video_name = self.tree_files.item(item, "text")
 
@@ -265,10 +265,10 @@ class FrameFiles(tk.LabelFrame):
 
         self.file_values = []
 
-        view.objectstorage.maincanvas.configure(width=0, height=0)
+        helpers.config.maincanvas.configure(width=0, height=0)
 
-        view.objectstorage.sliderobject.destroy_slider()
+        helpers.config.sliderobject.destroy_slider()
 
-        view.objectstorage.videoobject = None
+        helpers.config.videoobject = None
 
 
