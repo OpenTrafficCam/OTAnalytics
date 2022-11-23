@@ -30,6 +30,8 @@ selectionlist_objects = []
 selectionlist_sections = []
 # maybe necessary to incomment
 
+list_of_analyses = []
+
 raw_detections = []
 tracks_dic = {}
 tracks_df = None

@@ -238,23 +238,7 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
 
     bbcolor = color_dict[vehicle_class] + (255,)
 
-    cv2.rectangle(
-        np_image,
-        (
-            int(
-                x_start
-            ),
-            int(
-                y_start
-            ),
-        ),
-        (
-            int(x_end),
-            int(y_end),
-        ),
-        bbcolor,
-        2,
-    )
+    cv2.rectangle(np_image, (x_start, y_start), (x_end, y_end), bbcolor, 2)
 
     if w < 0.3 * 100:
         fontscale = 0.3
@@ -344,7 +328,13 @@ def draw_tracks_live_with_df(frame, np_image):
                 vehicle_class = row["Class"]
                 trackcolor = color_dict[vehicle_class] + (255,)
 
-                list_of_points = row["Coord"][(index_of_frame-40):index_of_frame]
+                if index_of_frame-40 < 0:
+                    index_beginn = 0
+                else:
+                    index_beginn = index_of_frame-40
+
+                list_of_points = row["Coord"][(index_beginn):index_of_frame]
+
 
                 pts = np.array(list_of_points, np.int32)
 
