@@ -11,7 +11,6 @@ import helpers.config
 import helpers.file_helper as file_helper
 from view.sections import draw_line, draw_polygon
 from helpers.config import bbox_factor_reference
-import time
 
 
 def manipulate_image(np_image=None, closing=False):
