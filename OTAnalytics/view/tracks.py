@@ -127,6 +127,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     #change when using autoload and evaluation
     button_bool["tracks_imported"] = True
 
+    #TODO raw dictionary not necessarry
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
 
