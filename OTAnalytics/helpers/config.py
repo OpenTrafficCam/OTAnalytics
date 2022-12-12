@@ -15,6 +15,5 @@ bbox_factor_reference = {
 }
 
 maincanvas = None
-videoobject = None
 sliderobject = None
 

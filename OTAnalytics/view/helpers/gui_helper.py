@@ -142,7 +142,7 @@ def button_display_tracks_switch(button_display_tracks):
         button (tkinter button): Button.
     """
 
-    if not file_helper.tracks_dic:
+    if not file_helper.list_of_analyses[-1].tracks_dic:
 
         info_message("Warning", "No tracks imported")
 
@@ -164,7 +164,7 @@ def button_display_bb_switch(button_display_bb):
     Args:
         button (tkinter button): Button.
     """
-    if not file_helper.tracks_dic:
+    if not file_helper.list_of_analyses[-1]:
 
         info_message("Warning", "No tracks imported")
 
@@ -185,7 +185,7 @@ def button_display_live_track_switch(button_display_tracks):
         button (tkinter button): Buttons.
     """
 
-    if not file_helper.tracks_dic:
+    if not file_helper.list_of_analyses[-1]:
 
         info_message("Warning", "No tracks imported!")
 

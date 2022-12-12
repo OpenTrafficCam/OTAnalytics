@@ -91,14 +91,14 @@ class FrameSection(tk.LabelFrame):
             detector_name = self.tree_sections.item(item, "text")
             file_helper.selectionlist_sections.append(detector_name)
 
-        for dict_key in file_helper.flow_dict["Detectors"].keys():
+        for dict_key in file_helper.list_of_analyses[-1].flow_dict["Detectors"].keys():
 
             if dict_key in file_helper.selectionlist_sections:
 
-                file_helper.flow_dict["Detectors"][dict_key]["color"] = (200, 0, 0, 255)
+                file_helper.list_of_analyses[-1].flow_dict["Detectors"][dict_key]["color"] = (200, 0, 0, 255)
 
             else:
-                file_helper.flow_dict["Detectors"][dict_key]["color"] = (
+                file_helper.list_of_analyses[-1].flow_dict["Detectors"][dict_key]["color"] = (
                     200,
                     125,
                     125,
@@ -123,13 +123,13 @@ class FrameSection(tk.LabelFrame):
 
             self.tree_sections.delete(sectionitem)
 
-            del file_helper.flow_dict["Detectors"][detector_name]
+            del file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector_name]
 
             #deletes detector in all movements
-            for key in file_helper.flow_dict["Movements"]:
-                for value in file_helper.flow_dict["Movements"][key]:
-                    if detector_name in file_helper.flow_dict["Movements"][key]:
-                        file_helper.flow_dict["Movements"][key].remove(detector_name)
+            for key in file_helper.list_of_analyses[-1].flow_dict["Movements"]:
+                for value in file_helper.list_of_analyses[-1].flow_dict["Movements"][key]:
+                    if detector_name in file_helper.list_of_analyses[-1].flow_dict["Movements"][key]:
+                        file_helper.list_of_analyses[-1].flow_dict["Movements"][key].remove(detector_name)
 
             # update all treeview 
             for i in treeview_movements.get_children():
@@ -196,7 +196,7 @@ class FrameSection(tk.LabelFrame):
 
         detector_name = entrywidget.get()
 
-        if detector_name in file_helper.flow_dict["Detectors"].keys():
+        if detector_name in file_helper.list_of_analyses[-1].flow_dict["Detectors"].keys():
             tk.messagebox.showinfo(
                 title="Warning", message="Sectionname already exists!"
             )
@@ -225,12 +225,12 @@ class FrameSection(tk.LabelFrame):
 
                 continue
 
-            if detector_name not in file_helper.flow_dict["Movements"][movement_name]:
+            if detector_name not in file_helper.list_of_analyses[-1].flow_dict["Movements"][movement_name]:
 
-                file_helper.flow_dict["Movements"][movement_name].append(detector_name)
+                file_helper.list_of_analyses[-1].flow_dict["Movements"][movement_name].append(detector_name)
                 
 
             else:
                 info_message("Warning", "Detector already part of movement!")
-        print(file_helper.flow_dict["Movements"][movement_name])
-        treeview_movements.set(item_movement,0,file_helper.flow_dict["Movements"][movement_name])
+       
+        treeview_movements.set(item_movement,0,file_helper.list_of_analyses[-1].flow_dict["Movements"][movement_name])

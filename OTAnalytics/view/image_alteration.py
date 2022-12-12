@@ -98,7 +98,7 @@ def draw_all_tracks():
         dtype=np.uint8,
     )
 
-    for index, track in file_helper.tracks_df.iterrows():
+    for index, track in file_helper.list_of_analyses[-1].tracks_df.iterrows():
         try:
             trackcolor = color_dict[track["Class"]] + (200,)
         except:
@@ -124,17 +124,17 @@ def draw_detectors_from_dict(np_image):
     Returns:
         np_image (numpy_array): returns manipulated image"""
 
-    if file_helper.flow_dict["Detectors"]:
+    if file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
 
         Line = "line"
 
-        for detector in file_helper.flow_dict["Detectors"]:
-            if file_helper.flow_dict["Detectors"][detector]["type"] == Line:
-                start_x = file_helper.flow_dict["Detectors"][detector]["start_x"]
-                start_y = file_helper.flow_dict["Detectors"][detector]["start_y"]
-                end_x = file_helper.flow_dict["Detectors"][detector]["end_x"]
-                end_y = file_helper.flow_dict["Detectors"][detector]["end_y"]
-                color = file_helper.flow_dict["Detectors"][detector]["color"]
+        for detector in file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
+            if file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["type"] == Line:
+                start_x = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["start_x"]
+                start_y = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["start_y"]
+                end_x = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["end_x"]
+                end_y = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["end_y"]
+                color = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["color"]
 
                 np_image = cv2.line(
                     np_image, (start_x, start_y), (end_x, end_y), color, 3
@@ -146,8 +146,8 @@ def draw_detectors_from_dict(np_image):
                 image = np_image
                 overlay = image.copy()
 
-                polypoints = file_helper.flow_dict["Detectors"][detector]["points"]
-                color = file_helper.flow_dict["Detectors"][detector]["color"]
+                polypoints = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["points"]
+                color = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["color"]
 
                 list_of_tuples = [list(elem) for elem in polypoints]
                 pts = np.array(list_of_tuples, np.int32)
@@ -201,7 +201,7 @@ def draw_bounding_box_with_df(frame, np_image):
         return np_image
 
         
-    df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
+    df = file_helper.list_of_analyses[-1].tracks_df.loc[(file_helper.list_of_analyses[-1].tracks_df['first_appearance_frame'] <= frame) & (file_helper.list_of_analyses[-1].tracks_df['last_appearance_frame'] >= frame)]
 
     for index, row in df.iterrows():
         try:
@@ -318,7 +318,7 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
 def draw_tracks_live_with_df(frame, np_image):
     #subset dataframe
     if button_bool["tracks_imported"] and button_bool["play_video"] and button_bool["display_live_track"]:
-        df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
+        df = file_helper.tracks_df.loc[(file_helper.list_of_analyses[-1].tracks_df['first_appearance_frame'] <= frame) & (file_helper.list_of_analyses[-1].tracks_df['last_appearance_frame'] >= frame)]
 
         for index, row in df.iterrows():
             try:
@@ -356,7 +356,7 @@ def create_intersection_list(current_line_shape):
 
     if button_bool["tracks_imported"] and button_bool["display_all_tracks_toggle"]:
 
-        intersect_series = file_helper.tracks_geoseries.intersects(current_line_shape)
+        intersect_series = file_helper.list_of_analyses[-1].tracks_geoseries.intersects(current_line_shape)
 
         file_helper.selectionlist_objects = [
             i for i in intersect_series.index if intersect_series[i]
