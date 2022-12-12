@@ -25,11 +25,11 @@ class Analyse():
         self.flowfile_existence, self.trackfile_existence = self._corresponding_file_existence()
         
         #section
-        self.flowfile = None
+        self.flow_dict = None
 
 
         #Analysationresults
-        self.eventdataframe = None
+        self.eventbased_dictionary = None
         self.tracks_df_result = None
 
         
