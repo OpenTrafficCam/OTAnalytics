@@ -14,6 +14,7 @@ import helpers.file_helper as file_helper
 import helpers.config
 import view.image_alteration
 import helpers.file_helper as file_helper
+from analyse.analyse_class import Analyse
 
 
 
@@ -118,7 +119,14 @@ class FrameFiles(tk.LabelFrame):
         )
         helpers.config.videoobject = Video(video_source.name)
 
+        file_helper.list_of_analyses.append(Analyse(video_source.name))
+        print(vars(file_helper.list_of_analyses[0]))
+
+        #To analays_class
+
+
         path = file_helper.get_dir(video_source.name)
+
 
         self.add_files_to_dict(path)
 

@@ -32,6 +32,8 @@ selectionlist_sections = []
 
 list_of_analyses = []
 
+
+
 raw_detections = []
 tracks_dic = {}
 tracks_df = None
@@ -111,8 +113,12 @@ def check_fileexistence(path, otflow_pattern, ottrk_pattern):
                 otflow_file = file
 
             elif bool(re.search(ottrk_pattern, file)):
+                print(bool(re.search(ottrk_pattern, file)))
 
                 ottrk_file = file
+    return bool(re.search(otflow_pattern, file)), bool(re.search(ottrk_pattern, file))
+
+    
 
 
 def re_initialize():
