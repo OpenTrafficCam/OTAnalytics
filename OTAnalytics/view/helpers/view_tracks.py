@@ -102,7 +102,7 @@ class FrameObject(tk.LabelFrame):
             command=lambda: [
                 self.clear_treeview(),
                 deload_trackfile(),
-                helpers.config.videoobject.initialize_empty_image(),
+                file_helper.list_of_analyses[-1].initialize_empty_image(),
                 self.button_show_tracks.configure(text="Show all Tracks"),
                 view.image_alteration.manipulate_image()
                 ]
@@ -137,8 +137,8 @@ class FrameObject(tk.LabelFrame):
             file_helper.tracks_df,
             file_helper.tracks_geoseries,
         ) = load_and_convert(
-            x_resize_factor=helpers.config.videoobject.x_resize_factor,
-            y_resize_factor=helpers.config.videoobject.y_resize_factor,
+            x_resize_factor=file_helper.list_of_analyses[-1].videoobject.x_resize_factor,
+            y_resize_factor=file_helper.list_of_analyses[-1].videoobject.y_resize_factor,
         )
         if file_helper.tracks_df.empty:
             print("Importing trackfile not possible, most likely du to missing trajectories")

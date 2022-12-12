@@ -4,6 +4,7 @@ from view.helpers.gui_helper import button_bool
 import view.image_alteration
 import helpers.config
 import view.sections
+import helpers.file_helper as file_helper
 
 
 class OtcCanvas(tk.Canvas):
@@ -112,7 +113,7 @@ class SliderFrame(tk.Frame):
             master=self.frame_slider,
             variable=self.slider_value,
             from_=0,
-            to=helpers.config.videoobject.totalframecount - 1,
+            to=file_helper.list_of_analyses[-1].videoobject.totalframecount - 1,
             orient=tk.HORIZONTAL,
             command=lambda event: self.slider_scroll(int(event)),
         )
@@ -157,9 +158,9 @@ class SliderFrame(tk.Frame):
             and not button_bool["rewind_video"]
             and button_bool["slider"]
         ):
-            helpers.config.videoobject.current_frame = slider_number
+            file_helper.list_of_analyses[-1].videoobject.current_frame = slider_number
 
-            np_image = helpers.config.videoobject.set_frame().copy()
+            np_image = file_helper.list_of_analyses[-1].videoobject.set_frame().copy()
             
 
             view.image_alteration.manipulate_image(np_image=np_image)

@@ -222,7 +222,6 @@ class FrameSection(tk.LabelFrame):
 
             if not detector_name or not movement_name:
                 info_message("Warning", "Please select section and movements!")
-                print("test")
 
                 continue
 

@@ -15,8 +15,6 @@ class Analyse():
 
         self.analyse_name = self._get_filename()
 
-
-
         #necessary track data
         self.raw_detections = None
         self.tracks_dic = None

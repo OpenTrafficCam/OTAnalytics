@@ -68,11 +68,6 @@ def get_filename(path: str):
     return os.path.basename(path)
 
 
-# def extract_pattern(filename):
-
-#     # return re.search("[a-z]+", filename)
-
-
 def create_pattern(videofilename):
 
     file_pattern = re.split(r"\_", videofilename)
@@ -113,13 +108,9 @@ def check_fileexistence(path, otflow_pattern, ottrk_pattern):
                 otflow_file = file
 
             elif bool(re.search(ottrk_pattern, file)):
-                print(bool(re.search(ottrk_pattern, file)))
 
                 ottrk_file = file
     return bool(re.search(otflow_pattern, file)), bool(re.search(ottrk_pattern, file))
-
-    
-
 
 def re_initialize():
     global flow_dict, raw_detections, tracks

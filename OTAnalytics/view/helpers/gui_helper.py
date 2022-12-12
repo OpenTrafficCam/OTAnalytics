@@ -58,7 +58,7 @@ def button_play_video_switch(button_play, button_rewind):
 
     button_bool["rewind_video"] = False
 
-    if not helpers.config.videoobject:
+    if not file_helper.list_of_analyses[-1].videoobject:
         info_message("Warning", "Please import video first!")
 
         return
@@ -76,7 +76,7 @@ def button_rewind_switch(button_rewind, button_play):
     Args:
         button (tkinter button): play and rewind button.
     """
-    if not helpers.config.videoobject:
+    if not file_helper.list_of_analyses[-1].videoobject:
         info_message("Warning", "Please import video first!")
 
         return

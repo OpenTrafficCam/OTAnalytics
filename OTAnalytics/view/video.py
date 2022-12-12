@@ -163,7 +163,7 @@ class Video(FileVideoStream):
         super().__init__(filepath, **kwargs)
 
         self.filename = filepath.split("/")[-1]
-        print(self.filename)
+
 
         # start a thread to read frames from the file video stream
         self.start_thread_forward()

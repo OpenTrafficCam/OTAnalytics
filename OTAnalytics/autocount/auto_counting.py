@@ -123,15 +123,8 @@ def time_calculation_dataframe(track_df, fps=None, datetime_obj=None):
         information in timeformat.
     """
     if fps is None or datetime_obj is None:
-        fps = helpers.config.videoobject.fps
-        datetime_obj=helpers.config.videoobject.datetime_obj
-    # if timedelta_entry is None:
-
-    #     entry_timedelta = "00:00:00"
-
-    # else:
-
-    #     entry_timedelta = timedelta_entry.get()
+        fps = file_helper.list_of_analyses[-1].videoobject.fps
+        datetime_obj=file_helper.list_of_analyses[-1].videoobject.datetime_obj
 
     track_df["first_appearance_time"] = pd.to_timedelta(
             (
@@ -219,8 +212,8 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_
         dataframe: dataframe with events and belonging datetime
     """
     if fps is None or datetime_obj is None:
-        fps = helpers.config.videoobject.fps
-        datetime_obj = helpers.config.videoobject.datetime_obj
+        fps = file_helper.list_of_analyses[-1].fps
+        datetime_obj = file_helper.list_of_analyses[-1].datetime_obj
 
     eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
     eventbased_dataframe.index.set_names(["EventID"], inplace=True)

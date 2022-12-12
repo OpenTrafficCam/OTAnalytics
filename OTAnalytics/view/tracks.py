@@ -128,6 +128,11 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     button_bool["tracks_imported"] = True
 
     #TODO raw dictionary not necessarry
+    file_helper.list_of_analyses[-1].raw_detections = raw_detections
+    file_helper.list_of_analyses[-1].tracks_dic = tracks_dic
+    file_helper.list_of_analyses[-1].tracks_df = tracks_df
+    file_helper.list_of_analyses[-1].tracks_geoseries = tracks_geoseries
+
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
 

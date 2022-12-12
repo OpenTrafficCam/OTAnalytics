@@ -107,10 +107,10 @@ class gui(tk.Tk):
 
     def load_video_and_add_frame(self):
 
-        if helpers.config.videoobject:
-            info_message("Warning", "Please remove video before adding a new one!")
+        # if file_helper.list_of_analyses[-1]:
+        #     info_message("Warning", "Please remove video before adding a new one!")
 
-            return
+        #     return
 
         self.frame_files.add_file()
         self.frame_files.add_canvas_frame()
@@ -147,7 +147,7 @@ class gui(tk.Tk):
 
             file_helper.re_initialize()
 
-            helpers.config.videoobject.initialize_empty_image()
+            file_helper.list_of_analyses[-1].videoobject.initialize_empty_image()
 
             button_bool["tracks_imported"] = False
 
@@ -198,8 +198,8 @@ class gui(tk.Tk):
                     file_helper.tracks_df,
                     file_helper.tracks_geoseries,
                 ) = load_and_convert(
-                    x_resize_factor=helpers.config.videoobject.x_resize_factor,
-                    y_resize_factor=helpers.config.videoobject.y_resize_factor,
+                    x_resize_factor=file_helper.list_of_analyses[-1].videoobject.x_resize_factor,
+                    y_resize_factor=file_helper.list_of_analyses[-1].videoobject.y_resize_factor,
                     autoimport=True,
                     files=files,
                 )

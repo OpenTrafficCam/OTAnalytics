@@ -28,11 +28,11 @@ def manipulate_image(np_image=None, closing=False):
         current and last twenty frames.
         raw_detections (dictionary): Dictionary with raw detections from OpenVision.
     """
-    if not helpers.config.videoobject:
+    if not file_helper.list_of_analyses[-1].videoobject:
         return
 
     if np_image is None:
-        np_image = helpers.config.videoobject.np_image.copy()
+        np_image = file_helper.list_of_analyses[-1].videoobject.np_image.copy()
 
     np_image = draw_detectors_from_dict(np_image)
     
@@ -44,20 +44,20 @@ def manipulate_image(np_image=None, closing=False):
             tracks_df=file_helper.tracks_df,
         )
         
-        np_image = draw_bounding_box_with_df(helpers.config.videoobject.current_frame,np_image )
+        np_image = draw_bounding_box_with_df(file_helper.list_of_analyses[-1].videoobject.current_frame,np_image )
 
-        np_image = draw_tracks_live_with_df(helpers.config.videoobject.current_frame,np_image)
+        np_image = draw_tracks_live_with_df(file_helper.list_of_analyses[-1].videoobject.current_frame,np_image)
 
     if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
 
-        if helpers.config.videoobject.transparent_image is None:
+        if file_helper.list_of_analyses[-1].videoobject.transparent_image is None:
 
             # creates transparent_image and draws all tracks on it
             # so all tracks dont have to be drawn everytime
-            helpers.config.videoobject.transparent_image = draw_all_tracks()
+            file_helper.list_of_analyses[-1].videoobject.transparent_image = draw_all_tracks()
 
         np_image = cv2.addWeighted(
-            helpers.config.videoobject.transparent_image, 0.5, np_image, 1, 0
+            file_helper.list_of_analyses[-1].videoobject.transparent_image, 0.5, np_image, 1, 0
         )
 
     # copy is important or else original image will be changed
@@ -78,10 +78,10 @@ def manipulate_image(np_image=None, closing=False):
 
     image = Image.fromarray(np_image)  # to PIL format
 
-    helpers.config.videoobject.ph_image = ImageTk.PhotoImage(image)
+    file_helper.list_of_analyses[-1].videoobject.ph_image = ImageTk.PhotoImage(image)
 
     helpers.config.maincanvas.create_image(
-        0, 0, anchor=tkinter.NW, image=helpers.config.videoobject.ph_image
+        0, 0, anchor=tkinter.NW, image=file_helper.list_of_analyses[-1].videoobject.ph_image
     )
 
     helpers.config.maincanvas.update()
@@ -91,8 +91,8 @@ def draw_all_tracks():
 
     np_image = np.zeros(
         [
-            helpers.config.videoobject.height,
-            helpers.config.videoobject.width,
+            file_helper.list_of_analyses[-1].videoobject.height,
+            file_helper.list_of_analyses[-1].videoobject.width,
             4,
         ],
         dtype=np.uint8,
@@ -102,7 +102,6 @@ def draw_all_tracks():
         try:
             trackcolor = color_dict[track["Class"]] + (200,)
         except:
-            print("Class not found")
             trackcolor = (
                 0,
                 0,
@@ -258,22 +257,22 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         np_image,
                         (
                             int(
-                                x_start * helpers.config.videoobject.x_resize_factor
+                                x_start * file_helper.list_of_analyses[-1].videoobject.x_resize_factor
                             )
                             - 1,
                             int(
-                                y_start * helpers.config.videoobject.y_resize_factor
+                                y_start * file_helper.list_of_analyses[-1].videoobject.y_resize_factor
                             )
                             - 1,
                         ),
                         (
                             int(
-                                x_start * helpers.config.videoobject.x_resize_factor
+                                x_start * file_helper.list_of_analyses[-1].videoobject.x_resize_factor
                             )
                             + text_w
                             + 2,
                             int(
-                                y_start * helpers.config.videoobject.y_resize_factor
+                                y_start * file_helper.list_of_analyses[-1].videoobject.y_resize_factor
                             )
                             - text_h
                             - 2,
@@ -285,10 +284,10 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         anno_txt,
                         (
                             int(
-                                x_start * helpers.config.videoobject.x_resize_factor
+                                x_start * file_helper.list_of_analyses[-1].videoobject.x_resize_factor
                             ),
                             int(
-                                y_start * helpers.config.videoobject.y_resize_factor
+                                y_start * file_helper.list_of_analyses[-1].videoobject.y_resize_factor
                             )
                             - 2,
                         ),
@@ -309,8 +308,8 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
     x_reference_point = int(x - 0.5 * w + w * bbox_factor_reference[vehicle_class][0])
     y_reference_point = int(y - 0.5 * h + h * bbox_factor_reference[vehicle_class][1])
 
-    x_reference_point = int(x_reference_point*helpers.config.videoobject.x_resize_factor)
-    y_reference_point = int(y_reference_point*helpers.config.videoobject.y_resize_factor)
+    x_reference_point = int(x_reference_point*file_helper.list_of_analyses[-1].videoobject.x_resize_factor)
+    y_reference_point = int(y_reference_point*file_helper.list_of_analyses[-1].videoobject.y_resize_factor)
 
     cv2.line(image, (x-5, y+5), (x+5, y-5), (255, 0, 0, 255), 2)
     cv2.line(image, (x-5, y-5), (x+5, y+5), (255, 0, 0, 255), 2)
