@@ -101,7 +101,9 @@ def create_pattern(videofilename):
 def check_fileexistence(path, otflow_pattern, ottrk_pattern):
     # sourcery skip: use-fstring-for-concatenation
     global otflow_file
-    global ottrk_file
+    global ottrk_file 
+    otflow_file = ""
+    ottrk_file = ""
 
     for root, dirs, files in os.walk(path):
         for file in files:

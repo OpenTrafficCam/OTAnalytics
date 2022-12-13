@@ -160,7 +160,7 @@ class gui(tk.Tk):
 
         path = list(self.frame_files.files_dict.keys())[-1]
 
-        if self.frame_files.files_dict[path]["otflow_file"] == "\u2705":
+        if file_helper.list_of_analyses[-1].flowfile_existence:
 
             response_flowfile = tk.messagebox.askquestion(
                 title="otflowfile detected",
@@ -176,7 +176,7 @@ class gui(tk.Tk):
 
                 file_helper.flow_dict = json.loads(files)
 
-        if self.frame_files.files_dict[path]["ottrk_file"] == "\u2705":
+        if file_helper.list_of_analyses[-1].trackfile_existence:
 
             response_track_file = tk.messagebox.askquestion(
                 title="Ottrackfile detected",
