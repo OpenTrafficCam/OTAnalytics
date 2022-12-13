@@ -26,13 +26,13 @@ def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
 def create_section_geometry_object():
     """_summary_
     """
-    for detector in file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
-        x1 = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["start_x"]
-        y1 = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["start_y"]
-        x2 = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["end_x"]
-        y2 = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["end_y"]
+    for detector in file_helper.flow_dict["Detectors"]:
+        x1 = file_helper.flow_dict["Detectors"][detector]["start_x"]
+        y1 = file_helper.flow_dict["Detectors"][detector]["start_y"]
+        x2 = file_helper.flow_dict["Detectors"][detector]["end_x"]
+        y2 = file_helper.flow_dict["Detectors"][detector]["end_y"]
 
-        file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["geometry"] = LineString([(x1, y1), (x2, y2)])
+        file_helper.flow_dict["Detectors"][detector]["geometry"] = LineString([(x1, y1), (x2, y2)])
 
 def find_intersection(row):
     """_summary_
@@ -44,12 +44,12 @@ def find_intersection(row):
         _type_: _description_
     """
 
-    for detector in  file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
+    for detector in  file_helper.flow_dict["Detectors"]:
 
-        if row.geometry.intersects(file_helper.list_of_analyses[-1].flow_dict["Detectors"]["Detectors"][detector]["geometry"]):
+        if row.geometry.intersects(file_helper.flow_dict["Detectors"]["Detectors"][detector]["geometry"]):
 
             # returns coordinates from intersections as point object
-            point_geometry = row.geometry.intersection( file_helper.list_of_analyses[-1].flow_dict["Detectors"]["Detectors"][detector]["geometry"])
+            point_geometry = row.geometry.intersection( file_helper.flow_dict["Detectors"]["Detectors"][detector]["geometry"])
             # create points from coords
             line_points = map(Point, row.geometry.coords)
 

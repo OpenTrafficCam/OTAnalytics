@@ -205,12 +205,12 @@ class gui(tk.Tk):
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-                for object in file_helper.tracks_df.index:
+                for object in file_helper.list_of_analyses[-1].tracks_df.index:
                     self.frame_objects.tree_objects.insert(
                         parent="",
                         index="end",
                         text=object,
-                        values=file_helper.tracks_dic[object]["Class"],
+                        values=file_helper.list_of_analyses[-1].tracks_dic[object]["Class"],
                     )
 
         file_helper.fill_tree_views(

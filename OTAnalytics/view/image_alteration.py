@@ -124,17 +124,17 @@ def draw_detectors_from_dict(np_image):
     Returns:
         np_image (numpy_array): returns manipulated image"""
 
-    if file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
+    if file_helper.flow_dict["Detectors"]:
 
         Line = "line"
 
-        for detector in file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
-            if file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["type"] == Line:
-                start_x = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["start_x"]
-                start_y = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["start_y"]
-                end_x = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["end_x"]
-                end_y = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["end_y"]
-                color = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["color"]
+        for detector in file_helper.flow_dict["Detectors"]:
+            if file_helper.flow_dict["Detectors"][detector]["type"] == Line:
+                start_x = file_helper.flow_dict["Detectors"][detector]["start_x"]
+                start_y = file_helper.flow_dict["Detectors"][detector]["start_y"]
+                end_x = file_helper.flow_dict["Detectors"][detector]["end_x"]
+                end_y = file_helper.flow_dict["Detectors"][detector]["end_y"]
+                color = file_helper.flow_dict["Detectors"][detector]["color"]
 
                 np_image = cv2.line(
                     np_image, (start_x, start_y), (end_x, end_y), color, 3
@@ -146,8 +146,8 @@ def draw_detectors_from_dict(np_image):
                 image = np_image
                 overlay = image.copy()
 
-                polypoints = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["points"]
-                color = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["color"]
+                polypoints = file_helper.flow_dict["Detectors"][detector]["points"]
+                color = file_helper.flow_dict["Detectors"][detector]["color"]
 
                 list_of_tuples = [list(elem) for elem in polypoints]
                 pts = np.array(list_of_tuples, np.int32)
