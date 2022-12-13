@@ -188,7 +188,7 @@ class FrameMovements(tk.LabelFrame):
 
     def create_movement_autofill_window(self):
 
-        if len(file_helper.flow_dict["Detectors"]) <= 1:
+        if len(file_helper.list_of_analyses[-1].flow_dict["Detectors"]) <= 1:
             tk.messagebox.showinfo(
                 title="Warning", message="Please at least two sections!"
             )
@@ -208,7 +208,7 @@ class FrameMovements(tk.LabelFrame):
         # selection treeview
         tree_select_section = ttk.Treeview(
             master=autofill_topwindow,
-            height=len(file_helper.flow_dict["Detectors"]),
+            height=len(file_helper.list_of_analyses[-1].flow_dict["Detectors"]),
         )
         tree_select_section.pack(
             fill="x",
@@ -221,7 +221,7 @@ class FrameMovements(tk.LabelFrame):
         )
         tree_select_section.column("#0", anchor="center", width=100)
         tree_select_section.heading("#0", text=tree_files_cols["#0"], anchor="center")
-        for detector in file_helper.flow_dict["Detectors"]:
+        for detector in file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
             tree_select_section.insert(parent="", index="end", text=detector)
 
         autofill_button = tk.Button(

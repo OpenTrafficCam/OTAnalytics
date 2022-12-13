@@ -48,7 +48,7 @@ def manipulate_image(np_image=None, closing=False):
 
         np_image = draw_tracks_live_with_df(file_helper.list_of_analyses[-1].videoobject.current_frame,np_image)
 
-    if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
+    if button_bool["display_all_tracks_toggle"] and file_helper.list_of_analyses[-1].tracks_df is not None:
 
         if file_helper.list_of_analyses[-1].videoobject.transparent_image is None:
 
@@ -146,8 +146,8 @@ def draw_detectors_from_dict(np_image):
                 image = np_image
                 overlay = image.copy()
 
-                polypoints = file_helper.flow_dict["Detectors"][detector]["points"]
-                color = file_helper.flow_dict["Detectors"][detector]["color"]
+                polypoints = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["points"]
+                color = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["color"]
 
                 list_of_tuples = [list(elem) for elem in polypoints]
                 pts = np.array(list_of_tuples, np.int32)

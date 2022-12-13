@@ -47,9 +47,9 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     """
     start_time = time.time()
     
-    if button_bool["tracks_imported"]:
-        info_message("Warning", "Tracks already imported")
-        return
+    # if button_bool["tracks_imported"]:
+    #     info_message("Warning", "Tracks already imported")
+    #     return
 
     if not autoimport:
         files = load_trackfile()
@@ -61,13 +61,10 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     # raw detections from OTVision
     raw_detections = loaded_dict["data"]
 
-
     for frame in raw_detections:
         for detection in raw_detections[frame]:
 
-
             if detection in tracks_dic:
-
 
                 tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"] 
                 vehicle_class = tracks_dic[detection]["Class"]
@@ -128,10 +125,6 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     button_bool["tracks_imported"] = True
 
     #TODO raw dictionary not necessarry
-    file_helper.list_of_analyses[-1].raw_detections = raw_detections
-    file_helper.list_of_analyses[-1].tracks_dic = tracks_dic
-    file_helper.list_of_analyses[-1].tracks_df = tracks_df
-    file_helper.list_of_analyses[-1].tracks_geoseries = tracks_geoseries
 
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
@@ -168,8 +161,6 @@ def create_tracks_dataframe(tracks_dic):
     tracks_df.reset_index()
 
     return tracks_df
-
-
 
 
 def return_first_frame(lst):

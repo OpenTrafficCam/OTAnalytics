@@ -37,7 +37,8 @@ class FrameFiles(tk.LabelFrame):
 
         # Files treeview
         self.tree_files = ttk.Treeview(master=self.frame_tree, height=3)
-        self.tree_files.pack(fill="x", ipady=10)
+        self.tree_files.pack(fill="x", ipady=10)      
+        self.tree_files.bind('<Button-1>', self.tree_key)
 
         tree_files_cols = {
             "#0": "Video",
@@ -175,6 +176,8 @@ class FrameFiles(tk.LabelFrame):
         TRUE_SYMBOL = "\u2705"  # "\u2713"  # "\u2714"
         FALSE_SYMBOL = "\u274E"  # "\u2717"  # "\u2718"
 
+        
+
         self.tree_files.delete(*self.tree_files.get_children())
 
         for analyses in file_helper.list_of_analyses:
@@ -186,7 +189,18 @@ class FrameFiles(tk.LabelFrame):
                     TRUE_SYMBOL if analyses.trackfile_existence else FALSE_SYMBOL,
                     TRUE_SYMBOL if analyses.flowfile_existence else FALSE_SYMBOL,
                 ),)
+        
+        # always keep first row selected
+        iid = self.tree_files.get_children()[0]
+        self.tree_files.selection_set(iid)
 
+    def tree_key(self, event):
+
+            selected_iid = self.tree_files.selection()[0]
+            current_idx = self.tree_files.index(selected_iid)
+
+            print('Current Row:',current_idx)
+            
 
     def play_video(self):
         """Function to play video."""
