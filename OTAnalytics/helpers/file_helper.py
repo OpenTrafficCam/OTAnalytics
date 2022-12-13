@@ -31,7 +31,7 @@ selectionlist_sections = []
 # maybe necessary to incomment
 
 list_of_analyses = []
-list_of_analyses_index = 0
+active_countings_index = 0
 
 
 

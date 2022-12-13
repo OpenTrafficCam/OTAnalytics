@@ -120,7 +120,7 @@ class FrameFiles(tk.LabelFrame):
         )
         #file_helper.list_of_analyses[-1] = Video(video_source.name)
 
-        file_helper.list_of_analyses.append(Analyse(video_source.name))
+        file_helper.list_of_analyses.insert(0,Analyse(video_source.name))
 
 
         path = file_helper.get_dir(video_source.name)
