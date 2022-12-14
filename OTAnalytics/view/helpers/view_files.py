@@ -138,7 +138,9 @@ class FrameFiles(tk.LabelFrame):
 
     def add_canvas_frame(self):
 
+
         image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=False)
+
 
         helpers.config.maincanvas.configure(
             width=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.width,
@@ -147,7 +149,9 @@ class FrameFiles(tk.LabelFrame):
         #re intialisize Slider if already existed
         if helpers.config.sliderobject.slider is not None:
             helpers.config.sliderobject.destroy_slider()
+        #creates slider and sets value to 0
         helpers.config.sliderobject.create_slider()
+
 
         helpers.config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
 

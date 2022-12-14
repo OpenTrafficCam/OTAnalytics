@@ -118,6 +118,7 @@ class SliderFrame(tk.Frame):
             orient=tk.HORIZONTAL,
             command=lambda event: self.slider_scroll(int(event)),
         )
+        self.slider.set(0)
 
         self.slider.bind("<ButtonPress-1>", self.slider_pressed)
         self.slider.bind("<ButtonRelease-1>", self.slider_released)
