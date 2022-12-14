@@ -174,9 +174,7 @@ class FrameFiles(tk.LabelFrame):
 
     def update_tree_files(self):
         TRUE_SYMBOL = "\u2705"  # "\u2713"  # "\u2714"
-        FALSE_SYMBOL = "\u274E"  # "\u2717"  # "\u2718"
-
-        
+        FALSE_SYMBOL = "\u274E"  # "\u2717"  # "\u2718"       
 
         self.tree_files.delete(*self.tree_files.get_children())
 
@@ -198,6 +196,8 @@ class FrameFiles(tk.LabelFrame):
 
             selected_iid = self.tree_files.selection()[0]
             current_idx = self.tree_files.index(selected_iid)
+
+            file_helper.list_of_analyses_index = current_idx
 
             print('Current Row:',current_idx)
             

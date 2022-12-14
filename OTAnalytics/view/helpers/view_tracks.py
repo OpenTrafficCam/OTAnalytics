@@ -132,10 +132,10 @@ class FrameObject(tk.LabelFrame):
     def add_tracks(self):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
         (
-            file_helper.raw_detections,
-            file_helper.tracks_dic,
-            file_helper.tracks_df,
-            file_helper.tracks_geoseries,
+            file_helper.list_of_analyses[-1].raw_detections,
+            file_helper.list_of_analyses[-1].tracks_dic, 
+            file_helper.list_of_analyses[-1].tracks_df,
+            file_helper.list_of_analyses[-1].tracks_geoseries,
         ) = load_and_convert(
             x_resize_factor=file_helper.list_of_analyses[-1].videoobject.x_resize_factor,
             y_resize_factor=file_helper.list_of_analyses[-1].videoobject.y_resize_factor,

@@ -31,7 +31,7 @@ selectionlist_sections = []
 # maybe necessary to incomment
 
 list_of_analyses = []
-active_countings_index = 0
+list_of_analyses_index = 0
 
 
 
@@ -102,19 +102,24 @@ def check_fileexistence(path, otflow_pattern, ottrk_pattern):
     # sourcery skip: use-fstring-for-concatenation
     global otflow_file
     global ottrk_file 
-    otflow_file = ""
-    ottrk_file = ""
+    otflow_file_existence = False
+    ottrk_file_existence = False
 
     for root, dirs, files in os.walk(path):
         for file in files:
-            if bool(re.search(otflow_pattern, file)):
+            if otflow_pattern:
+            
+                if bool(re.search(otflow_pattern, file)):
 
-                otflow_file = file
-            elif bool(re.search(ottrk_pattern, file)):
+                    otflow_file_existence = True
+                    otflow_file = file
+            if ottrk_pattern:
+                if bool(re.search(ottrk_pattern, file)):
 
-                ottrk_file = file
+                    ottrk_file_existence = True
+                    ottrk_file = file
 
-    return bool(re.search(otflow_pattern, otflow_file)), bool(re.search(ottrk_pattern, ottrk_file))
+    return otflow_file_existence, ottrk_file_existence
 
 def re_initialize():
     global flow_dict, raw_detections, tracks

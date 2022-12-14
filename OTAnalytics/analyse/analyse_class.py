@@ -42,6 +42,6 @@ class Analyse():
     def _corresponding_file_existence(self):
         #patterns
         otflow_pattern, ottrk_pattern = file_helper.create_pattern(self.analyse_name)
-        print(otflow_pattern)
+        print(otflow_pattern, ottrk_pattern)
         return file_helper.check_fileexistence(self.folder_path, otflow_pattern, ottrk_pattern)
 
