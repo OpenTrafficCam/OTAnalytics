@@ -2,6 +2,8 @@ import time
 import tkinter as tk
 from tkinter import filedialog
 import tkinter.ttk as ttk
+import glob
+import os
 
 from view.helpers.gui_helper import (
     button_play_video_switch,
@@ -103,6 +105,14 @@ class FrameFiles(tk.LabelFrame):
 
         self.button_rewind_video.grid(row=0, column=2, pady=(0, 10), sticky="ew")
 
+        # Add folder
+        self.button_add_folder = tk.Button(
+            master=self.frame_control,
+            width=15,
+            text="Add folder"        
+            
+        )
+        self.button_add_folder.grid(row=0, column=4, pady=(0, 10), sticky="ew")
         # Clear Video
         self.button_remove_video = tk.Button(
             master=self.frame_control,
@@ -120,21 +130,35 @@ class FrameFiles(tk.LabelFrame):
         )
         #file_helper.list_of_analyses[file_helper.list_of_analyses_index] = Video(video_source.name)
 
+        print(video_source)
+
         file_helper.list_of_analyses.insert(0,Analyse(video_source.name))
 
 
-        path = file_helper.get_dir(video_source.name)
+        #path = file_helper.get_dir(video_source.name)
 
 
-        self.add_files_to_dict(path)
+        # self.add_files_to_dict(path)
 
-        self.files_dict[path]["video_name"] = file_helper.get_filename(
-            video_source.name
-        )
+        # self.files_dict[path]["video_name"] = file_helper.get_filename(
+        #     video_source.name
+        # )
 
-        self.update_files_dict_values(path)
+        # self.update_files_dict_values(path)
 
         self.update_tree_files()
+
+    def add_folder(self):
+        videpath_folder = filedialog.askdirectory()
+
+        file_list = [videpath_folder + "/" + file for file in os.listdir(videpath_folder) if file.endswith('.mp4')]
+
+        print(file_list)
+        for video_path in file_list:
+            file_helper.list_of_analyses.insert(0,Analyse(video_path))
+            self.update_tree_files()
+
+
 
     def add_canvas_frame(self):
 

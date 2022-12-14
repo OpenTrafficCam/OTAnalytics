@@ -17,7 +17,7 @@ class Analyse():
 
         #necessary track data
         self.raw_detections = None
-        self.tracks_dic = None
+        self.tracks_dic = {}
         self.tracks_df = None
         self.tracks_geoseries = None
 

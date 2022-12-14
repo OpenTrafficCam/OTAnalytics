@@ -95,6 +95,10 @@ class gui(tk.Tk):
         self.frame_files.button_add_video.configure(
             command=self.load_video_and_add_frame
         )
+        self.frame_files.button_add_folder.configure(
+            command = self.folder_load_video_add_frame
+
+        )
 
         self.frame_sections.button_remove_section.configure(
             command=lambda: [
@@ -117,6 +121,9 @@ class gui(tk.Tk):
         self.ask_to_import()
 
         view.image_alteration.manipulate_image()
+    def folder_load_video_add_frame(self):
+        self.frame_files.add_folder()
+    
 
     def import_flowfile(self):
         """Calls load_flowfile-function and inserts view.sections to listboxwidget."""
