@@ -106,6 +106,7 @@ class SliderFrame(tk.Frame):
         self.frame_slider.pack(fill="x")
 
         self.slider_value = tk.DoubleVar()
+        self.slider = None
 
     def create_slider(self):
 
@@ -122,6 +123,8 @@ class SliderFrame(tk.Frame):
         self.slider.bind("<ButtonRelease-1>", self.slider_released)
 
         self.slider.pack(fill="x")
+
+
 
     def destroy_slider(self):
         self.slider.destroy()

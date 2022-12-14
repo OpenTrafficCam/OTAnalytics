@@ -144,7 +144,9 @@ class FrameFiles(tk.LabelFrame):
             width=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.width,
             height=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.height,
         )
-
+        #re intialisize Slider if already existed
+        if helpers.config.sliderobject.slider is not None:
+            helpers.config.sliderobject.destroy_slider()
         helpers.config.sliderobject.create_slider()
 
         helpers.config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
