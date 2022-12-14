@@ -158,9 +158,9 @@ class gui(tk.Tk):
 
     def ask_to_import(self):
 
-        path = list(self.frame_files.files_dict.keys())[-1]
+        path = file_helper.list_of_analyses[file_helper.list_of_analyses_index].folder_path
 
-        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].flowfile_existence:
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].flowfile_existence and file_helper.ask_to_import_flowfile:
 
             response_flowfile = tk.messagebox.askquestion(
                 title="otflowfile detected",
@@ -175,6 +175,14 @@ class gui(tk.Tk):
                 files = files.read()
 
                 file_helper.flow_dict = json.loads(files)
+
+            #stop asking
+            file_helper.ask_to_import_flowfile = False
+            file_helper.fill_tree_views(
+            3,
+            self.frame_movements.tree_movements,
+            self.frame_sections.tree_sections,
+        )
 
         if file_helper.list_of_analyses[file_helper.list_of_analyses_index].trackfile_existence:
 
@@ -210,12 +218,6 @@ class gui(tk.Tk):
                         text=object,
                         values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
                     )
-
-        file_helper.fill_tree_views(
-            3,
-            self.frame_movements.tree_movements,
-            self.frame_sections.tree_sections,
-        )
 
 
 def main():

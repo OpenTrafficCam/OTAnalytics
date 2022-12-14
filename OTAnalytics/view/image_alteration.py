@@ -41,7 +41,7 @@ def manipulate_image(np_image=None, closing=False):
         np_image = draw_selected_tracks(
             np_image,
             selectionlist=file_helper.selectionlist_objects,
-            tracks_df=file_helper.tracks_df,
+            tracks_df=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df,
         )
         
         np_image = draw_bounding_box_with_df(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame,np_image )

@@ -33,13 +33,13 @@ selectionlist_sections = []
 list_of_analyses = []
 list_of_analyses_index = 0
 
+ask_to_import_flowfile = True
 
 
-
-raw_detections = []
-tracks_dic = {}
-tracks_df = None
-tracks_geoseries = None
+# raw_detections = []
+# tracks_dic = {}
+# tracks_df = None
+# tracks_geoseries = None
 
 cleaned_object_dataframe = []
 eventbased_dictionary = {}
@@ -101,7 +101,7 @@ def create_pattern(videofilename):
 def check_fileexistence(path, otflow_pattern, ottrk_pattern):
     # sourcery skip: use-fstring-for-concatenation
     global otflow_file
-    global ottrk_file 
+    global ottrk_file
     otflow_file_existence = False
     ottrk_file_existence = False
 
@@ -147,9 +147,13 @@ def permutation_of_list(selected_sections, maxpermutation=2):
 # %%
 def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
 
+
     global flow_dict, raw_detections, tracks
 
     if option in [1, 3]:
+        #delete all 
+        for i in tree_movements.get_children():
+            tree_movements.delete(i)
         for movement in flow_dict["Movements"]:
 
             tree_movements.insert(
@@ -160,6 +164,7 @@ def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
             )
 
     if option in [2, 3]:
+
         for detector in flow_dict["Detectors"]:
             tree_sections.insert(parent="", index="end", text=detector)
 

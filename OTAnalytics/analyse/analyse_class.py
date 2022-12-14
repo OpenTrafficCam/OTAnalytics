@@ -23,12 +23,7 @@ class Analyse():
 
         #check for check_fileexistence
         self.flowfile_existence, self.trackfile_existence = self._corresponding_file_existence()
-        print(self.flowfile_existence, self.trackfile_existence)
         
-        #section
-        self.flow_dict = None
-
-
         #Analysationresults
         self.eventbased_dictionary = None
         self.tracks_df_result = None

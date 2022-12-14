@@ -14,6 +14,8 @@ bbox_factor_reference = {
     "unclear": (0.5,0.5)
 }
 
+
+
 maincanvas = None
 sliderobject = None
 

@@ -138,8 +138,7 @@ class FrameFiles(tk.LabelFrame):
 
     def add_canvas_frame(self):
 
-
-        image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=False)
+        np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=True)
 
 
         helpers.config.maincanvas.configure(
@@ -151,9 +150,8 @@ class FrameFiles(tk.LabelFrame):
             helpers.config.sliderobject.destroy_slider()
         #creates slider and sets value to 0
         helpers.config.sliderobject.create_slider()
-
-
-        helpers.config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
+        view.image_alteration.manipulate_image(np_image=np_image)
+        #helpers.config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
 
     def add_files_to_dict(self, path):
         self.files_dict[path] = {}
@@ -222,7 +220,7 @@ class FrameFiles(tk.LabelFrame):
         except Exception:
             print("No backwardthread alive")
 
-        for object in list(file_helper.tracks_dic.keys()):
+        for object in list(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic.keys()):
 
             # tracks disappear when videoplaying is stopped
             file_helper.tracks_live[object] = []

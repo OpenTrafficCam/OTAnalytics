@@ -91,14 +91,14 @@ class FrameSection(tk.LabelFrame):
             detector_name = self.tree_sections.item(item, "text")
             file_helper.selectionlist_sections.append(detector_name)
 
-        for dict_key in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"].keys():
+        for dict_key in file_helper.flow_dict["Detectors"].keys():
 
             if dict_key in file_helper.selectionlist_sections:
 
-                file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][dict_key]["color"] = (200, 0, 0, 255)
+                file_helper.flow_dict["Detectors"][dict_key]["color"] = (200, 0, 0, 255)
 
             else:
-                file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][dict_key]["color"] = (
+                file_helper.flow_dict["Detectors"][dict_key]["color"] = (
                     200,
                     125,
                     125,
@@ -123,13 +123,13 @@ class FrameSection(tk.LabelFrame):
 
             self.tree_sections.delete(sectionitem)
 
-            del file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector_name]
+            del file_helper.flow_dict["Detectors"][detector_name]
 
             #deletes detector in all movements
-            for key in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"]:
-                for value in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][key]:
-                    if detector_name in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][key]:
-                        file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][key].remove(detector_name)
+            for key in file_helper.flow_dict["Movements"]:
+                for value in file_helper.flow_dict["Movements"][key]:
+                    if detector_name in file_helper.flow_dict["Movements"][key]:
+                        file_helper.flow_dict["Movements"][key].remove(detector_name)
 
             # update all treeview 
             for i in treeview_movements.get_children():
