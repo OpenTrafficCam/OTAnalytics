@@ -107,7 +107,7 @@ class gui(tk.Tk):
 
     def load_video_and_add_frame(self):
 
-        # if file_helper.list_of_analyses[-1]:
+        # if file_helper.list_of_analyses[file_helper.list_of_analyses_index]:
         #     info_message("Warning", "Please remove video before adding a new one!")
 
         #     return
@@ -147,7 +147,7 @@ class gui(tk.Tk):
 
             file_helper.re_initialize()
 
-            file_helper.list_of_analyses[-1].videoobject.initialize_empty_image()
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.initialize_empty_image()
 
             button_bool["tracks_imported"] = False
 
@@ -160,7 +160,7 @@ class gui(tk.Tk):
 
         path = list(self.frame_files.files_dict.keys())[-1]
 
-        if file_helper.list_of_analyses[-1].flowfile_existence:
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].flowfile_existence:
 
             response_flowfile = tk.messagebox.askquestion(
                 title="otflowfile detected",
@@ -176,7 +176,7 @@ class gui(tk.Tk):
 
                 file_helper.flow_dict = json.loads(files)
 
-        if file_helper.list_of_analyses[-1].trackfile_existence:
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].trackfile_existence:
 
             response_track_file = tk.messagebox.askquestion(
                 title="Ottrackfile detected",
@@ -191,24 +191,24 @@ class gui(tk.Tk):
                 files = files.read()           
 
                 (
-                file_helper.list_of_analyses[-1].raw_detections,
-                file_helper.list_of_analyses[-1].tracks_dic,
-                file_helper.list_of_analyses[-1].tracks_df,
-                file_helper.list_of_analyses[-1].tracks_geoseries,
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].raw_detections,
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic,
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df,
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_geoseries,
                 ) = load_and_convert(
-                    x_resize_factor=file_helper.list_of_analyses[-1].videoobject.x_resize_factor,
-                    y_resize_factor=file_helper.list_of_analyses[-1].videoobject.y_resize_factor,
+                    x_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor,
+                    y_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor,
                     autoimport=True,
                     files=files,
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-                for object in file_helper.list_of_analyses[-1].tracks_df.index:
+                for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
                     self.frame_objects.tree_objects.insert(
                         parent="",
                         index="end",
                         text=object,
-                        values=file_helper.list_of_analyses[-1].tracks_dic[object]["Class"],
+                        values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
                     )
 
         file_helper.fill_tree_views(

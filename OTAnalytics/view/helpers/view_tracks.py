@@ -102,7 +102,7 @@ class FrameObject(tk.LabelFrame):
             command=lambda: [
                 self.clear_treeview(),
                 deload_trackfile(),
-                file_helper.list_of_analyses[-1].initialize_empty_image(),
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].initialize_empty_image(),
                 self.button_show_tracks.configure(text="Show all Tracks"),
                 view.image_alteration.manipulate_image()
                 ]
@@ -132,23 +132,23 @@ class FrameObject(tk.LabelFrame):
     def add_tracks(self):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
         (
-            file_helper.list_of_analyses[-1].raw_detections,
-            file_helper.list_of_analyses[-1].tracks_dic, 
-            file_helper.list_of_analyses[-1].tracks_df,
-            file_helper.list_of_analyses[-1].tracks_geoseries,
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].raw_detections,
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic, 
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df,
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_geoseries,
         ) = load_and_convert(
-            x_resize_factor=file_helper.list_of_analyses[-1].videoobject.x_resize_factor,
-            y_resize_factor=file_helper.list_of_analyses[-1].videoobject.y_resize_factor,
+            x_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor,
+            y_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor,
         )
-        if file_helper.list_of_analyses[-1].tracks_df.empty:
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.empty:
             print("Importing trackfile not possible, most likely du to missing trajectories")
             return
-        for object in file_helper.list_of_analyses[-1].tracks_df.index:
+        for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
             self.tree_objects.insert(
                 parent="",
                 index="end",
                 text=object,
-                values=file_helper.list_of_analyses[-1].tracks_dic[object]["Class"],
+                values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
             )
 
         button_display_tracks_switch(self.button_show_tracks)

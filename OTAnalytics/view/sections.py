@@ -34,7 +34,7 @@ def prepare_draw_line(
 ):
     """Draws line on canvas"""
 
-    np_image = file_helper.list_of_analyses[-1].videoobject.np_image.copy()
+    np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.np_image.copy()
 
     if not button_bool["linedetector_toggle"]:
 
@@ -92,7 +92,7 @@ def prepare_polygon(
 
         return
 
-    np_image = file_helper.list_of_analyses[-1].videoobject.np_image.copy()
+    np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.np_image.copy()
 
     if undo:
 

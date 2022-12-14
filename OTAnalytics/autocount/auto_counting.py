@@ -20,19 +20,19 @@ def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
     """
 
     file_helper.event_number += 1
-    file_helper.list_of_analyses[-1].eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID": detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID": detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
 
 
 def create_section_geometry_object():
     """_summary_
     """
-    for detector in file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
-        x1 = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["start_x"]
-        y1 = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["start_y"]
-        x2 = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["end_x"]
-        y2 = file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["end_y"]
+    for detector in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]:
+        x1 = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["start_x"]
+        y1 = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["start_y"]
+        x2 = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["end_x"]
+        y2 = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["end_y"]
 
-        file_helper.list_of_analyses[-1].flow_dict["Detectors"][detector]["geometry"] = LineString([(x1, y1), (x2, y2)])
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["geometry"] = LineString([(x1, y1), (x2, y2)])
 
 def find_intersection(row):
     """_summary_
@@ -44,12 +44,12 @@ def find_intersection(row):
         _type_: _description_
     """
 
-    for detector in  file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
+    for detector in  file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]:
 
-        if row.geometry.intersects(file_helper.list_of_analyses[-1].flow_dict["Detectors"]["Detectors"][detector]["geometry"]):
+        if row.geometry.intersects(file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]["Detectors"][detector]["geometry"]):
 
             # returns coordinates from intersections as point object
-            point_geometry = row.geometry.intersection( file_helper.list_of_analyses[-1].flow_dict["Detectors"]["Detectors"][detector]["geometry"])
+            point_geometry = row.geometry.intersection( file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]["Detectors"][detector]["geometry"])
             # create points from coords
             line_points = map(Point, row.geometry.coords)
 
@@ -88,7 +88,7 @@ def assign_movement(row):
     """
     sorted_sections = [x for (y,x) in sorted(zip(row["Crossed_Frames"], row["Crossed_Section"]))]
 
-    movement = [k for k, v in file_helper.list_of_analyses[-1].flow_dict["Movements"].items() if v == sorted_sections]
+    movement = [k for k, v in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"].items() if v == sorted_sections]
 
     return movement[0] if movement else None
         
@@ -123,8 +123,8 @@ def time_calculation_dataframe(track_df, fps=None, datetime_obj=None):
         information in timeformat.
     """
     if fps is None or datetime_obj is None:
-        fps = file_helper.list_of_analyses[-1].videoobject.fps
-        datetime_obj=file_helper.list_of_analyses[-1].videoobject.datetime_obj
+        fps = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.fps
+        datetime_obj=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.datetime_obj
 
     track_df["first_appearance_time"] = pd.to_timedelta(
             (
@@ -212,8 +212,8 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_
         dataframe: dataframe with events and belonging datetime
     """
     if fps is None or datetime_obj is None:
-        fps = file_helper.list_of_analyses[-1].fps
-        datetime_obj = file_helper.list_of_analyses[-1].datetime_obj
+        fps = file_helper.list_of_analyses[file_helper.list_of_analyses_index].fps
+        datetime_obj = file_helper.list_of_analyses[file_helper.list_of_analyses_index].datetime_obj
 
     eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
     eventbased_dataframe.index.set_names(["EventID"], inplace=True)
@@ -239,14 +239,14 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     """
     # create necessary columns
     file_helper.event_number = 0
-    file_helper.list_of_analyses[-1].tracks_df["Crossed_Section"] = ""
-    file_helper.list_of_analyses[-1].tracks_df["Crossed_Frames"] = ""
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Crossed_Section"] = ""
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Crossed_Frames"] = ""
 
     create_section_geometry_object()
 
-    file_helper.list_of_analyses[-1].tracks_df = file_helper.list_of_analyses[-1].tracks_df.apply(lambda row: find_intersection(row), axis=1)
-    file_helper.list_of_analyses[-1].tracks_df["Movement"] = file_helper.list_of_analyses[-1].tracks_df.apply(lambda row: assign_movement(row), axis=1)
-    file_helper.list_of_analyses[-1].tracks_df["Appearance"] = time_calculation_dataframe(file_helper.list_of_analyses[-1].tracks_df)
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.apply(lambda row: find_intersection(row), axis=1)
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Movement"] = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.apply(lambda row: assign_movement(row), axis=1)
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Appearance"] = time_calculation_dataframe(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df)
 
     eventbased_dataframe = eventased_dictionary_to_dataframe(fps=None, datetime_obj=None)
 
@@ -254,7 +254,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
 
     if for_drawing:
 
-        return file_helper.list_of_analyses[-1].cleaned_dataframe
+        return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
 
     safe_to_csv(tracks_df_result, eventbased_dataframe)
 

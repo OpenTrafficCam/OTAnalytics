@@ -38,7 +38,7 @@ class FrameFiles(tk.LabelFrame):
         # Files treeview
         self.tree_files = ttk.Treeview(master=self.frame_tree, height=3)
         self.tree_files.pack(fill="x", ipady=10)      
-        self.tree_files.bind('<Button-1>', self.tree_key)
+        self.tree_files.bind('<Button-1>',self.video_selection)
 
         tree_files_cols = {
             "#0": "Video",
@@ -118,7 +118,7 @@ class FrameFiles(tk.LabelFrame):
         video_source = filedialog.askopenfile(
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
-        #file_helper.list_of_analyses[-1] = Video(video_source.name)
+        #file_helper.list_of_analyses[file_helper.list_of_analyses_index] = Video(video_source.name)
 
         file_helper.list_of_analyses.insert(0,Analyse(video_source.name))
 
@@ -138,11 +138,11 @@ class FrameFiles(tk.LabelFrame):
 
     def add_canvas_frame(self):
 
-        image = file_helper.list_of_analyses[-1].videoobject.get_frame(np_image=False)
+        image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=False)
 
         helpers.config.maincanvas.configure(
-            width=file_helper.list_of_analyses[-1].videoobject.width,
-            height=file_helper.list_of_analyses[-1].videoobject.height,
+            width=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.width,
+            height=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.height,
         )
 
         helpers.config.sliderobject.create_slider()
@@ -192,12 +192,18 @@ class FrameFiles(tk.LabelFrame):
         iid = self.tree_files.get_children()[0]
         self.tree_files.selection_set(iid)
 
-    def tree_key(self, event):
+    def video_selection(self, event):
+
 
             selected_iid = self.tree_files.selection()[0]
             current_idx = self.tree_files.index(selected_iid)
 
+            if current_idx == file_helper.list_of_analyses_index:
+                return
+
             file_helper.list_of_analyses_index = current_idx
+
+            self.add_canvas_frame()
 
             print('Current Row:',current_idx)
             
@@ -206,7 +212,7 @@ class FrameFiles(tk.LabelFrame):
         """Function to play video."""
         # TODO workaround to not use try except
         try:
-            file_helper.list_of_analyses[-1].videoobject.stop_thread_backward()
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.stop_thread_backward()
         except Exception:
             print("No backwardthread alive")
 
@@ -217,27 +223,27 @@ class FrameFiles(tk.LabelFrame):
 
         while (
             button_bool["play_video"]
-            and file_helper.list_of_analyses[-1].videoobject.current_frame
-            < file_helper.list_of_analyses[-1].videoobject.totalframecount
+            and file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame
+            < file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.totalframecount
         ):
 
-            if not file_helper.list_of_analyses[-1].videoobject.thread_forward.is_alive():
-                file_helper.list_of_analyses[-1].videoobject.new_q()
-                file_helper.list_of_analyses[-1].videoobject.new_thread_forward()
-                file_helper.list_of_analyses[-1].videoobject.start_thread_forward()
+            if not file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.thread_forward.is_alive():
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.new_q()
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.new_thread_forward()
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.start_thread_forward()
                 # time.sleep(0.1)
 
 
-            time.sleep(file_helper.list_of_analyses[-1].videoobject.frame_delay)
+            time.sleep(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.frame_delay)
 
-            file_helper.list_of_analyses[-1].videoobject.current_frame += 1
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame += 1
 
-            np_image = file_helper.list_of_analyses[-1].videoobject.get_frame(np_image=True).copy()
+            np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=True).copy()
 
             view.image_alteration.manipulate_image(np_image=np_image)
 
             helpers.config.sliderobject.slider.set(
-                file_helper.list_of_analyses[-1].videoobject.current_frame
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame
             )
 
     def rewind_video(self):
@@ -245,30 +251,30 @@ class FrameFiles(tk.LabelFrame):
 
         # stop old thread
 
-        file_helper.list_of_analyses[-1].videoobject.stop_thread_forward()
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.stop_thread_forward()
 
         while (
             button_bool["rewind_video"]
-            and file_helper.list_of_analyses[-1].videoobject.current_frame
-            < file_helper.list_of_analyses[-1].videoobject.totalframecount
-            and file_helper.list_of_analyses[-1].videoobject.current_frame > 0
+            and file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame
+            < file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.totalframecount
+            and file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame > 0
         ):
-            if not file_helper.list_of_analyses[-1].videoobject.thread_backward.is_alive():
-                file_helper.list_of_analyses[-1].videoobject.new_q()
-                file_helper.list_of_analyses[-1].videoobject.new_thread_backward()
-                file_helper.list_of_analyses[-1].videoobject.start_thread_backward()
+            if not file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.thread_backward.is_alive():
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.new_q()
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.new_thread_backward()
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.start_thread_backward()
                 # time.sleep(0.1)
 
-            time.sleep(file_helper.list_of_analyses[-1].videoobject.frame_delay)
+            time.sleep(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.frame_delay)
 
-            file_helper.list_of_analyses[-1].videoobject.current_frame -= 1
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame -= 1
 
-            np_image = file_helper.list_of_analyses[-1].videoobject.get_frame(np_image=True)
+            np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=True)
 
             view.image_alteration.manipulate_image(np_image=np_image)
             # slows down program
             helpers.config.sliderobject.slider.set(
-                file_helper.list_of_analyses[-1].videoobject.current_frame
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame
             )
 
     def remove_video(self):
@@ -293,6 +299,6 @@ class FrameFiles(tk.LabelFrame):
 
         helpers.config.sliderobject.destroy_slider()
 
-        file_helper.list_of_analyses[-1] = None
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index] = None
 
 

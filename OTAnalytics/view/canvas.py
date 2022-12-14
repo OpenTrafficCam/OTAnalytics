@@ -113,7 +113,7 @@ class SliderFrame(tk.Frame):
             master=self.frame_slider,
             variable=self.slider_value,
             from_=0,
-            to=file_helper.list_of_analyses[-1].videoobject.totalframecount - 1,
+            to=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.totalframecount - 1,
             orient=tk.HORIZONTAL,
             command=lambda event: self.slider_scroll(int(event)),
         )
@@ -158,9 +158,9 @@ class SliderFrame(tk.Frame):
             and not button_bool["rewind_video"]
             and button_bool["slider"]
         ):
-            file_helper.list_of_analyses[-1].videoobject.current_frame = slider_number
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame = slider_number
 
-            np_image = file_helper.list_of_analyses[-1].videoobject.set_frame().copy()
+            np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.set_frame().copy()
             
 
             view.image_alteration.manipulate_image(np_image=np_image)

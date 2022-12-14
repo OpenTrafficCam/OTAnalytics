@@ -81,14 +81,14 @@ class FrameMovements(tk.LabelFrame):
         """
         movement_name = entrywidget.get()
 
-        if movement_name in file_helper.list_of_analyses[-1].flow_dict["Movements"].keys():
+        if movement_name in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"].keys():
             tk.messagebox.showinfo(
                 title="Warning", message="Movementname already exists!"
             )
 
         else:
 
-            file_helper.list_of_analyses[-1].flow_dict["Movements"][movement_name] = []
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][movement_name] = []
 
             self.tree_movements.insert(parent="", index="end", text=movement_name)
 
@@ -130,7 +130,7 @@ class FrameMovements(tk.LabelFrame):
 
             self.tree_movements.delete(movementitem)
 
-            del file_helper.list_of_analyses[-1].flow_dict["Movements"][movement_name]
+            del file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][movement_name]
 
     def create_movement_rename_window(self):
 
@@ -172,10 +172,10 @@ class FrameMovements(tk.LabelFrame):
 
         movement_new_name = entrywidget.get()
 
-        if movement_new_name not in file_helper.list_of_analyses[-1].flow_dict["Movements"].keys():
-            file_helper.list_of_analyses[-1].flow_dict["Movements"][
+        if movement_new_name not in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"].keys():
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][
                 movement_new_name
-            ] = file_helper.list_of_analyses[-1].flow_dict["Movements"].pop(old_movement_name)
+            ] = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"].pop(old_movement_name)
 
             self.tree_movements.item(self.item, text=movement_new_name)
 
@@ -188,7 +188,7 @@ class FrameMovements(tk.LabelFrame):
 
     def create_movement_autofill_window(self):
 
-        if len(file_helper.list_of_analyses[-1].flow_dict["Detectors"]) <= 1:
+        if len(file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]) <= 1:
             tk.messagebox.showinfo(
                 title="Warning", message="Please at least two sections!"
             )
@@ -208,7 +208,7 @@ class FrameMovements(tk.LabelFrame):
         # selection treeview
         tree_select_section = ttk.Treeview(
             master=autofill_topwindow,
-            height=len(file_helper.list_of_analyses[-1].flow_dict["Detectors"]),
+            height=len(file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]),
         )
         tree_select_section.pack(
             fill="x",
@@ -221,7 +221,7 @@ class FrameMovements(tk.LabelFrame):
         )
         tree_select_section.column("#0", anchor="center", width=100)
         tree_select_section.heading("#0", text=tree_files_cols["#0"], anchor="center")
-        for detector in file_helper.list_of_analyses[-1].flow_dict["Detectors"]:
+        for detector in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]:
             tree_select_section.insert(parent="", index="end", text=detector)
 
         autofill_button = tk.Button(
@@ -242,11 +242,11 @@ class FrameMovements(tk.LabelFrame):
         items = treeview.selection()
         sectionlist = [treeview.item(section, "text") for section in items]
 
-        permutation_list = file_helper.list_of_analyses[-1].permutation_of_list(sectionlist)
+        permutation_list = file_helper.list_of_analyses[file_helper.list_of_analyses_index].permutation_of_list(sectionlist)
 
         for permutation in permutation_list:
 
-            if list(permutation) in file_helper.list_of_analyses[-1].flow_dict["Movements"].values():
+            if list(permutation) in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"].values():
                 tk.messagebox.showinfo(
                     title="Warning",
                     message="Combination "
@@ -256,7 +256,7 @@ class FrameMovements(tk.LabelFrame):
                     + " already exists!",
                 )
                 continue
-            file_helper.list_of_analyses[-1].flow_dict["Movements"][
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][
                 permutation[0] + "-" + permutation[1]
             ] = list(permutation)
 
@@ -265,7 +265,7 @@ class FrameMovements(tk.LabelFrame):
                 index="end",
                 text=permutation[0] + "-" + permutation[1],
                 value=[
-                    file_helper.list_of_analyses[-1].flow_dict["Movements"][
+                    file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][
                         permutation[0] + "-" + permutation[1]
                     ]
                 ],
