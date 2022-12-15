@@ -237,8 +237,6 @@ class gui(tk.Tk):
         if response_track_file == "yes":
             for analyse in file_helper.list_of_analyses:
 
-    
-
                 #use trackfile if existent
                 if analyse.track_file:
                     path = file_helper.list_of_analyses[file_helper.list_of_analyses_index].folder_path
@@ -256,7 +254,6 @@ class gui(tk.Tk):
                         autoimport=True,
                         files=files,
                     )
-
 
 def main():
     """Main function."""

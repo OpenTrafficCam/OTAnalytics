@@ -196,7 +196,7 @@ class FrameSection(tk.LabelFrame):
 
         detector_name = entrywidget.get()
 
-        if detector_name in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"].keys():
+        if detector_name in file_helper.flow_dict["Detectors"].keys():
             tk.messagebox.showinfo(
                 title="Warning", message="Sectionname already exists!"
             )
@@ -225,12 +225,12 @@ class FrameSection(tk.LabelFrame):
 
                 continue
 
-            if detector_name not in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][movement_name]:
+            if detector_name not in file_helper.flow_dict["Movements"][movement_name]:
 
-                file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][movement_name].append(detector_name)
+                file_helper.flow_dict["Movements"][movement_name].append(detector_name)
                 
 
             else:
                 info_message("Warning", "Detector already part of movement!")
        
-        treeview_movements.set(item_movement,0,file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"][movement_name])
+        treeview_movements.set(item_movement,0,file_helper.flow_dict["Movements"][movement_name])

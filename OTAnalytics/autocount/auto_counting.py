@@ -5,6 +5,7 @@ import helpers.file_helper as file_helper
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
 from view.helpers.gui_helper import button_bool, info_message
+import os
 
 
 def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
@@ -26,13 +27,13 @@ def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
 def create_section_geometry_object():
     """_summary_
     """
-    for detector in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]:
-        x1 = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["start_x"]
-        y1 = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["start_y"]
-        x2 = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["end_x"]
-        y2 = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["end_y"]
+    for detector in file_helper.flow_dict["Detectors"]:
+        x1 = file_helper.flow_dict["Detectors"][detector]["start_x"]
+        y1 = file_helper.flow_dict["Detectors"][detector]["start_y"]
+        x2 = file_helper.flow_dict["Detectors"][detector]["end_x"]
+        y2 = file_helper.flow_dict["Detectors"][detector]["end_y"]
 
-        file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["geometry"] = LineString([(x1, y1), (x2, y2)])
+        file_helper.flow_dict["Detectors"][detector]["geometry"] = LineString([(x1, y1), (x2, y2)])
 
 def find_intersection(row):
     """_summary_
@@ -44,12 +45,12 @@ def find_intersection(row):
         _type_: _description_
     """
 
-    for detector in  file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]:
+    for detector in  file_helper.flow_dict["Detectors"]:
 
-        if row.geometry.intersects(file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]["Detectors"][detector]["geometry"]):
+        if row.geometry.intersects(file_helper.flow_dict["Detectors"][detector]["geometry"]):
 
             # returns coordinates from intersections as point object
-            point_geometry = row.geometry.intersection( file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"]["Detectors"][detector]["geometry"])
+            point_geometry = row.geometry.intersection( file_helper.flow_dict["Detectors"][detector]["geometry"])
             # create points from coords
             line_points = map(Point, row.geometry.coords)
 
@@ -88,25 +89,29 @@ def assign_movement(row):
     """
     sorted_sections = [x for (y,x) in sorted(zip(row["Crossed_Frames"], row["Crossed_Section"]))]
 
-    movement = [k for k, v in file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Movements"].items() if v == sorted_sections]
+    movement = [k for k, v in file_helper.flow_dict["Movements"].items() if v == sorted_sections]
 
     return movement[0] if movement else None
         
 # %%
-def safe_to_csv(dataframe_autocount, dataframe_eventbased=None):
+def safe_to_csv(analyse,dataframe_autocount, dataframe_eventbased=None ):
     """Safe dataframe as cvs and asks for filepath.
 
     Args:
         process_object (dataframe): Dataframe with object information.
     """
 
-    dataframe_list = [dataframe_autocount, dataframe_eventbased]
+    #dataframe_list = [dataframe_autocount, dataframe_eventbased]
+
+    filepath_event = os.path.join(analyse.folder_path, analyse.analyse_name + '_events.csv')
+    filepath_autocount = os.path.join(analyse.folder_path, analyse.analyse_name + '_count.csv')
     
-    for dataframe in dataframe_list:
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".csv", filetypes=[("CSV", "*.csv")]
-        )
-        dataframe.to_csv(file_path)
+    # for dataframe in dataframe_list:
+    #     file_path = filedialog.asksaveasfilename(
+    #         defaultextension=".csv", filetypes=[("CSV", "*.csv")]
+    #     )
+    dataframe_eventbased.to_csv(filepath_event)
+    dataframe_autocount.to_csv(filepath_autocount)
 
 
 # %%
@@ -202,7 +207,7 @@ def resample_dataframe(entry_interval, track_df):
 
     return track_df
 
-def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_obj=None):
+def eventased_dictionary_to_dataframe(analyse, fps=None, datetime_obj=None):
     """_summary_
 
     Args:
@@ -212,10 +217,10 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_
         dataframe: dataframe with events and belonging datetime
     """
     if fps is None or datetime_obj is None:
-        fps = file_helper.list_of_analyses[file_helper.list_of_analyses_index].fps
-        datetime_obj = file_helper.list_of_analyses[file_helper.list_of_analyses_index].datetime_obj
+        fps = analyse.videoobject.fps
+        datetime_obj = analyse.videoobject.datetime_obj
 
-    eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
+    eventbased_dataframe = pd.DataFrame.from_dict(analyse.eventbased_dictionary, orient='index')
     eventbased_dataframe.index.set_names(["EventID"], inplace=True)
     eventbased_dataframe["seconds"] = (eventbased_dataframe["Frame"] /fps)
     eventbased_dataframe["seconds"] = eventbased_dataframe["seconds"].astype('int')  
@@ -226,7 +231,7 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_
     return eventbased_dataframe
 
 
-def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=False):
+def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=False, multicomputation = False):
     """Calls previous functions for better readability.
 
     Args:
@@ -237,26 +242,30 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
+    
+    if multicomputation:
+        file_helper.event_number = 0
+        for analyse in file_helper.list_of_analyses:
     # create necessary columns
-    file_helper.event_number = 0
-    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Crossed_Section"] = ""
-    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Crossed_Frames"] = ""
 
-    create_section_geometry_object()
+            analyse.tracks_df["Crossed_Section"] = ""
+            analyse.tracks_df["Crossed_Frames"] = ""
 
-    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.apply(lambda row: find_intersection(row), axis=1)
-    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Movement"] = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.apply(lambda row: assign_movement(row), axis=1)
-    file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Appearance"] = time_calculation_dataframe(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df)
+            create_section_geometry_object()
 
-    eventbased_dataframe = eventased_dictionary_to_dataframe(fps=None, datetime_obj=None)
+            analyse.tracks_df =analyse.tracks_df.apply(lambda row: find_intersection(row), axis=1)
+            analyse.tracks_df["Movement"] = analyse.tracks_df.apply(lambda row: assign_movement(row), axis=1)
+            analyse.tracks_df["Appearance"] = time_calculation_dataframe(analyse.tracks_df)
 
-    tracks_df_result = clean_dataframe(file_helper.tracks_df)
+            eventbased_dataframe = eventased_dictionary_to_dataframe(analyse,fps=None, datetime_obj=None)
 
-    if for_drawing:
+            tracks_df_result = clean_dataframe(analyse.tracks_df)
 
-        return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
+            # if for_drawing:
 
-    safe_to_csv(tracks_df_result, eventbased_dataframe)
+            #     return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
+
+            safe_to_csv(analyse,tracks_df_result, eventbased_dataframe)
 
 def create_setting_window():
     """Creates window with button to resample dataframe and two
@@ -295,14 +304,23 @@ def create_setting_window():
     timeinterval_entry.grid(row=3, column=0, sticky="w", pady=5, padx=5)
     timeinterval_entry.insert(0, "None")
 
-    toplevelwindow_button = Button(
+    toplevelwindow_button_compute_onefile = Button(
         toplevelwindow,
-        text="Save file",
+        text="Compute",
         command=lambda: automated_counting(timeinterval_entry, time_entry, ),
     )
-    toplevelwindow_button.grid(
+    toplevelwindow_button_compute_onefile.grid(
         row=4, columnspan=5, column=0, sticky="w", pady=5, padx=5
     )
+    toplevelwindow_button_compute_all = Button(
+        toplevelwindow,
+        text="Compute all",
+        command=lambda: automated_counting(timeinterval_entry, time_entry, ),
+    )
+    toplevelwindow_button_compute_all.grid(
+        row=5, columnspan=5, column=0, sticky="w", pady=5, padx=5
+    )
+
 
     toplevelwindow.protocol("WM_DELETE_WINDOW")
     # makes the background window unavailable

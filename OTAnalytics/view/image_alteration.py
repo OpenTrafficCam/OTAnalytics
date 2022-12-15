@@ -146,8 +146,8 @@ def draw_detectors_from_dict(np_image):
                 image = np_image
                 overlay = image.copy()
 
-                polypoints = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["points"]
-                color = file_helper.list_of_analyses[file_helper.list_of_analyses_index].flow_dict["Detectors"][detector]["color"]
+                polypoints = file_helper.flow_dict["Detectors"][detector]["points"]
+                color = file_helper.flow_dict["Detectors"][detector]["color"]
 
                 list_of_tuples = [list(elem) for elem in polypoints]
                 pts = np.array(list_of_tuples, np.int32)

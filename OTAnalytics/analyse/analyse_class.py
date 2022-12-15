@@ -28,7 +28,7 @@ class Analyse():
         
         
         #Analysationresults
-        self.eventbased_dictionary = None
+        self.eventbased_dictionary = {}
         self.tracks_df_result = None
 
         

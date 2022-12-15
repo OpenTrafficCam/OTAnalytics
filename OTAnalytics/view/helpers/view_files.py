@@ -40,7 +40,8 @@ class FrameFiles(tk.LabelFrame):
         # Files treeview
         self.tree_files = ttk.Treeview(master=self.frame_tree, height=3)
         self.tree_files.pack(fill="x", ipady=10)      
-        self.tree_files.bind('<Button-1>',self.video_selection)
+        self.tree_files.bind('<ButtonRelease-1>',self.video_selection, add="+")
+        self.tree_files.bind('<ButtonRelease-1>',self.multi_video_selection, add="+")
 
         tree_files_cols = {
             "#0": "Video",
@@ -233,6 +234,19 @@ class FrameFiles(tk.LabelFrame):
             self.add_canvas_frame()
 
             print('Current Row:',current_idx)
+
+    def multi_video_selection(self, event):
+        """Re draws detectors, where the selected detectors has different color
+
+    Args:
+        event (tkinter.event): Section selection from  listbox.
+    """
+        file_helper.selectionlist_videofiles = []
+
+        for item in self.tree_files.selection():
+            videofiles_index =self.tree_files.index(item)
+            file_helper.selectionlist_videofiles.append(videofiles_index)
+        print(file_helper.selectionlist_videofiles)
             
 
     def play_video(self):
