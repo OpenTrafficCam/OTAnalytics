@@ -141,8 +141,11 @@ class FrameObject(tk.LabelFrame):
             y_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor,
         )
         if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.empty:
-            print("Importing trackfile not possible, most likely du to missing trajectories")
+            print("Importing trackfile not possible, most likely due to missing trajectories")
             return
+        self.insert_track_to_tree(self)
+
+    def insert_track_to_tree(self):
         for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
             self.tree_objects.insert(
                 parent="",
@@ -150,7 +153,6 @@ class FrameObject(tk.LabelFrame):
                 text=object,
                 values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
             )
-
         button_display_tracks_switch(self.button_show_tracks)
         view.image_alteration.manipulate_image()
 

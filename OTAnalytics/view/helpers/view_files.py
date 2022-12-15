@@ -123,6 +123,7 @@ class FrameFiles(tk.LabelFrame):
         )
         self.button_remove_video.grid(row=0, column=3, pady=(0, 10), sticky="ew")
 
+
     def add_file(self):
 
         # load video object
@@ -130,8 +131,6 @@ class FrameFiles(tk.LabelFrame):
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
         #file_helper.list_of_analyses[file_helper.list_of_analyses_index] = Video(video_source.name)
-
-        print(video_source)
 
         file_helper.list_of_analyses.insert(0,Analyse(video_source.name))
 
@@ -154,12 +153,9 @@ class FrameFiles(tk.LabelFrame):
 
         file_list = [videpath_folder + "/" + file for file in os.listdir(videpath_folder) if file.endswith('.mp4')]
 
-        print(file_list)
         for video_path in file_list:
             file_helper.list_of_analyses.insert(0,Analyse(video_path))
             self.update_tree_files()
-
-
 
     def add_canvas_frame(self):
 
