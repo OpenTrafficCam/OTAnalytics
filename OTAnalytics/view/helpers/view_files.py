@@ -131,7 +131,8 @@ class FrameFiles(tk.LabelFrame):
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
         #file_helper.list_of_analyses[file_helper.list_of_analyses_index] = Video(video_source.name)
-
+        print(file_helper.list_of_analyses_index)
+        file_helper.list_of_analyses_index =0
         file_helper.list_of_analyses.insert(0,Analyse(video_source.name))
 
 
