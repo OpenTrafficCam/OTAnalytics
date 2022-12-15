@@ -14,6 +14,8 @@ class Analyse():
         self.videoobject = Video(filepath_vid)
 
         self.analyse_name = self._get_filename()
+        #files
+        self.track_file = None
 
         #necessary track data
         self.raw_detections = None
@@ -22,7 +24,8 @@ class Analyse():
         self.tracks_geoseries = None
 
         #check for check_fileexistence
-        self.flowfile_existence, self.trackfile_existence = self._corresponding_file_existence()
+        self.flowfile_existence, self.trackfile_existence, self.track_file = self._corresponding_file_existence()
+        
         
         #Analysationresults
         self.eventbased_dictionary = None
@@ -37,6 +40,5 @@ class Analyse():
     def _corresponding_file_existence(self):
         #patterns
         otflow_pattern, ottrk_pattern = file_helper.create_pattern(self.analyse_name)
-        print(otflow_pattern, ottrk_pattern)
         return file_helper.check_fileexistence(self.folder_path, otflow_pattern, ottrk_pattern)
 

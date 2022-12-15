@@ -34,6 +34,7 @@ list_of_analyses = []
 list_of_analyses_index = 0
 
 ask_to_import_flowfile = True
+ask_to_import_trackfile = True
 
 
 # raw_detections = []
@@ -48,7 +49,6 @@ event_number = 1
 
 tracks_live = {}
 otflow_file = None
-ottrk_file = None
 
 
 
@@ -101,9 +101,10 @@ def create_pattern(videofilename):
 def check_fileexistence(path, otflow_pattern, ottrk_pattern):
     # sourcery skip: use-fstring-for-concatenation
     global otflow_file
-    global ottrk_file
     otflow_file_existence = False
     ottrk_file_existence = False
+    ottrk_file = None
+    otflow_file = None
 
     for root, dirs, files in os.walk(path):
         for file in files:
@@ -119,7 +120,7 @@ def check_fileexistence(path, otflow_pattern, ottrk_pattern):
                     ottrk_file_existence = True
                     ottrk_file = file
 
-    return otflow_file_existence, ottrk_file_existence
+    return otflow_file_existence, ottrk_file_existence,ottrk_file
 
 def re_initialize():
     global flow_dict, raw_detections, tracks

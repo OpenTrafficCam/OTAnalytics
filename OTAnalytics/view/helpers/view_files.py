@@ -222,7 +222,6 @@ class FrameFiles(tk.LabelFrame):
 
     def video_selection(self, event):
 
-
             selected_iid = self.tree_files.selection()[0]
             current_idx = self.tree_files.index(selected_iid)
 

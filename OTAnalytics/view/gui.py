@@ -121,8 +121,12 @@ class gui(tk.Tk):
         self.ask_to_import()
 
         view.image_alteration.manipulate_image()
+
     def folder_load_video_add_frame(self):
         self.frame_files.add_folder()
+        self.frame_files.add_canvas_frame()
+
+        self.ask_to_import_all_trackfiles()
     
 
     def import_flowfile(self):
@@ -191,7 +195,7 @@ class gui(tk.Tk):
             self.frame_sections.tree_sections,
         )
 
-        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].trackfile_existence:
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].trackfile_existence and file_helper.ask_to_import_trackfile:
 
             response_track_file = tk.messagebox.askquestion(
                 title="Ottrackfile detected",
@@ -200,7 +204,7 @@ class gui(tk.Tk):
 
             if response_track_file == "yes":
 
-                filepath = f"{path}/{file_helper.ottrk_file}"
+                filepath = f"{path}/{file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file}"
 
                 files = open(filepath, "r")
                 files = files.read()           
@@ -224,6 +228,33 @@ class gui(tk.Tk):
                         index="end",
                         text=object,
                         values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
+                    )
+    def ask_to_import_all_trackfiles(self):
+        response_track_file = tk.messagebox.askquestion(
+                title="Ottrackfile",
+                message="Do you want to import corresponding trackfiles if found in folder?",
+            )
+        if response_track_file == "yes":
+            for analyse in file_helper.list_of_analyses:
+
+    
+
+                #use trackfile if existent
+                if analyse.track_file:
+                    path = file_helper.list_of_analyses[file_helper.list_of_analyses_index].folder_path
+                    filepath = f"{path}/{analyse.track_file}"
+                    files = open(filepath, "r")
+                    files = files.read()    
+
+                    (analyse.raw_detections,
+                    analyse.tracks_dic,
+                    analyse.tracks_df,
+                    analyse.tracks_geoseries,
+                    ) = load_and_convert(
+                        x_resize_factor=analyse.videoobject.x_resize_factor,
+                        y_resize_factor=analyse.videoobject.y_resize_factor,
+                        autoimport=True,
+                        files=files,
                     )
 
 
