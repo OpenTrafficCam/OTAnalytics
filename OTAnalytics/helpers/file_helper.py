@@ -28,6 +28,7 @@ from datetime import datetime
 flow_dict = {"Detectors": {}, "Movements": {}}
 selectionlist_objects = []
 selectionlist_sections = []
+selectionlist_videofiles = []
 # maybe necessary to incomment
 
 list_of_analyses = []

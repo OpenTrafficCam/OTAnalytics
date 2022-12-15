@@ -6,6 +6,7 @@ import pandas as pd
 from shapely.geometry import LineString, Point, Polygon
 from view.helpers.gui_helper import button_bool, info_message
 import os
+import logging
 
 
 def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
@@ -242,30 +243,47 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
+    #create log
+    logging.basicConfig(filename="log.txt", level=logging.INFO,
+                        format="%(asctime)s %(message)s",  filemode="w")
+    #indexes to analyse
+    analyse_indexes = []
     
     if multicomputation:
-        file_helper.event_number = 0
-        for analyse in file_helper.list_of_analyses:
+
+
+        for index in range(len(file_helper.list_of_analyses)):
+            analyse_indexes.append(index)
+
+    else:
+        for index in file_helper.selectionlist_videofiles:
+
+            analyse_indexes.append(index)
+
+    for analyse_index in analyse_indexes:
     # create necessary columns
+        #try:
+        file_helper.list_of_analyses_index = analyse_index
 
-            analyse.tracks_df["Crossed_Section"] = ""
-            analyse.tracks_df["Crossed_Frames"] = ""
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Crossed_Section"] = ""
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Crossed_Frames"] = ""
 
-            create_section_geometry_object()
+        create_section_geometry_object()
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df =file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.apply(lambda row: find_intersection(row), axis=1)
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Movement"] = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.apply(lambda row: assign_movement(row), axis=1)
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df["Appearance"] = time_calculation_dataframe(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df)
+        eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.list_of_analyses[file_helper.list_of_analyses_index],fps=None, datetime_obj=None)
 
-            analyse.tracks_df =analyse.tracks_df.apply(lambda row: find_intersection(row), axis=1)
-            analyse.tracks_df["Movement"] = analyse.tracks_df.apply(lambda row: assign_movement(row), axis=1)
-            analyse.tracks_df["Appearance"] = time_calculation_dataframe(analyse.tracks_df)
+        tracks_df_result = clean_dataframe(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df)
 
-            eventbased_dataframe = eventased_dictionary_to_dataframe(analyse,fps=None, datetime_obj=None)
+        # # if for_drawing:
 
-            tracks_df_result = clean_dataframe(analyse.tracks_df)
+            #return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
 
-            # if for_drawing:
+        safe_to_csv(file_helper.list_of_analyses[file_helper.list_of_analyses_index],tracks_df_result, eventbased_dataframe)
+        # # except:
+        # #     logging.info(f"\n Could not compute File: {analyse.analyse_name}")
 
-            #     return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
-
-            safe_to_csv(analyse,tracks_df_result, eventbased_dataframe)
 
 def create_setting_window():
     """Creates window with button to resample dataframe and two
@@ -315,7 +333,7 @@ def create_setting_window():
     toplevelwindow_button_compute_all = Button(
         toplevelwindow,
         text="Compute all",
-        command=lambda: automated_counting(timeinterval_entry, time_entry, ),
+        command=lambda: automated_counting(timeinterval_entry, time_entry,multicomputation=True ),
     )
     toplevelwindow_button_compute_all.grid(
         row=5, columnspan=5, column=0, sticky="w", pady=5, padx=5
