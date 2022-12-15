@@ -143,7 +143,7 @@ class FrameObject(tk.LabelFrame):
         if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.empty:
             print("Importing trackfile not possible, most likely due to missing trajectories")
             return
-        self.insert_track_to_tree(self)
+        self.insert_track_to_tree()
 
     def insert_track_to_tree(self):
         for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:

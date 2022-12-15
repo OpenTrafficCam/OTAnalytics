@@ -130,22 +130,10 @@ class FrameFiles(tk.LabelFrame):
         video_source = filedialog.askopenfile(
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
-        #file_helper.list_of_analyses[file_helper.list_of_analyses_index] = Video(video_source.name)
         print(file_helper.list_of_analyses_index)
-        file_helper.list_of_analyses_index =0
+        file_helper.list_of_analyses_index = 0
         file_helper.list_of_analyses.insert(0,Analyse(video_source.name))
 
-
-        #path = file_helper.get_dir(video_source.name)
-
-
-        # self.add_files_to_dict(path)
-
-        # self.files_dict[path]["video_name"] = file_helper.get_filename(
-        #     video_source.name
-        # )
-
-        # self.update_files_dict_values(path)
 
         self.update_tree_files()
 
@@ -225,6 +213,9 @@ class FrameFiles(tk.LabelFrame):
 
             if current_idx == file_helper.list_of_analyses_index:
                 return
+            
+            #clear selected track
+            file_helper.selectionlist_objects = []
 
             file_helper.list_of_analyses_index = current_idx
 

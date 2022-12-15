@@ -36,7 +36,7 @@ def manipulate_image(np_image=None, closing=False):
 
     np_image = draw_detectors_from_dict(np_image)
     
-    if button_bool["tracks_imported"]:
+    if file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file:
 
         np_image = draw_selected_tracks(
             np_image,

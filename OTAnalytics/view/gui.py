@@ -108,17 +108,20 @@ class gui(tk.Tk):
         self.frame_files.tree_files.bind('<ButtonRelease-1>',self.reupdate_tree_objects, add="+")
  
     def reupdate_tree_objects(self, event):
+
         print(f"index: {file_helper.list_of_analyses_index}")
         for item in self.frame_objects.tree_objects.get_children():
             self.frame_objects.tree_objects.delete(item)
 
-        for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
-                self.frame_objects.tree_objects.insert(
-                parent="",
-                index="end",
-                text=object,
-                values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
-            )
+        if bool(file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file):
+
+            for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
+                    self.frame_objects.tree_objects.insert(
+                    parent="",
+                    index="end",
+                    text=object,
+                    values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
+                )
         
 
 
