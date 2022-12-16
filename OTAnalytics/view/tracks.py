@@ -24,9 +24,10 @@ def load_trackfile():
     return filepath.read()
 
 def deload_trackfile():
-    file_helper.list_of_analyses[file_helper.list_of_analyses_index].re_initialize()
-    # resets Button dictionary t everything buttonrelated to false
-    reset_buttons_tracks()
+    if file_helper.list_of_analyses:
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].re_initialize()
+        # resets Button dictionary t everything buttonrelated to false
+        reset_buttons_tracks()
 
 
 def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=None):

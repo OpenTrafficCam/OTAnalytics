@@ -170,5 +170,3 @@ class FrameObject(tk.LabelFrame):
         for i in self.tree_objects.get_children():
             self.tree_objects.delete(i)
 
-        
-

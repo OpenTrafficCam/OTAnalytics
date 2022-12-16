@@ -76,9 +76,9 @@ class gui(tk.Tk):
 
         self.frame_files.button_remove_video.configure(
             command=lambda: [
-                self.frame_files.remove_video(),
                 deload_trackfile(),
-                self.frame_objects.clear_treeview()
+                self.frame_objects.clear_treeview(),
+                self.frame_files.remove_video(),
                 
             ]
         )
@@ -241,13 +241,8 @@ class gui(tk.Tk):
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-                for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
-                    self.frame_objects.tree_objects.insert(
-                        parent="",
-                        index="end",
-                        text=object,
-                        values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
-                    )
+                self.fill_track_treeview()
+
     def ask_to_import_all_trackfiles(self):
         response_track_file = tk.messagebox.askquestion(
                 title="Ottrackfile",
@@ -271,8 +266,19 @@ class gui(tk.Tk):
                         x_resize_factor=analyse.videoobject.x_resize_factor,
                         y_resize_factor=analyse.videoobject.y_resize_factor,
                         autoimport=True,
-                        files=files,
-                    )
+                        files=files,)
+            self.fill_track_treeview()       
+            
+
+    def fill_track_treeview(self):
+        for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
+            self.frame_objects.tree_objects.insert(
+                parent="",
+                index="end",
+                text=object,
+                values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
+            )         
+
 
 def main():
     """Main function."""
