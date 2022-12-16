@@ -102,7 +102,7 @@ class FrameObject(tk.LabelFrame):
             command=lambda: [
                 self.clear_treeview(),
                 deload_trackfile(),
-                file_helper.list_of_analyses[file_helper.list_of_analyses_index].initialize_empty_image(),
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.initialize_empty_image(),
                 self.button_show_tracks.configure(text="Show all Tracks"),
                 view.image_alteration.manipulate_image()
                 ]

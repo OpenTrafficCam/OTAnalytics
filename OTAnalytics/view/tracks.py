@@ -24,11 +24,7 @@ def load_trackfile():
     return filepath.read()
 
 def deload_trackfile():
-    file_helper.raw_detections = []
-    file_helper.tracks = {}
-    file_helper.tracks_df = None
-    file_helper.tracks_geoseries = None
-
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].re_initialize()
     # resets Button dictionary t everything buttonrelated to false
     reset_buttons_tracks()
 

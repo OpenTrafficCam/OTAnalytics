@@ -308,26 +308,28 @@ class FrameFiles(tk.LabelFrame):
 
     def remove_video(self):
         """removes videofile"""
-        self.files_dict = {}
-        item = self.tree_files.selection()
-        video_name = self.tree_files.item(item, "text")
 
-        if not video_name:
+        if not file_helper.selectionlist_videofiles:
             info_message("Warning", "Please select video you wish to delete!")
 
             return
 
-        for item in self.tree_files.selection():
-            # item_text = self.tree_files.item(item, "values")
-
-            self.tree_files.delete(item)
-
-        self.file_values = []
+        for index in file_helper.selectionlist_videofiles:
+            iid = self.tree_files.get_children()[index]
+            self.tree_files.delete(iid)
+            del file_helper.list_of_analyses[index]
 
         helpers.config.maincanvas.configure(width=0, height=0)
 
         helpers.config.sliderobject.destroy_slider()
 
-        file_helper.list_of_analyses[file_helper.list_of_analyses_index] = None
+        if file_helper.list_of_analyses:
+
+            file_helper.list_of_analyses_index = 0
+            self.add_canvas_frame()
+
+
+
+
 
 

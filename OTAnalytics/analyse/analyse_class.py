@@ -42,3 +42,18 @@ class Analyse():
         otflow_pattern, ottrk_pattern = file_helper.create_pattern(self.analyse_name)
         return file_helper.check_fileexistence(self.folder_path, otflow_pattern, ottrk_pattern)
 
+    def re_initialize(self):
+        #necessary track data
+        self.track_file = None
+
+        
+        self.raw_detections = None
+        self.tracks_dic = {}
+        self.tracks_df = None
+        self.tracks_geoseries = None
+
+        #Analysationresults
+        self.eventbased_dictionary = {}
+        self.tracks_df_result = None
+
+
