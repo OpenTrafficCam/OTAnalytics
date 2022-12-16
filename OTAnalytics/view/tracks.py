@@ -7,6 +7,7 @@ import helpers.file_helper as file_helper
 import pandas as pd
 from helpers.config import bbox_factor_reference
 from shapely.geometry import LineString
+import os
 from view.helpers.gui_helper import (button_bool, color_dict, info_message,
                                      reset_buttons_tracks)
 
@@ -19,9 +20,9 @@ def load_trackfile():
     """
 
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
-    #files = open(filepath.name, "r")
+    #set the of the trackfile manuel
 
-    return filepath.read()
+    return filepath.read(), os.path.basename(filepath.name).split('/')[-1]
 
 def deload_trackfile():
     if file_helper.list_of_analyses:
@@ -49,7 +50,9 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     #     return
 
     if not autoimport:
-        files = load_trackfile()
+        files, filename = load_trackfile()
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file = filename
+        
 
     tracks_dic = {}
     loaded_dict = json.loads(files)
@@ -119,7 +122,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     print("--- %s seconds ---" % (time.time() - start_time))
 
     #change when using autoload and evaluation
-    button_bool["tracks_imported"] = True
+    # button_bool["tracks_imported"] = True
 
     #TODO raw dictionary not necessarry
 

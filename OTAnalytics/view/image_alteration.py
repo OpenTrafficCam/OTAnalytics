@@ -293,7 +293,7 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         ),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         fontscale,
-                        (255, 255, 255),
+                        (255, 255, 255,255),
                         1,
                     )
     draw_reference_cross(np_image,int(x), int(y), w, h, vehicle_class)

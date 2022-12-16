@@ -131,6 +131,7 @@ class FrameObject(tk.LabelFrame):
 
     def add_tracks(self):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
+        print(f"index when add tracks is calles {file_helper.list_of_analyses_index}")
         (
             file_helper.list_of_analyses[file_helper.list_of_analyses_index].raw_detections,
             file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic, 
@@ -140,6 +141,7 @@ class FrameObject(tk.LabelFrame):
             x_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor,
             y_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor,
         )
+        
         if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.empty:
             print("Importing trackfile not possible, most likely due to missing trajectories")
             return

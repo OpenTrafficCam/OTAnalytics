@@ -112,7 +112,7 @@ class gui(tk.Tk):
         print(f"index: {file_helper.list_of_analyses_index}")
         for item in self.frame_objects.tree_objects.get_children():
             self.frame_objects.tree_objects.delete(item)
-        print(bool(file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file))
+        print(file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file)
         if bool(file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file):
 
             for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
@@ -122,11 +122,6 @@ class gui(tk.Tk):
                     text=object,
                     values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
                 )
-        
-
-
-    
-
 
     def load_video_and_add_frame(self):
 
@@ -242,6 +237,9 @@ class gui(tk.Tk):
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
                 self.fill_track_treeview()
+            else:
+                # delete found trackfile from analyse class
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file = None
 
     def ask_to_import_all_trackfiles(self):
         response_track_file = tk.messagebox.askquestion(
