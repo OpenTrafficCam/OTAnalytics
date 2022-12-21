@@ -1,0 +1,48 @@
+2022-12-21 11:59:40,977 
+ Could not compute File: TUDCam01_FR20_2022-09-19_22-00-00
+2022-12-21 11:59:40,977 
+ Could not compute File: TUDCam01_FR20_2022-09-19_21-45-00
+2022-12-21 11:59:40,977 
+ Could not compute File: TUDCam01_FR20_2022-09-19_21-30-00
+2022-12-21 11:59:40,977 
+ Could not compute File: TUDCam01_FR20_2022-09-19_21-15-00
+2022-12-21 11:59:40,977 
+ Could not compute File: TUDCam01_FR20_2022-09-19_21-00-00
+2022-12-21 11:59:40,977 
+ Could not compute File: TUDCam01_FR20_2022-09-19_20-45-00
+2022-12-21 11:59:40,977 
+ Could not compute File: TUDCam01_FR20_2022-09-19_20-30-00
+2022-12-21 11:59:40,977 
+ Could not compute File: TUDCam01_FR20_2022-09-19_20-15-00
+2022-12-21 11:59:40,978 
+ Could not compute File: TUDCam01_FR20_2022-09-19_20-00-00
+2022-12-21 11:59:40,980 
+ Could not compute File: TUDCam01_FR20_2022-09-19_19-45-00
+2022-12-21 11:59:40,980 
+ Could not compute File: TUDCam01_FR20_2022-09-19_19-30-00
+2022-12-21 11:59:40,980 
+ Could not compute File: TUDCam01_FR20_2022-09-19_19-15-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_22-00-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_21-45-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_21-30-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_21-15-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_21-00-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_20-45-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_20-30-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_20-15-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_20-00-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_19-45-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_19-30-00
+2022-12-21 11:59:43,038 
+ Could not compute File: TUDCam01_FR20_2022-09-19_19-15-00

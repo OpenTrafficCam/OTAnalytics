@@ -174,7 +174,6 @@ class gui(tk.Tk):
 
             file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.initialize_empty_image()
 
-            button_bool["tracks_imported"] = False
 
             view.image_alteration.manipulate_image()
 

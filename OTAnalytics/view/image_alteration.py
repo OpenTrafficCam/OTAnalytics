@@ -317,7 +317,7 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
 
 def draw_tracks_live_with_df(frame, np_image):
     #subset dataframe
-    if button_bool["tracks_imported"] and button_bool["play_video"] and button_bool["display_live_track"]:
+    if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic and button_bool["play_video"] and button_bool["display_live_track"]:
         df = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.loc[(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df['first_appearance_frame'] <= frame) & (file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df['last_appearance_frame'] >= frame)]
 
         for index, row in df.iterrows():
@@ -354,7 +354,7 @@ def create_intersection_list(current_line_shape):
         current_line_shape (_type_): polygon or line
     """
 
-    if button_bool["tracks_imported"] and button_bool["display_all_tracks_toggle"]:
+    if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic and button_bool["display_all_tracks_toggle"]:
 
         intersect_series = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_geoseries.intersects(current_line_shape)
 
