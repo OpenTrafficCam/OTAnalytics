@@ -76,7 +76,7 @@ def create_pattern(videofilename):
     file_pattern = re.split(r"\_", videofilename)
     otflow_pattern = None
     ottrk_pattern = None
-
+    #otc filenames
     try:
 
         otflow_pattern = (
@@ -91,6 +91,25 @@ def create_pattern(videofilename):
             + file_pattern[2]
             + r"\_"
             + file_pattern[3][:8]
+            + ".*ottrk"
+        )
+    except Exception:
+        return otflow_pattern, ottrk_pattern
+    #tempus filename
+    try:
+
+
+        ottrk_pattern = (
+            r"^"
+            + file_pattern[0]
+            + r"\_"
+            + file_pattern[1]
+            + r"\_"
+            + file_pattern[2]
+            + r"\_"
+            + file_pattern[3]
+            + r"\_"
+            + file_pattern[4]
             + ".*ottrk"
         )
     except Exception:
