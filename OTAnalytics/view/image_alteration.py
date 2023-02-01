@@ -257,22 +257,22 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         np_image,
                         (
                             int(
-                                x_start * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+                                x_start
                             )
                             - 1,
                             int(
-                                y_start * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+                                y_start
                             )
                             - 1,
                         ),
                         (
                             int(
-                                x_start * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+                                x_start
                             )
                             + text_w
                             + 2,
                             int(
-                                y_start * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+                                y_start
                             )
                             - text_h
                             - 2,
@@ -284,10 +284,10 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         anno_txt,
                         (
                             int(
-                                x_start * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+                                x_start
                             ),
                             int(
-                                y_start * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+                                y_start
                             )
                             - 2,
                         ),

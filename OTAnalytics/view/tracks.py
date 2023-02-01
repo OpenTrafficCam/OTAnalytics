@@ -20,6 +20,7 @@ def load_trackfile():
     """
 
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
+
     #set the of the trackfile manuel
 
     return filepath.read(), os.path.basename(filepath.name).split('/')[-1]
@@ -32,8 +33,8 @@ def deload_trackfile():
 
 
 def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=None):
-    """_summary_
 
+    """_summary_
     Args:
         x_resize_factor (int): x factor for changed width
         y_resize_factor (int): x factor for changed width
@@ -43,6 +44,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     Returns:
         dataframes, dictionary, tracks as geoseries: raw_detections, tracks_dic, tracks_df, tracks_geoseries
     """
+
     start_time = time.time()
     
     # if button_bool["tracks_imported"]:
@@ -103,8 +105,8 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
                 tracks_dic[detection]["Coord"].append(
                     [
-                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks_dic[detection]["Class"]][0]) * x_resize_factor,
-                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks_dic[detection]["Class"]][1]) * y_resize_factor,
+                        ((raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[vehicle_class][0]))*x_resize_factor,
+                        ((raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[vehicle_class][1]))*y_resize_factor
                     ]
                 )
 

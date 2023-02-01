@@ -192,9 +192,13 @@ class Video(FileVideoStream):
 
             #
             self.y_resize_factor = self.height / self.videoheight
-            self.width = int(self.videowidth * self.y_resize_factor)
 
             self.x_resize_factor = self.width / self.videowidth
+
+
+            self.width = int(self.videowidth * self.x_resize_factor)
+            self.height = int(self.videoheight * self.y_resize_factor)
+
 
         else:
             self.x_resize_factor = 1

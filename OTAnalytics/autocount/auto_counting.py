@@ -7,7 +7,7 @@ from shapely.geometry import LineString, Point, Polygon
 from view.helpers.gui_helper import button_bool, info_message
 import os
 import logging
-
+import numpy as np
 
 def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
     """Creates dictionary with event information
@@ -284,6 +284,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
             safe_to_csv(file_helper.list_of_analyses[analyse_index],tracks_df_result, eventbased_dataframe)
         else:
             logging.info(f"\n Could not compute File: {file_helper.list_of_analyses[analyse_index].analyse_name}")
+
 
 
 def create_setting_window():
