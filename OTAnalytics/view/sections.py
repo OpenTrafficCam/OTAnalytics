@@ -149,6 +149,7 @@ def load_flowfile():
         filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
         files = open(filepath.name, "r")
         files = files.read()
+        print(files)
 
         return json.loads(files)
 

@@ -1,5 +1,2 @@
-
- No trackfile for scene: scene_339
- Videoname: 2022_06_23-14_07_58_scene_339_event_AV.mp4
- Videopath: C:\Users\Goerner\Desktop\testfolder_tempus\2022_06_23-14_07_58_scene_339_event_AV.mp4
- ------------------------------------------------------------------------------------
+2023-02-01 15:29:42,471 
+ Could not compute File: 2022_06_20-09_15_39_scene_1_event_CV

@@ -1,13 +1,11 @@
 import heapq
-from tkinter import Button, Entry, Label, Toplevel, filedialog
-import helpers.config
+from tkinter import Button, Entry, Label, Toplevel
 import helpers.file_helper as file_helper
 import pandas as pd
-from shapely.geometry import LineString, Point, Polygon
-from view.helpers.gui_helper import button_bool, info_message
+from shapely.geometry import LineString, Point
 import os
 import logging
-import numpy as np
+
 
 def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
     """Creates dictionary with event information
