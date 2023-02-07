@@ -72,6 +72,14 @@ def get_filename(path: str):
 
 
 def create_pattern(videofilename):
+    """creates pattern from videoname to find corresponding trackfile
+
+    Args:
+        videofilename (str): Videofilename
+
+    Returns:
+        regex-pattern: Pattern with date and year
+    """
 
     file_pattern = re.split(r"\_", videofilename)
     otflow_pattern = None
@@ -95,26 +103,8 @@ def create_pattern(videofilename):
         )
     except Exception:
         return otflow_pattern, ottrk_pattern
-    #tempus filename
-    try:
 
-
-        ottrk_pattern = (
-            r"^"
-            + file_pattern[0]
-            + r"\_"
-            + file_pattern[1]
-            + r"\_"
-            + file_pattern[2]
-            + r"\_"
-            + file_pattern[3]
-            + r"\_"
-            + file_pattern[4]
-            + ".*ottrk"
-        )
-    except Exception:
-        return otflow_pattern, ottrk_pattern
-
+    
     return otflow_pattern, ottrk_pattern
 
 

@@ -123,6 +123,9 @@ class FrameSection(tk.LabelFrame):
 
             self.tree_sections.delete(sectionitem)
 
+            print(file_helper.flow_dict["Detectors"][detector_name]
+)
+
             del file_helper.flow_dict["Detectors"][detector_name]
 
             #deletes detector in all movements

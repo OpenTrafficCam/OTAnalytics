@@ -127,11 +127,16 @@ class FrameFiles(tk.LabelFrame):
     def add_file(self):
 
         # load video object
-        video_source = filedialog.askopenfile(
+        video_sources = filedialog.askopenfilenames(
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
-        file_helper.list_of_analyses_index = 0
-        file_helper.list_of_analyses.insert(0,Analyse(video_source.name))
+        if video_sources:
+            i=0
+            for video_source in video_sources:
+                print(video_source)
+                
+                file_helper.list_of_analyses_index = i 
+                file_helper.list_of_analyses.insert(0,Analyse(video_source))
 
         self.update_tree_files()
 

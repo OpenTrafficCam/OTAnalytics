@@ -17,6 +17,18 @@ def save_flowfile():
     Args:
         flow_dict (dictionary): Dictionary with sections and movements.
     """
+    if file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.need_for_resize:
+        for detector in file_helper.flow_dict["Detectors"]:
+            file_helper.flow_dict["Detectors"][detector]["start_x"] = file_helper.flow_dict["Detectors"][detector]["start_x"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+            file_helper.flow_dict["Detectors"][detector]["start_y"] = file_helper.flow_dict["Detectors"][detector]["start_y"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+            file_helper.flow_dict["Detectors"][detector]["end_x"] = file_helper.flow_dict["Detectors"][detector]["end_x"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+            file_helper.flow_dict["Detectors"][detector]["end_y"] = file_helper.flow_dict["Detectors"][detector]["end_y"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+            #de geometry key because it cant be saved
+            if 'geometry' in file_helper.flow_dict["Detectors"][detector]:
+                del file_helper.flow_dict["Detectors"][detector]['geometry']
+        
+    print(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor)
+    print(file_helper.flow_dict["Detectors"])
     if file_helper.flow_dict["Detectors"]:
         files = [("Files", "*.otflow")]
         file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
@@ -149,7 +161,7 @@ def load_flowfile():
         filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
         files = open(filepath.name, "r")
         files = files.read()
-        print(files)
+
 
         return json.loads(files)
 

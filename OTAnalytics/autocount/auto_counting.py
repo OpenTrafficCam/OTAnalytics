@@ -261,6 +261,8 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     for analyse_index in analyse_indexes:
     # create necessary columns
         #try:
+        print(bool(file_helper.list_of_analyses[analyse_index].tracks_dic))
+        print(bool(file_helper.flow_dict["Detectors"]))
         if file_helper.list_of_analyses[analyse_index].tracks_dic and file_helper.flow_dict["Detectors"]:
             file_helper.list_of_analyses_index = analyse_index
 
