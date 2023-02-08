@@ -165,6 +165,7 @@ def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
         #delete all 
         for i in tree_movements.get_children():
             tree_movements.delete(i)
+
         for movement in flow_dict["Movements"]:
 
             tree_movements.insert(
@@ -175,9 +176,14 @@ def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
             )
 
     if option in [2, 3]:
+        #delete all 
+        for i in tree_sections.get_children():
+            tree_sections.delete(i)
 
         for detector in flow_dict["Detectors"]:
             tree_sections.insert(parent="", index="end", text=detector)
+
+
 
 
 def geobject_creator(row):

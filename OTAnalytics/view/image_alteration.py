@@ -130,10 +130,10 @@ def draw_detectors_from_dict(np_image):
 
         for detector in file_helper.flow_dict["Detectors"]:
             if file_helper.flow_dict["Detectors"][detector]["type"] == Line:
-                start_x = file_helper.flow_dict["Detectors"][detector]["start_x"]
-                start_y = file_helper.flow_dict["Detectors"][detector]["start_y"]
-                end_x = file_helper.flow_dict["Detectors"][detector]["end_x"]
-                end_y = file_helper.flow_dict["Detectors"][detector]["end_y"]
+                start_x = int(file_helper.flow_dict["Detectors"][detector]["start_x"])
+                start_y = int(file_helper.flow_dict["Detectors"][detector]["start_y"])
+                end_x = int(file_helper.flow_dict["Detectors"][detector]["end_x"])
+                end_y = int(file_helper.flow_dict["Detectors"][detector]["end_y"])
                 color = file_helper.flow_dict["Detectors"][detector]["color"]
 
                 np_image = cv2.line(

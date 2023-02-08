@@ -123,9 +123,6 @@ class FrameSection(tk.LabelFrame):
 
             self.tree_sections.delete(sectionitem)
 
-            print(file_helper.flow_dict["Detectors"][detector_name]
-)
-
             del file_helper.flow_dict["Detectors"][detector_name]
 
             #deletes detector in all movements
@@ -134,7 +131,7 @@ class FrameSection(tk.LabelFrame):
                     if detector_name in file_helper.flow_dict["Movements"][key]:
                         file_helper.flow_dict["Movements"][key].remove(detector_name)
 
-            # update all treeview 
+            # update whole treeview 
             for i in treeview_movements.get_children():
                 treeview_movements.delete(i)
 

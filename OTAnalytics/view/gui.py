@@ -145,7 +145,7 @@ class gui(tk.Tk):
 
     def import_flowfile(self):
         """Calls load_flowfile-function and inserts view.sections to listboxwidget."""
-        file_helper.flow_dict = view.sections.load_flowfile()
+        view.sections.load_flowfile()
 
         view.image_alteration.manipulate_image()
 

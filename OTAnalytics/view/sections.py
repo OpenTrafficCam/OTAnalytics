@@ -17,26 +17,25 @@ def save_flowfile():
     Args:
         flow_dict (dictionary): Dictionary with sections and movements.
     """
-    if file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.need_for_resize:
+    if file_helper.flow_dict["Detectors"]:
+        copy_of_flowdict = file_helper.flow_dict
+
         for detector in file_helper.flow_dict["Detectors"]:
-            file_helper.flow_dict["Detectors"][detector]["start_x"] = file_helper.flow_dict["Detectors"][detector]["start_x"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
-            file_helper.flow_dict["Detectors"][detector]["start_y"] = file_helper.flow_dict["Detectors"][detector]["start_y"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
-            file_helper.flow_dict["Detectors"][detector]["end_x"] = file_helper.flow_dict["Detectors"][detector]["end_x"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
-            file_helper.flow_dict["Detectors"][detector]["end_y"] = file_helper.flow_dict["Detectors"][detector]["end_y"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+            copy_of_flowdict["Detectors"][detector]["start_x"] = file_helper.flow_dict["Detectors"][detector]["start_x"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+            copy_of_flowdict["Detectors"][detector]["start_y"] = file_helper.flow_dict["Detectors"][detector]["start_y"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+            copy_of_flowdict["Detectors"][detector]["end_x"] = file_helper.flow_dict["Detectors"][detector]["end_x"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+            copy_of_flowdict["Detectors"][detector]["end_y"] = file_helper.flow_dict["Detectors"][detector]["end_y"] / file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
             #de geometry key because it cant be saved
             if 'geometry' in file_helper.flow_dict["Detectors"][detector]:
-                del file_helper.flow_dict["Detectors"][detector]['geometry']
-        
-    print(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor)
-    print(file_helper.flow_dict["Detectors"])
-    if file_helper.flow_dict["Detectors"]:
+                del copy_of_flowdict["Detectors"][detector]['geometry']
+
         files = [("Files", "*.otflow")]
         file = filedialog.asksaveasfile(filetypes=files, defaultextension=files)
         # with open(file.name, "w") as a_file:
         #     flow_dict["Detectors"] = detectors
         #     flow_dict["Movements"] = movement_dict
 
-        json.dump(file_helper.flow_dict, file, indent=4)
+        json.dump(copy_of_flowdict, file, indent=4)
     else:
         info_message("Warning", "Create Sections and Movements first!")
 
@@ -154,19 +153,24 @@ def load_flowfile():
         json: Return json file to read from.
     """
 
-    if (
-        not file_helper.flow_dict["Detectors"]
-        and not file_helper.flow_dict["Movements"]
-    ):
-        filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
-        files = open(filepath.name, "r")
-        files = files.read()
+    filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
+    files = open(filepath.name, "r")
+    files = files.read()
 
+    flow_dict_new = json.loads(files)
 
-        return json.loads(files)
+    file_helper.flow_dict.update(flow_dict_new)
+    
 
-    else:
-        info_message("Warning", "Clear existing flowfile first!")
+    for detector in flow_dict_new["Detectors"]:
+        print(detector)
+        file_helper.flow_dict["Detectors"][detector]["start_x"] = file_helper.flow_dict["Detectors"][detector]["start_x"] * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+        file_helper.flow_dict["Detectors"][detector]["start_y"] = file_helper.flow_dict["Detectors"][detector]["start_y"] * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+        file_helper.flow_dict["Detectors"][detector]["end_x"] = file_helper.flow_dict["Detectors"][detector]["end_x"] * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor
+        file_helper.flow_dict["Detectors"][detector]["end_y"] = file_helper.flow_dict["Detectors"][detector]["end_y"] * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
+        #de geometry key because it cant be saved
+
+    print(file_helper.flow_dict)
 
 
 def dump_to_flowdictionary(detector_name):
