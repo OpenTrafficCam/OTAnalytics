@@ -26,10 +26,7 @@ jobs:
           pip install -r requirements.txt
       - name: Install test dependencies
         run: |
-          pip install pytest
-          pip install pytest-cov
-          pip install flake8
-          pip install mypy
+          pip install -r requirements-dev.txt
       - name: Lint codebase
         run: |
           flake8 .
