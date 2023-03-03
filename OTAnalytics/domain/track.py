@@ -26,7 +26,8 @@ class Track:
 
 
 class TrackRepository:
-    tracks: dict[int, Track] = {}
+    def __init__(self) -> None:
+        self.tracks: dict[int, Track] = {}
 
     def add(self, track: Track) -> None:
         self.tracks[track.id] = track

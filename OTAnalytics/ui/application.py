@@ -7,8 +7,9 @@ from customtkinter import CTk, CTkButton
 
 
 class OTAnalyticsApplication:
-    datastore: Datastore
-    app: CTk
+    def __init__(self) -> None:
+        self.datastore: Datastore
+        self.app: CTk
 
     def add_track_of_file(self) -> None:
         track_file = ""  # TODO read from file chooser

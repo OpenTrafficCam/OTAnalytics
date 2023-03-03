@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -11,6 +12,7 @@ class TrackParser(ABC):
         pass
 
 
+@dataclass(frozen=True)
 class Video:
     path: Path
 
@@ -19,20 +21,18 @@ class Video:
 
 
 class VideoRepository:
-    videos: dict[int, Video]
+    def __init__(self) -> None:
+        self.videos: dict[int, Video] = {}
 
     def get_video_for(self, track: Track) -> Optional[Video]:
         return None
 
 
 class Datastore:
-    track_repository: TrackRepository
-    track_parser: TrackParser
-    video_repository: VideoRepository
-
     def __init__(self, track_parser: TrackParser) -> None:
         self.track_parser = track_parser
         self.track_repository = TrackRepository()
+        self.video_repository = VideoRepository()
 
     def load_track_file(self, file: Path) -> None:
         tracks = self.track_parser.parse(file)
