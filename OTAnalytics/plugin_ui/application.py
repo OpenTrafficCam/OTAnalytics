@@ -1,9 +1,9 @@
 import tkinter
-from parser.otvision_parser import OttrkParser
 
 import customtkinter
 from application.datastore import Datastore
 from customtkinter import CTk, CTkButton
+from plugin_parser.otvision_parser import OttrkParser
 
 
 class OTAnalyticsApplication:
