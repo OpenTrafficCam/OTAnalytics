@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from domain.event import Event
-from domain.track import Track
+from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.track import Track
 
 
 @dataclass(frozen=True)
@@ -96,3 +96,6 @@ class SectionRepository:
     def add_all(self, sections: Iterable[Section]) -> None:
         for section in sections:
             self.add(section)
+
+    def get_all(self) -> Iterable[Section]:
+        return self._sections.values()

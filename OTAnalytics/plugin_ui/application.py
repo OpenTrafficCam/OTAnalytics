@@ -3,10 +3,11 @@ from abc import abstractmethod
 from pathlib import Path
 
 import customtkinter
-from application.datastore import Datastore
 from customtkinter import CTk, CTkButton
-from domain.section import Section
-from plugin_parser.otvision_parser import OtsectionParser, OttrkParser
+
+from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.domain.section import Coordinate, LineSection, Section
+from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser, OttrkParser
 
 
 class OTAnalyticsApplication:
@@ -50,11 +51,11 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         self._app: CTk
 
     def load_tracks_in_file(self) -> None:
-        track_file = ""  # TODO read from file chooser
+        track_file = Path("")  # TODO read from file chooser
         self._datastore.load_track_file(file=track_file)
 
     def load_sections_in_file(self) -> None:
-        section_file = ""  # TODO read from file chooser
+        section_file = Path("")  # TODO read from file chooser
         self._datastore.load_section_file(file=section_file)
 
     def start(self) -> None:
@@ -98,5 +99,9 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         button.place(relx=0.75, rely=0.5, anchor=tkinter.CENTER)
 
     def add_section(self) -> None:
-        section: Section = None  # Get section from somewhere
+        section: Section = LineSection(
+            id="north",
+            start=Coordinate(0, 1),
+            end=Coordinate(2, 3),
+        )
         self._datastore.add_section(section)

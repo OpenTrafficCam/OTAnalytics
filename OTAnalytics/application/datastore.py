@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from domain.section import Section, SectionRepository
-from domain.track import Track, TrackId, TrackRepository
+from OTAnalytics.domain.section import Section, SectionRepository
+from OTAnalytics.domain.track import Track, TrackId, TrackRepository
 
 
 class TrackParser(ABC):
