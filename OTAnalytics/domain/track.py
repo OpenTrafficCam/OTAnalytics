@@ -20,14 +20,19 @@ class Detection:
 
 
 @dataclass(frozen=True)
-class Track:
+class TrackId:
     id: int
+
+
+@dataclass(frozen=True)
+class Track:
+    id: TrackId
     detections: list[Detection]
 
 
 class TrackRepository:
     def __init__(self) -> None:
-        self.tracks: dict[int, Track] = {}
+        self.tracks: dict[TrackId, Track] = {}
 
     def add(self, track: Track) -> None:
         self.tracks[track.id] = track
@@ -36,7 +41,7 @@ class TrackRepository:
         for track in tracks:
             self.add(track)
 
-    def get_for(self, id: int) -> Optional[Track]:
+    def get_for(self, id: TrackId) -> Optional[Track]:
         return None
 
     def get_all(self) -> Iterable[Track]:

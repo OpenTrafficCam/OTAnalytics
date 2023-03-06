@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from domain.track import Track, TrackRepository
+from domain.track import Track, TrackId, TrackRepository
 
 
 class TrackParser(ABC):
@@ -22,9 +22,9 @@ class Video:
 
 class VideoRepository:
     def __init__(self) -> None:
-        self.videos: dict[int, Video] = {}
+        self.videos: dict[TrackId, Video] = {}
 
-    def get_video_for(self, track: Track) -> Optional[Video]:
+    def get_video_for(self, track_id: TrackId) -> Optional[Video]:
         return None
 
 
