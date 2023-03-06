@@ -99,3 +99,6 @@ class SectionRepository:
 
     def get_all(self) -> Iterable[Section]:
         return self._sections.values()
+
+    def remove(self, section: Section) -> None:
+        del self._sections[section.id]
