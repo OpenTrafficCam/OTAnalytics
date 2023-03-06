@@ -71,10 +71,7 @@ class LineSection(Section):
 
 @dataclass(frozen=True)
 class Area(Section):
-    x: float
-    y: float
-    w: float
-    h: float
+    coordinates: list[Coordinate]
 
     def enter(self, track: Track) -> Optional[Event]:
         """
