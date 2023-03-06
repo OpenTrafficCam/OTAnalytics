@@ -1,8 +1,14 @@
 from pathlib import Path
+from typing import Tuple
 
-from application.datastore import SectionParser, TrackParser
-from domain.section import Section
-from domain.track import Track
+from OTAnalytics.application.datastore import (
+    SectionParser,
+    TrackParser,
+    Video,
+    VideoParser,
+)
+from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.track import Track, TrackId
 
 
 class OttrkParser(TrackParser):
@@ -12,4 +18,9 @@ class OttrkParser(TrackParser):
 
 class OtsectionParser(SectionParser):
     def parse(self, file: Path) -> list[Section]:
-        return super().parse(file)
+        return []
+
+
+class OttrkVideoParser(VideoParser):
+    def parse(self, file: Path) -> Tuple[list[TrackId], list[Video]]:
+        return [], []
