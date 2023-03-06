@@ -3,12 +3,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from domain.section import Section, SectionRepository
 from domain.track import Track, TrackId, TrackRepository
 
 
 class TrackParser(ABC):
     @abstractmethod
     def parse(self, file: Path) -> list[Track]:
+        pass
+
+
+class SectionParser(ABC):
+    @abstractmethod
+    def parse(self, file: Path) -> list[Section]:
         pass
 
 
@@ -22,18 +29,29 @@ class Video:
 
 class VideoRepository:
     def __init__(self) -> None:
-        self.videos: dict[TrackId, Video] = {}
+        self._videos: dict[TrackId, Video] = {}
 
     def get_video_for(self, track_id: TrackId) -> Optional[Video]:
         return None
 
 
 class Datastore:
-    def __init__(self, track_parser: TrackParser) -> None:
-        self.track_parser = track_parser
-        self.track_repository = TrackRepository()
-        self.video_repository = VideoRepository()
+    def __init__(
+        self, track_parser: TrackParser, section_parser: SectionParser
+    ) -> None:
+        self._track_parser = track_parser
+        self._section_parser = section_parser
+        self._track_repository = TrackRepository()
+        self._section_repository = SectionRepository()
+        self._video_repository = VideoRepository()
 
     def load_track_file(self, file: Path) -> None:
-        tracks = self.track_parser.parse(file)
-        self.track_repository.add_all(tracks)
+        tracks = self._track_parser.parse(file)
+        self._track_repository.add_all(tracks)
+
+    def load_section_file(self, file: Path) -> None:
+        sections = self._section_parser.parse(file)
+        self._section_repository.add_all(sections)
+
+    def add_section(self, section: Section) -> None:
+        self._section_repository.add(section)

@@ -5,15 +5,19 @@ from pathlib import Path
 import customtkinter
 from application.datastore import Datastore
 from customtkinter import CTk, CTkButton
-from plugin_parser.otvision_parser import OttrkParser
+from domain.section import Section
+from plugin_parser.otvision_parser import OtsectionParser, OttrkParser
 
 
 class OTAnalyticsApplication:
     def __init__(self) -> None:
-        self.datastore: Datastore
+        self._datastore: Datastore
 
     def add_tracks_of_file(self, track_file: Path) -> None:
-        self.datastore.load_track_file(file=track_file)
+        self._datastore.load_track_file(file=track_file)
+
+    def add_sections_of_file(self, sections_file: Path) -> None:
+        self._datastore.load_section_file(file=sections_file)
 
     def start(self) -> None:
         self.setup_application()
@@ -28,7 +32,8 @@ class OTAnalyticsApplication:
         Build all required objects and inject them where necessary
         """
         track_parser = OttrkParser()
-        self.datastore = Datastore(track_parser)
+        section_parser = OtsectionParser()
+        self._datastore = Datastore(track_parser, section_parser)
 
 
 class OTAnalyticsCli(OTAnalyticsApplication):
@@ -42,11 +47,15 @@ class OTAnalyticsCli(OTAnalyticsApplication):
 
 class OTAnalyticsGui(OTAnalyticsApplication):
     def __init__(self) -> None:
-        self.app: CTk
+        self._app: CTk
 
     def load_tracks_in_file(self) -> None:
         track_file = ""  # TODO read from file chooser
-        self.datastore.load_track_file(file=track_file)
+        self._datastore.load_track_file(file=track_file)
+
+    def load_sections_in_file(self) -> None:
+        section_file = ""  # TODO read from file chooser
+        self._datastore.load_section_file(file=section_file)
 
     def start(self) -> None:
         self.setup_application()
@@ -56,17 +65,38 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         customtkinter.set_appearance_mode("System")
         customtkinter.set_default_color_theme("blue")
 
-        self.app = CTk()
-        self.app.geometry("800x600")
+        self._app = CTk()
+        self._app.geometry("800x600")
 
         self.add_track_loader()
+        self.add_section_loader()
 
-        self.app.mainloop()
+        self._app.mainloop()
 
     def add_track_loader(self) -> None:
         button = CTkButton(
-            master=self.app,
+            master=self._app,
             text="Read tracks",
             command=self.load_tracks_in_file,
         )
+        button.place(relx=0.25, rely=0.5, anchor=tkinter.CENTER)
+
+    def add_section_loader(self) -> None:
+        button = CTkButton(
+            master=self._app,
+            text="Read sections",
+            command=self.load_sections_in_file,
+        )
         button.place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)
+
+    def add_section_button(self) -> None:
+        button = CTkButton(
+            master=self._app,
+            text="Add sections",
+            command=self.add_section,
+        )
+        button.place(relx=0.75, rely=0.5, anchor=tkinter.CENTER)
+
+    def add_section(self) -> None:
+        section: Section = None  # Get section from somewhere
+        self._datastore.add_section(section)
