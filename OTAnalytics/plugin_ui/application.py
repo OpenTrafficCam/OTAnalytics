@@ -1,5 +1,6 @@
 import tkinter
 from abc import abstractmethod
+from pathlib import Path
 
 import customtkinter
 from application.datastore import Datastore
@@ -11,8 +12,7 @@ class OTAnalyticsApplication:
     def __init__(self) -> None:
         self.datastore: Datastore
 
-    def add_tracks_of_file(self) -> None:
-        track_file = ""  # TODO read from file chooser
+    def add_tracks_of_file(self, track_file: Path) -> None:
         self.datastore.load_track_file(file=track_file)
 
     def start(self) -> None:
@@ -36,6 +36,7 @@ class OTAnalyticsCli(OTAnalyticsApplication):
         pass
 
     def start_internal(self) -> None:
+        # TODO parse config and add track and section files
         pass
 
 
@@ -43,7 +44,7 @@ class OTAnalyticsGui(OTAnalyticsApplication):
     def __init__(self) -> None:
         self.app: CTk
 
-    def add_tracks_of_file(self) -> None:
+    def load_tracks_in_file(self) -> None:
         track_file = ""  # TODO read from file chooser
         self.datastore.load_track_file(file=track_file)
 
@@ -66,6 +67,6 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         button = CTkButton(
             master=self.app,
             text="Read tracks",
-            command=self.add_tracks_of_file,
+            command=self.load_tracks_in_file,
         )
         button.place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)
