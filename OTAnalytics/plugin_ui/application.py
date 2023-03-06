@@ -7,7 +7,11 @@ from customtkinter import CTk, CTkButton
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.section import Coordinate, LineSection, Section
-from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser, OttrkParser
+from OTAnalytics.plugin_parser.otvision_parser import (
+    OtsectionParser,
+    OttrkParser,
+    OttrkVideoParser,
+)
 
 
 class OTAnalyticsApplication:
@@ -34,7 +38,8 @@ class OTAnalyticsApplication:
         """
         track_parser = OttrkParser()
         section_parser = OtsectionParser()
-        self._datastore = Datastore(track_parser, section_parser)
+        video_parser = OttrkVideoParser()
+        self._datastore = Datastore(track_parser, section_parser, video_parser)
 
 
 class OTAnalyticsCli(OTAnalyticsApplication):
