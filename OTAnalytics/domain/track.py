@@ -42,7 +42,7 @@ class TrackRepository:
             self.add(track)
 
     def get_for(self, id: TrackId) -> Optional[Track]:
-        return None
+        return self.tracks[id]
 
     def get_all(self) -> Iterable[Track]:
         return self.tracks.values()
