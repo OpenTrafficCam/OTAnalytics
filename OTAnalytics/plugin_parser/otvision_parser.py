@@ -9,7 +9,23 @@ from OTAnalytics.domain.track import Detection, Track
 
 
 class OttrkParser(TrackParser):
+    """Parse an ottrk file and convert its contents to our domain objects namely
+    `Tracks`.
+
+    Args:
+        TrackParser (TrackParser): extends TrackParser interface.
+    """
+
     def parse(self, ottrk_file: Path) -> list[Track]:
+        """Parse ottrk file and convert its content to domain level objects namely
+        `Track`s.
+
+        Args:
+            ottrk_file (Path): the file to
+
+        Returns:
+            list[Track]: the tracks.
+        """
         ottrk_dict = self._parse_bz2(ottrk_file)
         dets_list: list[dict] = ottrk_dict[ottrk_format.DATA][ottrk_format.DETECTIONS]
         tracks = self._parse_tracks(dets_list)
@@ -28,8 +44,19 @@ class OttrkParser(TrackParser):
             _dict = json.load(f)
             return _dict
 
-    def _parse_tracks(self, d: list[dict]) -> list[Track]:
-        tracks_dict = self._parse_detections(d)
+    def _parse_tracks(self, dets: list[dict]) -> list[Track]:
+        """Parse the detections of ottrk located at ottrk["data"]["detections"].
+
+        This method will also sort the detections belonging to a track by their
+        frame number.
+
+        Args:
+            dets (list[dict]): the detections in dict format.
+
+        Returns:
+            list[Track]: the tracks.
+        """
+        tracks_dict = self._parse_detections(dets)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
             sort_dets_by_frame = sorted(detections, key=lambda det: det.frame)
@@ -37,8 +64,8 @@ class OttrkParser(TrackParser):
         return tracks
 
     def _parse_detections(self, det_list: list[dict]) -> dict[int, list[Detection]]:
+        """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[int, list[Detection]] = {}
-        # Group detections by track id
         for det_dict in det_list:
             det = Detection(
                 classification=det_dict[ottrk_format.CLASS],
@@ -57,5 +84,6 @@ class OttrkParser(TrackParser):
             )
             if not tracks_dict.get(det.track_id):
                 tracks_dict[det.track_id] = []
-            tracks_dict[det.track_id].append(det)
+
+            tracks_dict[det.track_id].append(det)  # Group detections by track id
         return tracks_dict
