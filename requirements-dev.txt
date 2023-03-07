@@ -1,9 +1,9 @@
-black
-flake8
+black==23.1.0
+flake8==6.0.0
 interrogate
-isort
-mypy
+isort==5.12.0
+mypy==1.0.1
 pre-commit
 pytest
 pytest-cov
-yamllint
+yamllint==1.29.0
