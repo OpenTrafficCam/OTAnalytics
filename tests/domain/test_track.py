@@ -9,7 +9,7 @@ from OTAnalytics.domain.track import Detection, Track
 
 
 @pytest.fixture
-def valid_det_dict() -> dict:
+def valid_detection_dict() -> dict:
     return {
         ottrk_format.CLASS: "car",
         ottrk_format.CONFIDENCE: 0.5,
@@ -64,30 +64,30 @@ class TestDetection:
                 track_id=track_id,
             )
 
-    def test_instantiation_with_valid_args(self, valid_det_dict: dict) -> None:
-        det = Detection(**valid_det_dict)
-        assert det.classification == valid_det_dict[ottrk_format.CLASS]
-        assert det.confidence == valid_det_dict[ottrk_format.CONFIDENCE]
-        assert det.x == valid_det_dict[ottrk_format.X]
-        assert det.y == valid_det_dict[ottrk_format.Y]
-        assert det.w == valid_det_dict[ottrk_format.W]
-        assert det.h == valid_det_dict[ottrk_format.H]
-        assert det.frame == valid_det_dict[ottrk_format.FRAME]
-        assert det.occurrence == valid_det_dict[ottrk_format.OCCURENCE]
-        assert det.input_file_path == valid_det_dict[ottrk_format.INPUT_FILE_PATH]
+    def test_instantiation_with_valid_args(self, valid_detection_dict: dict) -> None:
+        det = Detection(**valid_detection_dict)
+        assert det.classification == valid_detection_dict[ottrk_format.CLASS]
+        assert det.confidence == valid_detection_dict[ottrk_format.CONFIDENCE]
+        assert det.x == valid_detection_dict[ottrk_format.X]
+        assert det.y == valid_detection_dict[ottrk_format.Y]
+        assert det.w == valid_detection_dict[ottrk_format.W]
+        assert det.h == valid_detection_dict[ottrk_format.H]
+        assert det.frame == valid_detection_dict[ottrk_format.FRAME]
+        assert det.occurrence == valid_detection_dict[ottrk_format.OCCURENCE]
+        assert det.input_file_path == valid_detection_dict[ottrk_format.INPUT_FILE_PATH]
         assert (
             det.interpolated_detection
-            == valid_det_dict[ottrk_format.INTERPOLATED_DETECTION]
+            == valid_detection_dict[ottrk_format.INTERPOLATED_DETECTION]
         )
-        assert det.track_id == valid_det_dict[ottrk_format.TRACK_ID]
+        assert det.track_id == valid_detection_dict[ottrk_format.TRACK_ID]
 
 
 class TestTrack:
     @pytest.mark.parametrize("id", [0, -1, 0.5])
     def test_value_error_raised_with_invalid_arg(
-        self, valid_det_dict: dict, id: int
+        self, valid_detection_dict: dict, id: int
     ) -> None:
-        detection = Detection(**valid_det_dict)
+        detection = Detection(**valid_detection_dict)
         with pytest.raises(ValidationError):
             Track(id=id, detections=[detection])
 
@@ -95,8 +95,8 @@ class TestTrack:
         with pytest.raises(ValidationError):
             Track(id=1, detections=[])
 
-    def test_instantiation_with_valid_args(self, valid_det_dict: dict) -> None:
-        detection = Detection(**valid_det_dict)
+    def test_instantiation_with_valid_args(self, valid_detection_dict: dict) -> None:
+        detection = Detection(**valid_detection_dict)
         track = Track(id=5, detections=[detection])
         assert track.id == 5
         assert track.detections == [detection]

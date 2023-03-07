@@ -1,7 +1,8 @@
 import bz2
-import json
 from datetime import datetime
 from pathlib import Path
+
+import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.datastore import TrackParser
@@ -41,14 +42,14 @@ class OttrkParser(TrackParser):
             dict: The content of the JSON file.
         """
         with bz2.open(p, "r") as f:
-            _dict = json.load(f)
+            _dict = ujson.load(f)
             return _dict
 
     def _parse_tracks(self, dets: list[dict]) -> list[Track]:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
 
         This method will also sort the detections belonging to a track by their
-        frame number.
+        occurrence.
 
         Args:
             dets (list[dict]): the detections in dict format.
@@ -59,7 +60,7 @@ class OttrkParser(TrackParser):
         tracks_dict = self._parse_detections(dets)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
-            sort_dets_by_frame = sorted(detections, key=lambda det: det.frame)
+            sort_dets_by_frame = sorted(detections, key=lambda det: det.occurrence)
             tracks.append(Track(id=track_id, detections=sort_dets_by_frame))
         return tracks
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import numpy as np
 from moviepy.video.io.VideoFileClip import VideoFileClip
+from numpy import ndarray
 
 from OTAnalytics.application.datastore import VideoReader
 
@@ -11,7 +11,7 @@ class FrameDoesNotExistError(Exception):
 
 
 class MoviepyVideoReader(VideoReader):
-    def get_frame(self, video_path: Path, index: int) -> np.ndarray:
+    def get_frame(self, video_path: Path, index: int) -> ndarray:
         """Get image of video at `frame`.
 
         Args:
@@ -22,7 +22,7 @@ class MoviepyVideoReader(VideoReader):
             FrameDoesNotExistError: if frame does not exist.
 
         Returns:
-            np.ndarray: the image as an multi-dimensional array.
+            ndarray: the image as an multi-dimensional array.
         """
         clip = VideoFileClip(str(video_path.absolute()))
         found = None

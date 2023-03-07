@@ -41,18 +41,22 @@ class Detection(BaseModel, frozen=True, allow_population_by_field_name=True):
     """
 
     classification: str = Field(alias=ottrk_format.CLASS)
-    confidence: float = Field(gt=0, le=1, description="must be between range [0,1]")
-    x: float = Field(ge=0, description="must be greater equal than 0")
-    y: float = Field(ge=0, description="must be greater equal than 0")
-    w: float = Field(ge=0, description="must be greater equal than 0")
-    h: float = Field(ge=0, description="must be greater equal than 0")
-    frame: int = Field(gt=0, description="must be greater than 0")
-    occurrence: datetime
-    input_file_path: Path
+    confidence: float = Field(
+        ge=0, le=1, description="must be in range [0,1]", alias=ottrk_format.CONFIDENCE
+    )
+    x: float = Field(ge=0, description="must be greater equal 0", alias=ottrk_format.X)
+    y: float = Field(ge=0, description="must be greater equal 0", alias=ottrk_format.Y)
+    w: float = Field(ge=0, description="must be greater equal 0", alias=ottrk_format.W)
+    h: float = Field(ge=0, description="must be greater equal 0", alias=ottrk_format.H)
+    frame: int = Field(
+        gt=0, description="must be greater than 0", alias=ottrk_format.FRAME
+    )
+    occurrence: datetime = Field(alias=ottrk_format.OCCURENCE)
+    input_file_path: Path = Field(alias=ottrk_format.INPUT_FILE_PATH)
     interpolated_detection: bool = Field(alias=ottrk_format.INTERPOLATED_DETECTION)
     track_id: int = Field(
-        gt=0,
-        description="Track ID must be greater equal than 0",
+        ge=1,
+        description="Track ID must be greater equal 1",
         alias=ottrk_format.TRACK_ID,
     )
 
@@ -74,14 +78,14 @@ class Track(BaseModel, frozen=True, allow_population_by_field_name=True):
     """
 
     id: int = Field(gt=0, description="id must be a number greater than 0")
-    detections: list[Detection]
+    detections: list[Detection] = Field(alias=ottrk_format.DETECTIONS)
 
     @validator("detections")
     def detections_must_be_in_right_order(
         cls, detections: list[Detection]
     ) -> list[Detection]:
-        if detections != sorted(detections, key=lambda det: det.frame):
-            raise ValueError("detections must be sorted by frame number")
+        if detections != sorted(detections, key=lambda det: det.occurrence):
+            raise ValueError("detections must be sorted by occurence")
         return detections
 
     @validator("detections")

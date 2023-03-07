@@ -1,16 +1,16 @@
 from pathlib import Path
 
-import numpy as np
 import pytest
+from numpy import array, int32, ndarray
 
 from OTAnalytics.application.datastore import Video, VideoReader
 
 
 class MockVideoReader(VideoReader):
-    def get_frame(self, video: Path, index: int) -> np.ndarray:
+    def get_frame(self, video: Path, index: int) -> ndarray:
         del video
         del index
-        return np.array([[1, 0], [0, 1]], np.int32)
+        return array([[1, 0], [0, 1]], int32)
 
 
 class TestVideo:
@@ -27,4 +27,4 @@ class TestVideo:
 
     def test_get_frame_return_correct_image(self, cyclist_video: Path) -> None:
         video = Video(video_reader=self.video_reader, path=cyclist_video)
-        assert video.get_frame(0).all() == np.array([[1, 0], [0, 1]], np.int32).all()
+        assert video.get_frame(0).all() == array([[1, 0], [0, 1]], int32).all()

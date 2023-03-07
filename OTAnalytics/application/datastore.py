@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
+from numpy import ndarray
 from pydantic import BaseModel, validator
 
 from OTAnalytics.domain.track import Track, TrackRepository
@@ -16,7 +16,7 @@ class TrackParser(ABC):
 
 class VideoReader(ABC):
     @abstractmethod
-    def get_frame(self, video: Path, index: int) -> np.ndarray:
+    def get_frame(self, video: Path, index: int) -> ndarray:
         """Get frame of `video` at `index`.
 
         Args:
@@ -24,7 +24,7 @@ class VideoReader(ABC):
             index (int): the index of the frame to get.
 
         Returns:
-            np.ndarray: the frame.
+            ndarray: the frame.
         """
         pass
 
@@ -52,14 +52,14 @@ class Video(BaseModel, frozen=True, arbitrary_types_allowed=True):
             raise ValueError("must be an existing path")
         return path
 
-    def get_frame(self, index: int) -> np.ndarray:
+    def get_frame(self, index: int) -> ndarray:
         """Returns the frame of the video at `index`.
 
         Args:
             index (int): the index of the frame to get.
 
         Returns:
-            np.ndarray: the frame.
+            ndarray: the frame.
         """
         return self.video_reader.get_frame(self.path, index)
 

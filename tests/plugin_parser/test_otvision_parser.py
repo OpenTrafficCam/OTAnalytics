@@ -1,9 +1,9 @@
 import bz2
-import json
 from datetime import datetime
 from pathlib import Path
 
 import pytest
+import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.domain.track import Detection, Track
@@ -150,7 +150,7 @@ def example_json_bz2(test_data_tmp_dir: Path) -> tuple[Path, dict]:
     bz2_json_file.touch()
     content = {"first_name": "John", "last_name": "Doe"}
     with bz2.open(bz2_json_file, "wt", encoding="UTF-8") as out:
-        json.dump(content, out)
+        ujson.dump(content, out)
     return bz2_json_file, content
 
 
@@ -160,7 +160,7 @@ def example_json(test_data_tmp_dir: Path) -> tuple[Path, dict]:
     json_file.touch()
     content = {"first_name": "John", "last_name": "Doe"}
     with bz2.open(json_file, "wt", encoding="UTF-8") as out:
-        json.dump(content, out)
+        ujson.dump(content, out)
     return json_file, content
 
 
