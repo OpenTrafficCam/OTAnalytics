@@ -8,6 +8,8 @@ import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.datastore import TrackParser
 from OTAnalytics.domain.track import Detection, Track
 
+ENCODING: str = "UTF-8"
+
 
 class OttrkParser(TrackParser):
     """Parse an ottrk file and convert its contents to our domain objects namely
@@ -41,7 +43,7 @@ class OttrkParser(TrackParser):
         Returns:
             dict: The content of the JSON file.
         """
-        with bz2.open(p, "r") as f:
+        with bz2.open(p, "rt", encoding=ENCODING) as f:
             _dict = ujson.load(f)
             return _dict
 
