@@ -1,9 +1,11 @@
 import tkinter
+from pathlib import Path
 
 import customtkinter
-from application.datastore import Datastore
 from customtkinter import CTk, CTkButton
-from plugin_parser.otvision_parser import OttrkParser
+
+from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
 
 class OTAnalyticsApplication:
@@ -12,7 +14,7 @@ class OTAnalyticsApplication:
         self.app: CTk
 
     def add_track_of_file(self) -> None:
-        track_file = ""  # TODO read from file chooser
+        track_file = Path("")  # TODO read from file chooser
         self.datastore.load_track_file(file=track_file)
 
     def start(self) -> None:

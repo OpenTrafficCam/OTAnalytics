@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from domain.track import Track, TrackRepository
+from numpy import ndarray
+from pydantic import BaseModel, validator
+
+from OTAnalytics.domain.track import Track, TrackRepository
 
 
 class TrackParser(ABC):
@@ -12,12 +14,54 @@ class TrackParser(ABC):
         pass
 
 
-@dataclass(frozen=True)
-class Video:
+class VideoReader(ABC):
+    @abstractmethod
+    def get_frame(self, video: Path, index: int) -> ndarray:
+        """Get frame of `video` at `index`.
+
+        Args:
+            video (Path): the path to the video file.
+            index (int): the index of the frame to get.
+
+        Returns:
+            ndarray: the frame.
+        """
+        pass
+
+
+class Video(BaseModel, frozen=True, arbitrary_types_allowed=True):
+    """Represents a video file.
+
+    Extends from pydantic.BaseModel
+    IMPORTANT: Instantiation of this class is only possible by using named parameters.
+
+    Args:
+        video_reader (VideoReader): A video reader used to get frames.
+        path (Path): the video file path.
+
+    Raises:
+        ValueError: if video file path does not exist.
+    """
+
+    video_reader: VideoReader
     path: Path
 
-    def get_image(self) -> None:
-        pass
+    @validator("path")
+    def check_path_exists(cls, path: Path) -> Path:
+        if not path.exists():
+            raise ValueError("must be an existing path")
+        return path
+
+    def get_frame(self, index: int) -> ndarray:
+        """Returns the frame of the video at `index`.
+
+        Args:
+            index (int): the index of the frame to get.
+
+        Returns:
+            ndarray: the frame.
+        """
+        return self.video_reader.get_frame(self.path, index)
 
 
 class VideoRepository:
