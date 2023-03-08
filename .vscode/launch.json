@@ -5,7 +5,15 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "OTAnalytics/__main__.py",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: OTAnalytics App",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }
