@@ -73,8 +73,8 @@ class Track(BaseModel, frozen=True, allow_population_by_field_name=True):
         detections (list[Detection]): the detections belonging to this track.
 
     Raises:
-        ValueError: if detections are not sorted by `frame`.
-        ValueError: if an empty detctions list has been passed.
+        ValueError: if detections are not sorted by `occurrence`.
+        ValueError: if an empty detections list has been passed.
     """
 
     id: int = Field(gt=0, description="id must be a number greater than 0")
