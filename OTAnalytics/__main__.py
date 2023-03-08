@@ -1,4 +1,9 @@
 from OTAnalytics.plugin_ui.application import OTAnalyticsApplication
 
-if __name__ == "__main__":
+
+def main() -> None:
     OTAnalyticsApplication().start()
+
+
+if __name__ == "__main__":
+    main()
