@@ -13,7 +13,7 @@
             "name": "Python: OTAnalytics App",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/run.py",
+            "module": "OTAnalytics",
             "console": "integratedTerminal",
             "justMyCode": true
         }
