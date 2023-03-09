@@ -4,7 +4,9 @@ from tkinter.filedialog import askopenfilename
 from typing import Any
 
 import customtkinter
+import numpy as np
 from customtkinter import CTk, CTkButton, CTkCanvas, CTkFrame
+from moviepy.editor import VideoFileClip
 from PIL import Image, ImageTk
 
 from OTAnalytics.application.datastore import Datastore
@@ -31,15 +33,18 @@ class CanvasBackground(CTkCanvas):
         self.bind("<ButtonRelease-1>", self.on_click)
 
         # This call should come from outside later
-        self.show_image(image=Image.open(r"OTAnalytics/plugin_ui/test_image.png"))
+        video = VideoFileClip(r"OTAnalytics/plugin_ui/test_video.mp4")
+        image = video.get_frame(0)
         self.show_rectangle()
+        self.show_image(image=image)
 
-    def show_image(self, image: Image.Image) -> None:
-        width, height = image.size
-        self.config(width=width, height=height, bg="black")
-        photo_image = ImageTk.PhotoImage(image=image)
-        print(photo_image)
-        self.create_image(0, 0, image=photo_image, anchor=tkinter.NW)
+    def show_image(self, image: np.ndarray) -> None:
+        pillow_image = Image.fromarray(image)
+        width, height = pillow_image.size
+        self.config(width=width, height=height)
+        pillow_photo_image = ImageTk.PhotoImage(image=pillow_image)
+        print(pillow_photo_image)
+        self.create_image(0, 0, image=pillow_photo_image, anchor=tkinter.NW)
 
     def show_rectangle(self) -> None:
         self.create_rectangle(10, 10, 70, 70)
