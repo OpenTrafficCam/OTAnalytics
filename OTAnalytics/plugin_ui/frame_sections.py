@@ -6,6 +6,7 @@ from typing import Any
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 
 
 class FrameSections(CTkFrame):
@@ -26,8 +27,11 @@ class FrameSections(CTkFrame):
         self.button_delete_selected_sections = ButtonDeleteSelectedSections(
             master=self, text="Remove"
         )
-        self.button_edit_selected_section = ButtonUpdateSelectedSectionMetadata(
-            master=self, text="Edit"
+        self.button_edit_geometry_selected_section = (
+            ButtonUpdateSelectedSectionGeometry(master=self, text="Edit geometry")
+        )
+        self.button_edit_metadata_selected_section = (
+            ButtonUpdateSelectedSectionMetadata(master=self, text="Edit metadata")
         )
 
     def _place_widgets(self) -> None:
@@ -42,11 +46,14 @@ class FrameSections(CTkFrame):
         self.button_new_section.grid(
             row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_edit_selected_section.grid(
+        self.button_edit_geometry_selected_section.grid(
             row=5, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_delete_selected_sections.grid(
+        self.button_edit_metadata_selected_section.grid(
             row=6, column=0, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.button_delete_selected_sections.grid(
+            row=7, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
 
@@ -117,13 +124,27 @@ class ButtonNewSection(CTkButton):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
+        self.toplevel_sections: ToplevelSections | None = None
+
         self.bind("<ButtonRelease-1>", self.on_click)
+
+        self.toplevel_sections = None
 
     def on_click(self, events: Any) -> None:
         # TODO: Enter drawing mode
-        # TODO: Call popup to enter metadata
+        self.get_metadata()
         # TODO: Yield geometry and metadata
-        print("Add new section (geometry and metadata)")
+        print(
+            "Add new section with geometry = <TODO> and"
+            + f"metadata = {self.section_metadata}"
+        )
+
+    def get_metadata(self) -> None:
+        if self.toplevel_sections is None or not self.toplevel_sections.winfo_exists():
+            self.toplevel_sections = ToplevelSections(title="New section")
+        else:
+            self.toplevel_sections.focus()
+        self.section_metadata = self.toplevel_sections.show()
 
 
 class ButtonUpdateSelectedSectionGeometry(CTkButton):
@@ -144,14 +165,29 @@ class ButtonUpdateSelectedSectionMetadata(CTkButton):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
+        self.toplevel_sections: ToplevelSections | None = None
+
         self.bind("<ButtonRelease-1>", self.on_click)
+
+        self.toplevel_sections = None
 
     def on_click(self, events: Any) -> None:
         # TODO: Make sure only one section is selected
         # TODO: Get currently selected section
-        # TODO: Call popup to modify metadata
+        self.get_metadata()
         # TODO: Yield updated metadata
-        print("Update metadata of selected section")
+        print(f"Update selected section with metadata={self.section_metadata}")
+
+    def get_metadata(self) -> None:
+        # TODO: Retrieve sections metadata via ID from selection in Treeview
+        INPUT_VALUES: dict = {"name": "Existing Section"}
+        if self.toplevel_sections is None or not self.toplevel_sections.winfo_exists():
+            self.toplevel_sections = ToplevelSections(
+                title="New section", input_values=INPUT_VALUES
+            )
+        else:
+            self.toplevel_sections.focus()
+        self.section_metadata = self.toplevel_sections.show()
 
 
 class ButtonDeleteSelectedSections(CTkButton):
@@ -161,5 +197,5 @@ class ButtonDeleteSelectedSections(CTkButton):
         self.bind("<ButtonRelease-1>", self.on_click)
 
     def on_click(self, events: Any) -> None:
-        # TODO: Get currently selected sections
+        # TODO: Get currently selected sections (?)
         print("Delete selected sections")
