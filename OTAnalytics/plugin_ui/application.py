@@ -2,10 +2,10 @@ from typing import Any
 
 import customtkinter
 from customtkinter import CTk
+from plugin_ui.frame_canvas import FrameCanvas
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
-from OTAnalytics.plugin_ui.canvas import FrameCanvas
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
