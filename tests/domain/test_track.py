@@ -2,7 +2,6 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.domain.track import Detection, Track
@@ -23,6 +22,25 @@ def valid_detection_dict() -> dict:
         ottrk_format.INTERPOLATED_DETECTION: False,
         ottrk_format.TRACK_ID: 1,
     }
+
+
+@pytest.fixture
+def valid_detection(valid_detection_dict: dict) -> Detection:
+    return Detection(
+        classification=valid_detection_dict[ottrk_format.CLASS],
+        confidence=valid_detection_dict[ottrk_format.CONFIDENCE],
+        x=valid_detection_dict[ottrk_format.X],
+        y=valid_detection_dict[ottrk_format.Y],
+        w=valid_detection_dict[ottrk_format.W],
+        h=valid_detection_dict[ottrk_format.H],
+        frame=valid_detection_dict[ottrk_format.FRAME],
+        occurrence=valid_detection_dict[ottrk_format.OCCURENCE],
+        input_file_path=valid_detection_dict[ottrk_format.INPUT_FILE_PATH],
+        interpolated_detection=valid_detection_dict[
+            ottrk_format.INTERPOLATED_DETECTION
+        ],
+        track_id=valid_detection_dict[ottrk_format.TRACK_ID],
+    )
 
 
 class TestDetection:
@@ -64,8 +82,10 @@ class TestDetection:
                 track_id=track_id,
             )
 
-    def test_instantiation_with_valid_args(self, valid_detection_dict: dict) -> None:
-        det = Detection(**valid_detection_dict)
+    def test_instantiation_with_valid_args(
+        self, valid_detection: Detection, valid_detection_dict: dict
+    ) -> None:
+        det = valid_detection
         assert det.classification == valid_detection_dict[ottrk_format.CLASS]
         assert det.confidence == valid_detection_dict[ottrk_format.CONFIDENCE]
         assert det.x == valid_detection_dict[ottrk_format.X]
@@ -85,18 +105,18 @@ class TestDetection:
 class TestTrack:
     @pytest.mark.parametrize("id", [0, -1, 0.5])
     def test_value_error_raised_with_invalid_arg(
-        self, valid_detection_dict: dict, id: int
+        self, valid_detection: Detection, valid_detection_dict: dict, id: int
     ) -> None:
-        detection = Detection(**valid_detection_dict)
-        with pytest.raises(ValidationError):
-            Track(id=id, detections=[detection])
+        with pytest.raises(ValueError):
+            Track(id=id, detections=[valid_detection])
 
     def test_raise_error_on_empty_detections(self) -> None:
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValueError):
             Track(id=1, detections=[])
 
-    def test_instantiation_with_valid_args(self, valid_detection_dict: dict) -> None:
-        detection = Detection(**valid_detection_dict)
-        track = Track(id=5, detections=[detection])
+    def test_instantiation_with_valid_args(
+        self, valid_detection: Detection, valid_detection_dict: dict
+    ) -> None:
+        track = Track(id=5, detections=[valid_detection])
         assert track.id == 5
-        assert track.detections == [detection]
+        assert track.detections == [valid_detection]

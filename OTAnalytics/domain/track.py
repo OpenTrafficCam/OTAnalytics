@@ -1,19 +1,17 @@
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-from pydantic import BaseModel, Field, validator
-
-import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.domain.common import DataclassValidation
 
 
-class Detection(BaseModel, frozen=True, allow_population_by_field_name=True):
+@dataclass(frozen=True)
+class Detection(DataclassValidation):
     """Represents a detection belonging to a `Track`.
 
     The detection uses the xywh bounding box format.
 
-    Extends from pydantic.BaseModel.
-    IMPORTANT: Instantiation of this class is only possible by using named parameters.
 
     Raises:
         ValueError: confidence not in [0,1]
@@ -40,33 +38,52 @@ class Detection(BaseModel, frozen=True, allow_population_by_field_name=True):
         track_id (int): the track id this detection belongs to.
     """
 
-    classification: str = Field(alias=ottrk_format.CLASS)
-    confidence: float = Field(
-        ge=0, le=1, description="must be in range [0,1]", alias=ottrk_format.CONFIDENCE
-    )
-    x: float = Field(ge=0, description="must be greater equal 0", alias=ottrk_format.X)
-    y: float = Field(ge=0, description="must be greater equal 0", alias=ottrk_format.Y)
-    w: float = Field(ge=0, description="must be greater equal 0", alias=ottrk_format.W)
-    h: float = Field(ge=0, description="must be greater equal 0", alias=ottrk_format.H)
-    frame: int = Field(
-        gt=0, description="must be greater than 0", alias=ottrk_format.FRAME
-    )
-    occurrence: datetime = Field(alias=ottrk_format.OCCURENCE)
-    input_file_path: Path = Field(alias=ottrk_format.INPUT_FILE_PATH)
-    interpolated_detection: bool = Field(alias=ottrk_format.INTERPOLATED_DETECTION)
-    track_id: int = Field(
-        ge=1,
-        description="Track ID must be greater equal 1",
-        alias=ottrk_format.TRACK_ID,
-    )
+    classification: str
+    confidence: float
+    x: float
+    y: float
+    w: float
+    h: float
+    frame: int
+    occurrence: datetime
+    input_file_path: Path
+    interpolated_detection: bool
+    track_id: int
+
+    def _validate(self) -> None:
+        self._validate_confidence_greater_equal_zero()
+        self._validate_bbox_values()
+        self._validate_frame_id_greater_equal_one()
+        self._validate_track_id_greater_equal_one()
+
+    def _validate_confidence_greater_equal_zero(self) -> None:
+        if self.confidence < 0 or self.confidence > 1:
+            raise ValueError("confidence must be in range [0,1]")
+
+    def _validate_bbox_values(self) -> None:
+        if self.x < 0:
+            raise ValueError("x must be greater equal 0")
+        if self.y < 0:
+            raise ValueError("y must be greater equal 0")
+        if self.w < 0:
+            raise ValueError("w must be greater equal 0")
+        if self.h < 0:
+            raise ValueError("h must be greater equal 0")
+
+    def _validate_frame_id_greater_equal_one(self) -> None:
+        if self.frame < 1:
+            raise ValueError("frame number must be greater equal 1")
+
+    def _validate_track_id_greater_equal_one(self) -> None:
+        if self.track_id < 1:
+            raise ValueError("track id must be greater equal 1")
 
 
-class Track(BaseModel, frozen=True, allow_population_by_field_name=True):
+@dataclass(frozen=True)
+class Track(DataclassValidation):
     """Represents the the track of an object as seen in the task of object tracking
     (computer vision).
 
-    Extends from pydantic.BaseModel.
-    IMPORTANT: Instantiation of this class is only possible by using named parameters.
 
     Args:
         id (int): the track id.
@@ -77,28 +94,30 @@ class Track(BaseModel, frozen=True, allow_population_by_field_name=True):
         ValueError: if an empty detections list has been passed.
     """
 
-    id: int = Field(gt=0, description="id must be a number greater than 0")
-    detections: list[Detection] = Field(alias=ottrk_format.DETECTIONS)
+    id: int
+    detections: list[Detection]
 
-    @validator("detections")
-    def detections_must_be_in_right_order(
-        cls, detections: list[Detection]
-    ) -> list[Detection]:
-        if detections != sorted(detections, key=lambda det: det.occurrence):
-            raise ValueError("detections must be sorted by occurence")
-        return detections
+    def _validate(self) -> None:
+        self._validate_id_greater_zero()
+        self._validate_detections_not_empty()
+        self._validate_detections_sorted_by_occurrence()
 
-    @validator("detections")
-    def detections_must_not_be_empty(
-        cls, detections: list[Detection]
-    ) -> list[Detection]:
-        if not detections:
+    def _validate_id_greater_zero(self) -> None:
+        if self.id < 1:
+            raise ValueError("id must be a number greater than 0")
+
+    def _validate_detections_not_empty(self) -> None:
+        if not self.detections:
             raise ValueError("must not be empty")
-        return detections
+
+    def _validate_detections_sorted_by_occurrence(self) -> None:
+        if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
+            raise ValueError("detections must be sorted by occurence")
 
 
-class TrackRepository(BaseModel):
-    tracks: dict[int, Track] = {}
+class TrackRepository:
+    def __init__(self, tracks: dict[int, Track] = {}) -> None:
+        self.tracks: dict[int, Track] = {}
 
     def add(self, track: Track) -> None:
         self.tracks[track.id] = track

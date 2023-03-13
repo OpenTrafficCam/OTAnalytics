@@ -81,7 +81,7 @@ class OttrkParser(TrackParser):
                 occurrence=datetime.strptime(
                     det_dict[ottrk_format.OCCURENCE], ottrk_format.DATE_FORMAT
                 ),
-                input_file_path=det_dict[ottrk_format.INPUT_FILE_PATH],
+                input_file_path=Path(det_dict[ottrk_format.INPUT_FILE_PATH]),
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
                 track_id=det_dict[ottrk_format.TRACK_ID],
             )
