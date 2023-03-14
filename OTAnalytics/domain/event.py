@@ -1,22 +1,26 @@
+import re
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
+from domain.track import Detection
+
 from OTAnalytics.domain.common import DataclassValidation
-from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+
+HOSTNAME = "hostname"
+FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)" r"_.*\..*"
 
 
-class RoadUserType(Enum):
-    """Enum defining all road user types."""
+class InproperFormattedFilename(Exception):
+    pass
 
-    PERSON: str = "PERSON"
-    BICYCLE: str = "BICYCLE"
-    MOTORCYCLE: str = "MOTORCYCLE"
-    CAR: str = "CAR"
-    BUS: str = "BUS"
-    TRUCK: str = "TRUCK"
-    TRAIN: str = "TRAIN"
+
+class BuildError(Exception):
+    pass
 
 
 class EventType(Enum):
@@ -24,43 +28,6 @@ class EventType(Enum):
 
     SECTION_ENTER: str = "section-enter"
     SECTION_LEAVE: str = "section-leave"
-
-
-@dataclass(frozen=True)
-class ImageCoordinate(Coordinate):
-    """An image coordinate.
-
-    Raises:
-        ValueError: x < 0
-        ValueError: y < 0
-
-    Args:
-        x (float): the x coordinate must be greater equal zero.
-        y (float): the y coordinate must be greater equal zero.
-    """
-
-    def _validate(self) -> None:
-        if self.x < 0:
-            raise ValueError(
-                f"x image coordinate must be greater equal zero, but is{self.x}"
-            )
-        if self.y < 0:
-            raise ValueError(
-                f"y image coordinate must be greater equal zero, but is{self.x}"
-            )
-
-
-@dataclass(frozen=True)
-class DirectionVector2D:
-    """Represents a 2-dimensional direction vector.
-
-    Args:
-        x1 (float): the first component of the 2-dim direction vector.
-        x2 (float): the second component of the 2-dim direction vector.
-    """
-
-    x1: float
-    x2: float
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -84,11 +51,11 @@ class Event(DataclassValidation):
     Args:
         road_user_id (int): the road user id involved with this event. It must be
         greater equal one.
-        road_user_type (RoadUserType): the road user type involved with this event.
+        road_user_type (str): the road user type involved with this event.
         hostname (str): the OTCamera hostname that the video is associated with.
         occurrence (datetime): the time when this event occurred.
         frame_number (int): the video frame number that this event is associated with.
-        section_id (Optional[int]): only set when event type is of section.
+        section_id (Optional[str]): only set when event type is of section.
         Defaults to `None`.
         event_coordinate (ImageCoordinate): location where the event occurred in
         the video.
@@ -100,15 +67,15 @@ class Event(DataclassValidation):
     """
 
     road_user_id: int
-    road_user_type: RoadUserType
+    road_user_type: str
     hostname: str
     occurrence: datetime
     frame_number: int
-    section_id: Optional[int]
+    section_id: Optional[str]
     event_coordinate: ImageCoordinate
     event_type: EventType
     direction_vector: DirectionVector2D
-    video_name = str
+    video_name: str
 
     def _validate(self) -> None:
         self._validate_road_user_id_greater_zero()
@@ -132,25 +99,79 @@ class Event(DataclassValidation):
             )
 
 
-@dataclass(frozen=True, kw_only=True)
-class SectionEnterEvent(Event):
-    """Defines an event where a road_user has entered a section.
+class EventBuilder(ABC):
+    @abstractmethod
+    def create_event(self, detection: Detection) -> Event:
+        pass
 
-    section_id (id): section ID involved with this event.
-    event_type (EventType): the event type.
-    """
+    def extract_hostname(self, file_path: Path) -> str:
+        """Parse the given filename and retrieve the start date of the video.
 
-    section_id: int
-    event_type: EventType = EventType.SECTION_ENTER
+        Args:
+            video_file (Path): path to video file
+
+        Raises:
+            InproperFormattedFilename: if the filename is not formatted as expected, an
+            exception will be raised
+
+        Returns:
+            datetime: start date of the video
+        """
+        match = re.search(
+            FILE_NAME_PATTERN,
+            file_path.name,
+        )
+        if match:
+            hostname: str = match.group(HOSTNAME)
+            return hostname
+        raise InproperFormattedFilename(f"Could not parse {file_path.name}.")
 
 
-@dataclass(frozen=True, kw_only=True)
-class SectionLeaveEvent(Event):
-    """Defines an event where a road_user has left a section.
+class SectionEventBuilder(EventBuilder):
+    def __init__(self) -> None:
+        self.section_id: Optional[str] = None
+        self.direction_vector: Optional[DirectionVector2D] = None
+        self.event_type: Optional[EventType] = None
 
-    section_id (id): section ID involved with this event.
-    event_type (EventType): the event type.
-    """
+    def reset(self) -> None:
+        self.section_id = None
+        self.direction_vector = None
+        self.event_type = None
 
-    section_id: int
-    event_type: EventType = EventType.SECTION_LEAVE
+    def add_section_id(self, section_id: str) -> None:
+        self.section_id = section_id
+
+    def add_event_type(self, event_type: EventType) -> None:
+        self.event_type = event_type
+
+    def add_direction_vector(
+        self, detection_1: Detection, detection_2: Detection
+    ) -> None:
+        self.direction_vector = DirectionVector2D(
+            x1=detection_2.x - detection_1.x, x2=detection_2.y - detection_1.y
+        )
+
+    def create_event(self, detection: Detection) -> Event:
+        if not self.section_id:
+            raise BuildError("attribute 'section_id' is not set")
+
+        if not self.event_type:
+            raise BuildError("attribute 'event_type' is not set")
+
+        if not self.direction_vector:
+            raise BuildError("attribute 'direction_vector' is not set")
+
+        section_event = Event(
+            road_user_id=detection.track_id,
+            road_user_type=detection.classification,
+            hostname=self.extract_hostname(detection.input_file_path),
+            occurrence=detection.occurrence,
+            frame_number=detection.frame,
+            section_id=self.section_id,
+            event_coordinate=ImageCoordinate(detection.x, detection.y),
+            event_type=self.event_type,
+            direction_vector=self.direction_vector,
+            video_name=detection.input_file_path.name,
+        )
+        self.reset()
+        return section_event
