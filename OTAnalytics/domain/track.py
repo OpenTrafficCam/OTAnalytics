@@ -116,7 +116,7 @@ class Track(DataclassValidation):
 
 
 class TrackRepository:
-    def __init__(self, tracks: dict[int, Track] = {}) -> None:
+    def __init__(self) -> None:
         self.tracks: dict[int, Track] = {}
 
     def add(self, track: Track) -> None:

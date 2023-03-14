@@ -1,89 +1,63 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
 
-from domain.event import Event
-from domain.track import Track
-
-
-@dataclass(frozen=True)
-class Coordinate:
-    x: float
-    y: float
+from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.geometry import Coordinate
 
 
 @dataclass(frozen=True)
-class Section(ABC):
+class Section(DataclassValidation):
     """
     Sections define virtual detectors to generate vehicle events.
+
+    Args:
+        id (str): the section id.
     """
 
     id: str
-
-    @abstractmethod
-    def enter(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event if the track enters the section.
-
-        Args:
-            track (Track): track to intersect with the section
-
-        Returns:
-            Optional[Event]: event if the track enters the section
-        """
-        pass
-
-    @abstractmethod
-    def leave(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event if the track leaves the section.
-
-        Args:
-            track (Track): track to intersect with the section
-
-        Returns:
-            Optional[Event]: event if the track leaves the section
-        """
-        pass
 
 
 @dataclass(frozen=True)
 class LineSection(Section):
     """
-    Section defined as line.
+    A line section is defined by two coordinates.
+
+    Args:
+        start (Coordinate): the start coordinate.
+        end (Coordinate): the end coordinate.
     """
 
     start: Coordinate
     end: Coordinate
 
-    def enter(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event for the first time the track crosses the line.
-        """
-        return None
-
-    def leave(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event for the last time the track crosses the line.
-        """
-        return None
+    def _validate(self) -> None:
+        if self.start == self.end:
+            raise ValueError(
+                (
+                    "Start and end point of coordinate must be different to be a line, "
+                    "but are same"
+                )
+            )
 
 
 @dataclass(frozen=True)
 class Area(Section):
-    x: float
-    y: float
-    w: float
-    h: float
+    """An area is defined by `[x1, x2, ..., x_n]` a list of coordinates
+    where n is a natural number and `x1 = x_n`.
 
-    def enter(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event for the first point of the track which enters the area.
-        """
-        return None
+    Args:
+        coordinates (list[Coordinate]): area defined by list of coordinates.
+    """
 
-    def leave(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event for the last point of the track which leaves the area.
-        """
-        return None
+    coordinates: list[Coordinate]
+
+    def _validate(self) -> None:
+        if len(self.coordinates) < 3:
+            raise ValueError(
+                (
+                    "Number of coordinates to define a valid area must be "
+                    f"greater equal three, but is {len(self.coordinates)}"
+                )
+            )
+
+        if self.coordinates[0] != self.coordinates[-1]:
+            raise ValueError("Coordinates don't define a closed area")
