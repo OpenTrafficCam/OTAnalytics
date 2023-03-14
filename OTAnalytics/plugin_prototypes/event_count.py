@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from prototypes.otanalytics_parser import JsonParser, PandasDataFrameParser
+from plugin_prototypes.otanalytics_parser import JsonParser, PandasDataFrameParser
 
 # % set env parameters and path
 EVENTS = "event_list"
@@ -30,9 +30,9 @@ def get_degrees(p_1_x: float, p_1_y: float, p_2_x: float, p_2_y: float) -> float
     diff_y = p_2_y - p_1_y
 
     v = np.array([diff_x, diff_y])
-    u = np.array([0, 1])
+    u = np.array([0, -1])
 
-    angle = np.degrees(np.arctan2(np.linalg.det([v, u]), np.dot(v, u)))
+    angle = np.degrees(np.arctan2(np.linalg.det([u, v]), np.dot(u, v)))
 
     return angle
 
@@ -53,9 +53,14 @@ for s in sections_dict.keys():
     p_2_y = sections_dict[s]["coordinates"]["p_2"]["y"]
     angle = get_degrees(p_1_x, p_1_y, p_2_x, p_2_y)
 
+    if angle == 0:
+        angle2 = angle + 360
+    else:
+        angle2 = angle
+
     sections_dict[s]["degrees"] = {
-        "p1_to_p2": [deg_range(angle - 90), deg_range(angle + 90)],
-        "p2_to_p1": [deg_range(angle + 180 - 90), deg_range(angle + 180 + 90)],
+        "p1_to_p2": [deg_range(angle - 180), deg_range(angle2)],
+        "p2_to_p1": [deg_range(angle), deg_range(angle + 180)],
     }
 
 
@@ -64,12 +69,12 @@ def get_dir_name(event: pd.DataFrame, sections: dict) -> pd.Series:
     section_id = str(event["section_id"])
     section = sections[section_id]
 
-    p_1_x = event["event_coordinate"][0]
-    p_1_y = event["event_coordinate"][1]
-    p_2_x = event["direction_vector"][0]
-    p_2_y = event["direction_vector"][1]
+    p_1_x = event["direction_vector"][0]
+    p_1_y = event["direction_vector"][1]
+    p_2_x = event["event_coordinate"][0]
+    p_2_y = event["event_coordinate"][1]
 
-    angle_of_track = deg_range(get_degrees(p_1_x, p_1_y, p_2_x, p_2_y) - 180)
+    angle_of_track = deg_range(get_degrees(p_1_x, p_1_y, p_2_x, p_2_y))
 
     event["angle"] = angle_of_track
 
