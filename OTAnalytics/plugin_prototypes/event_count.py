@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from plugin_prototypes.otanalytics_parser import JsonParser, PandasDataFrameParser
 
 # % set env parameters and path
@@ -10,6 +11,9 @@ EVENTS = "event_list"
 SECTIONS = "sections"
 eventlist_json_path = Path("data/eventlist.json")
 sectionlist_json_path = Path("data/sectionlist.json")
+from_time = ""
+to_time = ""
+interval_length = 1  # im minutes
 
 # % Import Eventlist
 eventlist_dict = JsonParser.from_dict(eventlist_json_path)
@@ -18,7 +22,12 @@ eventlist_dict = JsonParser.from_dict(eventlist_json_path)
 sectionlist_dict = JsonParser.from_dict(sectionlist_json_path)
 
 # % Create DataFrames for meta data and events
-events_df = PandasDataFrameParser.from_dict(eventlist_dict[EVENTS])
+events_df = PandasDataFrameParser.from_dict(eventlist_dict[EVENTS]).sort_values(
+    ["frame_number"]
+)
+events_df["timestamp"] = pd.to_datetime(
+    events_df["timestamp"], format="%Y-%m-%d_%H-%M-%S"
+)
 
 # % Create list of section dicts
 sections_dict = sectionlist_dict[SECTIONS]
@@ -65,7 +74,7 @@ for s in sections_dict.keys():
 
 
 # % Get direciton names
-def get_dir_name(event: pd.DataFrame, sections: dict) -> pd.Series:
+def get_dir_name_line(event: pd.DataFrame, sections: dict) -> pd.Series:
     section_id = str(event["section_id"])
     section = sections[section_id]
 
@@ -100,4 +109,107 @@ def get_dir_name(event: pd.DataFrame, sections: dict) -> pd.Series:
             return event
 
 
-events_test = events_df.apply(get_dir_name, args=[sections_dict], axis=1)
+events_df_dir = events_df.apply(get_dir_name_line, args=[sections_dict], axis=1)
+
+# % Create section name mapper
+section_name_mapper = {
+    sections_dict[s]["section_id"]: sections_dict[s]["name"]
+    for s in sections_dict.keys()
+}
+
+# % TODO: Set time intervals
+if from_time != "":
+    from_time_formatted = pd.to_datetime(from_time)
+    events_df_dir = events_df_dir[events_df_dir["timestamp"] >= from_time_formatted]
+    start_time = from_time_formatted
+else:
+    start_time = events_df_dir.loc[0, "timestamp"]
+
+if to_time != "":
+    to_time_formatted = pd.to_datetime(to_time)
+    events_df_dir = events_df_dir[events_df_dir["timestamp"] < to_time_formatted]
+else:
+    end_time = events_df_dir.loc[len(events_df_dir) - 1, "timestamp"]
+
+duration = end_time - start_time
+interval = pd.Timedelta(interval_length, "m")
+
+# % Create counting table
+counts_section = (
+    events_df_dir.groupby(
+        [
+            pd.Grouper(key="timestamp", freq=f"{interval_length}Min"),
+            "section_id",
+            "direction",
+            "vehicle_type",
+        ]
+    )["vehicle_id"]
+    .count()
+    .reset_index()
+    .rename({"timestamp": "time_interval", "vehicle_id": "n_vehicles"}, axis=1)
+)
+counts_section["section_name"] = counts_section["section_id"].map(section_name_mapper)
+counts_section_agg = (
+    counts_section.pivot(
+        index=["time_interval", "section_id", "section_name", "direction"],
+        columns="vehicle_type",
+        values="n_vehicles",
+    )
+    .reset_index()
+    .fillna(0)
+)
+
+# % Create counting plot
+p = sns.FacetGrid(
+    counts_section, hue="vehicle_type", row="section_name", col="direction", aspect=2
+)
+p.map(
+    sns.barplot,
+    "time_interval",
+    "n_vehicles",
+    alpha=0.7,
+    order=counts_section["time_interval"].unique(),
+)
+
+# % Create flow table
+flows_section = events_df_dir[["vehicle_id", "vehicle_type", "timestamp", "section_id"]]
+flows_section["section_id2"] = flows_section["section_id"]
+flows_section = (
+    flows_section.pivot_table(
+        index="vehicle_id",
+        values=["section_id", "section_id2", "timestamp", "vehicle_type"],
+        aggfunc={
+            "section_id": "first",
+            "section_id2": "last",
+            "timestamp": "first",
+            "vehicle_type": "first",
+        },
+        fill_value=0,
+    )
+    .reset_index()
+    .rename({"section_id": "from_section", "section_id2": "to_section"}, axis=1)
+)
+flows_section = (
+    flows_section.groupby(
+        [
+            pd.Grouper(key="timestamp", freq=f"{interval_length}Min"),
+            "from_section",
+            "to_section",
+            "vehicle_type",
+        ]
+    )["vehicle_id"]
+    .count()
+    .reset_index()
+    .rename({"timestamp": "time_interval"}, axis=1)
+)
+flows_section["from_section"] = flows_section["from_section"].map(section_name_mapper)
+flows_section["to_section"] = flows_section["to_section"].map(section_name_mapper)
+flows_section = (
+    flows_section.pivot(
+        index=["time_interval", "from_section", "to_section"],
+        columns="vehicle_type",
+        values="vehicle_id",
+    )
+    .reset_index()
+    .fillna(0)
+)
