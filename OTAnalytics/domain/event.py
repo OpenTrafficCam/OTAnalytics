@@ -87,7 +87,7 @@ class Event(DataclassValidation):
                 ValueError(
                     (
                         "frame number must be greater equal one, "
-                        f"but it {self.frame_number}"
+                        f"but is {self.frame_number}"
                     )
                 )
             )
@@ -124,7 +124,9 @@ class EventBuilder(ABC):
         if match:
             hostname: str = match.group(HOSTNAME)
             return hostname
-        raise InproperFormattedFilename(f"Could not parse {file_path.name}.")
+        raise InproperFormattedFilename(
+            f"Could not parse {file_path.name}. Hostname is missing."
+        )
 
 
 class SectionEventBuilder(EventBuilder):

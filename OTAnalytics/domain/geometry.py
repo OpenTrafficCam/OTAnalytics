@@ -70,9 +70,9 @@ class ImageCoordinate(Coordinate):
     def _validate(self) -> None:
         if self.x < 0:
             raise ValueError(
-                f"x image coordinate must be greater equal zero, but is{self.x}"
+                f"x image coordinate must be greater equal zero, but is {self.x}"
             )
         if self.y < 0:
             raise ValueError(
-                f"y image coordinate must be greater equal zero, but is{self.x}"
+                f"y image coordinate must be greater equal zero, but is {self.x}"
             )
