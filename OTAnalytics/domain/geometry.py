@@ -29,11 +29,11 @@ class Polygon(DataclassValidation):
     coordinates: list[Coordinate]
 
     def _validate(self) -> None:
-        if len(self.coordinates) < 3:
+        if len(self.coordinates) < 4:
             raise ValueError(
                 (
                     "Number of coordinates to define a valid polygon must be "
-                    f"greater equal three, but is {len(self.coordinates)}"
+                    f"greater equal four, but is {len(self.coordinates)}"
                 )
             )
 
