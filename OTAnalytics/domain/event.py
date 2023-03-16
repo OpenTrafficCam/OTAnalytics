@@ -135,11 +135,6 @@ class SectionEventBuilder(EventBuilder):
         self.direction_vector: Optional[DirectionVector2D] = None
         self.event_type: Optional[EventType] = None
 
-    def reset(self) -> None:
-        self.section_id = None
-        self.direction_vector = None
-        self.event_type = None
-
     def add_section_id(self, section_id: str) -> None:
         self.section_id = section_id
 
@@ -175,5 +170,4 @@ class SectionEventBuilder(EventBuilder):
             direction_vector=self.direction_vector,
             video_name=detection.input_file_path.name,
         )
-        self.reset()
         return section_event
