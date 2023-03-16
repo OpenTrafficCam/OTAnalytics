@@ -1,4 +1,4 @@
-from plugin_ui.application import OTAnalyticsGui
+from OTAnalytics.plugin_ui.application import ApplicationStarter
 
 if __name__ == "__main__":
-    OTAnalyticsGui().start()
+    ApplicationStarter().start_gui()
