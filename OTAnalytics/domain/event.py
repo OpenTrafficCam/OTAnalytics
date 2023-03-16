@@ -6,10 +6,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from domain.track import Detection
-
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.track import Detection
 
 HOSTNAME = "hostname"
 FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)" r"_.*\..*"
@@ -159,7 +158,7 @@ class SectionEventBuilder(EventBuilder):
             raise BuildError("attribute 'direction_vector' is not set")
 
         section_event = Event(
-            road_user_id=detection.track_id,
+            road_user_id=detection.track_id.id,
             road_user_type=detection.classification,
             hostname=self.extract_hostname(detection.input_file_path),
             occurrence=detection.occurrence,
