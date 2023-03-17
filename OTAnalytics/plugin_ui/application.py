@@ -42,9 +42,9 @@ class OTAnalyticsCli(OTAnalyticsApplication):
 
 
 class OTAnalyticsGui(OTAnalyticsApplication):
-    def __init__(self, datastore: Datastore) -> None:
+    def __init__(self, datastore: Datastore, app: CTk = CTk()) -> None:
         super().__init__(datastore)
-        self._app: CTk
+        self._app: CTk = app
 
     def _load_tracks_in_file(self) -> None:
         track_file = Path("")  # TODO read from file chooser
@@ -61,7 +61,6 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         customtkinter.set_appearance_mode("System")
         customtkinter.set_default_color_theme("blue")
 
-        self._app = CTk()
         self._app.geometry("800x600")
 
         self._add_track_loader()
