@@ -11,11 +11,18 @@ class Coordinate(DataclassValidation):
 
 @dataclass(frozen=True)
 class Line(DataclassValidation):
-    start: Coordinate
-    end: Coordinate
+    coordinates: list[Coordinate]
 
     def _validate(self) -> None:
-        if self.start == self.end:
+        if len(self.coordinates) < 2:
+            raise ValueError(
+                (
+                    "Number of coordinates to define a valid line must be "
+                    f"greater equal 2, but is {len(self.coordinates)}"
+                )
+            )
+
+        if self.coordinates[0] == self.coordinates[-1]:
             raise ValueError(
                 (
                     "Start and end point of coordinate must be different to be a line, "

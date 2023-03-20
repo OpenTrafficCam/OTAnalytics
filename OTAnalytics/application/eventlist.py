@@ -20,9 +20,38 @@ class SectionActionDetector:
     ) -> None:
         self.intersector = intersector
         self.section_event_builder = section_event_builder
-        pass
 
-    def detect_enter(self, section: Section, track: Track) -> Optional[Event]:
+    def detect_enter_events(
+        self,
+        sections: list[Section],
+        tracks: list[Track],
+    ) -> list[Event]:
+        event_list: list[Event] = []
+        for section in sections:
+            for track in tracks:
+                enter_event = self.detect_enter(section, track)
+                if enter_event:
+                    event_list.extend(enter_event)
+
+        return event_list
+
+    def detect_leave_events(
+        self,
+        sections: list[Section],
+        tracks: list[Track],
+    ) -> list[Event]:
+        """Detects the last time a track crosses the section.
+
+        Args:
+            section (Section): the section.
+            track (Track): the track.
+
+        Returns:
+            Optional[Event]: an event if section has been crossed. Otherwise `None`.
+        """
+        raise NotImplementedError
+
+    def detect_enter(self, section: Section, track: Track) -> Optional[list[Event]]:
         """Detects the first time a track crosses the section.
 
         Args:
@@ -37,12 +66,12 @@ class SectionActionDetector:
         self.section_event_builder.add_direction_vector(
             detection_1=track.detections[0], detection_2=track.detections[-1]
         )
-        event: Optional[Event] = self.intersector.intersect(
+        events: Optional[list[Event]] = self.intersector.intersect(
             track, event_builder=self.section_event_builder
         )
 
-        if event:
-            return event
+        if events:
+            return events
         return None
 
     def detect_leave(self, section: Section, track: Track) -> Optional[Event]:
@@ -55,33 +84,6 @@ class SectionActionDetector:
         Returns:
             Optional[Event]: an event if section has been crossed. Otherwise `None`.
         """
-        raise NotImplementedError
-
-
-class SectionEventCreator:
-    def __init__(
-        self,
-        section_action_detector: SectionActionDetector,
-    ) -> None:
-        self.section_action_detector = section_action_detector
-
-    def create_enter_events(
-        self,
-        sections: list[Section],
-        tracks: list[Track],
-    ) -> list[Event]:
-        event_list: list[Event] = []
-        for section in sections:
-            for track in tracks:
-                enter_event = self.section_action_detector.detect_enter(section, track)
-                if enter_event:
-                    event_list.append(enter_event)
-
-        return event_list
-
-    def create_leave_events(
-        self, sections: list[Section], tracks: list[Track]
-    ) -> list[Event]:
         raise NotImplementedError
 
 
