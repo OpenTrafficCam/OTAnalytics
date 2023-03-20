@@ -6,7 +6,7 @@ import pytest
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
 
@@ -17,7 +17,7 @@ def ottrk_sample(test_data_dir: Path) -> Path:
 
 @pytest.fixture
 def sample_track_det_1() -> tuple[Detection, dict]:
-    det_dict = {
+    det_dict: dict = {
         "class": "car",
         "confidence": 0.8448739051818848,
         "x": 153.6923828125,
@@ -42,11 +42,11 @@ def sample_track_det_1() -> tuple[Detection, dict]:
             h=det_dict[ottrk_format.H],
             frame=det_dict[ottrk_format.FRAME],
             occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURENCE]), ottrk_format.DATE_FORMAT
+                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
             ),
             input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
             interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=det_dict[ottrk_format.TRACK_ID],
+            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
         ),
         det_dict,
     )
@@ -54,7 +54,7 @@ def sample_track_det_1() -> tuple[Detection, dict]:
 
 @pytest.fixture
 def sample_track_det_2() -> tuple[Detection, dict]:
-    det_dict = {
+    det_dict: dict = {
         "class": "car",
         "confidence": 0.8319828510284424,
         "x": 155.19091796875,
@@ -79,11 +79,11 @@ def sample_track_det_2() -> tuple[Detection, dict]:
             h=det_dict[ottrk_format.H],
             frame=det_dict[ottrk_format.FRAME],
             occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURENCE]), ottrk_format.DATE_FORMAT
+                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
             ),
             input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
             interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=det_dict[ottrk_format.TRACK_ID],
+            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
         ),
         det_dict,
     )
@@ -91,7 +91,7 @@ def sample_track_det_2() -> tuple[Detection, dict]:
 
 @pytest.fixture
 def sample_track_det_3() -> tuple[Detection, dict]:
-    det_dict = {
+    det_dict: dict = {
         "class": "car",
         "confidence": 0.829952597618103,
         "x": 158.3513641357422,
@@ -116,11 +116,11 @@ def sample_track_det_3() -> tuple[Detection, dict]:
             h=det_dict[ottrk_format.H],
             frame=det_dict[ottrk_format.FRAME],
             occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURENCE]), ottrk_format.DATE_FORMAT
+                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
             ),
             input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
             interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=det_dict[ottrk_format.TRACK_ID],
+            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
         ),
         det_dict,
     )
@@ -134,7 +134,7 @@ def expected_sample_tracks(
 ) -> list[Track]:
     return [
         Track(
-            id=1,
+            id=TrackId(1),
             detections=[
                 sample_track_det_1[0],
                 sample_track_det_2[0],
@@ -204,8 +204,10 @@ class TestOttrkParser:
             [det_dict_3, det_dict_1, det_dict_2]
         )
 
-        expected_sorted = {1: [expected_det_1, expected_det_2, expected_det_3]}
-        expected_unsorted = {1: [expected_det_3, expected_det_1, expected_det_2]}
+        expected_sorted = {TrackId(1): [expected_det_1, expected_det_2, expected_det_3]}
+        expected_unsorted = {
+            TrackId(1): [expected_det_3, expected_det_1, expected_det_2]
+        }
 
         assert expected_sorted == result_sorted_dets
         assert expected_unsorted == result_unsorted_dets
@@ -228,7 +230,10 @@ class TestOttrkParser:
         )
 
         expected_sorted = [
-            Track(id=1, detections=[expected_det_1, expected_det_2, expected_det_3])
+            Track(
+                id=TrackId(1),
+                detections=[expected_det_1, expected_det_2, expected_det_3],
+            )
         ]
 
         assert expected_sorted == result_sorted_tracks

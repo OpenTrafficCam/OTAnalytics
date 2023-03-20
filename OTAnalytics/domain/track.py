@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
@@ -5,6 +6,11 @@ from typing import Iterable, Optional
 from pydantic import BaseModel, Field, validator
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+
+
+@dataclass(frozen=True)
+class TrackId:
+    id: int
 
 
 class Detection(BaseModel, frozen=True, allow_population_by_field_name=True):
@@ -51,14 +57,10 @@ class Detection(BaseModel, frozen=True, allow_population_by_field_name=True):
     frame: int = Field(
         gt=0, description="must be greater than 0", alias=ottrk_format.FRAME
     )
-    occurrence: datetime = Field(alias=ottrk_format.OCCURENCE)
+    occurrence: datetime = Field(alias=ottrk_format.OCCURRENCE)
     input_file_path: Path = Field(alias=ottrk_format.INPUT_FILE_PATH)
     interpolated_detection: bool = Field(alias=ottrk_format.INTERPOLATED_DETECTION)
-    track_id: int = Field(
-        ge=1,
-        description="Track ID must be greater equal 1",
-        alias=ottrk_format.TRACK_ID,
-    )
+    track_id: TrackId
 
 
 class Track(BaseModel, frozen=True, allow_population_by_field_name=True):
@@ -77,7 +79,7 @@ class Track(BaseModel, frozen=True, allow_population_by_field_name=True):
         ValueError: if an empty detections list has been passed.
     """
 
-    id: int = Field(gt=0, description="id must be a number greater than 0")
+    id: TrackId
     detections: list[Detection] = Field(alias=ottrk_format.DETECTIONS)
 
     @validator("detections")
@@ -98,7 +100,7 @@ class Track(BaseModel, frozen=True, allow_population_by_field_name=True):
 
 
 class TrackRepository(BaseModel):
-    tracks: dict[int, Track] = {}
+    tracks: dict[TrackId, Track] = {}
 
     def add(self, track: Track) -> None:
         self.tracks[track.id] = track
@@ -107,8 +109,8 @@ class TrackRepository(BaseModel):
         for track in tracks:
             self.add(track)
 
-    def get_for(self, id: int) -> Optional[Track]:
-        return None
+    def get_for(self, id: TrackId) -> Optional[Track]:
+        return self.tracks[id]
 
     def get_all(self) -> Iterable[Track]:
         return self.tracks.values()

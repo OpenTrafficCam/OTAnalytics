@@ -1,9 +1,4 @@
-from OTAnalytics.plugin_ui.application import OTAnalyticsApplication
-
-
-def main() -> None:
-    OTAnalyticsApplication().start()
-
+from OTAnalytics.plugin_ui.application import ApplicationStarter
 
 if __name__ == "__main__":
-    main()
+    ApplicationStarter().start_gui()

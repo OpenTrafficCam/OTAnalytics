@@ -1,11 +1,12 @@
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from pydantic import ValidationError
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.track import Detection, Track, TrackId, TrackRepository
 
 
 @pytest.fixture
@@ -18,10 +19,10 @@ def valid_detection_dict() -> dict:
         ottrk_format.W: 0.0,
         ottrk_format.H: 0.0,
         ottrk_format.FRAME: 1,
-        ottrk_format.OCCURENCE: datetime(2022, 1, 1, 1, 0, 0),
+        ottrk_format.OCCURRENCE: datetime(2022, 1, 1, 1, 0, 0),
         ottrk_format.INPUT_FILE_PATH: Path("path/to/file.otdet"),
         ottrk_format.INTERPOLATED_DETECTION: False,
-        ottrk_format.TRACK_ID: 1,
+        "track_id": TrackId(1),
     }
 
 
@@ -47,7 +48,7 @@ class TestDetection:
         w: float,
         h: float,
         frame: int,
-        track_id: int,
+        track_id: TrackId,
     ) -> None:
         with pytest.raises(ValueError):
             Detection(
@@ -73,13 +74,13 @@ class TestDetection:
         assert det.w == valid_detection_dict[ottrk_format.W]
         assert det.h == valid_detection_dict[ottrk_format.H]
         assert det.frame == valid_detection_dict[ottrk_format.FRAME]
-        assert det.occurrence == valid_detection_dict[ottrk_format.OCCURENCE]
+        assert det.occurrence == valid_detection_dict[ottrk_format.OCCURRENCE]
         assert det.input_file_path == valid_detection_dict[ottrk_format.INPUT_FILE_PATH]
         assert (
             det.interpolated_detection
             == valid_detection_dict[ottrk_format.INTERPOLATED_DETECTION]
         )
-        assert det.track_id == valid_detection_dict[ottrk_format.TRACK_ID]
+        assert det.track_id == valid_detection_dict["track_id"]
 
 
 class TestTrack:
@@ -97,6 +98,37 @@ class TestTrack:
 
     def test_instantiation_with_valid_args(self, valid_detection_dict: dict) -> None:
         detection = Detection(**valid_detection_dict)
-        track = Track(id=5, detections=[detection])
-        assert track.id == 5
+        track = Track(id=TrackId(5), detections=[detection])
+        assert track.id == TrackId(5)
         assert track.detections == [detection]
+
+
+class TestTrackRepository:
+    def test_add(self) -> None:
+        track = Mock()
+        repository = TrackRepository()
+
+        repository.add(track)
+
+        assert track in repository.get_all()
+
+    def test_add_all(self) -> None:
+        first_track = Mock()
+        second_track = Mock()
+        repository = TrackRepository()
+
+        repository.add_all([first_track, second_track])
+
+        assert first_track in repository.get_all()
+        assert second_track in repository.get_all()
+
+    def test_get_by_id(self) -> None:
+        first_track = Mock()
+        first_track.id.return_value = TrackId(1)
+        second_track = Mock()
+        repository = TrackRepository()
+        repository.add_all([first_track, second_track])
+
+        returned = repository.get_for(first_track.id)
+
+        assert returned == first_track

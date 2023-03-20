@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Iterable, Optional
 
-from domain.event import Event
-from domain.track import Track
+from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.track import Track
 
 
 @dataclass(frozen=True)
@@ -71,10 +71,7 @@ class LineSection(Section):
 
 @dataclass(frozen=True)
 class Area(Section):
-    x: float
-    y: float
-    w: float
-    h: float
+    coordinates: list[Coordinate]
 
     def enter(self, track: Track) -> Optional[Event]:
         """
@@ -87,3 +84,21 @@ class Area(Section):
         Generates an event for the last point of the track which leaves the area.
         """
         return None
+
+
+class SectionRepository:
+    def __init__(self) -> None:
+        self._sections: dict[str, Section] = {}
+
+    def add(self, section: Section) -> None:
+        self._sections[section.id] = section
+
+    def add_all(self, sections: Iterable[Section]) -> None:
+        for section in sections:
+            self.add(section)
+
+    def get_all(self) -> Iterable[Section]:
+        return self._sections.values()
+
+    def remove(self, section: Section) -> None:
+        del self._sections[section.id]
