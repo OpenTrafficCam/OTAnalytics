@@ -6,6 +6,20 @@ from typing import Iterable, Optional
 from OTAnalytics.domain.common import DataclassValidation
 
 
+class TrackError(Exception):
+    def __init__(self, track_id: int, *args: object) -> None:
+        super().__init__(*args)
+        self.track_id = track_id
+
+
+class BuildTrackWithSingleDetectionError(TrackError):
+    def __str__(self) -> str:
+        return (
+            f"Trying to construct track (track_id={self.track_id}) with less than "
+            "two detections."
+        )
+
+
 @dataclass(frozen=True)
 class Detection(DataclassValidation):
     """Represents a detection belonging to a `Track`.
@@ -99,16 +113,16 @@ class Track(DataclassValidation):
 
     def _validate(self) -> None:
         self._validate_id_greater_zero()
-        self._validate_detections_not_empty()
+        self._validate_track_has_at_least_two_detections()
         self._validate_detections_sorted_by_occurrence()
 
     def _validate_id_greater_zero(self) -> None:
         if self.id < 1:
             raise ValueError("id must be a number greater than 0")
 
-    def _validate_detections_not_empty(self) -> None:
-        if not self.detections:
-            raise ValueError("must not be empty")
+    def _validate_track_has_at_least_two_detections(self) -> None:
+        if len(self.detections) < 2:
+            raise BuildTrackWithSingleDetectionError(self.id)
 
     def _validate_detections_sorted_by_occurrence(self) -> None:
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):

@@ -4,7 +4,11 @@ from pathlib import Path
 import pytest
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.track import (
+    BuildTrackWithSingleDetectionError,
+    Detection,
+    Track,
+)
 
 
 @pytest.fixture
@@ -111,7 +115,7 @@ class TestTrack:
             Track(id=id, detections=[valid_detection])
 
     def test_raise_error_on_empty_detections(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(BuildTrackWithSingleDetectionError):
             Track(id=1, detections=[])
 
     def test_instantiation_with_valid_args(

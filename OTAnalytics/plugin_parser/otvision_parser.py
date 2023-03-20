@@ -6,7 +6,11 @@ import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.datastore import TrackParser
-from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.track import (
+    BuildTrackWithSingleDetectionError,
+    Detection,
+    Track,
+)
 
 ENCODING: str = "UTF-8"
 
@@ -62,8 +66,16 @@ class OttrkParser(TrackParser):
         tracks_dict = self._parse_detections(dets)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
-            sort_dets_by_frame = sorted(detections, key=lambda det: det.occurrence)
-            tracks.append(Track(id=track_id, detections=sort_dets_by_frame))
+            sort_dets_by_occurrence = sorted(detections, key=lambda det: det.occurrence)
+            try:
+                current_track = Track(id=track_id, detections=sort_dets_by_occurrence)
+                tracks.append(current_track)
+            except BuildTrackWithSingleDetectionError as be:
+                # TODO: log error
+                # Skip tracks with less than 2 detections
+                print(be)
+                tracks = []
+
         return tracks
 
     def _parse_detections(self, det_list: list[dict]) -> dict[int, list[Detection]]:
