@@ -6,8 +6,14 @@ import pytest
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.domain import section
+from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
 from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
+from OTAnalytics.plugin_parser.otvision_parser import (
+    OtsectionParser,
+    OttrkParser,
+    _parse_bz2,
+)
 
 
 @pytest.fixture
@@ -179,12 +185,12 @@ class TestOttrkParser:
 
     def test_parse_bz2(self, example_json_bz2: tuple[Path, dict]) -> None:
         example_json_bz2_path, expected_content = example_json_bz2
-        result_content = self.ottrk_parser._parse_bz2(example_json_bz2_path)
+        result_content = _parse_bz2(example_json_bz2_path)
         assert result_content == expected_content
 
     def test_parse_bz2_uncompressed_file(self, example_json: tuple[Path, dict]) -> None:
         example_path, expected_content = example_json
-        result_content = self.ottrk_parser._parse_bz2(example_path)
+        result_content = _parse_bz2(example_path)
         assert result_content == expected_content
 
     def test_parse_detections_output_has_same_order_as_input(
@@ -251,3 +257,53 @@ class TestOttrkParser:
         assert d1.input_file_path == d2.input_file_path
         assert d1.interpolated_detection == d2.interpolated_detection
         assert d1.track_id == d2.track_id
+
+
+class TestOtsectionParser:
+    def test_parse_section(self, test_data_tmp_dir: Path) -> None:
+        first_coordinate = Coordinate(0, 0)
+        second_coordinate = Coordinate(1, 1)
+        third_coordinate = Coordinate(1, 0)
+        line_section: Section = LineSection(
+            id="some",
+            start=first_coordinate,
+            end=second_coordinate,
+        )
+        area_section: Section = Area(
+            id="other",
+            coordinates=[
+                first_coordinate,
+                second_coordinate,
+                third_coordinate,
+                first_coordinate,
+            ],
+        )
+        json_file = test_data_tmp_dir / "section.json"
+        json_file.touch()
+        sections = [line_section, area_section]
+        parser = OtsectionParser()
+        parser.serialize(sections, json_file)
+
+        content = parser.parse(json_file)
+
+        assert content == sections
+
+    def test_serialise_section(self) -> None:
+        some_section: Section = LineSection(
+            id="some",
+            start=Coordinate(0, 0),
+            end=Coordinate(1, 1),
+        )
+        other_section: Section = LineSection(
+            id="other",
+            start=Coordinate(1, 0),
+            end=Coordinate(0, 1),
+        )
+        sections = [some_section, other_section]
+        parser = OtsectionParser()
+
+        content = parser._serialize(sections)
+
+        assert content == {
+            section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]
+        }

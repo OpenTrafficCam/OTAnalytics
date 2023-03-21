@@ -1,7 +1,7 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Iterable, Tuple
 
 import ujson
 
@@ -12,10 +12,35 @@ from OTAnalytics.application.datastore import (
     Video,
     VideoParser,
 )
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain import section
+from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
 from OTAnalytics.domain.track import Detection, Track, TrackId
 
 ENCODING: str = "UTF-8"
+
+
+def _parse_bz2(path: Path) -> dict:
+    """Parse JSON bz2.
+
+    Args:
+        path (Path): Path to bz2 JSON.
+
+    Returns:
+        dict: The content of the JSON file.
+    """
+    with bz2.open(path, "rt", encoding=ENCODING) as file:
+        return ujson.load(file)
+
+
+def _write_bz2(data: dict, path: Path) -> None:
+    """Parse JSON bz2.
+
+    Args:
+        dict: The content of the JSON file.
+        path (Path): Path to bz2 JSON.
+    """
+    with bz2.open(path, "wt", encoding=ENCODING) as file:
+        ujson.dump(data, file)
 
 
 class OttrkParser(TrackParser):
@@ -36,23 +61,10 @@ class OttrkParser(TrackParser):
         Returns:
             list[Track]: the tracks.
         """
-        ottrk_dict = self._parse_bz2(ottrk_file)
+        ottrk_dict = _parse_bz2(ottrk_file)
         dets_list: list[dict] = ottrk_dict[ottrk_format.DATA][ottrk_format.DETECTIONS]
         tracks = self._parse_tracks(dets_list)
         return tracks
-
-    def _parse_bz2(self, p: Path) -> dict:
-        """Parse JSON bz2.
-
-        Args:
-            p (Path): Path to bz2 JSON.
-
-        Returns:
-            dict: The content of the JSON file.
-        """
-        with bz2.open(p, "rt", encoding=ENCODING) as f:
-            _dict = ujson.load(f)
-            return _dict
 
     def _parse_tracks(self, dets: list[dict]) -> list[Track]:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
@@ -99,9 +111,55 @@ class OttrkParser(TrackParser):
         return tracks_dict
 
 
+class UnknownSectionType(Exception):
+    pass
+
+
 class OtsectionParser(SectionParser):
     def parse(self, file: Path) -> list[Section]:
-        return []
+        content: dict = _parse_bz2(file)
+        sections: list[Section] = [
+            self._parse_section(entry) for entry in content.get(section.SECTIONS, [])
+        ]
+        return sections
+
+    def _parse_section(self, entry: dict) -> Section:
+        match (entry.get(section.TYPE)):
+            case section.LINE:
+                return self._parse_line_section(entry)
+            case section.AREA:
+                return self._parse_area_section(entry)
+
+        raise UnknownSectionType()
+
+    def _parse_line_section(self, data: dict) -> Section:
+        section_id = data.get(section.ID, "no-id")
+        start = self._parse_coordinate(data.get(section.START, {}))
+        end = self._parse_coordinate(data.get(section.END, {}))
+        return LineSection(section_id, start, end)
+
+    def _parse_area_section(self, data: dict) -> Section:
+        section_id = data.get(section.ID, "no-id")
+        coordinates = self._parse_coordinates(data)
+        return Area(section_id, coordinates)
+
+    def _parse_coordinates(self, data: dict) -> list[Coordinate]:
+        return [
+            self._parse_coordinate(entry) for entry in data.get(section.COORDINATES, [])
+        ]
+
+    def _parse_coordinate(self, data: dict) -> Coordinate:
+        return Coordinate(
+            x=data.get(section.X, 0),
+            y=data.get(section.Y, 0),
+        )
+
+    def serialize(self, sections: Iterable[Section], file: Path) -> None:
+        content = self._serialize(sections)
+        _write_bz2(content, file)
+
+    def _serialize(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
+        return {section.SECTIONS: [section.to_dict() for section in sections]}
 
 
 class OttrkVideoParser(VideoParser):
