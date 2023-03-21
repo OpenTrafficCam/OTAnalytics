@@ -169,6 +169,14 @@ class OtsectionParser(SectionParser):
         raise UnknownSectionType()
 
     def _parse_line_section(self, data: dict) -> Section:
+        """Parse data to line section.
+
+        Args:
+            data (dict): data to parse to line section
+
+        Returns:
+            Section: line section
+        """
         self._validate_data(data, attributes=[section.ID, section.START, section.END])
         section_id = data[section.ID]
         start = self._parse_coordinate(data[section.START])
@@ -176,20 +184,53 @@ class OtsectionParser(SectionParser):
         return LineSection(section_id, start, end)
 
     def _validate_data(self, data: dict, attributes: list[str]) -> None:
+        """Validate attributes of dictionary
+
+        Args:
+            data (dict): dictionary to validate
+            attributes (list[str]): attributes that must exist
+
+        Raises:
+            InvalidSectionData: if an attribute is missing
+        """
         for attribute in attributes:
             if attribute not in data.keys():
                 raise InvalidSectionData(f"{attribute} attribute is missing")
 
     def _parse_area_section(self, data: dict) -> Section:
+        """Parse data to area section.
+
+        Args:
+            data (dict): data to parse to area section
+
+        Returns:
+            Section: area section
+        """
         self._validate_data(data, attributes=[section.ID, section.COORDINATES])
         section_id = data[section.ID]
         coordinates = self._parse_coordinates(data)
         return Area(section_id, coordinates)
 
     def _parse_coordinates(self, data: dict) -> list[Coordinate]:
+        """Parse data to coordinates.
+
+        Args:
+            data (dict): data to parse to coordinates
+
+        Returns:
+            list[Coordinate]: coordinates
+        """
         return [self._parse_coordinate(entry) for entry in data[section.COORDINATES]]
 
     def _parse_coordinate(self, data: dict) -> Coordinate:
+        """Parse data to coordinate.
+
+        Args:
+            data (dict): data to parse to coordinate
+
+        Returns:
+            Coordinate: coordinate
+        """
         self._validate_data(data, attributes=[section.X, section.Y])
         return Coordinate(
             x=data.get(section.X, 0),
@@ -197,10 +238,24 @@ class OtsectionParser(SectionParser):
         )
 
     def serialize(self, sections: Iterable[Section], file: Path) -> None:
-        content = self._serialize(sections)
+        """Serialize sections into file.
+
+        Args:
+            sections (Iterable[Section]): sections to serialize
+            file (Path): file to serialize sections to
+        """
+        content = self._convert(sections)
         _write_bz2(content, file)
 
-    def _serialize(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
+    def _convert(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
+        """Convert sections into dictionary
+
+        Args:
+            sections (Iterable[Section]): sections to convert
+
+        Returns:
+            dict[str, list[dict]]: dictionary containing raw information of sections
+        """
         return {section.SECTIONS: [section.to_dict() for section in sections]}
 
 

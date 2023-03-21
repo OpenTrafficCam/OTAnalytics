@@ -295,7 +295,7 @@ class TestOtsectionParser:
             InvalidSectionData, parser._parse_section, {section.TYPE: section.LINE}
         )
 
-    def test_serialise_section(self) -> None:
+    def test_convert_section(self) -> None:
         some_section: Section = LineSection(
             id="some",
             start=Coordinate(0, 0),
@@ -309,7 +309,7 @@ class TestOtsectionParser:
         sections = [some_section, other_section]
         parser = OtsectionParser()
 
-        content = parser._serialize(sections)
+        content = parser._convert(sections)
 
         assert content == {
             section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]
