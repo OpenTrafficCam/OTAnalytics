@@ -54,7 +54,7 @@ class Detection(DataclassValidation):
         input_file_path (Path): absolute path to otdet that the detection belongs to
         at the time of its creation.
         interpolated_detection (bool): whether this detection is interpolated.
-        track_id (int): the track id this detection belongs to.
+        track_id (TrackId): the track id this detection belongs to.
     """
 
     classification: str
@@ -105,7 +105,7 @@ class Track(DataclassValidation):
 
 
     Args:
-        id (int): the track id.
+        id (TrackId): the track id.
         detections (list[Detection]): the detections belonging to this track.
 
     Raises:
