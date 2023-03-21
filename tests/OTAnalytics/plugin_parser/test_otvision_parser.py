@@ -6,7 +6,7 @@ import pytest
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
 
@@ -32,7 +32,7 @@ def sample_track_det_1() -> Detection:
             "test/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otdet"
         ),
         interpolated_detection=False,
-        track_id=1,
+        track_id=TrackId(1),
     )
 
 
@@ -72,7 +72,7 @@ def sample_track_det_2() -> Detection:
             "test/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otdet"
         ),
         interpolated_detection=False,
-        track_id=1,
+        track_id=TrackId(1),
     )
 
 
@@ -112,7 +112,7 @@ def sample_track_det_3() -> Detection:
             "test/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otdet"
         ),
         interpolated_detection=False,
-        track_id=1,
+        track_id=TrackId(1),
     )
 
 
@@ -143,7 +143,7 @@ def expected_sample_tracks(
 ) -> list[Track]:
     return [
         Track(
-            id=1,
+            id=TrackId(1),
             detections=[
                 sample_track_det_1,
                 sample_track_det_2,
@@ -213,10 +213,10 @@ class TestOttrkParser:
         )
 
         expected_sorted = {
-            1: [sample_track_det_1, sample_track_det_2, sample_track_det_3]
+            TrackId(1): [sample_track_det_1, sample_track_det_2, sample_track_det_3]
         }
         expected_unsorted = {
-            1: [sample_track_det_3, sample_track_det_1, sample_track_det_2]
+            TrackId(1): [sample_track_det_3, sample_track_det_1, sample_track_det_2]
         }
 
         assert expected_sorted == result_sorted
@@ -240,7 +240,7 @@ class TestOttrkParser:
 
         expected_sorted = [
             Track(
-                id=1,
+                id=TrackId(1),
                 detections=[sample_track_det_1, sample_track_det_2, sample_track_det_3],
             )
         ]

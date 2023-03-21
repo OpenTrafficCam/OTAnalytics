@@ -1,15 +1,23 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
+from typing import Tuple
 
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.application.datastore import TrackParser
+from OTAnalytics.application.datastore import (
+    SectionParser,
+    TrackParser,
+    Video,
+    VideoParser,
+)
+from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import (
     BuildTrackWithSingleDetectionError,
     Detection,
     Track,
+    TrackId,
 )
 
 ENCODING: str = "UTF-8"
@@ -70,17 +78,17 @@ class OttrkParser(TrackParser):
             try:
                 current_track = Track(id=track_id, detections=sort_dets_by_occurrence)
                 tracks.append(current_track)
-            except BuildTrackWithSingleDetectionError as be:
+            except BuildTrackWithSingleDetectionError as build_error:
                 # TODO: log error
                 # Skip tracks with less than 2 detections
-                print(be)
+                print(build_error)
                 tracks = []
 
         return tracks
 
-    def _parse_detections(self, det_list: list[dict]) -> dict[int, list[Detection]]:
+    def _parse_detections(self, det_list: list[dict]) -> dict[TrackId, list[Detection]]:
         """Convert dict to Detection objects and group them by their track id."""
-        tracks_dict: dict[int, list[Detection]] = {}
+        tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
             det = Detection(
                 classification=det_dict[ottrk_format.CLASS],
@@ -91,14 +99,24 @@ class OttrkParser(TrackParser):
                 h=det_dict[ottrk_format.H],
                 frame=det_dict[ottrk_format.FRAME],
                 occurrence=datetime.strptime(
-                    det_dict[ottrk_format.OCCURENCE], ottrk_format.DATE_FORMAT
+                    det_dict[ottrk_format.OCCURRENCE], ottrk_format.DATE_FORMAT
                 ),
                 input_file_path=Path(det_dict[ottrk_format.INPUT_FILE_PATH]),
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-                track_id=det_dict[ottrk_format.TRACK_ID],
+                track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
             )
             if not tracks_dict.get(det.track_id):
                 tracks_dict[det.track_id] = []
 
             tracks_dict[det.track_id].append(det)  # Group detections by track id
         return tracks_dict
+
+
+class OtsectionParser(SectionParser):
+    def parse(self, file: Path) -> list[Section]:
+        return []
+
+
+class OttrkVideoParser(VideoParser):
+    def parse(self, file: Path) -> Tuple[list[TrackId], list[Video]]:
+        return [], []

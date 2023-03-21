@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Iterable
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate
@@ -61,3 +62,21 @@ class Area(Section):
 
         if self.coordinates[0] != self.coordinates[-1]:
             raise ValueError("Coordinates don't define a closed area")
+
+
+class SectionRepository:
+    def __init__(self) -> None:
+        self._sections: dict[str, Section] = {}
+
+    def add(self, section: Section) -> None:
+        self._sections[section.id] = section
+
+    def add_all(self, sections: Iterable[Section]) -> None:
+        for section in sections:
+            self.add(section)
+
+    def get_all(self) -> Iterable[Section]:
+        return self._sections.values()
+
+    def remove(self, section: Section) -> None:
+        del self._sections[section.id]

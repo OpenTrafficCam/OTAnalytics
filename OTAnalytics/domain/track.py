@@ -6,8 +6,13 @@ from typing import Iterable, Optional
 from OTAnalytics.domain.common import DataclassValidation
 
 
+@dataclass(frozen=True)
+class TrackId:
+    id: int
+
+
 class TrackError(Exception):
-    def __init__(self, track_id: int, *args: object) -> None:
+    def __init__(self, track_id: TrackId, *args: object) -> None:
         super().__init__(*args)
         self.track_id = track_id
 
@@ -62,7 +67,7 @@ class Detection(DataclassValidation):
     occurrence: datetime
     input_file_path: Path
     interpolated_detection: bool
-    track_id: int
+    track_id: TrackId
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()
@@ -89,7 +94,7 @@ class Detection(DataclassValidation):
             raise ValueError("frame number must be greater equal 1")
 
     def _validate_track_id_greater_equal_one(self) -> None:
-        if self.track_id < 1:
+        if self.track_id.id < 1:
             raise ValueError("track id must be greater equal 1")
 
 
@@ -108,7 +113,7 @@ class Track(DataclassValidation):
         ValueError: if an empty detections list has been passed.
     """
 
-    id: int
+    id: TrackId
     detections: list[Detection]
 
     def _validate(self) -> None:
@@ -117,7 +122,7 @@ class Track(DataclassValidation):
         self._validate_detections_sorted_by_occurrence()
 
     def _validate_id_greater_zero(self) -> None:
-        if self.id < 1:
+        if self.id.id < 1:
             raise ValueError("id must be a number greater than 0")
 
     def _validate_track_has_at_least_two_detections(self) -> None:
@@ -130,8 +135,8 @@ class Track(DataclassValidation):
 
 
 class TrackRepository:
-    def __init__(self) -> None:
-        self.tracks: dict[int, Track] = {}
+    def __init__(self, tracks: dict[TrackId, Track] = {}) -> None:
+        self.tracks: dict[TrackId, Track] = tracks
 
     def add(self, track: Track) -> None:
         self.tracks[track.id] = track
@@ -140,8 +145,8 @@ class TrackRepository:
         for track in tracks:
             self.add(track)
 
-    def get_for(self, id: int) -> Optional[Track]:
-        return None
+    def get_for(self, id: TrackId) -> Optional[Track]:
+        return self.tracks[id]
 
     def get_all(self) -> Iterable[Track]:
         return self.tracks.values()
