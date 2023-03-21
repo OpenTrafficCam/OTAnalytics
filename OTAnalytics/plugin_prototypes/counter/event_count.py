@@ -1,19 +1,29 @@
 # % Import libraries and modules
 from pathlib import Path
 
+import holoviews as hv
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from plugin_prototypes.otanalytics_parser import JsonParser, PandasDataFrameParser
+import plotly.express as px
+from matplotlib import pyplot as plt
+from mpl_chord_diagram import chord_diagram
+from plugin_prototypes.counter.otanalytics_parser import (
+    JsonParser,
+    PandasDataFrameParser,
+)
+
+hv.extension("bokeh")
+
 
 # % set env parameters and path
 EVENTS = "event_list"
 SECTIONS = "sections"
+TIME_FORMAT = "%d.%m%.%y %H:%M Uhr"
 eventlist_json_path = Path("data/eventlist.json")
 sectionlist_json_path = Path("data/sectionlist.json")
 from_time = ""
 to_time = ""
-interval_length = 1  # im minutes
+interval_length = 2  # im minutes
 
 # % Import Eventlist
 eventlist_dict = JsonParser.from_dict(eventlist_json_path)
@@ -159,17 +169,41 @@ counts_section_agg = (
     .fillna(0)
 )
 
+
+def _set_time_format(series: pd.Series, format: str) -> pd.Series:
+    return series.map(lambda x: x.strftime(format))
+
+
+counts_section["time_interval"] = _set_time_format(
+    counts_section["time_interval"], TIME_FORMAT
+)
+counts_section_agg["time_interval"] = _set_time_format(
+    counts_section_agg["time_interval"], TIME_FORMAT
+)
+
 # % Create counting plot
-p = sns.FacetGrid(
-    counts_section, hue="vehicle_type", row="section_name", col="direction", aspect=2
+fig = px.bar(
+    counts_section,
+    x="time_interval",
+    y="n_vehicles",
+    color="vehicle_type",
+    barmode="stack",
+    facet_col="direction",
+    facet_row="section_name",
+    facet_col_spacing=0.05,
+    facet_row_spacing=0.1,
+    height=800,
 )
-p.map(
-    sns.barplot,
-    "time_interval",
-    "n_vehicles",
-    alpha=0.7,
-    order=counts_section["time_interval"].unique(),
+
+"""fig.update_yaxes(
+    title_text="Number of road users",
+)"""
+fig.update_layout(
+    title="Counts at section X",
+    xaxis_title="Time of day",
+    legend_title="Type of<br>road user",
 )
+fig.show()
 
 # % Create flow table
 flows_section = events_df_dir[["vehicle_id", "vehicle_type", "timestamp", "section_id"]]
@@ -213,3 +247,84 @@ flows_section = (
     .reset_index()
     .fillna(0)
 )
+
+
+# % Create plot of flows
+def _get_all_flows_from_sections(
+    flows: pd.DataFrame, nodes: pd.DataFrame
+) -> pd.DataFrame:
+    all_flows = pd.DataFrame()
+    all_flows_time = pd.DataFrame()
+    for i in nodes["name"]:
+        from_section = [i] * len(nodes["name"])
+        to_section = list(nodes["name"])
+        flows_to_add = pd.DataFrame(
+            {"from_section": from_section, "to_section": to_section}
+        )
+        all_flows = pd.concat([all_flows, flows_to_add])
+
+    for j in flows["time_interval"].unique():
+        flows_time_to_add = all_flows
+        flows_time_to_add["time_interval"] = j
+        all_flows_time = pd.concat([all_flows_time, flows_time_to_add])
+
+    return pd.merge(
+        all_flows_time,
+        flows,
+        on=["from_section", "to_section", "time_interval"],
+        how="left",
+    ).fillna(0)
+
+
+nodes = pd.DataFrame(sections_dict).transpose()[["section_id", "name"]]
+flows = _get_all_flows_from_sections(flows_section, nodes)
+
+
+time_intervals = flows_section["time_interval"].unique()
+vehicle_types = events_df_dir["vehicle_type"].unique()
+
+fig, axs = plt.subplots(
+    len(time_intervals),
+    len(vehicle_types),
+    dpi=300,
+    figsize=(5 * len(time_intervals), 5 * len(vehicle_types)),
+)
+for i in range(0, len(time_intervals)):
+    for j in range(0, len(vehicle_types)):
+        if len(vehicle_types) > 1 and len(time_intervals) > 1:
+            axs_ij = axs[i, j]
+        elif len(vehicle_types) > 1 and len(time_intervals) == 1:
+            axs_ij = axs[j]
+        elif len(vehicle_types) == 1 and len(time_intervals) > 1:
+            axs_ij = axs[i]
+        flow_matrix = pd.pivot_table(
+            flows[flows["time_interval"] == time_intervals[i]],
+            index="from_section",
+            columns="to_section",
+            values=vehicle_types[j],
+            aggfunc="sum",
+        ).to_numpy(na_value=0)
+
+        chord_diagram(
+            flow_matrix,
+            names=nodes["name"],
+            order=None,
+            width=0.05,
+            pad=30.0,
+            gap=0.03,
+            chordwidth=0.7,
+            ax=axs_ij,
+            colors=None,
+            cmap=None,
+            alpha=0.6,
+            use_gradient=False,
+            chord_colors=None,
+            start_at=45,
+            extent=360,
+            directed=True,
+            show=False,
+        )
+        times = _set_time_format(pd.Series(time_intervals), TIME_FORMAT)
+        axs_ij.set_title(
+            f"Time Interval: {times[i]},\nRoad User: {vehicle_types[j]}", loc="Left"
+        )
