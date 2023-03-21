@@ -121,12 +121,14 @@ class TestTrack:
         with pytest.raises(BuildTrackWithSingleDetectionError):
             Track(id=TrackId(1), detections=[])
 
-    def test_instantiation_with_valid_args(
-        self, valid_detection: Detection, valid_detection_dict: dict
-    ) -> None:
-        track = Track(id=TrackId(5), detections=[valid_detection])
+    def test_error_on_single_detection(self, valid_detection: Detection) -> None:
+        with pytest.raises(BuildTrackWithSingleDetectionError):
+            Track(id=TrackId(5), detections=[valid_detection])
+
+    def test_instantiation_with_valid_args(self, valid_detection: Detection) -> None:
+        track = Track(id=TrackId(5), detections=[valid_detection, valid_detection])
         assert track.id == TrackId(5)
-        assert track.detections == [valid_detection]
+        assert track.detections == [valid_detection, valid_detection]
 
 
 class TestTrackRepository:
