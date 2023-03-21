@@ -19,6 +19,10 @@ COORDINATES: str = "coordinates"
 
 @dataclass(frozen=True)
 class Coordinate:
+    """
+    Models points in the image as x-y coordinates.
+    """
+
     x: float
     y: float
 
@@ -65,7 +69,8 @@ class Section(ABC):
 
     @abstractmethod
     def to_dict(self) -> dict:
-        """Convert section into dict to interact with other parts of the system,
+        """
+        Convert section into dict to interact with other parts of the system,
         e.g. serialization.
 
         Returns:
@@ -96,6 +101,10 @@ class LineSection(Section):
         return None
 
     def to_dict(self) -> dict:
+        """
+        Convert section into dict to interact with other parts of the system,
+        e.g. serialization.
+        """
         return {
             ID: self.id,
             TYPE: LINE,
@@ -121,6 +130,10 @@ class Area(Section):
         return None
 
     def to_dict(self) -> dict:
+        """
+        Convert section into dict to interact with other parts of the system,
+        e.g. serialization.
+        """
         return {
             TYPE: AREA,
             ID: self.id,
