@@ -92,9 +92,9 @@ class Event(DataclassValidation):
             )
 
     def _validate_road_user_id_greater_zero(self) -> None:
-        if self.road_user_id < 0:
+        if self.road_user_id < 1:
             raise ValueError(
-                f"vehicle_id must be greater than zero, but is {self.road_user_id}"
+                f"vehicle_id must be at least 1, but is {self.road_user_id}"
             )
 
 
