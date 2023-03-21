@@ -10,6 +10,7 @@ from OTAnalytics.domain import section
 from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.plugin_parser.otvision_parser import (
+    InvalidSectionData,
     OtsectionParser,
     OttrkParser,
     _parse_bz2,
@@ -287,6 +288,12 @@ class TestOtsectionParser:
         content = parser.parse(json_file)
 
         assert content == sections
+
+    def test_validate(self) -> None:
+        parser = OtsectionParser()
+        pytest.raises(
+            InvalidSectionData, parser._parse_section, {section.TYPE: section.LINE}
+        )
 
     def test_serialise_section(self) -> None:
         some_section: Section = LineSection(

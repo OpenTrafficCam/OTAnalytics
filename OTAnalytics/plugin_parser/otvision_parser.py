@@ -112,11 +112,37 @@ class OttrkParser(TrackParser):
 
 
 class UnknownSectionType(Exception):
+    """
+    This exception indicates unknown types in section files.
+    """
+
     pass
 
 
+class InvalidSectionData(Exception):
+    """
+    This exception indicates invalid data when parsing a section file.
+    """
+
+
 class OtsectionParser(SectionParser):
+    """
+    Parse a section file and convert its content to domain objects namely
+    LineSection, Area and Coordinate.
+
+    Args:
+        SectionParser (SectionParser): extends SectionParser interface
+    """
+
     def parse(self, file: Path) -> list[Section]:
+        """Parse the content of the file into Section objects.
+
+        Args:
+            file (Path): path to section file
+
+        Returns:
+            list[Section]: list of Section objects
+        """
         content: dict = _parse_bz2(file)
         sections: list[Section] = [
             self._parse_section(entry) for entry in content.get(section.SECTIONS, [])
@@ -124,31 +150,47 @@ class OtsectionParser(SectionParser):
         return sections
 
     def _parse_section(self, entry: dict) -> Section:
+        """Parse sections by type.
+
+        Args:
+            entry (dict): content of section file
+
+        Raises:
+            UnknownSectionType: if the type of a section is unknown
+
+        Returns:
+            Section: section of parsed type
+        """
         match (entry.get(section.TYPE)):
             case section.LINE:
                 return self._parse_line_section(entry)
             case section.AREA:
                 return self._parse_area_section(entry)
-
         raise UnknownSectionType()
 
     def _parse_line_section(self, data: dict) -> Section:
-        section_id = data.get(section.ID, "no-id")
-        start = self._parse_coordinate(data.get(section.START, {}))
-        end = self._parse_coordinate(data.get(section.END, {}))
+        self._validate_data(data, attributes=[section.ID, section.START, section.END])
+        section_id = data[section.ID]
+        start = self._parse_coordinate(data[section.START])
+        end = self._parse_coordinate(data[section.END])
         return LineSection(section_id, start, end)
 
+    def _validate_data(self, data: dict, attributes: list[str]) -> None:
+        for attribute in attributes:
+            if attribute not in data.keys():
+                raise InvalidSectionData(f"{attribute} attribute is missing")
+
     def _parse_area_section(self, data: dict) -> Section:
-        section_id = data.get(section.ID, "no-id")
+        self._validate_data(data, attributes=[section.ID, section.COORDINATES])
+        section_id = data[section.ID]
         coordinates = self._parse_coordinates(data)
         return Area(section_id, coordinates)
 
     def _parse_coordinates(self, data: dict) -> list[Coordinate]:
-        return [
-            self._parse_coordinate(entry) for entry in data.get(section.COORDINATES, [])
-        ]
+        return [self._parse_coordinate(entry) for entry in data[section.COORDINATES]]
 
     def _parse_coordinate(self, data: dict) -> Coordinate:
+        self._validate_data(data, attributes=[section.X, section.Y])
         return Coordinate(
             x=data.get(section.X, 0),
             y=data.get(section.Y, 0),
