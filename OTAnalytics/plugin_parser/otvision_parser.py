@@ -82,7 +82,6 @@ class OttrkParser(TrackParser):
                 # TODO: log error
                 # Skip tracks with less than 2 detections
                 print(build_error)
-                tracks = []
 
         return tracks
 

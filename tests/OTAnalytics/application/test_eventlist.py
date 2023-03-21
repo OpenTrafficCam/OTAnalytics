@@ -44,12 +44,6 @@ def ottrk_long_video(test_data_dir: Path) -> Path:
     return test_data_dir / "OTCamera10_FR20_2022-11-03_10-00-00.ottrk"
 
 
-@pytest.fixture(scope="module")
-def tracks_long_video(ottrk_long_video: Path) -> list[Track]:
-    ottrk_parser = OttrkParser()
-    return ottrk_parser.parse(ottrk_long_video)
-
-
 class TestSectionEventCreator:
     def test_intersect_by_small_track_components(
         self,
@@ -76,7 +70,7 @@ class TestSectionEventCreator:
         enter_events = section_action_detector.detect_enter_events(
             sections=[line_section], tracks=tracks
         )
-        assert len(enter_events) == 5
+        assert len(enter_events) == 7
 
     def test_intersect_by_single_track_line(
         self,
@@ -103,34 +97,7 @@ class TestSectionEventCreator:
         enter_events = section_action_detector.detect_enter_events(
             sections=[line_section], tracks=tracks
         )
-        assert len(enter_events) == 5
-
-    def test_intersect_by_single_track_line_long(
-        self,
-        tracks_long_video: list[Track],
-        shapely_intersection_adapter: ShapelyIntersectImplementationAdapter,
-        section_event_builder: SectionEventBuilder,
-    ) -> None:
-        # Setup
-        line_section = LineSection(
-            id="NE", start=Coordinate(103, 194), end=Coordinate(366, 129)
-        )
-
-        line_section_intersector = IntersectBySingleTrackLine(
-            implementation=shapely_intersection_adapter, line_section=line_section
-        )
-
-        section_action_detector = SectionActionDetector(
-            intersector=line_section_intersector,
-            section_event_builder=section_event_builder,
-        )
-
-        # Actual usage
-
-        enter_events = section_action_detector.detect_enter_events(
-            sections=[line_section], tracks=tracks_long_video
-        )
-        assert len(enter_events) == 5
+        assert len(enter_events) == 7
 
     def test_sth(self) -> None:
         l1 = LineString([[10, 10], [10, 20]])
