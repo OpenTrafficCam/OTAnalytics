@@ -1,6 +1,46 @@
 from unittest.mock import Mock
 
-from OTAnalytics.domain.section import SectionRepository
+import pytest
+
+from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.section import Area, LineSection, SectionRepository
+
+
+class TestLineSection:
+    def test_coordinates_define_point_raises_value_error(self) -> None:
+        with pytest.raises(ValueError):
+            LineSection("N", Coordinate(0, 0), Coordinate(0, 0))
+
+    def test_valid_line_section(self) -> None:
+        LineSection("N", Coordinate(0, 0), Coordinate(1, 0))
+
+
+class TestArea:
+    def test_coordinates_define_point_raises_value_error(self) -> None:
+        coordinates = [Coordinate(0, 0), Coordinate(0, 0)]
+        with pytest.raises(ValueError):
+            Area("N", coordinates)
+
+    def test_insufficient_coordinates_raises_value_error(self) -> None:
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        with pytest.raises(ValueError):
+            Area("N", coordinates)
+
+    def test_valid_area(self) -> None:
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        area = Area("N", coordinates)
+
+        assert area.id == "N"
+        assert area.coordinates == coordinates
 
 
 class TestSectionRepository:
