@@ -101,7 +101,7 @@ class SectionActionDetector:
         raise NotImplementedError
 
 
-class EventListRepository:
+class EventRepository:
     """The repository to store events."""
 
     def __init__(self) -> None:
