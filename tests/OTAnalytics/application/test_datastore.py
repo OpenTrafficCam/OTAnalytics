@@ -56,3 +56,19 @@ class TestDatastore:
         video_parser.parse.assert_called_with(some_file)
         assert some_track in store._track_repository.get_all()
         assert some_video == store._video_repository.get_video_for(some_track.id)
+
+    def test_save_section_file(self) -> None:
+        track_parser = Mock()
+        track_parser.parse.return_value = []
+        section_parser = Mock()
+        video_parser = Mock()
+        video_parser.parse.return_value = []
+        store = Datastore(
+            track_parser=track_parser,
+            section_parser=section_parser,
+            video_parser=video_parser,
+        )
+        some_file = Mock()
+        store.save_section_file(some_file)
+
+        section_parser.serialize.assert_called()

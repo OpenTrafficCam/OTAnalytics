@@ -2,11 +2,20 @@ from dataclasses import dataclass
 
 from OTAnalytics.domain.common import DataclassValidation
 
+X: str = "x"
+Y: str = "y"
+
 
 @dataclass(frozen=True)
 class Coordinate(DataclassValidation):
     x: float
     y: float
+
+    def to_dict(self) -> dict:
+        return {
+            X: self.x,
+            Y: self.y,
+        }
 
 
 @dataclass(frozen=True)

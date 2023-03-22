@@ -1,8 +1,18 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Iterable
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate
+
+SECTIONS: str = "sections"
+ID: str = "id"
+TYPE: str = "type"
+LINE: str = "line"
+START: str = "start"
+END: str = "end"
+AREA: str = "area"
+COORDINATES: str = "coordinates"
 
 
 @dataclass(frozen=True)
@@ -16,6 +26,17 @@ class Section(DataclassValidation):
     """
 
     id: str
+
+    @abstractmethod
+    def to_dict(self) -> dict:
+        """
+        Convert section into dict to interact with other parts of the system,
+        e.g. serialization.
+
+        Returns:
+            dict: serialized section
+        """
+        pass
 
 
 @dataclass(frozen=True)
@@ -43,6 +64,18 @@ class LineSection(Section):
                     "but are same"
                 )
             )
+
+    def to_dict(self) -> dict:
+        """
+        Convert section into dict to interact with other parts of the system,
+        e.g. serialization.
+        """
+        return {
+            ID: self.id,
+            TYPE: LINE,
+            START: self.start.to_dict(),
+            END: self.end.to_dict(),
+        }
 
 
 @dataclass(frozen=True)
@@ -75,6 +108,17 @@ class Area(Section):
 
         if self.coordinates[0] != self.coordinates[-1]:
             raise ValueError("Coordinates do not define a closed area")
+
+    def to_dict(self) -> dict:
+        """
+        Convert section into dict to interact with other parts of the system,
+        e.g. serialization.
+        """
+        return {
+            TYPE: AREA,
+            ID: self.id,
+            COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
+        }
 
 
 class SectionRepository:
