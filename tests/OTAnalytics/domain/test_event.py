@@ -3,7 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from OTAnalytics.domain.event import BuildError, Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.event import (
+    Event,
+    EventType,
+    IncompleteEventBuilderSetup,
+    SectionEventBuilder,
+)
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.track import Detection, TrackId
 
@@ -91,7 +96,7 @@ class TestEvent:
 class TestSectionEventBuilder:
     def test_create_event_without_adds(self, valid_detection: Detection) -> None:
         event_builder = SectionEventBuilder()
-        with pytest.raises(BuildError):
+        with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
 
     def test_create_event_without_event_type_added(
@@ -100,7 +105,7 @@ class TestSectionEventBuilder:
         event_builder = SectionEventBuilder()
         event_builder.add_section_id("N")
         event_builder.add_direction_vector(valid_detection, valid_detection)
-        with pytest.raises(BuildError):
+        with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
 
     def test_create_event_without_direction_vector_added(
@@ -109,7 +114,7 @@ class TestSectionEventBuilder:
         event_builder = SectionEventBuilder()
         event_builder.add_section_id("N")
         event_builder.add_event_type(EventType.SECTION_ENTER)
-        with pytest.raises(BuildError):
+        with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
 
     def test_create_event_without_section_id_added(
@@ -118,7 +123,7 @@ class TestSectionEventBuilder:
         event_builder = SectionEventBuilder()
         event_builder.add_direction_vector(valid_detection, valid_detection)
         event_builder.add_event_type(EventType.SECTION_ENTER)
-        with pytest.raises(BuildError):
+        with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
 
     def test_create_event_with_correctly_initialised_builder(
