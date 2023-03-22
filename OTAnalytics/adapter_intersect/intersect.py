@@ -12,6 +12,12 @@ from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 
 
 class ShapelyIntersectImplementationAdapter(IntersectImplementation):
+    """Adapts a `ShapelyIntersector` to conform to `IntersectImplentation interface.
+
+    Args:
+        shapely_intersector (ShapelyIntersector): the shapely intersector
+    """
+
     def __init__(self, shapely_intersector: ShapelyIntersector) -> None:
         self.shapely_intersector = shapely_intersector
 
