@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-from shapely import LineString
 
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
@@ -67,7 +66,7 @@ class TestSectionEventCreator:
 
         # Actual usage
 
-        enter_events = section_action_detector.detect_enter_events(
+        enter_events = section_action_detector.detect_enter_actions(
             sections=[line_section], tracks=tracks
         )
         assert len(enter_events) == 7
@@ -94,17 +93,7 @@ class TestSectionEventCreator:
 
         # Actual usage
 
-        enter_events = section_action_detector.detect_enter_events(
+        enter_events = section_action_detector.detect_enter_actions(
             sections=[line_section], tracks=tracks
         )
         assert len(enter_events) == 7
-
-    def test_sth(self) -> None:
-        l1 = LineString([[10, 10], [10, 20]])
-        l2 = LineString([[5, 15], [20, 15]])
-        x = l1.intersection(l2)
-        print(x)
-        l3 = LineString([[0, 0], [2, 3], [3, 0], [5, 3], [6, 0]])
-        l4 = LineString([[1, 1], [10, 1]])
-        x2 = l3.intersection(l4)
-        print(x2)
