@@ -6,8 +6,15 @@ import pytest
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.domain.track import Detection, Track
-from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
+from OTAnalytics.domain import section
+from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
+from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.plugin_parser.otvision_parser import (
+    InvalidSectionData,
+    OtsectionParser,
+    OttrkParser,
+    _parse_bz2,
+)
 
 
 @pytest.fixture
@@ -17,7 +24,7 @@ def ottrk_sample(test_data_dir: Path) -> Path:
 
 @pytest.fixture
 def sample_track_det_1() -> tuple[Detection, dict]:
-    det_dict = {
+    det_dict: dict = {
         "class": "car",
         "confidence": 0.8448739051818848,
         "x": 153.6923828125,
@@ -42,11 +49,11 @@ def sample_track_det_1() -> tuple[Detection, dict]:
             h=det_dict[ottrk_format.H],
             frame=det_dict[ottrk_format.FRAME],
             occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURENCE]), ottrk_format.DATE_FORMAT
+                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
             ),
             input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
             interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=det_dict[ottrk_format.TRACK_ID],
+            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
         ),
         det_dict,
     )
@@ -54,7 +61,7 @@ def sample_track_det_1() -> tuple[Detection, dict]:
 
 @pytest.fixture
 def sample_track_det_2() -> tuple[Detection, dict]:
-    det_dict = {
+    det_dict: dict = {
         "class": "car",
         "confidence": 0.8319828510284424,
         "x": 155.19091796875,
@@ -79,11 +86,11 @@ def sample_track_det_2() -> tuple[Detection, dict]:
             h=det_dict[ottrk_format.H],
             frame=det_dict[ottrk_format.FRAME],
             occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURENCE]), ottrk_format.DATE_FORMAT
+                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
             ),
             input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
             interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=det_dict[ottrk_format.TRACK_ID],
+            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
         ),
         det_dict,
     )
@@ -91,7 +98,7 @@ def sample_track_det_2() -> tuple[Detection, dict]:
 
 @pytest.fixture
 def sample_track_det_3() -> tuple[Detection, dict]:
-    det_dict = {
+    det_dict: dict = {
         "class": "car",
         "confidence": 0.829952597618103,
         "x": 158.3513641357422,
@@ -116,11 +123,11 @@ def sample_track_det_3() -> tuple[Detection, dict]:
             h=det_dict[ottrk_format.H],
             frame=det_dict[ottrk_format.FRAME],
             occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURENCE]), ottrk_format.DATE_FORMAT
+                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
             ),
             input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
             interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=det_dict[ottrk_format.TRACK_ID],
+            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
         ),
         det_dict,
     )
@@ -134,7 +141,7 @@ def expected_sample_tracks(
 ) -> list[Track]:
     return [
         Track(
-            id=1,
+            id=TrackId(1),
             detections=[
                 sample_track_det_1[0],
                 sample_track_det_2[0],
@@ -179,12 +186,12 @@ class TestOttrkParser:
 
     def test_parse_bz2(self, example_json_bz2: tuple[Path, dict]) -> None:
         example_json_bz2_path, expected_content = example_json_bz2
-        result_content = self.ottrk_parser._parse_bz2(example_json_bz2_path)
+        result_content = _parse_bz2(example_json_bz2_path)
         assert result_content == expected_content
 
     def test_parse_bz2_uncompressed_file(self, example_json: tuple[Path, dict]) -> None:
         example_path, expected_content = example_json
-        result_content = self.ottrk_parser._parse_bz2(example_path)
+        result_content = _parse_bz2(example_path)
         assert result_content == expected_content
 
     def test_parse_detections_output_has_same_order_as_input(
@@ -204,8 +211,10 @@ class TestOttrkParser:
             [det_dict_3, det_dict_1, det_dict_2]
         )
 
-        expected_sorted = {1: [expected_det_1, expected_det_2, expected_det_3]}
-        expected_unsorted = {1: [expected_det_3, expected_det_1, expected_det_2]}
+        expected_sorted = {TrackId(1): [expected_det_1, expected_det_2, expected_det_3]}
+        expected_unsorted = {
+            TrackId(1): [expected_det_3, expected_det_1, expected_det_2]
+        }
 
         assert expected_sorted == result_sorted_dets
         assert expected_unsorted == result_unsorted_dets
@@ -228,7 +237,10 @@ class TestOttrkParser:
         )
 
         expected_sorted = [
-            Track(id=1, detections=[expected_det_1, expected_det_2, expected_det_3])
+            Track(
+                id=TrackId(1),
+                detections=[expected_det_1, expected_det_2, expected_det_3],
+            )
         ]
 
         assert expected_sorted == result_sorted_tracks
@@ -246,3 +258,59 @@ class TestOttrkParser:
         assert d1.input_file_path == d2.input_file_path
         assert d1.interpolated_detection == d2.interpolated_detection
         assert d1.track_id == d2.track_id
+
+
+class TestOtsectionParser:
+    def test_parse_section(self, test_data_tmp_dir: Path) -> None:
+        first_coordinate = Coordinate(0, 0)
+        second_coordinate = Coordinate(1, 1)
+        third_coordinate = Coordinate(1, 0)
+        line_section: Section = LineSection(
+            id="some",
+            start=first_coordinate,
+            end=second_coordinate,
+        )
+        area_section: Section = Area(
+            id="other",
+            coordinates=[
+                first_coordinate,
+                second_coordinate,
+                third_coordinate,
+                first_coordinate,
+            ],
+        )
+        json_file = test_data_tmp_dir / "section.json"
+        json_file.touch()
+        sections = [line_section, area_section]
+        parser = OtsectionParser()
+        parser.serialize(sections, json_file)
+
+        content = parser.parse(json_file)
+
+        assert content == sections
+
+    def test_validate(self) -> None:
+        parser = OtsectionParser()
+        pytest.raises(
+            InvalidSectionData, parser._parse_section, {section.TYPE: section.LINE}
+        )
+
+    def test_convert_section(self) -> None:
+        some_section: Section = LineSection(
+            id="some",
+            start=Coordinate(0, 0),
+            end=Coordinate(1, 1),
+        )
+        other_section: Section = LineSection(
+            id="other",
+            start=Coordinate(1, 0),
+            end=Coordinate(0, 1),
+        )
+        sections = [some_section, other_section]
+        parser = OtsectionParser()
+
+        content = parser._convert(sections)
+
+        assert content == {
+            section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]
+        }
