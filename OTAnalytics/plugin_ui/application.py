@@ -54,6 +54,10 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         section_file = Path("")  # TODO read from file chooser
         self._datastore.load_section_file(file=section_file)
 
+    def _save_sections_to_file(self) -> None:
+        section_file = Path("")  # TODO read from file choser
+        self._datastore.save_section_file(file=section_file)
+
     def start_internal(self) -> None:
         self._show_gui()
 

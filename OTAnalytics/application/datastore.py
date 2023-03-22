@@ -20,6 +20,10 @@ class SectionParser(ABC):
     def parse(self, file: Path) -> list[Section]:
         pass
 
+    @abstractmethod
+    def serialize(self, sections: Iterable[Section], file: Path) -> None:
+        pass
+
 
 class VideoReader(ABC):
     @abstractmethod
@@ -114,6 +118,12 @@ class Datastore:
     def load_section_file(self, file: Path) -> None:
         sections = self._section_parser.parse(file)
         self._section_repository.add_all(sections)
+
+    def save_section_file(self, file: Path) -> None:
+        self._section_parser.serialize(
+            self._section_repository.get_all(),
+            file=file,
+        )
 
     def add_section(self, section: Section) -> None:
         self._section_repository.add(section)
