@@ -10,8 +10,8 @@ from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.domain.event import SectionEventBuilder
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.intersect import (
-    IntersectBySingleTrackLine,
     IntersectBySmallTrackComponents,
+    IntersectBySplittingTrackLine,
 )
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Track
@@ -83,7 +83,7 @@ class TestSectionEventCreator:
             id="NE", start=Coordinate(103, 194), end=Coordinate(366, 129)
         )
 
-        line_section_intersector = IntersectBySingleTrackLine(
+        line_section_intersector = IntersectBySplittingTrackLine(
             implementation=shapely_intersection_adapter, line_section=line_section
         )
 

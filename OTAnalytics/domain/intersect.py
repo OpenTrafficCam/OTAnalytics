@@ -4,7 +4,7 @@ from typing import Optional
 from OTAnalytics.domain.event import Event, EventBuilder
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 from OTAnalytics.domain.section import Area, LineSection
-from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.track import Track
 
 
 class IntersectImplementation(ABC):
@@ -58,11 +58,30 @@ class IntersectImplementation(ABC):
         pass
 
     @abstractmethod
-    def distance_coord_coord(self, p1: Coordinate, p2: Coordinate) -> float:
+    def distance_coord_coord(
+        self, coordinate_1: Coordinate, coordinate_2: Coordinate
+    ) -> float:
+        """Returns the distance between two coordinates.
+
+        Args:
+            coordinate_1 (Coordinate): the first coordinate
+            coordinate_2 (Coordinate): the second coordinate
+
+        Returns:
+            float: the distance
+        """
         pass
 
 
 class Intersector(ABC):
+    """
+    Defines an interface to implement a family of algorithms to intersect tracks
+    with sections.
+
+    Args:
+        implementation (IntersectImplementation): the intersection implementation
+    """
+
     @abstractmethod
     def __init__(self, implementation: IntersectImplementation) -> None:
         self.implementation = implementation
@@ -71,21 +90,25 @@ class Intersector(ABC):
     def intersect(
         self, track: Track, event_builder: EventBuilder
     ) -> Optional[list[Event]]:
-        """Defines interface to intersect a section with a detection.
+        """Intersect tracks with sections and generate events if they intersect.
+
+        Args:
+            track (Track): the track
+            event_builder (EventBuilder): builder to generate events
 
         Returns:
-            bool: `True` if section intersects with coordinate. Otherwise `False`.
+            Optional[list[Event]]: the event if the track intersects with the section.
+                Otherwise `None`
         """
         pass
 
 
 class LineSectionIntersector(Intersector):
-    """Determines whether a line section intersects with a detection.
+    """Determines whether a line section intersects with a track.
 
     Args:
-        implementation (IntersectorImplementation): the intersection implementation.
-        line (LineSection): the line to intersect with.
-        detection (Detection): the detection to intersect with.
+        implementation (IntersectorImplementation): the intersection implementation
+        line (LineSection): the line to intersect with
     """
 
     @abstractmethod
@@ -98,7 +121,15 @@ class LineSectionIntersector(Intersector):
         self._line_section = line_section
 
 
-class IntersectBySingleTrackLine(LineSectionIntersector):
+class IntersectBySplittingTrackLine(LineSectionIntersector):
+    """
+    Implements the intersection strategy by splitting a track with the section.
+
+    Args:
+        implementation (IntersectorImplementation): the intersection implementation
+        line (LineSection): the line to intersect with
+    """
+
     def __init__(
         self, implementation: IntersectImplementation, line_section: LineSection
     ) -> None:
@@ -133,12 +164,16 @@ class IntersectBySingleTrackLine(LineSectionIntersector):
 
 
 class IntersectBySmallTrackComponents(LineSectionIntersector):
-    """Determines whether a line section intersects with a detection.
+    """
+    Implements the intersection strategy by splitting up the track in its smallest
+    components and intersecting each of them with the section.
+
+    The smallest component of a track is to generate a Line with the coordinates of
+    two neighboring detections in the track.
 
     Args:
-        implementation (IntersectorImplementation): the intersection implementation.
-        line (LineSection): the line to intersect with.
-        detection (Detection): the detection to intersect with.
+        implementation (IntersectorImplementation): the intersection implementation
+        line (LineSection): the line to intersect with
     """
 
     def __init__(
@@ -158,20 +193,20 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
 
         events: list[Event] = []
 
-        for first_detection, second_detection in zip(
+        for current_detection, next_detection in zip(
             track.detections[0:-1], track.detections[1:]
         ):
             detection_as_geometry = Line(
                 [
-                    Coordinate(first_detection.x, first_detection.y),
-                    Coordinate(second_detection.x, second_detection.y),
+                    Coordinate(current_detection.x, current_detection.y),
+                    Coordinate(next_detection.x, next_detection.y),
                 ]
             )
             intersects = self.implementation.line_intersects_line(
                 line_section_as_geometry, detection_as_geometry
             )
             if intersects:
-                events.append(event_builder.create_event(first_detection))
+                events.append(event_builder.create_event(next_detection))
 
         if events:
             return events
@@ -215,25 +250,26 @@ class AreaIntersector(Intersector):
         Returns:
             bool: `True` if area intersects detection. Otherwise `False`.
         """
-        area_as_geometry = Polygon(self._area.coordinates)
-        intersected_detections: list[Detection] = []
-        for first_detection, second_detection in zip(
-            track.detections[0:-1], track.detections[1:]
-        ):
-            detection_as_geometry = Line(
-                [
-                    Coordinate(first_detection.x, first_detection.y),
-                    Coordinate(second_detection.x, second_detection.y),
-                ]
-            )
-            intersects = self.implementation.line_intersects_polygon(
-                detection_as_geometry, area_as_geometry
-            )
-            if intersects:
-                intersected_detections.append(first_detection)
+        # area_as_geometry = Polygon(self._area.coordinates)
+        # intersected_detections: list[Detection] = []
+        # for first_detection, second_detection in zip(
+        #     track.detections[0:-1], track.detections[1:]
+        # ):
+        #     detection_as_geometry = Line(
+        #         [
+        #             Coordinate(first_detection.x, first_detection.y),
+        #             Coordinate(second_detection.x, second_detection.y),
+        #         ]
+        #     )
+        #     intersects = self.implementation.line_intersects_polygon(
+        #         detection_as_geometry, area_as_geometry
+        #     )
+        #     if intersects:
+        #         intersected_detections.append(first_detection)
 
-        if intersected_detections:
-            selected_detection = intersected_detections[0]
-            return [event_builder.create_event(selected_detection)]
+        # if intersected_detections:
+        #     selected_detection = intersected_detections[0]
+        #     return [event_builder.create_event(selected_detection)]
 
-        return None
+        # return None
+        raise NotImplementedError
