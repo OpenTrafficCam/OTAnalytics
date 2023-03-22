@@ -39,8 +39,6 @@ class DummyCanvas(CTkCanvas):
         )
         self.config(width=dummy_image.width(), height=dummy_image.height())
 
-        self.pack()
-
 
 class DummyFrame(CTkFrame):
     def __init__(self, **kwargs: Any):
@@ -49,6 +47,10 @@ class DummyFrame(CTkFrame):
 
     def add_image(self, dummy_image: DummyImage) -> None:
         self.canvas.add_image(dummy_image)
+        PADX = 10
+        PADY = 5
+        STICKY = "NESW"
+        self.canvas.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
 
 
 class Dummy:
