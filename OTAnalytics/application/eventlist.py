@@ -6,60 +6,73 @@ from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
 
 
-class EventList:
-    def __init__(self) -> None:
-        self.events: list[Event] = []
-
-    def add_event(self, event: Event) -> None:
-        self.events.append(event)
-
-
 class SectionActionDetector:
+    """Detect when a track enters or leaves a section and generate events.
+
+    A track enters or leaves a section when they intersect.
+
+    Args:
+        intersector (Intersector): the intersector
+        section_event_builder (SectionEventBuilder): the section event builder
+    """
+
     def __init__(
         self, intersector: Intersector, section_event_builder: SectionEventBuilder
     ) -> None:
         self.intersector = intersector
         self.section_event_builder = section_event_builder
 
-    def detect_enter_events(
+    def detect_enter_actions(
         self,
         sections: list[Section],
         tracks: list[Track],
     ) -> list[Event]:
+        """Detect if tracks enter sections.
+
+        Args:
+            sections (list[Section]): the sections
+            tracks (list[Track]): the tracks
+
+        Returns:
+            list[Event]: the events if tracks do enter any of the sections.
+                Otherwise `None`.
+        """
         event_list: list[Event] = []
         for section in sections:
             for track in tracks:
-                enter_event = self.detect_enter(section, track)
+                enter_event = self._detect_enter(section, track)
                 if enter_event:
                     event_list.extend(enter_event)
 
         return event_list
 
-    def detect_leave_events(
+    def detect_leave_actions(
         self,
         sections: list[Section],
         tracks: list[Track],
     ) -> list[Event]:
-        """Detects the last time a track crosses the section.
+        """Detect if tracks leave sections.
 
         Args:
-            section (Section): the section.
-            track (Track): the track.
+            sections (list[Section]): the sections
+            tracks (list[Track]): the tracks
 
         Returns:
-            Optional[Event]: an event if section has been crossed. Otherwise `None`.
+            list[Event]: the event if tracks do leave any of the sections.
+                Otherwise `None`.
         """
         raise NotImplementedError
 
-    def detect_enter(self, section: Section, track: Track) -> Optional[list[Event]]:
-        """Detects the first time a track crosses the section.
+    def _detect_enter(self, section: Section, track: Track) -> Optional[list[Event]]:
+        """Detect when a track enters a section.
 
         Args:
-            section (Section): the section.
-            track (Track): the track.
+            sections (Section): the section
+            track (Track): the track
 
         Returns:
-            Optional[Event]: an event if section has been crossed. Otherwise `None`.
+            list[Event]: the event if a track enters a section.
+                Otherwise `None`.
         """
         self.section_event_builder.add_section_id(section.id)
         self.section_event_builder.add_event_type(EventType.SECTION_ENTER)
@@ -74,28 +87,46 @@ class SectionActionDetector:
             return events
         return None
 
-    def detect_leave(self, section: Section, track: Track) -> Optional[Event]:
-        """Detects the last time a track crosses the section.
+    def _detect_leave(self, section: Section, track: Track) -> Optional[Event]:
+        """Detect when a track leaves a section.
 
         Args:
-            section (Section): the section.
-            track (Track): the track.
+            sections (Section): the section
+            tracks (Track): the track
 
         Returns:
-            Optional[Event]: an event if section has been crossed. Otherwise `None`.
+            list[Event]: the event if a track leaves a section.
+                Otherwise `None`.
         """
         raise NotImplementedError
 
 
 class EventListRepository:
+    """The repository to store events."""
+
     def __init__(self) -> None:
         self.events: list[Event] = []
 
     def add(self, event: Event) -> None:
+        """Add an event to the repository.
+
+        Args:
+            event (Event): the event to add
+        """
         self.events.append(event)
 
     def add_all(self, events: Iterable[Event]) -> None:
+        """Add multiple events at once to the repository.
+
+        Args:
+            events (Iterable[Event]): the events
+        """
         self.events.extend(events)
 
     def get_all(self) -> Iterable[Event]:
+        """Get all events stored in the repository.
+
+        Returns:
+            Iterable[Event]: the events
+        """
         return self.events
