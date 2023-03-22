@@ -184,7 +184,7 @@ class OtsectionParser(SectionParser):
         return LineSection(section_id, start, end)
 
     def _validate_data(self, data: dict, attributes: list[str]) -> None:
-        """Validate attributes of dictionary
+        """Validate attributes of dictionary.
 
         Args:
             data (dict): dictionary to validate
@@ -248,7 +248,7 @@ class OtsectionParser(SectionParser):
         _write_bz2(content, file)
 
     def _convert(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
-        """Convert sections into dictionary
+        """Convert sections into dictionary.
 
         Args:
             sections (Iterable[Section]): sections to convert
