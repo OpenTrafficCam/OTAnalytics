@@ -1,9 +1,9 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable
 
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.geometry import Coordinate
 
 SECTIONS: str = "sections"
 ID: str = "id"
@@ -11,61 +11,21 @@ TYPE: str = "type"
 LINE: str = "line"
 START: str = "start"
 END: str = "end"
-X: str = "x"
-Y: str = "y"
 AREA: str = "area"
 COORDINATES: str = "coordinates"
 
 
 @dataclass(frozen=True)
-class Coordinate:
+class Section(DataclassValidation):
     """
-    Models points in the image as x-y coordinates.
-    """
+    A section defines a geometry a coordinate space and is used by traffic detectors to
+    create vehicle events.
 
-    x: float
-    y: float
-
-    def to_dict(self) -> dict:
-        return {
-            X: self.x,
-            Y: self.y,
-        }
-
-
-@dataclass(frozen=True)
-class Section(ABC):
-    """
-    Sections define virtual detectors to generate vehicle events.
+    Args:
+        id (str): the section id.
     """
 
     id: str
-
-    @abstractmethod
-    def enter(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event if the track enters the section.
-
-        Args:
-            track (Track): track to intersect with the section
-
-        Returns:
-            Optional[Event]: event if the track enters the section
-        """
-        pass
-
-    @abstractmethod
-    def leave(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event if the track leaves the section.
-
-        Args:
-            track (Track): track to intersect with the section
-
-        Returns:
-            Optional[Event]: event if the track leaves the section
-        """
-        pass
 
     @abstractmethod
     def to_dict(self) -> dict:
@@ -82,23 +42,28 @@ class Section(ABC):
 @dataclass(frozen=True)
 class LineSection(Section):
     """
-    Section defined as line.
+    A section that is defined by a line.
+
+    Raises:
+        ValueError: if start and end point coordinates are the same and therefore
+        define a point.
+
+    Args:
+        start (Coordinate): the start coordinate.
+        end (Coordinate): the end coordinate.
     """
 
     start: Coordinate
     end: Coordinate
 
-    def enter(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event for the first time the track crosses the line.
-        """
-        return None
-
-    def leave(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event for the last time the track crosses the line.
-        """
-        return None
+    def _validate(self) -> None:
+        if self.start == self.end:
+            raise ValueError(
+                (
+                    "Start and end point of coordinate must be different to be a line, "
+                    "but are same"
+                )
+            )
 
     def to_dict(self) -> dict:
         """
@@ -115,19 +80,34 @@ class LineSection(Section):
 
 @dataclass(frozen=True)
 class Area(Section):
+    """
+    A section that is defined by a polygon.
+
+    An area is defined by `[x1, x2, x3 ..., x_n]` a list of coordinates
+    where n is a natural number and `x1 = x_n`.
+
+    Raises:
+        ValueError: if coordinates do not define a closed area.
+        ValueError: if the number of coordinates is less than four thus defining an
+            invalid area.
+
+    Args:
+        coordinates (list[Coordinate]): area defined by list of coordinates.
+    """
+
     coordinates: list[Coordinate]
 
-    def enter(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event for the first point of the track which enters the area.
-        """
-        return None
+    def _validate(self) -> None:
+        if len(self.coordinates) < 4:
+            raise ValueError(
+                (
+                    "Number of coordinates to define a valid area must be "
+                    f"greater equal four, but is {len(self.coordinates)}"
+                )
+            )
 
-    def leave(self, track: Track) -> Optional[Event]:
-        """
-        Generates an event for the last point of the track which leaves the area.
-        """
-        return None
+        if self.coordinates[0] != self.coordinates[-1]:
+            raise ValueError("Coordinates do not define a closed area")
 
     def to_dict(self) -> dict:
         """
@@ -142,18 +122,40 @@ class Area(Section):
 
 
 class SectionRepository:
+    """Repository used to store sections."""
+
     def __init__(self) -> None:
         self._sections: dict[str, Section] = {}
 
     def add(self, section: Section) -> None:
+        """Add a section to the repository.
+
+        Args:
+            section (Section): the section to add.
+        """
         self._sections[section.id] = section
 
     def add_all(self, sections: Iterable[Section]) -> None:
+        """Add several sections at once to the repository.
+
+        Args:
+            sections (Iterable[Section]): the sections to add.
+        """
         for section in sections:
             self.add(section)
 
     def get_all(self) -> Iterable[Section]:
+        """Get all sections from the repository.
+
+        Returns:
+            Iterable[Section]: the sections.
+        """
         return self._sections.values()
 
     def remove(self, section: Section) -> None:
+        """Remove section from the repository.
+
+        Args:
+            section (Section): the section to be removed.
+        """
         del self._sections[section.id]
