@@ -5,11 +5,32 @@ from typing import Iterable, Optional
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.track import Track
 
+SECTIONS: str = "sections"
+ID: str = "id"
+TYPE: str = "type"
+LINE: str = "line"
+START: str = "start"
+END: str = "end"
+X: str = "x"
+Y: str = "y"
+AREA: str = "area"
+COORDINATES: str = "coordinates"
+
 
 @dataclass(frozen=True)
 class Coordinate:
+    """
+    Models points in the image as x-y coordinates.
+    """
+
     x: float
     y: float
+
+    def to_dict(self) -> dict:
+        return {
+            X: self.x,
+            Y: self.y,
+        }
 
 
 @dataclass(frozen=True)
@@ -46,6 +67,17 @@ class Section(ABC):
         """
         pass
 
+    @abstractmethod
+    def to_dict(self) -> dict:
+        """
+        Convert section into dict to interact with other parts of the system,
+        e.g. serialization.
+
+        Returns:
+            dict: serialized section
+        """
+        pass
+
 
 @dataclass(frozen=True)
 class LineSection(Section):
@@ -68,6 +100,18 @@ class LineSection(Section):
         """
         return None
 
+    def to_dict(self) -> dict:
+        """
+        Convert section into dict to interact with other parts of the system,
+        e.g. serialization.
+        """
+        return {
+            ID: self.id,
+            TYPE: LINE,
+            START: self.start.to_dict(),
+            END: self.end.to_dict(),
+        }
+
 
 @dataclass(frozen=True)
 class Area(Section):
@@ -84,6 +128,17 @@ class Area(Section):
         Generates an event for the last point of the track which leaves the area.
         """
         return None
+
+    def to_dict(self) -> dict:
+        """
+        Convert section into dict to interact with other parts of the system,
+        e.g. serialization.
+        """
+        return {
+            TYPE: AREA,
+            ID: self.id,
+            COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
+        }
 
 
 class SectionRepository:
