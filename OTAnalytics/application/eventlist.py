@@ -1,4 +1,4 @@
-from typing import Iterable, Optional
+from typing import Optional
 
 from OTAnalytics.domain.event import Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.intersect import Intersector
@@ -99,34 +99,3 @@ class SectionActionDetector:
                 Otherwise `None`.
         """
         raise NotImplementedError
-
-
-class EventRepository:
-    """The repository to store events."""
-
-    def __init__(self) -> None:
-        self.events: list[Event] = []
-
-    def add(self, event: Event) -> None:
-        """Add an event to the repository.
-
-        Args:
-            event (Event): the event to add
-        """
-        self.events.append(event)
-
-    def add_all(self, events: Iterable[Event]) -> None:
-        """Add multiple events at once to the repository.
-
-        Args:
-            events (Iterable[Event]): the events
-        """
-        self.events.extend(events)
-
-    def get_all(self) -> Iterable[Event]:
-        """Get all events stored in the repository.
-
-        Returns:
-            Iterable[Event]: the events
-        """
-        return self.events

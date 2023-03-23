@@ -1,10 +1,12 @@
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
 from OTAnalytics.domain.event import (
     Event,
+    EventRepository,
     EventType,
     IncompleteEventBuilderSetup,
     SectionEventBuilder,
@@ -147,3 +149,23 @@ class TestSectionEventBuilder:
         assert event.event_type == EventType.SECTION_ENTER
         assert event.direction_vector == DirectionVector2D(0, 0)
         assert event.video_name == valid_detection.input_file_path.name
+
+
+class TestEventRepository:
+    def test_add(self) -> None:
+        event = Mock()
+        repository = EventRepository()
+
+        repository.add(event)
+
+        assert event in repository.get_all()
+
+    def test_add_all(self) -> None:
+        first_event = Mock()
+        second_event = Mock()
+        repository = EventRepository()
+
+        repository.add_all([first_event, second_event])
+
+        assert first_event in repository.get_all()
+        assert second_event in repository.get_all()

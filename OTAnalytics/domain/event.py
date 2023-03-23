@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -222,3 +222,34 @@ class SectionEventBuilder(EventBuilder):
             direction_vector=self.direction_vector,
             video_name=detection.input_file_path.name,
         )
+
+
+class EventRepository:
+    """The repository to store events."""
+
+    def __init__(self) -> None:
+        self.events: list[Event] = []
+
+    def add(self, event: Event) -> None:
+        """Add an event to the repository.
+
+        Args:
+            event (Event): the event to add
+        """
+        self.events.append(event)
+
+    def add_all(self, events: Iterable[Event]) -> None:
+        """Add multiple events at once to the repository.
+
+        Args:
+            events (Iterable[Event]): the events
+        """
+        self.events.extend(events)
+
+    def get_all(self) -> Iterable[Event]:
+        """Get all events stored in the repository.
+
+        Returns:
+            Iterable[Event]: the events
+        """
+        return self.events
