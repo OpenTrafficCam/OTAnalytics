@@ -7,8 +7,12 @@ from OTAnalytics.domain.common import DataclassValidation
 
 
 @dataclass(frozen=True)
-class TrackId:
+class TrackId(DataclassValidation):
     id: int
+
+    def _validate(self) -> None:
+        if self.id < 1:
+            raise ValueError("track id must be greater equal 1")
 
 
 class TrackError(Exception):
@@ -73,7 +77,6 @@ class Detection(DataclassValidation):
         self._validate_confidence_greater_equal_zero()
         self._validate_bbox_values()
         self._validate_frame_id_greater_equal_one()
-        self._validate_track_id_greater_equal_one()
 
     def _validate_confidence_greater_equal_zero(self) -> None:
         if self.confidence < 0 or self.confidence > 1:
@@ -92,10 +95,6 @@ class Detection(DataclassValidation):
     def _validate_frame_id_greater_equal_one(self) -> None:
         if self.frame < 1:
             raise ValueError("frame number must be greater equal 1")
-
-    def _validate_track_id_greater_equal_one(self) -> None:
-        if self.track_id.id < 1:
-            raise ValueError("track id must be greater equal 1")
 
 
 @dataclass(frozen=True)
@@ -117,13 +116,8 @@ class Track(DataclassValidation):
     detections: list[Detection]
 
     def _validate(self) -> None:
-        self._validate_id_greater_zero()
         self._validate_track_has_at_least_two_detections()
         self._validate_detections_sorted_by_occurrence()
-
-    def _validate_id_greater_zero(self) -> None:
-        if self.id.id < 1:
-            raise ValueError("id must be a number greater than 0")
 
     def _validate_track_has_at_least_two_detections(self) -> None:
         if len(self.detections) < 2:
