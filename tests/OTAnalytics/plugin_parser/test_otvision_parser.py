@@ -23,8 +23,29 @@ def ottrk_sample(test_data_dir: Path) -> Path:
 
 
 @pytest.fixture
-def sample_track_det_1() -> tuple[Detection, dict]:
-    det_dict: dict = {
+def sample_track_det_1() -> Detection:
+    return Detection(
+        classification="car",
+        confidence=0.8448739051818848,
+        x=153.6923828125,
+        y=136.2128448486328,
+        w=76.55817413330078,
+        h=46.49921417236328,
+        frame=1,
+        occurrence=datetime.strptime(
+            "2020-01-01 00:00:00.000000", ottrk_format.DATE_FORMAT
+        ),
+        input_file_path=Path(
+            "test/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otdet"
+        ),
+        interpolated_detection=False,
+        track_id=TrackId(1),
+    )
+
+
+@pytest.fixture
+def sample_track_det_1_dict() -> dict:
+    return {
         "class": "car",
         "confidence": 0.8448739051818848,
         "x": 153.6923828125,
@@ -39,29 +60,32 @@ def sample_track_det_1() -> tuple[Detection, dict]:
         "finished": False,
         "track-id": 1,
     }
-    return (
-        Detection(
-            classification=det_dict[ottrk_format.CLASS],
-            confidence=det_dict[ottrk_format.CONFIDENCE],
-            x=det_dict[ottrk_format.X],
-            y=det_dict[ottrk_format.Y],
-            w=det_dict[ottrk_format.W],
-            h=det_dict[ottrk_format.H],
-            frame=det_dict[ottrk_format.FRAME],
-            occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
-            ),
-            input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
-            interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
+
+
+@pytest.fixture
+def sample_track_det_2() -> Detection:
+    return Detection(
+        classification="car",
+        confidence=0.8319828510284424,
+        x=155.19091796875,
+        y=136.7307891845703,
+        w=77.07390594482422,
+        h=46.8974609375,
+        frame=2,
+        occurrence=datetime.strptime(
+            "2020-01-01 00:00:00.050000", ottrk_format.DATE_FORMAT
         ),
-        det_dict,
+        input_file_path=Path(
+            "test/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otdet"
+        ),
+        interpolated_detection=False,
+        track_id=TrackId(1),
     )
 
 
 @pytest.fixture
-def sample_track_det_2() -> tuple[Detection, dict]:
-    det_dict: dict = {
+def sample_track_det_2_dict() -> dict:
+    return {
         "class": "car",
         "confidence": 0.8319828510284424,
         "x": 155.19091796875,
@@ -76,29 +100,32 @@ def sample_track_det_2() -> tuple[Detection, dict]:
         "finished": False,
         "track-id": 1,
     }
-    return (
-        Detection(
-            classification=det_dict[ottrk_format.CLASS],
-            confidence=det_dict[ottrk_format.CONFIDENCE],
-            x=det_dict[ottrk_format.X],
-            y=det_dict[ottrk_format.Y],
-            w=det_dict[ottrk_format.W],
-            h=det_dict[ottrk_format.H],
-            frame=det_dict[ottrk_format.FRAME],
-            occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
-            ),
-            input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
-            interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
+
+
+@pytest.fixture
+def sample_track_det_3() -> Detection:
+    return Detection(
+        classification="car",
+        confidence=0.829952597618103,
+        x=158.3513641357422,
+        y=137.06912231445312,
+        w=75.2576904296875,
+        h=49.759117126464844,
+        frame=3,
+        occurrence=datetime.strptime(
+            "2020-01-01 00:00:00.100000", ottrk_format.DATE_FORMAT
         ),
-        det_dict,
+        input_file_path=Path(
+            "test/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otdet"
+        ),
+        interpolated_detection=False,
+        track_id=TrackId(1),
     )
 
 
 @pytest.fixture
-def sample_track_det_3() -> tuple[Detection, dict]:
-    det_dict: dict = {
+def sample_track_det_3_dict() -> dict:
+    return {
         "class": "car",
         "confidence": 0.829952597618103,
         "x": 158.3513641357422,
@@ -113,39 +140,21 @@ def sample_track_det_3() -> tuple[Detection, dict]:
         "finished": False,
         "track-id": 1,
     }
-    return (
-        Detection(
-            classification=det_dict[ottrk_format.CLASS],
-            confidence=det_dict[ottrk_format.CONFIDENCE],
-            x=det_dict[ottrk_format.X],
-            y=det_dict[ottrk_format.Y],
-            w=det_dict[ottrk_format.W],
-            h=det_dict[ottrk_format.H],
-            frame=det_dict[ottrk_format.FRAME],
-            occurrence=datetime.strptime(
-                str(det_dict[ottrk_format.OCCURRENCE]), ottrk_format.DATE_FORMAT
-            ),
-            input_file_path=Path(str(det_dict[ottrk_format.INPUT_FILE_PATH])),
-            interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
-        ),
-        det_dict,
-    )
 
 
 @pytest.fixture
 def expected_sample_tracks(
-    sample_track_det_1: tuple[Detection, dict],
-    sample_track_det_2: tuple[Detection, dict],
-    sample_track_det_3: tuple[Detection, dict],
+    sample_track_det_1: Detection,
+    sample_track_det_2: Detection,
+    sample_track_det_3: Detection,
 ) -> list[Track]:
     return [
         Track(
             id=TrackId(1),
             detections=[
-                sample_track_det_1[0],
-                sample_track_det_2[0],
-                sample_track_det_3[0],
+                sample_track_det_1,
+                sample_track_det_2,
+                sample_track_det_3,
             ],
         )
     ]
@@ -196,50 +205,50 @@ class TestOttrkParser:
 
     def test_parse_detections_output_has_same_order_as_input(
         self,
-        sample_track_det_1: tuple[Detection, dict],
-        sample_track_det_2: tuple[Detection, dict],
-        sample_track_det_3: tuple[Detection, dict],
+        sample_track_det_1: Detection,
+        sample_track_det_2: Detection,
+        sample_track_det_3: Detection,
+        sample_track_det_1_dict: dict,
+        sample_track_det_2_dict: dict,
+        sample_track_det_3_dict: dict,
     ) -> None:
-        expected_det_1, det_dict_1 = sample_track_det_1
-        expected_det_2, det_dict_2 = sample_track_det_2
-        expected_det_3, det_dict_3 = sample_track_det_3
-
-        result_sorted_dets = self.ottrk_parser._parse_detections(
-            [det_dict_1, det_dict_2, det_dict_3]
+        result_sorted = self.ottrk_parser._parse_detections(
+            [sample_track_det_1_dict, sample_track_det_2_dict, sample_track_det_3_dict]
         )
-        result_unsorted_dets = self.ottrk_parser._parse_detections(
-            [det_dict_3, det_dict_1, det_dict_2]
+        result_unsorted = self.ottrk_parser._parse_detections(
+            [sample_track_det_3_dict, sample_track_det_1_dict, sample_track_det_2_dict]
         )
 
-        expected_sorted = {TrackId(1): [expected_det_1, expected_det_2, expected_det_3]}
+        expected_sorted = {
+            TrackId(1): [sample_track_det_1, sample_track_det_2, sample_track_det_3]
+        }
         expected_unsorted = {
-            TrackId(1): [expected_det_3, expected_det_1, expected_det_2]
+            TrackId(1): [sample_track_det_3, sample_track_det_1, sample_track_det_2]
         }
 
-        assert expected_sorted == result_sorted_dets
-        assert expected_unsorted == result_unsorted_dets
+        assert expected_sorted == result_sorted
+        assert expected_unsorted == result_unsorted
 
     def test_parse_tracks(
         self,
-        sample_track_det_1: tuple[Detection, dict],
-        sample_track_det_2: tuple[Detection, dict],
-        sample_track_det_3: tuple[Detection, dict],
+        sample_track_det_1: Detection,
+        sample_track_det_2: Detection,
+        sample_track_det_3: Detection,
+        sample_track_det_1_dict: dict,
+        sample_track_det_2_dict: dict,
+        sample_track_det_3_dict: dict,
     ) -> None:
-        expected_det_1, det_dict_1 = sample_track_det_1
-        expected_det_2, det_dict_2 = sample_track_det_2
-        expected_det_3, det_dict_3 = sample_track_det_3
-
         result_sorted_tracks = self.ottrk_parser._parse_tracks(
-            [det_dict_1, det_dict_2, det_dict_3]
+            [sample_track_det_1_dict, sample_track_det_2_dict, sample_track_det_3_dict]
         )
         result_unsorted_tracks = self.ottrk_parser._parse_tracks(
-            [det_dict_3, det_dict_1, det_dict_2]
+            [sample_track_det_3_dict, sample_track_det_1_dict, sample_track_det_2_dict]
         )
 
         expected_sorted = [
             Track(
                 id=TrackId(1),
-                detections=[expected_det_1, expected_det_2, expected_det_3],
+                detections=[sample_track_det_1, sample_track_det_2, sample_track_det_3],
             )
         ]
 
