@@ -58,7 +58,7 @@ class IntersectImplementation(ABC):
         pass
 
     @abstractmethod
-    def distance_coord_coord(
+    def distance_between(
         self, coordinate_1: Coordinate, coordinate_2: Coordinate
     ) -> float:
         """Returns the distance between two coordinates.

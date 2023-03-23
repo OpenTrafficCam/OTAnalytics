@@ -51,7 +51,7 @@ class ShapelyIntersectImplementationAdapter(IntersectImplementation):
         ]
         return splitted_lines
 
-    def distance_coord_coord(self, p1: Coordinate, p2: Coordinate) -> float:
+    def distance_between(self, p1: Coordinate, p2: Coordinate) -> float:
         shapely_point_1 = map_to_shapely_point(p1)
         shapely_point_2 = map_to_shapely_point(p2)
         return self.shapely_intersector.distance_point_point(
