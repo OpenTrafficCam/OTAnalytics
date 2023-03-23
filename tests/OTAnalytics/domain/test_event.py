@@ -35,7 +35,7 @@ class TestEvent:
     def test_instantiate_event_with_invalid_frame_number(self, frame: int) -> None:
         with pytest.raises(ValueError):
             Event(
-                road_user_id=0,
+                road_user_id=1,
                 road_user_type="car",
                 hostname="my_hostname",
                 occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
