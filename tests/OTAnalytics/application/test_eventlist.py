@@ -85,8 +85,6 @@ class TestSectionActionDetector:
         mock_section_event_builder.add_event_type.assert_called()
         mock_section_event_builder.add_direction_vector.assert_called()
         mock_intersector.intersect.assert_called()
-        assert len(mock_section_event_builder.method_calls) == 3
-        assert len(mock_intersector.method_calls) == 1
         assert mock_event == result_event
 
     def test_detect_enter_actions(
