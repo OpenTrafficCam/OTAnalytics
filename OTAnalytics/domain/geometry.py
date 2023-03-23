@@ -4,6 +4,8 @@ from OTAnalytics.domain.common import DataclassValidation
 
 X: str = "x"
 Y: str = "y"
+X1: str = "x1"
+X2: str = "x2"
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,9 @@ class Coordinate(DataclassValidation):
             X: self.x,
             Y: self.y,
         }
+
+    def to_list(self) -> list[float]:
+        return [self.x, self.y]
 
 
 @dataclass(frozen=True)
@@ -83,6 +88,15 @@ class DirectionVector2D:
 
     x1: float
     x2: float
+
+    def to_dict(self) -> dict:
+        return {
+            X1: self.x1,
+            X2: self.x2,
+        }
+
+    def to_list(self) -> list[float]:
+        return [self.x1, self.x2]
 
 
 @dataclass(frozen=True)

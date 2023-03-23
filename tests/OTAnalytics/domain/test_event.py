@@ -5,6 +5,17 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.domain.event import (
+    DATE_FORMAT,
+    DIRECTION_VECTOR,
+    EVENT_COORDINATE,
+    EVENT_TYPE,
+    FRAME_NUMBER,
+    HOSTNAME,
+    OCCURRENCE,
+    ROAD_USER_ID,
+    ROAD_USER_TYPE,
+    SECTION_ID,
+    VIDEO_NAME,
     Event,
     EventRepository,
     EventType,
@@ -93,6 +104,44 @@ class TestEvent:
         assert event.event_type == EventType.SECTION_ENTER
         assert event.direction_vector == direction
         assert event.video_name == "my_video_name.mp4"
+
+    def test_to_dict(self) -> None:
+        road_user_id = 1
+        road_user_type = "car"
+        hostname = "myhostname"
+        occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
+        frame_number = 1
+        section_id = "N"
+        event_coordinate = ImageCoordinate(0, 0)
+        direction_vector = DirectionVector2D(1, 0)
+        video_name = "my_video_name.mp4"
+        event = Event(
+            road_user_id=road_user_id,
+            road_user_type=road_user_type,
+            hostname=hostname,
+            occurrence=occurrence,
+            frame_number=frame_number,
+            section_id=section_id,
+            event_coordinate=event_coordinate,
+            event_type=EventType.SECTION_ENTER,
+            direction_vector=direction_vector,
+            video_name=video_name,
+        )
+        event_dict = event.to_dict()
+        expected = {
+            ROAD_USER_ID: road_user_id,
+            ROAD_USER_TYPE: road_user_type,
+            HOSTNAME: hostname,
+            OCCURRENCE: occurrence.strftime(DATE_FORMAT),
+            FRAME_NUMBER: frame_number,
+            SECTION_ID: section_id,
+            EVENT_COORDINATE: [event_coordinate.x, event_coordinate.y],
+            EVENT_TYPE: EventType.SECTION_ENTER.value,
+            DIRECTION_VECTOR: [direction_vector.x1, direction_vector.x2],
+            VIDEO_NAME: video_name,
+        }
+
+        assert event_dict == expected
 
 
 class TestSectionEventBuilder:

@@ -6,11 +6,20 @@ import pytest
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.adapter_intersect.intersect import (
+    ShapelyIntersectImplementationAdapter,
+)
+from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.domain import section
+from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
 from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
 from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     InvalidSectionData,
+    OtEventListParser,
     OtsectionParser,
     OttrkParser,
     _parse_bz2,
@@ -323,3 +332,72 @@ class TestOtsectionParser:
         assert content == {
             section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]
         }
+
+
+class TestOtEventListParser:
+    def test_convert_event(self, test_data_tmp_dir: Path) -> None:
+        road_user_id = 1
+        road_user_type = "car"
+        hostname = "myhostname"
+        section_id = "N"
+        direction_vector = DirectionVector2D(1, 0)
+        video_name = "my_video_name.mp4"
+        first_event = Event(
+            road_user_id=road_user_id,
+            road_user_type=road_user_type,
+            hostname=hostname,
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+            frame_number=1,
+            section_id=section_id,
+            event_coordinate=ImageCoordinate(0, 0),
+            event_type=EventType.SECTION_ENTER,
+            direction_vector=direction_vector,
+            video_name=video_name,
+        )
+        second_event = Event(
+            road_user_id=road_user_id,
+            road_user_type=road_user_type,
+            hostname=hostname,
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 10),
+            frame_number=2,
+            section_id=section_id,
+            event_coordinate=ImageCoordinate(10, 0),
+            event_type=EventType.SECTION_LEAVE,
+            direction_vector=direction_vector,
+            video_name=video_name,
+        )
+
+        event_list_parser = OtEventListParser()
+        content = event_list_parser._convert([first_event, second_event])
+
+        assert content == {EVENT_LIST: [first_event.to_dict(), second_event.to_dict()]}
+
+    def test_serialize_events(
+        self, tracks: list[Track], sections: list[Section], test_data_tmp_dir: Path
+    ) -> None:
+        # Setup
+        shapely_intersection_adapter = ShapelyIntersectImplementationAdapter(
+            ShapelyIntersector()
+        )
+        line_section = sections[0]
+
+        if isinstance(line_section, LineSection):
+            line_section_intersector = IntersectBySplittingTrackLine(
+                implementation=shapely_intersection_adapter, line_section=line_section
+            )
+
+        section_event_builder = SectionEventBuilder()
+
+        section_action_detector = SectionActionDetector(
+            intersector=line_section_intersector,
+            section_event_builder=section_event_builder,
+        )
+
+        enter_events = section_action_detector.detect_enter_actions(
+            sections=[line_section], tracks=tracks
+        )
+
+        event_list_parser = OtEventListParser()
+        event_list_file = test_data_tmp_dir / "eventlist.json"
+        event_list_parser.serialize(enter_events, event_list_file)
+        assert event_list_file.exists()

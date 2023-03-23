@@ -10,7 +10,19 @@ from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.track import Detection
 
+EVENT_LIST = "event_list"
+ROAD_USER_ID = "road_user_id"
+ROAD_USER_TYPE = "road_user_type"
 HOSTNAME = "hostname"
+OCCURRENCE = "occurrence"
+FRAME_NUMBER = "frame_number"
+SECTION_ID = "section_id"
+EVENT_COORDINATE = "event_coordinate"
+EVENT_TYPE = "event_type"
+DIRECTION_VECTOR = "direction_vector"
+VIDEO_NAME = "video_name"
+
+DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)" r"_.*\..*"
 
 
@@ -100,6 +112,26 @@ class Event(DataclassValidation):
             raise ValueError(
                 f"vehicle_id must be at least 1, but is {self.road_user_id}"
             )
+
+    def to_dict(self) -> dict:
+        """Convert event into dict to interact with other parts of the system,
+        e.g. serialization.
+
+        Returns:
+            dict: serialized event
+        """
+        return {
+            ROAD_USER_ID: self.road_user_id,
+            ROAD_USER_TYPE: self.road_user_type,
+            HOSTNAME: self.hostname,
+            OCCURRENCE: self.occurrence.strftime(DATE_FORMAT),
+            FRAME_NUMBER: self.frame_number,
+            SECTION_ID: self.section_id,
+            EVENT_COORDINATE: self.event_coordinate.to_list(),
+            EVENT_TYPE: self.event_type.value,
+            DIRECTION_VECTOR: self.direction_vector.to_list(),
+            VIDEO_NAME: self.video_name,
+        }
 
 
 class EventBuilder(ABC):
