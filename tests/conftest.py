@@ -27,7 +27,7 @@ def ottrk_path(test_data_dir: Path) -> Path:
     return test_data_dir / name
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def cyclist_video(test_data_dir: Path) -> Path:
     name = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
     return test_data_dir / name
