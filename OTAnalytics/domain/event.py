@@ -31,6 +31,8 @@ class EventType(Enum):
 
     SECTION_ENTER: str = "section-enter"
     SECTION_LEAVE: str = "section-leave"
+    ENTER_SCENE: str = "enter-scene"
+    LEAVE_SCENE: str = "leave-scene"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -110,6 +112,11 @@ class EventBuilder(ABC):
     """
 
     @abstractmethod
+    def __init__(self) -> None:
+        self.event_type: Optional[EventType] = None
+        self.direction_vector: Optional[DirectionVector2D] = None
+
+    @abstractmethod
     def create_event(self, detection: Detection) -> Event:
         """Creates an event with the information stored in a detection.
 
@@ -145,23 +152,6 @@ class EventBuilder(ABC):
             f"Could not parse {file_path.name}. Hostname is missing."
         )
 
-
-class SectionEventBuilder(EventBuilder):
-    """A builder to build section events."""
-
-    def __init__(self) -> None:
-        self.section_id: Optional[str] = None
-        self.direction_vector: Optional[DirectionVector2D] = None
-        self.event_type: Optional[EventType] = None
-
-    def add_section_id(self, section_id: str) -> None:
-        """Add a section id to add to the event to be build.
-
-        Args:
-            section_id (str): the section id
-        """
-        self.section_id = section_id
-
     def add_event_type(self, event_type: EventType) -> None:
         """Add an event type to add to the event to be build.
 
@@ -187,16 +177,32 @@ class SectionEventBuilder(EventBuilder):
             x1=detection_2.x - detection_1.x, x2=detection_2.y - detection_1.y
         )
 
+
+class SectionEventBuilder(EventBuilder):
+    """A builder to build section events."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.section_id: Optional[str] = None
+
+    def add_section_id(self, section_id: str) -> None:
+        """Add a section id to add to the event to be build.
+
+        Args:
+            section_id (str): the section id
+        """
+        self.section_id = section_id
+
     def create_event(self, detection: Detection) -> Event:
-        """Creates an event with the information stored in a detection.
+        """Creates an section event with the information stored in a detection.
 
         Args:
             detection (Detection): the detection holding the information
 
         Raises:
-            BuildError: if attribute 'section_id' is not set
-            BuildError: if attribute 'event_type' is not set
-            BuildError: attribute 'direction_vector' is not set
+            IncompleteEventBuilderSetup: if attribute 'section_id' is not set
+            IncompleteEventBuilderSetup: if attribute 'event_type' is not set
+            IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
 
         Returns:
             Event: the section event
@@ -217,6 +223,42 @@ class SectionEventBuilder(EventBuilder):
             occurrence=detection.occurrence,
             frame_number=detection.frame,
             section_id=self.section_id,
+            event_coordinate=ImageCoordinate(detection.x, detection.y),
+            event_type=self.event_type,
+            direction_vector=self.direction_vector,
+            video_name=detection.input_file_path.name,
+        )
+
+
+class SceneEventBuilder(EventBuilder):
+    """A builder to build scene events."""
+
+    def create_event(self, detection: Detection) -> Event:
+        """Creates a scene event with the information stored in a detection.
+
+        Args:
+            detection (Detection): the detection holding the information
+
+        Raises:
+            IncompleteEventBuilderSetup: if attribute 'event_type' is not set
+            IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
+
+        Returns:
+            Event: the scene event
+        """
+        if not self.event_type:
+            raise IncompleteEventBuilderSetup("attribute 'event_type' is not set")
+
+        if not self.direction_vector:
+            raise IncompleteEventBuilderSetup("attribute 'direction_vector' is not set")
+
+        return Event(
+            road_user_id=detection.track_id.id,
+            road_user_type=detection.classification,
+            hostname=self.extract_hostname(detection.input_file_path),
+            occurrence=detection.occurrence,
+            frame_number=detection.frame,
+            section_id=None,
             event_coordinate=ImageCoordinate(detection.x, detection.y),
             event_type=self.event_type,
             direction_vector=self.direction_vector,
