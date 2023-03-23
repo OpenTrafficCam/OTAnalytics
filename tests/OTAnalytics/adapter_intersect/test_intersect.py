@@ -191,7 +191,7 @@ class TestShapelyIntersectImplementationAdapter:
         mock_shapely_intersector.distance_point_point.return_value = 1
 
         adapter = ShapelyIntersectImplementationAdapter(mock_shapely_intersector)
-        result_splitted_line = adapter.distance_coord_coord(
+        result_splitted_line = adapter.distance_between(
             first_coordinate, second_coordinate
         )
 

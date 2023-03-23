@@ -210,7 +210,7 @@ class SectionEventBuilder(EventBuilder):
         if not self.direction_vector:
             raise IncompleteEventBuilderSetup("attribute 'direction_vector' is not set")
 
-        section_event = Event(
+        return Event(
             road_user_id=detection.track_id.id,
             road_user_type=detection.classification,
             hostname=self.extract_hostname(detection.input_file_path),
@@ -222,4 +222,3 @@ class SectionEventBuilder(EventBuilder):
             direction_vector=self.direction_vector,
             video_name=detection.input_file_path.name,
         )
-        return section_event

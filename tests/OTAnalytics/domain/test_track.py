@@ -111,11 +111,9 @@ class TestDetection:
 
 class TestTrack:
     @pytest.mark.parametrize("id", [0, -1, 0.5])
-    def test_value_error_raised_with_invalid_arg(
-        self, valid_detection: Detection, valid_detection_dict: dict, id: int
-    ) -> None:
+    def test_value_error_raised_with_invalid_arg(self, id: int) -> None:
         with pytest.raises(ValueError):
-            Track(id=TrackId(id), detections=[valid_detection])
+            TrackId(id)
 
     def test_raise_error_on_empty_detections(self) -> None:
         with pytest.raises(BuildTrackWithSingleDetectionError):
