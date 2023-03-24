@@ -5,6 +5,7 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from plugin_parser.otanalytics_parser import JsonParser
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
@@ -18,6 +19,8 @@ output_img = "data/tracks.png"
 start_time = ""
 end_time = "2022-09-15 07:05:00"
 start_end = True
+plot_sections = True
+sectionlist_json_path = Path("data/sectionlist_v2.json")
 
 # % Import tracks
 track_parser = OttrkParser()
@@ -26,6 +29,10 @@ track_df = pd.DataFrame(tracks[ottrk_format.DATA][ottrk_format.DETECTIONS]).sort
     ["track-id", "frame"]
 )
 track_df["occurrence"] = pd.to_datetime(track_df["occurrence"])
+
+# % Import sections
+# % Import Sectionlist
+sectionlist = JsonParser.from_dict(sectionlist_json_path)["sections"]
 
 # % Filter times
 if start_time != "":
@@ -110,6 +117,19 @@ if start_end:
         legend=False,
         s=3,
     )
+if plot_sections:
+    for section in range(0, len(sectionlist)):
+        x_data = [
+            sectionlist[section][i]["x"]
+            for i in sectionlist[section].keys()
+            if i in ["start", "end"]
+        ]
+        y_data = [
+            sectionlist[section][i]["y"]
+            for i in sectionlist[section].keys()
+            if i in ["start", "end"]
+        ]
+        sns.lineplot(x=x_data, y=y_data, linewidth=2, alpha=1, color="black")
 trkimg.set(xlabel="", ylabel="", xticklabels=[], yticklabels=[])
 plt.title(f"Tracks from '{ottrk_name}'", y=1.05, fontsize=12)
 trkimg.legend(title="Class", loc="upper left", bbox_to_anchor=(1, 1))
