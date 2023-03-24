@@ -116,7 +116,7 @@ class SceneActionDetector:
     def __init__(self, scene_event_builder: SceneEventBuilder) -> None:
         self._event_builder = scene_event_builder
 
-    def detect_enter_scene(self, tracks: list[Track]) -> list[Event]:
+    def detect_enter_scene(self, track: Track) -> Event:
         """Detect the first time a road user enters the  scene.
 
         Args:
@@ -125,19 +125,16 @@ class SceneActionDetector:
         Returns:
             list[Event]: the enter scene event
         """
-        scene_enter_events: list[Event] = []
 
-        for track in tracks:
-            self._event_builder.add_event_type(EventType.ENTER_SCENE)
-            self._event_builder.add_direction_vector(
-                track.detections[0], track.detections[-1]
-            )
-            first_detection = track.detections[0]
-            scene_enter_event = self._event_builder.create_event(first_detection)
-            scene_enter_events.append(scene_enter_event)
-        return scene_enter_events
+        self._event_builder.add_event_type(EventType.ENTER_SCENE)
+        self._event_builder.add_direction_vector(
+            track.detections[0], track.detections[-1]
+        )
+        first_detection = track.detections[0]
+        scene_enter_event = self._event_builder.create_event(first_detection)
+        return scene_enter_event
 
-    def detect_leave_scene(self, tracks: list[Track]) -> list[Event]:
+    def detect_leave_scene(self, track: Track) -> Event:
         """Detect the last time before a road user leaves the  scene.
 
         Args:
@@ -146,16 +143,13 @@ class SceneActionDetector:
         Returns:
             list[Event]: the leave scene event
         """
-        scene_leave_events: list[Event] = []
-        for track in tracks:
-            self._event_builder.add_direction_vector(
-                track.detections[0], track.detections[-1]
-            )
-            self._event_builder.add_event_type(EventType.LEAVE_SCENE)
-            first_detection = track.detections[-1]
-            leave_scene_event = self._event_builder.create_event(first_detection)
-            scene_leave_events.append(leave_scene_event)
-        return scene_leave_events
+        self._event_builder.add_direction_vector(
+            track.detections[0], track.detections[-1]
+        )
+        self._event_builder.add_event_type(EventType.LEAVE_SCENE)
+        first_detection = track.detections[-1]
+        leave_scene_event = self._event_builder.create_event(first_detection)
+        return leave_scene_event
 
 
 class EventRepository:

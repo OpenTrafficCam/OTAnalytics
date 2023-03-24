@@ -7,6 +7,7 @@ from OTAnalytics.domain.event import (
     Event,
     EventType,
     IncompleteEventBuilderSetup,
+    SceneEventBuilder,
     SectionEventBuilder,
 )
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -145,5 +146,49 @@ class TestSectionEventBuilder:
             valid_detection.x, valid_detection.y
         )
         assert event.event_type == EventType.SECTION_ENTER
+        assert event.direction_vector == DirectionVector2D(0, 0)
+        assert event.video_name == valid_detection.input_file_path.name
+
+
+class TestSceneEventBuilder:
+    def test_create_event_without_adds(self, valid_detection: Detection) -> None:
+        event_builder = SceneEventBuilder()
+        with pytest.raises(IncompleteEventBuilderSetup):
+            event_builder.create_event(valid_detection)
+
+    def test_create_event_without_event_type_added(
+        self, valid_detection: Detection
+    ) -> None:
+        event_builder = SceneEventBuilder()
+        event_builder.add_direction_vector(valid_detection, valid_detection)
+        with pytest.raises(IncompleteEventBuilderSetup):
+            event_builder.create_event(valid_detection)
+
+    def test_create_event_without_direction_vector_added(
+        self, valid_detection: Detection
+    ) -> None:
+        event_builder = SceneEventBuilder()
+        event_builder.add_event_type(EventType.SECTION_ENTER)
+        with pytest.raises(IncompleteEventBuilderSetup):
+            event_builder.create_event(valid_detection)
+
+    def test_create_event_with_correctly_initialised_builder(
+        self, valid_detection: Detection
+    ) -> None:
+        event_builder = SceneEventBuilder()
+        event_builder.add_direction_vector(valid_detection, valid_detection)
+        event_builder.add_event_type(EventType.ENTER_SCENE)
+        event = event_builder.create_event(valid_detection)
+
+        assert event.road_user_id == valid_detection.track_id.id
+        assert event.road_user_type == valid_detection.classification
+        assert event.hostname == "myhostname"
+        assert event.occurrence == valid_detection.occurrence
+        assert event.frame_number == valid_detection.frame
+        assert event.section_id is None
+        assert event.event_coordinate == ImageCoordinate(
+            valid_detection.x, valid_detection.y
+        )
+        assert event.event_type == EventType.ENTER_SCENE
         assert event.direction_vector == DirectionVector2D(0, 0)
         assert event.video_name == valid_detection.input_file_path.name

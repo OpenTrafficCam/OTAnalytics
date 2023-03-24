@@ -111,7 +111,6 @@ class EventBuilder(ABC):
         InproperFormattedFilename: if hostname could not be extracted from filename
     """
 
-    @abstractmethod
     def __init__(self) -> None:
         self.event_type: Optional[EventType] = None
         self.direction_vector: Optional[DirectionVector2D] = None
@@ -232,6 +231,9 @@ class SectionEventBuilder(EventBuilder):
 
 class SceneEventBuilder(EventBuilder):
     """A builder to build scene events."""
+
+    def __init__(self) -> None:
+        super().__init__()
 
     def create_event(self, detection: Detection) -> Event:
         """Creates a scene event with the information stored in a detection.
