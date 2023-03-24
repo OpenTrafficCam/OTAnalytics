@@ -15,9 +15,7 @@ TIME_FORMAT = "%d.%m%.%y %H:%M Uhr"
 FILTER_CLASS = ["car", "bus", "motorcycle", "truck"]
 FILTER_SECTION = ["NORTH", "EAST", "SOUTH", "WEST"]
 eventlist_json_path = Path(
-    "/Users/michaelheilig/platomo/User/Michael/OTAnalytics/testdata/miovision/"
-    + "generate_eventlist_miovision/"
-    + "NEW_eventlist_miovision.json"
+    "data/eventlist_Standard_SCUEHQ_FR30_2022-09-15_07-00-00.008.json"
 )
 sectionlist_json_path = Path(
     "data/sectionlist_Standard_SCUEHQ_2022-09-15_0000.008.json"
