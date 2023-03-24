@@ -16,7 +16,7 @@ num_min_frames = 30
 background_img = "data/vlcsnap-2023-03-09-11h40m22s762.png"
 output_img = "data/tracks.png"
 start_time = ""
-end_time = ""
+end_time = "2022-09-15 07:05:00"
 start_end = True
 
 # % Import tracks
@@ -76,7 +76,7 @@ if start_end:
     track_df_start_end = pd.concat(
         [
             track_df.groupby("track-id").first().reset_index(),
-            track_df.groupby("track-id").last().reset_index(),
+            # track_df.groupby("track-id").last().reset_index(),
         ]
     ).sort_values(["track-id", "frame"])
 
@@ -86,7 +86,7 @@ ottrk_name = str(ottrk_file).split("/")[-1]
 sns.set(style="dark")
 img = mpimg.imread(background_img)
 if start_end:
-    alpha = 0.02
+    alpha = 0.1
 else:
     alpha = 0.7
 trkimg = sns.lineplot(
