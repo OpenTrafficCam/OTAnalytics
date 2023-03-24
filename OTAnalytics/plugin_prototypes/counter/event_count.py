@@ -12,11 +12,19 @@ from plugin_parser.otanalytics_parser import JsonParser, PandasDataFrameParser
 EVENTS = "event_list"
 SECTIONS = "sections"
 TIME_FORMAT = "%d.%m%.%y %H:%M Uhr"
-eventlist_json_path = Path("data/eventlist.json")
-sectionlist_json_path = Path("data/sectionlist.json")
+FILTER_CLASS = ["car", "bus", "motorcycle", "truck"]
+FILTER_SECTION = ["NORTH", "EAST", "SOUTH", "WEST"]
+eventlist_json_path = Path(
+    "/Users/michaelheilig/platomo/User/Michael/OTAnalytics/testdata/miovision/"
+    + "generate_eventlist_miovision/"
+    + "NEW_eventlist_miovision.json"
+)
+sectionlist_json_path = Path(
+    "data/sectionlist_Standard_SCUEHQ_2022-09-15_0000.008.json"
+)
 from_time = ""
 to_time = ""
-interval_length = 2  # im minutes
+interval_length = 15  # im minutes
 
 # % Import Eventlist
 eventlist_dict = JsonParser.from_dict(eventlist_json_path)
@@ -31,9 +39,15 @@ events_df = PandasDataFrameParser.from_dict(eventlist_dict[EVENTS]).sort_values(
 )
 
 # Set timeformat (funcionality not included in Parser, TODO?)
-events_df["timestamp"] = pd.to_datetime(
-    events_df["timestamp"], format="%Y-%m-%d_%H-%M-%S"
+events_df["occurrence"] = pd.to_datetime(
+    events_df["occurrence"], format="%Y-%m-%d %H:%M:%S.%f"
 )
+
+# Filter events for classes and sections
+events_df = events_df[
+    (events_df["section_id"].isin(FILTER_SECTION))
+    & (events_df["road_user_type"].isin(FILTER_CLASS))
+]
 
 # % Create list of section dicts
 sections_dict = sectionlist_dict[SECTIONS]
@@ -41,11 +55,17 @@ sections_dict = sectionlist_dict[SECTIONS]
 
 # % Calculate direction from "event_coordinate" and "direction_vector" coordinates
 # Function to calculate direction for line between two points
-def get_degrees(p_1_x: float, p_1_y: float, p_2_x: float, p_2_y: float) -> float:
-    diff_x = p_2_x - p_1_x
-    diff_y = p_2_y - p_1_y
+def get_degrees(
+    p_1_x: float, p_1_y: float, p_2_x: float, p_2_y: float, vector: bool = False
+) -> float:
+    if vector:
+        v = np.array([p_1_x, p_1_y])
+    else:
+        diff_x = p_2_x - p_1_x
+        diff_y = p_2_y - p_1_y
 
-    v = np.array([diff_x, diff_y])
+        v = np.array([diff_x, diff_y])
+
     u = np.array([0, -1])
 
     angle = np.degrees(np.arctan2(np.linalg.det([u, v]), np.dot(u, v)))
@@ -93,7 +113,7 @@ def get_dir_name_line(event: pd.DataFrame, sections: dict) -> pd.Series:
     p_2_x = event["event_coordinate"][0]
     p_2_y = event["event_coordinate"][1]
 
-    angle_of_track = deg_range(get_degrees(p_1_x, p_1_y, p_2_x, p_2_y))
+    angle_of_track = deg_range(get_degrees(p_1_x, p_1_y, p_2_x, p_2_y, True))
 
     event["angle"] = angle_of_track
 
@@ -123,26 +143,26 @@ def get_dir_name_line(event: pd.DataFrame, sections: dict) -> pd.Series:
 events_df_dir = events_df.apply(get_dir_name_line, args=[sections_dict], axis=1)
 
 # % Create section name mapper
-section_name_mapper = {
+"""section_name_mapper = {
     sections_dict[s]["section_id"]: sections_dict[s]["name"]
     for s in sections_dict.keys()
-}
+}"""
 
 # % Set time intervals
 # Filter by start time
 if from_time != "":
     from_time_formatted = pd.to_datetime(from_time)
-    events_df_dir = events_df_dir[events_df_dir["timestamp"] >= from_time_formatted]
+    events_df_dir = events_df_dir[events_df_dir["occurrence"] >= from_time_formatted]
     start_time = from_time_formatted
 else:
-    start_time = events_df_dir.loc[0, "timestamp"]
+    start_time = events_df_dir.loc[0, "occurrence"]
 
 # Filter by end time
 if to_time != "":
     to_time_formatted = pd.to_datetime(to_time)
-    events_df_dir = events_df_dir[events_df_dir["timestamp"] < to_time_formatted]
+    events_df_dir = events_df_dir[events_df_dir["occurrence"] < to_time_formatted]
 else:
-    end_time = events_df_dir.loc[len(events_df_dir) - 1, "timestamp"]
+    end_time = events_df_dir.loc[len(events_df_dir) - 1, "occurrence"]
 
 duration = end_time - start_time
 interval = pd.Timedelta(interval_length, "m")
@@ -152,20 +172,20 @@ interval = pd.Timedelta(interval_length, "m")
 counts_section = (
     events_df_dir.groupby(
         [
-            pd.Grouper(key="timestamp", freq=f"{interval_length}Min"),
+            pd.Grouper(key="occurrence", freq=f"{interval_length}Min"),
             "section_id",
             "direction",
-            "vehicle_type",
+            "road_user_type",
         ]
-    )["vehicle_id"]
+    )["road_user_id"]
     .count()
     .reset_index()
-    .rename({"timestamp": "time_interval", "vehicle_id": "n_vehicles"}, axis=1)
+    .rename({"occurrence": "time_interval", "road_user_id": "n_vehicles"}, axis=1)
 )
 
 # % Prepare data for plotting
 # Add section names for plotting
-counts_section["section_name"] = counts_section["section_id"].map(section_name_mapper)
+# counts_section["section_name"] = counts_section["section_id"].map(section_name_mapper)
 
 
 # Function to set the time format for plotting
@@ -183,10 +203,10 @@ fig = px.bar(
     counts_section,
     x="time_interval",
     y="n_vehicles",
-    color="vehicle_type",
+    color="road_user_type",
     barmode="stack",
     facet_col="direction",
-    facet_row="section_name",
+    facet_row="section_id",
     facet_col_spacing=0.05,
     facet_row_spacing=0.1,
     height=800,
@@ -201,19 +221,21 @@ fig.show()
 
 # % Create flow table
 # Extract new DataFrame with only relevant columns
-flows_section = events_df_dir[["vehicle_id", "vehicle_type", "timestamp", "section_id"]]
+flows_section = events_df_dir[
+    ["road_user_id", "road_user_type", "occurrence", "section_id"]
+]
 flows_section["section_id2"] = flows_section["section_id"]
 
 # Get origin and destination section for each track (only first and last event!)
 flows_section = (
     flows_section.pivot_table(
-        index="vehicle_id",
-        values=["section_id", "section_id2", "timestamp", "vehicle_type"],
+        index="road_user_id",
+        values=["section_id", "section_id2", "occurrence", "road_user_type"],
         aggfunc={
             "section_id": "first",
             "section_id2": "last",
-            "timestamp": "first",
-            "vehicle_type": "first",
+            "occurrence": "first",
+            "road_user_type": "first",
         },
         fill_value=0,
     )
@@ -221,31 +243,31 @@ flows_section = (
     .rename({"section_id": "from_section", "section_id2": "to_section"}, axis=1)
 )
 
-# Group OD-relations by timestamp, Origin, destination and vehicle type
+# Group OD-relations by occurrence, Origin, destination and vehicle type
 flows_section = (
     flows_section.groupby(
         [
-            pd.Grouper(key="timestamp", freq=f"{interval_length}Min"),
+            pd.Grouper(key="occurrence", freq=f"{interval_length}Min"),
             "from_section",
             "to_section",
-            "vehicle_type",
+            "road_user_type",
         ]
-    )["vehicle_id"]
+    )["road_user_id"]
     .count()
     .reset_index()
-    .rename({"timestamp": "time_interval"}, axis=1)
+    .rename({"occurrence": "time_interval"}, axis=1)
 )
 
 # Replace section ids woth names
-flows_section["from_section"] = flows_section["from_section"].map(section_name_mapper)
-flows_section["to_section"] = flows_section["to_section"].map(section_name_mapper)
+# flows_section["from_section"] = flows_section["from_section"].map(section_name_mapper)
+# flows_section["to_section"] = flows_section["to_section"].map(section_name_mapper)
 
 # Create columns with counts for each vehicle type
 flows_section = (
     flows_section.pivot(
         index=["time_interval", "from_section", "to_section"],
-        columns="vehicle_type",
-        values="vehicle_id",
+        columns="road_user_type",
+        values="road_user_id",
     )
     .reset_index()
     .fillna(0)
@@ -282,6 +304,7 @@ def _get_all_flows_from_sections(
 
 # Extract nodes from section dict for plotting
 nodes = pd.DataFrame(sections_dict).transpose()[["section_id", "name"]]
+nodes = nodes[nodes["name"].isin(FILTER_SECTION)]
 
 # Add non-existing relations for plotting
 flows = _get_all_flows_from_sections(flows_section, nodes)
@@ -290,28 +313,28 @@ flows = _get_all_flows_from_sections(flows_section, nodes)
 time_intervals = flows_section["time_interval"].unique()
 
 # Extract existing vehicle types from events for plotting
-vehicle_types = events_df_dir["vehicle_type"].unique()
+road_user_types = events_df_dir["road_user_type"].unique()
 
 # Plot flows
 fig, axs = plt.subplots(
     len(time_intervals),
-    len(vehicle_types),
+    len(road_user_types),
     dpi=300,
-    figsize=(5 * len(time_intervals), 5 * len(vehicle_types)),
+    figsize=(5 * len(time_intervals), 5 * len(road_user_types)),
 )
 for i in range(0, len(time_intervals)):
-    for j in range(0, len(vehicle_types)):
-        if len(vehicle_types) > 1 and len(time_intervals) > 1:
+    for j in range(0, len(road_user_types)):
+        if len(road_user_types) > 1 and len(time_intervals) > 1:
             axs_ij = axs[i, j]
-        elif len(vehicle_types) > 1 and len(time_intervals) == 1:
+        elif len(road_user_types) > 1 and len(time_intervals) == 1:
             axs_ij = axs[j]
-        elif len(vehicle_types) == 1 and len(time_intervals) > 1:
+        elif len(road_user_types) == 1 and len(time_intervals) > 1:
             axs_ij = axs[i]
         flow_matrix = pd.pivot_table(
             flows[flows["time_interval"] == time_intervals[i]],
             index="from_section",
             columns="to_section",
-            values=vehicle_types[j],
+            values=road_user_types[j],
             aggfunc="sum",
         ).to_numpy(na_value=0)
 
@@ -336,5 +359,5 @@ for i in range(0, len(time_intervals)):
         )
         times = _set_time_format(pd.Series(time_intervals), TIME_FORMAT)
         axs_ij.set_title(
-            f"Time Interval: {times[i]},\nRoad User: {vehicle_types[j]}", loc="Left"
+            f"Time Interval: {times[i]},\nRoad User: {road_user_types[j]}", loc="Left"
         )
