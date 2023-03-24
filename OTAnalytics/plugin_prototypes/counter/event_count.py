@@ -53,6 +53,26 @@ events_df = events_df[
 sections_dict = sectionlist_dict[SECTIONS]
 
 
+# chose max class by sum of confidence
+def max_class(data: pd.DataFrame) -> dict:
+    tmp = data[["road_user_type", "road_user_id", "confidence"]]
+    map_df = (
+        tmp.groupby(["road_user_id", "road_user_type"])
+        .agg({"confidence": sum})
+        .reset_index()
+    )
+
+    class_map = {
+        map_df.loc[i, "road_user_id"]: map_df.loc[i, "road_user_type"]
+        for i in map_df.groupby("road_user_id")["confidence"].idxmax()
+    }
+    return class_map
+
+
+events_df["confidence"] = np.where(events_df["road_user_type"] == "car", 1, 0.99)
+events_df["max_class"] = events_df["road_user_id"].map(max_class(events_df))
+
+
 # % Calculate direction from "event_coordinate" and "direction_vector" coordinates
 # Function to calculate direction for line between two points
 def get_degrees(
@@ -175,7 +195,7 @@ counts_section = (
             pd.Grouper(key="occurrence", freq=f"{interval_length}Min"),
             "section_id",
             "direction",
-            "road_user_type",
+            "max_class",
         ]
     )["road_user_id"]
     .count()
@@ -203,7 +223,7 @@ fig = px.bar(
     counts_section,
     x="time_interval",
     y="n_vehicles",
-    color="road_user_type",
+    color="max_class",
     barmode="stack",
     facet_col="direction",
     facet_row="section_id",
@@ -221,21 +241,19 @@ fig.show()
 
 # % Create flow table
 # Extract new DataFrame with only relevant columns
-flows_section = events_df_dir[
-    ["road_user_id", "road_user_type", "occurrence", "section_id"]
-]
+flows_section = events_df_dir[["road_user_id", "max_class", "occurrence", "section_id"]]
 flows_section["section_id2"] = flows_section["section_id"]
 
 # Get origin and destination section for each track (only first and last event!)
 flows_section = (
     flows_section.pivot_table(
         index="road_user_id",
-        values=["section_id", "section_id2", "occurrence", "road_user_type"],
+        values=["section_id", "section_id2", "occurrence", "max_class"],
         aggfunc={
             "section_id": "first",
             "section_id2": "last",
             "occurrence": "first",
-            "road_user_type": "first",
+            "max_class": "first",
         },
         fill_value=0,
     )
@@ -250,7 +268,7 @@ flows_section = (
             pd.Grouper(key="occurrence", freq=f"{interval_length}Min"),
             "from_section",
             "to_section",
-            "road_user_type",
+            "max_class",
         ]
     )["road_user_id"]
     .count()
@@ -266,7 +284,7 @@ flows_section = (
 flows_section = (
     flows_section.pivot(
         index=["time_interval", "from_section", "to_section"],
-        columns="road_user_type",
+        columns="max_class",
         values="road_user_id",
     )
     .reset_index()
@@ -313,7 +331,7 @@ flows = _get_all_flows_from_sections(flows_section, nodes)
 time_intervals = flows_section["time_interval"].unique()
 
 # Extract existing vehicle types from events for plotting
-road_user_types = events_df_dir["road_user_type"].unique()
+road_user_types = events_df_dir["max_class"].unique()
 
 # Plot flows
 fig, axs = plt.subplots(
