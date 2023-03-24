@@ -4,11 +4,10 @@ from pathlib import Path
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import pandas as pd
+import plugin_parser.ottrk_dataformat as ottrk_format
 import seaborn as sns
 from plugin_parser.otanalytics_parser import JsonParser
-
-import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
+from plugin_parser.otvision_parser import OttrkParser
 
 # % Set variables
 ottrk_file = Path("data/Standard_SCUEHQ_FR30_2022-09-15_07-00-00.008.ottrk")
