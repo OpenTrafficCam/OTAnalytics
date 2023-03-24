@@ -20,9 +20,9 @@ eventlist_json_path = Path(
 sectionlist_json_path = Path(
     "data/sectionlist_Standard_SCUEHQ_2022-09-15_0000.008.json"
 )
-from_time = ""
-to_time = ""
-interval_length = 15  # im minutes
+from_time = "2022-09-15 07:00:00"
+to_time = "2022-09-15 07:15:00"
+interval_length = 5  # im minutes
 
 # % Import Eventlist
 eventlist_dict = JsonParser.from_dict(eventlist_json_path)
@@ -41,11 +41,36 @@ events_df["occurrence"] = pd.to_datetime(
     events_df["occurrence"], format="%Y-%m-%d %H:%M:%S.%f"
 )
 
-# Filter events for classes and sections
+# Filter by start time
+if from_time != "":
+    from_time_formatted = pd.to_datetime(from_time)
+    events_df = events_df[events_df["occurrence"] >= from_time_formatted]
+    start_time = from_time_formatted
+else:
+    start_time = events_df.loc[0, "occurrence"]
+
+# Filter by end time
+if to_time != "":
+    to_time_formatted = pd.to_datetime(to_time)
+    events_df = events_df[events_df["occurrence"] < to_time_formatted]
+    end_time = to_time_formatted
+else:
+    end_time = events_df.loc[len(events_df) - 1, "occurrence"]
+
+# Filter events for classes and sections and delete single intersections
 events_df = events_df[
     (events_df["section_id"].isin(FILTER_SECTION))
     & (events_df["road_user_type"].isin(FILTER_CLASS))
 ]
+
+valid_road_user_ids = (
+    events_df.groupby("road_user_id").count()["frame_number"].reset_index()
+)
+valid_road_user_ids = valid_road_user_ids[valid_road_user_ids["frame_number"] > 1][
+    "road_user_id"
+]
+
+events_df = events_df[events_df["road_user_id"].isin(valid_road_user_ids)]
 
 # % Create list of section dicts
 sections_dict = sectionlist_dict[SECTIONS]
@@ -167,21 +192,6 @@ events_df_dir = events_df.apply(get_dir_name_line, args=[sections_dict], axis=1)
 }"""
 
 # % Set time intervals
-# Filter by start time
-if from_time != "":
-    from_time_formatted = pd.to_datetime(from_time)
-    events_df_dir = events_df_dir[events_df_dir["occurrence"] >= from_time_formatted]
-    start_time = from_time_formatted
-else:
-    start_time = events_df_dir.loc[0, "occurrence"]
-
-# Filter by end time
-if to_time != "":
-    to_time_formatted = pd.to_datetime(to_time)
-    events_df_dir = events_df_dir[events_df_dir["occurrence"] < to_time_formatted]
-else:
-    end_time = events_df_dir.loc[len(events_df_dir) - 1, "occurrence"]
-
 duration = end_time - start_time
 interval = pd.Timedelta(interval_length, "m")
 
@@ -239,7 +249,9 @@ fig.show()
 
 # % Create flow table
 # Extract new DataFrame with only relevant columns
-flows_section = events_df_dir[["road_user_id", "max_class", "occurrence", "section_id"]]
+flows_section = events_df_dir[
+    ["road_user_id", "max_class", "occurrence", "section_id"]
+].sort_values(["road_user_id", "occurrence"])
 flows_section["section_id2"] = flows_section["section_id"]
 
 # Get origin and destination section for each track (only first and last event!)
@@ -352,6 +364,7 @@ for i in range(0, len(time_intervals)):
             columns="to_section",
             values=road_user_types[j],
             aggfunc="sum",
+            sort=False,
         ).to_numpy(na_value=0)
 
         chord_diagram(
@@ -361,7 +374,7 @@ for i in range(0, len(time_intervals)):
             width=0.05,
             pad=30.0,
             gap=0.03,
-            chordwidth=0.7,
+            chordwidth=0.5,
             ax=axs_ij,
             colors=None,
             cmap=None,
