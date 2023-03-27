@@ -7,6 +7,7 @@ from customtkinter import CTk, CTkButton
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.section import Coordinate, LineSection, Section
+from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtsectionParser,
     OttrkParser,
@@ -118,7 +119,7 @@ class ApplicationStarter:
         """
         Build all required objects and inject them where necessary
         """
-        track_parser = OttrkParser()
+        track_parser = OttrkParser(CalculateTrackClassificationByMaxConfidence())
         section_parser = OtsectionParser()
         video_parser = OttrkVideoParser()
         return Datastore(track_parser, section_parser, video_parser)
