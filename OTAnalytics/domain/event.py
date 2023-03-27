@@ -109,6 +109,9 @@ class EventBuilder(ABC):
         InproperFormattedFilename: if hostname could not be extracted from filename
     """
 
+    def __init__(self) -> None:
+        self.road_user_type: Optional[str] = None
+
     @abstractmethod
     def create_event(self, detection: Detection) -> Event:
         """Creates an event with the information stored in a detection.
@@ -144,6 +147,14 @@ class EventBuilder(ABC):
         raise InproperFormattedFilename(
             f"Could not parse {file_path.name}. Hostname is missing."
         )
+
+    def add_road_user_type(self, road_user_type: str) -> None:
+        """Add a road user type to add to the event to be build.
+
+        Args:
+            road_user_type (str): the road user type
+        """
+        self.road_user_type = road_user_type
 
 
 class SectionEventBuilder(EventBuilder):
@@ -210,9 +221,12 @@ class SectionEventBuilder(EventBuilder):
         if not self.direction_vector:
             raise IncompleteEventBuilderSetup("attribute 'direction_vector' is not set")
 
+        if not self.road_user_type:
+            raise IncompleteEventBuilderSetup("attribute 'road_user_type' is not set")
+
         return Event(
             road_user_id=detection.track_id.id,
-            road_user_type=detection.classification,
+            road_user_type=self.road_user_type,
             hostname=self.extract_hostname(detection.input_file_path),
             occurrence=detection.occurrence,
             frame_number=detection.frame,

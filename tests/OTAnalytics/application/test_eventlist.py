@@ -60,7 +60,7 @@ def track() -> Track:
         track_id=TrackId(1),
     )
 
-    return Track(track_id, [detection_1, detection_2])
+    return Track(track_id, "car", [detection_1, detection_2])
 
 
 @pytest.fixture

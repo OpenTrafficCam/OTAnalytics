@@ -133,6 +133,7 @@ class TestSectionEventBuilder:
         event_builder.add_section_id("N")
         event_builder.add_direction_vector(valid_detection, valid_detection)
         event_builder.add_event_type(EventType.SECTION_ENTER)
+        event_builder.add_road_user_type("car")
         event = event_builder.create_event(valid_detection)
 
         assert event.road_user_id == valid_detection.track_id.id

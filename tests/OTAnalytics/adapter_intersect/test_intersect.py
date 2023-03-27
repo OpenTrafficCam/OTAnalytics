@@ -15,7 +15,7 @@ from OTAnalytics.domain.intersect import (
     IntersectBySplittingTrackLine,
 )
 from OTAnalytics.domain.section import LineSection
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence, Track
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
@@ -25,7 +25,7 @@ FRAME_HEIGHT = 600
 
 @pytest.fixture(scope="module")
 def tracks(ottrk_path: Path) -> list[Track]:
-    ottrk_parser = OttrkParser()
+    ottrk_parser = OttrkParser(CalculateTrackClassificationByMaxConfidence())
     return ottrk_parser.parse(ottrk_path)
 
 

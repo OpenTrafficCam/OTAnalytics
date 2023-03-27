@@ -6,10 +6,20 @@ from typing import Iterable, Optional, Tuple
 from numpy import ndarray
 
 from OTAnalytics.domain.section import Section, SectionRepository
-from OTAnalytics.domain.track import Track, TrackId, TrackRepository
+from OTAnalytics.domain.track import (
+    Track,
+    TrackClassificationCalculator,
+    TrackId,
+    TrackRepository,
+)
 
 
 class TrackParser(ABC):
+    def __init__(
+        self, track_classification_calculator: TrackClassificationCalculator
+    ) -> None:
+        self._track_classification_calculator = track_classification_calculator
+
     @abstractmethod
     def parse(self, file: Path) -> list[Track]:
         pass
