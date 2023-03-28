@@ -1,10 +1,11 @@
-from abc import abstractmethod
 from pathlib import Path
 
 import customtkinter
 from customtkinter import CTk
 
+from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.state import TrackState
 from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
@@ -18,39 +19,21 @@ from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
 
 
-class OTAnalyticsApplication:
-    def __init__(self, datastore: Datastore) -> None:
-        self._datastore: Datastore = datastore
-
-    def add_tracks_of_file(self, track_file: Path) -> None:
-        self._datastore.load_track_file(file=track_file)
-
-    def add_sections_of_file(self, sections_file: Path) -> None:
-        self._datastore.load_section_file(file=sections_file)
+class OTAnalyticsCli:
+    def __init__(self, application: OTAnalyticsApplication) -> None:
+        self._application = application
 
     def start(self) -> None:
-        self.start_internal()
-
-    @abstractmethod
-    def start_internal(self) -> None:
-        pass
-
-
-class OTAnalyticsCli(OTAnalyticsApplication):
-    def __init__(self, datastore: Datastore) -> None:
-        super().__init__(datastore)
-
-    def start_internal(self) -> None:
         # TODO parse config and add track and section files
         pass
 
 
-class OTAnalyticsGui(OTAnalyticsApplication):
-    def __init__(self, datastore: Datastore, app: CTk = CTk()) -> None:
-        super().__init__(datastore)
+class OTAnalyticsGui:
+    def __init__(self, application: OTAnalyticsApplication, app: CTk = CTk()) -> None:
+        self._application = application
         self._app: CTk = app
 
-    def start_internal(self) -> None:
+    def start(self) -> None:
         self._show_gui()
 
     def _show_gui(self) -> None:
@@ -69,7 +52,7 @@ class OTAnalyticsGui(OTAnalyticsApplication):
 
     def _get_widgets(self) -> None:
         self.frame_canvas = FrameCanvas(master=self._app)
-        self.frame_tracks = FrameTracks(master=self._app, datastore=self._datastore)
+        self.frame_tracks = FrameTracks(master=self._app, application=self._application)
         self.frame_sections = FrameSections(master=self._app)
 
     def _place_widgets(self) -> None:
@@ -83,14 +66,18 @@ class OTAnalyticsGui(OTAnalyticsApplication):
 
 class ApplicationStarter:
     def start_gui(self) -> None:
-        datastore = self.create_datastore()
+        datastore = OTAnalyticsApplication(
+            self._create_datastore(), self._create_track_state()
+        )
         OTAnalyticsGui(datastore).start()
 
     def start_cli(self) -> None:
-        datastore = self.create_datastore()
+        datastore = OTAnalyticsApplication(
+            self._create_datastore(), self._create_track_state()
+        )
         OTAnalyticsCli(datastore).start()
 
-    def create_datastore(self) -> Datastore:
+    def _create_datastore(self) -> Datastore:
         """
         Build all required objects and inject them where necessary
         """
@@ -99,3 +86,6 @@ class ApplicationStarter:
         event_list_parser = OtEventListParser()
         video_parser = OttrkVideoParser()
         return Datastore(track_parser, section_parser, event_list_parser, video_parser)
+
+    def _create_track_state(self) -> TrackState:
+        return TrackState()
