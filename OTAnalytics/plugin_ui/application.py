@@ -4,7 +4,6 @@ from pathlib import Path
 
 import customtkinter
 from customtkinter import CTk, CTkButton
-from plugin_ui.frame_canvas import FrameCanvas
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.section import Coordinate, LineSection, Section
@@ -16,6 +15,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkVideoParser,
 )
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas, TrackImage
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
 
@@ -76,6 +76,8 @@ class OTAnalyticsGui(OTAnalyticsApplication):
 
         self._get_widgets()
         self._place_widgets()
+        image = TrackImage()
+        self.frame_canvas.add_image(image)
         self._app.mainloop()
 
     def _get_widgets(self) -> None:

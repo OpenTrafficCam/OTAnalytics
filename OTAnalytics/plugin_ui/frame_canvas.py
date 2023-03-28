@@ -1,12 +1,34 @@
 from typing import Any
 
 import customtkinter
-import numpy as np
 from customtkinter import CTkCanvas, CTkFrame
 from moviepy.editor import VideoFileClip
 from PIL import Image, ImageTk
 
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
+
+
+class TrackImage:
+    def load_image(self) -> Any:
+        video = VideoFileClip(
+            r"tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        )
+        image = video.get_frame(0)
+        return image
+
+    def width(self) -> int:
+        return self.pillow_image.width
+
+    def height(self) -> int:
+        return self.pillow_image.height
+
+    def convert_image(self) -> None:
+        self.pillow_image = Image.fromarray(self.load_image())
+
+    def create_photo(self) -> ImageTk.PhotoImage:
+        self.convert_image()
+        self.pillow_photo_image = ImageTk.PhotoImage(image=self.pillow_image)
+        return self.pillow_photo_image
 
 
 class FrameCanvas(CTkFrame):
@@ -24,28 +46,23 @@ class FrameCanvas(CTkFrame):
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
+    def add_image(self, image: TrackImage) -> None:
+        self.canvas_background.add_image(image)
+        PADX = 10
+        PADY = 5
+        STICKY = "NESW"
+        self.canvas_background.grid(
+            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
+        )
+
 
 class CanvasBackground(CTkCanvas):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
 
-        self.bind("<ButtonRelease-1>", self.on_click)
-
-        # This calls should come from outside later
-        video = VideoFileClip(
-            r"tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        )
-        image = video.get_frame(0)
-        self.show_rectangle()
-        self.show_image(image=image)
-
-    def show_image(self, image: np.ndarray) -> None:
-        pillow_image = Image.fromarray(image)
-        width, height = pillow_image.size
-        self.config(width=width, height=height)
-        pillow_photo_image = ImageTk.PhotoImage(image=pillow_image)
-        print(pillow_photo_image)
-        self.create_image(0, 0, image=pillow_photo_image, anchor=customtkinter.NW)
+    def add_image(self, image: TrackImage) -> None:
+        self.create_image(0, 0, image=image.create_photo(), anchor=customtkinter.NW)
+        self.config(width=image.width(), height=image.height())
 
     def show_rectangle(self) -> None:
         self.create_rectangle(10, 10, 70, 70)
