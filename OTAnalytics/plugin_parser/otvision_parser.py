@@ -77,8 +77,7 @@ class OttrkParser(TrackParser):
         """
         ottrk_dict = _parse_bz2(ottrk_file)
         dets_list: list[dict] = ottrk_dict[ottrk_format.DATA][ottrk_format.DETECTIONS]
-        tracks = self._parse_tracks(dets_list)
-        return tracks
+        return self._parse_tracks(dets_list)
 
     def _parse_tracks(self, dets: list[dict]) -> list[Track]:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
