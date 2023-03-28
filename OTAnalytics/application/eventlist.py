@@ -131,8 +131,7 @@ class SceneActionDetector:
             track.detections[0], track.detections[-1]
         )
         first_detection = track.detections[0]
-        scene_enter_event = self._event_builder.create_event(first_detection)
-        return scene_enter_event
+        return self._event_builder.create_event(first_detection)
 
     def detect_leave_scene(self, track: Track) -> Event:
         """Detect the last time before a road user leaves the  scene.
@@ -148,5 +147,4 @@ class SceneActionDetector:
         )
         self._event_builder.add_event_type(EventType.LEAVE_SCENE)
         first_detection = track.detections[-1]
-        leave_scene_event = self._event_builder.create_event(first_detection)
-        return leave_scene_event
+        return self._event_builder.create_event(first_detection)
