@@ -5,7 +5,7 @@ from typing import Generator, TypeVar
 import pytest
 
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence, Track
 from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser, OttrkParser
 
 T = TypeVar("T")
@@ -45,7 +45,7 @@ def cyclist_video(test_data_dir: Path) -> Path:
 
 @pytest.fixture(scope="module")
 def tracks(ottrk_path: Path) -> list[Track]:
-    ottrk_parser = OttrkParser()
+    ottrk_parser = OttrkParser(CalculateTrackClassificationByMaxConfidence())
     return ottrk_parser.parse(ottrk_path)
 
 

@@ -15,7 +15,12 @@ from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventB
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
 from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
-from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.domain.track import (
+    CalculateTrackClassificationByMaxConfidence,
+    Detection,
+    Track,
+    TrackId,
+)
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     InvalidSectionData,
@@ -160,6 +165,7 @@ def expected_sample_tracks(
     return [
         Track(
             id=TrackId(1),
+            classification="car",
             detections=[
                 sample_track_det_1,
                 sample_track_det_2,
@@ -190,7 +196,9 @@ def example_json(test_data_tmp_dir: Path) -> tuple[Path, dict]:
 
 
 class TestOttrkParser:
-    ottrk_parser: OttrkParser = OttrkParser()
+    ottrk_parser: OttrkParser = OttrkParser(
+        CalculateTrackClassificationByMaxConfidence()
+    )
 
     def test_parse_whole_ottrk(self, ottrk_path: Path) -> None:
         self.ottrk_parser.parse(ottrk_path)
@@ -257,6 +265,7 @@ class TestOttrkParser:
         expected_sorted = [
             Track(
                 id=TrackId(1),
+                classification="car",
                 detections=[sample_track_det_1, sample_track_det_2, sample_track_det_3],
             )
         ]
