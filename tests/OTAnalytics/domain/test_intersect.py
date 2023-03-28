@@ -10,6 +10,7 @@ from OTAnalytics.domain.intersect import (
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
     IntersectImplementation,
+    Intersector,
 )
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Detection, Track, TrackId
@@ -64,6 +65,14 @@ def track() -> Track:
     )
 
     return Track(track_id, "car", [detection_1, detection_2])
+
+
+class TestIntersector:
+    def test_select_coordinate_in_detection(self, detection: Detection) -> None:
+        offset = RelativeOffsetCoordinate(0.5, 0.5)
+        coordinate = Intersector._select_coordinate_in_detection(detection, offset)
+        assert coordinate.x == detection.x + detection.w * 0.5
+        assert coordinate.y == detection.y + detection.h * 0.5
 
 
 class TestIntersectBySplittingTrackLine:
