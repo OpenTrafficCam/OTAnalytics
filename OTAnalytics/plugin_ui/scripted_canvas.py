@@ -49,7 +49,7 @@ class DummyFrame(CTkFrame):
         self.canvas.add_image(dummy_image)
         PADX = 10
         PADY = 5
-        STICKY = "NESW"
+        STICKY = "NSEW"
         self.canvas.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
 
 
