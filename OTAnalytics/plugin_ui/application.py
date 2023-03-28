@@ -8,6 +8,7 @@ from plugin_ui.frame_canvas import FrameCanvas
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.section import Coordinate, LineSection, Section
+from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtsectionParser,
@@ -136,7 +137,7 @@ class ApplicationStarter:
         """
         Build all required objects and inject them where necessary
         """
-        track_parser = OttrkParser()
+        track_parser = OttrkParser(CalculateTrackClassificationByMaxConfidence())
         section_parser = OtsectionParser()
         event_list_parser = OtEventListParser()
         video_parser = OttrkVideoParser()

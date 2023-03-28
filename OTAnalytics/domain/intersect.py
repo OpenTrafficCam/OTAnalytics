@@ -148,6 +148,7 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
         splitted_lines = self.implementation.split_line_with_line(
             track_as_geometry, line_section_as_geometry
         )
+        event_builder.add_road_user_type(track.classification)
 
         if splitted_lines:
             events: list[Event] = []
@@ -187,9 +188,10 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
         line_section_as_geometry = Line(
             [self._line_section.start, self._line_section.end]
         )
-
         if not self._track_line_intersects_section(track, line_section_as_geometry):
             return None
+
+        event_builder.add_road_user_type(track.classification)
 
         events: list[Event] = []
 
