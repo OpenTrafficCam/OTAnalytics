@@ -1,12 +1,10 @@
-import tkinter
 from abc import abstractmethod
 from pathlib import Path
 
 import customtkinter
-from customtkinter import CTk, CTkButton
+from customtkinter import CTk
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.domain.section import Coordinate, LineSection, Section
 from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
@@ -52,18 +50,6 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         super().__init__(datastore)
         self._app: CTk = app
 
-    def _load_tracks_in_file(self) -> None:
-        track_file = Path("")  # TODO read from file chooser
-        self._datastore.load_track_file(file=track_file)
-
-    def _load_sections_in_file(self) -> None:
-        section_file = Path("")  # TODO read from file chooser
-        self._datastore.load_section_file(file=section_file)
-
-    def _save_sections_to_file(self) -> None:
-        section_file = Path("")  # TODO read from file choser
-        self._datastore.save_section_file(file=section_file)
-
     def start_internal(self) -> None:
         self._show_gui()
 
@@ -72,17 +58,18 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         customtkinter.set_default_color_theme("green")
 
         self._app.title("OTAnalytics")
-        self._add_section_loader()
 
         self._get_widgets()
         self._place_widgets()
-        image = TrackImage()
+        image = TrackImage(
+            Path(r"tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4")
+        )
         self.frame_canvas.add_image(image)
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
         self.frame_canvas = FrameCanvas(master=self._app)
-        self.frame_tracks = FrameTracks(master=self._app)
+        self.frame_tracks = FrameTracks(master=self._app, datastore=self._datastore)
         self.frame_sections = FrameSections(master=self._app)
 
     def _place_widgets(self) -> None:
@@ -92,38 +79,6 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         )
         self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_sections.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-
-    def _add_track_loader(self) -> None:
-        button = CTkButton(
-            master=self._app,
-            text="Read tracks",
-            command=self._load_tracks_in_file,
-        )
-        button.place(relx=0.25, rely=0.5, anchor=tkinter.CENTER)
-
-    def _add_section_loader(self) -> None:
-        button = CTkButton(
-            master=self._app,
-            text="Read sections",
-            command=self._load_sections_in_file,
-        )
-        button.place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)
-
-    def _add_section_button(self) -> None:
-        button = CTkButton(
-            master=self._app,
-            text="Add sections",
-            command=self._add_section,
-        )
-        button.place(relx=0.75, rely=0.5, anchor=tkinter.CENTER)
-
-    def _add_section(self) -> None:
-        section: Section = LineSection(
-            id="north",
-            start=Coordinate(0, 1),
-            end=Coordinate(2, 3),
-        )
-        self._datastore.add_section(section)
 
 
 class ApplicationStarter:

@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import customtkinter
@@ -8,13 +10,13 @@ from PIL import Image, ImageTk
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 
 
+@dataclass
 class TrackImage:
+    path: Path
+
     def load_image(self) -> Any:
-        video = VideoFileClip(
-            r"tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        )
-        image = video.get_frame(0)
-        return image
+        video = VideoFileClip(str(self.path))
+        return video.get_frame(0)
 
     def width(self) -> int:
         return self.pillow_image.width
