@@ -142,7 +142,12 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
             [self._line_section.start, self._line_section.end]
         )
         track_as_geometry = Line(
-            [Coordinate(detection.x, detection.y) for detection in track.detections]
+            [
+                Coordinate(
+                    detection.x + detection.w * 0.5, detection.y + detection.h * 0.5
+                )
+                for detection in track.detections
+            ]
         )
 
         splitted_lines = self.implementation.split_line_with_line(
