@@ -6,6 +6,8 @@ import customtkinter
 from customtkinter import CTk, CTkButton
 
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.domain.event import EventType
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Coordinate, LineSection, Section
 from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
 from OTAnalytics.plugin_parser.otvision_parser import (
@@ -101,6 +103,9 @@ class OTAnalyticsGui(OTAnalyticsApplication):
     def _add_section(self) -> None:
         section: Section = LineSection(
             id="north",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
+            },
             start=Coordinate(0, 1),
             end=Coordinate(2, 3),
         )
