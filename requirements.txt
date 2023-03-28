@@ -1,5 +1,5 @@
 customtkinter==5.1.2
 moviepy==1.0.3
 numpy==1.24.2
-pydantic==1.10.5
+shapely==2.0.1
 ujson==5.7.0

@@ -7,14 +7,22 @@ import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.datastore import (
+    EventListParser,
     SectionParser,
     TrackParser,
     Video,
     VideoParser,
 )
-from OTAnalytics.domain import section
-from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
-from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.domain import event, geometry, section
+from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.section import Area, LineSection, Section
+from OTAnalytics.domain.track import (
+    BuildTrackWithSingleDetectionError,
+    Detection,
+    Track,
+    TrackId,
+)
 
 ENCODING: str = "UTF-8"
 
@@ -81,8 +89,15 @@ class OttrkParser(TrackParser):
         tracks_dict = self._parse_detections(dets)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
-            sort_dets_by_frame = sorted(detections, key=lambda det: det.occurrence)
-            tracks.append(Track(id=track_id, detections=sort_dets_by_frame))
+            sort_dets_by_occurrence = sorted(detections, key=lambda det: det.occurrence)
+            try:
+                current_track = Track(id=track_id, detections=sort_dets_by_occurrence)
+                tracks.append(current_track)
+            except BuildTrackWithSingleDetectionError as build_error:
+                # TODO: log error
+                # Skip tracks with less than 2 detections
+                print(build_error)
+
         return tracks
 
     def _parse_detections(self, det_list: list[dict]) -> dict[TrackId, list[Detection]]:
@@ -100,7 +115,7 @@ class OttrkParser(TrackParser):
                 occurrence=datetime.strptime(
                     det_dict[ottrk_format.OCCURRENCE], ottrk_format.DATE_FORMAT
                 ),
-                input_file_path=det_dict[ottrk_format.INPUT_FILE_PATH],
+                input_file_path=Path(det_dict[ottrk_format.INPUT_FILE_PATH]),
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
                 track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
             )
@@ -231,10 +246,10 @@ class OtsectionParser(SectionParser):
         Returns:
             Coordinate: coordinate
         """
-        self._validate_data(data, attributes=[section.X, section.Y])
+        self._validate_data(data, attributes=[geometry.X, geometry.Y])
         return Coordinate(
-            x=data.get(section.X, 0),
-            y=data.get(section.Y, 0),
+            x=data.get(geometry.X, 0),
+            y=data.get(geometry.Y, 0),
         )
 
     def serialize(self, sections: Iterable[Section], file: Path) -> None:
@@ -262,3 +277,26 @@ class OtsectionParser(SectionParser):
 class OttrkVideoParser(VideoParser):
     def parse(self, file: Path) -> Tuple[list[TrackId], list[Video]]:
         return [], []
+
+
+class OtEventListParser(EventListParser):
+    def serialize(self, events: Iterable[Event], file: Path) -> None:
+        """Serialize event list into file.
+
+        Args:
+            events (Iterable[Event]): events to serialize
+            file (Path): file to serialize events to
+        """
+        content = self._convert(events)
+        _write_bz2(content, file)
+
+    def _convert(self, events: Iterable[Event]) -> dict[str, list[dict]]:
+        """Convert events to dictionary.
+
+        Args:
+            events (Iterable[Event]): events to convert
+
+        Returns:
+            dict[str, list[dict]]: dictionary containing raw information of events
+        """
+        return {event.EVENT_LIST: [event.to_dict() for event in events]}
