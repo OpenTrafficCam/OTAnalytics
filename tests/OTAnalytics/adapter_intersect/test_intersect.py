@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -17,16 +16,9 @@ from OTAnalytics.domain.intersect import (
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
-from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
 FRAME_WIDTH = 800
 FRAME_HEIGHT = 600
-
-
-@pytest.fixture(scope="module")
-def tracks(ottrk_path: Path) -> list[Track]:
-    ottrk_parser = OttrkParser()
-    return ottrk_parser.parse(ottrk_path)
 
 
 @pytest.fixture(scope="module")
@@ -38,11 +30,6 @@ def shapely_intersection_adapter() -> ShapelyIntersectImplementationAdapter:
 @pytest.fixture(scope="module")
 def section_event_builder() -> SectionEventBuilder:
     return SectionEventBuilder()
-
-
-@pytest.fixture(scope="module")
-def ottrk_long_video(test_data_dir: Path) -> Path:
-    return test_data_dir / "OTCamera10_FR20_2022-11-03_10-00-00.ottrk"
 
 
 class TestDetectSectionActivity:

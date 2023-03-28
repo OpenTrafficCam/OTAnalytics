@@ -7,12 +7,14 @@ import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.datastore import (
+    EventListParser,
     SectionParser,
     TrackParser,
     Video,
     VideoParser,
 )
-from OTAnalytics.domain import geometry, section
+from OTAnalytics.domain import event, geometry, section
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import Area, LineSection, Section
 from OTAnalytics.domain.track import (
@@ -275,3 +277,26 @@ class OtsectionParser(SectionParser):
 class OttrkVideoParser(VideoParser):
     def parse(self, file: Path) -> Tuple[list[TrackId], list[Video]]:
         return [], []
+
+
+class OtEventListParser(EventListParser):
+    def serialize(self, events: Iterable[Event], file: Path) -> None:
+        """Serialize event list into file.
+
+        Args:
+            events (Iterable[Event]): events to serialize
+            file (Path): file to serialize events to
+        """
+        content = self._convert(events)
+        _write_bz2(content, file)
+
+    def _convert(self, events: Iterable[Event]) -> dict[str, list[dict]]:
+        """Convert events to dictionary.
+
+        Args:
+            events (Iterable[Event]): events to convert
+
+        Returns:
+            dict[str, list[dict]]: dictionary containing raw information of events
+        """
+        return {event.EVENT_LIST: [event.to_dict() for event in events]}
