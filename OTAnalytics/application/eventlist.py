@@ -1,6 +1,11 @@
 from typing import Optional
 
-from OTAnalytics.domain.event import Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.event import (
+    Event,
+    EventType,
+    SceneEventBuilder,
+    SectionEventBuilder,
+)
 from OTAnalytics.domain.intersect import Intersector
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
@@ -99,3 +104,47 @@ class SectionActionDetector:
                 Otherwise `None`.
         """
         raise NotImplementedError
+
+
+class SceneActionDetector:
+    """Detect when a road user enters or leaves the scene.
+
+    Args:
+        scene_event_builder (SceneEventBuilder): the builder to build scene events
+    """
+
+    def __init__(self, scene_event_builder: SceneEventBuilder) -> None:
+        self._event_builder = scene_event_builder
+
+    def detect_enter_scene(self, track: Track) -> Event:
+        """Detect the first time a road user enters the  scene.
+
+        Args:
+            tracks (list[Track]): the track associated with the road user
+
+        Returns:
+            list[Event]: the enter scene event
+        """
+
+        self._event_builder.add_event_type(EventType.ENTER_SCENE)
+        self._event_builder.add_direction_vector(
+            track.detections[0], track.detections[-1]
+        )
+        first_detection = track.detections[0]
+        return self._event_builder.create_event(first_detection)
+
+    def detect_leave_scene(self, track: Track) -> Event:
+        """Detect the last time before a road user leaves the  scene.
+
+        Args:
+            tracks (list[Track]): the track associated with the road user
+
+        Returns:
+            list[Event]: the leave scene event
+        """
+        self._event_builder.add_direction_vector(
+            track.detections[0], track.detections[-1]
+        )
+        self._event_builder.add_event_type(EventType.LEAVE_SCENE)
+        first_detection = track.detections[-1]
+        return self._event_builder.create_event(first_detection)

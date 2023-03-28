@@ -4,9 +4,14 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain.event import Event, SectionEventBuilder
-from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.application.eventlist import SceneActionDetector, SectionActionDetector
+from OTAnalytics.domain.event import (
+    Event,
+    EventType,
+    SceneEventBuilder,
+    SectionEventBuilder,
+)
+from OTAnalytics.domain.geometry import Coordinate, DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.intersect import Intersector
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Detection, Track, TrackId
@@ -104,3 +109,47 @@ class TestSectionActionDetector:
             [line_section], [track]
         )
         assert result_events == [mock_event]
+
+
+class TestSceneActionDetector:
+    def test_detect_enter_scene(self, track: Track) -> None:
+        scene_event_builder = SceneEventBuilder()
+        scene_event_builder.add_event_type(EventType.ENTER_SCENE)
+        scene_event_builder.add_direction_vector(
+            track.detections[0], track.detections[1]
+        )
+        scene_action_detector = SceneActionDetector(scene_event_builder)
+        event = scene_action_detector.detect_enter_scene(track)
+        assert event == Event(
+            road_user_id=1,
+            road_user_type="car",
+            hostname="myhostname",
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+            frame_number=1,
+            section_id=None,
+            event_coordinate=ImageCoordinate(0.0, 5.0),
+            event_type=EventType.ENTER_SCENE,
+            direction_vector=DirectionVector2D(10, 0),
+            video_name="myhostname_something.otdet",
+        )
+
+    def test_detect_leave_scene(self, track: Track) -> None:
+        scene_event_builder = SceneEventBuilder()
+        scene_event_builder.add_event_type(EventType.LEAVE_SCENE)
+        scene_event_builder.add_direction_vector(
+            track.detections[0], track.detections[1]
+        )
+        scene_action_detector = SceneActionDetector(scene_event_builder)
+        event = scene_action_detector.detect_leave_scene(track)
+        assert event == Event(
+            road_user_id=1,
+            road_user_type="car",
+            hostname="myhostname",
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
+            frame_number=2,
+            section_id=None,
+            event_coordinate=ImageCoordinate(10.0, 5.0),
+            event_type=EventType.LEAVE_SCENE,
+            direction_vector=DirectionVector2D(10, 0),
+            video_name="myhostname_something.otdet",
+        )
