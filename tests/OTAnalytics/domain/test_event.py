@@ -19,6 +19,7 @@ from OTAnalytics.domain.event import (
     Event,
     EventRepository,
     EventType,
+    EventTypeParseError,
     IncompleteEventBuilderSetup,
     SceneEventBuilder,
     SectionEventBuilder,
@@ -42,6 +43,21 @@ def valid_detection() -> Detection:
         interpolated_detection=False,
         track_id=TrackId(1),
     )
+
+
+class TestEventType:
+    def test_serialize(self) -> None:
+        event_type = EventType.ENTER_SCENE
+        assert event_type.serialize() == event_type.value
+
+    def test_parse_valid_string(self) -> None:
+        event_type = "section-enter"
+        assert EventType.parse(event_type) == EventType.SECTION_ENTER
+
+    def test_parse_not_existing_event_type(self) -> None:
+        event_type = "foo-bar"
+        with pytest.raises(EventTypeParseError):
+            EventType.parse(event_type)
 
 
 class TestEvent:

@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.domain.event import EventType, SectionEventBuilder
-from OTAnalytics.domain.geometry import Coordinate, Line
+from OTAnalytics.domain.geometry import Coordinate, Line, RelativeOffsetCoordinate
 from OTAnalytics.domain.intersect import (
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
@@ -83,7 +83,12 @@ class TestIntersectBySplittingTrackLine:
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N", start=Coordinate(5, 0), end=Coordinate(5, 10)
+            id="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            start=Coordinate(5, 0),
+            end=Coordinate(5, 10),
         )
 
         intersector = IntersectBySplittingTrackLine(mock_implementation, line_section)
@@ -123,7 +128,12 @@ class TestIntersectBySmallTrackComponents:
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N", start=Coordinate(5, 0), end=Coordinate(5, 10)
+            id="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            start=Coordinate(5, 0),
+            end=Coordinate(5, 10),
         )
 
         intersector = IntersectBySmallTrackComponents(mock_implementation, line_section)

@@ -12,7 +12,11 @@ from OTAnalytics.adapter_intersect.intersect import (
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.domain import section
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
-from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.geometry import (
+    DirectionVector2D,
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+)
 from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
 from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
 from OTAnalytics.domain.track import (
@@ -294,11 +298,17 @@ class TestOtsectionParser:
         third_coordinate = Coordinate(1, 0)
         line_section: Section = LineSection(
             id="some",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             start=first_coordinate,
             end=second_coordinate,
         )
         area_section: Section = Area(
             id="other",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             coordinates=[
                 first_coordinate,
                 second_coordinate,
@@ -325,11 +335,17 @@ class TestOtsectionParser:
     def test_convert_section(self) -> None:
         some_section: Section = LineSection(
             id="some",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             start=Coordinate(0, 0),
             end=Coordinate(1, 1),
         )
         other_section: Section = LineSection(
             id="other",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             start=Coordinate(1, 0),
             end=Coordinate(0, 1),
         )
