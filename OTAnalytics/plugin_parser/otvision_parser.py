@@ -21,6 +21,7 @@ from OTAnalytics.domain.track import (
     BuildTrackWithSingleDetectionError,
     Detection,
     Track,
+    TrackClassificationCalculator,
     TrackId,
 )
 
@@ -59,6 +60,11 @@ class OttrkParser(TrackParser):
         TrackParser (TrackParser): extends TrackParser interface.
     """
 
+    def __init__(
+        self, track_classification_calculator: TrackClassificationCalculator
+    ) -> None:
+        super().__init__(track_classification_calculator)
+
     def parse(self, ottrk_file: Path) -> list[Track]:
         """Parse ottrk file and convert its content to domain level objects namely
         `Track`s.
@@ -71,8 +77,7 @@ class OttrkParser(TrackParser):
         """
         ottrk_dict = _parse_bz2(ottrk_file)
         dets_list: list[dict] = ottrk_dict[ottrk_format.DATA][ottrk_format.DETECTIONS]
-        tracks = self._parse_tracks(dets_list)
-        return tracks
+        return self._parse_tracks(dets_list)
 
     def _parse_tracks(self, dets: list[dict]) -> list[Track]:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
@@ -90,8 +95,13 @@ class OttrkParser(TrackParser):
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
             sort_dets_by_occurrence = sorted(detections, key=lambda det: det.occurrence)
+            classification = self._track_classification_calculator.calculate(detections)
             try:
-                current_track = Track(id=track_id, detections=sort_dets_by_occurrence)
+                current_track = Track(
+                    id=track_id,
+                    classification=classification,
+                    detections=sort_dets_by_occurrence,
+                )
                 tracks.append(current_track)
             except BuildTrackWithSingleDetectionError as build_error:
                 # TODO: log error

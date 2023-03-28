@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -113,6 +114,7 @@ class Track(DataclassValidation):
     """
 
     id: TrackId
+    classification: str
     detections: list[Detection]
 
     def _validate(self) -> None:
@@ -126,6 +128,38 @@ class Track(DataclassValidation):
     def _validate_detections_sorted_by_occurrence(self) -> None:
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
             raise ValueError("detections must be sorted by occurence")
+
+
+class TrackClassificationCalculator(ABC):
+    """
+    Defines interface for calculation strategy to determine a track's classification.
+    """
+
+    @abstractmethod
+    def calculate(self, detections: list[Detection]) -> str:
+        """Determine a track's classification.
+
+        Args:
+            detections (Detection): the track's detections needed to determine the
+                classification
+
+        Returns:
+            str: the track's class
+        """
+        pass
+
+
+class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator):
+    """Determine a track's classification by its detections max confidence."""
+
+    def calculate(self, detections: list[Detection]) -> str:
+        classifications: dict[str, float] = {}
+        for detection in detections:
+            if classifications.get(detection.classification):
+                classifications[detection.classification] += detection.confidence
+            classifications[detection.classification] = detection.confidence
+
+        return max(classifications, key=lambda x: classifications[x])
 
 
 class TrackRepository:
