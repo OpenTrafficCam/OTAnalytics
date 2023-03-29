@@ -2,7 +2,8 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.application.state import TrackObserver, TrackState
+from OTAnalytics.application.state import SectionState, TrackObserver, TrackState
+from OTAnalytics.domain.section import SectionId, SectionObserver
 from OTAnalytics.domain.track import TrackId
 
 
@@ -21,6 +22,37 @@ class TestTrackState:
         assert observer.notify_track.call_args_list == [
             call(first_track),
             call(changed_track),
+        ]
+
+    def test_update_selected_track_on_notify_tracks(self) -> None:
+        first_track = TrackId(1)
+        second_track = TrackId(2)
+        state = TrackState()
+
+        state.notify_tracks([first_track, second_track])
+
+        assert state.selected_track == first_track
+
+    def test_update_selected_track_on_notify_tracks_with_empty_list(self) -> None:
+        with pytest.raises(IndexError):
+            TrackState().notify_tracks([])
+
+
+class TestSectionState:
+    def test_notify_observer(self) -> None:
+        first_section = SectionId("north")
+        changed_section = SectionId("south")
+        observer = Mock(spec=SectionObserver)
+        state = SectionState()
+        state.register(observer)
+
+        state.update(first_section)
+        state.update(changed_section)
+        state.update(changed_section)
+
+        assert observer.notify_section.call_args_list == [
+            call(first_section),
+            call(changed_section),
         ]
 
     def test_update_selected_track_on_notify_tracks(self) -> None:

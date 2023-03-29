@@ -13,8 +13,37 @@ from OTAnalytics.domain.section import (
     TYPE,
     Area,
     LineSection,
+    SectionId,
+    SectionListObserver,
+    SectionListSubject,
+    SectionObserver,
     SectionRepository,
+    SectionSubject,
 )
+
+
+class TestSectionSubject:
+    def test_notify_observer(self) -> None:
+        changed_track = SectionId("north")
+        observer = Mock(spec=SectionObserver)
+        subject = SectionSubject()
+        subject.register(observer)
+
+        subject.notify(changed_track)
+
+        observer.notify_section.assert_called_with(changed_track)
+
+
+class TestSectionListSubject:
+    def test_notify_observer(self) -> None:
+        changed_tracks = [SectionId("north"), SectionId("south")]
+        observer = Mock(spec=SectionListObserver)
+        subject = SectionListSubject()
+        subject.register(observer)
+
+        subject.notify(changed_tracks)
+
+        observer.notify_sections.assert_called_with(changed_tracks)
 
 
 class TestLineSection:

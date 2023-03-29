@@ -1,6 +1,6 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate
@@ -13,6 +13,45 @@ START: str = "start"
 END: str = "end"
 AREA: str = "area"
 COORDINATES: str = "coordinates"
+
+
+@dataclass(frozen=True)
+class SectionId:
+    id: str
+
+
+class SectionListObserver(ABC):
+    @abstractmethod
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        pass
+
+
+class SectionObserver(ABC):
+    @abstractmethod
+    def notify_section(self, section_id: Optional[SectionId]) -> None:
+        pass
+
+
+class SectionSubject:
+    def __init__(self) -> None:
+        self.observers: set[SectionObserver] = set()
+
+    def register(self, observer: SectionObserver) -> None:
+        self.observers.add(observer)
+
+    def notify(self, section_id: Optional[SectionId]) -> None:
+        [observer.notify_section(section_id) for observer in self.observers]
+
+
+class SectionListSubject:
+    def __init__(self) -> None:
+        self.observers: set[SectionListObserver] = set()
+
+    def register(self, observer: SectionListObserver) -> None:
+        self.observers.add(observer)
+
+    def notify(self, sections: list[SectionId]) -> None:
+        [observer.notify_sections(sections) for observer in self.observers]
 
 
 @dataclass(frozen=True)
