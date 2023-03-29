@@ -2,7 +2,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.event import EventType
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate, X, Y
 from OTAnalytics.domain.section import (
     AREA,
     COORDINATES,
@@ -10,6 +11,7 @@ from OTAnalytics.domain.section import (
     ID,
     LINE,
     PLUGIN_DATA,
+    RELATIVE_OFFSET_COORDINATES,
     START,
     TYPE,
     Area,
@@ -21,22 +23,49 @@ from OTAnalytics.domain.section import (
 class TestLineSection:
     def test_coordinates_define_point_raises_value_error(self) -> None:
         with pytest.raises(ValueError):
-            LineSection("N", {}, Coordinate(0, 0), Coordinate(0, 0))
+            LineSection(
+                id="N",
+                relative_offset_coordinates={
+                    EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                },
+                plugin_data={},
+                start=Coordinate(0, 0),
+                end=Coordinate(0, 0),
+            )
 
     def test_valid_line_section(self) -> None:
-        LineSection("N", {}, Coordinate(0, 0), Coordinate(1, 0))
+        LineSection(
+            id="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=Coordinate(0, 0),
+            end=Coordinate(1, 0),
+        )
 
     def test_to_dict(self) -> None:
         section_id = "some"
         start = Coordinate(0, 0)
         end = Coordinate(1, 1)
-        section = LineSection(id=section_id, plugin_data={}, start=start, end=end)
+        section = LineSection(
+            id=section_id,
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=start,
+            end=end,
+        )
 
         section_dict = section.to_dict()
 
         assert section_dict == {
             TYPE: LINE,
             ID: section_id,
+            RELATIVE_OFFSET_COORDINATES: {
+                EventType.SECTION_ENTER.serialize(): {X: 0, Y: 0}
+            },
             START: start.to_dict(),
             END: end.to_dict(),
             PLUGIN_DATA: {},
@@ -47,7 +76,15 @@ class TestLineSection:
         id = "N"
         start = Coordinate(0, 0)
         end = Coordinate(10, 10)
-        line = LineSection(id, plugin_data, start, end)
+        line = LineSection(
+            id=id,
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data=plugin_data,
+            start=start,
+            end=end,
+        )
         assert line.id == id
         assert line.plugin_data == plugin_data
         assert line.start == start
@@ -58,7 +95,14 @@ class TestAreaSection:
     def test_coordinates_define_point_raises_value_error(self) -> None:
         coordinates = [Coordinate(0, 0), Coordinate(0, 0)]
         with pytest.raises(ValueError):
-            Area("N", {}, coordinates)
+            Area(
+                id="N",
+                relative_offset_coordinates={
+                    EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                },
+                plugin_data={},
+                coordinates=coordinates,
+            )
 
     def test_insufficient_coordinates_raises_value_error(self) -> None:
         coordinates = [
@@ -67,7 +111,14 @@ class TestAreaSection:
             Coordinate(0, 0),
         ]
         with pytest.raises(ValueError):
-            Area("N", {}, coordinates)
+            Area(
+                id="N",
+                relative_offset_coordinates={
+                    EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                },
+                plugin_data={},
+                coordinates=coordinates,
+            )
 
     def test_valid_area(self) -> None:
         coordinates = [
@@ -76,7 +127,14 @@ class TestAreaSection:
             Coordinate(2, 0),
             Coordinate(0, 0),
         ]
-        area = Area("N", {}, coordinates)
+        area = Area(
+            id="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=coordinates,
+        )
 
         assert area.id == "N"
         assert area.coordinates == coordinates
@@ -88,7 +146,12 @@ class TestAreaSection:
         third = Coordinate(1, 1)
         forth = Coordinate(0, 0)
         section = Area(
-            id=section_id, plugin_data={}, coordinates=[first, second, third, forth]
+            id=section_id,
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=[first, second, third, forth],
         )
 
         section_dict = section.to_dict()
@@ -96,6 +159,9 @@ class TestAreaSection:
         assert section_dict == {
             TYPE: AREA,
             ID: section_id,
+            RELATIVE_OFFSET_COORDINATES: {
+                EventType.SECTION_ENTER.serialize(): {X: 0, Y: 0}
+            },
             COORDINATES: [
                 first.to_dict(),
                 second.to_dict(),
@@ -114,7 +180,14 @@ class TestAreaSection:
             Coordinate(2, 0),
             Coordinate(0, 0),
         ]
-        line = Area(id, plugin_data, coordinates)
+        line = Area(
+            id=id,
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data=plugin_data,
+            coordinates=coordinates,
+        )
         assert line.id == id
         assert line.plugin_data == plugin_data
         assert line.coordinates == coordinates

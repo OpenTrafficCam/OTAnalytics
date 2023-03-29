@@ -10,9 +10,13 @@ from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain import section
+from OTAnalytics.domain import geometry, section
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
-from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.geometry import (
+    DirectionVector2D,
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+)
 from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
 from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
 from OTAnalytics.domain.track import (
@@ -295,12 +299,18 @@ class TestOtsectionParser:
         third_coordinate = Coordinate(1, 0)
         line_section: Section = LineSection(
             id="some",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             plugin_data={"key_1": "some_data", "key_2": "some_data"},
             start=first_coordinate,
             end=second_coordinate,
         )
         area_section: Section = Area(
             id="other",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             plugin_data={"key_1": "some_data", "key_2": "some_data"},
             coordinates=[
                 first_coordinate,
@@ -328,12 +338,18 @@ class TestOtsectionParser:
     def test_convert_section(self) -> None:
         some_section: Section = LineSection(
             id="some",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             plugin_data={},
             start=Coordinate(0, 0),
             end=Coordinate(1, 1),
         )
         other_section: Section = LineSection(
             id="other",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             plugin_data={},
             start=Coordinate(1, 0),
             end=Coordinate(0, 1),
@@ -352,6 +368,9 @@ class TestOtsectionParser:
         end = Coordinate(1, 1)
         expected: Section = LineSection(
             id="some",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             plugin_data={},
             start=start,
             end=end,
@@ -362,13 +381,19 @@ class TestOtsectionParser:
                 {
                     section.ID: "some",
                     section.TYPE: "line",
+                    section.RELATIVE_OFFSET_COORDINATES: {
+                        EventType.SECTION_ENTER.serialize(): {
+                            geometry.X: 0,
+                            geometry.Y: 0,
+                        }
+                    },
                     section.START: {
-                        "x": 0,
-                        "y": 0,
+                        geometry.X: 0,
+                        geometry.Y: 0,
                     },
                     section.END: {
-                        "x": 1,
-                        "y": 1,
+                        geometry.X: 1,
+                        geometry.Y: 1,
                     },
                 }
             ]
@@ -386,6 +411,9 @@ class TestOtsectionParser:
         end = Coordinate(1, 1)
         expected: Section = LineSection(
             id="some",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
             plugin_data={"key_1": "some_data", "1": "some_data"},
             start=start,
             end=end,
@@ -396,13 +424,19 @@ class TestOtsectionParser:
                 {
                     section.ID: "some",
                     section.TYPE: "line",
+                    section.RELATIVE_OFFSET_COORDINATES: {
+                        EventType.SECTION_ENTER.serialize(): {
+                            geometry.X: 0,
+                            geometry.Y: 0,
+                        }
+                    },
                     section.START: {
-                        "x": 0,
-                        "y": 0,
+                        geometry.X: 0,
+                        geometry.Y: 0,
                     },
                     section.END: {
-                        "x": 1,
-                        "y": 1,
+                        geometry.X: 1,
+                        geometry.Y: 1,
                     },
                     section.PLUGIN_DATA: {"key_1": "some_data", "1": "some_data"},
                 }
