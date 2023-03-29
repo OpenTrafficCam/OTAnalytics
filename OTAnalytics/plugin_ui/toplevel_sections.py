@@ -11,7 +11,7 @@ class ToplevelSections(CTkToplevel):
     ) -> None:
         super().__init__(**kwargs)
         self.title(title)
-        self.input_values: dict = {} if input_values is None else input_values
+        self.input_values: dict = {"name": ""} if input_values is None else input_values
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._get_widgets()
         self._place_widgets()
