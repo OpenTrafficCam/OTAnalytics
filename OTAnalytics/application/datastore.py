@@ -11,6 +11,7 @@ from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
     TrackId,
+    TrackListObserver,
     TrackRepository,
 )
 
@@ -128,6 +129,9 @@ class Datastore:
         self._section_repository = SectionRepository()
         self._event_repository = EventRepository()
         self._video_repository = VideoRepository()
+
+    def register_tracks_observer(self, observer: TrackListObserver) -> None:
+        self._track_repository.register_tracks_observer(observer)
 
     def load_track_file(self, file: Path) -> None:
         tracks = self._track_parser.parse(file)
