@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 
@@ -162,6 +162,13 @@ class Track(DataclassValidation):
     def _validate_detections_sorted_by_occurrence(self) -> None:
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
             raise ValueError("detections must be sorted by occurence")
+
+
+@dataclass(frozen=True)
+class TrackImage:
+    @abstractmethod
+    def as_array(self) -> Any:
+        pass
 
 
 class TrackClassificationCalculator(ABC):

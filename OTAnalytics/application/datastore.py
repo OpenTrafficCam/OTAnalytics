@@ -3,14 +3,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional, Tuple
 
-from numpy import ndarray
-
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import Section, SectionRepository
 from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
     TrackId,
+    TrackImage,
     TrackListObserver,
     TrackRepository,
 )
@@ -45,7 +44,7 @@ class EventListParser(ABC):
 
 class VideoReader(ABC):
     @abstractmethod
-    def get_frame(self, video: Path, index: int) -> ndarray:
+    def get_frame(self, video: Path, index: int) -> TrackImage:
         """Get frame of `video` at `index`.
 
         Args:
@@ -80,7 +79,7 @@ class Video:
         if not self.path.exists():
             raise ValueError("must be an existing path")
 
-    def get_frame(self, index: int) -> ndarray:
+    def get_frame(self, index: int) -> TrackImage:
         """Returns the frame of the video at `index`.
 
         Args:
@@ -109,7 +108,9 @@ class VideoRepository:
 
 class VideoParser(ABC):
     @abstractmethod
-    def parse(self, file: Path) -> Tuple[list[TrackId], list[Video]]:
+    def parse(
+        self, file: Path, track_ids: list[TrackId]
+    ) -> Tuple[list[TrackId], list[Video]]:
         pass
 
 
@@ -135,9 +136,10 @@ class Datastore:
 
     def load_track_file(self, file: Path) -> None:
         tracks = self._track_parser.parse(file)
-        self._track_repository.add_all(tracks)
-        track_ids, videos = self._video_parser.parse(file)
+        track_ids = [track.id for track in tracks]
+        track_ids, videos = self._video_parser.parse(file, track_ids)
         self._video_repository.add_all(track_ids, videos)
+        self._track_repository.add_all(tracks)
 
     def load_section_file(self, file: Path) -> None:
         sections = self._section_parser.parse(file)
@@ -157,3 +159,8 @@ class Datastore:
 
     def add_section(self, section: Section) -> None:
         self._section_repository.add(section)
+
+    def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
+        if video := self._video_repository.get_video_for(track_id):
+            return video.get_frame(0)
+        return None

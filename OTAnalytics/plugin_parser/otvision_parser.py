@@ -12,6 +12,7 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     Video,
     VideoParser,
+    VideoReader,
 )
 from OTAnalytics.domain import event, geometry, section
 from OTAnalytics.domain.event import Event
@@ -285,8 +286,18 @@ class OtsectionParser(SectionParser):
 
 
 class OttrkVideoParser(VideoParser):
-    def parse(self, file: Path) -> Tuple[list[TrackId], list[Video]]:
-        return [], []
+    def __init__(self, video_reader: VideoReader) -> None:
+        super().__init__()
+        self._video_reader = video_reader
+
+    def parse(
+        self, file: Path, track_ids: list[TrackId]
+    ) -> Tuple[list[TrackId], list[Video]]:
+        content = _parse_bz2(file)
+        metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
+        video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
+        video_file_path = Video(self._video_reader, file.parent / video_file)
+        return track_ids, [video_file_path] * len(track_ids)
 
 
 class OtEventListParser(EventListParser):

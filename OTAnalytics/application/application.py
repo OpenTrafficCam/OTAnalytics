@@ -1,7 +1,9 @@
 from pathlib import Path
+from typing import Optional
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import TrackState
+from OTAnalytics.domain.track import TrackId, TrackImage
 
 
 class OTAnalyticsApplication:
@@ -18,3 +20,6 @@ class OTAnalyticsApplication:
 
     def add_sections_of_file(self, sections_file: Path) -> None:
         self._datastore.load_section_file(file=sections_file)
+
+    def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
+        return self._datastore.get_image_of_track(track_id)

@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import customtkinter
 from customtkinter import CTk
 
@@ -14,9 +12,10 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkVideoParser,
 )
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
-from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas, TrackImage
+from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
+from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
 
 
 class OTAnalyticsCli:
@@ -44,14 +43,11 @@ class OTAnalyticsGui:
 
         self._get_widgets()
         self._place_widgets()
-        image = TrackImage(
-            Path(r"tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4")
-        )
-        self.frame_canvas.add_image(image)
+        self._wire_widgets()
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
-        self.frame_canvas = FrameCanvas(master=self._app)
+        self.frame_canvas = FrameCanvas(master=self._app, application=self._application)
         self.frame_tracks = FrameTracks(master=self._app, application=self._application)
         self.frame_sections = FrameSections(master=self._app)
 
@@ -62,6 +58,9 @@ class OTAnalyticsGui:
         )
         self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_sections.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+
+    def _wire_widgets(self) -> None:
+        self._application.track_state.register(self.frame_canvas)
 
 
 class ApplicationStarter:
@@ -84,7 +83,7 @@ class ApplicationStarter:
         track_parser = OttrkParser(CalculateTrackClassificationByMaxConfidence())
         section_parser = OtsectionParser()
         event_list_parser = OtEventListParser()
-        video_parser = OttrkVideoParser()
+        video_parser = OttrkVideoParser(MoviepyVideoReader())
         return Datastore(track_parser, section_parser, event_list_parser, video_parser)
 
     def _create_track_state(self) -> TrackState:
