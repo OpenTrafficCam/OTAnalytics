@@ -50,12 +50,6 @@ class FrameCanvas(CTkFrame):
 
     def add_image(self, image: TrackImage) -> None:
         self.canvas_background.add_image(image)
-        PADX = 10
-        PADY = 5
-        STICKY = "NESW"
-        self.canvas_background.grid(
-            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
 
 
 class CanvasBackground(CTkCanvas):
