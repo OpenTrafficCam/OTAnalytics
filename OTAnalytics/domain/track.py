@@ -16,6 +16,29 @@ class TrackId(DataclassValidation):
             raise ValueError("track id must be greater equal 1")
 
 
+class TrackListObserver(ABC):
+    @abstractmethod
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        pass
+
+
+class TrackObserver(ABC):
+    @abstractmethod
+    def notify_track(self, track_id: Optional[TrackId]) -> None:
+        pass
+
+
+class TrackSubject:
+    def __init__(self) -> None:
+        self.observers: set[TrackObserver] = set()
+
+    def register(self, observer: TrackObserver) -> None:
+        self.observers.add(observer)
+
+    def notify(self, track_id: Optional[TrackId]) -> None:
+        [observer.notify_track(track_id) for observer in self.observers]
+
+
 class TrackError(Exception):
     def __init__(self, track_id: TrackId, *args: object) -> None:
         super().__init__(*args)
@@ -178,26 +201,3 @@ class TrackRepository:
 
     def get_all(self) -> Iterable[Track]:
         return self.tracks.values()
-
-
-class TrackListObserver(ABC):
-    @abstractmethod
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
-        pass
-
-
-class TrackObserver(ABC):
-    @abstractmethod
-    def notify_track(self, track_id: Optional[TrackId]) -> None:
-        pass
-
-
-class TrackSubject:
-    def __init__(self) -> None:
-        self.observers: set[TrackObserver] = set()
-
-    def register(self, observer: TrackObserver) -> None:
-        self.observers.add(observer)
-
-    def notify(self, track_id: Optional[TrackId]) -> None:
-        [observer.notify_track(track_id) for observer in self.observers]
