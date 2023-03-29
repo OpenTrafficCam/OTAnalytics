@@ -39,6 +39,17 @@ class TrackSubject:
         [observer.notify_track(track_id) for observer in self.observers]
 
 
+class TrackListSubject:
+    def __init__(self) -> None:
+        self.observers: set[TrackListObserver] = set()
+
+    def register(self, observer: TrackListObserver) -> None:
+        self.observers.add(observer)
+
+    def notify(self, tracks: list[TrackId]) -> None:
+        [observer.notify_tracks(tracks) for observer in self.observers]
+
+
 class TrackError(Exception):
     def __init__(self, track_id: TrackId, *args: object) -> None:
         super().__init__(*args)
@@ -188,13 +199,22 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
 class TrackRepository:
     def __init__(self, tracks: dict[TrackId, Track] = {}) -> None:
         self.tracks: dict[TrackId, Track] = tracks
+        self.observers = TrackListSubject()
+
+    def register_tracks_observer(self, observer: TrackListObserver) -> None:
+        self.observers.register(observer)
 
     def add(self, track: Track) -> None:
+        self.__add(track)
+        self.observers.notify([track.id])
+
+    def __add(self, track: Track) -> None:
         self.tracks[track.id] = track
 
     def add_all(self, tracks: Iterable[Track]) -> None:
         for track in tracks:
-            self.add(track)
+            self.__add(track)
+        self.observers.notify([track.id for track in tracks])
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         return self.tracks[id]
