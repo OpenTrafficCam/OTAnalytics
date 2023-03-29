@@ -14,7 +14,7 @@ class FrameDoesNotExistError(Exception):
 
 
 @dataclass(frozen=True)
-class MoviepiTrackImage(TrackImage):
+class MoviepyTrackImage(TrackImage):
     image: ndarray
 
     def as_array(self) -> Any:
@@ -44,4 +44,4 @@ class MoviepyVideoReader(VideoReader):
         clip.close()
         if found is None:
             raise FrameDoesNotExistError(f"frame number '{index}' does not exist")
-        return MoviepiTrackImage(found)
+        return MoviepyTrackImage(found)
