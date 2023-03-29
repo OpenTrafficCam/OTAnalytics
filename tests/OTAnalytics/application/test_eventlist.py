@@ -70,7 +70,9 @@ def track() -> Track:
 
 @pytest.fixture
 def line_section() -> LineSection:
-    return LineSection(id="N", start=Coordinate(5, 0), end=Coordinate(5, 10))
+    return LineSection(
+        id="N", plugin_data={}, start=Coordinate(5, 0), end=Coordinate(5, 10)
+    )
 
 
 class TestSectionActionDetector:

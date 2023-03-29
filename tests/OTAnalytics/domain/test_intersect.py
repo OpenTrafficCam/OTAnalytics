@@ -83,7 +83,7 @@ class TestIntersectBySplittingTrackLine:
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N", start=Coordinate(5, 0), end=Coordinate(5, 10)
+            id="N", plugin_data={}, start=Coordinate(5, 0), end=Coordinate(5, 10)
         )
 
         intersector = IntersectBySplittingTrackLine(mock_implementation, line_section)
@@ -123,7 +123,7 @@ class TestIntersectBySmallTrackComponents:
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N", start=Coordinate(5, 0), end=Coordinate(5, 10)
+            id="N", plugin_data={}, start=Coordinate(5, 0), end=Coordinate(5, 10)
         )
 
         intersector = IntersectBySmallTrackComponents(mock_implementation, line_section)

@@ -9,6 +9,7 @@ from OTAnalytics.domain.section import (
     END,
     ID,
     LINE,
+    PLUGIN_DATA,
     START,
     TYPE,
     Area,
@@ -20,16 +21,16 @@ from OTAnalytics.domain.section import (
 class TestLineSection:
     def test_coordinates_define_point_raises_value_error(self) -> None:
         with pytest.raises(ValueError):
-            LineSection("N", Coordinate(0, 0), Coordinate(0, 0))
+            LineSection("N", {}, Coordinate(0, 0), Coordinate(0, 0))
 
     def test_valid_line_section(self) -> None:
-        LineSection("N", Coordinate(0, 0), Coordinate(1, 0))
+        LineSection("N", {}, Coordinate(0, 0), Coordinate(1, 0))
 
     def test_to_dict(self) -> None:
         section_id = "some"
         start = Coordinate(0, 0)
         end = Coordinate(1, 1)
-        section = LineSection(id=section_id, start=start, end=end)
+        section = LineSection(id=section_id, plugin_data={}, start=start, end=end)
 
         section_dict = section.to_dict()
 
@@ -38,14 +39,26 @@ class TestLineSection:
             ID: section_id,
             START: start.to_dict(),
             END: end.to_dict(),
+            PLUGIN_DATA: {},
         }
+
+    def test_initialization_with_plugin_data(self) -> None:
+        plugin_data: dict = {"key_1": "some data", "key_2": "some data"}
+        id = "N"
+        start = Coordinate(0, 0)
+        end = Coordinate(10, 10)
+        line = LineSection(id, plugin_data, start, end)
+        assert line.id == id
+        assert line.plugin_data == plugin_data
+        assert line.start == start
+        assert line.end == end
 
 
 class TestAreaSection:
     def test_coordinates_define_point_raises_value_error(self) -> None:
         coordinates = [Coordinate(0, 0), Coordinate(0, 0)]
         with pytest.raises(ValueError):
-            Area("N", coordinates)
+            Area("N", {}, coordinates)
 
     def test_insufficient_coordinates_raises_value_error(self) -> None:
         coordinates = [
@@ -54,7 +67,7 @@ class TestAreaSection:
             Coordinate(0, 0),
         ]
         with pytest.raises(ValueError):
-            Area("N", coordinates)
+            Area("N", {}, coordinates)
 
     def test_valid_area(self) -> None:
         coordinates = [
@@ -63,7 +76,7 @@ class TestAreaSection:
             Coordinate(2, 0),
             Coordinate(0, 0),
         ]
-        area = Area("N", coordinates)
+        area = Area("N", {}, coordinates)
 
         assert area.id == "N"
         assert area.coordinates == coordinates
@@ -74,7 +87,9 @@ class TestAreaSection:
         second = Coordinate(1, 0)
         third = Coordinate(1, 1)
         forth = Coordinate(0, 0)
-        section = Area(id=section_id, coordinates=[first, second, third, forth])
+        section = Area(
+            id=section_id, plugin_data={}, coordinates=[first, second, third, forth]
+        )
 
         section_dict = section.to_dict()
 
@@ -87,7 +102,22 @@ class TestAreaSection:
                 third.to_dict(),
                 forth.to_dict(),
             ],
+            PLUGIN_DATA: {},
         }
+
+    def test_initialization_with_plugin_data(self) -> None:
+        plugin_data: dict = {"key_1": "some data", "key_2": "some data"}
+        id = "N"
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        line = Area(id, plugin_data, coordinates)
+        assert line.id == id
+        assert line.plugin_data == plugin_data
+        assert line.coordinates == coordinates
 
 
 class TestSectionRepository:

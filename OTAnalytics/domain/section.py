@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Any, Iterable
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate
@@ -13,6 +13,7 @@ START: str = "start"
 END: str = "end"
 AREA: str = "area"
 COORDINATES: str = "coordinates"
+PLUGIN_DATA: str = "plugin_data"
 
 
 @dataclass(frozen=True)
@@ -23,9 +24,12 @@ class Section(DataclassValidation):
 
     Args:
         id (str): the section id.
+        plugin_data (dict): data that plugins or prototypes can use which are not
+            modelled in the domain layer yet
     """
 
     id: str
+    plugin_data: dict[str, Any]
 
     @abstractmethod
     def to_dict(self) -> dict:
@@ -49,6 +53,9 @@ class LineSection(Section):
         define a point.
 
     Args:
+        id (str): the section id
+        plugin_data (dict[str,any]): data that plugins or prototypes can use which are
+            not modelled in the domain layer yet
         start (Coordinate): the start coordinate.
         end (Coordinate): the end coordinate.
     """
@@ -75,6 +82,7 @@ class LineSection(Section):
             TYPE: LINE,
             START: self.start.to_dict(),
             END: self.end.to_dict(),
+            PLUGIN_DATA: self.plugin_data,
         }
 
 
@@ -92,6 +100,9 @@ class Area(Section):
             invalid area.
 
     Args:
+        id (str): the section id
+        plugin_data (dict[str, Any]): data that plugins or prototypes can use which are
+            not modelled in the domain layer yet
         coordinates (list[Coordinate]): area defined by list of coordinates.
     """
 
@@ -118,6 +129,7 @@ class Area(Section):
             TYPE: AREA,
             ID: self.id,
             COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
+            PLUGIN_DATA: self.plugin_data,
         }
 
 

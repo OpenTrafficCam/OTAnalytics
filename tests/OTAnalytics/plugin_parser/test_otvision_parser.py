@@ -28,6 +28,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtsectionParser,
     OttrkParser,
     _parse_bz2,
+    _write_bz2,
 )
 
 
@@ -294,11 +295,13 @@ class TestOtsectionParser:
         third_coordinate = Coordinate(1, 0)
         line_section: Section = LineSection(
             id="some",
+            plugin_data={"key_1": "some_data", "key_2": "some_data"},
             start=first_coordinate,
             end=second_coordinate,
         )
         area_section: Section = Area(
             id="other",
+            plugin_data={"key_1": "some_data", "key_2": "some_data"},
             coordinates=[
                 first_coordinate,
                 second_coordinate,
@@ -325,11 +328,13 @@ class TestOtsectionParser:
     def test_convert_section(self) -> None:
         some_section: Section = LineSection(
             id="some",
+            plugin_data={},
             start=Coordinate(0, 0),
             end=Coordinate(1, 1),
         )
         other_section: Section = LineSection(
             id="other",
+            plugin_data={},
             start=Coordinate(1, 0),
             end=Coordinate(0, 1),
         )
@@ -341,6 +346,75 @@ class TestOtsectionParser:
         assert content == {
             section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]
         }
+
+    def test_parse_plugin_data_no_entry(self, test_data_tmp_dir: Path) -> None:
+        start = Coordinate(0, 0)
+        end = Coordinate(1, 1)
+        expected: Section = LineSection(
+            id="some",
+            plugin_data={},
+            start=start,
+            end=end,
+        )
+
+        section_data = {
+            section.SECTIONS: [
+                {
+                    section.ID: "some",
+                    section.TYPE: "line",
+                    section.START: {
+                        "x": 0,
+                        "y": 0,
+                    },
+                    section.END: {
+                        "x": 1,
+                        "y": 1,
+                    },
+                }
+            ]
+        }
+        save_path = test_data_tmp_dir / "sections.otflow"
+        _write_bz2(section_data, save_path)
+
+        parser = OtsectionParser()
+        sections = parser.parse(save_path)
+
+        assert sections == [expected]
+
+    def test_parse_plugin_data_with_plugin_data(self, test_data_tmp_dir: Path) -> None:
+        start = Coordinate(0, 0)
+        end = Coordinate(1, 1)
+        expected: Section = LineSection(
+            id="some",
+            plugin_data={"key_1": "some_data", "1": "some_data"},
+            start=start,
+            end=end,
+        )
+
+        section_data = {
+            section.SECTIONS: [
+                {
+                    section.ID: "some",
+                    section.TYPE: "line",
+                    section.START: {
+                        "x": 0,
+                        "y": 0,
+                    },
+                    section.END: {
+                        "x": 1,
+                        "y": 1,
+                    },
+                    section.PLUGIN_DATA: {"key_1": "some_data", "1": "some_data"},
+                }
+            ]
+        }
+        save_path = test_data_tmp_dir / "sections.otflow"
+        _write_bz2(section_data, save_path)
+
+        parser = OtsectionParser()
+        sections = parser.parse(save_path)
+
+        assert sections == [expected]
 
 
 class TestOtEventListParser:

@@ -41,7 +41,10 @@ class TestDetectSectionActivity:
     ) -> None:
         # Setup
         line_section = LineSection(
-            id="NE", start=Coordinate(103, 194), end=Coordinate(366, 129)
+            id="NE",
+            plugin_data={},
+            start=Coordinate(103, 194),
+            end=Coordinate(366, 129),
         )
 
         line_section_intersector = IntersectBySmallTrackComponents(
@@ -68,7 +71,10 @@ class TestDetectSectionActivity:
     ) -> None:
         # Setup
         line_section = LineSection(
-            id="NE", start=Coordinate(103, 194), end=Coordinate(366, 129)
+            id="NE",
+            plugin_data={},
+            start=Coordinate(103, 194),
+            end=Coordinate(366, 129),
         )
 
         line_section_intersector = IntersectBySplittingTrackLine(
