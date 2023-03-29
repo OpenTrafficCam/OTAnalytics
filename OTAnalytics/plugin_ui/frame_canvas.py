@@ -59,8 +59,8 @@ class CanvasBackground(CTkCanvas):
         super().__init__(*args, **kwargs)
 
     def add_image(self, image: DisplayableImage) -> None:
-        viewable_image = image.create_photo()
-        self.create_image(0, 0, image=viewable_image, anchor=customtkinter.NW)
+        self.viewable_image = image.create_photo()
+        self.create_image(0, 0, image=self.viewable_image, anchor=customtkinter.NW)
         self.config(width=image.width(), height=image.height())
 
     def show_rectangle(self) -> None:
