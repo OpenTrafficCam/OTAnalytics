@@ -12,7 +12,9 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackId,
+    TrackObserver,
     TrackRepository,
+    TrackSubject,
 )
 
 
@@ -273,3 +275,15 @@ class TestTrackRepository:
         returned = repository.get_for(first_track.id)
 
         assert returned == first_track
+
+
+class TestTrackSubject:
+    def test_notify_observer(self) -> None:
+        changed_track = TrackId(1)
+        observer = Mock(spec=TrackObserver)
+        subject = TrackSubject()
+        subject.register(observer)
+
+        subject.notify(changed_track)
+
+        observer.notify_track.assert_called_with(changed_track)

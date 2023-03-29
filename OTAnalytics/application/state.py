@@ -1,22 +1,20 @@
-from abc import ABC, abstractmethod
 from typing import Optional
 
-from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track import (
+    TrackId,
+    TrackListObserver,
+    TrackObserver,
+    TrackSubject,
+)
 
 
-class TrackObserver(ABC):
-    @abstractmethod
-    def notify(self, track_id: Optional[TrackId]) -> None:
-        pass
-
-
-class TrackState:
+class TrackState(TrackListObserver):
     def __init__(self) -> None:
         self.selected_track: Optional[TrackId] = None
-        self.observers: list[TrackObserver] = []
+        self.observers: TrackSubject = TrackSubject()
 
     def register(self, observer: TrackObserver) -> None:
-        self.observers.append(observer)
+        self.observers.register(observer)
 
     def update(self, track_id: TrackId) -> None:
         if self.selected_track != track_id:
@@ -24,4 +22,9 @@ class TrackState:
             self._notify_observers()
 
     def _notify_observers(self) -> None:
-        [observer.notify(self.selected_track) for observer in self.observers]
+        self.observers.notify(self.selected_track)
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        if not tracks:
+            raise IndexError("No tracks to select")
+        self.update(tracks[0])
