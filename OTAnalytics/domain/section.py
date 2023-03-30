@@ -67,7 +67,7 @@ class Section(DataclassValidation):
     create vehicle events.
 
     Args:
-        id (str): the section id
+        id (SectionId): the section id
         relative_offset_coordinates (list[RelativeOffsetCoordinate]): used to determine
             which coordinates of a track to build the geometry to intersect
         plugin_data (dict): data that plugins or prototypes can use which are not

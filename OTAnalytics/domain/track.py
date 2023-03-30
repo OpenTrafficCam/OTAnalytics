@@ -209,9 +209,21 @@ class TrackRepository:
         self.observers = TrackListSubject()
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
+        """
+        Listen to changes of the repository.
+
+        Args:
+            observer (TrackListObserver): listener to be notifed about changes
+        """
         self.observers.register(observer)
 
     def add(self, track: Track) -> None:
+        """
+        Add a single track to the repository and notify the observers.
+
+        Args:
+            track (Track): track to be added
+        """
         self.__add(track)
         self.observers.notify([track.id])
 
@@ -219,12 +231,33 @@ class TrackRepository:
         self.tracks[track.id] = track
 
     def add_all(self, tracks: Iterable[Track]) -> None:
+        """
+        Add multiple tracks to the repository and notify only once about it.
+
+        Args:
+            tracks (Iterable[Track]): tracks to be added
+        """
         for track in tracks:
             self.__add(track)
         self.observers.notify([track.id for track in tracks])
 
     def get_for(self, id: TrackId) -> Optional[Track]:
+        """
+        Retrieve a track for the given id.
+
+        Args:
+            id (TrackId): id to search for
+
+        Returns:
+            Optional[Track]: track if it exists
+        """
         return self.tracks[id]
 
     def get_all(self) -> Iterable[Track]:
+        """
+        Retrieve all tracks.
+
+        Returns:
+            Iterable[Track]: all tracks within the repository
+        """
         return self.tracks.values()

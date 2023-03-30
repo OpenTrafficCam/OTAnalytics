@@ -64,7 +64,7 @@ class Event(DataclassValidation):
         hostname (str): the OTCamera hostname that the video is associated with
         occurrence (datetime): the time when this event occurred
         frame_number (int): the video frame number that this event is associated with
-        section_id (Optional[str]): only set when event type is of section
+        section_id (Optional[SectionId]): only set when event type is of section
             Defaults to `None`.
         event_coordinate (ImageCoordinate): location where the event occurred in
             the video
