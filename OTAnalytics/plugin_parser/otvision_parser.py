@@ -17,7 +17,7 @@ from OTAnalytics.application.datastore import (
 from OTAnalytics.domain import event, geometry, section
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Area, LineSection, Section
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     BuildTrackWithSingleDetectionError,
     Detection,
@@ -212,7 +212,7 @@ class OtsectionParser(SectionParser):
                 section.END,
             ],
         )
-        section_id = data[section.ID]
+        section_id = self._parse_section_id(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
         start = self._parse_coordinate(data[section.START])
         end = self._parse_coordinate(data[section.END])
@@ -220,6 +220,9 @@ class OtsectionParser(SectionParser):
         return LineSection(
             section_id, relative_offset_coordinates, plugin_data, start, end
         )
+
+    def _parse_section_id(self, data: dict) -> SectionId:
+        return SectionId(data[section.ID])
 
     def _validate_data(self, data: dict, attributes: list[str]) -> None:
         """Validate attributes of dictionary.
@@ -245,7 +248,7 @@ class OtsectionParser(SectionParser):
             Section: area section
         """
         self._validate_data(data, attributes=[section.ID, section.COORDINATES])
-        section_id = data[section.ID]
+        section_id = self._parse_section_id(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
         coordinates = self._parse_coordinates(data)
         plugin_data = self._parse_plugin_data(data)

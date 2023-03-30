@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
-from OTAnalytics.domain.event import EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.types import EventType
 
 SECTIONS: str = "sections"
 ID: str = "id"
@@ -21,6 +21,9 @@ PLUGIN_DATA: str = "plugin_data"
 @dataclass(frozen=True)
 class SectionId:
     id: str
+
+    def serialize(self) -> str:
+        return self.id
 
 
 class SectionListObserver(ABC):
@@ -71,7 +74,7 @@ class Section(DataclassValidation):
             modelled in the domain layer yet
     """
 
-    id: str
+    id: SectionId
     relative_offset_coordinates: dict[EventType, RelativeOffsetCoordinate]
     plugin_data: dict[str, Any]
 
@@ -149,7 +152,7 @@ class LineSection(Section):
         e.g. serialization.
         """
         return {
-            ID: self.id,
+            ID: self.id.serialize(),
             TYPE: LINE,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             START: self.start.to_dict(),
@@ -201,7 +204,7 @@ class Area(Section):
         """
         return {
             TYPE: AREA,
-            ID: self.id,
+            ID: self.id.serialize(),
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
             PLUGIN_DATA: self.plugin_data,
@@ -212,13 +215,34 @@ class SectionRepository:
     """Repository used to store sections."""
 
     def __init__(self) -> None:
-        self._sections: dict[str, Section] = {}
+        self._sections: dict[SectionId, Section] = {}
+        self.observers: SectionListSubject = SectionListSubject()
+
+    def register_sections_observer(self, observer: SectionListObserver) -> None:
+        self.observers.register(observer)
 
     def add(self, section: Section) -> None:
         """Add a section to the repository.
 
         Args:
             section (Section): the section to add
+        """
+        self._add(section)
+        self._notify([section.id])
+
+    def _notify(self, sections: list[SectionId]) -> None:
+        """Notifies all observers about the changed sections
+
+        Args:
+            sections (list[SectionId]): list of sections to notify about
+        """
+        self.observers.notify(sections)
+
+    def _add(self, section: Section) -> None:
+        """Internal method to add sections without notifying observers.
+
+        Args:
+            section (Section): _description_
         """
         self._sections[section.id] = section
 
@@ -230,6 +254,7 @@ class SectionRepository:
         """
         for section in sections:
             self.add(section)
+        self._notify([section.id for section in sections])
 
     def get_all(self) -> Iterable[Section]:
         """Get all sections from the repository.
