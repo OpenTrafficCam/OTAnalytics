@@ -4,10 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from plugin_prototypes.zeitbedarfe.otanalytics_parser import (
-    JsonParser,
-    PandasDataFrameParser,
-)
+from plugin_parser.otanalytics_parser import JsonParser, PandasDataFrameParser
 
 # % set env parameters and path
 EVENTS = "event_list"

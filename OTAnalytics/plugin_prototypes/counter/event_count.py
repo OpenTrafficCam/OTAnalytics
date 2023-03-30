@@ -7,10 +7,7 @@ import pandas as pd
 import plotly.express as px
 from matplotlib import pyplot as plt
 from mpl_chord_diagram import chord_diagram
-from plugin_prototypes.zeitbedarfe.otanalytics_parser import (
-    JsonParser,
-    PandasDataFrameParser,
-)
+from plugin_parser.otanalytics_parser import JsonParser, PandasDataFrameParser
 
 hv.extension("bokeh")
 
