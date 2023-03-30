@@ -5,15 +5,45 @@ from shapely.ops import snap, split
 
 
 class ShapelyIntersector:
+    """Provides shapely geometry operations."""
+
     def line_intersects_line(self, line_1: LineString, line_2: LineString) -> bool:
+        """Checks if a line intersects with another line.
+
+        Args:
+            line_1 (LineString): the first line
+            line_2 (LineString): the second line
+
+        Returns:
+            bool: `True` if they intersect. Otherwise `False`.
+        """
         return line_1.intersects(line_2)
 
     def line_intersects_polygon(self, line: LineString, polygon: Polygon) -> bool:
+        """Checks if a line intersects with a polygon.
+
+        Args:
+            line (LineString): the line
+            polygon (Polygon): the polygon
+
+        Returns:
+            bool:  `True` if they intersect. Otherwise `False`.
+        """
         return line.intersects(polygon)
 
     def intersection_line_with_line(
         self, line_1: LineString, line_2: LineString
     ) -> Optional[list[Point]]:
+        """Calculates the intersection points of to lines if they exist.
+
+        Args:
+            line_1 (LineString): the first line to intersect with
+            line_2 (LineString): the second line to intersect with
+
+        Returns:
+            Optional[list[Point]]: the intersection points if they intersect.
+                Otherwise `None`.
+        """
         intersection = line_1.intersection(line_2)
         if not intersection.is_empty:
             try:
@@ -29,9 +59,37 @@ class ShapelyIntersector:
     def split_line_with_line(
         self, line: LineString, splitter: LineString
     ) -> GeometryCollection:
+        """Use a LineString to split another LineString.
+
+        If `line` intersects `splitter` then line_1 will be splitted at the
+        intersection points.
+        I.e. Let line_1 = [p_1, p_2, ..., p_n], n a natural number and p_x
+        the intersection point.
+
+        Then `line` will be splitted as follows:
+        [[p_1, p_2, ..., p_x], [p_x, p_(x+1), ..., p_n].
+
+        Args:
+            line (LineString): the line to be splitted
+            splitter (LineString): the line used for splitting
+
+        Returns:
+            GeometryCollection: the splitted lines if they `line` and `splitter`
+                intersect. Otherwise the collection contains a single element that is
+                the original `line`.
+        """
         return self._complex_split(line, splitter)
 
     def distance_point_point(self, p1: Point, p2: Point) -> float:
+        """Calculates the distance between two points.
+
+        Args:
+            p1 (Point): the first point to calculate the distance for
+            p2 (Point): the second point to calculate the distance for
+
+        Returns:
+            float: _description_
+        """
         return p1.distance(p2)
 
     def _complex_split(
