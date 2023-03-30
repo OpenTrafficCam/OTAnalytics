@@ -1,6 +1,12 @@
 import pytest
 
-from OTAnalytics.domain.geometry import Coordinate, ImageCoordinate, Line, Polygon
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    ImageCoordinate,
+    Line,
+    Polygon,
+    RelativeOffsetCoordinate,
+)
 
 
 class TestLine:
@@ -23,7 +29,8 @@ class TestLine:
 
     def test_instantiate_line_with_valid_coordinates(self) -> None:
         coordinates = [Coordinate(0, 0), Coordinate(1, 0)]
-        Line(coordinates)
+        line = Line(coordinates)
+        assert line.coordinates == coordinates
 
 
 class TestPolygon:
@@ -34,7 +41,8 @@ class TestPolygon:
             Coordinate(2, 0),
             Coordinate(0, 0),
         ]
-        Polygon(coordinates)
+        polygon = Polygon(coordinates)
+        assert polygon.coordinates == coordinates
 
     def test_instantiate_not_closed_raises_value_error(self) -> None:
         coordinates = [
@@ -65,4 +73,20 @@ class TestImageCoordinate:
             ImageCoordinate(x, y)
 
     def test_instantiate_with_valid_xy_values(self) -> None:
-        ImageCoordinate(0, 0)
+        coord = ImageCoordinate(0, 0)
+        assert coord.x == 0
+        assert coord.y == 0
+
+
+class TestRelativeOffset:
+    @pytest.mark.parametrize("x,y", [(-1, 0), (0, -1), (0, 10), (10, 0), (10, 10)])
+    def test_instantiate_with_invalid_xy_values_raises_value_error(
+        self, x: float, y: float
+    ) -> None:
+        with pytest.raises(ValueError):
+            RelativeOffsetCoordinate(x, y)
+
+    def test_instantiate_with_valid_xy_values(self) -> None:
+        offset = RelativeOffsetCoordinate(0, 0)
+        assert offset.x == 0
+        assert offset.y == 0
