@@ -15,8 +15,8 @@ from OTAnalytics.application.datastore import (
     VideoReader,
 )
 from OTAnalytics.domain import event, geometry, section
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.event import Event, EventType
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section
 from OTAnalytics.domain.track import (
     BuildTrackWithSingleDetectionError,
@@ -203,11 +203,23 @@ class OtsectionParser(SectionParser):
         Returns:
             Section: line section
         """
-        self._validate_data(data, attributes=[section.ID, section.START, section.END])
+        self._validate_data(
+            data,
+            attributes=[
+                section.ID,
+                section.RELATIVE_OFFSET_COORDINATES,
+                section.START,
+                section.END,
+            ],
+        )
         section_id = data[section.ID]
+        relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
         start = self._parse_coordinate(data[section.START])
         end = self._parse_coordinate(data[section.END])
-        return LineSection(section_id, start, end)
+        plugin_data = self._parse_plugin_data(data)
+        return LineSection(
+            section_id, relative_offset_coordinates, plugin_data, start, end
+        )
 
     def _validate_data(self, data: dict, attributes: list[str]) -> None:
         """Validate attributes of dictionary.
@@ -234,8 +246,10 @@ class OtsectionParser(SectionParser):
         """
         self._validate_data(data, attributes=[section.ID, section.COORDINATES])
         section_id = data[section.ID]
+        relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
         coordinates = self._parse_coordinates(data)
-        return Area(section_id, coordinates)
+        plugin_data = self._parse_plugin_data(data)
+        return Area(section_id, relative_offset_coordinates, plugin_data, coordinates)
 
     def _parse_coordinates(self, data: dict) -> list[Coordinate]:
         """Parse data to coordinates.
@@ -262,6 +276,49 @@ class OtsectionParser(SectionParser):
             x=data.get(geometry.X, 0),
             y=data.get(geometry.Y, 0),
         )
+
+    def _parse_relative_offset_coordinates(
+        self, data: dict
+    ) -> dict[EventType, RelativeOffsetCoordinate]:
+        """Parse data to relative offset coordinates.
+
+        Args:
+            data (dict): data to parse to relative offset coordinates
+
+        Returns:
+            dict[EventType, RelativeOffsetCoordinate]: relative offset coordinates
+        """
+        return {
+            EventType.parse(event_type): self._parse_relative_offset(offset)
+            for event_type, offset in data[section.RELATIVE_OFFSET_COORDINATES].items()
+        }
+
+    def _parse_relative_offset(self, data: dict) -> RelativeOffsetCoordinate:
+        """Parse data to relative offset coordinate.
+
+        Args:
+            data (dict): data to parse to relative offset coordinate
+
+        Returns:
+            RelativeOffsetCoordinate: the relative offset coordinate
+        """
+        self._validate_data(data, attributes=[geometry.X, geometry.Y])
+        return RelativeOffsetCoordinate(
+            x=data.get(geometry.X, 0),
+            y=data.get(geometry.Y, 0),
+        )
+
+    def _parse_plugin_data(self, data: dict) -> dict:
+        """Parse plugin data if there is an entry in the data dict.
+
+        Args:
+            data (dict): the dictionary containing the plugin_data at key
+                `section.PLUGIN_DATA`
+
+        Returns:
+            dict: the plugin data
+        """
+        return data.get(section.PLUGIN_DATA, {})
 
     def serialize(self, sections: Iterable[Section], file: Path) -> None:
         """Serialize sections into file.

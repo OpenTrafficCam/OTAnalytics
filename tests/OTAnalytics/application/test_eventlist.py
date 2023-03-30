@@ -11,7 +11,12 @@ from OTAnalytics.domain.event import (
     SceneEventBuilder,
     SectionEventBuilder,
 )
-from OTAnalytics.domain.geometry import Coordinate, DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    DirectionVector2D,
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+)
 from OTAnalytics.domain.intersect import Intersector
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Detection, Track, TrackId
@@ -70,7 +75,15 @@ def track() -> Track:
 
 @pytest.fixture
 def line_section() -> LineSection:
-    return LineSection(id="N", start=Coordinate(5, 0), end=Coordinate(5, 10))
+    return LineSection(
+        id="N",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+        },
+        plugin_data={},
+        start=Coordinate(5, 0),
+        end=Coordinate(5, 10),
+    )
 
 
 class TestSectionActionDetector:
