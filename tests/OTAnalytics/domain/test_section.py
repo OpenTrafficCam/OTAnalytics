@@ -10,6 +10,7 @@ from OTAnalytics.domain.section import (
     END,
     ID,
     LINE,
+    PLUGIN_DATA,
     RELATIVE_OFFSET_COORDINATES,
     START,
     TYPE,
@@ -27,6 +28,7 @@ class TestLineSection:
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
+                plugin_data={},
                 start=Coordinate(0, 0),
                 end=Coordinate(0, 0),
             )
@@ -37,6 +39,7 @@ class TestLineSection:
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
+            plugin_data={},
             start=Coordinate(0, 0),
             end=Coordinate(1, 0),
         )
@@ -50,6 +53,7 @@ class TestLineSection:
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
+            plugin_data={},
             start=start,
             end=end,
         )
@@ -64,7 +68,27 @@ class TestLineSection:
             },
             START: start.to_dict(),
             END: end.to_dict(),
+            PLUGIN_DATA: {},
         }
+
+    def test_initialization_with_plugin_data(self) -> None:
+        plugin_data: dict = {"key_1": "some data", "key_2": "some data"}
+        id = "N"
+        start = Coordinate(0, 0)
+        end = Coordinate(10, 10)
+        line = LineSection(
+            id=id,
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data=plugin_data,
+            start=start,
+            end=end,
+        )
+        assert line.id == id
+        assert line.plugin_data == plugin_data
+        assert line.start == start
+        assert line.end == end
 
 
 class TestAreaSection:
@@ -76,6 +100,7 @@ class TestAreaSection:
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
+                plugin_data={},
                 coordinates=coordinates,
             )
 
@@ -91,6 +116,7 @@ class TestAreaSection:
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
+                plugin_data={},
                 coordinates=coordinates,
             )
 
@@ -106,6 +132,7 @@ class TestAreaSection:
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
+            plugin_data={},
             coordinates=coordinates,
         )
 
@@ -123,6 +150,7 @@ class TestAreaSection:
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
+            plugin_data={},
             coordinates=[first, second, third, forth],
         )
 
@@ -140,7 +168,29 @@ class TestAreaSection:
                 third.to_dict(),
                 forth.to_dict(),
             ],
+            PLUGIN_DATA: {},
         }
+
+    def test_initialization_with_plugin_data(self) -> None:
+        plugin_data: dict = {"key_1": "some data", "key_2": "some data"}
+        id = "N"
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        line = Area(
+            id=id,
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data=plugin_data,
+            coordinates=coordinates,
+        )
+        assert line.id == id
+        assert line.plugin_data == plugin_data
+        assert line.coordinates == coordinates
 
 
 class TestSectionRepository:

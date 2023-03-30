@@ -96,6 +96,7 @@ class TestIntersectBySplittingTrackLine:
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
+            plugin_data={},
             start=Coordinate(5, 0),
             end=Coordinate(5, 10),
         )
@@ -141,6 +142,7 @@ class TestIntersectBySmallTrackComponents:
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
+            plugin_data={},
             start=Coordinate(5, 0),
             end=Coordinate(5, 10),
         )

@@ -50,6 +50,7 @@ class TestDetectSectionActivity:
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
+            plugin_data={},
             start=Coordinate(103, 194),
             end=Coordinate(366, 129),
         )
@@ -82,6 +83,7 @@ class TestDetectSectionActivity:
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
+            plugin_data={},
             start=Coordinate(103, 194),
             end=Coordinate(366, 129),
         )

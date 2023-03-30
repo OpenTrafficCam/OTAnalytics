@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Any, Iterable
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import EventType
@@ -15,6 +15,7 @@ END: str = "end"
 AREA: str = "area"
 COORDINATES: str = "coordinates"
 RELATIVE_OFFSET_COORDINATES: str = "relative_offset_coordinates"
+PLUGIN_DATA: str = "plugin_data"
 
 
 @dataclass(frozen=True)
@@ -27,10 +28,13 @@ class Section(DataclassValidation):
         id (str): the section id
         relative_offset_coordinates (list[RelativeOffsetCoordinate]): used to determine
             which coordinates of a track to build the geometry to intersect
+        plugin_data (dict): data that plugins or prototypes can use which are not
+            modelled in the domain layer yet
     """
 
     id: str
     relative_offset_coordinates: dict[EventType, RelativeOffsetCoordinate]
+    plugin_data: dict[str, Any]
 
     @abstractmethod
     def to_dict(self) -> dict:
@@ -82,6 +86,8 @@ class LineSection(Section):
         id (str): the section id
         relative_offset_coordinates (list[RelativeOffsetCoordinate]): used to determine
             which coordinates of a track to build the geometry to intersect
+        plugin_data (dict[str,any]): data that plugins or prototypes can use which are
+            not modelled in the domain layer yet
         start (Coordinate): the start coordinate
         end (Coordinate): the end coordinate
     """
@@ -109,6 +115,7 @@ class LineSection(Section):
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             START: self.start.to_dict(),
             END: self.end.to_dict(),
+            PLUGIN_DATA: self.plugin_data,
         }
 
 
@@ -129,6 +136,8 @@ class Area(Section):
         id (str): the section id
         relative_offset_coordinates (list[RelativeOffsetCoordinate]): used to determine
             which coordinates of a track to build the geometry to intersect
+        plugin_data (dict[str, Any]): data that plugins or prototypes can use which are
+            not modelled in the domain layer yet
         coordinates (list[Coordinate]): area defined by list of coordinates
     """
 
@@ -156,6 +165,7 @@ class Area(Section):
             ID: self.id,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
+            PLUGIN_DATA: self.plugin_data,
         }
 
 
