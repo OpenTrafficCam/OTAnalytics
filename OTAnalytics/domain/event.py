@@ -4,21 +4,41 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.track import Detection
 
+EVENT_LIST = "event_list"
+ROAD_USER_ID = "road_user_id"
+ROAD_USER_TYPE = "road_user_type"
 HOSTNAME = "hostname"
+OCCURRENCE = "occurrence"
+FRAME_NUMBER = "frame_number"
+SECTION_ID = "section_id"
+EVENT_COORDINATE = "event_coordinate"
+EVENT_TYPE = "event_type"
+DIRECTION_VECTOR = "direction_vector"
+VIDEO_NAME = "video_name"
+
+DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)" r"_.*\..*"
 
 
 class InproperFormattedFilename(Exception):
+    """This exception indicates an in proper formatted file name."""
+
     pass
 
 
-class BuildError(Exception):
+class IncompleteEventBuilderSetup(Exception):
+    """This section indicates an incomplete event builder setup."""
+
+    pass
+
+
+class EventTypeParseError(Exception):
     pass
 
 
@@ -27,6 +47,27 @@ class EventType(Enum):
 
     SECTION_ENTER: str = "section-enter"
     SECTION_LEAVE: str = "section-leave"
+    ENTER_SCENE: str = "enter-scene"
+    LEAVE_SCENE: str = "leave-scene"
+
+    def serialize(self) -> str:
+        return self.value
+
+    @staticmethod
+    def parse(event_type: str) -> "EventType":
+        match event_type:
+            case EventType.SECTION_ENTER.value:
+                return EventType.SECTION_ENTER
+            case EventType.SECTION_LEAVE.value:
+                return EventType.SECTION_LEAVE
+            case EventType.ENTER_SCENE.value:
+                return EventType.ENTER_SCENE
+            case EventType.LEAVE_SCENE.value:
+                return EventType.LEAVE_SCENE
+            case _:
+                raise EventTypeParseError(
+                    f"Unable to parse not existing event type '{event_type}'"
+                )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -49,19 +90,19 @@ class Event(DataclassValidation):
 
     Args:
         road_user_id (int): the road user id involved with this event. It must be
-        greater equal one.
-        road_user_type (str): the road user type involved with this event.
-        hostname (str): the OTCamera hostname that the video is associated with.
-        occurrence (datetime): the time when this event occurred.
-        frame_number (int): the video frame number that this event is associated with.
-        section_id (Optional[str]): only set when event type is of section.
-        Defaults to `None`.
+            greater equal one
+        road_user_type (str): the road user type involved with this event
+        hostname (str): the OTCamera hostname that the video is associated with
+        occurrence (datetime): the time when this event occurred
+        frame_number (int): the video frame number that this event is associated with
+        section_id (Optional[str]): only set when event type is of section
+            Defaults to `None`.
         event_coordinate (ImageCoordinate): location where the event occurred in
-        the video.
-        event_type (EventType): this event's type.
+            the video
+        event_type (EventType): this event's type
         direction_vector (DirectionVector2D): a 2-dimensional direction vector denoting
-        the direction of the road user associated with this event.
-        video_name (str): the video name associated with this event.
+            the direction of the road user associated with this event
+        video_name (str): the video name associated with this event
 
     """
 
@@ -92,15 +133,54 @@ class Event(DataclassValidation):
             )
 
     def _validate_road_user_id_greater_zero(self) -> None:
-        if self.road_user_id < 0:
+        if self.road_user_id < 1:
             raise ValueError(
-                f"vehicle_id must be greater than zero, but is {self.road_user_id}"
+                f"vehicle_id must be at least 1, but is {self.road_user_id}"
             )
+
+    def to_dict(self) -> dict:
+        """Convert event into dict to interact with other parts of the system,
+        e.g. serialization.
+
+        Returns:
+            dict: serialized event
+        """
+        return {
+            ROAD_USER_ID: self.road_user_id,
+            ROAD_USER_TYPE: self.road_user_type,
+            HOSTNAME: self.hostname,
+            OCCURRENCE: self.occurrence.strftime(DATE_FORMAT),
+            FRAME_NUMBER: self.frame_number,
+            SECTION_ID: self.section_id,
+            EVENT_COORDINATE: self.event_coordinate.to_list(),
+            EVENT_TYPE: self.event_type.value,
+            DIRECTION_VECTOR: self.direction_vector.to_list(),
+            VIDEO_NAME: self.video_name,
+        }
 
 
 class EventBuilder(ABC):
+    """Defines an interface to build various type of events.
+
+    Raises:
+        InproperFormattedFilename: if hostname could not be extracted from filename
+    """
+
+    def __init__(self) -> None:
+        self.road_user_type: Optional[str] = None
+        self.event_type: Optional[EventType] = None
+        self.direction_vector: Optional[DirectionVector2D] = None
+
     @abstractmethod
     def create_event(self, detection: Detection) -> Event:
+        """Creates an event with the information stored in a detection.
+
+        Args:
+            detection (Detection): the detection holding the information
+
+        Returns:
+            Event: the event
+        """
         pass
 
     def extract_hostname(self, file_path: Path) -> str:
@@ -111,7 +191,7 @@ class EventBuilder(ABC):
 
         Raises:
             InproperFormattedFilename: if the filename is not formatted as expected, an
-            exception will be raised
+                exception will be raised
 
         Returns:
             datetime: start date of the video
@@ -127,39 +207,84 @@ class EventBuilder(ABC):
             f"Could not parse {file_path.name}. Hostname is missing."
         )
 
+    def add_road_user_type(self, road_user_type: str) -> None:
+        """Add a road user type to add to the event to be build.
 
-class SectionEventBuilder(EventBuilder):
-    def __init__(self) -> None:
-        self.section_id: Optional[str] = None
-        self.direction_vector: Optional[DirectionVector2D] = None
-        self.event_type: Optional[EventType] = None
-
-    def add_section_id(self, section_id: str) -> None:
-        self.section_id = section_id
+        Args:
+            road_user_type (str): the road user type
+        """
+        self.road_user_type = road_user_type
 
     def add_event_type(self, event_type: EventType) -> None:
+        """Add an event type to add to the event to be build.
+
+        Args:
+            event_type (EventType): the event type
+        """
         self.event_type = event_type
 
     def add_direction_vector(
         self, detection_1: Detection, detection_2: Detection
     ) -> None:
+        """Build direction vector from two detections and add to the event to be build.
+
+        Let x1 be `detection_1.x` and x2 be `detection_1.y` be a coordinate x = (x1,x2).
+        Let y1 be `detection_2.x` and y2 be `detection_2.y` be a coordinate y = (x1,x2).
+        The direction vector v is calculated by v = y-x.
+
+        Args:
+            detection_1 (Detection): the first detection
+            detection_2 (Detection): the second detection
+        """
         self.direction_vector = DirectionVector2D(
             x1=detection_2.x - detection_1.x, x2=detection_2.y - detection_1.y
         )
 
+
+class SectionEventBuilder(EventBuilder):
+    """A builder to build section events."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.section_id: Optional[str] = None
+
+    def add_section_id(self, section_id: str) -> None:
+        """Add a section id to add to the event to be build.
+
+        Args:
+            section_id (str): the section id
+        """
+        self.section_id = section_id
+
     def create_event(self, detection: Detection) -> Event:
+        """Creates an section event with the information stored in a detection.
+
+        Args:
+            detection (Detection): the detection holding the information
+
+        Raises:
+            IncompleteEventBuilderSetup: if attribute 'section_id' is not set
+            IncompleteEventBuilderSetup: if attribute 'event_type' is not set
+            IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
+
+        Returns:
+            Event: the section event
+        """
         if not self.section_id:
-            raise BuildError("attribute 'section_id' is not set")
+            raise IncompleteEventBuilderSetup("attribute 'section_id' is not set")
 
         if not self.event_type:
-            raise BuildError("attribute 'event_type' is not set")
+            raise IncompleteEventBuilderSetup("attribute 'event_type' is not set")
 
         if not self.direction_vector:
-            raise BuildError("attribute 'direction_vector' is not set")
+            raise IncompleteEventBuilderSetup("attribute 'direction_vector' is not set")
 
-        section_event = Event(
+        if not self.road_user_type:
+            raise IncompleteEventBuilderSetup("attribute 'road_user_type' is not set")
+
+        return Event(
             road_user_id=detection.track_id.id,
-            road_user_type=detection.classification,
+            road_user_type=self.road_user_type,
             hostname=self.extract_hostname(detection.input_file_path),
             occurrence=detection.occurrence,
             frame_number=detection.frame,
@@ -169,4 +294,73 @@ class SectionEventBuilder(EventBuilder):
             direction_vector=self.direction_vector,
             video_name=detection.input_file_path.name,
         )
-        return section_event
+
+
+class SceneEventBuilder(EventBuilder):
+    """A builder to build scene events."""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def create_event(self, detection: Detection) -> Event:
+        """Creates a scene event with the information stored in a detection.
+
+        Args:
+            detection (Detection): the detection holding the information
+
+        Raises:
+            IncompleteEventBuilderSetup: if attribute 'event_type' is not set
+            IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
+
+        Returns:
+            Event: the scene event
+        """
+        if not self.event_type:
+            raise IncompleteEventBuilderSetup("attribute 'event_type' is not set")
+
+        if not self.direction_vector:
+            raise IncompleteEventBuilderSetup("attribute 'direction_vector' is not set")
+
+        return Event(
+            road_user_id=detection.track_id.id,
+            road_user_type=detection.classification,
+            hostname=self.extract_hostname(detection.input_file_path),
+            occurrence=detection.occurrence,
+            frame_number=detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(detection.x, detection.y),
+            event_type=self.event_type,
+            direction_vector=self.direction_vector,
+            video_name=detection.input_file_path.name,
+        )
+
+
+class EventRepository:
+    """The repository to store events."""
+
+    def __init__(self) -> None:
+        self.events: list[Event] = []
+
+    def add(self, event: Event) -> None:
+        """Add an event to the repository.
+
+        Args:
+            event (Event): the event to add
+        """
+        self.events.append(event)
+
+    def add_all(self, events: Iterable[Event]) -> None:
+        """Add multiple events at once to the repository.
+
+        Args:
+            events (Iterable[Event]): the events
+        """
+        self.events.extend(events)
+
+    def get_all(self) -> Iterable[Event]:
+        """Get all events stored in the repository.
+
+        Returns:
+            Iterable[Event]: the events
+        """
+        return self.events
