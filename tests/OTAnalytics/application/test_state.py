@@ -15,9 +15,9 @@ class TestTrackState:
         state = TrackState()
         state.register(observer)
 
-        state.update(first_track)
-        state.update(changed_track)
-        state.update(changed_track)
+        state.select(first_track)
+        state.select(changed_track)
+        state.select(changed_track)
 
         assert observer.notify_track.call_args_list == [
             call(first_track),
@@ -46,9 +46,9 @@ class TestSectionState:
         state = SectionState()
         state.register(observer)
 
-        state.update(first_section)
-        state.update(changed_section)
-        state.update(changed_section)
+        state.select(first_section)
+        state.select(changed_section)
+        state.select(changed_section)
 
         assert observer.notify_section.call_args_list == [
             call(first_section),
