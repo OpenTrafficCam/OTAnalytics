@@ -3,7 +3,7 @@ from customtkinter import CTk
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import TrackState
+from OTAnalytics.application.state import SectionState, TrackState
 from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
@@ -66,13 +66,17 @@ class OTAnalyticsGui:
 class ApplicationStarter:
     def start_gui(self) -> None:
         datastore = OTAnalyticsApplication(
-            self._create_datastore(), self._create_track_state()
+            self._create_datastore(),
+            self._create_track_state(),
+            self._create_section_state(),
         )
         OTAnalyticsGui(datastore).start()
 
     def start_cli(self) -> None:
         datastore = OTAnalyticsApplication(
-            self._create_datastore(), self._create_track_state()
+            self._create_datastore(),
+            self._create_track_state(),
+            self._create_section_state(),
         )
         OTAnalyticsCli(datastore).start()
 
@@ -88,3 +92,6 @@ class ApplicationStarter:
 
     def _create_track_state(self) -> TrackState:
         return TrackState()
+
+    def _create_section_state(self) -> SectionState:
+        return SectionState()

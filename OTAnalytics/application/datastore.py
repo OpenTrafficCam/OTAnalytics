@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Tuple
 
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.section import Section, SectionRepository
+from OTAnalytics.domain.section import Section, SectionListObserver, SectionRepository
 from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
@@ -133,6 +133,9 @@ class Datastore:
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
         self._track_repository.register_tracks_observer(observer)
+
+    def register_sections_observer(self, observer: SectionListObserver) -> None:
+        self._section_repository.register_sections_observer(observer)
 
     def load_track_file(self, file: Path) -> None:
         tracks = self._track_parser.parse(file)
