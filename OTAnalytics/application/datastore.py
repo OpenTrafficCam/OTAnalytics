@@ -5,11 +5,22 @@ from typing import Iterable, Optional, Tuple
 
 from numpy import ndarray
 
+from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import Section, SectionRepository
-from OTAnalytics.domain.track import Track, TrackId, TrackRepository
+from OTAnalytics.domain.track import (
+    Track,
+    TrackClassificationCalculator,
+    TrackId,
+    TrackRepository,
+)
 
 
 class TrackParser(ABC):
+    def __init__(
+        self, track_classification_calculator: TrackClassificationCalculator
+    ) -> None:
+        self._track_classification_calculator = track_classification_calculator
+
     @abstractmethod
     def parse(self, file: Path) -> list[Track]:
         pass
@@ -22,6 +33,12 @@ class SectionParser(ABC):
 
     @abstractmethod
     def serialize(self, sections: Iterable[Section], file: Path) -> None:
+        pass
+
+
+class EventListParser(ABC):
+    @abstractmethod
+    def serialize(self, events: Iterable[Event], file: Path) -> None:
         pass
 
 
@@ -100,13 +117,16 @@ class Datastore:
         self,
         track_parser: TrackParser,
         section_parser: SectionParser,
+        event_list_parser: EventListParser,
         video_parser: VideoParser,
     ) -> None:
         self._track_parser = track_parser
         self._section_parser = section_parser
+        self._event_list_parser = event_list_parser
         self._video_parser = video_parser
         self._track_repository = TrackRepository()
         self._section_repository = SectionRepository()
+        self._event_repository = EventRepository()
         self._video_repository = VideoRepository()
 
     def load_track_file(self, file: Path) -> None:
@@ -122,6 +142,12 @@ class Datastore:
     def save_section_file(self, file: Path) -> None:
         self._section_parser.serialize(
             self._section_repository.get_all(),
+            file=file,
+        )
+
+    def save_event_list_file(self, file: Path) -> None:
+        self._event_list_parser.serialize(
+            self._event_repository.get_all(),
             file=file,
         )
 

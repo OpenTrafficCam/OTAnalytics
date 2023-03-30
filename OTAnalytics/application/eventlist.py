@@ -1,6 +1,11 @@
-from typing import Iterable, Optional
+from typing import Optional
 
-from OTAnalytics.domain.event import Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.event import (
+    Event,
+    EventType,
+    SceneEventBuilder,
+    SectionEventBuilder,
+)
 from OTAnalytics.domain.intersect import Intersector
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
@@ -101,32 +106,45 @@ class SectionActionDetector:
         raise NotImplementedError
 
 
-class EventRepository:
-    """The repository to store events."""
+class SceneActionDetector:
+    """Detect when a road user enters or leaves the scene.
 
-    def __init__(self) -> None:
-        self.events: list[Event] = []
+    Args:
+        scene_event_builder (SceneEventBuilder): the builder to build scene events
+    """
 
-    def add(self, event: Event) -> None:
-        """Add an event to the repository.
+    def __init__(self, scene_event_builder: SceneEventBuilder) -> None:
+        self._event_builder = scene_event_builder
 
-        Args:
-            event (Event): the event to add
-        """
-        self.events.append(event)
-
-    def add_all(self, events: Iterable[Event]) -> None:
-        """Add multiple events at once to the repository.
+    def detect_enter_scene(self, track: Track) -> Event:
+        """Detect the first time a road user enters the  scene.
 
         Args:
-            events (Iterable[Event]): the events
-        """
-        self.events.extend(events)
-
-    def get_all(self) -> Iterable[Event]:
-        """Get all events stored in the repository.
+            tracks (list[Track]): the track associated with the road user
 
         Returns:
-            Iterable[Event]: the events
+            list[Event]: the enter scene event
         """
-        return self.events
+
+        self._event_builder.add_event_type(EventType.ENTER_SCENE)
+        self._event_builder.add_direction_vector(
+            track.detections[0], track.detections[-1]
+        )
+        first_detection = track.detections[0]
+        return self._event_builder.create_event(first_detection)
+
+    def detect_leave_scene(self, track: Track) -> Event:
+        """Detect the last time before a road user leaves the  scene.
+
+        Args:
+            tracks (list[Track]): the track associated with the road user
+
+        Returns:
+            list[Event]: the leave scene event
+        """
+        self._event_builder.add_direction_vector(
+            track.detections[0], track.detections[-1]
+        )
+        self._event_builder.add_event_type(EventType.LEAVE_SCENE)
+        first_detection = track.detections[-1]
+        return self._event_builder.create_event(first_detection)
