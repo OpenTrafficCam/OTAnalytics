@@ -187,7 +187,7 @@ class TestShapelyIntersectImplementationAdapter:
         assert len(mock_shapely_intersector.method_calls) == 1
         assert result_splitted_line is None
 
-    def test_distance_coord_coord(self) -> None:
+    def test_distance_between(self) -> None:
         first_coordinate = Coordinate(0, 0)
         second_coordinate = Coordinate(1, 0)
 
