@@ -1,3 +1,5 @@
+from typing import Any
+
 import customtkinter
 from customtkinter import CTk
 
@@ -65,20 +67,19 @@ class OTAnalyticsGui:
 
 class ApplicationStarter:
     def start_gui(self) -> None:
-        datastore = OTAnalyticsApplication(
-            self._create_datastore(),
-            self._create_track_state(),
-            self._create_section_state(),
-        )
+        datastore = OTAnalyticsApplication(**self.build_dependencies())
         OTAnalyticsGui(datastore).start()
 
     def start_cli(self) -> None:
-        datastore = OTAnalyticsApplication(
-            self._create_datastore(),
-            self._create_track_state(),
-            self._create_section_state(),
-        )
+        datastore = OTAnalyticsApplication(**self.build_dependencies())
         OTAnalyticsCli(datastore).start()
+
+    def build_dependencies(self) -> dict[str, Any]:
+        return {
+            "datastore": self._create_datastore(),
+            "track_state": self._create_track_state(),
+            "section_state": self._create_section_state(),
+        }
 
     def _create_datastore(self) -> Datastore:
         """
