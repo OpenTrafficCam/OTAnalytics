@@ -308,8 +308,8 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
     x_reference_point = int(x - 0.5 * w + w * bbox_factor_reference[vehicle_class][0])
     y_reference_point = int(y - 0.5 * h + h * bbox_factor_reference[vehicle_class][1])
 
-    x_reference_point = int(x_reference_point*file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor)
-    y_reference_point = int(y_reference_point*file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor)
+    x_reference_point = int(x_reference_point*1)
+    y_reference_point = int(y_reference_point*1)
 
     cv2.line(image, (x-5, y+5), (x+5, y-5), (255, 0, 0, 255), 2)
     cv2.line(image, (x-5, y-5), (x+5, y+5), (255, 0, 0, 255), 2)
