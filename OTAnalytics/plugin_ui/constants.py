@@ -1,0 +1,3 @@
+PADX = 10
+PADY = 5
+STICKY = "NESW"

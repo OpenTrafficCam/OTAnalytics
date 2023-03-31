@@ -1,16 +1,44 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional, Tuple
 
 from numpy import ndarray
-from pydantic import BaseModel, validator
 
-from OTAnalytics.domain.track import Track, TrackRepository
+from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.section import Section, SectionRepository
+from OTAnalytics.domain.track import (
+    Track,
+    TrackClassificationCalculator,
+    TrackId,
+    TrackRepository,
+)
 
 
 class TrackParser(ABC):
+    def __init__(
+        self, track_classification_calculator: TrackClassificationCalculator
+    ) -> None:
+        self._track_classification_calculator = track_classification_calculator
+
     @abstractmethod
     def parse(self, file: Path) -> list[Track]:
+        pass
+
+
+class SectionParser(ABC):
+    @abstractmethod
+    def parse(self, file: Path) -> list[Section]:
+        pass
+
+    @abstractmethod
+    def serialize(self, sections: Iterable[Section], file: Path) -> None:
+        pass
+
+
+class EventListParser(ABC):
+    @abstractmethod
+    def serialize(self, events: Iterable[Event], file: Path) -> None:
         pass
 
 
@@ -29,11 +57,9 @@ class VideoReader(ABC):
         pass
 
 
-class Video(BaseModel, frozen=True, arbitrary_types_allowed=True):
+@dataclass(frozen=True)
+class Video:
     """Represents a video file.
-
-    Extends from pydantic.BaseModel
-    IMPORTANT: Instantiation of this class is only possible by using named parameters.
 
     Args:
         video_reader (VideoReader): A video reader used to get frames.
@@ -46,11 +72,12 @@ class Video(BaseModel, frozen=True, arbitrary_types_allowed=True):
     video_reader: VideoReader
     path: Path
 
-    @validator("path")
-    def check_path_exists(cls, path: Path) -> Path:
-        if not path.exists():
+    def __post_init__(self) -> None:
+        self.check_path_exists()
+
+    def check_path_exists(self) -> None:
+        if not self.path.exists():
             raise ValueError("must be an existing path")
-        return path
 
     def get_frame(self, index: int) -> ndarray:
         """Returns the frame of the video at `index`.
@@ -66,18 +93,63 @@ class Video(BaseModel, frozen=True, arbitrary_types_allowed=True):
 
 class VideoRepository:
     def __init__(self) -> None:
-        self.videos: dict[int, Video] = {}
+        self._videos: dict[TrackId, Video] = {}
 
-    def get_video_for(self, track: Track) -> Optional[Video]:
-        return None
+    def add(self, track_id: TrackId, video: Video) -> None:
+        self._videos[track_id] = video
+
+    def add_all(self, track_ids: Iterable[TrackId], videos: Iterable[Video]) -> None:
+        for track_id, video in zip(track_ids, videos):
+            self.add(track_id, video)
+
+    def get_video_for(self, track_id: TrackId) -> Optional[Video]:
+        return self._videos.get(track_id)
+
+
+class VideoParser(ABC):
+    @abstractmethod
+    def parse(self, file: Path) -> Tuple[list[TrackId], list[Video]]:
+        pass
 
 
 class Datastore:
-    def __init__(self, track_parser: TrackParser) -> None:
-        self.track_parser = track_parser
-        self.track_repository = TrackRepository()
-        self.video_repository = VideoRepository()
+    def __init__(
+        self,
+        track_parser: TrackParser,
+        section_parser: SectionParser,
+        event_list_parser: EventListParser,
+        video_parser: VideoParser,
+    ) -> None:
+        self._track_parser = track_parser
+        self._section_parser = section_parser
+        self._event_list_parser = event_list_parser
+        self._video_parser = video_parser
+        self._track_repository = TrackRepository()
+        self._section_repository = SectionRepository()
+        self._event_repository = EventRepository()
+        self._video_repository = VideoRepository()
 
     def load_track_file(self, file: Path) -> None:
-        tracks = self.track_parser.parse(file)
-        self.track_repository.add_all(tracks)
+        tracks = self._track_parser.parse(file)
+        self._track_repository.add_all(tracks)
+        track_ids, videos = self._video_parser.parse(file)
+        self._video_repository.add_all(track_ids, videos)
+
+    def load_section_file(self, file: Path) -> None:
+        sections = self._section_parser.parse(file)
+        self._section_repository.add_all(sections)
+
+    def save_section_file(self, file: Path) -> None:
+        self._section_parser.serialize(
+            self._section_repository.get_all(),
+            file=file,
+        )
+
+    def save_event_list_file(self, file: Path) -> None:
+        self._event_list_parser.serialize(
+            self._event_repository.get_all(),
+            file=file,
+        )
+
+    def add_section(self, section: Section) -> None:
+        self._section_repository.add(section)
