@@ -1,6 +1,9 @@
 from pathlib import Path
 from typing import Optional
 
+from domain.event import Event
+
+from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState
 from OTAnalytics.domain.track import TrackId, TrackImage
@@ -12,11 +15,16 @@ class OTAnalyticsApplication:
     """
 
     def __init__(
-        self, datastore: Datastore, track_state: TrackState, section_state: SectionState
+        self,
+        datastore: Datastore,
+        track_state: TrackState,
+        section_state: SectionState,
+        intersect: RunIntersect,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
         self.section_state: SectionState = section_state
+        self._intersect = intersect
         self._connect_observers()
 
     def _connect_observers(self) -> None:
@@ -58,5 +66,11 @@ class OTAnalyticsApplication:
         return self._datastore.get_image_of_track(track_id)
 
     def start_analysis(self) -> None:
-        print("Started")
-        pass
+        events: list[Event] = self._intersect.run(
+            tracks=self._datastore._track_repository.get_all(),
+            sections=self._datastore._section_repository.get_all(),
+        )
+        self._datastore._event_repository.add_all(events)
+
+    def save_events(self, file: Path) -> None:
+        self._datastore.save_event_list_file(file)

@@ -1,7 +1,10 @@
 from typing import Any
 
 import customtkinter
+from adapter_intersect.intersect import ShapelyIntersectImplementationAdapter
+from application.analysis import RunIntersect
 from customtkinter import CTk
+from plugin_intersect.intersect import ShapelyIntersector
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
@@ -52,7 +55,9 @@ class OTAnalyticsGui:
     def _get_widgets(self) -> None:
         self.frame_canvas = FrameCanvas(master=self._app, application=self._application)
         self.frame_tracks = FrameTracks(master=self._app, application=self._application)
-        self.frame_sections = FrameSections(master=self._app)
+        self.frame_sections = FrameSections(
+            master=self._app, application=self._application
+        )
         self.frame_analysis = FrameAnalysis(
             master=self._app, application=self._application
         )
@@ -84,6 +89,7 @@ class ApplicationStarter:
             "datastore": self._create_datastore(),
             "track_state": self._create_track_state(),
             "section_state": self._create_section_state(),
+            "intersect": self._create_intersect(),
         }
 
     def _create_datastore(self) -> Datastore:
@@ -101,3 +107,10 @@ class ApplicationStarter:
 
     def _create_section_state(self) -> SectionState:
         return SectionState()
+
+    def _create_intersect(self) -> RunIntersect:
+        return RunIntersect(
+            intersect_implementation=ShapelyIntersectImplementationAdapter(
+                ShapelyIntersector()
+            )
+        )

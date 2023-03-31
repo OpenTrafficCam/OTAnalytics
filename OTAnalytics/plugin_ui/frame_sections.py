@@ -1,3 +1,4 @@
+from pathlib import Path
 from tkinter import Listbox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter.ttk import Treeview
@@ -5,22 +6,23 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
+from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 
 
 class FrameSections(CTkFrame):
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self._application = application
         self._get_widgets()
         self._place_widgets()
 
     def _get_widgets(self) -> None:
         self.label = CTkLabel(master=self, text="Sections")
         self.listbox_sections = TreeviewSections(master=self)
-        self.button_load_sections = ButtonLoadSections(
-            master=self,
-            text="Load",
+        self.button_load_sections = CTkButton(
+            master=self, text="Load", command=self._load_sections_in_file
         )
         self.button_save_sections = ButtonSaveSections(master=self, text="Save")
         self.button_new_section = ButtonNewSection(master=self, text="New")
@@ -55,6 +57,13 @@ class FrameSections(CTkFrame):
         self.button_delete_selected_sections.grid(
             row=7, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def _load_sections_in_file(self) -> None:
+        sections_file = askopenfilename(
+            title="Load sections file", filetypes=[("sections file", "*.otflow")]
+        )
+        print(f"Sections file to load: {sections_file}")
+        self._application.add_sections_of_file(Path(sections_file))
 
 
 class TreeviewSections(Treeview):
@@ -92,19 +101,6 @@ class ListboxSections(Listbox):
     def show(self, sections: list[str]) -> None:
         for i, section in enumerate(sections):
             self.insert(i, section)
-
-
-class ButtonLoadSections(CTkButton):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-        self.bind("<ButtonRelease-1>", self.on_click)
-
-    def on_click(self, events: Any) -> None:
-        self.sections_file = askopenfilename(
-            title="Load sections file", filetypes=[("sections file", "*.otflow")]
-        )
-        print(f"Sections file to load: {self.sections_file}")
 
 
 class ButtonSaveSections(CTkButton):
