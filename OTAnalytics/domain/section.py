@@ -27,36 +27,88 @@ class SectionId:
 
 
 class SectionListObserver(ABC):
+    """
+    Interface to listen to changes to a list of sections.
+    """
+
     @abstractmethod
     def notify_sections(self, sections: list[SectionId]) -> None:
+        """
+        Notifies that the given sections have been added.
+
+        Args:
+            sections (list[SectionId]): list of added sections
+        """
         pass
 
 
 class SectionObserver(ABC):
+    """
+    Interface to listen to changes of a single section.
+    """
+
     @abstractmethod
     def notify_section(self, section_id: Optional[SectionId]) -> None:
+        """
+        Notifies that the section of the given id has changed.
+
+        Args:
+            track_id (Optional[SectionId]): id of the changed section
+        """
         pass
 
 
 class SectionSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
     def __init__(self) -> None:
         self.observers: set[SectionObserver] = set()
 
     def register(self, observer: SectionObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (SectionObserver): listener to add
+        """
         self.observers.add(observer)
 
     def notify(self, section_id: Optional[SectionId]) -> None:
+        """
+        Notifies observers about the section id.
+
+        Args:
+            track_id (Optional[SectionId]): id of the changed section
+        """
         [observer.notify_section(section_id) for observer in self.observers]
 
 
 class SectionListSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
     def __init__(self) -> None:
         self.observers: set[SectionListObserver] = set()
 
     def register(self, observer: SectionListObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (SectionListObserver): listener to add
+        """
         self.observers.add(observer)
 
     def notify(self, sections: list[SectionId]) -> None:
+        """
+        Notifies observers about the list of sections.
+
+        Args:
+            tracks (list[SectionId]): list of added sections
+        """
         [observer.notify_sections(sections) for observer in self.observers]
 
 

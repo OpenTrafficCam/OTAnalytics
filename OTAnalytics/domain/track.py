@@ -17,36 +17,88 @@ class TrackId(DataclassValidation):
 
 
 class TrackListObserver(ABC):
+    """
+    Interface to listen to changes to a list of tracks.
+    """
+
     @abstractmethod
     def notify_tracks(self, tracks: list[TrackId]) -> None:
+        """
+        Notifies that the given tracks have been added.
+
+        Args:
+            tracks (list[TrackId]): list of added tracks
+        """
         pass
 
 
 class TrackObserver(ABC):
+    """
+    Interface to listen to changes of a single track.
+    """
+
     @abstractmethod
     def notify_track(self, track_id: Optional[TrackId]) -> None:
+        """
+        Notifies that the track of the given id has changed.
+
+        Args:
+            track_id (Optional[TrackId]): id of the changed track
+        """
         pass
 
 
 class TrackSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
     def __init__(self) -> None:
         self.observers: set[TrackObserver] = set()
 
     def register(self, observer: TrackObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (TrackObserver): listener to add
+        """
         self.observers.add(observer)
 
     def notify(self, track_id: Optional[TrackId]) -> None:
+        """
+        Notifies observers about the track id.
+
+        Args:
+            track_id (Optional[TrackId]): id of the changed track
+        """
         [observer.notify_track(track_id) for observer in self.observers]
 
 
 class TrackListSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
     def __init__(self) -> None:
         self.observers: set[TrackListObserver] = set()
 
     def register(self, observer: TrackListObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (TrackListObserver): listener to add
+        """
         self.observers.add(observer)
 
     def notify(self, tracks: list[TrackId]) -> None:
+        """
+        Notifies observers about the list of tracks.
+
+        Args:
+            tracks (list[TrackId]): list of added tracks
+        """
         [observer.notify_tracks(tracks) for observer in self.observers]
 
 
