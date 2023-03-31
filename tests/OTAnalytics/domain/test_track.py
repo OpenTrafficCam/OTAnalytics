@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 from unittest.mock import Mock
 
 import pytest
@@ -14,6 +13,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
+from tests.conftest import TrackBuilder
 
 
 @pytest.fixture
@@ -50,81 +50,6 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
         ],
         track_id=valid_detection_dict[ottrk_format.TRACK_ID],
     )
-
-
-class DataBuilder:
-    def __init__(
-        self,
-        confidence: float,
-        x: float,
-        y: float,
-        w: float,
-        h: float,
-        occurrence: datetime,
-        input_file_path: Path,
-        interpolated_detection: bool,
-        track_id: TrackId,
-        frame: Optional[int] = None,
-        track_class: Optional[str] = None,
-        detection_class: Optional[str] = None,
-    ) -> None:
-        self._track_class = track_class
-        self._detections: list[Detection] = []
-        self._detection_class = detection_class
-        self._confidence = confidence
-        self._x = x
-        self._y = y
-        self._w = w
-        self._h = h
-        self._frame = frame
-        self._occurrence = occurrence
-        self._input_file_path = input_file_path
-        self._interpolated_detection = interpolated_detection
-        self._track_id = track_id
-
-    def build_track(self) -> Track:
-        if self._track_class is None:
-            raise ValueError("track ")
-
-        return Track(self._track_id, self._track_class, self._detections)
-
-    def build_detections(self) -> list[Detection]:
-        return self._detections
-
-    def append_detection(self) -> None:
-        if self._detection_class is None:
-            raise ValueError("classification not set")
-
-        if self._frame is None:
-            raise ValueError("frame not set")
-
-        self._detections.append(
-            Detection(
-                classification=self._detection_class,
-                confidence=self._confidence,
-                x=self._x,
-                y=self._y,
-                w=self._w,
-                h=self._h,
-                frame=self._frame,
-                occurrence=self._occurrence,
-                input_file_path=self._input_file_path,
-                interpolated_detection=self._interpolated_detection,
-                track_id=self._track_id,
-            )
-        )
-
-    def add_detection_class(self, classification: str) -> None:
-        self._detection_class = classification
-
-    def add_confidence(self, confidence: float) -> None:
-        self._confidence = confidence
-
-    def add_frame(self, frame: int) -> None:
-        self._frame = frame
-
-    def add_track_class(self, classification: str) -> None:
-        self._track_class = classification
 
 
 class TestDetection:
@@ -213,18 +138,10 @@ class TestTrack:
 
 class TestCalculateTrackClassificationByMaxConfidence:
     def test_calculate(self) -> None:
-        builder = DataBuilder(
+        builder = TrackBuilder(
             confidence=0.8,
-            x=0.0,
-            y=0.0,
             w=10,
             h=10,
-            frame=1,
-            occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-            input_file_path=Path("mypath_postfix.otdet"),
-            interpolated_detection=False,
-            track_id=TrackId(1),
-            detection_class="car",
         )
         builder.append_detection()
 
