@@ -64,7 +64,17 @@ class OTAnalyticsApplication:
         return self._datastore.get_image_of_track(track_id)
 
     def start_analysis(self) -> None:
+        """
+        Intersect all tracks with all sections and write the events into the event
+        repository
+        """
         self._intersect.run()
 
     def save_events(self, file: Path) -> None:
+        """
+        Save the event repository into a file.
+
+        Args:
+            file (Path): file to save the events to
+        """
         self._datastore.save_event_list_file(file)
