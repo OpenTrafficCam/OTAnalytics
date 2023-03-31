@@ -126,9 +126,14 @@ class TestShapelyIntersectImplementationAdapter:
 
     @pytest.fixture
     def polygon(self) -> Polygon:
-        return Polygon(
-            [Coordinate(0, 0), Coordinate(1, 0), Coordinate(2, 0), Coordinate(0, 0)],
-        )
+        polygon_coordinates = [
+            Coordinate(0, 0),
+            Coordinate(0, 1),
+            Coordinate(1, 1),
+            Coordinate(1, 0),
+            Coordinate(0, 0),
+        ]
+        return Polygon(polygon_coordinates)
 
     def test_line_intersects_line(self, first_line: Line, second_line: Line) -> None:
         mock_shapely_intersector = Mock(spec=ShapelyIntersector)
@@ -201,3 +206,28 @@ class TestShapelyIntersectImplementationAdapter:
 
         assert len(mock_shapely_intersector.method_calls) == 1
         assert result_splitted_line == 1
+
+    def test_are_coordinates_within_polygon(self, polygon: Polygon) -> None:
+        coordinates = [Coordinate(0, 0), Coordinate(0.5, 0.5), Coordinate(2, 2)]
+
+        mock_shapely_intersector = Mock()
+        mock_shapely_intersector.are_points_within_polygon.return_value = [
+            False,
+            True,
+            False,
+        ]
+        mock_shapely_mapper = Mock()
+        mock_shapely_mapper.map_to_tuple_coordinates.return_value = [
+            (0, 0),
+            (0.5, 0.5),
+            (2, 2),
+        ]
+        adapter = ShapelyIntersectImplementationAdapter(
+            mock_shapely_intersector, mock_shapely_mapper
+        )
+
+        result_mask = adapter.are_coordinates_within_polygon(coordinates, polygon)
+
+        mock_shapely_mapper.map_to_tuple_coordinates.assert_called_once()
+        mock_shapely_intersector.are_points_within_polygon.assert_called_once()
+        assert result_mask == [False, True, False]

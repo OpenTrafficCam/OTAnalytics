@@ -61,3 +61,13 @@ class ShapelyIntersectImplementationAdapter(IntersectImplementation):
         return self.shapely_intersector.distance_point_point(
             shapely_point_1, shapely_point_2
         )
+
+    def are_coordinates_within_polygon(
+        self, coordinates: list[Coordinate], polygon: Polygon
+    ) -> list[bool]:
+        points = self.mapper.map_to_tuple_coordinates(coordinates)
+        shapely_polygon = self.mapper.map_to_shapely_polygon(polygon)
+        mask = self.shapely_intersector.are_points_within_polygon(
+            points, shapely_polygon
+        )
+        return mask

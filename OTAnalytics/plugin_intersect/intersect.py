@@ -1,6 +1,7 @@
 from typing import Optional
 
-from shapely import GeometryCollection, LineString, Point, Polygon
+from numpy import ndarray
+from shapely import GeometryCollection, LineString, Point, Polygon, contains_xy, prepare
 from shapely.ops import snap, split
 
 
@@ -91,6 +92,26 @@ class ShapelyIntersector:
             float: _description_
         """
         return p1.distance(p2)
+
+    def are_points_within_polygon(
+        self, points: list[tuple[float, float]], polygon: Polygon
+    ) -> list[bool]:
+        """Checks if the points are within the polygon.
+
+        A point is within a polygon if it is enclosed by it. Meaning that a point
+        sitting on the boundary of a polygon is treated as not being within it.
+
+        Args:
+            points (list[tuple[float, float]]): the points
+            polygon (Polygon): the polygon
+
+        Returns:
+            list[bool]: the boolean mask holding the information whether a point is
+                within a the polygon or not
+        """
+        prepare(polygon)
+        mask: ndarray = contains_xy(polygon, points)
+        return mask.tolist()
 
     def _complex_split(
         self, geom: LineString, splitter: LineString | Polygon

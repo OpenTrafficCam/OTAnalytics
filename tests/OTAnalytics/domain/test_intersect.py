@@ -4,16 +4,24 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.event import EventType, SectionEventBuilder
-from OTAnalytics.domain.geometry import Coordinate, Line, RelativeOffsetCoordinate
+from OTAnalytics.domain.event import Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    DirectionVector2D,
+    ImageCoordinate,
+    Line,
+    RelativeOffsetCoordinate,
+)
 from OTAnalytics.domain.intersect import (
+    IntersectAreaByTrackPoints,
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
     IntersectImplementation,
     Intersector,
 )
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import Area, LineSection
 from OTAnalytics.domain.track import Detection, Track, TrackId
+from tests.conftest import EventBuilder, TrackBuilder
 
 
 @pytest.fixture
@@ -164,3 +172,360 @@ class TestIntersectBySmallTrackComponents:
         assert result_event.direction_vector.x1 == 0
         assert result_event.direction_vector.x2 == 0
         assert result_event.video_name == expected_detection.input_file_path.name
+
+
+class TestIntersectAreaByTrackPoints:
+    @pytest.fixture
+    def area(self) -> Area:
+        return Area(
+            id="N",
+            coordinates=[
+                Coordinate(1, 1),
+                Coordinate(1, 2),
+                Coordinate(2, 2),
+                Coordinate(2, 1),
+                Coordinate(1, 1),
+            ],
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0),
+                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0, 0),
+            },
+            plugin_data={},
+        )
+
+    def test_intersect_track_starts_outside_section(
+        self,
+        area: Area,
+        detection: Detection,
+        track_builder: TrackBuilder,
+        event_builder: EventBuilder,
+    ) -> None:
+        mock_implementation = Mock()
+        mock_implementation.are_coordinates_within_polygon.return_value = [
+            False,
+            True,
+            False,
+        ]
+
+        track_builder.add_xy_bbox(0.5, 1.5)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.5, 1.5)
+        track_builder.add_frame(2)
+        track_builder.add_microsecond(1)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(3, 1.5)
+        track_builder.add_frame(3)
+        track_builder.add_microsecond(2)
+        track_builder.append_detection()
+
+        track = track_builder.build_track()
+
+        section_event_builder = SectionEventBuilder()
+        section_event_builder.add_section_id(area.id)
+        section_event_builder.add_direction_vector(detection, detection)
+
+        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        result_events = intersector.intersect(track, section_event_builder)
+
+        event_builder.add_microsecond(1)
+        event_builder.add_frame_number(2)
+        event_builder.add_event_coordinate(1.5, 1.5)
+        event_builder.add_event_type("section-enter")
+        event_builder.append_section_event()
+
+        event_builder.add_microsecond(2)
+        event_builder.add_frame_number(3)
+        event_builder.add_event_coordinate(3, 1.5)
+        event_builder.add_event_type("section-leave")
+        event_builder.append_section_event()
+        expected_events = event_builder.build_events()
+        assert result_events == expected_events
+
+    def test_intersect_track_starts_inside_section(
+        self,
+        area: Area,
+        detection: Detection,
+        track_builder: TrackBuilder,
+        event_builder: EventBuilder,
+    ) -> None:
+        mock_implementation = Mock()
+        mock_implementation.are_coordinates_within_polygon.return_value = [
+            True,
+            False,
+        ]
+
+        track_builder.add_xy_bbox(1.5, 1.5)
+        track_builder.add_frame(1)
+        track_builder.occurrence_microsecond = 1
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(3, 1.5)
+        track_builder.add_frame(2)
+        track_builder.occurrence_microsecond = 2
+        track_builder.append_detection()
+
+        track = track_builder.build_track()
+
+        section_event_builder = SectionEventBuilder()
+        section_event_builder.add_section_id(area.id)
+        section_event_builder.add_direction_vector(detection, detection)
+
+        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        result_events = intersector.intersect(track, section_event_builder)
+
+        event_builder.add_microsecond(1)
+        event_builder.add_frame_number(1)
+        event_builder.add_event_coordinate(1.5, 1.5)
+        event_builder.add_event_type("section-enter")
+        event_builder.append_section_event()
+
+        event_builder.add_microsecond(2)
+        event_builder.add_frame_number(2)
+        event_builder.add_event_coordinate(3, 1.5)
+        event_builder.add_event_type("section-leave")
+        event_builder.append_section_event()
+
+        expected_events = event_builder.build_events()
+
+        assert result_events == expected_events
+
+    def test_intersect_track_is_inside_section(
+        self,
+        area: Area,
+        detection: Detection,
+        track_builder: TrackBuilder,
+        event_builder: EventBuilder,
+    ) -> None:
+        mock_implementation = Mock()
+        mock_implementation.are_coordinates_within_polygon.return_value = [
+            True,
+        ]
+
+        track_builder.add_xy_bbox(1.5, 1.5)
+        track_builder.add_frame(1)
+        track_builder.occurrence_microsecond = 1
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.7, 1.5)
+        track_builder.add_frame(2)
+        track_builder.occurrence_microsecond = 2
+        track_builder.append_detection()
+
+        track = track_builder.build_track()
+
+        section_event_builder = SectionEventBuilder()
+        section_event_builder.add_section_id(area.id)
+        section_event_builder.add_direction_vector(detection, detection)
+
+        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        result_events = intersector.intersect(track, section_event_builder)
+
+        event_builder.add_microsecond(1)
+        event_builder.add_frame_number(1)
+        event_builder.add_event_coordinate(1.5, 1.5)
+        event_builder.add_event_type("section-enter")
+        event_builder.append_section_event()
+        expected_events = event_builder.build_events()
+
+        assert result_events == expected_events
+
+    def test_intersect_track_starts_outside_and_stays_inside_section(
+        self, area: Area, detection: Detection, track_builder: TrackBuilder
+    ) -> None:
+        mock_implementation = Mock()
+        mock_implementation.are_coordinates_within_polygon.return_value = [False, True]
+        track_builder.add_xy_bbox(0.5, 1.5)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.5, 1.5)
+        track_builder.add_frame(2)
+        track_builder.occurrence_microsecond = 1
+        track_builder.append_detection()
+
+        track = track_builder.build_track()
+
+        event_builder = SectionEventBuilder()
+        event_builder.add_section_id(area.id)
+        event_builder.add_direction_vector(detection, detection)
+
+        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        result_events = intersector.intersect(track, event_builder)
+        expected_events = [
+            Event(
+                road_user_id=1,
+                road_user_type="car",
+                hostname="myhostname",
+                occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
+                frame_number=2,
+                section_id="N",
+                event_coordinate=ImageCoordinate(1.5, 1.5),
+                event_type=EventType.SECTION_ENTER,
+                direction_vector=DirectionVector2D(0, 0),
+                video_name="myhostname_file.otdet",
+            )
+        ]
+        assert result_events == expected_events
+
+    def test_intersect_track_starts_outside_section_with_multiple_intersections(
+        self,
+        area: Area,
+        detection: Detection,
+        track_builder: TrackBuilder,
+        event_builder: EventBuilder,
+    ) -> None:
+        mock_implementation = Mock()
+        mock_implementation.are_coordinates_within_polygon.return_value = [
+            False,
+            True,
+            False,
+            True,
+            False,
+        ]
+
+        track_builder.add_xy_bbox(0.5, 1.5)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.5, 1.5)
+        track_builder.add_frame(2)
+        track_builder.occurrence_microsecond = 1
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(3, 1.5)
+        track_builder.add_frame(3)
+        track_builder.occurrence_microsecond = 2
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.5, 1.5)
+        track_builder.add_frame(4)
+        track_builder.occurrence_microsecond = 3
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(3, 1.5)
+        track_builder.add_frame(5)
+        track_builder.occurrence_microsecond = 4
+        track_builder.append_detection()
+
+        track = track_builder.build_track()
+
+        section_event_builder = SectionEventBuilder()
+        section_event_builder.add_section_id(area.id)
+        section_event_builder.add_direction_vector(detection, detection)
+
+        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        result_events = intersector.intersect(track, section_event_builder)
+
+        event_builder.add_microsecond(1)
+        event_builder.add_frame_number(2)
+        event_builder.add_event_coordinate(1.5, 1.5)
+        event_builder.add_event_type("section-enter")
+        event_builder.append_section_event()
+
+        event_builder.add_microsecond(2)
+        event_builder.add_frame_number(3)
+        event_builder.add_event_coordinate(3, 1.5)
+        event_builder.add_event_type("section-leave")
+        event_builder.append_section_event()
+
+        event_builder.add_microsecond(3)
+        event_builder.add_frame_number(4)
+        event_builder.add_event_coordinate(1.5, 1.5)
+        event_builder.add_event_type("section-enter")
+        event_builder.append_section_event()
+
+        event_builder.add_microsecond(4)
+        event_builder.add_frame_number(5)
+        event_builder.add_event_coordinate(3, 1.5)
+        event_builder.add_event_type("section-leave")
+        event_builder.append_section_event()
+
+        expected_events = event_builder.build_events()
+
+        assert result_events == expected_events
+
+    def test_intersect_track_starts_inside_section_with_multiple_intersections(
+        self,
+        area: Area,
+        detection: Detection,
+        track_builder: TrackBuilder,
+        event_builder: EventBuilder,
+    ) -> None:
+        mock_implementation = Mock()
+        mock_implementation.are_coordinates_within_polygon.return_value = [
+            True,
+            False,
+            True,
+            False,
+        ]
+
+        track_builder.add_xy_bbox(1.5, 1.5)
+        track_builder.add_frame(2)
+        track_builder.occurrence_microsecond = 1
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(3, 1.5)
+        track_builder.add_frame(3)
+        track_builder.occurrence_microsecond = 2
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.5, 1.5)
+        track_builder.add_frame(4)
+        track_builder.occurrence_microsecond = 3
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(3, 1.5)
+        track_builder.add_frame(5)
+        track_builder.occurrence_microsecond = 4
+        track_builder.append_detection()
+
+        track = track_builder.build_track()
+
+        section_event_builder = SectionEventBuilder()
+        section_event_builder.add_section_id(area.id)
+        section_event_builder.add_direction_vector(detection, detection)
+
+        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        result_events = intersector.intersect(track, section_event_builder)
+
+        event_builder.add_microsecond(1)
+        event_builder.add_frame_number(2)
+        event_builder.add_event_coordinate(1.5, 1.5)
+        event_builder.add_event_type("section-enter")
+        event_builder.append_section_event()
+
+        event_builder.add_microsecond(2)
+        event_builder.add_frame_number(3)
+        event_builder.add_event_coordinate(3, 1.5)
+        event_builder.add_event_type("section-leave")
+        event_builder.append_section_event()
+
+        event_builder.add_microsecond(3)
+        event_builder.add_frame_number(4)
+        event_builder.add_event_coordinate(1.5, 1.5)
+        event_builder.add_event_type("section-enter")
+        event_builder.append_section_event()
+
+        event_builder.add_microsecond(4)
+        event_builder.add_frame_number(5)
+        event_builder.add_event_coordinate(3, 1.5)
+        event_builder.add_event_type("section-leave")
+        event_builder.append_section_event()
+
+        expected_events = event_builder.build_events()
+
+        assert result_events == expected_events
+
+    @staticmethod
+    def compare_events(first: Event, second: Event) -> None:
+        assert first.road_user_id == second.road_user_id
+        assert first.road_user_type == second.road_user_type
+        assert first.hostname == second.hostname
+        assert first.frame_number == second.frame_number
+        assert first.section_id == second.section_id
+        assert first.event_coordinate.x == second.event_coordinate.x
+        assert first.event_coordinate.y == second.event_coordinate.y
+        assert first.event_coordinate == second.event_coordinate
+        assert first.event_type == second.event_type
+        assert first.direction_vector == second.direction_vector
+        assert first.video_name == second.video_name

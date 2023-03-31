@@ -30,3 +30,9 @@ class ShapelyMapper:
         """Map a shapely `LineString` to a domain `Line` geometry."""
         coords = [Coordinate(coord[0], coord[1]) for coord in line.coords]
         return Line(coords)
+
+    @staticmethod
+    def map_to_tuple_coordinates(
+        coordinates: list[Coordinate],
+    ) -> list[tuple[float, float]]:
+        return [(coordinate.x, coordinate.y) for coordinate in coordinates]

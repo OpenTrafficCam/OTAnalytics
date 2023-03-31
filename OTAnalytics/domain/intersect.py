@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from OTAnalytics.domain.event import Event, EventBuilder
+from OTAnalytics.domain.event import Event, EventBuilder, EventType
 from OTAnalytics.domain.geometry import (
     Coordinate,
     Line,
@@ -74,6 +74,26 @@ class IntersectImplementation(ABC):
 
         Returns:
             float: the distance
+        """
+        pass
+
+    @abstractmethod
+    def are_coordinates_within_polygon(
+        self, coordinates: list[Coordinate], polygon: Polygon
+    ) -> list[bool]:
+        """Checks if coordinates are within a polygon.
+
+        A coordinate is within a polygon if it is enclosed by it. Meaning that a point
+        sitting on the boundary of a polygon is treated as not being within it.
+
+        Args:
+            coordinates (list[Coordinate]): the coordinates to check if they are
+                contained by the polygon
+            polygon (Polygon): the polygon
+
+        Returns:
+            list[bool]: the boolean mask holding information whether a point is within
+                a polygon or not
         """
         pass
 
@@ -287,6 +307,11 @@ class AreaIntersector(Intersector):
         super().__init__(implementation)
         self._area = area
 
+
+class IntersectAreaByTrackPoints(AreaIntersector):
+    def __init__(self, implementation: IntersectImplementation, area: Area) -> None:
+        super().__init__(implementation, area)
+
     def intersect(
         self, track: Track, event_builder: EventBuilder
     ) -> Optional[list[Event]]:
@@ -295,26 +320,42 @@ class AreaIntersector(Intersector):
         Returns:
             bool: `True` if area intersects detection. Otherwise `False`.
         """
-        # area_as_geometry = Polygon(self._area.coordinates)
-        # intersected_detections: list[Detection] = []
-        # for first_detection, second_detection in zip(
-        #     track.detections[0:-1], track.detections[1:]
-        # ):
-        #     detection_as_geometry = Line(
-        #         [
-        #             Coordinate(first_detection.x, first_detection.y),
-        #             Coordinate(second_detection.x, second_detection.y),
-        #         ]
-        #     )
-        #     intersects = self.implementation.line_intersects_polygon(
-        #         detection_as_geometry, area_as_geometry
-        #     )
-        #     if intersects:
-        #         intersected_detections.append(first_detection)
+        area_as_polygon = Polygon(self._area.coordinates)
+        offset = self._area.relative_offset_coordinates[EventType.SECTION_ENTER]
 
-        # if intersected_detections:
-        #     selected_detection = intersected_detections[0]
-        #     return [event_builder.create_event(selected_detection)]
+        track_coordinates: list[Coordinate] = [
+            self._select_coordinate_in_detection(detection, offset)
+            for detection in track.detections
+        ]
+        mask = self.implementation.are_coordinates_within_polygon(
+            track_coordinates, area_as_polygon
+        )
+        events: list[Event] = []
 
-        # return None
-        raise NotImplementedError
+        event_builder.add_road_user_type(track.classification)
+        track_starts_inside_area = mask[0]
+
+        if track_starts_inside_area:
+            first_detection = track.detections[0]
+            event_builder.add_event_type(EventType.SECTION_ENTER)
+            event_builder.add_road_user_type(first_detection.classification)
+            event = event_builder.create_event(first_detection)
+            events.append(event)
+
+        section_currently_entered = track_starts_inside_area
+        for current_detection, entered in zip(track.detections[1:], mask[1:]):
+            if section_currently_entered == entered:
+                continue
+
+            if entered:
+                event_builder.add_event_type(EventType.SECTION_ENTER)
+            else:
+                event_builder.add_event_type(EventType.SECTION_LEAVE)
+
+            event = event_builder.create_event(current_detection)
+            events.append(event)
+            section_currently_entered = entered
+
+        if events:
+            return events
+        return None
