@@ -29,6 +29,10 @@ class RunIntersect:
         self._intersect_implementation = intersect_implementation
 
     def run(self) -> None:
+        """
+        Intersect all tracks with all sections and write the result into the event
+        repository.
+        """
         tracks = self._track_repository.get_all()
         sections = self._section_repository.get_all()
         events = self._intersect(tracks, sections)
