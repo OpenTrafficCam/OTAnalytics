@@ -7,20 +7,25 @@ from typing import Any
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
 from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionRepository
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 
 
 class FrameSections(CTkFrame):
-    def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        application: OTAnalyticsApplication,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self._application = application
-        self._get_widgets()
+        self._get_widgets(self._application._datastore._section_repository)
         self._place_widgets()
 
-    def _get_widgets(self) -> None:
+    def _get_widgets(self, section_repository: SectionRepository) -> None:
         self.label = CTkLabel(master=self, text="Sections")
-        self.listbox_sections = TreeviewSections(master=self)
+        self.listbox_sections = TreeviewSections(section_repository, master=self)
         self.button_load_sections = CTkButton(
             master=self, text="Load", command=self._load_sections_in_file
         )
@@ -66,14 +71,15 @@ class FrameSections(CTkFrame):
         self._application.add_sections_of_file(Path(sections_file))
 
 
-class TreeviewSections(Treeview):
-    def __init__(self, **kwargs: Any) -> None:
+class TreeviewSections(Treeview, SectionListObserver):
+    def __init__(self, section_repository: SectionRepository, **kwargs: Any) -> None:
         super().__init__(show="tree", **kwargs)
+        self._section_repository = section_repository
+        self._section_repository.register_sections_observer(self)
         self.bind("<ButtonRelease-3>", self._deselect_sections)
         self._define_columns()
         # This call should come from outside later
-        sections = ["North", "West", "South", "East"]
-        self.add_sections(sections=sections)
+        self._update_sections()
 
     def _define_columns(self) -> None:
         self["columns"] = "Section"
@@ -81,9 +87,19 @@ class TreeviewSections(Treeview):
         self.column(column="Section", anchor="center", width=80, minwidth=40)
         self["displaycolumns"] = "Section"
 
-    def add_sections(self, sections: list[str]) -> None:
-        for id, section in enumerate(sections):
-            self.insert(parent="", index="end", iid=str(id), text="", values=[section])
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        self._update_sections()
+
+    def _update_sections(self) -> None:
+        self.delete(*self.get_children())
+        sections = [section.id for section in self._section_repository.get_all()]
+        self.add_sections(sections=sections)
+
+    def add_sections(self, sections: list[SectionId]) -> None:
+        for section in sections:
+            self.insert(
+                parent="", index="end", iid=section.id, text="", values=[section.id]
+            )
 
     def _deselect_sections(self, event: Any) -> None:
         for item in self.selection():
