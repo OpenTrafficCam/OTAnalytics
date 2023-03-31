@@ -14,6 +14,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkVideoParser,
 )
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
@@ -52,14 +53,18 @@ class OTAnalyticsGui:
         self.frame_canvas = FrameCanvas(master=self._app, application=self._application)
         self.frame_tracks = FrameTracks(master=self._app, application=self._application)
         self.frame_sections = FrameSections(master=self._app)
+        self.frame_analysis = FrameAnalysis(
+            master=self._app, application=self._application
+        )
 
     def _place_widgets(self) -> None:
         PADY = 10
         self.frame_canvas.grid(
-            row=0, column=0, rowspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=0, rowspan=3, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_sections.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _wire_widgets(self) -> None:
         self._application.track_state.register(self.frame_canvas)

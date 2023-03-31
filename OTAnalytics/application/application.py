@@ -56,3 +56,7 @@ class OTAnalyticsApplication:
             the image can be loaded
         """
         return self._datastore.get_image_of_track(track_id)
+
+    def start_analysis(self) -> None:
+        print("Started")
+        pass
