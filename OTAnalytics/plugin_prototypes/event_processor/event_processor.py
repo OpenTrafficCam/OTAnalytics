@@ -1,5 +1,4 @@
 # % Import libraries and modules
-import numpy as np
 import pandas as pd
 
 from OTAnalytics.plugin_parser.otanalytics_parser import (
@@ -72,14 +71,5 @@ class EventProcessor:
         ]["road_user_id"]
 
         events_df = events_df[events_df["road_user_id"].isin(valid_road_user_ids)]
-
-        # chose max class by sum of confidence
-
-        events_df["confidence"] = np.where(
-            events_df["road_user_type"] == "car", 1, 0.99
-        )
-        events_df["max_class"] = events_df["road_user_id"].map(
-            self._max_class(events_df)
-        )
 
         return events_df.sort_values(["road_user_id", "occurrence"])
