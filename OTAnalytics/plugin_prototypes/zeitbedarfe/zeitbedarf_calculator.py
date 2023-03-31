@@ -6,6 +6,7 @@ import pandas as pd
     JsonParser,
     PandasDataFrameParser,
 )"""
+from OTAnalytics.plugin_parser.otanalytics_parser import JsonParser
 from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser
 
 # from OTAnalytics.plugin_prototypes.counter.event_counter import CountsProcessor
@@ -18,14 +19,14 @@ class ZeitbedarfsProcessor:
         self.TIME_FORMAT = config["TIME_FORMAT"]
         self.FROM_TIME = config["FROM_TIME"]
         self.TO_TIME = config["TO_TIME"]
-        self.INTERVAL_LENGTH_MIN = config["INTERVAL_LENGTH_MIN"]
-        self.SECTIONSLIST_PATH = config["SECTIONSLIST_PATH"]
-        self.EVENTS = events
 
         otsection_parser = OtsectionParser()
-        self.SECTIONS = otsection_parser.parse(self.SECTIONSLIST_PATH)
+        self.SECTIONS = otsection_parser.parse(config["SECTIONSLIST_PATH"])
 
-        self.SIGNALPROG = pd.read_csv(config["SIGNALPROG_PATH"])
+        signalprog = pd.read_csv(config["SIGNALPROG_PATH"])
+        signalprogmapper = JsonParser.from_dict(config["SIGNALPROG_MAPPER_PATH"])
+
+        signalprog = self._reshape_signal_program_data(signalprog, signalprogmapper)
 
         if self.FROM_TIME != "":
             from_time_formatted = pd.to_datetime(self.FROM_TIME)
@@ -45,5 +46,29 @@ class ZeitbedarfsProcessor:
         self.INTERVALS = pd.date_range(
             start_time,
             end_time - pd.Timedelta("1s"),
-            freq=f"{self.INTERVAL_LENGTH_MIN}min",
+            freq=f"{config['INTERVAL_LENGTH_MIN']}min",
         )
+
+        self.EVENTS = pd.concat([events, signalprog]).sort_values(["occurrence"])
+
+    def _reshape_signal_program_data(
+        self, signalprog: pd.DataFrame, signalprogmapper: dict
+    ) -> pd.DataFrame:
+        signal_prog = signalprog[["d_time", "sig_name", "sig_status"]].rename(
+            {
+                "d_time": "occurrence",
+                "sig_name": "section_id",
+                "sig_status": "event_type",
+            }
+        )
+
+        signal_prog["section_id"] = signal_prog["section_id"].map(
+            signalprogmapper["signal_names_to_section_ids"]
+        )
+        signal_prog["event_type"] = signal_prog["event_type"].map(
+            signalprogmapper["signal_status_to_event_types"]
+        )
+
+        return signal_prog
+
+        pass
