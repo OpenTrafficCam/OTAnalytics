@@ -85,11 +85,12 @@ class ApplicationStarter:
         OTAnalyticsCli(datastore).start()
 
     def build_dependencies(self) -> dict[str, Any]:
+        datastore = self._create_datastore()
         return {
-            "datastore": self._create_datastore(),
+            "datastore": datastore,
             "track_state": self._create_track_state(),
             "section_state": self._create_section_state(),
-            "intersect": self._create_intersect(),
+            "intersect": self._create_intersect(datastore),
         }
 
     def _create_datastore(self) -> Datastore:
@@ -108,9 +109,12 @@ class ApplicationStarter:
     def _create_section_state(self) -> SectionState:
         return SectionState()
 
-    def _create_intersect(self) -> RunIntersect:
+    def _create_intersect(self, datastore: Datastore) -> RunIntersect:
         return RunIntersect(
+            datastore._track_repository,
+            datastore._section_repository,
+            datastore._event_repository,
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
-            )
+            ),
         )

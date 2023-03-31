@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import Optional
 
-from domain.event import Event
-
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState
@@ -66,11 +64,7 @@ class OTAnalyticsApplication:
         return self._datastore.get_image_of_track(track_id)
 
     def start_analysis(self) -> None:
-        events: list[Event] = self._intersect.run(
-            tracks=self._datastore._track_repository.get_all(),
-            sections=self._datastore._section_repository.get_all(),
-        )
-        self._datastore._event_repository.add_all(events)
+        self._intersect.run()
 
     def save_events(self, file: Path) -> None:
         self._datastore.save_event_list_file(file)

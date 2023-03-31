@@ -1,13 +1,13 @@
 from typing import Iterable
 
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain.event import Event, SectionEventBuilder
+from OTAnalytics.domain.event import Event, EventRepository, SectionEventBuilder
 from OTAnalytics.domain.intersect import (
     IntersectBySplittingTrackLine,
     IntersectImplementation,
 )
-from OTAnalytics.domain.section import LineSection, Section
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.section import LineSection, Section, SectionRepository
+from OTAnalytics.domain.track import Track, TrackRepository
 
 
 class RunIntersect:
@@ -16,10 +16,27 @@ class RunIntersect:
     sections
     """
 
-    def __init__(self, intersect_implementation: IntersectImplementation) -> None:
+    def __init__(
+        self,
+        track_repository: TrackRepository,
+        section_repository: SectionRepository,
+        event_repository: EventRepository,
+        intersect_implementation: IntersectImplementation,
+    ) -> None:
+        self._track_repository = track_repository
+        self._section_repository = section_repository
+        self._event_repository = event_repository
         self._intersect_implementation = intersect_implementation
 
-    def run(self, tracks: Iterable[Track], sections: Iterable[Section]) -> list[Event]:
+    def run(self) -> None:
+        tracks = self._track_repository.get_all()
+        sections = self._section_repository.get_all()
+        events = self._intersect(tracks, sections)
+        self._event_repository.add_all(events)
+
+    def _intersect(
+        self, tracks: Iterable[Track], sections: Iterable[Section]
+    ) -> list[Event]:
         events: list[Event] = []
         for _track in tracks:
             for _section in sections:
