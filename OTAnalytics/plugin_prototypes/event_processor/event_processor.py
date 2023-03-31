@@ -18,20 +18,6 @@ class EventProcessor:
         self.TO_TIME = config["TO_TIME"]
         self.INTERVAL_LENGTH_MIN = config["INTERVAL_LENGTH_MIN"]
 
-    def _max_class(self, data: pd.DataFrame) -> dict:
-        tmp = data[["road_user_type", "road_user_id", "confidence"]]
-        map_df = (
-            tmp.groupby(["road_user_id", "road_user_type"])
-            .agg({"confidence": sum})
-            .reset_index()
-        )
-
-        class_map = {
-            map_df.loc[i, "road_user_id"]: map_df.loc[i, "road_user_type"]
-            for i in map_df.groupby("road_user_id")["confidence"].idxmax()
-        }
-        return class_map
-
     def process_events(self) -> pd.DataFrame:
         # Import Eventlist
         eventlist_dict = JsonParser.from_dict(self.EVENTLIST_PATH)
