@@ -146,6 +146,9 @@ class FrameSection(tk.LabelFrame):
     def create_section_entry_window(self):
         """Creates toplevel window to name view.sections."""
 
+
+        file_helper.selectionlist_objects = []             
+
         # only if line or polygon creation is activate
         if button_bool["linedetector_toggle"] or button_bool["polygondetector_toggle"]:
 
