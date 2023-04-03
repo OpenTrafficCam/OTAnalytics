@@ -53,8 +53,7 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
         file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file = filename
 
     filepath = files
-    print(f"FILEPATH = {filepath}")
-    #test
+
     with bz2.open(filepath, "rt", encoding=ENCODING) as input:
         loaded_dict = ujson.load(input)
 
@@ -102,11 +101,11 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
             )
             tracks_dic[detection["track-id"]]["Confidence"].append(detection["confidence"])
 
-        elif detection["class"] in color_dict.keys():
+       
+        else:
             vehicle_class = detection["class"]
 
             if vehicle_class not in bbox_factor_reference.keys():
-
                 vehicle_class = "unclear"
 
             tracks_dic[(detection["track-id"])] = {
@@ -137,7 +136,6 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     if not tracks_dic:
         #TODO ABORT MESSAGE
         return None, None, None, None
-
     # only valid track when more than one detection
     # only for drawing on canvas due to better df-loc with frames
     tracks_df = create_tracks_dataframe(tracks_dic)
