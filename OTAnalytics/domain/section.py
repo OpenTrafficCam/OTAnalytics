@@ -294,7 +294,7 @@ class SectionRepository:
         """Internal method to add sections without notifying observers.
 
         Args:
-            section (Section): _description_
+            section (Section): the section to be added
         """
         self._sections[section.id] = section
 

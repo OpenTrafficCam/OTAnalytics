@@ -52,7 +52,7 @@ class VideoReader(ABC):
             index (int): the index of the frame to get.
 
         Returns:
-            ndarray: the frame.
+            TrackImage: the frame.
         """
         pass
 
@@ -86,7 +86,7 @@ class Video:
             index (int): the index of the frame to get.
 
         Returns:
-            ndarray: the frame.
+            TrackImage: the frame.
         """
         return self.video_reader.get_frame(self.path, index)
 
