@@ -197,6 +197,7 @@ def draw_selected_tracks(np_image, selectionlist, tracks_df):
 
 def draw_bounding_box_with_df(frame, np_image):
 
+
     if not button_bool["display_bb"]:
         return np_image
 

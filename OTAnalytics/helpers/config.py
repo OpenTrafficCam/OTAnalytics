@@ -4,6 +4,11 @@ E.g. (0,0) for top-left corner, (1,0) for top-right corner,
 (0,1) for bottom-left corner, (1,1) for bottom-right corner
 """
 
+
+
+ENCODING = "UTF-8"
+COMPRESSED_FILETYPE = ".bz2"
+
 bbox_factor_reference = {
     "car": (1, 0.5),
     "bicycle": (0.5, 0.5),
@@ -18,4 +23,3 @@ bbox_factor_reference = {
 
 maincanvas = None
 sliderobject = None
-

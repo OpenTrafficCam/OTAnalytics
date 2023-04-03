@@ -220,8 +220,7 @@ class gui(tk.Tk):
 
                 filepath = f"{path}/{file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file}"
 
-                files = open(filepath, "r")
-                files = files.read()           
+     
 
                 (
                 file_helper.list_of_analyses[file_helper.list_of_analyses_index].raw_detections,
@@ -232,7 +231,7 @@ class gui(tk.Tk):
                     x_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor,
                     y_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor,
                     autoimport=True,
-                    files=files,
+                    files=filepath,
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
