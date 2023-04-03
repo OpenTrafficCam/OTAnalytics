@@ -163,7 +163,7 @@ class Video(FileVideoStream):
         super().__init__(filepath, **kwargs)
 
         self.filename = filepath.split("/")[-1]
-        print(self.filename)
+
 
         # start a thread to read frames from the file video stream
         self.start_thread_forward()
@@ -192,11 +192,22 @@ class Video(FileVideoStream):
 
             #
             self.y_resize_factor = self.height / self.videoheight
-            self.width = int(self.videowidth * self.y_resize_factor)
+            print(self.height)
+            print(self.videoheight)
 
-            self.x_resize_factor = self.width / self.videowidth
+            self.x_resize_factor =  self.y_resize_factor
+
+            print(self.x_resize_factor)
+            print(self.y_resize_factor)
+            print(self.videoheight)
+            print(self.videowidth)
+
+            self.width = int(self.videowidth * self.x_resize_factor)
+            self.height = int(self.videoheight * self.y_resize_factor)
+
 
         else:
+
             self.x_resize_factor = 1
             self.y_resize_factor = 1
 

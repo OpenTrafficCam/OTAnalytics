@@ -2,6 +2,8 @@ import time
 import tkinter as tk
 from tkinter import filedialog
 import tkinter.ttk as ttk
+import glob
+import os
 
 from view.helpers.gui_helper import (
     button_play_video_switch,
@@ -14,6 +16,7 @@ import helpers.file_helper as file_helper
 import helpers.config
 import view.image_alteration
 import helpers.file_helper as file_helper
+from analyse.analyse_class import Analyse
 
 
 
@@ -36,7 +39,9 @@ class FrameFiles(tk.LabelFrame):
 
         # Files treeview
         self.tree_files = ttk.Treeview(master=self.frame_tree, height=3)
-        self.tree_files.pack(fill="x", ipady=10)
+        self.tree_files.pack(fill="x", ipady=10)      
+        self.tree_files.bind('<ButtonRelease-1>',self.video_selection, add="+")
+        self.tree_files.bind('<ButtonRelease-1>',self.multi_video_selection, add="+")
 
         tree_files_cols = {
             "#0": "Video",
@@ -101,6 +106,14 @@ class FrameFiles(tk.LabelFrame):
 
         self.button_rewind_video.grid(row=0, column=2, pady=(0, 10), sticky="ew")
 
+        # Add folder
+        self.button_add_folder = tk.Button(
+            master=self.frame_control,
+            width=15,
+            text="Add folder"        
+            
+        )
+        self.button_add_folder.grid(row=0, column=4, pady=(0, 10), sticky="ew")
         # Clear Video
         self.button_remove_video = tk.Button(
             master=self.frame_control,
@@ -110,38 +123,48 @@ class FrameFiles(tk.LabelFrame):
         )
         self.button_remove_video.grid(row=0, column=3, pady=(0, 10), sticky="ew")
 
+
     def add_file(self):
 
         # load video object
-        video_source = filedialog.askopenfile(
+        video_sources = filedialog.askopenfilenames(
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
-        helpers.config.videoobject = Video(video_source.name)
-
-        path = file_helper.get_dir(video_source.name)
-
-        self.add_files_to_dict(path)
-
-        self.files_dict[path]["video_name"] = file_helper.get_filename(
-            video_source.name
-        )
-
-        self.update_files_dict_values(path)
+        if video_sources:
+            i=0
+            for video_source in video_sources:
+                print(video_source)
+                
+                file_helper.list_of_analyses_index = i 
+                file_helper.list_of_analyses.insert(0,Analyse(video_source))
 
         self.update_tree_files()
 
+    def add_folder(self):
+        videpath_folder = filedialog.askdirectory()
+
+        file_list = [videpath_folder + "/" + file for file in os.listdir(videpath_folder) if file.endswith('.mp4')]
+
+        for video_path in file_list:
+            file_helper.list_of_analyses.insert(0,Analyse(video_path))
+            self.update_tree_files()
+
     def add_canvas_frame(self):
 
-        image = helpers.config.videoobject.get_frame(np_image=False)
+        np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=True)
+
 
         helpers.config.maincanvas.configure(
-            width=helpers.config.videoobject.width,
-            height=helpers.config.videoobject.height,
+            width=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.width,
+            height=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.height,
         )
-
+        #re intialisize Slider if already existed
+        if helpers.config.sliderobject.slider is not None:
+            helpers.config.sliderobject.destroy_slider()
+        #creates slider and sets value to 0
         helpers.config.sliderobject.create_slider()
-
-        helpers.config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
+        view.image_alteration.manipulate_image(np_image=np_image)
+        #helpers.config.maincanvas.create_image(0, 0, anchor=tk.NW, image=image)
 
     def add_files_to_dict(self, path):
         self.files_dict[path] = {}
@@ -167,53 +190,93 @@ class FrameFiles(tk.LabelFrame):
         )
 
     def update_tree_files(self):
-        for path, file_values in self.files_dict.items():
+        TRUE_SYMBOL = "\u2705"  # "\u2713"  # "\u2714"
+        FALSE_SYMBOL = "\u274E"  # "\u2717"  # "\u2718"       
+
+        self.tree_files.delete(*self.tree_files.get_children())
+
+        for analyses in file_helper.list_of_analyses:
             self.tree_files.insert(
                 parent="",
                 index="end",
-                text=file_values["video_name"],
+                text=analyses.videoobject.filename,
                 values=(
-                    file_values["ottrk_file"],
-                    file_values["otflow_file"],
-                ),
-            )
+                    TRUE_SYMBOL if analyses.trackfile_existence else FALSE_SYMBOL,
+                    TRUE_SYMBOL if analyses.flowfile_existence else FALSE_SYMBOL,
+                ),)
+        
+        # always keep first row selected
+        iid = self.tree_files.get_children()[0]
+        self.tree_files.selection_set(iid)
+
+    def video_selection(self, event):
+
+            selected_iid = self.tree_files.selection()[0]
+            current_idx = self.tree_files.index(selected_iid)
+
+            if current_idx == file_helper.list_of_analyses_index:
+                print("nothing happend")
+                return
+            
+            #clear selected track
+            file_helper.selectionlist_objects = []
+
+            file_helper.list_of_analyses_index = current_idx
+
+            self.add_canvas_frame()
+
+            print('Current Row:',current_idx)
+
+    def multi_video_selection(self, event):
+        """Re draws detectors, where the selected detectors has different color
+
+    Args:
+        event (tkinter.event): Section selection from  listbox.
+    """
+        file_helper.selectionlist_videofiles = []
+
+        for item in self.tree_files.selection():
+            videofiles_index =self.tree_files.index(item)
+            file_helper.selectionlist_videofiles.append(videofiles_index)
+        print(file_helper.selectionlist_videofiles)
+            
 
     def play_video(self):
         """Function to play video."""
         # TODO workaround to not use try except
         try:
-            helpers.config.videoobject.stop_thread_backward()
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.stop_thread_backward()
         except Exception:
             print("No backwardthread alive")
 
-        for object in list(file_helper.tracks_dic.keys()):
+        for object in list(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic.keys()):
 
             # tracks disappear when videoplaying is stopped
             file_helper.tracks_live[object] = []
 
         while (
             button_bool["play_video"]
-            and helpers.config.videoobject.current_frame
-            < helpers.config.videoobject.totalframecount
+            and file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame
+            < file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.totalframecount
         ):
 
-            if not helpers.config.videoobject.thread_forward.is_alive():
-                helpers.config.videoobject.new_q()
-                helpers.config.videoobject.new_thread_forward()
-                helpers.config.videoobject.start_thread_forward()
+            if not file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.thread_forward.is_alive():
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.new_q()
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.new_thread_forward()
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.start_thread_forward()
                 # time.sleep(0.1)
 
 
-            time.sleep(helpers.config.videoobject.frame_delay)
+            time.sleep(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.frame_delay)
 
-            helpers.config.videoobject.current_frame += 1
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame += 1
 
-            np_image = helpers.config.videoobject.get_frame(np_image=True).copy()
+            np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=True).copy()
 
             view.image_alteration.manipulate_image(np_image=np_image)
 
             helpers.config.sliderobject.slider.set(
-                helpers.config.videoobject.current_frame
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame
             )
 
     def rewind_video(self):
@@ -221,54 +284,56 @@ class FrameFiles(tk.LabelFrame):
 
         # stop old thread
 
-        helpers.config.videoobject.stop_thread_forward()
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.stop_thread_forward()
 
         while (
             button_bool["rewind_video"]
-            and helpers.config.videoobject.current_frame
-            < helpers.config.videoobject.totalframecount
-            and helpers.config.videoobject.current_frame > 0
+            and file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame
+            < file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.totalframecount
+            and file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame > 0
         ):
-            if not helpers.config.videoobject.thread_backward.is_alive():
-                helpers.config.videoobject.new_q()
-                helpers.config.videoobject.new_thread_backward()
-                helpers.config.videoobject.start_thread_backward()
+            if not file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.thread_backward.is_alive():
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.new_q()
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.new_thread_backward()
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.start_thread_backward()
                 # time.sleep(0.1)
 
-            time.sleep(helpers.config.videoobject.frame_delay)
+            time.sleep(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.frame_delay)
 
-            helpers.config.videoobject.current_frame -= 1
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame -= 1
 
-            np_image = helpers.config.videoobject.get_frame(np_image=True)
+            np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.get_frame(np_image=True)
 
             view.image_alteration.manipulate_image(np_image=np_image)
             # slows down program
             helpers.config.sliderobject.slider.set(
-                helpers.config.videoobject.current_frame
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame
             )
 
     def remove_video(self):
         """removes videofile"""
-        self.files_dict = {}
-        item = self.tree_files.selection()
-        video_name = self.tree_files.item(item, "text")
 
-        if not video_name:
+        if not file_helper.selectionlist_videofiles:
             info_message("Warning", "Please select video you wish to delete!")
 
             return
 
-        for item in self.tree_files.selection():
-            # item_text = self.tree_files.item(item, "values")
-
-            self.tree_files.delete(item)
-
-        self.file_values = []
+        for index in file_helper.selectionlist_videofiles:
+            iid = self.tree_files.get_children()[index]
+            self.tree_files.delete(iid)
+            del file_helper.list_of_analyses[index]
 
         helpers.config.maincanvas.configure(width=0, height=0)
 
         helpers.config.sliderobject.destroy_slider()
 
-        helpers.config.videoobject = None
+        if file_helper.list_of_analyses:
+
+            file_helper.list_of_analyses_index = 0
+            self.add_canvas_frame()
+
+
+
+
 
 

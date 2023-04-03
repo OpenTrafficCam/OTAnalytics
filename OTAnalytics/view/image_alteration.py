@@ -11,7 +11,6 @@ import helpers.config
 import helpers.file_helper as file_helper
 from view.sections import draw_line, draw_polygon
 from helpers.config import bbox_factor_reference
-import time
 
 
 def manipulate_image(np_image=None, closing=False):
@@ -29,36 +28,36 @@ def manipulate_image(np_image=None, closing=False):
         current and last twenty frames.
         raw_detections (dictionary): Dictionary with raw detections from OpenVision.
     """
-    if not helpers.config.videoobject:
+    if not file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject:
         return
 
     if np_image is None:
-        np_image = helpers.config.videoobject.np_image.copy()
+        np_image = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.np_image.copy()
 
     np_image = draw_detectors_from_dict(np_image)
     
-    if button_bool["tracks_imported"]:
+    if file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file:
 
         np_image = draw_selected_tracks(
             np_image,
             selectionlist=file_helper.selectionlist_objects,
-            tracks_df=file_helper.tracks_df,
+            tracks_df=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df,
         )
         
-        np_image = draw_bounding_box_with_df(helpers.config.videoobject.current_frame,np_image )
+        np_image = draw_bounding_box_with_df(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame,np_image )
 
-        np_image = draw_tracks_live_with_df(helpers.config.videoobject.current_frame,np_image)
+        np_image = draw_tracks_live_with_df(file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.current_frame,np_image)
 
-    if button_bool["display_all_tracks_toggle"] and button_bool["tracks_imported"]:
+    if button_bool["display_all_tracks_toggle"] and file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df is not None:
 
-        if helpers.config.videoobject.transparent_image is None:
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.transparent_image is None:
 
             # creates transparent_image and draws all tracks on it
             # so all tracks dont have to be drawn everytime
-            helpers.config.videoobject.transparent_image = draw_all_tracks()
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.transparent_image = draw_all_tracks()
 
         np_image = cv2.addWeighted(
-            helpers.config.videoobject.transparent_image, 0.5, np_image, 1, 0
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.transparent_image, 0.5, np_image, 1, 0
         )
 
     # copy is important or else original image will be changed
@@ -79,10 +78,10 @@ def manipulate_image(np_image=None, closing=False):
 
     image = Image.fromarray(np_image)  # to PIL format
 
-    helpers.config.videoobject.ph_image = ImageTk.PhotoImage(image)
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.ph_image = ImageTk.PhotoImage(image)
 
     helpers.config.maincanvas.create_image(
-        0, 0, anchor=tkinter.NW, image=helpers.config.videoobject.ph_image
+        0, 0, anchor=tkinter.NW, image=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.ph_image
     )
 
     helpers.config.maincanvas.update()
@@ -92,18 +91,17 @@ def draw_all_tracks():
 
     np_image = np.zeros(
         [
-            helpers.config.videoobject.height,
-            helpers.config.videoobject.width,
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.height,
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.width,
             4,
         ],
         dtype=np.uint8,
     )
 
-    for index, track in file_helper.tracks_df.iterrows():
+    for index, track in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.iterrows():
         try:
             trackcolor = color_dict[track["Class"]] + (200,)
         except:
-            print("Class not found")
             trackcolor = (
                 0,
                 0,
@@ -132,10 +130,10 @@ def draw_detectors_from_dict(np_image):
 
         for detector in file_helper.flow_dict["Detectors"]:
             if file_helper.flow_dict["Detectors"][detector]["type"] == Line:
-                start_x = file_helper.flow_dict["Detectors"][detector]["start_x"]
-                start_y = file_helper.flow_dict["Detectors"][detector]["start_y"]
-                end_x = file_helper.flow_dict["Detectors"][detector]["end_x"]
-                end_y = file_helper.flow_dict["Detectors"][detector]["end_y"]
+                start_x = int(file_helper.flow_dict["Detectors"][detector]["start_x"])
+                start_y = int(file_helper.flow_dict["Detectors"][detector]["start_y"])
+                end_x = int(file_helper.flow_dict["Detectors"][detector]["end_x"])
+                end_y = int(file_helper.flow_dict["Detectors"][detector]["end_y"])
                 color = file_helper.flow_dict["Detectors"][detector]["color"]
 
                 np_image = cv2.line(
@@ -199,11 +197,12 @@ def draw_selected_tracks(np_image, selectionlist, tracks_df):
 
 def draw_bounding_box_with_df(frame, np_image):
 
+
     if not button_bool["display_bb"]:
         return np_image
 
         
-    df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
+    df = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.loc[(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df['first_appearance_frame'] <= frame) & (file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df['last_appearance_frame'] >= frame)]
 
     for index, row in df.iterrows():
         try:
@@ -238,23 +237,7 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
 
     bbcolor = color_dict[vehicle_class] + (255,)
 
-    cv2.rectangle(
-        np_image,
-        (
-            int(
-                x_start
-            ),
-            int(
-                y_start
-            ),
-        ),
-        (
-            int(x_end),
-            int(y_end),
-        ),
-        bbcolor,
-        2,
-    )
+    cv2.rectangle(np_image, (x_start, y_start), (x_end, y_end), bbcolor, 2)
 
     if w < 0.3 * 100:
         fontscale = 0.3
@@ -275,22 +258,22 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         np_image,
                         (
                             int(
-                                x_start * helpers.config.videoobject.x_resize_factor
+                                x_start
                             )
                             - 1,
                             int(
-                                y_start * helpers.config.videoobject.y_resize_factor
+                                y_start
                             )
                             - 1,
                         ),
                         (
                             int(
-                                x_start * helpers.config.videoobject.x_resize_factor
+                                x_start
                             )
                             + text_w
                             + 2,
                             int(
-                                y_start * helpers.config.videoobject.y_resize_factor
+                                y_start
                             )
                             - text_h
                             - 2,
@@ -302,16 +285,16 @@ def draw_bb_from_coordinates(x,y,w,h, np_image, vehicle_class, confidence):
                         anno_txt,
                         (
                             int(
-                                x_start * helpers.config.videoobject.x_resize_factor
+                                x_start
                             ),
                             int(
-                                y_start * helpers.config.videoobject.y_resize_factor
+                                y_start
                             )
                             - 2,
                         ),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         fontscale,
-                        (255, 255, 255),
+                        (255, 255, 255,255),
                         1,
                     )
     draw_reference_cross(np_image,int(x), int(y), w, h, vehicle_class)
@@ -326,8 +309,8 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
     x_reference_point = int(x - 0.5 * w + w * bbox_factor_reference[vehicle_class][0])
     y_reference_point = int(y - 0.5 * h + h * bbox_factor_reference[vehicle_class][1])
 
-    x_reference_point = int(x_reference_point*helpers.config.videoobject.x_resize_factor)
-    y_reference_point = int(y_reference_point*helpers.config.videoobject.y_resize_factor)
+    x_reference_point = int(x_reference_point*1)
+    y_reference_point = int(y_reference_point*1)
 
     cv2.line(image, (x-5, y+5), (x+5, y-5), (255, 0, 0, 255), 2)
     cv2.line(image, (x-5, y-5), (x+5, y+5), (255, 0, 0, 255), 2)
@@ -335,8 +318,8 @@ def draw_reference_cross(image, x, y, w, h, vehicle_class):
 
 def draw_tracks_live_with_df(frame, np_image):
     #subset dataframe
-    if button_bool["tracks_imported"] and button_bool["play_video"] and button_bool["display_live_track"]:
-        df = file_helper.tracks_df.loc[(file_helper.tracks_df['first_appearance_frame'] <= frame) & (file_helper.tracks_df['last_appearance_frame'] >= frame)]
+    if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic and button_bool["play_video"] and button_bool["display_live_track"]:
+        df = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.loc[(file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df['first_appearance_frame'] <= frame) & (file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df['last_appearance_frame'] >= frame)]
 
         for index, row in df.iterrows():
             try:
@@ -344,7 +327,13 @@ def draw_tracks_live_with_df(frame, np_image):
                 vehicle_class = row["Class"]
                 trackcolor = color_dict[vehicle_class] + (255,)
 
-                list_of_points = row["Coord"][(index_of_frame-40):index_of_frame]
+                if index_of_frame-40 < 0:
+                    index_beginn = 0
+                else:
+                    index_beginn = index_of_frame-40
+
+                list_of_points = row["Coord"][(index_beginn):index_of_frame]
+
 
                 pts = np.array(list_of_points, np.int32)
 
@@ -366,9 +355,9 @@ def create_intersection_list(current_line_shape):
         current_line_shape (_type_): polygon or line
     """
 
-    if button_bool["tracks_imported"] and button_bool["display_all_tracks_toggle"]:
+    if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic and button_bool["display_all_tracks_toggle"]:
 
-        intersect_series = file_helper.tracks_geoseries.intersects(current_line_shape)
+        intersect_series = file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_geoseries.intersects(current_line_shape)
 
         file_helper.selectionlist_objects = [
             i for i in intersect_series.index if intersect_series[i]

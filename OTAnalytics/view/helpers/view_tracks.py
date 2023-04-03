@@ -102,7 +102,7 @@ class FrameObject(tk.LabelFrame):
             command=lambda: [
                 self.clear_treeview(),
                 deload_trackfile(),
-                helpers.config.videoobject.initialize_empty_image(),
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.initialize_empty_image(),
                 self.button_show_tracks.configure(text="Show all Tracks"),
                 view.image_alteration.manipulate_image()
                 ]
@@ -131,26 +131,30 @@ class FrameObject(tk.LabelFrame):
 
     def add_tracks(self):
         """Calls load_tracks-function and inserts tracks into listboxwdidget."""
+        print(f"index when add tracks is calles {file_helper.list_of_analyses_index}")
         (
-            file_helper.raw_detections,
-            file_helper.tracks_dic,
-            file_helper.tracks_df,
-            file_helper.tracks_geoseries,
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].raw_detections,
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic, 
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df,
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_geoseries,
         ) = load_and_convert(
-            x_resize_factor=helpers.config.videoobject.x_resize_factor,
-            y_resize_factor=helpers.config.videoobject.y_resize_factor,
+            x_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor,
+            y_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor,
         )
-        if file_helper.tracks_df.empty:
-            print("Importing trackfile not possible, most likely du to missing trajectories")
+        
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.empty:
+            print("Importing trackfile not possible, most likely due to missing trajectories")
             return
-        for object in file_helper.tracks_df.index:
+        self.insert_track_to_tree()
+
+    def insert_track_to_tree(self):
+        for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
             self.tree_objects.insert(
                 parent="",
                 index="end",
                 text=object,
-                values=file_helper.tracks_dic[object]["Class"],
+                values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
             )
-
         button_display_tracks_switch(self.button_show_tracks)
         view.image_alteration.manipulate_image()
 
@@ -167,6 +171,4 @@ class FrameObject(tk.LabelFrame):
     def clear_treeview(self):
         for i in self.tree_objects.get_children():
             self.tree_objects.delete(i)
-
-        
 

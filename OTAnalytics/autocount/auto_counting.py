@@ -1,10 +1,10 @@
 import heapq
-from tkinter import Button, Entry, Label, Toplevel, filedialog
-import helpers.config
+from tkinter import Button, Entry, Label, Toplevel
 import helpers.file_helper as file_helper
 import pandas as pd
-from shapely.geometry import LineString, Point, Polygon
-from view.helpers.gui_helper import button_bool, info_message
+from shapely.geometry import LineString, Point
+import os
+import logging
 
 
 def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
@@ -20,7 +20,7 @@ def create_event(detector, object_id, vhc_class, nearest_x, nearest_y, frame):
     """
 
     file_helper.event_number += 1
-    file_helper.eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID": detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
+    file_helper.list_of_analyses[file_helper.list_of_analyses_index].eventbased_dictionary[file_helper.event_number] = {"TrackID": object_id, "SectionID": detector, "Class": vhc_class, "Frame": int(frame), "X": int(nearest_x), "Y": int(nearest_y)}
 
 
 def create_section_geometry_object():
@@ -44,12 +44,12 @@ def find_intersection(row):
         _type_: _description_
     """
 
-    for detector in file_helper.flow_dict["Detectors"]:
+    for detector in  file_helper.flow_dict["Detectors"]:
 
         if row.geometry.intersects(file_helper.flow_dict["Detectors"][detector]["geometry"]):
 
             # returns coordinates from intersections as point object
-            point_geometry = row.geometry.intersection(file_helper.flow_dict["Detectors"][detector]["geometry"])
+            point_geometry = row.geometry.intersection( file_helper.flow_dict["Detectors"][detector]["geometry"])
             # create points from coords
             line_points = map(Point, row.geometry.coords)
 
@@ -93,20 +93,24 @@ def assign_movement(row):
     return movement[0] if movement else None
         
 # %%
-def safe_to_csv(dataframe_autocount, dataframe_eventbased=None):
+def safe_to_csv(analyse,dataframe_autocount, dataframe_eventbased=None ):
     """Safe dataframe as cvs and asks for filepath.
 
     Args:
         process_object (dataframe): Dataframe with object information.
     """
 
-    dataframe_list = [dataframe_autocount, dataframe_eventbased]
+    #dataframe_list = [dataframe_autocount, dataframe_eventbased]
+
+    filepath_event = os.path.join(analyse.folder_path, analyse.analyse_name + '_events.csv')
+    filepath_autocount = os.path.join(analyse.folder_path, analyse.analyse_name + '_count.csv')
     
-    for dataframe in dataframe_list:
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".csv", filetypes=[("CSV", "*.csv")]
-        )
-        dataframe.to_csv(file_path)
+    # for dataframe in dataframe_list:
+    #     file_path = filedialog.asksaveasfilename(
+    #         defaultextension=".csv", filetypes=[("CSV", "*.csv")]
+    #     )
+    dataframe_eventbased.to_csv(filepath_event)
+    dataframe_autocount.to_csv(filepath_autocount)
 
 
 # %%
@@ -123,15 +127,8 @@ def time_calculation_dataframe(track_df, fps=None, datetime_obj=None):
         information in timeformat.
     """
     if fps is None or datetime_obj is None:
-        fps = helpers.config.videoobject.fps
-        datetime_obj=helpers.config.videoobject.datetime_obj
-    # if timedelta_entry is None:
-
-    #     entry_timedelta = "00:00:00"
-
-    # else:
-
-    #     entry_timedelta = timedelta_entry.get()
+        fps = file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.fps
+        datetime_obj=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.datetime_obj
 
     track_df["first_appearance_time"] = pd.to_timedelta(
             (
@@ -209,7 +206,7 @@ def resample_dataframe(entry_interval, track_df):
 
     return track_df
 
-def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_obj=None):
+def eventased_dictionary_to_dataframe(analyse, fps=None, datetime_obj=None):
     """_summary_
 
     Args:
@@ -219,21 +216,21 @@ def eventased_dictionary_to_dataframe(eventbased_dictionary, fps=None, datetime_
         dataframe: dataframe with events and belonging datetime
     """
     if fps is None or datetime_obj is None:
-        fps = helpers.config.videoobject.fps
-        datetime_obj = helpers.config.videoobject.datetime_obj
+        fps = analyse.videoobject.fps
+        datetime_obj = analyse.videoobject.datetime_obj
 
-    eventbased_dataframe = pd.DataFrame.from_dict(eventbased_dictionary, orient='index')
+    eventbased_dataframe = pd.DataFrame.from_dict(analyse.eventbased_dictionary, orient='index')
     eventbased_dataframe.index.set_names(["EventID"], inplace=True)
     eventbased_dataframe["seconds"] = (eventbased_dataframe["Frame"] /fps)
     eventbased_dataframe["seconds"] = eventbased_dataframe["seconds"].astype('int')  
     eventbased_dataframe["DateTime"] = pd.to_timedelta(eventbased_dataframe["seconds"], unit='seconds')
     eventbased_dataframe["DateTime"] = eventbased_dataframe["DateTime"] + datetime_obj
-#   eventbased_dataframe = eventbased_dataframe.set_index("EventID")
+    #eventbased_dataframe = eventbased_dataframe.set_index("EventID")
     eventbased_dataframe.drop('seconds', axis=1, inplace=True)
     return eventbased_dataframe
 
 
-def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=False):
+def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=False, multicomputation = False):
     """Calls previous functions for better readability.
 
     Args:
@@ -244,27 +241,51 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
+    #create log
+    logging.basicConfig(filename="log.txt", level=logging.INFO,
+                        format="%(asctime)s %(message)s",  filemode="w")
+    #indexes to analyse
+    analyse_indexes = []
+    
+    if multicomputation:
+
+
+        for index in range(len(file_helper.list_of_analyses)):
+            analyse_indexes.append(index)
+
+    else:
+        for index in file_helper.selectionlist_videofiles:
+
+            analyse_indexes.append(index)
+
+    for analyse_index in analyse_indexes:
     # create necessary columns
-    file_helper.event_number = 0
-    file_helper.tracks_df["Crossed_Section"] = ""
-    file_helper.tracks_df["Crossed_Frames"] = ""
+        #try:
+        print(bool(file_helper.list_of_analyses[analyse_index].tracks_dic))
+        print(bool(file_helper.flow_dict["Detectors"]))
+        if file_helper.list_of_analyses[analyse_index].tracks_dic and file_helper.flow_dict["Detectors"]:
+            file_helper.list_of_analyses_index = analyse_index
 
-    create_section_geometry_object()
+            file_helper.list_of_analyses[analyse_index].tracks_df["Crossed_Section"] = ""
+            file_helper.list_of_analyses[analyse_index].tracks_df["Crossed_Frames"] = ""
 
-    file_helper.tracks_df = file_helper.tracks_df.apply(lambda row: find_intersection(row), axis=1)
-    file_helper.tracks_df["Movement"] = file_helper.tracks_df.apply(lambda row: assign_movement(row), axis=1)
-    file_helper.tracks_df["Appearance"] = time_calculation_dataframe(file_helper.tracks_df)
+            create_section_geometry_object()
+            file_helper.list_of_analyses[analyse_index].tracks_df =file_helper.list_of_analyses[analyse_index].tracks_df.apply(lambda row: find_intersection(row), axis=1)
+            file_helper.list_of_analyses[analyse_index].tracks_df["Movement"] = file_helper.list_of_analyses[analyse_index].tracks_df.apply(lambda row: assign_movement(row), axis=1)
+            file_helper.list_of_analyses[analyse_index].tracks_df["Appearance"] = time_calculation_dataframe(file_helper.list_of_analyses[analyse_index].tracks_df)
+            eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.list_of_analyses[file_helper.list_of_analyses_index],fps=None, datetime_obj=None)
 
-    eventbased_dataframe = eventased_dictionary_to_dataframe(fps=None, datetime_obj=None)
+            tracks_df_result = clean_dataframe(file_helper.list_of_analyses[analyse_index].tracks_df)
 
-    tracks_df_result = clean_dataframe(file_helper.tracks_df)
+            # # if for_drawing:
 
-    if for_drawing:
+                #return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
 
-        return file_helper.cleaned_object_dataframe
+            safe_to_csv(file_helper.list_of_analyses[analyse_index],tracks_df_result, eventbased_dataframe)
+        else:
+            logging.info(f"\n Could not compute File: {file_helper.list_of_analyses[analyse_index].analyse_name}")
 
 
-    safe_to_csv(tracks_df_result, eventbased_dataframe)
 
 def create_setting_window():
     """Creates window with button to resample dataframe and two
@@ -275,12 +296,6 @@ def create_setting_window():
         flowdictionary (dictionary): Dictionary with sections and movements.
         tracks (dictionary): Dictionary with tracks.
     """
-
-    if not button_bool["tracks_imported"]:
-
-        info_message("Warning", "Please import tracks first!")
-
-        return
 
     # creates window to insert autocount time and groupby time
     toplevelwindow = Toplevel()
@@ -303,14 +318,23 @@ def create_setting_window():
     timeinterval_entry.grid(row=3, column=0, sticky="w", pady=5, padx=5)
     timeinterval_entry.insert(0, "None")
 
-    toplevelwindow_button = Button(
+    toplevelwindow_button_compute_onefile = Button(
         toplevelwindow,
-        text="Save file",
+        text="Compute",
         command=lambda: automated_counting(timeinterval_entry, time_entry, ),
     )
-    toplevelwindow_button.grid(
+    toplevelwindow_button_compute_onefile.grid(
         row=4, columnspan=5, column=0, sticky="w", pady=5, padx=5
     )
+    toplevelwindow_button_compute_all = Button(
+        toplevelwindow,
+        text="Compute all",
+        command=lambda: automated_counting(timeinterval_entry, time_entry,multicomputation=True ),
+    )
+    toplevelwindow_button_compute_all.grid(
+        row=5, columnspan=5, column=0, sticky="w", pady=5, padx=5
+    )
+
 
     toplevelwindow.protocol("WM_DELETE_WINDOW")
     # makes the background window unavailable

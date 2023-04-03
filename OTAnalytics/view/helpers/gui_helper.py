@@ -58,7 +58,7 @@ def button_play_video_switch(button_play, button_rewind):
 
     button_bool["rewind_video"] = False
 
-    if not helpers.config.videoobject:
+    if not file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject:
         info_message("Warning", "Please import video first!")
 
         return
@@ -76,7 +76,7 @@ def button_rewind_switch(button_rewind, button_play):
     Args:
         button (tkinter button): play and rewind button.
     """
-    if not helpers.config.videoobject:
+    if not file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject:
         info_message("Warning", "Please import video first!")
 
         return
@@ -142,7 +142,7 @@ def button_display_tracks_switch(button_display_tracks):
         button (tkinter button): Button.
     """
 
-    if not file_helper.tracks_dic:
+    if not file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic:
 
         info_message("Warning", "No tracks imported")
 
@@ -164,7 +164,7 @@ def button_display_bb_switch(button_display_bb):
     Args:
         button (tkinter button): Button.
     """
-    if not file_helper.tracks_dic:
+    if not file_helper.list_of_analyses[file_helper.list_of_analyses_index]:
 
         info_message("Warning", "No tracks imported")
 
@@ -185,7 +185,7 @@ def button_display_live_track_switch(button_display_tracks):
         button (tkinter button): Buttons.
     """
 
-    if not file_helper.tracks_dic:
+    if not file_helper.list_of_analyses[file_helper.list_of_analyses_index]:
 
         info_message("Warning", "No tracks imported!")
 

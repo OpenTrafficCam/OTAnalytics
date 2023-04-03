@@ -28,12 +28,20 @@ from datetime import datetime
 flow_dict = {"Detectors": {}, "Movements": {}}
 selectionlist_objects = []
 selectionlist_sections = []
+selectionlist_videofiles = []
 # maybe necessary to incomment
 
-raw_detections = []
-tracks_dic = {}
-tracks_df = None
-tracks_geoseries = None
+list_of_analyses = []
+list_of_analyses_index = 0
+
+ask_to_import_flowfile = True
+ask_to_import_trackfile = True
+
+
+# raw_detections = []
+# tracks_dic = {}
+# tracks_df = None
+# tracks_geoseries = None
 
 cleaned_object_dataframe = []
 eventbased_dictionary = {}
@@ -42,7 +50,6 @@ event_number = 1
 
 tracks_live = {}
 otflow_file = None
-ottrk_file = None
 
 
 
@@ -64,17 +71,20 @@ def get_filename(path: str):
     return os.path.basename(path)
 
 
-# def extract_pattern(filename):
-
-#     # return re.search("[a-z]+", filename)
-
-
 def create_pattern(videofilename):
+    """creates pattern from videoname to find corresponding trackfile
+
+    Args:
+        videofilename (str): Videofilename
+
+    Returns:
+        regex-pattern: Pattern with date and year
+    """
 
     file_pattern = re.split(r"\_", videofilename)
     otflow_pattern = None
     ottrk_pattern = None
-
+    #otc filenames
     try:
 
         otflow_pattern = (
@@ -94,24 +104,33 @@ def create_pattern(videofilename):
     except Exception:
         return otflow_pattern, ottrk_pattern
 
+    
     return otflow_pattern, ottrk_pattern
 
 
 def check_fileexistence(path, otflow_pattern, ottrk_pattern):
     # sourcery skip: use-fstring-for-concatenation
     global otflow_file
-    global ottrk_file
+    otflow_file_existence = False
+    ottrk_file_existence = False
+    ottrk_file = None
+    otflow_file = None
 
     for root, dirs, files in os.walk(path):
         for file in files:
-            if bool(re.search(otflow_pattern, file)):
+            if otflow_pattern:
+            
+                if bool(re.search(otflow_pattern, file)):
 
-                otflow_file = file
+                    otflow_file_existence = True
+                    otflow_file = file
+            if ottrk_pattern:
+                if bool(re.search(ottrk_pattern, file)):
 
-            elif bool(re.search(ottrk_pattern, file)):
+                    ottrk_file_existence = True
+                    ottrk_file = file
 
-                ottrk_file = file
-
+    return otflow_file_existence, ottrk_file_existence,ottrk_file
 
 def re_initialize():
     global flow_dict, raw_detections, tracks
@@ -139,9 +158,14 @@ def permutation_of_list(selected_sections, maxpermutation=2):
 # %%
 def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
 
+
     global flow_dict, raw_detections, tracks
 
     if option in [1, 3]:
+        #delete all 
+        for i in tree_movements.get_children():
+            tree_movements.delete(i)
+
         for movement in flow_dict["Movements"]:
 
             tree_movements.insert(
@@ -152,8 +176,14 @@ def fill_tree_views(option=3, tree_movements=None, tree_sections=None):
             )
 
     if option in [2, 3]:
+        #delete all 
+        for i in tree_sections.get_children():
+            tree_sections.delete(i)
+
         for detector in flow_dict["Detectors"]:
             tree_sections.insert(parent="", index="end", text=detector)
+
+
 
 
 def geobject_creator(row):

@@ -76,9 +76,9 @@ class gui(tk.Tk):
 
         self.frame_files.button_remove_video.configure(
             command=lambda: [
-                self.frame_files.remove_video(),
                 deload_trackfile(),
-                self.frame_objects.clear_treeview()
+                self.frame_objects.clear_treeview(),
+                self.frame_files.remove_video(),
                 
             ]
         )
@@ -95,22 +95,40 @@ class gui(tk.Tk):
         self.frame_files.button_add_video.configure(
             command=self.load_video_and_add_frame
         )
+        self.frame_files.button_add_folder.configure(
+            command = self.folder_load_video_add_frame
+
+        )
 
         self.frame_sections.button_remove_section.configure(
             command=lambda: [
                 self.frame_sections.delete_section(self.frame_movements.tree_movements)
             ]
         )
-        # self.frame_movements.button_autocreate_movement.configure(
-        #     command=self.autocreate_movements_from_sections
-        # )
+        self.frame_files.tree_files.bind('<ButtonRelease-1>',self.reupdate_tree_objects, add="+")
+ 
+    def reupdate_tree_objects(self, event):
+
+        print(f"index: {file_helper.list_of_analyses_index}")
+        for item in self.frame_objects.tree_objects.get_children():
+            self.frame_objects.tree_objects.delete(item)
+        print(file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file)
+        if bool(file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file):
+
+            for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
+                    self.frame_objects.tree_objects.insert(
+                    parent="",
+                    index="end",
+                    text=object,
+                    values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
+                )
 
     def load_video_and_add_frame(self):
 
-        if helpers.config.videoobject:
-            info_message("Warning", "Please remove video before adding a new one!")
+        # if file_helper.list_of_analyses[file_helper.list_of_analyses_index]:
+        #     info_message("Warning", "Please remove video before adding a new one!")
 
-            return
+        #     return
 
         self.frame_files.add_file()
         self.frame_files.add_canvas_frame()
@@ -118,9 +136,16 @@ class gui(tk.Tk):
 
         view.image_alteration.manipulate_image()
 
+    def folder_load_video_add_frame(self):
+        self.frame_files.add_folder()
+        self.frame_files.add_canvas_frame()
+
+        self.ask_to_import_all_trackfiles()
+    
+
     def import_flowfile(self):
         """Calls load_flowfile-function and inserts view.sections to listboxwidget."""
-        file_helper.flow_dict = view.sections.load_flowfile()
+        view.sections.load_flowfile()
 
         view.image_alteration.manipulate_image()
 
@@ -147,9 +172,8 @@ class gui(tk.Tk):
 
             file_helper.re_initialize()
 
-            helpers.config.videoobject.initialize_empty_image()
+            file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.initialize_empty_image()
 
-            button_bool["tracks_imported"] = False
 
             view.image_alteration.manipulate_image()
 
@@ -158,9 +182,9 @@ class gui(tk.Tk):
 
     def ask_to_import(self):
 
-        path = list(self.frame_files.files_dict.keys())[-1]
+        path = file_helper.list_of_analyses[file_helper.list_of_analyses_index].folder_path
 
-        if self.frame_files.files_dict[path]["otflow_file"] == "\u2705":
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].flowfile_existence and file_helper.ask_to_import_flowfile:
 
             response_flowfile = tk.messagebox.askquestion(
                 title="otflowfile detected",
@@ -176,7 +200,15 @@ class gui(tk.Tk):
 
                 file_helper.flow_dict = json.loads(files)
 
-        if self.frame_files.files_dict[path]["ottrk_file"] == "\u2705":
+            #stop asking
+            file_helper.ask_to_import_flowfile = False
+            file_helper.fill_tree_views(
+            3,
+            self.frame_movements.tree_movements,
+            self.frame_sections.tree_sections,
+        )
+
+        if file_helper.list_of_analyses[file_helper.list_of_analyses_index].trackfile_existence and file_helper.ask_to_import_trackfile:
 
             response_track_file = tk.messagebox.askquestion(
                 title="Ottrackfile detected",
@@ -185,39 +217,64 @@ class gui(tk.Tk):
 
             if response_track_file == "yes":
 
-                filepath = f"{path}/{file_helper.ottrk_file}"
 
-                files = open(filepath, "r")
-                files = files.read()
+                filepath = f"{path}/{file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file}"
 
-               
+     
 
                 (
-                    file_helper.raw_detections,
-                    file_helper.tracks_dic,
-                    file_helper.tracks_df,
-                    file_helper.tracks_geoseries,
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].raw_detections,
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic,
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df,
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_geoseries,
                 ) = load_and_convert(
-                    x_resize_factor=helpers.config.videoobject.x_resize_factor,
-                    y_resize_factor=helpers.config.videoobject.y_resize_factor,
+                    x_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor,
+                    y_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor,
                     autoimport=True,
-                    files=files,
+                    files=filepath,
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
-                for object in file_helper.tracks_df.index:
-                    self.frame_objects.tree_objects.insert(
-                        parent="",
-                        index="end",
-                        text=object,
-                        values=file_helper.tracks_dic[object]["Class"],
-                    )
+                self.fill_track_treeview()
+            else:
+                # delete found trackfile from analyse class
+                file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file = None
 
-        file_helper.fill_tree_views(
-            3,
-            self.frame_movements.tree_movements,
-            self.frame_sections.tree_sections,
-        )
+    def ask_to_import_all_trackfiles(self):
+        response_track_file = tk.messagebox.askquestion(
+                title="Ottrackfile",
+                message="Do you want to import corresponding trackfiles if found in folder?",
+            )
+        if response_track_file == "yes":
+            for analyse in file_helper.list_of_analyses:
+
+                #use trackfile if existent
+                if analyse.track_file:
+                    path = file_helper.list_of_analyses[file_helper.list_of_analyses_index].folder_path
+                    filepath = f"{path}/{analyse.track_file}"
+                    files = open(filepath, "r")
+                    files = files.read()    
+
+                    (analyse.raw_detections,
+                    analyse.tracks_dic,
+                    analyse.tracks_df,
+                    analyse.tracks_geoseries,
+                    ) = load_and_convert(
+                        x_resize_factor=analyse.videoobject.x_resize_factor,
+                        y_resize_factor=analyse.videoobject.y_resize_factor,
+                        autoimport=True,
+                        files=files,)
+            self.fill_track_treeview()       
+            
+
+    def fill_track_treeview(self):
+        for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
+            self.frame_objects.tree_objects.insert(
+                parent="",
+                index="end",
+                text=object,
+                values=file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_dic[object]["Class"],
+            )         
 
 
 def main():

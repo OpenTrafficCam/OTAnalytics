@@ -1,12 +1,14 @@
-import json
 import time
 from tkinter import filedialog
+import bz2
+import ujson
 
 import geopandas as gpd
 import helpers.file_helper as file_helper
 import pandas as pd
-from helpers.config import bbox_factor_reference
+from helpers.config import bbox_factor_reference, ENCODING, COMPRESSED_FILETYPE
 from shapely.geometry import LineString
+import os
 from view.helpers.gui_helper import (button_bool, color_dict, info_message,
                                      reset_buttons_tracks)
 
@@ -15,27 +17,24 @@ def load_trackfile():
     """Loads file with objects detected in OTVision.
 
     Returns:
-        str: filepath
+        str: filepath, basefilename
     """
 
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
-    #files = open(filepath.name, "r")
 
-    return filepath.read()
+    #set the of the trackfile manuel
+    return filepath, os.path.basename(filepath.name).split('/')[-1]
 
 def deload_trackfile():
-    file_helper.raw_detections = []
-    file_helper.tracks = {}
-    file_helper.tracks_df = None
-    file_helper.tracks_geoseries = None
-
-    # resets Button dictionary t everything buttonrelated to false
-    reset_buttons_tracks()
+    if file_helper.list_of_analyses:
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].re_initialize()
+        # resets Button dictionary t everything buttonrelated to false
+        reset_buttons_tracks()
 
 
 def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=None):
-    """_summary_
 
+    """_summary_
     Args:
         x_resize_factor (int): x factor for changed width
         y_resize_factor (int): x factor for changed width
@@ -45,76 +44,98 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     Returns:
         dataframes, dictionary, tracks as geoseries: raw_detections, tracks_dic, tracks_df, tracks_geoseries
     """
-    start_time = time.time()
-    
-    if button_bool["tracks_imported"]:
-        info_message("Warning", "Tracks already imported")
-        return
+
+    start_time = time.time()   
+    tracks_dic = {}
 
     if not autoimport:
-        files = load_trackfile()
+        filepath, filename = load_trackfile()
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file = filename
 
-    tracks_dic = {}
-    loaded_dict = json.loads(files)
+    filepath = files
+
+    with bz2.open(filepath, "rt", encoding=ENCODING) as input:
+        loaded_dict = ujson.load(input)
 
 
     # raw detections from OTVision
-    raw_detections = loaded_dict["data"]
+    raw_detections = loaded_dict["data"]["detections"]
 
+    for detection in raw_detections:
+        
+        if detection["track-id"] in tracks_dic:
+            if (
+                tracks_dic[detection["track-id"]]["Max_confidence"]
+                < detection["confidence"]):
 
-    for frame in raw_detections:
-        for detection in raw_detections[frame]:
+                tracks_dic[detection["track-id"]]["Max_confidence"] = detection[
+                    "confidence"
+                ]
+                vehicle_class = detection["class"]
+            else:
+                vehicle_class = tracks_dic[detection["track-id"]]["Class"]
+            if vehicle_class not in bbox_factor_reference.keys():
+                vehicle_class = "unclear"
 
+            tracks_dic[detection["track-id"]]["Coord"].append(
+                [
+                    (
+                        (detection["x"] - 0.5 * detection["w"])
+                        + (detection["w"] * bbox_factor_reference[vehicle_class][0])
+                    )
+                    * x_resize_factor,
+                    (
+                        (detection["y"] - 0.5 * detection["h"])
+                        + (detection["h"] * bbox_factor_reference[vehicle_class][1])
+                    )
+                    * y_resize_factor,
+                ]
+            )
+            tracks_dic[detection["track-id"]]["Class"] = vehicle_class
+            tracks_dic[detection["track-id"]]["Frame"].append(int(detection["frame"]))
+            tracks_dic[detection["track-id"]]["Width"].append(
+                detection["w"] * x_resize_factor
+            )
+            tracks_dic[detection["track-id"]]["Height"].append(
+                detection["h"] * y_resize_factor
+            )
+            tracks_dic[detection["track-id"]]["Confidence"].append(detection["confidence"])
 
-            if detection in tracks_dic:
+       
+        else:
+            vehicle_class = detection["class"]
 
+            if vehicle_class not in bbox_factor_reference.keys():
+                vehicle_class = "unclear"
 
-                tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"] 
-                vehicle_class = tracks_dic[detection]["Class"]
-                if vehicle_class not in bbox_factor_reference.keys():
-                        vehicle_class = "unclear"
+            tracks_dic[(detection["track-id"])] = {
+                "Coord": [],
+                "Frame": [int(detection["frame"])],
+                "Class": vehicle_class,
+                "Width": [detection["w"] * x_resize_factor],
+                "Height": [detection["h"] * y_resize_factor],
+                "Confidence": [detection["confidence"]],
+                "Max_confidence": detection["confidence"],
+            }
 
-                tracks_dic[detection]["Coord"].append(
-                    [
-                        ((raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[vehicle_class][0]))*x_resize_factor,
-                        ((raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[vehicle_class][1]))*y_resize_factor
-                    ]
-                )
-
-                # tracks_dic[detection]["Class"] = raw_detections[frame][detection]["class"]
-
-                tracks_dic[detection]["Frame"].append(int(frame))
-                tracks_dic[detection]["Width"].append(raw_detections[frame][detection]["w"]*x_resize_factor)
-                tracks_dic[detection]["Height"].append(raw_detections[frame][detection]["h"]*y_resize_factor)
-                tracks_dic[detection]["Confidence"].append(raw_detections[frame][detection]["conf"])
-                
-
-            elif raw_detections[frame][detection]["class"] in color_dict.keys():
-                vehicle_class = raw_detections[frame][detection]["class"]
-                if vehicle_class not in bbox_factor_reference.keys():
-                    vehicle_class = "unclear"
-
-                tracks_dic[detection] = {
-                    "Coord": [],
-                    "Frame": [int(frame)],
-                    "Class": vehicle_class,
-                    "Width": [raw_detections[frame][detection]["w"]*x_resize_factor],
-                    "Height":[raw_detections[frame][detection]["h"]*y_resize_factor],
-                    "Confidence": [raw_detections[frame][detection]["conf"]],
-                    # "Max_confidence": raw_detections[frame][detection]["conf"]
-                }
-
-                tracks_dic[detection]["Coord"].append(
-                    [
-                        (raw_detections[frame][detection]["x"]-0.5*raw_detections[frame][detection]["w"]) + (raw_detections[frame][detection]["w"]*bbox_factor_reference[tracks_dic[detection]["Class"]][0]) * x_resize_factor,
-                        (raw_detections[frame][detection]["y"]-0.5*raw_detections[frame][detection]["h"]) + (raw_detections[frame][detection]["h"]*bbox_factor_reference[tracks_dic[detection]["Class"]][1]) * y_resize_factor,
-                    ]
-                )
+            tracks_dic[detection["track-id"]]["Coord"].append(
+                [
+                    (
+                        (detection["x"] - 0.5 * detection["w"])
+                        + (detection["w"] * bbox_factor_reference[vehicle_class][0])
+                    )
+                    * x_resize_factor,
+                    (
+                        (detection["y"] - 0.5 * detection["h"])
+                        + (detection["h"] * bbox_factor_reference[vehicle_class][1])
+                    )
+                    * y_resize_factor,
+                ]
+            )
 
     if not tracks_dic:
         #TODO ABORT MESSAGE
         return None, None, None, None
-
     # only valid track when more than one detection
     # only for drawing on canvas due to better df-loc with frames
     tracks_df = create_tracks_dataframe(tracks_dic)
@@ -125,7 +146,11 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     print("--- %s seconds ---" % (time.time() - start_time))
 
     #change when using autoload and evaluation
-    #button_bool["tracks_imported"] = True
+    # button_bool["tracks_imported"] = True
+
+    #TODO raw dictionary not necessarry
+    tracks_df.to_csv("dataframe.csv")
+
 
     return raw_detections, tracks_dic, tracks_df, tracks_geoseries
 
@@ -161,9 +186,8 @@ def create_tracks_dataframe(tracks_dic):
 
     tracks_df.reset_index()
 
+
     return tracks_df
-
-
 
 
 def return_first_frame(lst):

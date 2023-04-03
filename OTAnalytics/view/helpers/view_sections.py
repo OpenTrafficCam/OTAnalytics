@@ -131,7 +131,7 @@ class FrameSection(tk.LabelFrame):
                     if detector_name in file_helper.flow_dict["Movements"][key]:
                         file_helper.flow_dict["Movements"][key].remove(detector_name)
 
-            # update all treeview 
+            # update whole treeview 
             for i in treeview_movements.get_children():
                 treeview_movements.delete(i)
 
@@ -222,7 +222,6 @@ class FrameSection(tk.LabelFrame):
 
             if not detector_name or not movement_name:
                 info_message("Warning", "Please select section and movements!")
-                print("test")
 
                 continue
 
@@ -233,5 +232,5 @@ class FrameSection(tk.LabelFrame):
 
             else:
                 info_message("Warning", "Detector already part of movement!")
-        print(file_helper.flow_dict["Movements"][movement_name])
+       
         treeview_movements.set(item_movement,0,file_helper.flow_dict["Movements"][movement_name])
