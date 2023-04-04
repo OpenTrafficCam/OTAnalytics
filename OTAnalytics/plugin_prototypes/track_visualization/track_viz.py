@@ -5,11 +5,10 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import ujson
+from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import Divider, Size
-from pandas import DataFrame, read_json
 from plugin_video_processing.video_reader import NdArrayImage
 
 from OTAnalytics.domain import track
@@ -33,34 +32,15 @@ plot_sections = True
 sectionlist_json_path = Path("data/sectionlist_v2.json")
 
 
-class JsonParser:
-    @staticmethod
-    def from_dict(f: Path) -> dict:
-        with open(f, "r", encoding=ENCODING) as out:
-            return ujson.load(out)
-
-
-class PandasDataFrameParser:
-    @staticmethod
-    def from_json(f: Path) -> DataFrame:
-        return read_json(f)
-
-    @staticmethod
-    def from_dict(d: dict, transpose: bool = False) -> DataFrame:
-        df = DataFrame(d)
-        return df.transpose() if transpose else df
-
-
 # % Filter length (number of frames)
 def min_frames(data: pd.DataFrame, min_frames: int = 10) -> list:
     tmp = data[[track.FRAME, track.TRACK_ID]]
     tmp_min_frames = tmp.groupby(track.TRACK_ID).count().reset_index()
-    list_min_frames = [
+    return [
         tmp_min_frames.loc[i, track.TRACK_ID]
-        for i in range(0, len(tmp_min_frames))
+        for i in range(len(tmp_min_frames))
         if tmp_min_frames.loc[i, track.FRAME] >= min_frames
     ]
-    return list_min_frames
 
 
 # % Determine max class
@@ -73,11 +53,10 @@ def max_class(data: pd.DataFrame) -> dict:
         .reset_index()
     )
 
-    class_map = {
+    return {
         map_df.loc[i, track.TRACK_ID]: map_df.loc[i, track.CLASSIFICATION]
         for i in map_df.groupby(track.TRACK_ID)[track.CONFIDENCE].idxmax()
     }
-    return class_map
 
 
 def run(
@@ -178,7 +157,7 @@ def run(
             ax=axes,
         )
     if plot_sections:
-        for section in range(0, len(sectionlist)):
+        for section in range(len(sectionlist)):
             x_data = [
                 sectionlist[section][i]["x"]
                 for i in sectionlist[section].keys()
@@ -211,6 +190,10 @@ def run(
     axes.set_ylim(0, height)
     axes.set_xlim(0, width)
     axes.invert_yaxis()
+    return convert_to_track_image(figure, axes)
+
+
+def convert_to_track_image(figure: Figure, axes: Axes) -> TrackImage:
     canvas = FigureCanvasAgg(figure)
     canvas.draw()
     bbox_contents = figure.canvas.copy_from_bbox(axes.bbox)
