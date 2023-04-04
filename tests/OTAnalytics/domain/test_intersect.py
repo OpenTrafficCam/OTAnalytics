@@ -5,13 +5,14 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.domain.event import EventType, SectionEventBuilder
-from OTAnalytics.domain.geometry import Coordinate, Line
+from OTAnalytics.domain.geometry import Coordinate, Line, RelativeOffsetCoordinate
 from OTAnalytics.domain.intersect import (
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
     IntersectImplementation,
+    Intersector,
 )
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 
 
@@ -63,7 +64,15 @@ def track() -> Track:
         track_id=TrackId(1),
     )
 
-    return Track(track_id, [detection_1, detection_2])
+    return Track(track_id, "car", [detection_1, detection_2])
+
+
+class TestIntersector:
+    def test_select_coordinate_in_detection(self, detection: Detection) -> None:
+        offset = RelativeOffsetCoordinate(0.5, 0.5)
+        coordinate = Intersector._select_coordinate_in_detection(detection, offset)
+        assert coordinate.x == detection.x + detection.w * 0.5
+        assert coordinate.y == detection.y + detection.h * 0.5
 
 
 class TestIntersectBySplittingTrackLine:
@@ -78,12 +87,18 @@ class TestIntersectBySplittingTrackLine:
 
         # Setup event builder
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N", start=Coordinate(5, 0), end=Coordinate(5, 10)
+            id=SectionId("N"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=Coordinate(5, 0),
+            end=Coordinate(5, 10),
         )
 
         intersector = IntersectBySplittingTrackLine(mock_implementation, line_section)
@@ -118,12 +133,18 @@ class TestIntersectBySmallTrackComponents:
 
         # Setup event builder
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N", start=Coordinate(5, 0), end=Coordinate(5, 10)
+            id=SectionId("N"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=Coordinate(5, 0),
+            end=Coordinate(5, 10),
         )
 
         intersector = IntersectBySmallTrackComponents(mock_implementation, line_section)

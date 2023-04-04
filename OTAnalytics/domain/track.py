@@ -1,7 +1,8 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 
@@ -13,6 +14,92 @@ class TrackId(DataclassValidation):
     def _validate(self) -> None:
         if self.id < 1:
             raise ValueError("track id must be greater equal 1")
+
+
+class TrackListObserver(ABC):
+    """
+    Interface to listen to changes to a list of tracks.
+    """
+
+    @abstractmethod
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        """
+        Notifies that the given tracks have been added.
+
+        Args:
+            tracks (list[TrackId]): list of added tracks
+        """
+        pass
+
+
+class TrackObserver(ABC):
+    """
+    Interface to listen to changes of a single track.
+    """
+
+    @abstractmethod
+    def notify_track(self, track_id: Optional[TrackId]) -> None:
+        """
+        Notifies that the track of the given id has changed.
+
+        Args:
+            track_id (Optional[TrackId]): id of the changed track
+        """
+        pass
+
+
+class TrackSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[TrackObserver] = set()
+
+    def register(self, observer: TrackObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (TrackObserver): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, track_id: Optional[TrackId]) -> None:
+        """
+        Notifies observers about the track id.
+
+        Args:
+            track_id (Optional[TrackId]): id of the changed track
+        """
+        [observer.notify_track(track_id) for observer in self.observers]
+
+
+class TrackListSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[TrackListObserver] = set()
+
+    def register(self, observer: TrackListObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (TrackListObserver): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, tracks: list[TrackId]) -> None:
+        """
+        Notifies observers about the list of tracks.
+
+        Args:
+            tracks (list[TrackId]): list of added tracks
+        """
+        [observer.notify_tracks(tracks) for observer in self.observers]
 
 
 class TrackError(Exception):
@@ -113,6 +200,7 @@ class Track(DataclassValidation):
     """
 
     id: TrackId
+    classification: str
     detections: list[Detection]
 
     def _validate(self) -> None:
@@ -128,19 +216,105 @@ class Track(DataclassValidation):
             raise ValueError("detections must be sorted by occurence")
 
 
+@dataclass(frozen=True)
+class TrackImage:
+    @abstractmethod
+    def as_array(self) -> Any:
+        pass
+
+
+class TrackClassificationCalculator(ABC):
+    """
+    Defines interface for calculation strategy to determine a track's classification.
+    """
+
+    @abstractmethod
+    def calculate(self, detections: list[Detection]) -> str:
+        """Determine a track's classification.
+
+        Args:
+            detections (Detection): the track's detections needed to determine the
+                classification
+
+        Returns:
+            str: the track's class
+        """
+        pass
+
+
+class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator):
+    """Determine a track's classification by its detections max confidence."""
+
+    def calculate(self, detections: list[Detection]) -> str:
+        classifications: dict[str, float] = {}
+        for detection in detections:
+            if classifications.get(detection.classification):
+                classifications[detection.classification] += detection.confidence
+            classifications[detection.classification] = detection.confidence
+
+        return max(classifications, key=lambda x: classifications[x])
+
+
 class TrackRepository:
     def __init__(self, tracks: dict[TrackId, Track] = {}) -> None:
         self.tracks: dict[TrackId, Track] = tracks
+        self.observers = TrackListSubject()
+
+    def register_tracks_observer(self, observer: TrackListObserver) -> None:
+        """
+        Listen to changes of the repository.
+
+        Args:
+            observer (TrackListObserver): listener to be notifed about changes
+        """
+        self.observers.register(observer)
 
     def add(self, track: Track) -> None:
+        """
+        Add a single track to the repository and notify the observers.
+
+        Args:
+            track (Track): track to be added
+        """
+        self.__add(track)
+        self.observers.notify([track.id])
+
+    def __add(self, track: Track) -> None:
+        """Internal method to add a track without notifying observers.
+
+        Args:
+            track (Track): the track to be added
+        """
         self.tracks[track.id] = track
 
     def add_all(self, tracks: Iterable[Track]) -> None:
+        """
+        Add multiple tracks to the repository and notify only once about it.
+
+        Args:
+            tracks (Iterable[Track]): tracks to be added
+        """
         for track in tracks:
-            self.add(track)
+            self.__add(track)
+        self.observers.notify([track.id for track in tracks])
 
     def get_for(self, id: TrackId) -> Optional[Track]:
+        """
+        Retrieve a track for the given id.
+
+        Args:
+            id (TrackId): id to search for
+
+        Returns:
+            Optional[Track]: track if it exists
+        """
         return self.tracks[id]
 
     def get_all(self) -> Iterable[Track]:
+        """
+        Retrieve all tracks.
+
+        Returns:
+            Iterable[Track]: all tracks within the repository
+        """
         return self.tracks.values()

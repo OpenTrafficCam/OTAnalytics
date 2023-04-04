@@ -6,14 +6,33 @@ import pytest
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.domain import section
-from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
-from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.adapter_intersect.intersect import (
+    ShapelyIntersectImplementationAdapter,
+)
+from OTAnalytics.application.eventlist import SectionActionDetector
+from OTAnalytics.domain import geometry, section
+from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.geometry import (
+    DirectionVector2D,
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+)
+from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
+from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section, SectionId
+from OTAnalytics.domain.track import (
+    CalculateTrackClassificationByMaxConfidence,
+    Detection,
+    Track,
+    TrackId,
+)
+from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     InvalidSectionData,
+    OtEventListParser,
     OtsectionParser,
     OttrkParser,
     _parse_bz2,
+    _write_bz2,
 )
 
 
@@ -151,6 +170,7 @@ def expected_sample_tracks(
     return [
         Track(
             id=TrackId(1),
+            classification="car",
             detections=[
                 sample_track_det_1,
                 sample_track_det_2,
@@ -181,7 +201,9 @@ def example_json(test_data_tmp_dir: Path) -> tuple[Path, dict]:
 
 
 class TestOttrkParser:
-    ottrk_parser: OttrkParser = OttrkParser()
+    ottrk_parser: OttrkParser = OttrkParser(
+        CalculateTrackClassificationByMaxConfidence()
+    )
 
     def test_parse_whole_ottrk(self, ottrk_path: Path) -> None:
         self.ottrk_parser.parse(ottrk_path)
@@ -248,6 +270,7 @@ class TestOttrkParser:
         expected_sorted = [
             Track(
                 id=TrackId(1),
+                classification="car",
                 detections=[sample_track_det_1, sample_track_det_2, sample_track_det_3],
             )
         ]
@@ -275,12 +298,20 @@ class TestOtsectionParser:
         second_coordinate = Coordinate(1, 1)
         third_coordinate = Coordinate(1, 0)
         line_section: Section = LineSection(
-            id="some",
+            id=SectionId("some"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={"key_1": "some_data", "key_2": "some_data"},
             start=first_coordinate,
             end=second_coordinate,
         )
         area_section: Section = Area(
-            id="other",
+            id=SectionId("other"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={"key_1": "some_data", "key_2": "some_data"},
             coordinates=[
                 first_coordinate,
                 second_coordinate,
@@ -306,12 +337,20 @@ class TestOtsectionParser:
 
     def test_convert_section(self) -> None:
         some_section: Section = LineSection(
-            id="some",
+            id=SectionId("some"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
             start=Coordinate(0, 0),
             end=Coordinate(1, 1),
         )
         other_section: Section = LineSection(
-            id="other",
+            id=SectionId("other"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
             start=Coordinate(1, 0),
             end=Coordinate(0, 1),
         )
@@ -323,3 +362,159 @@ class TestOtsectionParser:
         assert content == {
             section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]
         }
+
+    def test_parse_plugin_data_no_entry(self, test_data_tmp_dir: Path) -> None:
+        start = Coordinate(0, 0)
+        end = Coordinate(1, 1)
+        expected: Section = LineSection(
+            id=SectionId("some"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=start,
+            end=end,
+        )
+
+        section_data = {
+            section.SECTIONS: [
+                {
+                    section.ID: "some",
+                    section.TYPE: "line",
+                    section.RELATIVE_OFFSET_COORDINATES: {
+                        EventType.SECTION_ENTER.serialize(): {
+                            geometry.X: 0,
+                            geometry.Y: 0,
+                        }
+                    },
+                    section.START: {
+                        geometry.X: 0,
+                        geometry.Y: 0,
+                    },
+                    section.END: {
+                        geometry.X: 1,
+                        geometry.Y: 1,
+                    },
+                }
+            ]
+        }
+        save_path = test_data_tmp_dir / "sections.otflow"
+        _write_bz2(section_data, save_path)
+
+        parser = OtsectionParser()
+        sections = parser.parse(save_path)
+
+        assert sections == [expected]
+
+    def test_parse_plugin_data_with_plugin_data(self, test_data_tmp_dir: Path) -> None:
+        start = Coordinate(0, 0)
+        end = Coordinate(1, 1)
+        expected: Section = LineSection(
+            id=SectionId("some"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={"key_1": "some_data", "1": "some_data"},
+            start=start,
+            end=end,
+        )
+
+        section_data = {
+            section.SECTIONS: [
+                {
+                    section.ID: "some",
+                    section.TYPE: "line",
+                    section.RELATIVE_OFFSET_COORDINATES: {
+                        EventType.SECTION_ENTER.serialize(): {
+                            geometry.X: 0,
+                            geometry.Y: 0,
+                        }
+                    },
+                    section.START: {
+                        geometry.X: 0,
+                        geometry.Y: 0,
+                    },
+                    section.END: {
+                        geometry.X: 1,
+                        geometry.Y: 1,
+                    },
+                    section.PLUGIN_DATA: {"key_1": "some_data", "1": "some_data"},
+                }
+            ]
+        }
+        save_path = test_data_tmp_dir / "sections.otflow"
+        _write_bz2(section_data, save_path)
+
+        parser = OtsectionParser()
+        sections = parser.parse(save_path)
+
+        assert sections == [expected]
+
+
+class TestOtEventListParser:
+    def test_convert_event(self, test_data_tmp_dir: Path) -> None:
+        road_user_id = 1
+        road_user_type = "car"
+        hostname = "myhostname"
+        section_id = SectionId("N")
+        direction_vector = DirectionVector2D(1, 0)
+        video_name = "my_video_name.mp4"
+        first_event = Event(
+            road_user_id=road_user_id,
+            road_user_type=road_user_type,
+            hostname=hostname,
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+            frame_number=1,
+            section_id=section_id,
+            event_coordinate=ImageCoordinate(0, 0),
+            event_type=EventType.SECTION_ENTER,
+            direction_vector=direction_vector,
+            video_name=video_name,
+        )
+        second_event = Event(
+            road_user_id=road_user_id,
+            road_user_type=road_user_type,
+            hostname=hostname,
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 10),
+            frame_number=2,
+            section_id=section_id,
+            event_coordinate=ImageCoordinate(10, 0),
+            event_type=EventType.SECTION_LEAVE,
+            direction_vector=direction_vector,
+            video_name=video_name,
+        )
+
+        event_list_parser = OtEventListParser()
+        content = event_list_parser._convert([first_event, second_event])
+
+        assert content == {EVENT_LIST: [first_event.to_dict(), second_event.to_dict()]}
+
+    def test_serialize_events(
+        self, tracks: list[Track], sections: list[Section], test_data_tmp_dir: Path
+    ) -> None:
+        # Setup
+        shapely_intersection_adapter = ShapelyIntersectImplementationAdapter(
+            ShapelyIntersector()
+        )
+        line_section = sections[0]
+
+        if isinstance(line_section, LineSection):
+            line_section_intersector = IntersectBySplittingTrackLine(
+                implementation=shapely_intersection_adapter, line_section=line_section
+            )
+
+        section_event_builder = SectionEventBuilder()
+
+        section_action_detector = SectionActionDetector(
+            intersector=line_section_intersector,
+            section_event_builder=section_event_builder,
+        )
+
+        enter_events = section_action_detector.detect_enter_actions(
+            sections=[line_section], tracks=tracks
+        )
+
+        event_list_parser = OtEventListParser()
+        event_list_file = test_data_tmp_dir / "eventlist.json"
+        event_list_parser.serialize(enter_events, event_list_file)
+        assert event_list_file.exists()

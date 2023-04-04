@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -8,25 +7,23 @@ from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain.event import SectionEventBuilder
-from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
+from OTAnalytics.domain.event import EventType, SectionEventBuilder
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    Line,
+    Polygon,
+    RelativeOffsetCoordinate,
+)
 from OTAnalytics.domain.intersect import (
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
 )
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
-from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
 FRAME_WIDTH = 800
 FRAME_HEIGHT = 600
-
-
-@pytest.fixture(scope="module")
-def tracks(ottrk_path: Path) -> list[Track]:
-    ottrk_parser = OttrkParser()
-    return ottrk_parser.parse(ottrk_path)
 
 
 @pytest.fixture(scope="module")
@@ -40,11 +37,6 @@ def section_event_builder() -> SectionEventBuilder:
     return SectionEventBuilder()
 
 
-@pytest.fixture(scope="module")
-def ottrk_long_video(test_data_dir: Path) -> Path:
-    return test_data_dir / "OTCamera10_FR20_2022-11-03_10-00-00.ottrk"
-
-
 class TestDetectSectionActivity:
     def test_intersect_by_small_track_components(
         self,
@@ -54,7 +46,13 @@ class TestDetectSectionActivity:
     ) -> None:
         # Setup
         line_section = LineSection(
-            id="NE", start=Coordinate(103, 194), end=Coordinate(366, 129)
+            id=SectionId("NE"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=Coordinate(103, 194),
+            end=Coordinate(366, 129),
         )
 
         line_section_intersector = IntersectBySmallTrackComponents(
@@ -81,7 +79,13 @@ class TestDetectSectionActivity:
     ) -> None:
         # Setup
         line_section = LineSection(
-            id="NE", start=Coordinate(103, 194), end=Coordinate(366, 129)
+            id=SectionId("NE"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=Coordinate(103, 194),
+            end=Coordinate(366, 129),
         )
 
         line_section_intersector = IntersectBySplittingTrackLine(

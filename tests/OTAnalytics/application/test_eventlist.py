@@ -4,11 +4,21 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.eventlist import EventRepository, SectionActionDetector
-from OTAnalytics.domain.event import Event, SectionEventBuilder
-from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.application.eventlist import SceneActionDetector, SectionActionDetector
+from OTAnalytics.domain.event import (
+    Event,
+    EventType,
+    SceneEventBuilder,
+    SectionEventBuilder,
+)
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    DirectionVector2D,
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+)
 from OTAnalytics.domain.intersect import Intersector
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 
 
@@ -60,12 +70,20 @@ def track() -> Track:
         track_id=TrackId(1),
     )
 
-    return Track(track_id, [detection_1, detection_2])
+    return Track(track_id, "car", [detection_1, detection_2])
 
 
 @pytest.fixture
 def line_section() -> LineSection:
-    return LineSection(id="N", start=Coordinate(5, 0), end=Coordinate(5, 10))
+    return LineSection(
+        id=SectionId("N"),
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+        },
+        plugin_data={},
+        start=Coordinate(5, 0),
+        end=Coordinate(5, 10),
+    )
 
 
 class TestSectionActionDetector:
@@ -106,21 +124,45 @@ class TestSectionActionDetector:
         assert result_events == [mock_event]
 
 
-class TestEventRepository:
-    def test_add(self) -> None:
-        event = Mock()
-        repository = EventRepository()
+class TestSceneActionDetector:
+    def test_detect_enter_scene(self, track: Track) -> None:
+        scene_event_builder = SceneEventBuilder()
+        scene_event_builder.add_event_type(EventType.ENTER_SCENE)
+        scene_event_builder.add_direction_vector(
+            track.detections[0], track.detections[1]
+        )
+        scene_action_detector = SceneActionDetector(scene_event_builder)
+        event = scene_action_detector.detect_enter_scene(track)
+        assert event == Event(
+            road_user_id=1,
+            road_user_type="car",
+            hostname="myhostname",
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+            frame_number=1,
+            section_id=None,
+            event_coordinate=ImageCoordinate(0.0, 5.0),
+            event_type=EventType.ENTER_SCENE,
+            direction_vector=DirectionVector2D(10, 0),
+            video_name="myhostname_something.otdet",
+        )
 
-        repository.add(event)
-
-        assert event in repository.get_all()
-
-    def test_add_all(self) -> None:
-        first_event = Mock()
-        second_event = Mock()
-        repository = EventRepository()
-
-        repository.add_all([first_event, second_event])
-
-        assert first_event in repository.get_all()
-        assert second_event in repository.get_all()
+    def test_detect_leave_scene(self, track: Track) -> None:
+        scene_event_builder = SceneEventBuilder()
+        scene_event_builder.add_event_type(EventType.LEAVE_SCENE)
+        scene_event_builder.add_direction_vector(
+            track.detections[0], track.detections[1]
+        )
+        scene_action_detector = SceneActionDetector(scene_event_builder)
+        event = scene_action_detector.detect_leave_scene(track)
+        assert event == Event(
+            road_user_id=1,
+            road_user_type="car",
+            hostname="myhostname",
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
+            frame_number=2,
+            section_id=None,
+            event_coordinate=ImageCoordinate(10.0, 5.0),
+            event_type=EventType.LEAVE_SCENE,
+            direction_vector=DirectionVector2D(10, 0),
+            video_name="myhostname_something.otdet",
+        )

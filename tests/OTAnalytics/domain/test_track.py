@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 from unittest.mock import Mock
 
 import pytest
@@ -7,10 +8,15 @@ import pytest
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.domain.track import (
     BuildTrackWithSingleDetectionError,
+    CalculateTrackClassificationByMaxConfidence,
     Detection,
     Track,
     TrackId,
+    TrackListObserver,
+    TrackListSubject,
+    TrackObserver,
     TrackRepository,
+    TrackSubject,
 )
 
 
@@ -48,6 +54,105 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
         ],
         track_id=valid_detection_dict[ottrk_format.TRACK_ID],
     )
+
+
+class DataBuilder:
+    def __init__(
+        self,
+        confidence: float,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        occurrence: datetime,
+        input_file_path: Path,
+        interpolated_detection: bool,
+        track_id: TrackId,
+        frame: Optional[int] = None,
+        track_class: Optional[str] = None,
+        detection_class: Optional[str] = None,
+    ) -> None:
+        self._track_class = track_class
+        self._detections: list[Detection] = []
+        self._detection_class = detection_class
+        self._confidence = confidence
+        self._x = x
+        self._y = y
+        self._w = w
+        self._h = h
+        self._frame = frame
+        self._occurrence = occurrence
+        self._input_file_path = input_file_path
+        self._interpolated_detection = interpolated_detection
+        self._track_id = track_id
+
+    def build_track(self) -> Track:
+        if self._track_class is None:
+            raise ValueError("track ")
+
+        return Track(self._track_id, self._track_class, self._detections)
+
+    def build_detections(self) -> list[Detection]:
+        return self._detections
+
+    def append_detection(self) -> None:
+        if self._detection_class is None:
+            raise ValueError("classification not set")
+
+        if self._frame is None:
+            raise ValueError("frame not set")
+
+        self._detections.append(
+            Detection(
+                classification=self._detection_class,
+                confidence=self._confidence,
+                x=self._x,
+                y=self._y,
+                w=self._w,
+                h=self._h,
+                frame=self._frame,
+                occurrence=self._occurrence,
+                input_file_path=self._input_file_path,
+                interpolated_detection=self._interpolated_detection,
+                track_id=self._track_id,
+            )
+        )
+
+    def add_detection_class(self, classification: str) -> None:
+        self._detection_class = classification
+
+    def add_confidence(self, confidence: float) -> None:
+        self._confidence = confidence
+
+    def add_frame(self, frame: int) -> None:
+        self._frame = frame
+
+    def add_track_class(self, classification: str) -> None:
+        self._track_class = classification
+
+
+class TestTrackSubject:
+    def test_notify_observer(self) -> None:
+        changed_track = TrackId(1)
+        observer = Mock(spec=TrackObserver)
+        subject = TrackSubject()
+        subject.register(observer)
+
+        subject.notify(changed_track)
+
+        observer.notify_track.assert_called_with(changed_track)
+
+
+class TestTrackListSubject:
+    def test_notify_observer(self) -> None:
+        changed_tracks = [TrackId(1), TrackId(2)]
+        observer = Mock(spec=TrackListObserver)
+        subject = TrackListSubject()
+        subject.register(observer)
+
+        subject.notify(changed_tracks)
+
+        observer.notify_tracks.assert_called_with(changed_tracks)
 
 
 class TestDetection:
@@ -117,36 +222,86 @@ class TestTrack:
 
     def test_raise_error_on_empty_detections(self) -> None:
         with pytest.raises(BuildTrackWithSingleDetectionError):
-            Track(id=TrackId(1), detections=[])
+            Track(id=TrackId(1), classification="car", detections=[])
 
     def test_error_on_single_detection(self, valid_detection: Detection) -> None:
         with pytest.raises(BuildTrackWithSingleDetectionError):
-            Track(id=TrackId(5), detections=[valid_detection])
+            Track(id=TrackId(5), classification="car", detections=[valid_detection])
 
     def test_instantiation_with_valid_args(self, valid_detection: Detection) -> None:
-        track = Track(id=TrackId(5), detections=[valid_detection, valid_detection])
+        track = Track(
+            id=TrackId(5),
+            classification="car",
+            detections=[valid_detection, valid_detection],
+        )
         assert track.id == TrackId(5)
+        assert track.classification == "car"
         assert track.detections == [valid_detection, valid_detection]
+
+
+class TestCalculateTrackClassificationByMaxConfidence:
+    def test_calculate(self) -> None:
+        builder = DataBuilder(
+            confidence=0.8,
+            x=0.0,
+            y=0.0,
+            w=10,
+            h=10,
+            frame=1,
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+            input_file_path=Path("mypath_postfix.otdet"),
+            interpolated_detection=False,
+            track_id=TrackId(1),
+            detection_class="car",
+        )
+        builder.append_detection()
+
+        builder.add_confidence(0.7)
+        builder.add_frame(2)
+        builder.append_detection()
+
+        builder.add_detection_class("truck")
+        builder.add_confidence(0.4)
+        builder.add_frame(2)
+        builder.append_detection()
+        detections = builder.build_detections()
+        track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
+        result = track_classification_calculator.calculate(detections)
+
+        assert result == "car"
+        assert detections[2].classification == "truck"
 
 
 class TestTrackRepository:
     def test_add(self) -> None:
+        track_id = TrackId(1)
         track = Mock()
+        track.id = track_id
+        observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
+        repository.register_tracks_observer(observer)
 
         repository.add(track)
 
         assert track in repository.get_all()
+        observer.notify_tracks.assert_called_with([track_id])
 
     def test_add_all(self) -> None:
+        first_id = TrackId(1)
+        second_id = TrackId(2)
         first_track = Mock()
+        first_track.id = first_id
         second_track = Mock()
+        second_track.id = second_id
+        observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
+        repository.register_tracks_observer(observer)
 
         repository.add_all([first_track, second_track])
 
         assert first_track in repository.get_all()
         assert second_track in repository.get_all()
+        observer.notify_tracks.assert_called_with([first_id, second_id])
 
     def test_get_by_id(self) -> None:
         first_track = Mock()

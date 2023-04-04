@@ -2,9 +2,14 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from OTAnalytics.domain.event import Event, EventBuilder
-from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    Line,
+    Polygon,
+    RelativeOffsetCoordinate,
+)
 from OTAnalytics.domain.section import Area, LineSection
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import Detection, Track
 
 
 class IntersectImplementation(ABC):
@@ -102,6 +107,28 @@ class Intersector(ABC):
         """
         pass
 
+    @staticmethod
+    def _select_coordinate_in_detection(
+        detection: Detection, offset: RelativeOffsetCoordinate
+    ) -> Coordinate:
+        """Select a coordinate within the bounding box of a detection.
+
+        A coordinate within the bounding box of a detection is selected by applying the
+        offset.
+
+        Args:
+            detection (Detection): the detection containing the bounding box dimensions
+            offset (RelativeOffsetCoordinate): the offset to include in the selection
+                of the coordinate
+
+        Returns:
+            Coordinate: the coordinate
+        """
+        return Coordinate(
+            x=detection.x + detection.w * offset.x,
+            y=detection.y + detection.h * offset.y,
+        )
+
 
 class LineSectionIntersector(Intersector):
     """Determines whether a line section intersects with a track.
@@ -141,11 +168,16 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
         line_section_as_geometry = Line(
             [self._line_section.start, self._line_section.end]
         )
+        if event_builder.event_type is None:
+            raise ValueError("Event type not set in section builder")
+
+        offset = self._line_section.relative_offset_coordinates[
+            event_builder.event_type
+        ]
+
         track_as_geometry = Line(
             [
-                Coordinate(
-                    detection.x + detection.w * 0.5, detection.y + detection.h * 0.5
-                )
+                self._select_coordinate_in_detection(detection, offset)
                 for detection in track.detections
             ]
         )
@@ -153,6 +185,7 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
         splitted_lines = self.implementation.split_line_with_line(
             track_as_geometry, line_section_as_geometry
         )
+        event_builder.add_road_user_type(track.classification)
 
         if splitted_lines:
             events: list[Event] = []
@@ -192,9 +225,16 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
         line_section_as_geometry = Line(
             [self._line_section.start, self._line_section.end]
         )
-
         if not self._track_line_intersects_section(track, line_section_as_geometry):
             return None
+
+        event_builder.add_road_user_type(track.classification)
+        if event_builder.event_type is None:
+            raise ValueError("Event type not set in section builder")
+
+        offset = self._line_section.relative_offset_coordinates[
+            event_builder.event_type
+        ]
 
         events: list[Event] = []
 
@@ -203,8 +243,8 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
         ):
             detection_as_geometry = Line(
                 [
-                    Coordinate(current_detection.x, current_detection.y),
-                    Coordinate(next_detection.x, next_detection.y),
+                    self._select_coordinate_in_detection(current_detection, offset),
+                    self._select_coordinate_in_detection(next_detection, offset),
                 ]
             )
             intersects = self.implementation.line_intersects_line(

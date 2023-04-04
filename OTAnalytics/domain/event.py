@@ -2,13 +2,14 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Detection
+from OTAnalytics.domain.types import EventType
 
 EVENT_LIST = "event_list"
 ROAD_USER_ID = "road_user_id"
@@ -38,13 +39,6 @@ class IncompleteEventBuilderSetup(Exception):
     pass
 
 
-class EventType(Enum):
-    """Enum defining all event types."""
-
-    SECTION_ENTER: str = "section-enter"
-    SECTION_LEAVE: str = "section-leave"
-
-
 @dataclass(frozen=True, kw_only=True)
 class Event(DataclassValidation):
     """A traffic event triggered by some traffic event holding all necessary
@@ -70,7 +64,7 @@ class Event(DataclassValidation):
         hostname (str): the OTCamera hostname that the video is associated with
         occurrence (datetime): the time when this event occurred
         frame_number (int): the video frame number that this event is associated with
-        section_id (Optional[str]): only set when event type is of section
+        section_id (Optional[SectionId]): only set when event type is of section
             Defaults to `None`.
         event_coordinate (ImageCoordinate): location where the event occurred in
             the video
@@ -86,7 +80,7 @@ class Event(DataclassValidation):
     hostname: str
     occurrence: datetime
     frame_number: int
-    section_id: Optional[str]
+    section_id: Optional[SectionId]
     event_coordinate: ImageCoordinate
     event_type: EventType
     direction_vector: DirectionVector2D
@@ -126,12 +120,15 @@ class Event(DataclassValidation):
             HOSTNAME: self.hostname,
             OCCURRENCE: self.occurrence.strftime(DATE_FORMAT),
             FRAME_NUMBER: self.frame_number,
-            SECTION_ID: self.section_id,
+            SECTION_ID: self._serialized_section_id(),
             EVENT_COORDINATE: self.event_coordinate.to_list(),
             EVENT_TYPE: self.event_type.value,
             DIRECTION_VECTOR: self.direction_vector.to_list(),
             VIDEO_NAME: self.video_name,
         }
+
+    def _serialized_section_id(self) -> Optional[str]:
+        return self.section_id.serialize() if self.section_id else None
 
 
 class EventBuilder(ABC):
@@ -140,6 +137,11 @@ class EventBuilder(ABC):
     Raises:
         InproperFormattedFilename: if hostname could not be extracted from filename
     """
+
+    def __init__(self) -> None:
+        self.road_user_type: Optional[str] = None
+        self.event_type: Optional[EventType] = None
+        self.direction_vector: Optional[DirectionVector2D] = None
 
     @abstractmethod
     def create_event(self, detection: Detection) -> Event:
@@ -177,22 +179,13 @@ class EventBuilder(ABC):
             f"Could not parse {file_path.name}. Hostname is missing."
         )
 
-
-class SectionEventBuilder(EventBuilder):
-    """A builder to build section events."""
-
-    def __init__(self) -> None:
-        self.section_id: Optional[str] = None
-        self.direction_vector: Optional[DirectionVector2D] = None
-        self.event_type: Optional[EventType] = None
-
-    def add_section_id(self, section_id: str) -> None:
-        """Add a section id to add to the event to be build.
+    def add_road_user_type(self, road_user_type: str) -> None:
+        """Add a road user type to add to the event to be build.
 
         Args:
-            section_id (str): the section id
+            road_user_type (str): the road user type
         """
-        self.section_id = section_id
+        self.road_user_type = road_user_type
 
     def add_event_type(self, event_type: EventType) -> None:
         """Add an event type to add to the event to be build.
@@ -219,16 +212,32 @@ class SectionEventBuilder(EventBuilder):
             x1=detection_2.x - detection_1.x, x2=detection_2.y - detection_1.y
         )
 
+
+class SectionEventBuilder(EventBuilder):
+    """A builder to build section events."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.section_id: Optional[SectionId] = None
+
+    def add_section_id(self, section_id: SectionId) -> None:
+        """Add a section id to add to the event to be build.
+
+        Args:
+            section_id (SectionId): the section id
+        """
+        self.section_id = section_id
+
     def create_event(self, detection: Detection) -> Event:
-        """Creates an event with the information stored in a detection.
+        """Creates an section event with the information stored in a detection.
 
         Args:
             detection (Detection): the detection holding the information
 
         Raises:
-            BuildError: if attribute 'section_id' is not set
-            BuildError: if attribute 'event_type' is not set
-            BuildError: attribute 'direction_vector' is not set
+            IncompleteEventBuilderSetup: if attribute 'section_id' is not set
+            IncompleteEventBuilderSetup: if attribute 'event_type' is not set
+            IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
 
         Returns:
             Event: the section event
@@ -242,13 +251,55 @@ class SectionEventBuilder(EventBuilder):
         if not self.direction_vector:
             raise IncompleteEventBuilderSetup("attribute 'direction_vector' is not set")
 
+        if not self.road_user_type:
+            raise IncompleteEventBuilderSetup("attribute 'road_user_type' is not set")
+
+        return Event(
+            road_user_id=detection.track_id.id,
+            road_user_type=self.road_user_type,
+            hostname=self.extract_hostname(detection.input_file_path),
+            occurrence=detection.occurrence,
+            frame_number=detection.frame,
+            section_id=self.section_id,
+            event_coordinate=ImageCoordinate(detection.x, detection.y),
+            event_type=self.event_type,
+            direction_vector=self.direction_vector,
+            video_name=detection.input_file_path.name,
+        )
+
+
+class SceneEventBuilder(EventBuilder):
+    """A builder to build scene events."""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def create_event(self, detection: Detection) -> Event:
+        """Creates a scene event with the information stored in a detection.
+
+        Args:
+            detection (Detection): the detection holding the information
+
+        Raises:
+            IncompleteEventBuilderSetup: if attribute 'event_type' is not set
+            IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
+
+        Returns:
+            Event: the scene event
+        """
+        if not self.event_type:
+            raise IncompleteEventBuilderSetup("attribute 'event_type' is not set")
+
+        if not self.direction_vector:
+            raise IncompleteEventBuilderSetup("attribute 'direction_vector' is not set")
+
         return Event(
             road_user_id=detection.track_id.id,
             road_user_type=detection.classification,
             hostname=self.extract_hostname(detection.input_file_path),
             occurrence=detection.occurrence,
             frame_number=detection.frame,
-            section_id=self.section_id,
+            section_id=None,
             event_coordinate=ImageCoordinate(detection.x, detection.y),
             event_type=self.event_type,
             direction_vector=self.direction_vector,
