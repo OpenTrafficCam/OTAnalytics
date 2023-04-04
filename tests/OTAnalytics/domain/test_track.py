@@ -12,7 +12,11 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackId,
+    TrackListObserver,
+    TrackListSubject,
+    TrackObserver,
     TrackRepository,
+    TrackSubject,
 )
 
 
@@ -125,6 +129,30 @@ class DataBuilder:
 
     def add_track_class(self, classification: str) -> None:
         self._track_class = classification
+
+
+class TestTrackSubject:
+    def test_notify_observer(self) -> None:
+        changed_track = TrackId(1)
+        observer = Mock(spec=TrackObserver)
+        subject = TrackSubject()
+        subject.register(observer)
+
+        subject.notify(changed_track)
+
+        observer.notify_track.assert_called_with(changed_track)
+
+
+class TestTrackListSubject:
+    def test_notify_observer(self) -> None:
+        changed_tracks = [TrackId(1), TrackId(2)]
+        observer = Mock(spec=TrackListObserver)
+        subject = TrackListSubject()
+        subject.register(observer)
+
+        subject.notify(changed_tracks)
+
+        observer.notify_tracks.assert_called_with(changed_tracks)
 
 
 class TestDetection:
@@ -246,22 +274,34 @@ class TestCalculateTrackClassificationByMaxConfidence:
 
 class TestTrackRepository:
     def test_add(self) -> None:
+        track_id = TrackId(1)
         track = Mock()
+        track.id = track_id
+        observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
+        repository.register_tracks_observer(observer)
 
         repository.add(track)
 
         assert track in repository.get_all()
+        observer.notify_tracks.assert_called_with([track_id])
 
     def test_add_all(self) -> None:
+        first_id = TrackId(1)
+        second_id = TrackId(2)
         first_track = Mock()
+        first_track.id = first_id
         second_track = Mock()
+        second_track.id = second_id
+        observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
+        repository.register_tracks_observer(observer)
 
         repository.add_all([first_track, second_track])
 
         assert first_track in repository.get_all()
         assert second_track in repository.get_all()
+        observer.notify_tracks.assert_called_with([first_id, second_id])
 
     def test_get_by_id(self) -> None:
         first_track = Mock()
