@@ -52,7 +52,7 @@ class VideoReader(ABC):
             index (int): the index of the frame to get.
 
         Returns:
-            ndarray: the frame.
+            TrackImage: the frame.
         """
         pass
 
@@ -86,7 +86,7 @@ class Video:
             index (int): the index of the frame to get.
 
         Returns:
-            ndarray: the frame.
+            TrackImage: the frame.
         """
         return self.video_reader.get_frame(self.path, index)
 
@@ -228,6 +228,9 @@ class Datastore:
             self._section_repository.get_all(),
             file=file,
         )
+
+    def get_all_sections(self) -> Iterable[Section]:
+        return self._section_repository.get_all()
 
     def save_event_list_file(self, file: Path) -> None:
         """

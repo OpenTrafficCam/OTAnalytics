@@ -7,7 +7,7 @@ from typing import Any
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionRepository
+from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 
@@ -20,12 +20,12 @@ class FrameSections(CTkFrame):
     ) -> None:
         super().__init__(**kwargs)
         self._application = application
-        self._get_widgets(self._application._datastore._section_repository)
+        self._get_widgets(self._application)
         self._place_widgets()
 
-    def _get_widgets(self, section_repository: SectionRepository) -> None:
+    def _get_widgets(self, application: OTAnalyticsApplication) -> None:
         self.label = CTkLabel(master=self, text="Sections")
-        self.listbox_sections = TreeviewSections(section_repository, master=self)
+        self.listbox_sections = TreeviewSections(application, master=self)
         self.button_load_sections = CTkButton(
             master=self, text="Load", command=self._load_sections_in_file
         )
@@ -72,10 +72,10 @@ class FrameSections(CTkFrame):
 
 
 class TreeviewSections(Treeview, SectionListObserver):
-    def __init__(self, section_repository: SectionRepository, **kwargs: Any) -> None:
+    def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
         super().__init__(show="tree", **kwargs)
-        self._section_repository = section_repository
-        self._section_repository.register_sections_observer(self)
+        self.application = application
+        self.application.register_sections_observer(self)
         self.bind("<ButtonRelease-3>", self._deselect_sections)
         self._define_columns()
         # This call should come from outside later
@@ -92,7 +92,7 @@ class TreeviewSections(Treeview, SectionListObserver):
 
     def _update_sections(self) -> None:
         self.delete(*self.get_children())
-        sections = [section.id for section in self._section_repository.get_all()]
+        sections = [section.id for section in self.application.get_all_sections()]
         self.add_sections(sections=sections)
 
     def add_sections(self, sections: list[SectionId]) -> None:

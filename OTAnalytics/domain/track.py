@@ -315,6 +315,11 @@ class TrackRepository:
         self.observers.notify([track.id])
 
     def __add(self, track: Track) -> None:
+        """Internal method to add a track without notifying observers.
+
+        Args:
+            track (Track): the track to be added
+        """
         self.tracks[track.id] = track
 
     def add_all(self, tracks: Iterable[Track]) -> None:

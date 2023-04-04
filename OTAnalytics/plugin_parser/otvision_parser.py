@@ -347,7 +347,6 @@ class OtsectionParser(SectionParser):
 
 class OttrkVideoParser(VideoParser):
     def __init__(self, video_reader: VideoReader) -> None:
-        super().__init__()
         self._video_reader = video_reader
 
     def parse(

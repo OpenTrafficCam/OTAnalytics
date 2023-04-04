@@ -280,21 +280,13 @@ class SectionRepository:
             section (Section): the section to add
         """
         self._add(section)
-        self._notify([section.id])
-
-    def _notify(self, sections: list[SectionId]) -> None:
-        """Notifies all observers about the changed sections
-
-        Args:
-            sections (list[SectionId]): list of sections to notify about
-        """
-        self.observers.notify(sections)
+        self.observers.notify([section.id])
 
     def _add(self, section: Section) -> None:
         """Internal method to add sections without notifying observers.
 
         Args:
-            section (Section): _description_
+            section (Section): the section to be added
         """
         self._sections[section.id] = section
 
@@ -305,8 +297,8 @@ class SectionRepository:
             sections (Iterable[Section]): the sections to add
         """
         for section in sections:
-            self.add(section)
-        self._notify([section.id for section in sections])
+            self._add(section)
+        self.observers.notify([section.id for section in sections])
 
     def get_all(self) -> Iterable[Section]:
         """Get all sections from the repository.

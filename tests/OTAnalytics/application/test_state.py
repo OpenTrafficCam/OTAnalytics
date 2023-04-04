@@ -55,15 +55,15 @@ class TestSectionState:
             call(changed_section),
         ]
 
-    def test_update_selected_track_on_notify_tracks(self) -> None:
-        first_track = TrackId(1)
-        second_track = TrackId(2)
-        state = TrackState()
+    def test_update_selected_section_on_notify_sections(self) -> None:
+        first = SectionId("north")
+        second = SectionId("south")
+        state = SectionState()
 
-        state.notify_tracks([first_track, second_track])
+        state.notify_sections([first, second])
 
-        assert state.selected_track == first_track
+        assert state.selected_section == first
 
-    def test_update_selected_track_on_notify_tracks_with_empty_list(self) -> None:
+    def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
         with pytest.raises(IndexError):
-            TrackState().notify_tracks([])
+            SectionState().notify_sections([])

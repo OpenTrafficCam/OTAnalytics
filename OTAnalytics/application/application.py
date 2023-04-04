@@ -1,5 +1,7 @@
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
+
+from domain.section import Section, SectionListObserver
 
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
@@ -33,6 +35,12 @@ class OTAnalyticsApplication:
         """
         self._datastore.register_tracks_observer(self.track_state)
         self._datastore.register_sections_observer(self.section_state)
+
+    def register_sections_observer(self, observer: SectionListObserver) -> None:
+        self._datastore.register_sections_observer(observer)
+
+    def get_all_sections(self) -> Iterable[Section]:
+        return self._datastore.get_all_sections()
 
     def add_tracks_of_file(self, track_file: Path) -> None:
         """
