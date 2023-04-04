@@ -249,6 +249,14 @@ class TrackImage:
     def as_array(self) -> Any:
         pass
 
+    @abstractmethod
+    def width(self) -> int:
+        pass
+
+    @abstractmethod
+    def height(self) -> int:
+        pass
+
 
 class TrackClassificationCalculator(ABC):
     """

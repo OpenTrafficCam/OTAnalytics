@@ -23,12 +23,12 @@ class DisplayableImage:
     def height(self) -> int:
         return self.pillow_image.height
 
-    def convert_image(self) -> None:
-        self.pillow_image = Image.fromarray(self.image.as_array())
+    def create_pillow_image(self) -> Image.Image:
+        self.pillow_image = Image.fromarray(self.image.as_array()).convert(mode="RGBA")
+        return self.pillow_image
 
     def create_photo(self) -> ImageTk.PhotoImage:
-        self.convert_image()
-        self.pillow_photo_image = ImageTk.PhotoImage(image=self.pillow_image)
+        self.pillow_photo_image = ImageTk.PhotoImage(image=self.create_pillow_image())
         return self.pillow_photo_image
 
 
@@ -62,40 +62,65 @@ class FrameCanvas(CTkFrame, Observer[TrackImage]):
 
     def notify(self, image: Optional[TrackImage]) -> None:
         if image:
-            self.track_image = image
-            self.add_image(DisplayableImage(image))
+            self.background_image = image
+            self.add_image(DisplayableImage(image), layer="background")
 
-    def add_image(self, image: DisplayableImage) -> None:
-        self.canvas_background.add_image(image)
+    def add_image(self, image: DisplayableImage, layer: str) -> None:
+        self.canvas_background.add_image(image, layer)
+
+    def remove_layer(self, layer: str) -> None:
+        self.canvas_background.remove_layer(layer)
 
     def register_at(self, view_state: TrackViewState) -> None:
         view_state.background_image.register(self)
 
     def _show_tracks_command(self) -> None:
-        # self.canvas_background.add_image(image)
-        # self.
-        if self._show_tracks:
+        if self._show_tracks.get():
             tracks = self._application._datastore._track_repository.get_all()
             sections = self._application._datastore._section_repository.get_all()
-            tracked_image = track_viz.run(tracks, sections, self.track_image)
-            self.add_image(DisplayableImage(tracked_image))
-        # else:
-        #     self.
+            self.tracked_image = track_viz.run(
+                tracks=tracks,
+                sections=sections,
+                width=self.background_image.width(),
+                height=self.background_image.height(),
+            )
+            self.add_image(DisplayableImage(self.tracked_image), layer="track")
+        else:
+            self.remove_layer("track")
 
 
 class CanvasBackground(CTkCanvas):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self._current_id = None
+        self._layers: dict[str, Image.Image] = {}
+        self._current_id: Any = None
 
-    def add_image(self, image: DisplayableImage) -> None:
+    def add_image(self, image: DisplayableImage, layer: str) -> None:
         if self._current_id:
             self.delete(self._current_id)
-        self.current_image = image.create_photo()
+        self._layers[layer] = image.create_pillow_image()
+        self._draw()
+
+    def _draw(self) -> None:
+        self._current_image = self._build_image()
         self._current_id = self.create_image(
-            0, 0, image=self.current_image, anchor=customtkinter.NW
+            0, 0, image=self._current_image, anchor=customtkinter.NW
         )
-        self.config(width=image.width(), height=image.height())
+        self.config(
+            width=self._current_image.width(), height=self._current_image.height()
+        )
+
+    def _build_image(self) -> ImageTk.PhotoImage:
+        if "track" in self._layers.keys():
+            background = self._layers["background"]
+            tracks = self._layers["track"]
+            return ImageTk.PhotoImage(Image.alpha_composite(background, tracks))
+        return ImageTk.PhotoImage(self._layers["background"])
+
+    def remove_layer(self, layer: str) -> None:
+        if layer in self._layers.keys():
+            del self._layers[layer]
+        self._draw()
 
     def show_rectangle(self) -> None:
         self.create_rectangle(10, 10, 70, 70)

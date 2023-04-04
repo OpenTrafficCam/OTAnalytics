@@ -1,7 +1,6 @@
 # % Import libraries
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -9,14 +8,16 @@ import seaborn as sns
 import ujson
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
-from numpy import ndarray
+from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame, read_json
+from plugin_video_processing.video_reader import NdArrayImage
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Detection, Track, TrackImage
 
 ENCODING = "UTF-8"
+DPI = 100
 
 
 # % Set variables
@@ -79,22 +80,15 @@ def max_class(data: pd.DataFrame) -> dict:
     return class_map
 
 
-@dataclass(frozen=True)
-class PlottedImage(TrackImage):
-    image: ndarray
-
-    def as_array(self) -> Any:
-        return self.image
-
-
 def run(
-    track_list: Iterable[Track],
+    tracks: Iterable[Track],
     sections: Iterable[Section],
-    image: TrackImage,
+    width: int,
+    height: int,
 ) -> TrackImage:
     # % Import tracks
     detections: list[Detection] = []
-    for current_track in track_list:
+    for current_track in tracks:
         detections.extend(current_track.detections)
     prepared = [detection.to_dict() for detection in detections]
     converted = pd.DataFrame(
@@ -136,16 +130,31 @@ def run(
 
     # % Plot the image
     ottrk_name = str(ottrk_file).split("/")[-1]
-    # sns.set(style="dark")
-    img = image.as_array()
     if start_end:
-        alpha = 0.1
+        alpha = 1.0
     else:
-        alpha = 0.7
+        alpha = 1.0
 
-    figure = Figure(figsize=(6, 4), dpi=100)
-    axes = figure.add_subplot()
-    axes.imshow(img)
+    figure = Figure(figsize=(10, 10), dpi=DPI)
+    # The first items are for padding and the second items are for the axes.
+    # sizes are in inch.
+    image_width = width / DPI
+    h = [Size.Fixed(0.0), Size.Fixed(image_width)]
+    image_height = height / DPI
+    v = [Size.Fixed(0.0), Size.Fixed(image_height)]
+
+    divider = Divider(
+        fig=figure,
+        pos=(0, 0, 1, 1),
+        horizontal=h,
+        vertical=v,
+        aspect=False,
+    )
+    # The width and height of the rectangle are ignored.
+
+    axes = figure.add_axes(
+        divider.get_position(), axes_locator=divider.new_locator(nx=1, ny=1)
+    )
     sns.lineplot(
         x="x",
         y="y",
@@ -197,8 +206,16 @@ def run(
     axes.set_title(f"Tracks from '{ottrk_name}'", y=1.05, fontsize=12)
     axes.legend(title="Class", loc="upper left", bbox_to_anchor=(1, 1))
     figure.subplots_adjust(top=0.8)
+    figure.patch.set_alpha(0.0)
+    axes.patch.set_alpha(0.0)
+    axes.set_ylim(0, height)
+    axes.set_xlim(0, width)
+    axes.invert_yaxis()
     canvas = FigureCanvasAgg(figure)
     canvas.draw()
-    data = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
-    new_image = data.reshape(canvas.get_width_height()[::-1] + (3,))
-    return PlottedImage(new_image)
+    bbox_contents = figure.canvas.copy_from_bbox(axes.bbox)
+    left, bottom, right, top = bbox_contents.get_extents()
+
+    image_array = np.frombuffer(bbox_contents.to_string(), dtype=np.uint8)
+    image_array = image_array.reshape([top - bottom, right - left, 4])
+    return NdArrayImage(image_array)
