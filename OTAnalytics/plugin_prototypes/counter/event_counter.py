@@ -43,32 +43,73 @@ class CountsProcessor:
             freq=f"{config['INTERVAL_LENGTH_MIN']}min",
         )
 
-    def get_flows(self) -> pd.DataFrame:
+    def get_flows(self, all_timestamps: bool = False) -> pd.DataFrame:
         # Create counting table
         # Get direction for each track (first and last event!)
         events = self.EVENTS.sort_values(["road_user_id", "occurrence"])
         events["section_id2"] = events["section_id"]
-        flows_section = (
-            events.pivot_table(
-                index="road_user_id",
-                values=[
-                    "section_id",
-                    "section_id2",
-                    "occurrence",
-                    "time_interval",
-                    "road_user_type",
-                ],
-                aggfunc={
-                    "section_id": "first",
-                    "section_id2": "last",
-                    "occurrence": "first",
-                    "road_user_type": "first",
-                },
-                fill_value=0,
+        if all_timestamps:
+            events["occurrence2"] = events["occurrence"]
+
+            flows_section = (
+                events.pivot_table(
+                    index="road_user_id",
+                    values=[
+                        "section_id",
+                        "section_id2",
+                        "occurrence",
+                        "occurrence2",
+                        "time_interval",
+                        "road_user_type",
+                    ],
+                    aggfunc={
+                        "section_id": "first",
+                        "section_id2": "last",
+                        "occurrence": "first",
+                        "occurrence2": "last",
+                        "time_interval": "first",
+                        "road_user_type": "first",
+                    },
+                    fill_value=0,
+                )
+                .reset_index()
+                .rename(
+                    {
+                        "section_id": "from_section",
+                        "section_id2": "to_section",
+                        "occurrence": "occurrence_from",
+                        "occurrence2": "occurrence_to",
+                    },
+                    axis=1,
+                )
             )
-            .reset_index()
-            .rename({"section_id": "from_section", "section_id2": "to_section"}, axis=1)
-        )
+
+        else:
+            flows_section = (
+                events.pivot_table(
+                    index="road_user_id",
+                    values=[
+                        "section_id",
+                        "section_id2",
+                        "occurrence",
+                        "time_interval",
+                        "road_user_type",
+                    ],
+                    aggfunc={
+                        "section_id": "first",
+                        "section_id2": "last",
+                        "occurrence": "first",
+                        "time_interval": "first",
+                        "road_user_type": "first",
+                    },
+                    fill_value=0,
+                )
+                .reset_index()
+                .rename(
+                    {"section_id": "from_section", "section_id2": "to_section"},
+                    axis=1,
+                )
+            )
 
         return flows_section
 
