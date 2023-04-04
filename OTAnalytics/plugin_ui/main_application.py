@@ -77,8 +77,8 @@ class OTAnalyticsGui:
 
 class ApplicationStarter:
     def start_gui(self) -> None:
-        datastore = OTAnalyticsApplication(**self.build_dependencies())
-        OTAnalyticsGui(datastore).start()
+        application = OTAnalyticsApplication(**self.build_dependencies())
+        OTAnalyticsGui(application).start()
 
     def start_cli(self) -> None:
         datastore = OTAnalyticsApplication(**self.build_dependencies())
