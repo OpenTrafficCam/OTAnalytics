@@ -8,7 +8,12 @@ from plugin_intersect.intersect import ShapelyIntersector
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import SectionState, TrackState
+from OTAnalytics.application.state import (
+    BackgroundImageUpdater,
+    SectionState,
+    TrackState,
+    TrackViewState,
+)
 from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
@@ -72,7 +77,8 @@ class OTAnalyticsGui:
         self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _wire_widgets(self) -> None:
-        self._application.track_state.register(self.frame_canvas)
+        self._application.track_view_state.background_image.register(self.frame_canvas)
+        self.frame_canvas.register_at(self._application.track_view_state)
 
 
 class ApplicationStarter:
@@ -89,6 +95,7 @@ class ApplicationStarter:
         return {
             "datastore": datastore,
             "track_state": self._create_track_state(),
+            "track_view_state": self._create_track_view_state(datastore),
             "section_state": self._create_section_state(),
             "intersect": self._create_intersect(datastore),
         }
@@ -105,6 +112,12 @@ class ApplicationStarter:
 
     def _create_track_state(self) -> TrackState:
         return TrackState()
+
+    def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
+        state = TrackViewState()
+        updater = BackgroundImageUpdater(datastore._track_repository, datastore, state)
+        datastore.register_tracks_observer(updater)
+        return state
 
     def _create_section_state(self) -> SectionState:
         return SectionState()

@@ -6,6 +6,18 @@ from typing import Any, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 
+CLASSIFICATION: str = "classification"
+CONFIDENCE: str = "confidence"
+X: str = "x"
+Y: str = "y"
+W: str = "w"
+H: str = "h"
+FRAME: str = "frame"
+OCCURRENCE: str = "occurrence"
+INPUT_FILE_PATH: str = "input_file_path"
+INTERPOLATED_DETECTION: str = "interpolated_detection"
+TRACK_ID: str = "track_id"
+
 
 @dataclass(frozen=True)
 class TrackId(DataclassValidation):
@@ -182,6 +194,21 @@ class Detection(DataclassValidation):
     def _validate_frame_id_greater_equal_one(self) -> None:
         if self.frame < 1:
             raise ValueError("frame number must be greater equal 1")
+
+    def to_dict(self) -> dict:
+        return {
+            CLASSIFICATION: self.classification,
+            CONFIDENCE: self.confidence,
+            X: self.x,
+            Y: self.y,
+            W: self.w,
+            H: self.h,
+            FRAME: self.frame,
+            OCCURRENCE: self.occurrence,
+            INPUT_FILE_PATH: self.input_file_path,
+            INTERPOLATED_DETECTION: self.interpolated_detection,
+            TRACK_ID: self.track_id.id,
+        }
 
 
 @dataclass(frozen=True)

@@ -3,7 +3,7 @@ from typing import Optional
 
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import SectionState, TrackState
+from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
 from OTAnalytics.domain.track import TrackId, TrackImage
 
 
@@ -16,11 +16,13 @@ class OTAnalyticsApplication:
         self,
         datastore: Datastore,
         track_state: TrackState,
+        track_view_state: TrackViewState,
         section_state: SectionState,
         intersect: RunIntersect,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
+        self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self._intersect = intersect
         self._connect_observers()

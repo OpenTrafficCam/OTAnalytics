@@ -1,5 +1,7 @@
-from typing import Optional
+from abc import ABC, abstractmethod
+from typing import Generic, Optional, TypeVar
 
+from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
@@ -8,8 +10,10 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import (
     TrackId,
+    TrackImage,
     TrackListObserver,
     TrackObserver,
+    TrackRepository,
     TrackSubject,
 )
 
@@ -62,6 +66,97 @@ class TrackState(TrackListObserver):
         if not tracks:
             raise IndexError("No tracks to select")
         self.select(tracks[0])
+
+
+VALUE = TypeVar("VALUE")
+
+
+class Observer(ABC, Generic[VALUE]):
+    """
+    Interface to listen to changes of a value.
+    """
+
+    @abstractmethod
+    def notify(self, value: Optional[VALUE]) -> None:
+        """
+        Notifies that the value has changed.
+
+        Args:
+            value (Optional[VALUE]): changed value
+        """
+        pass
+
+
+class Subject(Generic[VALUE]):
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[Observer[VALUE]] = set()
+
+    def register(self, observer: Observer[VALUE]) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (Observer[VALUE]): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, value: Optional[VALUE]) -> None:
+        """
+        Notifies observers about the changed value.
+
+        Args:
+            value (Optional[VALUD]): changed value
+        """
+        [observer.notify(value) for observer in self.observers]
+
+
+class BindableProperty(Generic[VALUE]):
+    def __init__(self) -> None:
+        self._property: Optional[VALUE] = None
+        self._observers: Subject[VALUE] = Subject[VALUE]()
+
+    def register(self, observer: Observer[VALUE]) -> None:
+        self._observers.register(observer)
+
+    def set(self, value: Optional[VALUE]) -> None:
+        self._property = value
+        self._observers.notify(value)
+
+    def get(self) -> Optional[VALUE]:
+        return self._property
+
+
+class TrackViewState:
+    """
+    This state represents the information to be shown on the ui.
+    """
+
+    def __init__(self) -> None:
+        self.background_image = BindableProperty[TrackImage]()
+        self.show_tracks = BindableProperty[bool]()
+
+
+class BackgroundImageUpdater(TrackListObserver):
+    def __init__(
+        self,
+        track_repository: TrackRepository,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+    ) -> None:
+        self._track_repository = track_repository
+        self._application = datastore
+        self._track_view_state = track_view_state
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        if not tracks:
+            raise IndexError("No tracks changed")
+        self._track_view_state.background_image.set(
+            self._application.get_image_of_track(tracks[0])
+        )
 
 
 class SectionState(SectionListObserver):
