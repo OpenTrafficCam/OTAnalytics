@@ -25,48 +25,31 @@ class SectionActionDetector:
         self.intersector = intersector
         self.section_event_builder = section_event_builder
 
-    def detect_enter_actions(
+    def detect(
         self,
         sections: list[Section],
         tracks: list[Track],
     ) -> list[Event]:
-        """Detect if tracks enter sections.
+        """Detect section events.
 
         Args:
             sections (list[Section]): the sections
             tracks (list[Track]): the tracks
 
         Returns:
-            list[Event]: the events if tracks do enter any of the sections.
-                Otherwise `None`.
+            list[Event]: the events if tracks intersect with any of the sections.
+                Otherwise return empty list.
         """
         event_list: list[Event] = []
         for section in sections:
             for track in tracks:
-                enter_event = self._detect_enter(section, track)
+                enter_event = self._detect(section, track)
                 if enter_event:
                     event_list.extend(enter_event)
 
         return event_list
 
-    def detect_leave_actions(
-        self,
-        sections: list[Section],
-        tracks: list[Track],
-    ) -> list[Event]:
-        """Detect if tracks leave sections.
-
-        Args:
-            sections (list[Section]): the sections
-            tracks (list[Track]): the tracks
-
-        Returns:
-            list[Event]: the event if tracks do leave any of the sections.
-                Otherwise `None`.
-        """
-        raise NotImplementedError
-
-    def _detect_enter(self, section: Section, track: Track) -> list[Event]:
+    def _detect(self, section: Section, track: Track) -> list[Event]:
         """Detect when a track enters a section.
 
         Args:
@@ -86,19 +69,6 @@ class SectionActionDetector:
             track, event_builder=self.section_event_builder
         )
         return events
-
-    def _detect_leave(self, section: Section, track: Track) -> list[Event]:
-        """Detect when a track leaves a section.
-
-        Args:
-            sections (Section): the section
-            tracks (Track): the track
-
-        Returns:
-            list[Event]: the event if a track leaves a section.
-                Otherwise `None`.
-        """
-        raise NotImplementedError
 
 
 class SceneActionDetector:

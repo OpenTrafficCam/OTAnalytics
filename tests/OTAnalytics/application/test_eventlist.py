@@ -140,7 +140,7 @@ class TestSectionActionDetector:
         section_action_detector = SectionActionDetector(
             mock_intersector, mock_section_event_builder
         )
-        result_event = section_action_detector._detect_enter(line_section, track)
+        result_event = section_action_detector._detect(line_section, track)
 
         mock_section_event_builder.add_section_id.assert_called()
         mock_section_event_builder.add_event_type.assert_called()
@@ -161,9 +161,7 @@ class TestSectionActionDetector:
             mock_intersector, mock_section_event_builder
         )
 
-        result_events = section_action_detector.detect_enter_actions(
-            [line_section], [track]
-        )
+        result_events = section_action_detector.detect([line_section], [track])
         assert result_events == [mock_event]
 
 

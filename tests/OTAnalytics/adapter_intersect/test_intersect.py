@@ -98,10 +98,8 @@ class TestDetectSectionActivity:
 
         # Actual usage
 
-        enter_events = section_action_detector.detect_enter_actions(
-            sections=[line_section], tracks=tracks
-        )
-        assert len(enter_events) == 7
+        events = section_action_detector.detect(sections=[line_section], tracks=tracks)
+        assert len(events) == 7
 
     def test_intersect_by_single_track_line(
         self,
@@ -131,10 +129,8 @@ class TestDetectSectionActivity:
 
         # Actual usage
 
-        enter_events = section_action_detector.detect_enter_actions(
-            sections=[line_section], tracks=tracks
-        )
-        assert len(enter_events) == 7
+        events = section_action_detector.detect(sections=[line_section], tracks=tracks)
+        assert len(events) == 7
 
     def test_intersect_area_by_track_points(
         self,
@@ -165,9 +161,7 @@ class TestDetectSectionActivity:
         section_action_detector = SectionActionDetector(
             intersector=area_intersector, section_event_builder=section_event_builder
         )
-        events = section_action_detector.detect_enter_actions(
-            sections=[area_section], tracks=tracks
-        )
+        events = section_action_detector.detect(sections=[area_section], tracks=tracks)
 
         enter_events: list[Event] = []
         leave_events: list[Event] = []

@@ -54,8 +54,8 @@ class RunIntersect:
                         intersector=line_section_intersector,
                         section_event_builder=section_event_builder,
                     )
-                    if enter_events := section_action_detector._detect_enter(
+                    _events = section_action_detector._detect(
                         section=_section, track=_track
-                    ):
-                        events.extend(enter_events)
+                    )
+                    events.extend(_events)
         return events

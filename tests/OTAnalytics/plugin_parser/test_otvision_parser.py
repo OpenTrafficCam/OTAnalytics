@@ -381,11 +381,9 @@ class TestOtEventListParser:
             section_event_builder=section_event_builder,
         )
 
-        enter_events = section_action_detector.detect_enter_actions(
-            sections=[line_section], tracks=tracks
-        )
+        events = section_action_detector.detect(sections=[line_section], tracks=tracks)
 
         event_list_parser = OtEventListParser()
         event_list_file = test_data_tmp_dir / "eventlist.json"
-        event_list_parser.serialize(enter_events, event_list_file)
+        event_list_parser.serialize(events, event_list_file)
         assert event_list_file.exists()
