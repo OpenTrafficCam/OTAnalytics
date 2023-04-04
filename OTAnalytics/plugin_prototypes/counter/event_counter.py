@@ -1,4 +1,6 @@
 # % Import libraries and modules
+from pathlib import Path
+
 import pandas as pd
 import plotly.express as px
 from matplotlib import pyplot as plt
@@ -13,7 +15,7 @@ class CountsProcessor:
         self.FROM_TIME = config["FROM_TIME"]
         self.TO_TIME = config["TO_TIME"]
         self.INTERVAL_LENGTH_MIN = config["INTERVAL_LENGTH_MIN"]
-        self.SECTIONSLIST_PATH = config["SECTIONSLIST_PATH"]
+        self.SECTIONSLIST_PATH = Path(config["SECTIONSLIST_PATH"])
         self.DIRECTION_NAMES = config["DIRECTION_NAMES"]
         self.EVENTS = events
 
