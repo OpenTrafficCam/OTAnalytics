@@ -2,13 +2,14 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Detection
+from OTAnalytics.domain.types import EventType
 
 EVENT_LIST = "event_list"
 ROAD_USER_ID = "road_user_id"
@@ -38,38 +39,6 @@ class IncompleteEventBuilderSetup(Exception):
     pass
 
 
-class EventTypeParseError(Exception):
-    pass
-
-
-class EventType(Enum):
-    """Enum defining all event types."""
-
-    SECTION_ENTER: str = "section-enter"
-    SECTION_LEAVE: str = "section-leave"
-    ENTER_SCENE: str = "enter-scene"
-    LEAVE_SCENE: str = "leave-scene"
-
-    def serialize(self) -> str:
-        return self.value
-
-    @staticmethod
-    def parse(event_type: str) -> "EventType":
-        match event_type:
-            case EventType.SECTION_ENTER.value:
-                return EventType.SECTION_ENTER
-            case EventType.SECTION_LEAVE.value:
-                return EventType.SECTION_LEAVE
-            case EventType.ENTER_SCENE.value:
-                return EventType.ENTER_SCENE
-            case EventType.LEAVE_SCENE.value:
-                return EventType.LEAVE_SCENE
-            case _:
-                raise EventTypeParseError(
-                    f"Unable to parse not existing event type '{event_type}'"
-                )
-
-
 @dataclass(frozen=True, kw_only=True)
 class Event(DataclassValidation):
     """A traffic event triggered by some traffic event holding all necessary
@@ -95,7 +64,7 @@ class Event(DataclassValidation):
         hostname (str): the OTCamera hostname that the video is associated with
         occurrence (datetime): the time when this event occurred
         frame_number (int): the video frame number that this event is associated with
-        section_id (Optional[str]): only set when event type is of section
+        section_id (Optional[SectionId]): only set when event type is of section
             Defaults to `None`.
         event_coordinate (ImageCoordinate): location where the event occurred in
             the video
@@ -111,7 +80,7 @@ class Event(DataclassValidation):
     hostname: str
     occurrence: datetime
     frame_number: int
-    section_id: Optional[str]
+    section_id: Optional[SectionId]
     event_coordinate: ImageCoordinate
     event_type: EventType
     direction_vector: DirectionVector2D
@@ -151,12 +120,15 @@ class Event(DataclassValidation):
             HOSTNAME: self.hostname,
             OCCURRENCE: self.occurrence.strftime(DATE_FORMAT),
             FRAME_NUMBER: self.frame_number,
-            SECTION_ID: self.section_id,
+            SECTION_ID: self._serialized_section_id(),
             EVENT_COORDINATE: self.event_coordinate.to_list(),
             EVENT_TYPE: self.event_type.value,
             DIRECTION_VECTOR: self.direction_vector.to_list(),
             VIDEO_NAME: self.video_name,
         }
+
+    def _serialized_section_id(self) -> Optional[str]:
+        return self.section_id.serialize() if self.section_id else None
 
 
 class EventBuilder(ABC):
@@ -246,13 +218,13 @@ class SectionEventBuilder(EventBuilder):
 
     def __init__(self) -> None:
         super().__init__()
-        self.section_id: Optional[str] = None
+        self.section_id: Optional[SectionId] = None
 
-    def add_section_id(self, section_id: str) -> None:
+    def add_section_id(self, section_id: SectionId) -> None:
         """Add a section id to add to the event to be build.
 
         Args:
-            section_id (str): the section id
+            section_id (SectionId): the section id
         """
         self.section_id = section_id
 

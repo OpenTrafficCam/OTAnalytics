@@ -8,7 +8,7 @@ import pytest
 
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
@@ -159,7 +159,7 @@ class EventBuilder:
                 self.occurrence_microsecond,
             ),
             frame_number=self.frame_number,
-            section_id=self.section_id,
+            section_id=SectionId(self.section_id),
             event_coordinate=ImageCoordinate(
                 self.event_coordinate_x, self.event_coordinate_y
             ),

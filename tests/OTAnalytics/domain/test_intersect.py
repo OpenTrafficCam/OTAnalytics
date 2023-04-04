@@ -19,7 +19,7 @@ from OTAnalytics.domain.intersect import (
     IntersectImplementation,
     Intersector,
 )
-from OTAnalytics.domain.section import Area, LineSection
+from OTAnalytics.domain.section import Area, LineSection, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from tests.conftest import EventBuilder, TrackBuilder
 
@@ -95,12 +95,12 @@ class TestIntersectBySplittingTrackLine:
 
         # Setup event builder
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N",
+            id=SectionId("N"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -141,12 +141,12 @@ class TestIntersectBySmallTrackComponents:
 
         # Setup event builder
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N",
+            id=SectionId("N"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -178,7 +178,7 @@ class TestIntersectAreaByTrackPoints:
     @pytest.fixture
     def area(self) -> Area:
         return Area(
-            id="N",
+            id=SectionId("N"),
             coordinates=[
                 Coordinate(1, 1),
                 Coordinate(1, 2),
@@ -359,7 +359,7 @@ class TestIntersectAreaByTrackPoints:
                 hostname="myhostname",
                 occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
                 frame_number=2,
-                section_id="N",
+                section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(1.5, 1.5),
                 event_type=EventType.SECTION_ENTER,
                 direction_vector=DirectionVector2D(0, 0),

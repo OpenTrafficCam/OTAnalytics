@@ -18,14 +18,14 @@ from OTAnalytics.domain.event import (
     VIDEO_NAME,
     Event,
     EventRepository,
-    EventType,
-    EventTypeParseError,
     IncompleteEventBuilderSetup,
     SceneEventBuilder,
     SectionEventBuilder,
 )
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Detection, TrackId
+from OTAnalytics.domain.types import EventType, EventTypeParseError
 
 
 @pytest.fixture
@@ -70,7 +70,7 @@ class TestEvent:
                 hostname="my_hostname",
                 occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
                 frame_number=frame,
-                section_id="N",
+                section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(0, 0),
                 event_type=EventType.SECTION_ENTER,
                 direction_vector=DirectionVector2D(1, 0),
@@ -88,7 +88,7 @@ class TestEvent:
                 hostname="myhostname",
                 occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
                 frame_number=1,
-                section_id="N",
+                section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(0, 0),
                 event_type=EventType.SECTION_ENTER,
                 direction_vector=DirectionVector2D(1, 0),
@@ -105,7 +105,7 @@ class TestEvent:
             hostname="my_hostname",
             occurrence=occurrence,
             frame_number=1,
-            section_id="N",
+            section_id=SectionId("N"),
             event_coordinate=event_coordinate,
             event_type=EventType.SECTION_ENTER,
             direction_vector=direction,
@@ -116,7 +116,7 @@ class TestEvent:
         assert event.hostname == "my_hostname"
         assert event.occurrence == occurrence
         assert event.frame_number == 1
-        assert event.section_id == "N"
+        assert event.section_id == SectionId("N")
         assert event.event_coordinate == event_coordinate
         assert event.event_type == EventType.SECTION_ENTER
         assert event.direction_vector == direction
@@ -128,7 +128,7 @@ class TestEvent:
         hostname = "myhostname"
         occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
         frame_number = 1
-        section_id = "N"
+        section_id = SectionId("N")
         event_coordinate = ImageCoordinate(0, 0)
         direction_vector = DirectionVector2D(1, 0)
         video_name = "my_video_name.mp4"
@@ -151,7 +151,7 @@ class TestEvent:
             HOSTNAME: hostname,
             OCCURRENCE: occurrence.strftime(DATE_FORMAT),
             FRAME_NUMBER: frame_number,
-            SECTION_ID: section_id,
+            SECTION_ID: section_id.serialize(),
             EVENT_COORDINATE: [event_coordinate.x, event_coordinate.y],
             EVENT_TYPE: EventType.SECTION_ENTER.value,
             DIRECTION_VECTOR: [direction_vector.x1, direction_vector.x2],
@@ -171,7 +171,7 @@ class TestSectionEventBuilder:
         self, valid_detection: Detection
     ) -> None:
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_direction_vector(valid_detection, valid_detection)
         with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
@@ -180,7 +180,7 @@ class TestSectionEventBuilder:
         self, valid_detection: Detection
     ) -> None:
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
         with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
@@ -198,7 +198,7 @@ class TestSectionEventBuilder:
         self, valid_detection: Detection
     ) -> None:
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_direction_vector(valid_detection, valid_detection)
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_road_user_type("car")
@@ -209,7 +209,7 @@ class TestSectionEventBuilder:
         assert event.hostname == "myhostname"
         assert event.occurrence == valid_detection.occurrence
         assert event.frame_number == valid_detection.frame
-        assert event.section_id == "N"
+        assert event.section_id == SectionId("N")
         assert event.event_coordinate == ImageCoordinate(
             valid_detection.x, valid_detection.y
         )

@@ -1,10 +1,10 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
-from OTAnalytics.domain.event import EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.types import EventType
 
 SECTIONS: str = "sections"
 ID: str = "id"
@@ -19,20 +19,114 @@ PLUGIN_DATA: str = "plugin_data"
 
 
 @dataclass(frozen=True)
+class SectionId:
+    id: str
+
+    def serialize(self) -> str:
+        return self.id
+
+
+class SectionListObserver(ABC):
+    """
+    Interface to listen to changes to a list of sections.
+    """
+
+    @abstractmethod
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        """
+        Notifies that the given sections have been added.
+
+        Args:
+            sections (list[SectionId]): list of added sections
+        """
+        pass
+
+
+class SectionObserver(ABC):
+    """
+    Interface to listen to changes of a single section.
+    """
+
+    @abstractmethod
+    def notify_section(self, section_id: Optional[SectionId]) -> None:
+        """
+        Notifies that the section of the given id has changed.
+
+        Args:
+            track_id (Optional[SectionId]): id of the changed section
+        """
+        pass
+
+
+class SectionSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[SectionObserver] = set()
+
+    def register(self, observer: SectionObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (SectionObserver): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, section_id: Optional[SectionId]) -> None:
+        """
+        Notifies observers about the section id.
+
+        Args:
+            track_id (Optional[SectionId]): id of the changed section
+        """
+        [observer.notify_section(section_id) for observer in self.observers]
+
+
+class SectionListSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[SectionListObserver] = set()
+
+    def register(self, observer: SectionListObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (SectionListObserver): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, sections: list[SectionId]) -> None:
+        """
+        Notifies observers about the list of sections.
+
+        Args:
+            tracks (list[SectionId]): list of added sections
+        """
+        [observer.notify_sections(sections) for observer in self.observers]
+
+
+@dataclass(frozen=True)
 class Section(DataclassValidation):
     """
     A section defines a geometry a coordinate space and is used by traffic detectors to
     create vehicle events.
 
     Args:
-        id (str): the section id
+        id (SectionId): the section id
         relative_offset_coordinates (list[RelativeOffsetCoordinate]): used to determine
             which coordinates of a track to build the geometry to intersect
         plugin_data (dict): data that plugins or prototypes can use which are not
             modelled in the domain layer yet
     """
 
-    id: str
+    id: SectionId
     relative_offset_coordinates: dict[EventType, RelativeOffsetCoordinate]
     plugin_data: dict[str, Any]
 
@@ -110,7 +204,7 @@ class LineSection(Section):
         e.g. serialization.
         """
         return {
-            ID: self.id,
+            ID: self.id.serialize(),
             TYPE: LINE,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             START: self.start.to_dict(),
@@ -162,7 +256,7 @@ class Area(Section):
         """
         return {
             TYPE: AREA,
-            ID: self.id,
+            ID: self.id.serialize(),
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
             PLUGIN_DATA: self.plugin_data,
@@ -173,13 +267,26 @@ class SectionRepository:
     """Repository used to store sections."""
 
     def __init__(self) -> None:
-        self._sections: dict[str, Section] = {}
+        self._sections: dict[SectionId, Section] = {}
+        self.observers: SectionListSubject = SectionListSubject()
+
+    def register_sections_observer(self, observer: SectionListObserver) -> None:
+        self.observers.register(observer)
 
     def add(self, section: Section) -> None:
         """Add a section to the repository.
 
         Args:
             section (Section): the section to add
+        """
+        self._add(section)
+        self.observers.notify([section.id])
+
+    def _add(self, section: Section) -> None:
+        """Internal method to add sections without notifying observers.
+
+        Args:
+            section (Section): the section to be added
         """
         self._sections[section.id] = section
 
@@ -190,7 +297,8 @@ class SectionRepository:
             sections (Iterable[Section]): the sections to add
         """
         for section in sections:
-            self.add(section)
+            self._add(section)
+        self.observers.notify([section.id for section in sections])
 
     def get_all(self) -> Iterable[Section]:
         """Get all sections from the repository.
