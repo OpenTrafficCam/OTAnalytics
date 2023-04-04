@@ -112,9 +112,7 @@ class Intersector(ABC):
         self.implementation = implementation
 
     @abstractmethod
-    def intersect(
-        self, track: Track, event_builder: EventBuilder
-    ) -> Optional[list[Event]]:
+    def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
         """Intersect tracks with sections and generate events if they intersect.
 
         Args:
@@ -122,8 +120,8 @@ class Intersector(ABC):
             event_builder (EventBuilder): builder to generate events
 
         Returns:
-            Optional[list[Event]]: the event if the track intersects with the section.
-                Otherwise `None`
+            list[Event]: the events if the track intersects with the section.
+                Otherwise return empty list.
         """
         pass
 
@@ -182,9 +180,7 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
     ) -> None:
         super().__init__(implementation, line_section)
 
-    def intersect(
-        self, track: Track, event_builder: EventBuilder
-    ) -> Optional[list[Event]]:
+    def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
         line_section_as_geometry = Line(
             [self._line_section.start, self._line_section.end]
         )
@@ -207,8 +203,9 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
         )
         event_builder.add_road_user_type(track.classification)
 
+        events: list[Event] = []
+
         if splitted_lines:
-            events: list[Event] = []
             current_idx = len(splitted_lines[0].coordinates)
             for n, splitted_line in enumerate(splitted_lines[1:], start=1):
                 # Subtract by 2n to account for intersection points
@@ -216,9 +213,7 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
                 selected_detection = track.detections[detection_index]
                 events.append(event_builder.create_event(selected_detection))
                 current_idx += len(splitted_line.coordinates)
-            return events
-
-        return None
+        return events
 
 
 class IntersectBySmallTrackComponents(LineSectionIntersector):
@@ -239,14 +234,14 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
     ) -> None:
         super().__init__(implementation, line_section)
 
-    def intersect(
-        self, track: Track, event_builder: EventBuilder
-    ) -> Optional[list[Event]]:
+    def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
+        events: list[Event] = []
+
         line_section_as_geometry = Line(
             [self._line_section.start, self._line_section.end]
         )
         if not self._track_line_intersects_section(track, line_section_as_geometry):
-            return None
+            return events
 
         event_builder.add_road_user_type(track.classification)
         if event_builder.event_type is None:
@@ -255,8 +250,6 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
         offset = self._line_section.relative_offset_coordinates[
             event_builder.event_type
         ]
-
-        events: list[Event] = []
 
         for current_detection, next_detection in zip(
             track.detections[0:-1], track.detections[1:]
@@ -273,10 +266,7 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
             if intersects:
                 events.append(event_builder.create_event(next_detection))
 
-        if events:
-            return events
-
-        return None
+        return events
 
     def _track_line_intersects_section(self, track: Track, line_section: Line) -> bool:
         """Whether a track line defined by all its detections intersects the section"""
@@ -312,9 +302,7 @@ class IntersectAreaByTrackPoints(AreaIntersector):
     def __init__(self, implementation: IntersectImplementation, area: Area) -> None:
         super().__init__(implementation, area)
 
-    def intersect(
-        self, track: Track, event_builder: EventBuilder
-    ) -> Optional[list[Event]]:
+    def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
         """Intersect area with a detection.
 
         Returns:
@@ -356,6 +344,4 @@ class IntersectAreaByTrackPoints(AreaIntersector):
             events.append(event)
             section_currently_entered = entered
 
-        if events:
-            return events
-        return None
+        return events

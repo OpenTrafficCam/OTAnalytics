@@ -1,5 +1,3 @@
-from typing import Optional
-
 from OTAnalytics.domain.event import (
     Event,
     EventType,
@@ -68,7 +66,7 @@ class SectionActionDetector:
         """
         raise NotImplementedError
 
-    def _detect_enter(self, section: Section, track: Track) -> Optional[list[Event]]:
+    def _detect_enter(self, section: Section, track: Track) -> list[Event]:
         """Detect when a track enters a section.
 
         Args:
@@ -77,22 +75,19 @@ class SectionActionDetector:
 
         Returns:
             list[Event]: the event if a track enters a section.
-                Otherwise `None`.
+                Otherwise return empty list.
         """
         self.section_event_builder.add_section_id(section.id)
         self.section_event_builder.add_event_type(EventType.SECTION_ENTER)
         self.section_event_builder.add_direction_vector(
             detection_1=track.detections[0], detection_2=track.detections[-1]
         )
-        events: Optional[list[Event]] = self.intersector.intersect(
+        events: list[Event] = self.intersector.intersect(
             track, event_builder=self.section_event_builder
         )
+        return events
 
-        if events:
-            return events
-        return None
-
-    def _detect_leave(self, section: Section, track: Track) -> Optional[Event]:
+    def _detect_leave(self, section: Section, track: Track) -> list[Event]:
         """Detect when a track leaves a section.
 
         Args:
