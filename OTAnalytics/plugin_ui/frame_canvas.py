@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.state import Observer, TrackViewState
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.plugin_prototypes.track_visualization import track_viz
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import TrackPlotter
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 
 
@@ -78,7 +78,7 @@ class FrameCanvas(CTkFrame, Observer[TrackImage]):
         if self._show_tracks.get():
             tracks = self._application._datastore._track_repository.get_all()
             sections = self._application._datastore._section_repository.get_all()
-            self.tracked_image = track_viz.run(
+            self.tracked_image = TrackPlotter().run(
                 tracks=tracks,
                 sections=sections,
                 width=self.background_image.width(),
