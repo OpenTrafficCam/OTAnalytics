@@ -58,4 +58,36 @@ class EventProcessor:
 
         events_df = events_df[events_df["road_user_id"].isin(valid_road_user_ids)]
 
+        if self.FROM_TIME != "":
+            from_time_formatted = pd.to_datetime(self.FROM_TIME)
+            events_df = events_df[events_df["occurrence"] >= from_time_formatted]
+            start_time = from_time_formatted
+        else:
+            start_time = events_df.loc[0, "occurrence"]
+
+        # Filter by end time
+        if self.TO_TIME != "":
+            to_time_formatted = pd.to_datetime(self.TO_TIME)
+            events_df = events_df[events_df["occurrence"] < to_time_formatted]
+            end_time = to_time_formatted
+        else:
+            end_time = events_df.loc[len(events_df) - 1, "occurrence"]
+
+        self.INTERVALS = pd.date_range(
+            start_time,
+            end_time - pd.Timedelta("1s"),
+            freq=f"{self.INTERVAL_LENGTH_MIN}min",
+        )
+
+        events_df["time_interval"] = (
+            (
+                events_df["occurrence"]
+                - pd.TimedeltaIndex(
+                    events_df["occurrence"].dt.minute % self.INTERVAL_LENGTH_MIN, "m"
+                )
+            )
+            - pd.TimedeltaIndex(events_df["occurrence"].dt.second, "s")
+            - pd.TimedeltaIndex(events_df["occurrence"].dt.microsecond, "microsecond")
+        )
+
         return events_df.sort_values(["road_user_id", "occurrence"])
