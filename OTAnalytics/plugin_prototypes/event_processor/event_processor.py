@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 
-from OTAnalytics.plugin_parser.otanalytics_parser import (
+from OTAnalytics.plugin_prototypes.event_processor.otanalytics_parser import (
     JsonParser,
     PandasDataFrameParser,
 )
