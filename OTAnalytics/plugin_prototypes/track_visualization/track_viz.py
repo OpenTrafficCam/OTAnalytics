@@ -3,11 +3,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import ujson
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 from numpy import ndarray
 from pandas import DataFrame, read_json
 
@@ -135,13 +136,17 @@ def run(
 
     # % Plot the image
     ottrk_name = str(ottrk_file).split("/")[-1]
-    sns.set(style="dark")
+    # sns.set(style="dark")
     img = image.as_array()
     if start_end:
         alpha = 0.1
     else:
         alpha = 0.7
-    trkimg = sns.lineplot(
+
+    figure = Figure(figsize=(6, 4), dpi=100)
+    axes = figure.add_subplot()
+    axes.imshow(img)
+    sns.lineplot(
         x="x",
         y="y",
         hue="max_class",
@@ -151,8 +156,8 @@ def run(
         estimator=None,
         sort=False,
         alpha=alpha,
+        ax=axes,
     )
-    trkimg.imshow(img)
     if start_end:
         sns.scatterplot(
             x="x",
@@ -161,6 +166,7 @@ def run(
             data=track_df_start_end,
             legend=False,
             s=3,
+            ax=axes,
         )
     if plot_sections:
         for section in range(0, len(sectionlist)):
@@ -174,18 +180,24 @@ def run(
                 for i in sectionlist[section].keys()
                 if i in ["start", "end"]
             ]
-            sns.lineplot(x=x_data, y=y_data, linewidth=2, alpha=1, color="black")
-    trkimg.set(xlabel="", ylabel="", xticklabels=[], yticklabels=[])
-    plt.title(f"Tracks from '{ottrk_name}'", y=1.05, fontsize=12)
-    trkimg.legend(title="Class", loc="upper left", bbox_to_anchor=(1, 1))
-    plt.subplots_adjust(top=0.8)
-    plt.savefig(
-        output_img,
-        orientation="landscape",
-        dpi=300,
-        bbox_inches="tight",
+            sns.lineplot(
+                x=x_data,
+                y=y_data,
+                linewidth=2,
+                alpha=1,
+                color="black",
+                ax=axes,
+            )
+    axes.set(
+        xlabel="",
+        ylabel="",
+        xticklabels=[],
+        yticklabels=[],
     )
-    canvas = plt.gca().figure.canvas
+    axes.set_title(f"Tracks from '{ottrk_name}'", y=1.05, fontsize=12)
+    axes.legend(title="Class", loc="upper left", bbox_to_anchor=(1, 1))
+    figure.subplots_adjust(top=0.8)
+    canvas = FigureCanvasAgg(figure)
     canvas.draw()
     data = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
     new_image = data.reshape(canvas.get_width_height()[::-1] + (3,))
