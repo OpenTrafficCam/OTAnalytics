@@ -71,8 +71,50 @@ def track() -> Track:
         interpolated_detection=False,
         track_id=TrackId(1),
     )
-
-    return Track(track_id, "car", [detection_1, detection_2])
+    detection_3 = Detection(
+        classification="car",
+        confidence=0.5,
+        x=15.0,
+        y=5.0,
+        w=15.3,
+        h=30.5,
+        frame=3,
+        occurrence=datetime(2022, 1, 1, 0, 0, 0, 2),
+        input_file_path=Path("path/to/myhostname_something.otdet"),
+        interpolated_detection=False,
+        track_id=TrackId(1),
+    )
+    detection_4 = Detection(
+        classification="car",
+        confidence=0.5,
+        x=20.0,
+        y=5.0,
+        w=15.3,
+        h=30.5,
+        frame=4,
+        occurrence=datetime(2022, 1, 1, 0, 0, 0, 3),
+        input_file_path=Path("path/to/myhostname_something.otdet"),
+        interpolated_detection=False,
+        track_id=TrackId(1),
+    )
+    detection_5 = Detection(
+        classification="car",
+        confidence=0.5,
+        x=25.0,
+        y=5.0,
+        w=15.3,
+        h=30.5,
+        frame=5,
+        occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),
+        input_file_path=Path("path/to/myhostname_something.otdet"),
+        interpolated_detection=False,
+        track_id=TrackId(1),
+    )
+    return Track(
+        track_id,
+        "car",
+        [detection_1, detection_2, detection_3, detection_4, detection_5],
+    )
 
 
 class TestIntersector:
@@ -133,11 +175,14 @@ class TestIntersectBySmallTrackComponents:
     def test_intersect(self, detection: Detection, track: Track) -> None:
         # Setup mock intersection implementation
         mock_implementation = Mock(spec=IntersectImplementation)
-        intersection_result: list[Line] = [
-            Line([Coordinate(0, 5), Coordinate(5, 5)]),
-            Line([Coordinate(5, 5), Coordinate(10, 5)]),
+        mock_implementation.line_intersects_line.side_effect = [
+            True,
+            True,
+            False,
+            False,
+            False,
+            False,
         ]
-        mock_implementation.split_line_with_line.return_value = intersection_result
 
         # Setup event builder
         event_builder = SectionEventBuilder()
@@ -220,6 +265,15 @@ class TestIntersectAreaByTrackPoints:
         track_builder.add_microsecond(2)
         track_builder.append_detection()
 
+        track_builder.add_xy_bbox(3.5, 1.5)
+        track_builder.add_frame(4)
+        track_builder.add_microsecond(3)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(4, 1.5)
+        track_builder.add_frame(5)
+        track_builder.add_microsecond(4)
+        track_builder.append_detection()
         track = track_builder.build_track()
 
         section_event_builder = SectionEventBuilder()
@@ -258,12 +312,27 @@ class TestIntersectAreaByTrackPoints:
 
         track_builder.add_xy_bbox(1.5, 1.5)
         track_builder.add_frame(1)
-        track_builder.occurrence_microsecond = 1
+        track_builder.add_microsecond(1)
         track_builder.append_detection()
 
         track_builder.add_xy_bbox(3, 1.5)
         track_builder.add_frame(2)
-        track_builder.occurrence_microsecond = 2
+        track_builder.add_microsecond(2)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(3.5, 1.5)
+        track_builder.add_frame(3)
+        track_builder.add_microsecond(3)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(4, 1.5)
+        track_builder.add_frame(4)
+        track_builder.add_microsecond(4)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(4.5, 1.5)
+        track_builder.add_frame(5)
+        track_builder.add_microsecond(5)
         track_builder.append_detection()
 
         track = track_builder.build_track()
@@ -305,12 +374,27 @@ class TestIntersectAreaByTrackPoints:
 
         track_builder.add_xy_bbox(1.5, 1.5)
         track_builder.add_frame(1)
-        track_builder.occurrence_microsecond = 1
+        track_builder.add_microsecond(1)
         track_builder.append_detection()
 
         track_builder.add_xy_bbox(1.7, 1.5)
         track_builder.add_frame(2)
-        track_builder.occurrence_microsecond = 2
+        track_builder.add_microsecond(2)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.8, 1.5)
+        track_builder.add_frame(3)
+        track_builder.add_microsecond(3)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.7, 1.5)
+        track_builder.add_frame(4)
+        track_builder.add_microsecond(4)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.8, 1.5)
+        track_builder.add_frame(5)
+        track_builder.add_microsecond(4)
         track_builder.append_detection()
 
         track = track_builder.build_track()
@@ -341,7 +425,22 @@ class TestIntersectAreaByTrackPoints:
 
         track_builder.add_xy_bbox(1.5, 1.5)
         track_builder.add_frame(2)
-        track_builder.occurrence_microsecond = 1
+        track_builder.add_microsecond(1)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.7, 1.5)
+        track_builder.add_frame(3)
+        track_builder.add_microsecond(2)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.8, 1.5)
+        track_builder.add_frame(4)
+        track_builder.add_microsecond(3)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(1.7, 1.5)
+        track_builder.add_frame(5)
+        track_builder.add_microsecond(4)
         track_builder.append_detection()
 
         track = track_builder.build_track()
@@ -357,7 +456,7 @@ class TestIntersectAreaByTrackPoints:
                 road_user_id=1,
                 road_user_type="car",
                 hostname="myhostname",
-                occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
+                occurrence=datetime(2020, 1, 1, 0, 0, 0, 1),
                 frame_number=2,
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(1.5, 1.5),
@@ -461,22 +560,27 @@ class TestIntersectAreaByTrackPoints:
 
         track_builder.add_xy_bbox(1.5, 1.5)
         track_builder.add_frame(2)
-        track_builder.occurrence_microsecond = 1
+        track_builder.add_microsecond(1)
         track_builder.append_detection()
 
         track_builder.add_xy_bbox(3, 1.5)
         track_builder.add_frame(3)
-        track_builder.occurrence_microsecond = 2
+        track_builder.add_microsecond(2)
         track_builder.append_detection()
 
         track_builder.add_xy_bbox(1.5, 1.5)
         track_builder.add_frame(4)
-        track_builder.occurrence_microsecond = 3
+        track_builder.add_microsecond(3)
         track_builder.append_detection()
 
         track_builder.add_xy_bbox(3, 1.5)
         track_builder.add_frame(5)
-        track_builder.occurrence_microsecond = 4
+        track_builder.add_microsecond(4)
+        track_builder.append_detection()
+
+        track_builder.add_xy_bbox(4, 1.5)
+        track_builder.add_frame(6)
+        track_builder.add_microsecond(5)
         track_builder.append_detection()
 
         track = track_builder.build_track()

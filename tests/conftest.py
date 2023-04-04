@@ -15,6 +15,7 @@ from OTAnalytics.domain.track import (
     Track,
     TrackId,
 )
+from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser, OttrkParser
 
 T = TypeVar("T")
@@ -32,7 +33,7 @@ class TrackBuilder:
     w: float = 10
     h: float = 10
     frame: int = 1
-    occurrence_year: int = 2022
+    occurrence_year: int = 2020
     occurrence_month: int = 1
     occurrence_day: int = 1
     occurrence_hour: int = 0
@@ -116,13 +117,102 @@ class TrackBuilder:
         self.x = x
         self.y = y
 
+    def get_example_metadata(self) -> dict:
+        return {
+            "otdet_version": "1.0",
+            "video": {
+                "filename": "path/to/myhostname_file",
+                "filetype": ".mp4",
+                "width": 800.0,
+                "height": 600.0,
+                "recorded_fps": 20.0,
+                "number_of_frames": 60.0,
+                "recorded_start_date": "2020-01-01 00:00:00.000000",
+                "length": "0:00:03",
+            },
+            "detection": {
+                "otvision_version": "1.0",
+                "model": {
+                    "name": "YOLOv5",
+                    "weights": "yolov5s",
+                    "iou_threshold": 0.45,
+                    "image_size": 640,
+                    "max_confidence": 0.25,
+                    "half_precision": False,
+                    "classes": {
+                        "0": "person",
+                        "1": "bicycle",
+                        "2": "car",
+                        "3": "motorcycle",
+                        "5": "bus",
+                        "6": "train",
+                        "7": "truck",
+                        "8": "boat",
+                    },
+                },
+                "chunksize": 1,
+                "normalized_bbox": False,
+            },
+            "ottrk_version": "1.0",
+            "tracking": {
+                "otvision_version": "1.0",
+                "first_tracked_video_start": "2020-01-01 00:00:00.000000",
+                "last_tracked_video_end": "2020-01-01 00:00:02.950000",
+                "tracker": {
+                    "name": "IOU",
+                    "sigma_l": 0.27,
+                    "sigma_h": 0.42,
+                    "sigma_iou": 0.38,
+                    "t_min": 5,
+                    "t_miss_max": 51,
+                },
+            },
+        }
+
+    def serialize_detection(
+        self, detection: Detection, is_first: bool, is_finished: bool
+    ) -> dict:
+        return {
+            ottrk_dataformat.CLASS: detection.classification,
+            ottrk_dataformat.CONFIDENCE: detection.confidence,
+            ottrk_dataformat.X: detection.x,
+            ottrk_dataformat.Y: detection.y,
+            ottrk_dataformat.W: detection.w,
+            ottrk_dataformat.H: detection.h,
+            ottrk_dataformat.FRAME: detection.frame,
+            ottrk_dataformat.OCCURRENCE: detection.occurrence.strftime(
+                ottrk_dataformat.DATE_FORMAT
+            ),
+            ottrk_dataformat.INPUT_FILE_PATH: str(detection.input_file_path),
+            ottrk_dataformat.INTERPOLATED_DETECTION: detection.interpolated_detection,
+            ottrk_dataformat.FIRST: is_first,
+            ottrk_dataformat.FINISHED: is_finished,
+            ottrk_dataformat.TRACK_ID: detection.track_id.id,
+        }
+
+    def build_serialized_detections(self) -> list[dict]:
+        detections: list[dict] = []
+        detections.append(self.serialize_detection(self._detections[0], True, False))
+        for detection in self._detections[1:-1]:
+            detections.append(self.serialize_detection(detection, False, False))
+
+        detections.append(self.serialize_detection(self._detections[-1], False, True))
+        return detections
+
+    def build_ottrk(self) -> dict:
+        detections = self.build_serialized_detections()
+        return {
+            ottrk_dataformat.METADATA: self.get_example_metadata(),
+            ottrk_dataformat.DATA: {ottrk_dataformat.DETECTIONS: detections},
+        }
+
 
 @dataclass
 class EventBuilder:
     road_user_id: int = 1
     road_user_type: str = "car"
     hostname: str = "myhostname"
-    occurrence_year: int = 2022
+    occurrence_year: int = 2020
     occurrence_month: int = 1
     occurrence_day: int = 1
     occurrence_hour: int = 0

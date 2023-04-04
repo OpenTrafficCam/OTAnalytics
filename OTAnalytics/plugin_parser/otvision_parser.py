@@ -19,7 +19,7 @@ from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
-    BuildTrackWithSingleDetectionError,
+    BuildTrackWithLessThanFiveDetectionsError,
     Detection,
     Track,
     TrackClassificationCalculator,
@@ -104,7 +104,7 @@ class OttrkParser(TrackParser):
                     detections=sort_dets_by_occurrence,
                 )
                 tracks.append(current_track)
-            except BuildTrackWithSingleDetectionError as build_error:
+            except BuildTrackWithLessThanFiveDetectionsError as build_error:
                 # TODO: log error
                 # Skip tracks with less than 2 detections
                 print(build_error)
