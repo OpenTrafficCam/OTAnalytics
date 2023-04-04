@@ -6,29 +6,35 @@ from mpl_chord_diagram import chord_diagram
 
 from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser
 
+TIME_FORMAT = "TIME_FORMAT"
+FROM_TIME = "FROM_TIME"
+TO_TIME = "TO_TIME"
+INTERVAL_LENGTH_MIN = "INTERVAL_LENGTH_MIN"
+SECTIONSLIST_PATH = "SECTIONSLIST_PATH"
+
 
 class CountsProcessor:
     def __init__(self, config: dict, events: pd.DataFrame) -> None:
-        self.TIME_FORMAT = config["TIME_FORMAT"]
-        self.FROM_TIME = config["FROM_TIME"]
-        self.TO_TIME = config["TO_TIME"]
-        self.INTERVAL_LENGTH_MIN = config["INTERVAL_LENGTH_MIN"]
-        self.SECTIONSLIST_PATH = config["SECTIONSLIST_PATH"]
-        self.EVENTS = events
+        self.time_format = config[TIME_FORMAT]
+        self.from_time = config[FROM_TIME]
+        self.to_time = config[TO_TIME]
+        self.interval_length_min = config[INTERVAL_LENGTH_MIN]
+        self.sectionslist_path = config[SECTIONSLIST_PATH]
+        self.events = events
 
         otsection_parser = OtsectionParser()
-        self.SECTIONS = otsection_parser.parse(self.SECTIONSLIST_PATH)
+        self.sections = otsection_parser.parse(self.sectionslist_path)
 
-        if self.FROM_TIME != "":
-            from_time_formatted = pd.to_datetime(self.FROM_TIME)
+        if self.from_time != "":
+            from_time_formatted = pd.to_datetime(self.from_time)
             events = events[events["occurrence"] >= from_time_formatted]
             start_time = from_time_formatted
         else:
             start_time = events.loc[0, "occurrence"]
 
         # Filter by end time
-        if self.TO_TIME != "":
-            to_time_formatted = pd.to_datetime(self.TO_TIME)
+        if self.to_time != "":
+            to_time_formatted = pd.to_datetime(self.to_time)
             events = events[events["occurrence"] < to_time_formatted]
             end_time = to_time_formatted
         else:
@@ -37,13 +43,13 @@ class CountsProcessor:
         self.INTERVALS = pd.date_range(
             start_time,
             end_time - pd.Timedelta("1s"),
-            freq=f"{self.INTERVAL_LENGTH_MIN}min",
+            freq=f"{self.interval_length_min}min",
         )
 
     def get_flows(self) -> pd.DataFrame:
         # Create counting table
         # Get direction for each track (first and last event!)
-        events = self.EVENTS.sort_values(["road_user_id", "occurrence"])
+        events = self.events.sort_values(["road_user_id", "occurrence"])
         events["section_id2"] = events["section_id"]
         flows_section = (
             events.pivot_table(
@@ -69,7 +75,7 @@ class CountsProcessor:
         counts_section_in = (
             self.FLOWS.groupby(
                 [
-                    pd.Grouper(key="occurrence", freq=f"{self.INTERVAL_LENGTH_MIN}Min"),
+                    pd.Grouper(key="occurrence", freq=f"{self.interval_length_min}Min"),
                     "from_section",
                     "max_class",
                 ]
@@ -91,7 +97,7 @@ class CountsProcessor:
         counts_section_out = (
             self.FLOWS.groupby(
                 [
-                    pd.Grouper(key="occurrence", freq=f"{self.INTERVAL_LENGTH_MIN}Min"),
+                    pd.Grouper(key="occurrence", freq=f"{self.interval_length_min}Min"),
                     "to_section",
                     "max_class",
                 ]
@@ -120,7 +126,7 @@ class CountsProcessor:
         intervals = self.INTERVALS
         # Import Sectionlist
 
-        section_list = [section.id for section in self.SECTIONS]
+        section_list = [section.id for section in self.sections]
 
         # Create table template
         counts_template = pd.DataFrame()
@@ -160,7 +166,7 @@ class CountsProcessor:
         flows_section = (
             self.FLOWS.groupby(
                 [
-                    pd.Grouper(key="occurrence", freq=f"{self.INTERVAL_LENGTH_MIN}Min"),
+                    pd.Grouper(key="occurrence", freq=f"{self.interval_length_min}Min"),
                     "from_section",
                     "to_section",
                     "max_class",
@@ -181,7 +187,7 @@ class CountsProcessor:
         intervals = self.INTERVALS
         # Import Sectionlist
 
-        section_list = [section.id for section in self.SECTIONS]
+        section_list = [section.id for section in self.sections]
 
         # Create table template
         flows_template = pd.DataFrame()
@@ -217,7 +223,7 @@ class CountsProcessor:
 
         # Set the time format for plotting
         counts_section["time_interval"] = self._set_time_format(
-            counts_section["time_interval"], self.TIME_FORMAT
+            counts_section["time_interval"], self.time_format
         )
 
         # % Create counting plot
@@ -242,7 +248,7 @@ class CountsProcessor:
         fig.show()
 
     def plot_flows(self) -> None:
-        nodes = [section.id for section in self.SECTIONS]
+        nodes = [section.id for section in self.sections]
 
         flows = self.FLOW_TABLE
         time_intervals = self.INTERVALS
@@ -296,7 +302,7 @@ class CountsProcessor:
                     show=False,
                 )
                 times = self._set_time_format(
-                    pd.Series(time_intervals), self.TIME_FORMAT
+                    pd.Series(time_intervals), self.time_format
                 )
                 axs_ij.set_title(
                     f"Time Interval: {times[i]},\nRoad User: {road_user_types[j]}",
