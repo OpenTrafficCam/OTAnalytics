@@ -7,17 +7,26 @@ from OTAnalytics.plugin_prototypes.event_processor.otanalytics_parser import (
     PandasDataFrameParser,
 )
 
+TIME_FORMAT = "TIME_FORMAT"
+FILTER_CLASS = "FILTER_CLASS"
+FILTER_SECTION = "FILTER_SECTION"
+EVENTLIST_PATH = "EVENTLIST_PATH"
+SECTIONSLIST_PATH = "SECTIONSLIST_PATH"
+FROM_TIME = "FROM_TIME"
+TO_TIME = "TO_TIME"
+INTERVAL_LENGTH_MIN = "INTERVAL_LENGTH_MIN"
+
 
 class EventProcessor:
     def __init__(self, config: dict):
-        self.TIME_FORMAT = config["TIME_FORMAT"]
-        self.FILTER_CLASS = config["FILTER_CLASS"]
-        self.FILTER_SECTION = config["FILTER_SECTION"]
-        self.EVENTLIST_PATH = config["EVENTLIST_PATH"]
-        self.SECTIONSLIST_PATH = config["SECTIONSLIST_PATH"]
-        self.FROM_TIME = config["FROM_TIME"]
-        self.TO_TIME = config["TO_TIME"]
-        self.INTERVAL_LENGTH_MIN = config["INTERVAL_LENGTH_MIN"]
+        self.TIME_FORMAT = config[TIME_FORMAT]
+        self.FILTER_CLASS = config[FILTER_CLASS]
+        self.FILTER_SECTION = config[FILTER_SECTION]
+        self.EVENTLIST_PATH = config[EVENTLIST_PATH]
+        self.SECTIONSLIST_PATH = config[SECTIONSLIST_PATH]
+        self.FROM_TIME = config[FROM_TIME]
+        self.TO_TIME = config[TO_TIME]
+        self.INTERVAL_LENGTH_MIN = config[INTERVAL_LENGTH_MIN]
 
     def _max_class(self, data: pd.DataFrame) -> dict:
         tmp = data[["road_user_type", "road_user_id", "confidence"]]

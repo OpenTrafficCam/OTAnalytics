@@ -71,9 +71,9 @@ class CountsProcessor:
 
     def create_counting_table(self, return_table: bool = True) -> pd.DataFrame:
         if not hasattr(self, "FLOWS"):
-            self.FLOWS = self.get_flows()
+            self.flows = self.get_flows()
         counts_section_in = (
-            self.FLOWS.groupby(
+            self.flows.groupby(
                 [
                     pd.Grouper(key="occurrence", freq=f"{self.interval_length_min}Min"),
                     "from_section",
@@ -95,7 +95,7 @@ class CountsProcessor:
         counts_section_in["direction"] = "in"
 
         counts_section_out = (
-            self.FLOWS.groupby(
+            self.flows.groupby(
                 [
                     pd.Grouper(key="occurrence", freq=f"{self.interval_length_min}Min"),
                     "to_section",
@@ -132,7 +132,7 @@ class CountsProcessor:
         counts_template = pd.DataFrame()
         for i in intervals:
             for j in ["in", "out"]:
-                for k in self.FLOWS["max_class"].unique():
+                for k in self.flows["max_class"].unique():
                     counts_to_add = pd.DataFrame(
                         {
                             "section_id": section_list,
@@ -144,7 +144,7 @@ class CountsProcessor:
                     counts_template = pd.concat([counts_template, counts_to_add])
 
         # Merge data and save
-        self.COUNTING_TABLE = (
+        self.counting_table = (
             pd.merge(
                 counts_template,
                 counts_section,
@@ -156,15 +156,15 @@ class CountsProcessor:
         )
 
         if return_table:
-            return self.COUNTING_TABLE
+            return self.counting_table
 
     # TODO: export table
 
     def create_flow_table(self, return_table: bool = True) -> pd.DataFrame:
         if not hasattr(self, "FLOWS"):
-            self.FLOWS = self.get_flows()
+            self.flows = self.get_flows()
         flows_section = (
-            self.FLOWS.groupby(
+            self.flows.groupby(
                 [
                     pd.Grouper(key="occurrence", freq=f"{self.interval_length_min}Min"),
                     "from_section",
@@ -193,7 +193,7 @@ class CountsProcessor:
         flows_template = pd.DataFrame()
         for i in intervals:
             for j in section_list:
-                for k in self.FLOWS["max_class"].unique():
+                for k in self.flows["max_class"].unique():
                     flows_to_add = pd.DataFrame(
                         {
                             "from_section": j,
@@ -219,7 +219,7 @@ class CountsProcessor:
         return series.map(lambda x: x.strftime(format))
 
     def plot_counts(self, intersection_name: str = "") -> None:
-        counts_section = self.COUNTING_TABLE
+        counts_section = self.counting_table
 
         # Set the time format for plotting
         counts_section["time_interval"] = self._set_time_format(
@@ -253,7 +253,7 @@ class CountsProcessor:
         flows = self.FLOW_TABLE
         time_intervals = self.INTERVALS
 
-        road_user_types = self.FLOWS["max_class"].unique()
+        road_user_types = self.flows["max_class"].unique()
 
         # Plot flows
         fig, axs = pyplot.subplots(
