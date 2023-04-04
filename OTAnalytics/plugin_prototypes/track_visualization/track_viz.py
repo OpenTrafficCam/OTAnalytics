@@ -1,8 +1,8 @@
 from typing import Iterable
 
-import numpy as np
+import numpy
 import pandas
-import seaborn as sns
+import seaborn
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
@@ -126,7 +126,7 @@ class TrackPlotter:
         return figure
 
     def _plot_tracks(self, track_df: DataFrame, alpha: float, axes: Axes) -> None:
-        sns.lineplot(
+        seaborn.lineplot(
             x="x",
             y="y",
             hue=track.CLASSIFICATION,
@@ -146,7 +146,7 @@ class TrackPlotter:
                 # track_df.groupby("track-id").last().reset_index(),
             ]
         ).sort_values([track.TRACK_ID, track.FRAME])
-        sns.scatterplot(
+        seaborn.scatterplot(
             x="x",
             y="y",
             hue=track.CLASSIFICATION,
@@ -169,7 +169,7 @@ class TrackPlotter:
                 for i in sectionlist[section].keys()
                 if i in ["start", "end"]
             ]
-            sns.lineplot(
+            seaborn.lineplot(
                 x=x_data,
                 y=y_data,
                 linewidth=2,
@@ -195,6 +195,6 @@ class TrackPlotter:
         bbox_contents = figure.canvas.copy_from_bbox(axes.bbox)
         left, bottom, right, top = bbox_contents.get_extents()
 
-        image_array = np.frombuffer(bbox_contents.to_string(), dtype=np.uint8)
+        image_array = numpy.frombuffer(bbox_contents.to_string(), dtype=numpy.uint8)
         image_array = image_array.reshape([top - bottom, right - left, 4])
         return NdArrayImage(image_array)
