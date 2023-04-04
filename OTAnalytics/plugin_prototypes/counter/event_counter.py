@@ -1,7 +1,7 @@
 # % Import libraries and modules
 import pandas as pd
 import plotly.express as px
-from matplotlib import pyplot as plt
+from matplotlib import pyplot
 from mpl_chord_diagram import chord_diagram
 
 from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser
@@ -250,7 +250,7 @@ class CountsProcessor:
         road_user_types = self.FLOWS["max_class"].unique()
 
         # Plot flows
-        fig, axs = plt.subplots(
+        fig, axs = pyplot.subplots(
             len(time_intervals),
             len(road_user_types),
             dpi=300,
