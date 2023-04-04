@@ -15,10 +15,11 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
 )
 from OTAnalytics.domain.intersect import (
+    IntersectAreaByTrackPoints,
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
 )
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import Area, LineSection
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 
@@ -103,6 +104,41 @@ class TestDetectSectionActivity:
             sections=[line_section], tracks=tracks
         )
         assert len(enter_events) == 7
+
+    def test_intersect_area_by_track_points(
+        self,
+        tracks: list[Track],
+        shapely_intersection_adapter: ShapelyIntersectImplementationAdapter,
+        section_event_builder: SectionEventBuilder,
+    ) -> None:
+        coordinates: list[Coordinate] = [
+            Coordinate(112, 187),
+            Coordinate(377, 127),
+            Coordinate(467, 118),
+            Coordinate(121, 222),
+            Coordinate(112, 187),
+        ]
+        area_section = Area(
+            id="NE",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0),
+                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0, 0),
+            },
+            plugin_data={},
+            coordinates=coordinates,
+        )
+
+        area_intersector = IntersectAreaByTrackPoints(
+            shapely_intersection_adapter, area_section
+        )
+        section_action_detector = SectionActionDetector(
+            intersector=area_intersector, section_event_builder=section_event_builder
+        )
+        enter_events = section_action_detector.detect_enter_actions(
+            sections=[area_section], tracks=tracks
+        )
+        assert enter_events
+        raise NotImplementedError
 
 
 class TestShapelyIntersectImplementationAdapter:
