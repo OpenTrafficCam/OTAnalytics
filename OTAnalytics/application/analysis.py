@@ -3,10 +3,11 @@ from typing import Iterable
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.domain.event import Event, EventRepository, SectionEventBuilder
 from OTAnalytics.domain.intersect import (
+    IntersectAreaByTrackPoints,
     IntersectBySplittingTrackLine,
     IntersectImplementation,
 )
-from OTAnalytics.domain.section import LineSection, Section, SectionRepository
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionRepository
 from OTAnalytics.domain.track import Track, TrackRepository
 
 
@@ -52,6 +53,20 @@ class RunIntersect:
                     section_event_builder = SectionEventBuilder()
                     section_action_detector = SectionActionDetector(
                         intersector=line_section_intersector,
+                        section_event_builder=section_event_builder,
+                    )
+                    _events = section_action_detector._detect(
+                        section=_section, track=_track
+                    )
+                    events.extend(_events)
+                if isinstance(_section, Area):
+                    area_section_intersector = IntersectAreaByTrackPoints(
+                        implementation=self._intersect_implementation,
+                        area=_section,
+                    )
+                    section_event_builder = SectionEventBuilder()
+                    section_action_detector = SectionActionDetector(
+                        intersector=area_section_intersector,
                         section_event_builder=section_event_builder,
                     )
                     _events = section_action_detector._detect(
