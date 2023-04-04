@@ -14,6 +14,7 @@ class CountsProcessor:
         self.TO_TIME = config["TO_TIME"]
         self.INTERVAL_LENGTH_MIN = config["INTERVAL_LENGTH_MIN"]
         self.SECTIONSLIST_PATH = config["SECTIONSLIST_PATH"]
+        self.DIRECTION_NAMES = config["DIRECTION_NAMES"]
         self.EVENTS = events
 
         otsection_parser = OtsectionParser()
@@ -37,7 +38,7 @@ class CountsProcessor:
         self.INTERVALS = pd.date_range(
             start_time,
             end_time - pd.Timedelta("1s"),
-            freq=f"{self.INTERVAL_LENGTH_MIN}min",
+            freq=f"{config['INTERVAL_LENGTH_MIN']}min",
         )
 
     def get_flows(self) -> pd.DataFrame:
@@ -48,12 +49,18 @@ class CountsProcessor:
         flows_section = (
             events.pivot_table(
                 index="road_user_id",
-                values=["section_id", "section_id2", "occurrence", "max_class"],
+                values=[
+                    "section_id",
+                    "section_id2",
+                    "occurrence",
+                    "time_interval",
+                    "road_user_type",
+                ],
                 aggfunc={
                     "section_id": "first",
                     "section_id2": "last",
                     "occurrence": "first",
-                    "max_class": "first",
+                    "road_user_type": "first",
                 },
                 fill_value=0,
             )
@@ -66,12 +73,12 @@ class CountsProcessor:
     def create_counting_table(self, return_table: bool = True) -> pd.DataFrame:
         if not hasattr(self, "FLOWS"):
             self.FLOWS = self.get_flows()
-        counts_section_in = (
+        counts_section_first_last = (
             self.FLOWS.groupby(
                 [
                     pd.Grouper(key="occurrence", freq=f"{self.INTERVAL_LENGTH_MIN}Min"),
                     "from_section",
-                    "max_class",
+                    "road_user_type",
                 ]
             )["road_user_id"]
             .count()
@@ -86,14 +93,16 @@ class CountsProcessor:
             )
         )
         # TODO: direction_mapper when plugin_data can be parsed
-        counts_section_in["direction"] = "in"
+        counts_section_first_last["direction"] = self.DIRECTION_NAMES[
+            "first_to_last_section"
+        ]
 
-        counts_section_out = (
+        counts_section_last_first = (
             self.FLOWS.groupby(
                 [
                     pd.Grouper(key="occurrence", freq=f"{self.INTERVAL_LENGTH_MIN}Min"),
                     "to_section",
-                    "max_class",
+                    "road_user_type",
                 ]
             )["road_user_id"]
             .count()
@@ -108,11 +117,13 @@ class CountsProcessor:
             )
         )
         # TODO: direction_mapper when plugin_data can be parsed
-        counts_section_out["direction"] = "out"
+        counts_section_last_first["direction"] = self.DIRECTION_NAMES[
+            "last_to_first_section"
+        ]
 
         counts_section = (
-            pd.concat([counts_section_in, counts_section_out])
-            .sort_values(["time_interval", "section_id", "direction", "max_class"])
+            pd.concat([counts_section_first_last, counts_section_last_first])
+            .sort_values(["time_interval", "section_id", "direction", "road_user_type"])
             .reset_index(drop=True)
         )
 
@@ -126,13 +137,13 @@ class CountsProcessor:
         counts_template = pd.DataFrame()
         for i in intervals:
             for j in ["in", "out"]:
-                for k in self.FLOWS["max_class"].unique():
+                for k in self.FLOWS["road_user_type"].unique():
                     counts_to_add = pd.DataFrame(
                         {
                             "section_id": section_list,
                             "time_interval": i,
                             "direction": j,
-                            "max_class": k,
+                            "road_user_type": k,
                         }
                     )
                     counts_template = pd.concat([counts_template, counts_to_add])
@@ -142,11 +153,11 @@ class CountsProcessor:
             pd.merge(
                 counts_template,
                 counts_section,
-                on=["time_interval", "section_id", "max_class", "direction"],
+                on=["time_interval", "section_id", "road_user_type", "direction"],
                 how="left",
             )
             .fillna(0)
-            .sort_values(["time_interval", "section_id", "direction", "max_class"])
+            .sort_values(["time_interval", "section_id", "direction", "road_user_type"])
         )
 
         if return_table:
@@ -163,7 +174,7 @@ class CountsProcessor:
                     pd.Grouper(key="occurrence", freq=f"{self.INTERVAL_LENGTH_MIN}Min"),
                     "from_section",
                     "to_section",
-                    "max_class",
+                    "road_user_type",
                 ]
             )["road_user_id"]
             .count()
@@ -175,7 +186,7 @@ class CountsProcessor:
                 },
                 axis=1,
             )
-        ).sort_values(["time_interval", "from_section", "to_section", "max_class"])
+        ).sort_values(["time_interval", "from_section", "to_section", "road_user_type"])
 
         # Set time intervals
         intervals = self.INTERVALS
@@ -187,13 +198,13 @@ class CountsProcessor:
         flows_template = pd.DataFrame()
         for i in intervals:
             for j in section_list:
-                for k in self.FLOWS["max_class"].unique():
+                for k in self.FLOWS["road_user_type"].unique():
                     flows_to_add = pd.DataFrame(
                         {
                             "from_section": j,
                             "to_section": section_list,
                             "time_interval": i,
-                            "max_class": k,
+                            "road_user_type": k,
                         }
                     )
                     flows_template = pd.concat([flows_template, flows_to_add])
@@ -202,7 +213,7 @@ class CountsProcessor:
         self.FLOW_TABLE = pd.merge(
             flows_template.reset_index(drop=True),
             flows_section,
-            on=["time_interval", "from_section", "to_section", "max_class"],
+            on=["time_interval", "from_section", "to_section", "road_user_type"],
             how="left",
         ).fillna(0)
 
@@ -225,7 +236,7 @@ class CountsProcessor:
             counts_section,
             x="time_interval",
             y="n_vehicles",
-            color="max_class",
+            color="road_user_type",
             barmode="stack",
             facet_col="direction",
             facet_row="section_id",
@@ -247,7 +258,7 @@ class CountsProcessor:
         flows = self.FLOW_TABLE
         time_intervals = self.INTERVALS
 
-        road_user_types = self.FLOWS["max_class"].unique()
+        road_user_types = self.FLOWS["road_user_type"].unique()
 
         # Plot flows
         fig, axs = plt.subplots(
@@ -267,7 +278,7 @@ class CountsProcessor:
                 flow_matrix = pd.pivot_table(
                     flows[
                         (flows["time_interval"] == time_intervals[i])
-                        & (flows["max_class"] == road_user_types[j])
+                        & (flows["road_user_type"] == road_user_types[j])
                     ],
                     index="from_section",
                     columns="to_section",
