@@ -1,11 +1,13 @@
 from unittest.mock import Mock
 
 import pytest
+from matplotlib import pyplot
 from shapely import GeometryCollection, LineString
 
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
+from OTAnalytics.adapter_intersect.mapping import ShapelyMapper
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.domain.event import EventType, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
@@ -19,7 +21,7 @@ from OTAnalytics.domain.intersect import (
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
 )
-from OTAnalytics.domain.section import Area, LineSection, SectionId
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 
@@ -36,6 +38,35 @@ def shapely_intersection_adapter() -> ShapelyIntersectImplementationAdapter:
 @pytest.fixture(scope="module")
 def section_event_builder() -> SectionEventBuilder:
     return SectionEventBuilder()
+
+
+def plot_tracks_and_sections(tracks: list[Track], sections: list[Section]) -> None:
+    """Plot tracks and sections."""
+
+    mapper = ShapelyMapper()
+
+    _, ax = pyplot.subplots()
+
+    for section in sections:
+        if isinstance(section, LineSection):
+            shapely_line_section = mapper.map_to_shapely_line_string(
+                Line([section.start, section.end])
+            )
+            ax.plot(*shapely_line_section.xy)
+        elif isinstance(section, Area):
+            shapely_area_section = mapper.map_to_shapely_polygon(
+                Polygon(section.coordinates)
+            )
+            ax.plot(*shapely_area_section.exterior.xy)
+
+    for track in tracks:
+        detection_coords = [
+            Coordinate(detection.x, detection.y) for detection in track.detections
+        ]
+        shapely_track = mapper.map_to_shapely_line_string(Line(detection_coords))
+        ax.plot(*shapely_track.xy)
+
+    pyplot.gca().invert_yaxis()
 
 
 class TestDetectSectionActivity:
