@@ -18,6 +18,12 @@ class MockVideoReader(VideoReader):
             def as_array(self) -> Any:
                 return array([[1, 0], [0, 1]], int32)
 
+            def width(self) -> int:
+                return 2
+
+            def height(self) -> int:
+                return 2
+
         return MockImage()
 
 
