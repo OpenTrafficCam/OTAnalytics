@@ -9,7 +9,7 @@ from OTAnalytics.adapter_intersect.intersect import (
 )
 from OTAnalytics.adapter_intersect.mapping import ShapelyMapper
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain.event import EventType, SectionEventBuilder
+from OTAnalytics.domain.event import Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
     Line,
@@ -165,11 +165,24 @@ class TestDetectSectionActivity:
         section_action_detector = SectionActionDetector(
             intersector=area_intersector, section_event_builder=section_event_builder
         )
-        enter_events = section_action_detector.detect_enter_actions(
+        events = section_action_detector.detect_enter_actions(
             sections=[area_section], tracks=tracks
         )
-        assert enter_events
-        raise NotImplementedError
+
+        enter_events: list[Event] = []
+        leave_events: list[Event] = []
+
+        for event in events:
+            match event.event_type:
+                case EventType.SECTION_ENTER:
+                    enter_events.append(event)
+                case EventType.SECTION_LEAVE:
+                    leave_events.append(event)
+                case _:
+                    continue
+
+        assert len(enter_events) == 5
+        assert len(leave_events) == 5
 
 
 class TestShapelyIntersectImplementationAdapter:
