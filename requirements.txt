@@ -1,5 +1,8 @@
 customtkinter==5.1.2
 moviepy==1.0.3
+mpl_chord_diagram==0.4.1
 numpy==1.24.2
+pandas==2.0.0
+plotly==5.14.0
 shapely==2.0.1
 ujson==5.7.0
