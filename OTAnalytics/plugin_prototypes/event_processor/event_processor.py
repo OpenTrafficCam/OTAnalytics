@@ -1,4 +1,6 @@
 # % Import libraries and modules
+from pathlib import Path
+
 import pandas as pd
 
 from OTAnalytics.plugin_parser.otanalytics_parser import (
@@ -12,21 +14,34 @@ class EventProcessor:
         self.TIME_FORMAT = config["TIME_FORMAT"]
         self.FILTER_CLASS = config["FILTER_CLASS"]
         self.FILTER_SECTION = config["FILTER_SECTION"]
-        self.EVENTLIST_PATH = config["EVENTLIST_PATH"]
-        self.SECTIONSLIST_PATH = config["SECTIONSLIST_PATH"]
+        self.EVENTLIST_PATH = Path(config["EVENTLIST_PATH"])
+        self.SECTIONSLIST_PATH = Path(config["SECTIONSLIST_PATH"])
         self.FROM_TIME = config["FROM_TIME"]
         self.TO_TIME = config["TO_TIME"]
         self.INTERVAL_LENGTH_MIN = config["INTERVAL_LENGTH_MIN"]
 
+    def _import_eventlists(self) -> pd.DataFrame:
+        if self.EVENTLIST_PATH.is_file():
+            eventlist_path = [self.EVENTLIST_PATH]
+        else:
+            eventlist_path = [p for p in self.EVENTLIST_PATH.iterdir() if p.is_file()]
+
+        events = pd.DataFrame()
+
+        for eventlist in eventlist_path:
+            eventlist_dict = JsonParser.from_dict(eventlist)
+
+            # Create DataFrames for events
+            # Parse Eventlist to DataFrame
+            events_df = PandasDataFrameParser.from_dict(eventlist_dict["event_list"])
+
+            events = pd.concat([events, events_df], axis=1)
+
+        return events.sort_values(["occurrence"])
+
     def process_events(self) -> pd.DataFrame:
         # Import Eventlist
-        eventlist_dict = JsonParser.from_dict(self.EVENTLIST_PATH)
-
-        # Create DataFrames for events
-        # Parse Eventlist to DataFrame
-        events_df = PandasDataFrameParser.from_dict(
-            eventlist_dict["event_list"]
-        ).sort_values(["frame_number"])
+        events_df = self._import_eventlists()
 
         # Set timeformat (funcionality not included in Parser, TODO?)
         events_df["occurrence"] = pd.to_datetime(

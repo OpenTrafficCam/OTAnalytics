@@ -1,4 +1,5 @@
 # % Import libraries and modules
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -21,10 +22,10 @@ class ZeitbedarfsProcessor:
         self.SIGTIMEOFFSET = signal_time_offset  # in milliseconds
 
         otsection_parser = OtsectionParser()
-        self.SECTIONS = otsection_parser.parse(config["SECTIONSLIST_PATH"])
+        self.SECTIONS = otsection_parser.parse(Path(config["SECTIONSLIST_PATH"]))
 
-        signalprog = pd.read_csv(config["SIGNALPROG_PATH"])
-        signalprogmapper = JsonParser.from_dict(config["SIGNALPROG_MAPPER_PATH"])
+        signalprog = pd.read_csv(Path(config["SIGNALPROG_PATH"]))
+        signalprogmapper = JsonParser.from_dict(Path(config["SIGNALPROG_MAPPER_PATH"]))
 
         self.SIGNALEVENTS = self._reshape_signal_program_data(
             signalprog, signalprogmapper
