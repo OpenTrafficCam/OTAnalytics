@@ -229,6 +229,9 @@ class Datastore:
             file=file,
         )
 
+    def get_all_sections(self) -> Iterable[Section]:
+        return self._section_repository.get_all()
+
     def save_event_list_file(self, file: Path) -> None:
         """
         Save events from the event list in an event file.
