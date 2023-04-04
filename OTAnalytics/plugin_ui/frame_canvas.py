@@ -1,22 +1,18 @@
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import customtkinter
 from customtkinter import CTkCanvas, CTkFrame
-from moviepy.editor import VideoFileClip
 from PIL import Image, ImageTk
 
+from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackObserver
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 
 
 @dataclass
-class TrackImage:
-    path: Path
-
-    def load_image(self) -> Any:
-        video = VideoFileClip(str(self.path))
-        return video.get_frame(0)
+class DisplayableImage:
+    image: TrackImage
 
     def width(self) -> int:
         return self.pillow_image.width
@@ -25,7 +21,7 @@ class TrackImage:
         return self.pillow_image.height
 
     def convert_image(self) -> None:
-        self.pillow_image = Image.fromarray(self.load_image())
+        self.pillow_image = Image.fromarray(self.image.as_array())
 
     def create_photo(self) -> ImageTk.PhotoImage:
         self.convert_image()
@@ -33,9 +29,10 @@ class TrackImage:
         return self.pillow_photo_image
 
 
-class FrameCanvas(CTkFrame):
-    def __init__(self, **kwargs: Any) -> None:
+class FrameCanvas(CTkFrame, TrackObserver):
+    def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self._application = application
         self._get_widgets()
         self._place_widgets()
 
@@ -48,22 +45,22 @@ class FrameCanvas(CTkFrame):
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
-    def add_image(self, image: TrackImage) -> None:
+    def notify_track(self, track_id: Optional[TrackId]) -> None:
+        if track_id:
+            if image := self._application.get_image_of_track(track_id):
+                self.add_image(DisplayableImage(image))
+
+    def add_image(self, image: DisplayableImage) -> None:
         self.canvas_background.add_image(image)
-        PADX = 10
-        PADY = 5
-        STICKY = "NESW"
-        self.canvas_background.grid(
-            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
 
 
 class CanvasBackground(CTkCanvas):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
-    def add_image(self, image: TrackImage) -> None:
-        self.create_image(0, 0, image=image.create_photo(), anchor=customtkinter.NW)
+    def add_image(self, image: DisplayableImage) -> None:
+        self.current_image = image.create_photo()
+        self.create_image(0, 0, image=self.current_image, anchor=customtkinter.NW)
         self.config(width=image.width(), height=image.height())
 
     def show_rectangle(self) -> None:

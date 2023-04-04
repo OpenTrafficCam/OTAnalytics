@@ -18,7 +18,7 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
 )
 from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
-from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section
+from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
@@ -298,7 +298,7 @@ class TestOtsectionParser:
         second_coordinate = Coordinate(1, 1)
         third_coordinate = Coordinate(1, 0)
         line_section: Section = LineSection(
-            id="some",
+            id=SectionId("some"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -307,7 +307,7 @@ class TestOtsectionParser:
             end=second_coordinate,
         )
         area_section: Section = Area(
-            id="other",
+            id=SectionId("other"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -337,7 +337,7 @@ class TestOtsectionParser:
 
     def test_convert_section(self) -> None:
         some_section: Section = LineSection(
-            id="some",
+            id=SectionId("some"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -346,7 +346,7 @@ class TestOtsectionParser:
             end=Coordinate(1, 1),
         )
         other_section: Section = LineSection(
-            id="other",
+            id=SectionId("other"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -367,7 +367,7 @@ class TestOtsectionParser:
         start = Coordinate(0, 0)
         end = Coordinate(1, 1)
         expected: Section = LineSection(
-            id="some",
+            id=SectionId("some"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -410,7 +410,7 @@ class TestOtsectionParser:
         start = Coordinate(0, 0)
         end = Coordinate(1, 1)
         expected: Section = LineSection(
-            id="some",
+            id=SectionId("some"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -456,7 +456,7 @@ class TestOtEventListParser:
         road_user_id = 1
         road_user_type = "car"
         hostname = "myhostname"
-        section_id = "N"
+        section_id = SectionId("N")
         direction_vector = DirectionVector2D(1, 0)
         video_name = "my_video_name.mp4"
         first_event = Event(
