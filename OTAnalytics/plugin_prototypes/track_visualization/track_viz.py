@@ -1,5 +1,3 @@
-# % Import libraries
-from pathlib import Path
 from typing import Iterable
 
 import numpy as np
@@ -20,22 +18,47 @@ ENCODING = "UTF-8"
 DPI = 100
 
 
-# % Set variables
-ottrk_file = Path("data/Standard_SCUEHQ_FR30_2022-09-15_07-00-00.008.ottrk")
-filter_classes = ["car", "motorcycle", "person", "truck", "bicycle", "train"]
-num_min_frames = 30
-background_img = "data/vlcsnap-2023-03-09-11h40m22s762.png"
-output_img = "data/tracks.png"
-start_time = ""
-end_time = "2022-09-15 07:05:00"
-start_end = True
-plot_sections = True
-sectionlist_json_path = Path("data/sectionlist_v2.json")
-
-
 class TrackPlotter:
+    def plot(
+        self,
+        tracks: Iterable[Track],
+        sections: Iterable[Section],
+        width: int,
+        height: int,
+        filter_classes: list[str] = [
+            "car",
+            "motorcycle",
+            "person",
+            "truck",
+            "bicycle",
+            "train",
+        ],
+        num_min_frames: int = 30,
+        start_time: str = "",
+        end_time: str = "2022-09-15 07:05:00",
+        start_end: bool = True,
+        plot_sections: bool = True,
+        alpha: float = 0.1,
+    ) -> TrackImage:
+        track_df = self._convert_tracks(tracks)
+
+        # % Filter times
+        track_df = self._filter_tracks(
+            filter_classes, num_min_frames, start_time, end_time, track_df
+        )
+
+        figure = self._create_figure()
+        axes = self._create_axes(width, height, figure)
+        self._plot_tracks(track_df, alpha, axes)
+        if start_end:
+            self._plot_start_end_points(track_df, axes)
+        if plot_sections:
+            self._plot_sections(sections, axes)
+        self._style_axes(width, height, axes)
+        return self.convert_to_track_image(figure, axes)
+
     # % Filter length (number of frames)
-    def min_frames(self, data: DataFrame, min_frames: int = 10) -> list:
+    def _min_frames(self, data: DataFrame, min_frames: int = 10) -> list:
         tmp = data[[track.FRAME, track.TRACK_ID]]
         tmp_min_frames = tmp.groupby(track.TRACK_ID).count().reset_index()
         return [
@@ -44,31 +67,14 @@ class TrackPlotter:
             if tmp_min_frames.loc[i, track.FRAME] >= min_frames
         ]
 
-    # % Determine max class
-    # chose max class by sum of confidence
-    def max_class(self, data: DataFrame) -> dict:
-        tmp = data[[track.CLASSIFICATION, track.TRACK_ID, track.CONFIDENCE]]
-        map_df = (
-            tmp.groupby([track.TRACK_ID, track.CLASSIFICATION])
-            .agg({track.CONFIDENCE: sum})
-            .reset_index()
-        )
-
-        return {
-            map_df.loc[i, track.TRACK_ID]: map_df.loc[i, track.CLASSIFICATION]
-            for i in map_df.groupby(track.TRACK_ID)[track.CONFIDENCE].idxmax()
-        }
-
-    def run(
+    def _filter_tracks(
         self,
-        tracks: Iterable[Track],
-        sections: Iterable[Section],
-        width: int,
-        height: int,
-    ) -> TrackImage:
-        track_df = self._convert_tracks(tracks)
-
-        # % Filter times
+        filter_classes: list[str],
+        num_min_frames: int,
+        start_time: str,
+        end_time: str,
+        track_df: DataFrame,
+    ) -> DataFrame:
         if start_time != "":
             track_df = track_df[track_df[track.OCCURRENCE] >= start_time]
 
@@ -78,35 +84,16 @@ class TrackPlotter:
         # % Filter traffic classes
         track_df = track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
 
-        track_df = track_df[
-            track_df[track.TRACK_ID].isin(self.min_frames(track_df, num_min_frames))
+        return track_df[
+            track_df[track.TRACK_ID].isin(self._min_frames(track_df, num_min_frames))
         ]
 
-        track_df["max_class"] = track_df[track.TRACK_ID].map(self.max_class(track_df))
-
-        # % Get start and end points only
-
-        if start_end:
-            track_df_start_end = pandas.concat(
-                [
-                    track_df.groupby(track.TRACK_ID).first().reset_index(),
-                    # track_df.groupby("track-id").last().reset_index(),
-                ]
-            ).sort_values([track.TRACK_ID, track.FRAME])
-
-        # % Plot the image
-        ottrk_name = str(ottrk_file).split("/")[-1]
-        if start_end:
-            alpha = 1.0
-        else:
-            alpha = 1.0
-
-        figure = Figure(figsize=(10, 10), dpi=DPI)
+    def _create_axes(self, width: int, height: int, figure: Figure) -> Axes:
         # The first items are for padding and the second items are for the axes.
         # sizes are in inch.
         image_width = width / DPI
-        h = [Size.Fixed(0.0), Size.Fixed(image_width)]
         image_height = height / DPI
+        h = [Size.Fixed(0.0), Size.Fixed(image_width)]
         v = [Size.Fixed(0.0), Size.Fixed(image_height)]
 
         divider = Divider(
@@ -117,14 +104,32 @@ class TrackPlotter:
             aspect=False,
         )
         # The width and height of the rectangle are ignored.
-
-        axes = figure.add_axes(
+        return figure.add_axes(
             divider.get_position(), axes_locator=divider.new_locator(nx=1, ny=1)
         )
+
+    def _style_axes(self, width: int, height: int, axes: Axes) -> None:
+        axes.set(
+            xlabel="",
+            ylabel="",
+            xticklabels=[],
+            yticklabels=[],
+        )
+        axes.set_ylim(0, height)
+        axes.set_xlim(0, width)
+        axes.patch.set_alpha(0.0)
+        axes.invert_yaxis()
+
+    def _create_figure(self) -> Figure:
+        figure = Figure(figsize=(10, 10), dpi=DPI)
+        figure.patch.set_alpha(0.0)
+        return figure
+
+    def _plot_tracks(self, track_df: DataFrame, alpha: float, axes: Axes) -> None:
         sns.lineplot(
             x="x",
             y="y",
-            hue="max_class",
+            hue=track.CLASSIFICATION,
             data=track_df,
             units=track.TRACK_ID,
             linewidth=0.6,
@@ -133,52 +138,45 @@ class TrackPlotter:
             alpha=alpha,
             ax=axes,
         )
-        if start_end:
-            sns.scatterplot(
-                x="x",
-                y="y",
-                hue="max_class",
-                data=track_df_start_end,
-                legend=False,
-                s=3,
+
+    def _plot_start_end_points(self, track_df: DataFrame, axes: Axes) -> None:
+        track_df_start_end = pandas.concat(
+            [
+                track_df.groupby(track.TRACK_ID).first().reset_index(),
+                # track_df.groupby("track-id").last().reset_index(),
+            ]
+        ).sort_values([track.TRACK_ID, track.FRAME])
+        sns.scatterplot(
+            x="x",
+            y="y",
+            hue=track.CLASSIFICATION,
+            data=track_df_start_end,
+            legend=False,
+            s=3,
+            ax=axes,
+        )
+
+    def _plot_sections(self, sections: Iterable[Section], axes: Axes) -> None:
+        sectionlist = [section.to_dict() for section in sections]
+        for section in range(len(sectionlist)):
+            x_data = [
+                sectionlist[section][i]["x"]
+                for i in sectionlist[section].keys()
+                if i in ["start", "end"]
+            ]
+            y_data = [
+                sectionlist[section][i]["y"]
+                for i in sectionlist[section].keys()
+                if i in ["start", "end"]
+            ]
+            sns.lineplot(
+                x=x_data,
+                y=y_data,
+                linewidth=2,
+                alpha=1,
+                color="black",
                 ax=axes,
             )
-        if plot_sections:
-            sectionlist = [section.to_dict() for section in sections]
-            for section in range(len(sectionlist)):
-                x_data = [
-                    sectionlist[section][i]["x"]
-                    for i in sectionlist[section].keys()
-                    if i in ["start", "end"]
-                ]
-                y_data = [
-                    sectionlist[section][i]["y"]
-                    for i in sectionlist[section].keys()
-                    if i in ["start", "end"]
-                ]
-                sns.lineplot(
-                    x=x_data,
-                    y=y_data,
-                    linewidth=2,
-                    alpha=1,
-                    color="black",
-                    ax=axes,
-                )
-        axes.set(
-            xlabel="",
-            ylabel="",
-            xticklabels=[],
-            yticklabels=[],
-        )
-        axes.set_title(f"Tracks from '{ottrk_name}'", y=1.05, fontsize=12)
-        axes.legend(title="Class", loc="upper left", bbox_to_anchor=(1, 1))
-        figure.subplots_adjust(top=0.8)
-        figure.patch.set_alpha(0.0)
-        axes.patch.set_alpha(0.0)
-        axes.set_ylim(0, height)
-        axes.set_xlim(0, width)
-        axes.invert_yaxis()
-        return self.convert_to_track_image(figure, axes)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         detections: list[Detection] = []

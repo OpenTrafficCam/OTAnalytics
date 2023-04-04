@@ -78,7 +78,7 @@ class FrameCanvas(CTkFrame, Observer[TrackImage]):
         if self._show_tracks.get():
             tracks = self._application._datastore._track_repository.get_all()
             sections = self._application._datastore._section_repository.get_all()
-            self.tracked_image = TrackPlotter().run(
+            self.tracked_image = TrackPlotter().plot(
                 tracks=tracks,
                 sections=sections,
                 width=self.background_image.width(),
