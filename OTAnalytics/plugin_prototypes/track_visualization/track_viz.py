@@ -8,11 +8,11 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
-from plugin_video_processing.video_reader import NdArrayImage
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Detection, Track, TrackImage
+from OTAnalytics.plugin_video_processing.video_reader import NdArrayImage
 
 ENCODING = "UTF-8"
 DPI = 100
