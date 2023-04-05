@@ -70,22 +70,7 @@ class TrackState(TrackListObserver):
 
 
 VALUE = TypeVar("VALUE")
-
-
-class Observer(ABC, Generic[VALUE]):
-    """
-    Interface to listen to changes of a value.
-    """
-
-    @abstractmethod
-    def notify(self, value: Optional[VALUE]) -> None:
-        """
-        Notifies that the value has changed.
-
-        Args:
-            value (Optional[VALUE]): changed value
-        """
-        pass
+Observer = Callable[[Optional[VALUE]], None]
 
 
 class Subject(Generic[VALUE]):
@@ -94,9 +79,9 @@ class Subject(Generic[VALUE]):
     """
 
     def __init__(self) -> None:
-        self.observers: set[Callable[[Optional[VALUE]], None]] = set()
+        self.observers: set[Observer[VALUE]] = set()
 
-    def register(self, observer: Callable[[Optional[VALUE]], None]) -> None:
+    def register(self, observer: Observer[VALUE]) -> None:
         """
         Listen to events.
 
@@ -120,7 +105,7 @@ class BindableProperty(Generic[VALUE]):
         self._property: Optional[VALUE] = None
         self._observers: Subject[VALUE] = Subject[VALUE]()
 
-    def register(self, observer: Callable[[Optional[VALUE]], None]) -> None:
+    def register(self, observer: Observer[VALUE]) -> None:
         self._observers.register(observer)
 
     def set(self, value: Optional[VALUE]) -> None:
@@ -177,14 +162,14 @@ class TrackImageUpdater(TrackListObserver):
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._track_plotter = track_plotter
-        self._track_view_state.show_tracks.register(self.notify)
+        self._track_view_state.show_tracks.register(self._notify_show_tracks)
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         if not tracks:
             raise IndexError("No tracks changed")
         self._update_image(tracks[0])
 
-    def notify(self, show_tracks: Optional[bool]) -> None:
+    def _notify_show_tracks(self, show_tracks: Optional[bool]) -> None:
         if track := next(iter(self._datastore.get_all_tracks())):
             self._update_image(track.id)
 

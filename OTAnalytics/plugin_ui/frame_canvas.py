@@ -7,7 +7,7 @@ from customtkinter import CTkCanvas, CTkCheckBox, CTkFrame
 from PIL import Image, ImageTk
 
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.state import Observer, TrackViewState
+from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 
@@ -31,7 +31,7 @@ class DisplayableImage:
         return self.pillow_photo_image
 
 
-class FrameCanvas(CTkFrame, Observer[TrackImage]):
+class FrameCanvas(CTkFrame):
     def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._application = application
