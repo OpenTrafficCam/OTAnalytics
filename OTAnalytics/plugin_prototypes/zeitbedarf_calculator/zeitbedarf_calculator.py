@@ -27,10 +27,19 @@ class ZeitbedarfsProcessor:
         signalprog = pd.read_csv(Path(config["SIGNALPROG_PATH"]))
         signalprogmapper = JsonParser.from_dict(Path(config["SIGNALPROG_MAPPER_PATH"]))
 
-        self.SIGNALEVENTS = self._reshape_signal_program_data(
-            signalprog, signalprogmapper
-        )
+        signal_events = self._reshape_signal_program_data(signalprog, signalprogmapper)
 
+        signal_events = signal_events[
+            signal_events["event_type"].isin(["signal-red-yellow", "signal-red"])
+        ]
+        self.SIGNALEVENTS = signal_events[
+            (
+                signal_events["intersection_name"].isin(
+                    signalprogmapper["filter_intersection_name"]
+                )
+            )
+            & (signal_events["sig_name"].isin(signalprogmapper["filter_sig_name"]))
+        ]
         if self.FROM_TIME != "":
             from_time_formatted = pd.to_datetime(self.FROM_TIME)
             events = events[events["occurrence"] >= from_time_formatted]
@@ -125,7 +134,7 @@ class ZeitbedarfsProcessor:
 
             u = 0
             for row in range(0, len(events_zb)):
-                if events_zb.loc[row, "event_type"] == "signal-green":
+                if events_zb.loc[row, "event_type"] == "signal-red-yellow":
                     a = 0
                     u += 1
                 if events_zb.loc[row, "event_type"] == "signal-red":
