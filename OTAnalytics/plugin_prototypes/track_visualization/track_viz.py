@@ -8,12 +8,12 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
+from PIL import Image
 
 from OTAnalytics.application.state import TrackPlotter
 from OTAnalytics.domain import track
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import Detection, Track, TrackImage
-from OTAnalytics.plugin_video_processing.video_reader import NdArrayImage
+from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
 
 ENCODING = "UTF-8"
 DPI = 100
@@ -198,4 +198,4 @@ class MatplotlibTrackPlotter(TrackPlotter):
 
         image_array = numpy.frombuffer(bbox_contents.to_string(), dtype=numpy.uint8)
         image_array = image_array.reshape([top - bottom, right - left, 4])
-        return NdArrayImage(image_array)
+        return PilImage(Image.fromarray(image_array))
