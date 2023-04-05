@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import customtkinter
 from customtkinter import CTkCanvas, CTkCheckBox, CTkFrame
-from PIL import Image, ImageTk
+from PIL import ImageTk
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.state import TrackViewState
@@ -14,21 +14,16 @@ from OTAnalytics.plugin_ui.constants import PADX, STICKY
 
 @dataclass
 class DisplayableImage:
-    image: TrackImage
+    _image: TrackImage
 
     def width(self) -> int:
-        return self.pillow_image.width
+        return self._image.width()
 
     def height(self) -> int:
-        return self.pillow_image.height
-
-    def create_pillow_image(self) -> Image.Image:
-        self.pillow_image = self.image.as_image()
-        return self.pillow_image
+        return self._image.height()
 
     def create_photo(self) -> ImageTk.PhotoImage:
-        self.pillow_photo_image = ImageTk.PhotoImage(image=self.create_pillow_image())
-        return self.pillow_photo_image
+        return ImageTk.PhotoImage(image=self._image.as_image())
 
 
 class FrameCanvas(CTkFrame):
@@ -86,35 +81,22 @@ class FrameCanvas(CTkFrame):
 class CanvasBackground(CTkCanvas):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self._layers: dict[str, Image.Image] = {}
+        self._current_image: ImageTk.PhotoImage
         self._current_id: Any = None
 
     def add_image(self, image: DisplayableImage, layer: str) -> None:
         if self._current_id:
             self.delete(self._current_id)
-        self._layers[layer] = image.create_pillow_image()
+        self._current_image = image.create_photo()
         self._draw()
 
     def _draw(self) -> None:
-        self._current_image = self._build_image()
         self._current_id = self.create_image(
             0, 0, image=self._current_image, anchor=customtkinter.NW
         )
         self.config(
             width=self._current_image.width(), height=self._current_image.height()
         )
-
-    def _build_image(self) -> ImageTk.PhotoImage:
-        if "track" in self._layers.keys():
-            background = self._layers["background"]
-            tracks = self._layers["track"]
-            return ImageTk.PhotoImage(Image.alpha_composite(background, tracks))
-        return ImageTk.PhotoImage(self._layers["background"])
-
-    def remove_layer(self, layer: str) -> None:
-        if layer in self._layers.keys():
-            del self._layers[layer]
-        self._draw()
 
     def show_rectangle(self) -> None:
         self.create_rectangle(10, 10, 70, 70)
