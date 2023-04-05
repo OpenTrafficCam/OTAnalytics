@@ -207,6 +207,9 @@ class Datastore:
         self._video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 
+    def get_all_tracks(self) -> Iterable[Track]:
+        return self._track_repository.get_all()
+
     def load_section_file(self, file: Path) -> None:
         """
         Load sections from the given files and store them in the section repository.

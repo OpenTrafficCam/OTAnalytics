@@ -1,19 +1,20 @@
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, TypeVar
+from typing import Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.section import (
+    Section,
     SectionId,
     SectionListObserver,
     SectionObserver,
     SectionSubject,
 )
 from OTAnalytics.domain.track import (
+    Track,
     TrackId,
     TrackImage,
     TrackListObserver,
     TrackObserver,
-    TrackRepository,
     TrackSubject,
 )
 
@@ -93,9 +94,9 @@ class Subject(Generic[VALUE]):
     """
 
     def __init__(self) -> None:
-        self.observers: set[Observer[VALUE]] = set()
+        self.observers: set[Callable[[Optional[VALUE]], None]] = set()
 
-    def register(self, observer: Observer[VALUE]) -> None:
+    def register(self, observer: Callable[[Optional[VALUE]], None]) -> None:
         """
         Listen to events.
 
@@ -111,7 +112,7 @@ class Subject(Generic[VALUE]):
         Args:
             value (Optional[VALUD]): changed value
         """
-        [observer.notify(value) for observer in self.observers]
+        [observer(value) for observer in self.observers]
 
 
 class BindableProperty(Generic[VALUE]):
@@ -119,7 +120,7 @@ class BindableProperty(Generic[VALUE]):
         self._property: Optional[VALUE] = None
         self._observers: Subject[VALUE] = Subject[VALUE]()
 
-    def register(self, observer: Observer[VALUE]) -> None:
+    def register(self, observer: Callable[[Optional[VALUE]], None]) -> None:
         self._observers.register(observer)
 
     def set(self, value: Optional[VALUE]) -> None:
@@ -140,23 +141,66 @@ class TrackViewState:
         self.show_tracks = BindableProperty[bool]()
 
 
-class BackgroundImageUpdater(TrackListObserver):
+class TrackPlotter(ABC):
+    @abstractmethod
+    def plot(
+        self,
+        tracks: Iterable[Track],
+        sections: Iterable[Section],
+        width: int,
+        height: int,
+        filter_classes: Iterable[str] = (
+            "car",
+            "motorcycle",
+            "person",
+            "truck",
+            "bicycle",
+            "train",
+        ),
+        num_min_frames: int = 30,
+        start_time: str = "",
+        end_time: str = "2022-09-15 07:05:00",
+        start_end: bool = True,
+        plot_sections: bool = True,
+        alpha: float = 0.1,
+    ) -> TrackImage:
+        pass
+
+
+class TrackImageUpdater(TrackListObserver):
     def __init__(
         self,
-        track_repository: TrackRepository,
         datastore: Datastore,
         track_view_state: TrackViewState,
+        track_plotter: TrackPlotter,
     ) -> None:
-        self._track_repository = track_repository
-        self._application = datastore
+        self._datastore = datastore
         self._track_view_state = track_view_state
+        self._track_plotter = track_plotter
+        self._track_view_state.show_tracks.register(self.notify)
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         if not tracks:
             raise IndexError("No tracks changed")
-        self._track_view_state.background_image.set(
-            self._application.get_image_of_track(tracks[0])
-        )
+        self._update_image(tracks[0])
+
+    def notify(self, show_tracks: Optional[bool]) -> None:
+        if track := next(iter(self._datastore.get_all_tracks())):
+            self._update_image(track.id)
+
+    def _update_image(self, track_id: TrackId) -> None:
+        if new_image := self._datastore.get_image_of_track(track_id):
+            if self._track_view_state.show_tracks.get():
+                track_image = self._track_plotter.plot(
+                    self._datastore.get_all_tracks(),
+                    self._datastore.get_all_sections(),
+                    width=new_image.width(),
+                    height=new_image.height(),
+                )
+                combined_image = new_image.add(track_image)
+                self._track_view_state.background_image.set(combined_image)
+            else:
+                self._track_view_state.background_image.set(new_image)
 
 
 class SectionState(SectionListObserver):

@@ -5,12 +5,13 @@ from adapter_intersect.intersect import ShapelyIntersectImplementationAdapter
 from application.analysis import RunIntersect
 from customtkinter import CTk
 from plugin_intersect.intersect import ShapelyIntersector
+from plugin_prototypes.track_visualization.track_viz import MatplotlibTrackPlotter
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
-    BackgroundImageUpdater,
     SectionState,
+    TrackImageUpdater,
     TrackState,
     TrackViewState,
 )
@@ -77,7 +78,6 @@ class OTAnalyticsGui:
         self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _wire_widgets(self) -> None:
-        self._application.track_view_state.background_image.register(self.frame_canvas)
         self.frame_canvas.register_at(self._application.track_view_state)
 
 
@@ -115,7 +115,8 @@ class ApplicationStarter:
 
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
-        updater = BackgroundImageUpdater(datastore._track_repository, datastore, state)
+        track_plotter = MatplotlibTrackPlotter()
+        updater = TrackImageUpdater(datastore, state, track_plotter)
         datastore.register_tracks_observer(updater)
         return state
 

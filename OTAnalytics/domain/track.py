@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Iterable, Optional
+
+from PIL import Image
 
 from OTAnalytics.domain.common import DataclassValidation
 
@@ -245,8 +247,13 @@ class Track(DataclassValidation):
 
 @dataclass(frozen=True)
 class TrackImage:
+    def add(self, other: "TrackImage") -> "TrackImage":
+        self_image = self.as_image().convert(mode="RGBA")
+        other_image = other.as_image().convert(mode="RGBA")
+        return PilImage(Image.alpha_composite(self_image, other_image))
+
     @abstractmethod
-    def as_array(self) -> Any:
+    def as_image(self) -> Image.Image:
         pass
 
     @abstractmethod
@@ -256,6 +263,20 @@ class TrackImage:
     @abstractmethod
     def height(self) -> int:
         pass
+
+
+@dataclass(frozen=True)
+class PilImage(TrackImage):
+    _image: Image.Image
+
+    def as_image(self) -> Image.Image:
+        return self._image
+
+    def width(self) -> int:
+        return self._image.width
+
+    def height(self) -> int:
+        return self._image.height
 
 
 class TrackClassificationCalculator(ABC):
@@ -352,4 +373,4 @@ class TrackRepository:
         Returns:
             Iterable[Track]: all tracks within the repository
         """
-        return self.tracks.values()
+        return iter(self.tracks.values())

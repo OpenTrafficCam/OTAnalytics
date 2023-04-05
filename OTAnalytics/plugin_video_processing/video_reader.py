@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from numpy import ndarray
+from PIL import Image
 
 from OTAnalytics.application.datastore import VideoReader
 from OTAnalytics.domain.track import TrackImage
@@ -15,16 +15,16 @@ class FrameDoesNotExistError(Exception):
 
 @dataclass(frozen=True)
 class NdArrayImage(TrackImage):
-    image: ndarray
+    _image: ndarray
 
-    def as_array(self) -> Any:
-        return self.image
+    def as_image(self) -> Image.Image:
+        return Image.fromarray(self._image)
 
     def width(self) -> int:
-        return self.image.shape[1]
+        return self._image.shape[1]
 
     def height(self) -> int:
-        return self.image.shape[0]
+        return self._image.shape[0]
 
 
 class MoviepyVideoReader(VideoReader):

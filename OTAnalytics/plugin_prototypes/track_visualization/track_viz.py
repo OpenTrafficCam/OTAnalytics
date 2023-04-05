@@ -9,6 +9,7 @@ from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 
+from OTAnalytics.application.state import TrackPlotter
 from OTAnalytics.domain import track
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Detection, Track, TrackImage
@@ -18,21 +19,21 @@ ENCODING = "UTF-8"
 DPI = 100
 
 
-class TrackPlotter:
+class MatplotlibTrackPlotter(TrackPlotter):
     def plot(
         self,
         tracks: Iterable[Track],
         sections: Iterable[Section],
         width: int,
         height: int,
-        filter_classes: list[str] = [
+        filter_classes: Iterable[str] = (
             "car",
             "motorcycle",
             "person",
             "truck",
             "bicycle",
             "train",
-        ],
+        ),
         num_min_frames: int = 30,
         start_time: str = "",
         end_time: str = "2022-09-15 07:05:00",
@@ -69,7 +70,7 @@ class TrackPlotter:
 
     def _filter_tracks(
         self,
-        filter_classes: list[str],
+        filter_classes: Iterable[str],
         num_min_frames: int,
         start_time: str,
         end_time: str,

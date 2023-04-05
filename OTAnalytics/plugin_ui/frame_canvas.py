@@ -9,7 +9,6 @@ from PIL import Image, ImageTk
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.state import Observer, TrackViewState
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import TrackPlotter
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 
 
@@ -24,7 +23,7 @@ class DisplayableImage:
         return self.pillow_image.height
 
     def create_pillow_image(self) -> Image.Image:
-        self.pillow_image = Image.fromarray(self.image.as_array()).convert(mode="RGBA")
+        self.pillow_image = self.image.as_image()
         return self.pillow_image
 
     def create_photo(self) -> ImageTk.PhotoImage:
@@ -62,8 +61,8 @@ class FrameCanvas(CTkFrame, Observer[TrackImage]):
 
     def notify(self, image: Optional[TrackImage]) -> None:
         if image:
-            self.background_image = image
-            self.add_image(DisplayableImage(image), layer="background")
+            self._image = image
+            self.add_image(DisplayableImage(self._image), layer="background")
 
     def add_image(self, image: DisplayableImage, layer: str) -> None:
         self.canvas_background.add_image(image, layer)
@@ -72,21 +71,16 @@ class FrameCanvas(CTkFrame, Observer[TrackImage]):
         self.canvas_background.remove_layer(layer)
 
     def register_at(self, view_state: TrackViewState) -> None:
-        view_state.background_image.register(self)
+        self._view_state = view_state
+        view_state.background_image.register(self.notify)
+        view_state.show_tracks.register(self._update_show_tracks)
+
+    def _update_show_tracks(self, value: Optional[bool]) -> None:
+        new_value = value or False
+        self._show_tracks.set(new_value)
 
     def _show_tracks_command(self) -> None:
-        if self._show_tracks.get():
-            tracks = self._application._datastore._track_repository.get_all()
-            sections = self._application._datastore._section_repository.get_all()
-            self.tracked_image = TrackPlotter().plot(
-                tracks=tracks,
-                sections=sections,
-                width=self.background_image.width(),
-                height=self.background_image.height(),
-            )
-            self.add_image(DisplayableImage(self.tracked_image), layer="track")
-        else:
-            self.remove_layer("track")
+        self._view_state.show_tracks.set(self._show_tracks.get())
 
 
 class CanvasBackground(CTkCanvas):
