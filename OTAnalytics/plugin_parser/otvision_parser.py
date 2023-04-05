@@ -12,11 +12,12 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     Video,
     VideoParser,
+    VideoReader,
 )
 from OTAnalytics.domain import event, geometry, section
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Area, LineSection, Section
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     BuildTrackWithSingleDetectionError,
     Detection,
@@ -211,7 +212,7 @@ class OtsectionParser(SectionParser):
                 section.END,
             ],
         )
-        section_id = data[section.ID]
+        section_id = self._parse_section_id(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
         start = self._parse_coordinate(data[section.START])
         end = self._parse_coordinate(data[section.END])
@@ -219,6 +220,9 @@ class OtsectionParser(SectionParser):
         return LineSection(
             section_id, relative_offset_coordinates, plugin_data, start, end
         )
+
+    def _parse_section_id(self, data: dict) -> SectionId:
+        return SectionId(data[section.ID])
 
     def _validate_data(self, data: dict, attributes: list[str]) -> None:
         """Validate attributes of dictionary.
@@ -244,7 +248,7 @@ class OtsectionParser(SectionParser):
             Section: area section
         """
         self._validate_data(data, attributes=[section.ID, section.COORDINATES])
-        section_id = data[section.ID]
+        section_id = self._parse_section_id(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
         coordinates = self._parse_coordinates(data)
         plugin_data = self._parse_plugin_data(data)
@@ -342,8 +346,17 @@ class OtsectionParser(SectionParser):
 
 
 class OttrkVideoParser(VideoParser):
-    def parse(self, file: Path) -> Tuple[list[TrackId], list[Video]]:
-        return [], []
+    def __init__(self, video_reader: VideoReader) -> None:
+        self._video_reader = video_reader
+
+    def parse(
+        self, file: Path, track_ids: list[TrackId]
+    ) -> Tuple[list[TrackId], list[Video]]:
+        content = _parse_bz2(file)
+        metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
+        video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
+        video_file_path = Video(self._video_reader, file.parent / video_file)
+        return track_ids, [video_file_path] * len(track_ids)
 
 
 class OtEventListParser(EventListParser):

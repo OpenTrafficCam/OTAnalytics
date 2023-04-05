@@ -12,7 +12,7 @@ from OTAnalytics.domain.intersect import (
     IntersectImplementation,
     Intersector,
 )
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 
 
@@ -87,12 +87,12 @@ class TestIntersectBySplittingTrackLine:
 
         # Setup event builder
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N",
+            id=SectionId("N"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -133,12 +133,12 @@ class TestIntersectBySmallTrackComponents:
 
         # Setup event builder
         event_builder = SectionEventBuilder()
-        event_builder.add_section_id("N")
+        event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
-            id="N",
+            id=SectionId("N"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },

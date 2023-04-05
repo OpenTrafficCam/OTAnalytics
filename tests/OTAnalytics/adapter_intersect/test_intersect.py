@@ -18,7 +18,7 @@ from OTAnalytics.domain.intersect import (
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
 )
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 
@@ -46,7 +46,7 @@ class TestDetectSectionActivity:
     ) -> None:
         # Setup
         line_section = LineSection(
-            id="NE",
+            id=SectionId("NE"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -79,7 +79,7 @@ class TestDetectSectionActivity:
     ) -> None:
         # Setup
         line_section = LineSection(
-            id="NE",
+            id=SectionId("NE"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
