@@ -4,14 +4,14 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 
 
 class FrameTracks(CTkFrame):
-    def __init__(self, datastore: Datastore, **kwargs: Any) -> None:
+    def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._datastore = datastore
+        self.application = application
         self._get_widgets()
         self._place_widgets()
 
@@ -34,4 +34,4 @@ class FrameTracks(CTkFrame):
             title="Load tracks file", filetypes=[("tracks file", "*.ottrk")]
         )
         print(f"Tracks file to load: {track_file}")
-        self._datastore.load_track_file(file=Path(track_file))
+        self.application.add_tracks_of_file(track_file=Path(track_file))

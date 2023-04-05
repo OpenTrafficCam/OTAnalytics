@@ -1,9 +1,10 @@
 from pathlib import Path
 
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from numpy import ndarray
+from PIL import Image
 
 from OTAnalytics.application.datastore import VideoReader
+from OTAnalytics.domain.track import PilImage, TrackImage
 
 
 class FrameDoesNotExistError(Exception):
@@ -11,7 +12,7 @@ class FrameDoesNotExistError(Exception):
 
 
 class MoviepyVideoReader(VideoReader):
-    def get_frame(self, video_path: Path, index: int) -> ndarray:
+    def get_frame(self, video_path: Path, index: int) -> TrackImage:
         """Get image of video at `frame`.
 
         Args:
@@ -33,4 +34,4 @@ class MoviepyVideoReader(VideoReader):
         clip.close()
         if found is None:
             raise FrameDoesNotExistError(f"frame number '{index}' does not exist")
-        return found
+        return PilImage(Image.fromarray(found))

@@ -18,7 +18,7 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
 )
 from OTAnalytics.domain.intersect import Intersector
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 
 
@@ -76,7 +76,7 @@ def track() -> Track:
 @pytest.fixture
 def line_section() -> LineSection:
     return LineSection(
-        id="N",
+        id=SectionId("N"),
         relative_offset_coordinates={
             EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
         },
