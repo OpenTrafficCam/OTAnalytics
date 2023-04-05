@@ -1,12 +1,12 @@
 from typing import Any
 
 import customtkinter
-from adapter_intersect.intersect import ShapelyIntersectImplementationAdapter
-from application.analysis import RunIntersect
 from customtkinter import CTk
-from plugin_intersect.intersect import ShapelyIntersector
-from plugin_prototypes.track_visualization.track_viz import MatplotlibTrackPlotter
 
+from OTAnalytics.adapter_intersect.intersect import (
+    ShapelyIntersectImplementationAdapter,
+)
+from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
@@ -16,11 +16,15 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
+from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtsectionParser,
     OttrkParser,
     OttrkVideoParser,
+)
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    MatplotlibTrackPlotter,
 )
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
