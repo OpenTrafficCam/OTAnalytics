@@ -23,7 +23,7 @@ def load_trackfile():
     filepath = filedialog.askopenfile(filetypes=[("Tracks", "*.ottrk")])
 
     #set the of the trackfile manuel
-    return filepath, os.path.basename(filepath.name).split('/')[-1]
+    return filepath.name, os.path.basename(filepath.name).split('/')[-1]
 
 def deload_trackfile():
     if file_helper.list_of_analyses:
@@ -48,20 +48,28 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
     start_time = time.time()   
     tracks_dic = {}
 
+    filepath = files
+
     if not autoimport:
         filepath, filename = load_trackfile()
         file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file = filename
 
-    with bz2.open(filepath.name, "rt", encoding=ENCODING) as input:
+    
+
+    with bz2.open(filepath, "rt", encoding=ENCODING) as input:
         loaded_dict = ujson.load(input)
 
 
     # raw detections from OTVision
     raw_detections = loaded_dict["data"]["detections"]
 
+
+
     for detection in raw_detections:
         
         if detection["track-id"] in tracks_dic:
+            # if detection["track-id"] == 9:
+            #     print(detection)
             if (
                 tracks_dic[detection["track-id"]]["Max_confidence"]
                 < detection["confidence"]):
