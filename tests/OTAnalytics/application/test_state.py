@@ -1,8 +1,8 @@
 from unittest.mock import Mock, call
 
 import pytest
-from application.datastore import Datastore
 
+from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
