@@ -5,17 +5,11 @@ import customtkinter
 from customtkinter import CTk
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
-from OTAnalytics.plugin_parser.otvision_parser import (
-    OtEventListParser,
-    OtsectionParser,
-    OttrkParser,
-    OttrkVideoParser,
-)
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas, TrackImage
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
+from OTAnalytics.plugin_ui.view_model import ViewModel
 
 
 class OTAnalyticsApplication:
@@ -46,9 +40,12 @@ class OTAnalyticsCli(OTAnalyticsApplication):
 
 
 class OTAnalyticsGui(OTAnalyticsApplication):
-    def __init__(self, datastore: Datastore, app: CTk = CTk()) -> None:
+    def __init__(
+        self, datastore: Datastore, viewmodel: ViewModel, app: CTk = CTk()
+    ) -> None:
         super().__init__(datastore)
         self._app: CTk = app
+        self._viewmodel = viewmodel
 
     def start_internal(self) -> None:
         self._show_gui()
@@ -68,9 +65,11 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
-        self.frame_canvas = FrameCanvas(master=self._app)
-        self.frame_tracks = FrameTracks(master=self._app, datastore=self._datastore)
-        self.frame_sections = FrameSections(master=self._app)
+        self.frame_tracks = FrameTracks(
+            master=self._app, datastore=self._datastore, viewmodel=self._viewmodel
+        )
+        self.frame_sections = FrameSections(master=self._app, viewmodel=self._viewmodel)
+        self.frame_canvas = FrameCanvas(master=self._app, viewmodel=self._viewmodel)
 
     def _place_widgets(self) -> None:
         PADY = 10
@@ -79,23 +78,3 @@ class OTAnalyticsGui(OTAnalyticsApplication):
         )
         self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_sections.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-
-
-class ApplicationStarter:
-    def start_gui(self) -> None:
-        datastore = self.create_datastore()
-        OTAnalyticsGui(datastore).start()
-
-    def start_cli(self) -> None:
-        datastore = self.create_datastore()
-        OTAnalyticsCli(datastore).start()
-
-    def create_datastore(self) -> Datastore:
-        """
-        Build all required objects and inject them where necessary
-        """
-        track_parser = OttrkParser(CalculateTrackClassificationByMaxConfidence())
-        section_parser = OtsectionParser()
-        event_list_parser = OtEventListParser()
-        video_parser = OttrkVideoParser()
-        return Datastore(track_parser, section_parser, event_list_parser, video_parser)

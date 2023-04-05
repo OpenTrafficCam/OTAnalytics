@@ -34,6 +34,6 @@ class ToplevelSections(CTkToplevel):
         self.destroy()
         self.update()
 
-    def show(self) -> dict:
+    def get_metadata(self) -> dict:
         self.wait_window()
         return self.input_values
