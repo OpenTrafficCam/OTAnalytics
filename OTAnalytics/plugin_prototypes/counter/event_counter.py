@@ -206,8 +206,6 @@ class CountsProcessor:
         if return_table:
             return self.COUNTING_TABLE
 
-    # TODO: export table
-
     def create_flow_table(self, return_table: bool = True) -> pd.DataFrame:
         if not hasattr(self, "FLOWS"):
             self.FLOWS = self.get_flows()
