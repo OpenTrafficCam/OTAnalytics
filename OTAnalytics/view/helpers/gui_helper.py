@@ -1,4 +1,6 @@
 from tkinter import messagebox
+
+import numpy as np
 import helpers.file_helper as file_helper
 import helpers.config
 
@@ -22,14 +24,25 @@ button_bool = {
 }
 
 
-color_dict = {
-    "car": (89, 101, 212),
-    "bicycle": (73, 166, 91),
-    "truck": (97, 198, 212),
-    "motorcycle": (148, 52, 137),
-    "person": (214, 107, 88),
-    "bus": (179, 177, 68),
-    "unclear":  (255, 255, 255)
+color_dict = {    
+    "pedestrian": (234, 225, 176),
+    "bicyclist": (254, 239, 201),
+    "car": (16, 92, 113),
+    "motorcyclist": (38, 211, 48),
+    "private_van": (128, 211, 62),
+    "bus": (89, 24, 0),
+    "train": (191, 221, 29),
+    "truck": (27, 28, 132),
+    "scooter_driver": (252, 106, 239),
+    "cargo_bike_driver": (236, 245, 43),
+    "bicyclist_with_trailer": (176, 113, 185),
+    "car_with_trailer": (201, 15, 174),
+    "private_van_with_trailer": (104, 159, 134),
+    "truck_with_trailer": (47, 247, 91),
+    "delivery_van": (205, 176, 52),
+    "delivery_van_with_trailer": (226, 171, 88),
+    "truck_with_semitrailer": (101, 61, 137),
+    "other": (209, 191, 11)
 }
 
 statepanel_txt = {
