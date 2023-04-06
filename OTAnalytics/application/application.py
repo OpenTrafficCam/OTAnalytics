@@ -1,11 +1,10 @@
 from pathlib import Path
 from typing import Iterable, Optional
 
-from domain.section import Section, SectionListObserver
-
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState
+from OTAnalytics.domain.section import Section, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackImage
 
 
