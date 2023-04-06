@@ -9,6 +9,10 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def set_treeview_sections(self, canvas: AbstractCanvasBackground) -> None:
+        pass
+
+    @abstractmethod
     def load_sections(self) -> None:
         pass
 
