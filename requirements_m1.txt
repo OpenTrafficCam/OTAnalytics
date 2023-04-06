@@ -1,0 +1,12 @@
+pandas
+geopandas
+openpyxl
+Shapely
+GDAL
+Fiona
+keyboard
+opencv-python
+Pillow
+rtree
+plotly
+ujson
