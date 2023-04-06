@@ -49,6 +49,10 @@ class OTAnalyticsApplication:
         """
         self._datastore.load_track_file(file=track_file)
 
+    def delete_all_tracks(self) -> None:
+        """Delete all tracks."""
+        self._datastore.delete_all_tracks()
+
     def add_sections_of_file(self, sections_file: Path) -> None:
         """
         Load sections from a sections file.

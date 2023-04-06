@@ -207,6 +207,10 @@ class Datastore:
         self._video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 
+    def delete_all_tracks(self) -> None:
+        """Delete all tracks in repository."""
+        self._track_repository.delete_all()
+
     def load_section_file(self, file: Path) -> None:
         """
         Load sections from the given files and store them in the section repository.

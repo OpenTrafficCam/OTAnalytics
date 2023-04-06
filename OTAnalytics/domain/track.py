@@ -256,8 +256,8 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
 
 
 class TrackRepository:
-    def __init__(self, tracks: dict[TrackId, Track] = {}) -> None:
-        self.tracks: dict[TrackId, Track] = tracks
+    def __init__(self) -> None:
+        self.tracks: dict[TrackId, Track] = {}
         self.observers = TrackListSubject()
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
@@ -297,6 +297,10 @@ class TrackRepository:
         for track in tracks:
             self.__add(track)
         self.observers.notify([track.id for track in tracks])
+
+    def delete_all(self) -> None:
+        """Delete all tracks."""
+        self.tracks = {}
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """

@@ -4,17 +4,23 @@ import customtkinter
 from adapter_intersect.intersect import ShapelyIntersectImplementationAdapter
 from application.analysis import RunIntersect
 from customtkinter import CTk
-from plugin_intersect.intersect import ShapelyIntersector
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState
 from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
+from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtsectionParser,
     OttrkParser,
     OttrkVideoParser,
+)
+from OTAnalytics.plugin_ui.cli import (
+    CliArgumentParser,
+    CliArguments,
+    CliParseError,
+    OTAnalyticsCli,
 )
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
@@ -22,15 +28,6 @@ from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
 from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
-
-
-class OTAnalyticsCli:
-    def __init__(self, application: OTAnalyticsApplication) -> None:
-        self._application = application
-
-    def start(self) -> None:
-        # TODO parse config and add track and section files
-        pass
 
 
 class OTAnalyticsGui:
@@ -76,13 +73,28 @@ class OTAnalyticsGui:
 
 
 class ApplicationStarter:
+    def start(self) -> None:
+        parser = self._build_cli_argument_parser()
+        cli_args = parser.parse()
+
+        if cli_args.start_cli:
+            try:
+                self.start_cli(cli_args)
+            except CliParseError as e:
+                print(e)
+        else:
+            self.start_gui()
+
+    def _build_cli_argument_parser(self) -> CliArgumentParser:
+        return CliArgumentParser()
+
     def start_gui(self) -> None:
         application = OTAnalyticsApplication(**self.build_dependencies())
         OTAnalyticsGui(application).start()
 
-    def start_cli(self) -> None:
+    def start_cli(self, cli_args: CliArguments) -> None:
         datastore = OTAnalyticsApplication(**self.build_dependencies())
-        OTAnalyticsCli(datastore).start()
+        OTAnalyticsCli(datastore, cli_args).start()
 
     def build_dependencies(self) -> dict[str, Any]:
         datastore = self._create_datastore()
