@@ -174,7 +174,7 @@ class CountsProcessor:
         intervals = self.INTERVALS
         # Import Sectionlist
 
-        section_list = [section.id for section in self.SECTIONS]
+        section_list = [section.id.id for section in self.SECTIONS]
 
         # Create table template
         counts_template = pd.DataFrame()
