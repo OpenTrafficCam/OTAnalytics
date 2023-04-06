@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from view.helpers.gui_helper import button_bool, info_message
 import view.image_alteration
-import helpers.config
+from helpers.config import maincanvas, TRANSFORMED_COORDS
 import helpers.file_helper as file_helper
 from shapely.geometry import LineString
 
@@ -63,8 +63,8 @@ def prepare_draw_line(
 
     lineobject = create_LineString(
         [
-            helpers.config.maincanvas.points[0],
-            helpers.config.maincanvas.points[1],
+            maincanvas.points[0],
+            maincanvas.points[1],
         ]
     )
     view.image_alteration.create_intersection_list(lineobject)
@@ -88,8 +88,8 @@ def create_LineString(pts):
 def draw_line(np_image):
     return cv2.line(
         np_image,
-        helpers.config.maincanvas.points[0],
-        helpers.config.maincanvas.points[1],
+        maincanvas.points[0],
+        maincanvas.points[1],
         (200, 125, 125, 255),
         3,
     )
@@ -117,16 +117,16 @@ def prepare_polygon(
 
     if undo:
 
-        del helpers.config.maincanvas.polygon_points[-1]
+        del maincanvas.polygon_points[-1]
 
     if adding_points:
 
-        helpers.config.maincanvas.polygon_points.append(
-            helpers.config.maincanvas.points[0]
+        maincanvas.polygon_points.append(
+           maincanvas.points[0]
         )
 
     list_of_tuples = [
-        list(elem) for elem in helpers.config.maincanvas.polygon_points
+        list(elem) for elem in maincanvas.polygon_points
     ]
 
     if len(list_of_tuples) > 1:
@@ -141,7 +141,7 @@ def draw_polygon(np_image, closing):
     image = np_image
     overlay = image.copy()
     list_of_tuples = [
-        list(elem) for elem in helpers.config.maincanvas.polygon_points
+        list(elem) for elem in maincanvas.polygon_points
     ]
 
     pts = np.array(list_of_tuples, np.int32)
@@ -156,12 +156,16 @@ def draw_polygon(np_image, closing):
     return cv2.polylines(image, [pts], closing, (200, 125, 125, 255), 2)
 
 
-def load_flowfile():
+def load_flowfile(TRANSFORMED_COORDS):
     """Loads flow file.
 
     Returns:
         json: Return json file to read from.
     """
+    if not TRANSFORMED_COORDS:
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor = 1
+        file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor = 1
+
 
     filepath = filedialog.askopenfile(filetypes=[("Detectors", "*.OTflow")])
     files = open(filepath.name, "r")
@@ -196,16 +200,16 @@ def dump_to_flowdictionary(detector_name):
 
         file_helper.flow_dict["Detectors"][detector_name] = {
             "type": "line",
-            "start_x": helpers.config.maincanvas.points[0][0],
-            "start_y": helpers.config.maincanvas.points[0][1],
-            "end_x": helpers.config.maincanvas.points[1][0],
-            "end_y": helpers.config.maincanvas.points[1][1],
+            "start_x": maincanvas.points[0][0],
+            "start_y": maincanvas.points[0][1],
+            "end_x":maincanvas.points[1][0],
+            "end_y": maincanvas.points[1][1],
             "color": (200, 125, 125, 255),
         }
 
     if button_bool["polygondetector_toggle"] is True:
         file_helper.flow_dict["Detectors"][detector_name] = {
             "type": "polygon",
-            "points": helpers.config.maincanvas.polygon_points,
+            "points": maincanvas.polygon_points,
             "color": (200, 125, 125, 255),
         }

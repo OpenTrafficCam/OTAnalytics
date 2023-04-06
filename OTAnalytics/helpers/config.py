@@ -9,6 +9,8 @@ E.g. (0,0) for top-left corner, (1,0) for top-right corner,
 ENCODING = "UTF-8"
 COMPRESSED_FILETYPE = ".bz2"
 
+TRANSFORMED_COORDS = False
+
 bbox_factor_reference = {
     "car": (1, 0.5),
     "bicycle": (0.5, 0.5),

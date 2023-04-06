@@ -10,7 +10,7 @@ from view.helpers.gui_helper import (
     button_display_tracks_switch,
 )
 import keyboard
-import helpers.config
+from helpers.config import TRANSFORMED_COORDS
 import helpers.file_helper as file_helper
 import view.image_alteration
 import view.sections
@@ -145,7 +145,7 @@ class gui(tk.Tk):
 
     def import_flowfile(self):
         """Calls load_flowfile-function and inserts view.sections to listboxwidget."""
-        view.sections.load_flowfile()
+        view.sections.load_flowfile(TRANSFORMED_COORDS)
 
         view.image_alteration.manipulate_image()
 
