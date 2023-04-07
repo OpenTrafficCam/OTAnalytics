@@ -24,7 +24,7 @@ class EventProcessor:
         if self.EVENTLIST_PATH.is_file():
             eventlist_path = [self.EVENTLIST_PATH]
         else:
-            eventlist_path = [p for p in self.EVENTLIST_PATH.iterdir() if p.is_file()]
+            eventlist_path = list(Path("your_directory").glob("*.ottrk"))
 
         events = pd.DataFrame()
 
