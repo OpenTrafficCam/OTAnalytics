@@ -3,10 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from OTAnalytics.plugin_parser.otanalytics_parser import (
-    JsonParser,
-    PandasDataFrameParser,
-)
+import OTAnalytics.plugin_parser.otvision_parser as otvp
+from OTAnalytics.plugin_parser.otanalytics_parser import PandasDataFrameParser
 
 
 class EventProcessor:
@@ -24,18 +22,16 @@ class EventProcessor:
         if self.EVENTLIST_PATH.is_file():
             eventlist_path = [self.EVENTLIST_PATH]
         else:
-            eventlist_path = list(Path("your_directory").glob("*.ottrk"))
+            eventlist_path = list(Path(self.EVENTLIST_PATH).glob("*.json.bz2"))
 
         events = pd.DataFrame()
 
         for eventlist in eventlist_path:
-            eventlist_dict = JsonParser.from_dict(eventlist)
+            eventlist_dict = otvp._parse_bz2(eventlist)
 
-            # Create DataFrames for events
-            # Parse Eventlist to DataFrame
             events_df = PandasDataFrameParser.from_dict(eventlist_dict["event_list"])
 
-            events = pd.concat([events, events_df], axis=1)
+            events = pd.concat([events, events_df], axis=0)
 
         return events.sort_values(["occurrence"])
 
