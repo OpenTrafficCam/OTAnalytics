@@ -1,3 +1,4 @@
+import copy
 import uuid
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from typing import TypedDict
@@ -6,7 +7,11 @@ from plugin_ui.abstract_canvas_background import AbstractCanvasBackground
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
-from OTAnalytics.plugin_ui.line_section import LineSectionBuilder, LineSectionDrawer
+from OTAnalytics.plugin_ui.line_section import (
+    LineSectionBuilder,
+    LineSectionDeleter,
+    LineSectionDrawer,
+)
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.view_model import ViewModel
 
@@ -23,6 +28,16 @@ DUMMY_SECTIONS: list[DummySection] = [
     {"id": "section2", "name": "East", "point0": (200, 200), "point1": (300, 200)},
     {"id": "section3", "name": "North", "point0": (300, 300), "point1": (300, 400)},
 ]
+
+
+class MissingInjectedInstanceError(Exception):
+    """Raises when no instance of an object was injected before referencing it"""
+
+    def __init__(self, injected_object: str):
+        message = (
+            f"An instance of {injected_object} has to be injected before referencing it"
+        )
+        super().__init__(message)
 
 
 class DummyViewModel(ViewModel):
@@ -55,9 +70,8 @@ class DummyViewModel(ViewModel):
             return
         print(f"Sections file to load: {sections_file}")
         # TODO: @briemla retrieve line_sections from file via model
-        self._sections = DUMMY_SECTIONS
-        self._draw_sections_on_canvas()
-        self._list_sections_in_treeview()
+        self._sections = copy.deepcopy(DUMMY_SECTIONS)
+        self._refresh_sections_on_gui()
 
     def save_sections(self) -> None:
         sections_file = asksaveasfilename(
@@ -66,11 +80,17 @@ class DummyViewModel(ViewModel):
         print(f"Sections file to save: {sections_file}")
 
     def remove_section(self) -> None:
-        # TODO: Get currently selected sections (?)
-        pass
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(injected_object="treeview_sections")
+        selected_section_id = self._treeview_sections.focus()
+        for section in self._sections:
+            if section["id"] == selected_section_id:
+                self._sections.remove(section)
+                print(f"This section was removed: {section}")
+        self._refresh_sections_on_gui()
 
     def add_section(self) -> None:
-        self._new_section["id"] = uuid.uuid1()
+        self._new_section["id"] = str(uuid.uuid1())
         self._add_section_geometry()
 
     def edit_section_geometry(self) -> None:
@@ -85,18 +105,16 @@ class DummyViewModel(ViewModel):
         # TODO: Get currently selected section
         # TODO: Retrieve sections metadata via ID from selection in Treeview
         INPUT_VALUES: dict = {"name": "Existing Section"}
+        position = self._get_absolute_canvas_position()
         updated_section_metadata = ToplevelSections(
-            title="Edit section", input_values=INPUT_VALUES
+            title="Edit section", initial_position=position, input_values=INPUT_VALUES
         ).get_metadata()
-        print(f"Uodated LineSection Metadata: {updated_section_metadata}")
+        print(f"Updated LineSection Metadata: {updated_section_metadata}")
 
     def _add_section_geometry(self) -> None:
         if self._canvas is None:  # or self._gui is None
-            raise ValueError(
-                "Canvas has to tell DummyViewModel about itself before adding a section"
-            )
+            raise MissingInjectedInstanceError(injected_object="canvas")
         # frames_to_disable = [self._gui.frame_sections, self._gui.frame_tracks]
-        # BUG: Adding 2+ sections doesnt work
         LineSectionBuilder(
             view_model=self,
             canvas=self._canvas,
@@ -111,11 +129,21 @@ class DummyViewModel(ViewModel):
         self._add_section_metadata()
 
     def _add_section_metadata(self) -> None:
-        section_metadata = ToplevelSections(title="New section").get_metadata()
+        position = self._get_absolute_canvas_position()
+        section_metadata = ToplevelSections(
+            title="New section", initial_position=position
+        ).get_metadata()
         self._new_section["name"] = section_metadata["name"]
         self._finish_adding_section()
         # TODO: @briemla provide for model
         print(f"New LineSection Metadata: {section_metadata}")
+
+    def _get_absolute_canvas_position(self) -> tuple[int, int]:
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(injected_object="canvas")
+        x = self._canvas.winfo_rootx()
+        y = self._canvas.winfo_rooty()
+        return x, y
 
     def _finish_adding_section(self) -> None:
         for key in ["id", "name", "point0", "point1"]:
@@ -130,33 +158,43 @@ class DummyViewModel(ViewModel):
             point1=self._new_section["point1"],
         )
         self._sections.append(new_section)
-        self._draw_sections_on_canvas()
-        self._list_sections_in_treeview()
+        self._refresh_sections_on_gui()
         # TODO: @briemla provide for model
         # Teardown
         self._new_section = {}
 
-    def _draw_sections_on_canvas(self) -> None:
+    def _refresh_sections_on_gui(self) -> None:
+        self._remove_all_sections_from_canvas()
+        self._remove_all_sections_from_treeview()
+        self._draw_all_sections_on_canvas()
+        self._list_all_sections_in_treeview()
+
+    def _draw_all_sections_on_canvas(self) -> None:
         if self._canvas is None:
-            raise ValueError(
-                "Gui has to tell DummyViewModel about itself before drawing sections"
-            )
+            raise MissingInjectedInstanceError(injected_object="canvas")
         line_section_drawer = LineSectionDrawer(canvas=self._canvas)
         for line_section in self._sections:
             line_section_drawer.draw_section(
+                tag="line_section",
                 id=line_section["id"],
                 point0=line_section["point0"],
                 point1=line_section["point1"],
             )
 
-    def _list_sections_in_treeview(self) -> None:
+    def _remove_all_sections_from_canvas(self) -> None:
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(injected_object="canvas")
+        LineSectionDeleter(canvas=self._canvas).delete_sections(tag="line_section")
+
+    def _list_all_sections_in_treeview(self) -> None:
         if self._treeview_sections is None:
-            raise ValueError(
-                "Treeview has to tell DummyViewModel about itself before listing "
-                + "sections"
-            )
-        self._treeview_sections.delete(*self._treeview_sections.get_children())
+            raise MissingInjectedInstanceError(injected_object="treeview_sections")
         for line_section in self._sections:
             self._treeview_sections.add_section(
                 id=line_section["id"], name=line_section["name"]
             )
+
+    def _remove_all_sections_from_treeview(self) -> None:
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(injected_object="treeview_sections")
+        self._treeview_sections.delete(*self._treeview_sections.get_children())

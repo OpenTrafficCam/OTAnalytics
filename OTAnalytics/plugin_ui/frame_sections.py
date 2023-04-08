@@ -66,9 +66,9 @@ class FrameSections(CTkFrame):
 
 class TreeviewSections(AbstractTreeviewSections):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
-        super().__init__(show="tree", **kwargs)
+        super().__init__(show="tree", selectmode="browse", **kwargs)
         self._viewmodel = viewmodel
-        self.bind("<ButtonRelease-3>", self._deselect_sections)
+        self.bind("<ButtonRelease-2>", self._deselect_sections)
         self._define_columns()
         self.introduce_to_viewmodel()
 
@@ -87,6 +87,9 @@ class TreeviewSections(AbstractTreeviewSections):
     def _deselect_sections(self, event: Any) -> None:
         for item in self.selection():
             self.selection_remove(item)
+
+    def get_selected_section(self) -> str:
+        return self.focus()
 
 
 class ListboxSections(Listbox):

@@ -10,3 +10,7 @@ class AbstractTreeviewSections(Treeview):
     @abstractmethod
     def add_section(self, id: str, name: str) -> None:
         pass
+
+    @abstractmethod
+    def get_selected_section(self) -> str:
+        pass

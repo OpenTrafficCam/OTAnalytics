@@ -61,13 +61,17 @@ class LineSectionBuilder(SectionBuilder, CanvasObserver):
                 "self.point0 as to be set before listening to mouse motion"
             )
         if self.point1_tmp is None:
-            print("No tmp point")
             self.line_section_drawer.draw_section(
-                id=self.temporary_id, point0=self.point0, point1=coordinates
+                tag="temporary_line_section",
+                id=self.temporary_id,
+                point0=self.point0,
+                point1=coordinates,
             )
         else:
             self.line_section_updater.update_section(
-                id=self.temporary_id, point0=self.point0, point1=coordinates
+                id=self.temporary_id,
+                point0=self.point0,
+                point1=coordinates,
             )
         self.point1_tmp = coordinates
 
@@ -85,7 +89,7 @@ class LineSectionBuilder(SectionBuilder, CanvasObserver):
 
     def teardown(self) -> None:
         self.detach_from(self._canvas.event_handler)
-        self.line_section_deleter.delete_section(self.temporary_id)
+        self.line_section_deleter.delete_sections(tag="temporary_line_section")
         # self.gui_state_changer.reset_states()
 
 
@@ -95,6 +99,7 @@ class LineSectionDrawer(SectionDrawer):
 
     def draw_section(
         self,
+        tag: str,
         id: str,
         point0: tuple[int, int],
         point1: tuple[int, int],
@@ -104,7 +109,7 @@ class LineSectionDrawer(SectionDrawer):
         x0, y0 = point0
         x1, y1 = point1
         self.line_id = self._canvas.create_line(
-            x0, y0, x1, y1, width=line_width, fill=line_color, tags=id
+            x0, y0, x1, y1, width=line_width, fill=line_color, tags=(tag, id)
         )
 
 
@@ -124,5 +129,10 @@ class LineSectionDeleter(SectionDeleter):
     def __init__(self, canvas: AbstractCanvasBackground) -> None:
         self._canvas = canvas
 
-    def delete_section(self, id: str) -> None:
-        self._canvas.delete(id)
+    def delete_sections(self, tag: str) -> None:
+        """Deletes all sections from a self._canvas with a given tag.
+
+        Args:
+            tag (str): Tag given when creating a canvas item (e.g. "line_section")
+        """
+        self._canvas.delete(tag)

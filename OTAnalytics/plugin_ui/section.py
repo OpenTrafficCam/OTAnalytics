@@ -8,7 +8,7 @@ class SectionBuilder(ABC):
 class SectionDrawer(ABC):
     @abstractmethod
     def draw_section(
-        self, id: str, point0: tuple[int, int], point1: tuple[int, int]
+        self, tag: str, id: str, point0: tuple[int, int], point1: tuple[int, int]
     ) -> None:
         pass
 
@@ -23,5 +23,5 @@ class SectionUpdater(ABC):
 
 class SectionDeleter(ABC):
     @abstractmethod
-    def delete_section(self, id: str) -> None:
+    def delete_sections(self, tag: str) -> None:
         pass
