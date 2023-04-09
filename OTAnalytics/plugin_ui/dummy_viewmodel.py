@@ -1,7 +1,8 @@
 import copy
 import uuid
+from tkinter import Widget
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from typing import TypedDict
+from typing import TypedDict, cast
 
 from plugin_ui.abstract_canvas_background import AbstractCanvasBackground
 
@@ -12,6 +13,7 @@ from OTAnalytics.plugin_ui.line_section import (
     LineSectionDeleter,
     LineSectionDrawer,
 )
+from OTAnalytics.plugin_ui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.view_model import ViewModel
 
@@ -83,6 +85,12 @@ class DummyViewModel(ViewModel):
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(injected_object="treeview_sections")
         selected_section_id = self._treeview_sections.focus()
+        if not selected_section_id:
+            position = self._get_absolute_position(widget=self._treeview_sections)
+            InfoBox(
+                message="Please select a section to remove", initial_position=position
+            )
+            return
         for section in self._sections:
             if section["id"] == selected_section_id:
                 self._sections.remove(section)
@@ -94,22 +102,52 @@ class DummyViewModel(ViewModel):
         self._add_section_geometry()
 
     def edit_section_geometry(self) -> None:
-        # TODO: Make sure only one section is selected
         # TODO: Get currently selected section
         # TODO: Enter drawing mode (there, old section is deleted, first)
         # TODO: Yield updated geometry
         print("Update geometry of selected section")
 
     def edit_section_metadata(self) -> None:
-        # TODO: Make sure only one section is selected
-        # TODO: Get currently selected section
-        # TODO: Retrieve sections metadata via ID from selection in Treeview
-        INPUT_VALUES: dict = {"name": "Existing Section"}
-        position = self._get_absolute_canvas_position()
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(injected_object="treeview_sections")
+        selected_section_id = self._treeview_sections.get_selected_section()
+        position = self._get_absolute_position(widget=self._treeview_sections)
+        if not selected_section_id:
+            InfoBox(
+                message="Please select a section to edit", initial_position=position
+            )
+            return
+        current_metadata = self._get_section_metadata(selected_section_id)
+        if self._canvas is None:  # or self._gui is None
+            raise MissingInjectedInstanceError(injected_object="canvas")
+        position = self._get_absolute_position(widget=self._canvas)
         updated_section_metadata = ToplevelSections(
-            title="Edit section", initial_position=position, input_values=INPUT_VALUES
+            title="Edit section",
+            initial_position=position,
+            input_values=current_metadata,
         ).get_metadata()
+        self._set_section_metadata(
+            id=selected_section_id, metadata=updated_section_metadata
+        )
         print(f"Updated LineSection Metadata: {updated_section_metadata}")
+
+    def _get_section_metadata(self, id: str) -> dict:
+        for section in self._sections:
+            if section["id"] == id:
+                current_metadata = {k: v for k, v in section.items() if k in ["name"]}
+                break
+        return current_metadata
+
+    def _set_section_metadata(self, id: str, metadata: dict) -> None:
+        new_metadata = metadata
+        for index, section in enumerate(self._sections):
+            if section["id"] == id:
+                new_data = dict(section) | new_metadata
+                # if set(new_data.keys()) != set(section.__annotations__.keys()):
+                #     raise ValueError("new_data does not have all required keys")
+                updated_section = cast(DummySection, new_data)
+                self._sections[index] = updated_section
+                break
 
     def _add_section_geometry(self) -> None:
         if self._canvas is None:  # or self._gui is None
@@ -129,7 +167,9 @@ class DummyViewModel(ViewModel):
         self._add_section_metadata()
 
     def _add_section_metadata(self) -> None:
-        position = self._get_absolute_canvas_position()
+        if self._canvas is None:  # or self._gui is None
+            raise MissingInjectedInstanceError(injected_object="canvas")
+        position = self._get_absolute_position(widget=self._canvas)
         section_metadata = ToplevelSections(
             title="New section", initial_position=position
         ).get_metadata()
@@ -138,11 +178,9 @@ class DummyViewModel(ViewModel):
         # TODO: @briemla provide for model
         print(f"New LineSection Metadata: {section_metadata}")
 
-    def _get_absolute_canvas_position(self) -> tuple[int, int]:
-        if self._canvas is None:
-            raise MissingInjectedInstanceError(injected_object="canvas")
-        x = self._canvas.winfo_rootx()
-        y = self._canvas.winfo_rooty()
+    def _get_absolute_position(self, widget: Widget) -> tuple[int, int]:
+        x = widget.winfo_rootx()
+        y = widget.winfo_rooty()
         return x, y
 
     def _finish_adding_section(self) -> None:
