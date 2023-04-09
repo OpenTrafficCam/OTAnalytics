@@ -16,6 +16,9 @@ TEMPORARY_SECTION_ID: str = "temporary_section"
 LINE_WIDTH: int = 5
 LINE_COLOR: str = "red"
 
+# TODO: If possible make this classes reusable for other canvas items
+# TODO: Rename to more canvas specific names, as LineSection also has metadata
+
 
 class LineSectionBuilder(SectionBuilder, CanvasObserver):
     def __init__(
@@ -89,7 +92,7 @@ class LineSectionBuilder(SectionBuilder, CanvasObserver):
 
     def teardown(self) -> None:
         self.detach_from(self._canvas.event_handler)
-        self.line_section_deleter.delete_sections(tag="temporary_line_section")
+        self.line_section_deleter.delete_sections(tag_or_id="temporary_line_section")
         # self.gui_state_changer.reset_states()
 
 
@@ -129,10 +132,11 @@ class LineSectionDeleter(SectionDeleter):
     def __init__(self, canvas: AbstractCanvasBackground) -> None:
         self._canvas = canvas
 
-    def delete_sections(self, tag: str) -> None:
-        """Deletes all sections from a self._canvas with a given tag.
+    def delete_sections(self, tag_or_id: str) -> None:
+        """If a tag is given, deletes all sections from a self._canvas with a given tag.
+        If an id is given, deletes the section with this id.
 
         Args:
             tag (str): Tag given when creating a canvas item (e.g. "line_section")
         """
-        self._canvas.delete(tag)
+        self._canvas.delete(tag_or_id)

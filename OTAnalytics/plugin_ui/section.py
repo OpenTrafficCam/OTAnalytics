@@ -23,5 +23,5 @@ class SectionUpdater(ABC):
 
 class SectionDeleter(ABC):
     @abstractmethod
-    def delete_sections(self, tag: str) -> None:
+    def delete_sections(self, tag_or_id: str) -> None:
         pass
