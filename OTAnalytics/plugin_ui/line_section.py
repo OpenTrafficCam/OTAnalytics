@@ -14,7 +14,7 @@ from OTAnalytics.plugin_ui.view_model import ViewModel
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
 LINE_WIDTH: int = 5
-LINE_COLOR: str = "red"
+LINE_COLOR: str = "lightgreen"
 
 # TODO: If possible make this classes reusable for other canvas items
 # TODO: Rename to more canvas specific names, as LineSection also has metadata
@@ -69,6 +69,7 @@ class LineSectionBuilder(SectionBuilder, CanvasObserver):
                 id=self.temporary_id,
                 point0=self.point0,
                 point1=coordinates,
+                line_color="red",
             )
         else:
             self.line_section_updater.update_section(
