@@ -76,8 +76,17 @@ class DummyViewModel(ViewModel):
         self._refresh_sections_on_gui()
 
     def save_sections(self) -> None:
+        if not self._sections:
+            if self._treeview_sections is None:
+                raise MissingInjectedInstanceError(injected_object="treeview_sections")
+            position = self._get_absolute_position(widget=self._treeview_sections)
+            InfoBox(
+                message="No sections to save, please add new sections first",
+                initial_position=position,
+            )
+            return
         sections_file = asksaveasfilename(
-            title="Load sections file", filetypes=[("sections file", "*.otflow")]
+            title="Save sections file as", filetypes=[("sections file", "*.otflow")]
         )
         print(f"Sections file to save: {sections_file}")
 
