@@ -159,6 +159,7 @@ class DummyViewModel(ViewModel):
         self._set_section_metadata(
             id=section_to_edit, metadata=updated_section_metadata
         )
+        self._refresh_sections_on_gui()
         print(f"Updated LineSection Metadata: {updated_section_metadata}")
 
     def _get_section_to_edit(self) -> str | None:
