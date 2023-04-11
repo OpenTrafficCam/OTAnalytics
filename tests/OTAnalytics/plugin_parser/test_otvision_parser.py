@@ -18,7 +18,14 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
 )
 from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
-from OTAnalytics.domain.section import Area, Coordinate, LineSection, Section, SectionId
+from OTAnalytics.domain.section import (
+    SECTIONS,
+    Area,
+    Coordinate,
+    LineSection,
+    Section,
+    SectionId,
+)
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
@@ -483,11 +490,41 @@ class TestOtEventListParser:
             direction_vector=direction_vector,
             video_name=video_name,
         )
+        line_section = LineSection(
+            id=SectionId("N"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
+                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
+            },
+            plugin_data={"foo": "bar"},
+            start=Coordinate(0, 0),
+            end=Coordinate(1, 0),
+        )
+        area_section = Area(
+            id=SectionId("S"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
+                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
+            },
+            plugin_data={"foo": "bar"},
+            coordinates=[
+                Coordinate(0, 0),
+                Coordinate(0, 10),
+                Coordinate(10, 10),
+                Coordinate(10, 0),
+                Coordinate(0, 0),
+            ],
+        )
+        events = [first_event, second_event]
+        sections = [line_section, area_section]
 
         event_list_parser = OtEventListParser()
-        content = event_list_parser._convert([first_event, second_event])
+        content = event_list_parser._convert(events, sections)
 
-        assert content == {EVENT_LIST: [first_event.to_dict(), second_event.to_dict()]}
+        assert content == {
+            SECTIONS: [line_section.to_dict(), area_section.to_dict()],
+            EVENT_LIST: [first_event.to_dict(), second_event.to_dict()],
+        }
 
     def test_serialize_events(
         self, tracks: list[Track], sections: list[Section], test_data_tmp_dir: Path
@@ -516,5 +553,5 @@ class TestOtEventListParser:
 
         event_list_parser = OtEventListParser()
         event_list_file = test_data_tmp_dir / "eventlist.json"
-        event_list_parser.serialize(enter_events, event_list_file)
+        event_list_parser.serialize(enter_events, [line_section], event_list_file)
         assert event_list_file.exists()
