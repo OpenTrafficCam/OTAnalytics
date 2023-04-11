@@ -38,7 +38,9 @@ class SectionParser(ABC):
 
 class EventListParser(ABC):
     @abstractmethod
-    def serialize(self, events: Iterable[Event], file: Path) -> None:
+    def serialize(
+        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+    ) -> None:
         pass
 
 
@@ -245,6 +247,7 @@ class Datastore:
         """
         self._event_list_parser.serialize(
             self._event_repository.get_all(),
+            self._section_repository.get_all(),
             file=file,
         )
 
