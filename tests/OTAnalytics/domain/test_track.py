@@ -6,7 +6,7 @@ import pytest
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.domain.track import (
-    BuildTrackWithLessThanFiveDetectionsError,
+    BuildTrackWithLessThanNDetectionsError,
     CalculateTrackClassificationByMaxConfidence,
     Detection,
     Track,
@@ -146,11 +146,11 @@ class TestTrack:
             TrackId(id)
 
     def test_raise_error_on_empty_detections(self) -> None:
-        with pytest.raises(BuildTrackWithLessThanFiveDetectionsError):
+        with pytest.raises(BuildTrackWithLessThanNDetectionsError):
             Track(id=TrackId(1), classification="car", detections=[])
 
     def test_error_on_single_detection(self, valid_detection: Detection) -> None:
-        with pytest.raises(BuildTrackWithLessThanFiveDetectionsError):
+        with pytest.raises(BuildTrackWithLessThanNDetectionsError):
             Track(id=TrackId(5), classification="car", detections=[valid_detection])
 
     def test_instantiation_with_valid_args(self, valid_detection: Detection) -> None:
