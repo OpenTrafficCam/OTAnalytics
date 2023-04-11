@@ -101,18 +101,40 @@ class Subject(Generic[VALUE]):
 
 
 class BindableProperty(Generic[VALUE]):
+    """
+    Represents a property of the given type that informs its observers about changes.
+    """
+
     def __init__(self) -> None:
         self._property: Optional[VALUE] = None
         self._observers: Subject[VALUE] = Subject[VALUE]()
 
     def register(self, observer: Observer[VALUE]) -> None:
+        """
+        Listen to property changes.
+
+        Args:
+            observer (Observer[VALUE]): observer to be notified about changes
+        """
         self._observers.register(observer)
 
     def set(self, value: Optional[VALUE]) -> None:
+        """
+        Change the current value of the property
+
+        Args:
+            value (Optional[VALUE]): new value to be set
+        """
         self._property = value
         self._observers.notify(value)
 
     def get(self) -> Optional[VALUE]:
+        """
+        Get the current value of the property.
+
+        Returns:
+            Optional[VALUE]: current value
+        """
         return self._property
 
 
@@ -127,6 +149,10 @@ class TrackViewState:
 
 
 class TrackPlotter(ABC):
+    """
+    Abstraction to plot the background image.
+    """
+
     @abstractmethod
     def plot(
         self,
@@ -153,6 +179,11 @@ class TrackPlotter(ABC):
 
 
 class TrackImageUpdater(TrackListObserver):
+    """
+    This class listens to track changes in the repository and updates the background
+    image. It takes into account whether the tracks and sections should be shown or not.
+    """
+
     def __init__(
         self,
         datastore: Datastore,
@@ -165,15 +196,36 @@ class TrackImageUpdater(TrackListObserver):
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
+        """
+        Will notify this object about changes in the track repository.
+
+        Args:
+            tracks (list[TrackId]): list of changed track ids
+
+        Raises:
+            IndexError: if the list is empty
+        """
         if not tracks:
             raise IndexError("No tracks changed")
         self._update_image(tracks[0])
 
     def _notify_show_tracks(self, show_tracks: Optional[bool]) -> None:
+        """
+        Will update the image according to changes of the show tracks property.
+
+        Args:
+            show_tracks (Optional[bool]): current value
+        """
         if track := next(iter(self._datastore.get_all_tracks())):
             self._update_image(track.id)
 
     def _update_image(self, track_id: TrackId) -> None:
+        """
+        Updates the current background image with or without tracks and sections.
+
+        Args:
+            track_id (TrackId): track id used to get the video image
+        """
         if new_image := self._datastore.get_image_of_track(track_id):
             if self._track_view_state.show_tracks.get():
                 track_image = self._track_plotter.plot(
