@@ -43,7 +43,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
         end_time: str = "",
         start_end: bool = True,
         plot_sections: bool = True,
-        alpha: float = 0.1,
+        alpha: float = 0.5,
     ) -> TrackImage:
         """
         Plot the tracks and section as image.
