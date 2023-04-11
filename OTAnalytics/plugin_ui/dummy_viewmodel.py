@@ -9,9 +9,9 @@ from plugin_ui.abstract_canvas_background import AbstractCanvasBackground
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.line_section import (
-    LineSectionBuilder,
-    LineSectionDeleter,
-    LineSectionDrawer,
+    LineSectionGeometryBuilder,
+    LineSectionGeometryDeleter,
+    LineSectionGeometryDrawer,
 )
 from OTAnalytics.plugin_ui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
@@ -117,7 +117,7 @@ class DummyViewModel(ViewModel):
             return
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
-        LineSectionDeleter(canvas=self._canvas).delete_sections(
+        LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
             tag_or_id=self._section_to_edit_geometry
         )
         self._add_section_geometry()
@@ -194,7 +194,7 @@ class DummyViewModel(ViewModel):
         if self._canvas is None:  # or self._gui is None
             raise MissingInjectedInstanceError(injected_object="canvas")
         # frames_to_disable = [self._gui.frame_sections, self._gui.frame_tracks]
-        LineSectionBuilder(
+        LineSectionGeometryBuilder(
             view_model=self,
             canvas=self._canvas,
             # frames_to_disable=frames_to_disable,
@@ -254,7 +254,7 @@ class DummyViewModel(ViewModel):
     def _draw_all_sections_on_canvas(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
-        line_section_drawer = LineSectionDrawer(canvas=self._canvas)
+        line_section_drawer = LineSectionGeometryDrawer(canvas=self._canvas)
         for line_section in self._sections:
             line_section_drawer.draw_section(
                 tag="line_section",
@@ -266,7 +266,7 @@ class DummyViewModel(ViewModel):
     def _remove_all_sections_from_canvas(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
-        LineSectionDeleter(canvas=self._canvas).delete_sections(
+        LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
             tag_or_id="line_section"
         )
 

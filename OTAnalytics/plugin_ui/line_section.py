@@ -3,10 +3,10 @@
 from OTAnalytics.plugin_ui.abstract_canvas_background import AbstractCanvasBackground
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.section import (
-    SectionBuilder,
-    SectionDeleter,
-    SectionDrawer,
-    SectionUpdater,
+    SectionGeometryBuilder,
+    SectionGeometryDeleter,
+    SectionGeometryDrawer,
+    SectionGeometryUpdater,
 )
 from OTAnalytics.plugin_ui.view_model import ViewModel
 
@@ -20,7 +20,7 @@ LINE_COLOR: str = "lightgreen"
 # TODO: Rename to more canvas specific names, as LineSection also has metadata
 
 
-class LineSectionBuilder(SectionBuilder, CanvasObserver):
+class LineSectionGeometryBuilder(SectionGeometryBuilder, CanvasObserver):
     def __init__(
         self,
         view_model: ViewModel,
@@ -31,9 +31,9 @@ class LineSectionBuilder(SectionBuilder, CanvasObserver):
         self._canvas = canvas
         # self._frames_to_disable = frames_to_disable
 
-        self.line_section_drawer = LineSectionDrawer(canvas=canvas)
-        self.line_section_updater = LineSectionUpdater(canvas=canvas)
-        self.line_section_deleter = LineSectionDeleter(canvas=canvas)
+        self.line_section_drawer = LineSectionGeometryDrawer(canvas=canvas)
+        self.line_section_updater = LineSectionGeometryUpdater(canvas=canvas)
+        self.line_section_deleter = LineSectionGeometryDeleter(canvas=canvas)
 
         self.temporary_id: str = TEMPORARY_SECTION_ID
         self.point0: tuple[int, int] | None = None
@@ -97,7 +97,7 @@ class LineSectionBuilder(SectionBuilder, CanvasObserver):
         # self.gui_state_changer.reset_states()
 
 
-class LineSectionDrawer(SectionDrawer):
+class LineSectionGeometryDrawer(SectionGeometryDrawer):
     def __init__(self, canvas: AbstractCanvasBackground) -> None:
         self._canvas = canvas
 
@@ -117,7 +117,7 @@ class LineSectionDrawer(SectionDrawer):
         )
 
 
-class LineSectionUpdater(SectionUpdater):
+class LineSectionGeometryUpdater(SectionGeometryUpdater):
     def __init__(self, canvas: AbstractCanvasBackground) -> None:
         self._canvas = canvas
 
@@ -129,7 +129,7 @@ class LineSectionUpdater(SectionUpdater):
         self._canvas.coords(id, x0, y0, x1, y1)
 
 
-class LineSectionDeleter(SectionDeleter):
+class LineSectionGeometryDeleter(SectionGeometryDeleter):
     def __init__(self, canvas: AbstractCanvasBackground) -> None:
         self._canvas = canvas
 
