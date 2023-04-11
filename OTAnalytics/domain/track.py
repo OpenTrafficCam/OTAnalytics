@@ -247,26 +247,63 @@ class Track(DataclassValidation):
 
 @dataclass(frozen=True)
 class TrackImage:
+    """
+    Represents an image with tracks. This might be an empty image or one with different
+    types of track visualisation.
+    """
+
     def add(self, other: "TrackImage") -> "TrackImage":
+        """
+        Add the other image on top of this image. The composition of the two images
+        takes transparency into account.
+
+        Args:
+            other (TrackImage): other image to stack on top of this image
+
+        Returns:
+            TrackImage: combined image of this and the other image
+        """
         self_image = self.as_image().convert(mode="RGBA")
         other_image = other.as_image().convert(mode="RGBA")
         return PilImage(Image.alpha_composite(self_image, other_image))
 
     @abstractmethod
     def as_image(self) -> Image.Image:
+        """
+        Convert image into a base python image.
+
+        Returns:
+            Image.Image: image as pilow image
+        """
         pass
 
     @abstractmethod
     def width(self) -> int:
+        """
+        Width of the image.
+
+        Returns:
+            int: width of the image
+        """
         pass
 
     @abstractmethod
     def height(self) -> int:
+        """
+        Height of the image.
+
+        Returns:
+            int: height of the image
+        """
         pass
 
 
 @dataclass(frozen=True)
 class PilImage(TrackImage):
+    """
+    Konkrete implementation using pilow as image format.
+    """
+
     _image: Image.Image
 
     def as_image(self) -> Image.Image:
