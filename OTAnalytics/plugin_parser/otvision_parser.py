@@ -360,23 +360,56 @@ class OttrkVideoParser(VideoParser):
 
 
 class OtEventListParser(EventListParser):
-    def serialize(self, events: Iterable[Event], file: Path) -> None:
+    def serialize(
+        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+    ) -> None:
         """Serialize event list into file.
 
         Args:
             events (Iterable[Event]): events to serialize
-            file (Path): file to serialize events to
+            sections (Section): sections to serialize
+            file (Path): file to serialize events and sections to
         """
-        content = self._convert(events)
+        content = self._convert(events, sections)
         _write_bz2(content, file)
 
-    def _convert(self, events: Iterable[Event]) -> dict[str, list[dict]]:
+    def _convert(
+        self, events: Iterable[Event], sections: Iterable[Section]
+    ) -> dict[str, list[dict]]:
+        """Convert events to dictionary.
+
+        Args:
+            events (Iterable[Event]): events to convert
+            sections (Iterable[Section]): sections to convert
+
+        Returns:
+            dict[str, list[dict]]: dictionary containing raw information of events
+        """
+        converted_sections = self._convert_sections(sections)
+        converted_events = self._convert_events(events)
+        return {
+            section.SECTIONS: converted_sections,
+            event.EVENT_LIST: converted_events,
+        }
+
+    def _convert_events(self, events: Iterable[Event]) -> list[dict]:
         """Convert events to dictionary.
 
         Args:
             events (Iterable[Event]): events to convert
 
         Returns:
-            dict[str, list[dict]]: dictionary containing raw information of events
+            list[dict]: list containing raw information of events
         """
-        return {event.EVENT_LIST: [event.to_dict() for event in events]}
+        return [event.to_dict() for event in events]
+
+    def _convert_sections(self, sections: Iterable[Section]) -> list[dict]:
+        """Convert sections to dictionary
+
+        Args:
+            sections (Iterable[Section]): sections to convert
+
+        Returns:
+            list[dict]: list containing raw information of sections
+        """
+        return [section.to_dict() for section in sections]
