@@ -274,10 +274,7 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
             [Coordinate(detection.x, detection.y) for detection in track.detections]
         )
 
-        intersects = self.implementation.line_intersects_line(
-            line_section, track_as_geometry
-        )
-        return intersects
+        return self.implementation.line_intersects_line(line_section, track_as_geometry)
 
 
 class AreaIntersector(Intersector):

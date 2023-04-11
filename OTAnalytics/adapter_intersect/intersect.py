@@ -49,15 +49,14 @@ class ShapelyIntersectImplementationAdapter(IntersectImplementation):
         if len(intersection_points.geoms) == 1:
             return None
 
-        splitted_lines = [
+        return [
             self.mapper.map_to_domain_line(line_string)
             for line_string in intersection_points.geoms
         ]
-        return splitted_lines
 
-    def distance_between(self, p1: Coordinate, p2: Coordinate) -> float:
-        shapely_point_1 = self.mapper.map_to_shapely_point(p1)
-        shapely_point_2 = self.mapper.map_to_shapely_point(p2)
+    def distance_between(self, point_1: Coordinate, point_2: Coordinate) -> float:
+        shapely_point_1 = self.mapper.map_to_shapely_point(point_1)
+        shapely_point_2 = self.mapper.map_to_shapely_point(point_2)
         return self.shapely_intersector.distance_point_point(
             shapely_point_1, shapely_point_2
         )
@@ -67,7 +66,6 @@ class ShapelyIntersectImplementationAdapter(IntersectImplementation):
     ) -> list[bool]:
         points = self.mapper.map_to_tuple_coordinates(coordinates)
         shapely_polygon = self.mapper.map_to_shapely_polygon(polygon)
-        mask = self.shapely_intersector.are_points_within_polygon(
+        return self.shapely_intersector.are_points_within_polygon(
             points, shapely_polygon
         )
-        return mask
