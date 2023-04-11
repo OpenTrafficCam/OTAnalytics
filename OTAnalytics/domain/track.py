@@ -301,7 +301,7 @@ class TrackImage:
 @dataclass(frozen=True)
 class PilImage(TrackImage):
     """
-    Konkrete implementation using pilow as image format.
+    Concrete implementation using pilow as image format.
     """
 
     _image: Image.Image

@@ -124,7 +124,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
             track_df (DataFrame): dataframe of tracks
 
         Returns:
-            DataFrame: _description_
+            DataFrame: filtered by classes, time and number of images
         """
         if start_time != "":
             track_df = track_df[track_df[track.OCCURRENCE] >= start_time]
