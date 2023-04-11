@@ -250,7 +250,8 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
         for detection in detections:
             if classifications.get(detection.classification):
                 classifications[detection.classification] += detection.confidence
-            classifications[detection.classification] = detection.confidence
+            else:
+                classifications[detection.classification] = detection.confidence
 
         return max(classifications, key=lambda x: classifications[x])
 
