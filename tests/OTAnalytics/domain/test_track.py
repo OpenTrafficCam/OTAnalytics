@@ -256,14 +256,20 @@ class TestCalculateTrackClassificationByMaxConfidence:
         )
         builder.append_detection()
 
-        builder.add_confidence(0.7)
+        builder.add_confidence(0.8)
         builder.add_frame(2)
+        builder.append_detection()
+
+        builder.add_detection_class("truck")
+        builder.add_confidence(0.8)
+        builder.add_frame(3)
         builder.append_detection()
 
         builder.add_detection_class("truck")
         builder.add_confidence(0.4)
         builder.add_frame(2)
         builder.append_detection()
+
         detections = builder.build_detections()
         track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
         result = track_classification_calculator.calculate(detections)
