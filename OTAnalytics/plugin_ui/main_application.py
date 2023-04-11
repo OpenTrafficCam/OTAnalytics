@@ -1,10 +1,12 @@
 from typing import Any
 
 import customtkinter
-from adapter_intersect.intersect import ShapelyIntersectImplementationAdapter
-from application.analysis import RunIntersect
 from customtkinter import CTk
 
+from OTAnalytics.adapter_intersect.intersect import (
+    ShapelyIntersectImplementationAdapter,
+)
+from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState
