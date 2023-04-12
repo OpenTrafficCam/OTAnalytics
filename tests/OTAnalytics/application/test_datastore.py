@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 from numpy import array, int32
+from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore, Video, VideoReader
 from OTAnalytics.domain.track import TrackId, TrackImage
@@ -15,8 +16,14 @@ class MockVideoReader(VideoReader):
         del index
 
         class MockImage(TrackImage):
-            def as_array(self) -> Any:
-                return array([[1, 0], [0, 1]], int32)
+            def as_image(self) -> Any:
+                return Image.fromarray(array([[1, 0], [0, 1]], int32))
+
+            def width(self) -> int:
+                return 2
+
+            def height(self) -> int:
+                return 2
 
         return MockImage()
 
@@ -35,8 +42,8 @@ class TestVideo:
 
     def test_get_frame_return_correct_image(self, cyclist_video: Path) -> None:
         video = Video(video_reader=self.video_reader, path=cyclist_video)
-        assert (
-            video.get_frame(0).as_array().all() == array([[1, 0], [0, 1]], int32).all()
+        assert video.get_frame(0).as_image() == Image.fromarray(
+            array([[1, 0], [0, 1]], int32)
         )
 
 

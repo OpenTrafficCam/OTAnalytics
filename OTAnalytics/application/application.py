@@ -1,11 +1,10 @@
 from pathlib import Path
 from typing import Iterable, Optional
 
-from domain.section import Section, SectionListObserver
-
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import SectionState, TrackState
+from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.domain.section import Section, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackImage
 
 
@@ -18,11 +17,13 @@ class OTAnalyticsApplication:
         self,
         datastore: Datastore,
         track_state: TrackState,
+        track_view_state: TrackViewState,
         section_state: SectionState,
         intersect: RunIntersect,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
+        self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self._intersect = intersect
         self._connect_observers()
@@ -48,6 +49,10 @@ class OTAnalyticsApplication:
             track_file (Path): file in ottrk format
         """
         self._datastore.load_track_file(file=track_file)
+
+    def delete_all_tracks(self) -> None:
+        """Delete all tracks."""
+        self._datastore.delete_all_tracks()
 
     def add_sections_of_file(self, sections_file: Path) -> None:
         """

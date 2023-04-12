@@ -1,20 +1,36 @@
 from typing import Any
 
 import customtkinter
-from adapter_intersect.intersect import ShapelyIntersectImplementationAdapter
-from application.analysis import RunIntersect
 from customtkinter import CTk
-from plugin_intersect.intersect import ShapelyIntersector
 
+from OTAnalytics.adapter_intersect.intersect import (
+    ShapelyIntersectImplementationAdapter,
+)
+from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import SectionState, TrackState
+from OTAnalytics.application.state import (
+    SectionState,
+    TrackImageUpdater,
+    TrackState,
+    TrackViewState,
+)
 from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
+from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtsectionParser,
     OttrkParser,
     OttrkVideoParser,
+)
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    MatplotlibTrackPlotter,
+)
+from OTAnalytics.plugin_ui.cli import (
+    CliArgumentParser,
+    CliArguments,
+    CliParseError,
+    OTAnalyticsCli,
 )
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
@@ -22,15 +38,6 @@ from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
 from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
-
-
-class OTAnalyticsCli:
-    def __init__(self, application: OTAnalyticsApplication) -> None:
-        self._application = application
-
-    def start(self) -> None:
-        # TODO parse config and add track and section files
-        pass
 
 
 class OTAnalyticsGui:
@@ -72,23 +79,39 @@ class OTAnalyticsGui:
         self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _wire_widgets(self) -> None:
-        self._application.track_state.register(self.frame_canvas)
+        self.frame_canvas.register_at(self._application.track_view_state)
 
 
 class ApplicationStarter:
+    def start(self) -> None:
+        parser = self._build_cli_argument_parser()
+        cli_args = parser.parse()
+
+        if cli_args.start_cli:
+            try:
+                self.start_cli(cli_args)
+            except CliParseError as e:
+                print(e)
+        else:
+            self.start_gui()
+
+    def _build_cli_argument_parser(self) -> CliArgumentParser:
+        return CliArgumentParser()
+
     def start_gui(self) -> None:
         application = OTAnalyticsApplication(**self.build_dependencies())
         OTAnalyticsGui(application).start()
 
-    def start_cli(self) -> None:
+    def start_cli(self, cli_args: CliArguments) -> None:
         datastore = OTAnalyticsApplication(**self.build_dependencies())
-        OTAnalyticsCli(datastore).start()
+        OTAnalyticsCli(datastore, cli_args).start()
 
     def build_dependencies(self) -> dict[str, Any]:
         datastore = self._create_datastore()
         return {
             "datastore": datastore,
             "track_state": self._create_track_state(),
+            "track_view_state": self._create_track_view_state(datastore),
             "section_state": self._create_section_state(),
             "intersect": self._create_intersect(datastore),
         }
@@ -105,6 +128,13 @@ class ApplicationStarter:
 
     def _create_track_state(self) -> TrackState:
         return TrackState()
+
+    def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
+        state = TrackViewState()
+        track_plotter = MatplotlibTrackPlotter()
+        updater = TrackImageUpdater(datastore, state, track_plotter)
+        datastore.register_tracks_observer(updater)
+        return state
 
     def _create_section_state(self) -> SectionState:
         return SectionState()
