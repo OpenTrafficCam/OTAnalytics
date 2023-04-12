@@ -1,0 +1,2 @@
+# Necessary to allow execution of source venv/bin/activate
+external-sources=true
