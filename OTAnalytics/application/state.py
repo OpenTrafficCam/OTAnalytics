@@ -100,7 +100,7 @@ class Subject(Generic[VALUE]):
         [observer(value) for observer in self.observers]
 
 
-class BindableProperty(Generic[VALUE]):
+class ObservableProperty(Generic[VALUE]):
     """
     Represents a property of the given type that informs its observers about changes.
     """
@@ -144,8 +144,8 @@ class TrackViewState:
     """
 
     def __init__(self) -> None:
-        self.background_image = BindableProperty[TrackImage]()
-        self.show_tracks = BindableProperty[bool]()
+        self.background_image = ObservableProperty[TrackImage]()
+        self.show_tracks = ObservableProperty[bool]()
 
 
 class TrackPlotter(ABC):
