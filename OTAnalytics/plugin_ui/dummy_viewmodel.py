@@ -59,6 +59,10 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
     def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:
         self._treeview_sections = treeview
 
+    def set_selected_section_id(self, id: str) -> None:
+        self._selected_section_id = id
+        print(f"New line section selected in treeview: id={id}")
+
     def load_tracks(self) -> None:
         tracks_file = askopenfilename(
             title="Load tracks file", filetypes=[("tracks file", "*.ottrk")]
@@ -118,7 +122,6 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         self._refresh_sections_on_gui()
 
     def edit_section_geometry(self) -> None:
-        self._selected_section_id = self._get_selected_section_id()
         if self._selected_section_id is None:
             return
         if self._canvas is None:
@@ -141,10 +144,15 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         self._refresh_sections_on_gui()
 
     def edit_section_metadata(self) -> None:
-        selected_section_id = self._get_selected_section_id()
-        if selected_section_id is None:
+        if self._selected_section_id is None:
+            if self._treeview_sections is None:
+                raise MissingInjectedInstanceError(injected_object="treeview_sections")
+            position = get_widget_position(self._treeview_sections)
+            InfoBox(
+                message="Please select a section to edit", initial_position=position
+            )
             return
-        current_metadata = self._get_section_metadata(selected_section_id)
+        current_metadata = self._get_section_metadata(self._selected_section_id)
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
         position = get_widget_position(widget=self._canvas)
@@ -154,7 +162,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             input_values=current_metadata,
         ).get_metadata()
         self._set_section_metadata(
-            id=selected_section_id, metadata=updated_section_metadata
+            id=self._selected_section_id, metadata=updated_section_metadata
         )
         self._refresh_sections_on_gui()
         print(f"Updated line_section Metadata: {updated_section_metadata}")
@@ -180,30 +188,17 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
     def remove_section(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(injected_object="treeview_sections")
-        selected_section_id = self._treeview_sections.focus()
-        if not selected_section_id:
+        if not self._selected_section_id:
             position = get_widget_position(widget=self._treeview_sections)
             InfoBox(
                 message="Please select a section to remove", initial_position=position
             )
             return
         for section in self._sections:
-            if section["id"] == selected_section_id:
+            if section["id"] == self._selected_section_id:
                 self._sections.remove(section)
                 print(f"This section was removed: {section}")
         self._refresh_sections_on_gui()
-
-    def _get_selected_section_id(self) -> str | None:
-        if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(injected_object="treeview_sections")
-        selected_section_id = self._treeview_sections.get_selected_section()
-        position = get_widget_position(widget=self._treeview_sections)
-        if not selected_section_id:
-            InfoBox(
-                message="Please select a section to edit", initial_position=position
-            )
-            return None
-        return selected_section_id
 
     def _refresh_sections_on_gui(self) -> None:
         self._remove_all_sections_from_canvas()

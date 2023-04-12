@@ -13,6 +13,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def set_selected_section_id(self, id: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def load_sections(self) -> None:
         raise NotImplementedError
 

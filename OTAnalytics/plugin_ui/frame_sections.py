@@ -69,6 +69,7 @@ class TreeviewSections(AbstractTreeviewSections):
         super().__init__(show="tree", selectmode="browse", **kwargs)
         self._viewmodel = viewmodel
         self.bind("<ButtonRelease-2>", self._deselect_sections)
+        self.bind("<<TreeviewSelect>>", self.notify_viewmodel)
         self._define_columns()
         self.introduce_to_viewmodel()
 
@@ -90,6 +91,16 @@ class TreeviewSections(AbstractTreeviewSections):
 
     def get_selected_section(self) -> str:
         return self.focus()
+
+    def notify_viewmodel(self, event: Any) -> None:
+        selection = self.selection()
+        if len(selection) == 0:
+            line_section_id = None
+        elif len(selection) == 1:
+            line_section_id = selection[0]
+        else:
+            raise ValueError("Only one item in TreeviewSections shall be selected")
+        self._viewmodel.set_selected_section_id(id=line_section_id)
 
 
 class ListboxSections(Listbox):
