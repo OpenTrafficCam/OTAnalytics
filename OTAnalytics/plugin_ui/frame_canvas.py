@@ -7,7 +7,7 @@ from customtkinter import CTkFrame
 from moviepy.editor import VideoFileClip
 from PIL import Image, ImageTk
 
-from OTAnalytics.plugin_ui.abstract_canvas_background import AbstractCanvasBackground
+from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver, EventHandler
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.view_model import ViewModel
@@ -64,7 +64,7 @@ class FrameCanvas(CTkFrame):
         )
 
 
-class CanvasBackground(AbstractCanvasBackground):
+class CanvasBackground(AbstractCanvas):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any):
         super().__init__(**kwargs)
         self._viewmodel = viewmodel

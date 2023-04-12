@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from OTAnalytics.plugin_ui.abstract_canvas_background import AbstractCanvasBackground
+from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
@@ -30,7 +30,7 @@ class LineSectionGeometryBuilderObserver(ABC):
 
 
 class LineSectionGeometryPainter:
-    def __init__(self, canvas: AbstractCanvasBackground) -> None:
+    def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
     def draw_section(
@@ -61,7 +61,7 @@ class LineSectionGeometryPainter:
 
 
 class LineSectionGeometryUpdater:
-    def __init__(self, canvas: AbstractCanvasBackground) -> None:
+    def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
     def update_section(
@@ -73,7 +73,7 @@ class LineSectionGeometryUpdater:
 
 
 class LineSectionGeometryDeleter:
-    def __init__(self, canvas: AbstractCanvasBackground) -> None:
+    def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
     def delete_sections(self, tag_or_id: str) -> None:
@@ -90,7 +90,7 @@ class LineSectionGeometryBuilder(CanvasObserver):
     def __init__(
         self,
         observer: LineSectionGeometryBuilderObserver,
-        canvas: AbstractCanvasBackground,
+        canvas: AbstractCanvas,
         # frames_to_disable: list[CTkFrame],
     ) -> None:
         self._observer = observer
@@ -171,7 +171,7 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver):
     def __init__(
         self,
         viewmodel: ViewModel,
-        canvas: AbstractCanvasBackground,
+        canvas: AbstractCanvas,
     ) -> None:
         self._viewmodel = viewmodel
         self._canvas = canvas

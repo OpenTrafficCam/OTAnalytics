@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
 
-from OTAnalytics.plugin_ui.abstract_canvas_background import AbstractCanvasBackground
+from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 
 
 class ViewModel(ABC):
     @abstractmethod
-    def set_canvas(self, canvas: AbstractCanvasBackground) -> None:
+    def set_canvas(self, canvas: AbstractCanvas) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def set_treeview_sections(self, canvas: AbstractCanvasBackground) -> None:
+    def set_treeview_sections(self, canvas: AbstractCanvas) -> None:
         raise NotImplementedError
 
     @abstractmethod

@@ -3,9 +3,8 @@ import uuid
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from typing import TypedDict, cast
 
-from plugin_ui.abstract_canvas_background import AbstractCanvasBackground
-
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.line_section import (
@@ -48,13 +47,13 @@ class MissingInjectedInstanceError(Exception):
 class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
     def __init__(self, datastore: Datastore) -> None:
         self._datastore = datastore
-        self._canvas: AbstractCanvasBackground | None = None
+        self._canvas: AbstractCanvas | None = None
         self._treeview_sections: AbstractTreeviewSections | None
         self._new_section: dict = {}
         self._sections: list[DummySection] = []
         self._selected_section_id: str | None = None
 
-    def set_canvas(self, canvas: AbstractCanvasBackground) -> None:
+    def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
     def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:

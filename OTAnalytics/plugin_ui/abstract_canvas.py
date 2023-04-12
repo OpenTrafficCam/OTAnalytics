@@ -5,7 +5,7 @@ from customtkinter import CTkCanvas
 # from OTAnalytics.plugin_ui.canvas_observer import EventHandler
 
 
-class AbstractCanvasBackground(CTkCanvas):
+class AbstractCanvas(CTkCanvas):
     # TODO: Properly define abstract property here and in derived class(es)
     # @property
     # @abstractmethod
