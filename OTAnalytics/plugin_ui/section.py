@@ -10,7 +10,7 @@ class SectionGeometryDrawer(ABC):
     def draw_section(
         self, tag: str, id: str, point0: tuple[int, int], point1: tuple[int, int]
     ) -> None:
-        pass
+        raise NotImplementedError
 
 
 class SectionGeometryUpdater(ABC):
@@ -18,7 +18,7 @@ class SectionGeometryUpdater(ABC):
     def update_section(
         self, id: str, point0: tuple[int, int], point1: tuple[int, int]
     ) -> None:
-        pass
+        raise NotImplementedError
 
 
 class SectionGeometryDeleter(ABC):
