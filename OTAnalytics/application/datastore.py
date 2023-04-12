@@ -209,6 +209,15 @@ class Datastore:
         self._video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 
+    def get_all_tracks(self) -> Iterable[Track]:
+        """
+        Retrieve all tracks of the repository as iterable.
+
+        Returns:
+            Iterable[Track]: all tracks of the repository
+        """
+        return self._track_repository.get_all()
+
     def delete_all_tracks(self) -> None:
         """Delete all tracks in repository."""
         self._track_repository.delete_all()
