@@ -83,6 +83,7 @@ class Configuration:
         zip_file = Path(output_directory, f"{file_name}-{self._suffix}.zip")
         self._copy_to_output_directory(temp_directory)
         zip_output_folder(temp_directory, zip_file)
+        clean_directory(build_path)
 
     def _copy_to_output_directory(self, output_directory: Path) -> None:
         files = collect_files(base_path=self._otanalytics_path, file_extension=".py")
