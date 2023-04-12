@@ -5,10 +5,10 @@ class SectionGeometryBuilder(ABC):
     pass
 
 
-class SectionGeometryDrawer(ABC):
+class SectionGeometryPainter(ABC):
     @abstractmethod
     def draw_section(
-        self, tag: str, id: str, point0: tuple[int, int], point1: tuple[int, int]
+        self, tag: str, id: str, start: tuple[int, int], end: tuple[int, int]
     ) -> None:
         raise NotImplementedError
 
@@ -16,7 +16,7 @@ class SectionGeometryDrawer(ABC):
 class SectionGeometryUpdater(ABC):
     @abstractmethod
     def update_section(
-        self, id: str, point0: tuple[int, int], point1: tuple[int, int]
+        self, id: str, start: tuple[int, int], end: tuple[int, int]
     ) -> None:
         raise NotImplementedError
 
@@ -24,4 +24,10 @@ class SectionGeometryUpdater(ABC):
 class SectionGeometryDeleter(ABC):
     @abstractmethod
     def delete_sections(self, tag_or_id: str) -> None:
+        raise NotImplementedError
+
+
+class TreeviewUpdater(ABC):
+    @abstractmethod
+    def list_items(self) -> None:
         raise NotImplementedError

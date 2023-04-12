@@ -1,6 +1,5 @@
 import copy
 import uuid
-from tkinter import Widget
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from typing import TypedDict, cast
 
@@ -8,27 +7,31 @@ from plugin_ui.abstract_canvas_background import AbstractCanvasBackground
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
+from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.line_section import (
+    LineSectionBuilder,
     LineSectionGeometryBuilder,
+    LineSectionGeometryBuilderObserver,
     LineSectionGeometryDeleter,
-    LineSectionGeometryDrawer,
+    LineSectionGeometryPainter,
 )
 from OTAnalytics.plugin_ui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.view_model import ViewModel
 
 
+# TODO: @briemla delete code for dummy sections
 class DummySection(TypedDict):
     id: str
     name: str
-    point0: tuple[int, int]
-    point1: tuple[int, int]
+    start: tuple[int, int]
+    end: tuple[int, int]
 
 
 DUMMY_SECTIONS: list[DummySection] = [
-    {"id": "section1", "name": "West", "point0": (50, 50), "point1": (100, 100)},
-    {"id": "section2", "name": "East", "point0": (200, 200), "point1": (300, 200)},
-    {"id": "section3", "name": "North", "point0": (300, 300), "point1": (300, 400)},
+    {"id": "section1", "name": "West", "start": (50, 50), "end": (100, 100)},
+    {"id": "section2", "name": "East", "start": (200, 200), "end": (300, 200)},
+    {"id": "section3", "name": "North", "start": (300, 300), "end": (300, 400)},
 ]
 
 
@@ -42,14 +45,14 @@ class MissingInjectedInstanceError(Exception):
         super().__init__(message)
 
 
-class DummyViewModel(ViewModel):
+class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
     def __init__(self, datastore: Datastore) -> None:
         self._datastore = datastore
         self._canvas: AbstractCanvasBackground | None = None
         self._treeview_sections: AbstractTreeviewSections | None
         self._new_section: dict = {}
         self._sections: list[DummySection] = []
-        self._section_to_edit_geometry: str | None = None
+        self._selected_section_id: str | None = None
 
     def set_canvas(self, canvas: AbstractCanvasBackground) -> None:
         self._canvas = canvas
@@ -80,7 +83,7 @@ class DummyViewModel(ViewModel):
         if not self._sections:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(injected_object="treeview_sections")
-            position = self._get_absolute_position(widget=self._treeview_sections)
+            position = get_widget_position(widget=self._treeview_sections)
             InfoBox(
                 message="No sections to save, please add new sections first",
                 initial_position=position,
@@ -91,12 +94,96 @@ class DummyViewModel(ViewModel):
         )
         print(f"Sections file to save: {sections_file}")
 
+    def add_section(self) -> None:
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(injected_object="canvas")
+        LineSectionBuilder(viewmodel=self, canvas=self._canvas)
+
+    def set_new_section(
+        self,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        metadata: dict[str, str],
+    ) -> None:
+        # TODO: @briemla delete block and connect to model
+        name = metadata["name"]
+        new_section = DummySection(
+            id=str(uuid.uuid1()),
+            name=name,
+            start=start,
+            end=end,
+        )
+        self._sections.append(new_section)
+        print(f"New line_section created with name={name}, start={start} and end={end}")
+
+        self._refresh_sections_on_gui()
+
+    def edit_section_geometry(self) -> None:
+        self._selected_section_id = self._get_selected_section_id()
+        if self._selected_section_id is None:
+            return
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(injected_object="canvas")
+        LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
+            tag_or_id=self._selected_section_id
+        )
+        LineSectionGeometryBuilder(observer=self, canvas=self._canvas)
+
+    def set_section_geometry(
+        self, start: tuple[int, int], end: tuple[int, int]
+    ) -> None:
+        # TODO: @briemla delete block and connect to model
+        for section in self._sections:
+            if section["id"] == self._selected_section_id:
+                section["start"] = start
+                section["end"] = end
+        print(f"Updated line_section geometry with start={start} and end={end}")
+
+        self._refresh_sections_on_gui()
+
+    def edit_section_metadata(self) -> None:
+        selected_section_id = self._get_selected_section_id()
+        if selected_section_id is None:
+            return
+        current_metadata = self._get_section_metadata(selected_section_id)
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(injected_object="canvas")
+        position = get_widget_position(widget=self._canvas)
+        updated_section_metadata = ToplevelSections(
+            title="Edit section",
+            initial_position=position,
+            input_values=current_metadata,
+        ).get_metadata()
+        self._set_section_metadata(
+            id=selected_section_id, metadata=updated_section_metadata
+        )
+        self._refresh_sections_on_gui()
+        print(f"Updated line_section Metadata: {updated_section_metadata}")
+
+    def _get_section_metadata(self, id: str) -> dict:
+        # TODO: @briemla delete block and connect to model
+        for section in self._sections:
+            if section["id"] == id:
+                current_metadata = {k: v for k, v in section.items() if k in ["name"]}
+                break
+        return current_metadata
+
+    def _set_section_metadata(self, id: str, metadata: dict) -> None:
+        # TODO: @briemla delete block and connect to model
+        new_metadata = metadata
+        for index, section in enumerate(self._sections):
+            if section["id"] == id:
+                new_data = dict(section) | new_metadata
+                updated_section = cast(DummySection, new_data)
+                self._sections[index] = updated_section
+                break
+
     def remove_section(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(injected_object="treeview_sections")
         selected_section_id = self._treeview_sections.focus()
         if not selected_section_id:
-            position = self._get_absolute_position(widget=self._treeview_sections)
+            position = get_widget_position(widget=self._treeview_sections)
             InfoBox(
                 message="Please select a section to remove", initial_position=position
             )
@@ -107,143 +194,17 @@ class DummyViewModel(ViewModel):
                 print(f"This section was removed: {section}")
         self._refresh_sections_on_gui()
 
-    def add_section(self) -> None:
-        self._new_section["id"] = str(uuid.uuid1())
-        self._add_section_geometry()
-
-    def edit_section_geometry(self) -> None:
-        self._section_to_edit_geometry = self._get_section_to_edit()
-        if self._section_to_edit_geometry is None:
-            return
-        if self._canvas is None:
-            raise MissingInjectedInstanceError(injected_object="canvas")
-        LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
-            tag_or_id=self._section_to_edit_geometry
-        )
-        self._add_section_geometry()
-
-    def _finish_editing_section_geometry(
-        self, point0: tuple[int, int], point1: tuple[int, int]
-    ) -> None:
-        if self._section_to_edit_geometry is None:
-            return
-        self._set_section_geometry(self._section_to_edit_geometry, point0, point1)
-        self._section_to_edit_geometry = None
-        self._refresh_sections_on_gui()
-
-    def _set_section_geometry(
-        self, id: str, point0: tuple[int, int], point1: tuple[int, int]
-    ) -> None:
-        updated_geometry = {"point0": point0, "point1": point1}
-        for index, section in enumerate(self._sections):
-            if section["id"] == id:
-                new_data = dict(section) | updated_geometry
-                updated_section = cast(DummySection, new_data)
-                self._sections[index] = updated_section
-                break
-        print(f"Updated LineSection Geometry: {updated_section}")
-
-    def edit_section_metadata(self) -> None:
-        section_to_edit = self._get_section_to_edit()
-        if section_to_edit is None:
-            return
-        current_metadata = self._get_section_metadata(section_to_edit)
-        if self._canvas is None:
-            raise MissingInjectedInstanceError(injected_object="canvas")
-        position = self._get_absolute_position(widget=self._canvas)
-        updated_section_metadata = ToplevelSections(
-            title="Edit section",
-            initial_position=position,
-            input_values=current_metadata,
-        ).get_metadata()
-        self._set_section_metadata(
-            id=section_to_edit, metadata=updated_section_metadata
-        )
-        self._refresh_sections_on_gui()
-        print(f"Updated LineSection Metadata: {updated_section_metadata}")
-
-    def _get_section_to_edit(self) -> str | None:
+    def _get_selected_section_id(self) -> str | None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(injected_object="treeview_sections")
         selected_section_id = self._treeview_sections.get_selected_section()
-        position = self._get_absolute_position(widget=self._treeview_sections)
+        position = get_widget_position(widget=self._treeview_sections)
         if not selected_section_id:
             InfoBox(
                 message="Please select a section to edit", initial_position=position
             )
             return None
         return selected_section_id
-
-    def _get_section_metadata(self, id: str) -> dict:
-        for section in self._sections:
-            if section["id"] == id:
-                current_metadata = {k: v for k, v in section.items() if k in ["name"]}
-                break
-        return current_metadata
-
-    def _set_section_metadata(self, id: str, metadata: dict) -> None:
-        new_metadata = metadata
-        for index, section in enumerate(self._sections):
-            if section["id"] == id:
-                new_data = dict(section) | new_metadata
-                updated_section = cast(DummySection, new_data)
-                self._sections[index] = updated_section
-                break
-
-    def _add_section_geometry(self) -> None:
-        if self._canvas is None:  # or self._gui is None
-            raise MissingInjectedInstanceError(injected_object="canvas")
-        # frames_to_disable = [self._gui.frame_sections, self._gui.frame_tracks]
-        LineSectionGeometryBuilder(
-            view_model=self,
-            canvas=self._canvas,
-            # frames_to_disable=frames_to_disable,
-        )
-
-    def set_new_section_geometry(
-        self, point0: tuple[int, int], point1: tuple[int, int]
-    ) -> None:
-        if self._section_to_edit_geometry is None:
-            self._new_section["point0"] = point0
-            self._new_section["point1"] = point1
-            self._add_section_metadata()
-        else:
-            self._finish_editing_section_geometry(point0, point1)
-
-    def _add_section_metadata(self) -> None:
-        if self._canvas is None:  # or self._gui is None
-            raise MissingInjectedInstanceError(injected_object="canvas")
-        position = self._get_absolute_position(widget=self._canvas)
-        section_metadata = ToplevelSections(
-            title="New section", initial_position=position
-        ).get_metadata()
-        self._new_section["name"] = section_metadata["name"]
-        self._finish_adding_section()
-        # TODO: @briemla provide for model
-        print(f"New LineSection Metadata: {section_metadata}")
-
-    def _get_absolute_position(self, widget: Widget) -> tuple[int, int]:
-        x = widget.winfo_rootx()
-        y = widget.winfo_rooty()
-        return x, y
-
-    def _finish_adding_section(self) -> None:
-        for key in ["id", "name", "point0", "point1"]:
-            if key not in self._new_section:
-                raise ValueError(
-                    f"{key} has to be specified before finish adding the section"
-                )
-        new_section = DummySection(
-            id=self._new_section["id"],
-            name=self._new_section["name"],
-            point0=self._new_section["point0"],
-            point1=self._new_section["point1"],
-        )
-        self._sections.append(new_section)
-        self._refresh_sections_on_gui()
-        # TODO: @briemla provide for model
-        # Teardown
-        self._new_section = {}
 
     def _refresh_sections_on_gui(self) -> None:
         self._remove_all_sections_from_canvas()
@@ -254,13 +215,13 @@ class DummyViewModel(ViewModel):
     def _draw_all_sections_on_canvas(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
-        line_section_drawer = LineSectionGeometryDrawer(canvas=self._canvas)
+        line_section_drawer = LineSectionGeometryPainter(canvas=self._canvas)
         for line_section in self._sections:
             line_section_drawer.draw_section(
                 tag="line_section",
                 id=line_section["id"],
-                point0=line_section["point0"],
-                point1=line_section["point1"],
+                start=line_section["start"],
+                end=line_section["end"],
             )
 
     def _remove_all_sections_from_canvas(self) -> None:

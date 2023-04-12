@@ -25,7 +25,12 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def remove_section(self) -> None:
+    def set_new_section(
+        self,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        metadata: dict[str, str],
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -37,7 +42,5 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_new_section_geometry(
-        self, point0: tuple[int, int], point1: tuple[int, int]
-    ) -> None:
+    def remove_section(self) -> None:
         raise NotImplementedError
