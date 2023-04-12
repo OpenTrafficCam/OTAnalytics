@@ -4,11 +4,11 @@ from abc import ABC, abstractmethod
 class EventHandler(ABC):
     @abstractmethod
     def attach_observer(self, observer: "CanvasObserver") -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def detach_observer(self, observer: "CanvasObserver") -> None:
-        pass
+        raise NotImplementedError
 
 
 class CanvasObserver(ABC):
@@ -25,6 +25,6 @@ class CanvasObserver(ABC):
     @abstractmethod
     def update(self, coordinates: tuple[int, int], event_type: str) -> None:
         """
-        Receive update from subject.
+        Receive update from canvas event handler.
         """
-        pass
+        raise NotImplementedError

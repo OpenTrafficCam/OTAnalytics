@@ -24,4 +24,4 @@ class SectionGeometryUpdater(ABC):
 class SectionGeometryDeleter(ABC):
     @abstractmethod
     def delete_sections(self, tag_or_id: str) -> None:
-        pass
+        raise NotImplementedError

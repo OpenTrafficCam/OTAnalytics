@@ -6,38 +6,38 @@ from OTAnalytics.plugin_ui.abstract_canvas_background import AbstractCanvasBackg
 class ViewModel(ABC):
     @abstractmethod
     def set_canvas(self, canvas: AbstractCanvasBackground) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def set_treeview_sections(self, canvas: AbstractCanvasBackground) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def load_sections(self) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def save_sections(self) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def add_section(self) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def remove_section(self) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def edit_section_geometry(self) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def edit_section_metadata(self) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def set_new_section_geometry(
         self, point0: tuple[int, int], point1: tuple[int, int]
     ) -> None:
-        pass
+        raise NotImplementedError
