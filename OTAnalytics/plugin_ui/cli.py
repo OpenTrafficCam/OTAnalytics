@@ -2,6 +2,8 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
 
+from tqdm import tqdm
+
 from OTAnalytics.application.application import OTAnalyticsApplication
 
 EVENTLIST_FILE_TYPE = "otevents"
@@ -108,7 +110,7 @@ class OTAnalyticsCli:
         Args:
             ottrk_files (list[Path]): the ottrk files to be analyzed
         """
-        for ottrk_file in ottrk_files:
+        for ottrk_file in tqdm(ottrk_files, desc="Analyzed files", unit=" files"):
             save_path = self._determine_eventlist_save_path(ottrk_file)
             self._application.add_tracks_of_file(ottrk_file)
             self._application.start_analysis()
