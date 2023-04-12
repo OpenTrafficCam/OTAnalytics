@@ -2,9 +2,23 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Iterable, Optional
+
+from PIL import Image
 
 from OTAnalytics.domain.common import DataclassValidation
+
+CLASSIFICATION: str = "classification"
+CONFIDENCE: str = "confidence"
+X: str = "x"
+Y: str = "y"
+W: str = "w"
+H: str = "h"
+FRAME: str = "frame"
+OCCURRENCE: str = "occurrence"
+INPUT_FILE_PATH: str = "input_file_path"
+INTERPOLATED_DETECTION: str = "interpolated_detection"
+TRACK_ID: str = "track_id"
 
 VALID_TRACK_SIZE: int = 5
 
@@ -185,6 +199,21 @@ class Detection(DataclassValidation):
         if self.frame < 1:
             raise ValueError("frame number must be greater equal 1")
 
+    def to_dict(self) -> dict:
+        return {
+            CLASSIFICATION: self.classification,
+            CONFIDENCE: self.confidence,
+            X: self.x,
+            Y: self.y,
+            W: self.w,
+            H: self.h,
+            FRAME: self.frame,
+            OCCURRENCE: self.occurrence,
+            INPUT_FILE_PATH: self.input_file_path,
+            INTERPOLATED_DETECTION: self.interpolated_detection,
+            TRACK_ID: self.track_id.id,
+        }
+
 
 @dataclass(frozen=True)
 class Track(DataclassValidation):
@@ -220,9 +249,73 @@ class Track(DataclassValidation):
 
 @dataclass(frozen=True)
 class TrackImage:
+    """
+    Represents an image with tracks. This might be an empty image or one with different
+    types of track visualisation.
+    """
+
+    def add(self, other: "TrackImage") -> "TrackImage":
+        """
+        Add the other image on top of this image. The composition of the two images
+        takes transparency into account.
+
+        Args:
+            other (TrackImage): other image to stack on top of this image
+
+        Returns:
+            TrackImage: combined image of this and the other image
+        """
+        self_image = self.as_image().convert(mode="RGBA")
+        other_image = other.as_image().convert(mode="RGBA")
+        return PilImage(Image.alpha_composite(self_image, other_image))
+
     @abstractmethod
-    def as_array(self) -> Any:
+    def as_image(self) -> Image.Image:
+        """
+        Convert image into a base python image.
+
+        Returns:
+            Image.Image: image as pilow image
+        """
         pass
+
+    @abstractmethod
+    def width(self) -> int:
+        """
+        Width of the image.
+
+        Returns:
+            int: width of the image
+        """
+        pass
+
+    @abstractmethod
+    def height(self) -> int:
+        """
+        Height of the image.
+
+        Returns:
+            int: height of the image
+        """
+        pass
+
+
+@dataclass(frozen=True)
+class PilImage(TrackImage):
+    """
+    Concrete implementation using pilow as image format.
+    """
+
+    _image: Image.Image
+
+    def as_image(self) -> Image.Image:
+        return self._image
+
+    def width(self) -> int:
+        return self._image.width
+
+    def height(self) -> int:
+        return self._image.height
 
 
 class TrackClassificationCalculator(ABC):
@@ -324,4 +417,4 @@ class TrackRepository:
         Returns:
             Iterable[Track]: all tracks within the repository
         """
-        return self.tracks.values()
+        return iter(self.tracks.values())

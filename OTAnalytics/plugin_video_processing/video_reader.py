@@ -1,24 +1,14 @@
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from numpy import ndarray
+from PIL import Image
 
 from OTAnalytics.application.datastore import VideoReader
-from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track import PilImage, TrackImage
 
 
 class FrameDoesNotExistError(Exception):
     pass
-
-
-@dataclass(frozen=True)
-class MoviepyTrackImage(TrackImage):
-    image: ndarray
-
-    def as_array(self) -> Any:
-        return self.image
 
 
 class MoviepyVideoReader(VideoReader):
@@ -44,4 +34,4 @@ class MoviepyVideoReader(VideoReader):
         clip.close()
         if found is None:
             raise FrameDoesNotExistError(f"frame number '{index}' does not exist")
-        return MoviepyTrackImage(found)
+        return PilImage(Image.fromarray(found))
