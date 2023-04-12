@@ -4,9 +4,11 @@ from typing import Optional
 from OTAnalytics.domain.event import Event, EventBuilder, EventType
 from OTAnalytics.domain.geometry import (
     Coordinate,
+    DirectionVector2D,
     Line,
     Polygon,
     RelativeOffsetCoordinate,
+    calculate_direction_vector,
 )
 from OTAnalytics.domain.section import Area, LineSection
 from OTAnalytics.domain.track import Detection, Track
@@ -147,6 +149,25 @@ class Intersector(ABC):
             y=detection.y + detection.h * offset.y,
         )
 
+    @staticmethod
+    def _calculate_direction_vector(
+        first: Detection, second: Detection
+    ) -> DirectionVector2D:
+        """Calculate direction vector from two detections.
+
+        The direction vector will be calculated by taking the x and y values of the
+        detection's bounding box.
+
+        Args:
+            first (Detection): the first detection
+            second (Detection): the second detection
+
+        Returns:
+            DirectionVector2D: the direction vector
+        """
+        result = calculate_direction_vector(first.x, first.y, second.x, second.y)
+        return result
+
 
 class LineSectionIntersector(Intersector):
     """Determines whether a line section intersects with a track.
@@ -211,6 +232,13 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
                 # Subtract by 2n to account for intersection points
                 detection_index = current_idx - 2 * n + 1
                 selected_detection = track.detections[detection_index]
+                previous_detection = track.detections[detection_index - 1]
+
+                event_builder.add_direction_vector(
+                    self._calculate_direction_vector(
+                        previous_detection, selected_detection
+                    )
+                )
                 events.append(event_builder.create_event(selected_detection))
                 current_idx += len(splitted_line.coordinates)
         return events
@@ -264,8 +292,10 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
                 line_section_as_geometry, detection_as_geometry
             )
             if intersects:
+                event_builder.add_direction_vector(
+                    self._calculate_direction_vector(current_detection, next_detection)
+                )
                 events.append(event_builder.create_event(next_detection))
-
         return events
 
     def _track_line_intersects_section(self, track: Track, line_section: Line) -> bool:
@@ -322,15 +352,27 @@ class IntersectAreaByTrackPoints(AreaIntersector):
 
         if track_starts_inside_area:
             first_detection = track.detections[0]
+            second_detection = track.detections[1]
+
             event_builder.add_event_type(EventType.SECTION_ENTER)
             event_builder.add_road_user_type(first_detection.classification)
+            event_builder.add_direction_vector(
+                self._calculate_direction_vector(first_detection, second_detection)
+            )
             event = event_builder.create_event(first_detection)
             events.append(event)
 
         section_currently_entered = track_starts_inside_area
-        for current_detection, entered in zip(track.detections[1:], mask[1:]):
+        for index, (current_detection, entered) in enumerate(
+            zip(track.detections[1:], mask[1:]), start=1
+        ):
             if section_currently_entered == entered:
                 continue
+            prev_detection = track.detections[index - 1]
+
+            event_builder.add_direction_vector(
+                self._calculate_direction_vector(prev_detection, current_detection)
+            )
 
             if entered:
                 event_builder.add_event_type(EventType.SECTION_ENTER)

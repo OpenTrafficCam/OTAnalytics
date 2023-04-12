@@ -172,7 +172,7 @@ class TestSectionEventBuilder:
     ) -> None:
         event_builder = SectionEventBuilder()
         event_builder.add_section_id(SectionId("N"))
-        event_builder.add_direction_vector(valid_detection, valid_detection)
+        event_builder.add_direction_vector(Mock())
         with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
 
@@ -189,7 +189,7 @@ class TestSectionEventBuilder:
         self, valid_detection: Detection
     ) -> None:
         event_builder = SectionEventBuilder()
-        event_builder.add_direction_vector(valid_detection, valid_detection)
+        event_builder.add_direction_vector(Mock())
         event_builder.add_event_type(EventType.SECTION_ENTER)
         with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
@@ -199,7 +199,10 @@ class TestSectionEventBuilder:
     ) -> None:
         event_builder = SectionEventBuilder()
         event_builder.add_section_id(SectionId("N"))
-        event_builder.add_direction_vector(valid_detection, valid_detection)
+
+        direction_vector = Mock(spec=DirectionVector2D)
+        event_builder.add_direction_vector(direction_vector)
+
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_road_user_type("car")
         event = event_builder.create_event(valid_detection)
@@ -214,7 +217,7 @@ class TestSectionEventBuilder:
             valid_detection.x, valid_detection.y
         )
         assert event.event_type == EventType.SECTION_ENTER
-        assert event.direction_vector == DirectionVector2D(0, 0)
+        assert event.direction_vector == direction_vector
         assert event.video_name == valid_detection.input_file_path.name
 
 
@@ -228,7 +231,7 @@ class TestSceneEventBuilder:
         self, valid_detection: Detection
     ) -> None:
         event_builder = SceneEventBuilder()
-        event_builder.add_direction_vector(valid_detection, valid_detection)
+        event_builder.add_direction_vector(Mock())
         with pytest.raises(IncompleteEventBuilderSetup):
             event_builder.create_event(valid_detection)
 
@@ -244,7 +247,8 @@ class TestSceneEventBuilder:
         self, valid_detection: Detection
     ) -> None:
         event_builder = SceneEventBuilder()
-        event_builder.add_direction_vector(valid_detection, valid_detection)
+        direction_vector = Mock(spec=DirectionVector2D)
+        event_builder.add_direction_vector(direction_vector)
         event_builder.add_event_type(EventType.ENTER_SCENE)
         event = event_builder.create_event(valid_detection)
 
@@ -258,7 +262,7 @@ class TestSceneEventBuilder:
             valid_detection.x, valid_detection.y
         )
         assert event.event_type == EventType.ENTER_SCENE
-        assert event.direction_vector == DirectionVector2D(0, 0)
+        assert event.direction_vector == direction_vector
         assert event.video_name == valid_detection.input_file_path.name
 
 
