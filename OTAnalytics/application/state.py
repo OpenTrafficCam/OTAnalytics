@@ -107,7 +107,7 @@ class ObservableProperty(Generic[VALUE]):
 
     def __init__(self) -> None:
         self._property: Optional[VALUE] = None
-        self._observers: Subject[VALUE] = Subject[VALUE]()
+        self._subject: Subject[VALUE] = Subject[VALUE]()
 
     def register(self, observer: Observer[VALUE]) -> None:
         """
@@ -116,7 +116,7 @@ class ObservableProperty(Generic[VALUE]):
         Args:
             observer (Observer[VALUE]): observer to be notified about changes
         """
-        self._observers.register(observer)
+        self._subject.register(observer)
 
     def set(self, value: Optional[VALUE]) -> None:
         """
@@ -126,7 +126,7 @@ class ObservableProperty(Generic[VALUE]):
             value (Optional[VALUE]): new value to be set
         """
         self._property = value
-        self._observers.notify(value)
+        self._subject.notify(value)
 
     def get(self) -> Optional[VALUE]:
         """
