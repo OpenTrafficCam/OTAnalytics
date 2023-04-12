@@ -7,7 +7,7 @@ from numpy import array, int32
 from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore, Video, VideoReader
-from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 
 
 class MockVideoReader(VideoReader):
@@ -61,6 +61,7 @@ class TestDatastore:
         video_parser = Mock()
         video_parser.parse.return_value = [some_track_id], [some_video]
         store = Datastore(
+            track_repository=TrackRepository(),
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
@@ -83,6 +84,7 @@ class TestDatastore:
         video_parser = Mock()
         video_parser.parse.return_value = []
         store = Datastore(
+            track_repository=TrackRepository(),
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
@@ -101,6 +103,7 @@ class TestDatastore:
         video_parser = Mock()
         video_parser.parse.return_value = []
         store = Datastore(
+            track_repository=TrackRepository(),
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
