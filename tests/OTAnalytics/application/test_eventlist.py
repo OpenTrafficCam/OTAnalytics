@@ -69,8 +69,51 @@ def track() -> Track:
         interpolated_detection=False,
         track_id=TrackId(1),
     )
+    detection_3 = Detection(
+        classification="car",
+        confidence=0.5,
+        x=15.0,
+        y=5.0,
+        w=15.3,
+        h=30.5,
+        frame=3,
+        occurrence=datetime(2022, 1, 1, 0, 0, 0, 2),
+        input_file_path=Path("path/to/myhostname_something.otdet"),
+        interpolated_detection=False,
+        track_id=TrackId(1),
+    )
+    detection_4 = Detection(
+        classification="car",
+        confidence=0.5,
+        x=20.0,
+        y=5.0,
+        w=15.3,
+        h=30.5,
+        frame=4,
+        occurrence=datetime(2022, 1, 1, 0, 0, 0, 3),
+        input_file_path=Path("path/to/myhostname_something.otdet"),
+        interpolated_detection=False,
+        track_id=TrackId(1),
+    )
+    detection_5 = Detection(
+        classification="car",
+        confidence=0.5,
+        x=25.0,
+        y=5.0,
+        w=15.3,
+        h=30.5,
+        frame=5,
+        occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),
+        input_file_path=Path("path/to/myhostname_something.otdet"),
+        interpolated_detection=False,
+        track_id=TrackId(1),
+    )
 
-    return Track(track_id, "car", [detection_1, detection_2])
+    return Track(
+        track_id,
+        "car",
+        [detection_1, detection_2, detection_3, detection_4, detection_5],
+    )
 
 
 @pytest.fixture
@@ -97,7 +140,7 @@ class TestSectionActionDetector:
         section_action_detector = SectionActionDetector(
             mock_intersector, mock_section_event_builder
         )
-        result_event = section_action_detector._detect_enter(line_section, track)
+        result_event = section_action_detector._detect(line_section, track)
 
         mock_section_event_builder.add_section_id.assert_called()
         mock_section_event_builder.add_event_type.assert_called()
@@ -118,9 +161,7 @@ class TestSectionActionDetector:
             mock_intersector, mock_section_event_builder
         )
 
-        result_events = section_action_detector.detect_enter_actions(
-            [line_section], [track]
-        )
+        result_events = section_action_detector.detect([line_section], [track])
         assert result_events == [mock_event]
 
 
@@ -142,7 +183,7 @@ class TestSceneActionDetector:
             section_id=None,
             event_coordinate=ImageCoordinate(0.0, 5.0),
             event_type=EventType.ENTER_SCENE,
-            direction_vector=DirectionVector2D(10, 0),
+            direction_vector=DirectionVector2D(25, 0),
             video_name="myhostname_something.otdet",
         )
 
@@ -158,11 +199,11 @@ class TestSceneActionDetector:
             road_user_id=1,
             road_user_type="car",
             hostname="myhostname",
-            occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
-            frame_number=2,
+            occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),
+            frame_number=5,
             section_id=None,
-            event_coordinate=ImageCoordinate(10.0, 5.0),
+            event_coordinate=ImageCoordinate(25, 5),
             event_type=EventType.LEAVE_SCENE,
-            direction_vector=DirectionVector2D(10, 0),
+            direction_vector=DirectionVector2D(25, 0),
             video_name="myhostname_something.otdet",
         )

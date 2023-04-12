@@ -20,6 +20,8 @@ INPUT_FILE_PATH: str = "input_file_path"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
 
+VALID_TRACK_SIZE: int = 5
+
 
 @dataclass(frozen=True)
 class TrackId(DataclassValidation):
@@ -122,11 +124,11 @@ class TrackError(Exception):
         self.track_id = track_id
 
 
-class BuildTrackWithSingleDetectionError(TrackError):
+class BuildTrackWithLessThanNDetectionsError(TrackError):
     def __str__(self) -> str:
         return (
             f"Trying to construct track (track_id={self.track_id}) with less than "
-            "two detections."
+            f"{VALID_TRACK_SIZE} detections."
         )
 
 
@@ -233,12 +235,12 @@ class Track(DataclassValidation):
     detections: list[Detection]
 
     def _validate(self) -> None:
-        self._validate_track_has_at_least_two_detections()
+        self._validate_track_has_at_least_five_detections()
         self._validate_detections_sorted_by_occurrence()
 
-    def _validate_track_has_at_least_two_detections(self) -> None:
-        if len(self.detections) < 2:
-            raise BuildTrackWithSingleDetectionError(self.id)
+    def _validate_track_has_at_least_five_detections(self) -> None:
+        if len(self.detections) < 5:
+            raise BuildTrackWithLessThanNDetectionsError(self.id)
 
     def _validate_detections_sorted_by_occurrence(self) -> None:
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
@@ -343,14 +345,15 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
         for detection in detections:
             if classifications.get(detection.classification):
                 classifications[detection.classification] += detection.confidence
-            classifications[detection.classification] = detection.confidence
+            else:
+                classifications[detection.classification] = detection.confidence
 
         return max(classifications, key=lambda x: classifications[x])
 
 
 class TrackRepository:
-    def __init__(self, tracks: dict[TrackId, Track] = {}) -> None:
-        self.tracks: dict[TrackId, Track] = tracks
+    def __init__(self) -> None:
+        self.tracks: dict[TrackId, Track] = {}
         self.observers = TrackListSubject()
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
@@ -390,6 +393,10 @@ class TrackRepository:
         for track in tracks:
             self.__add(track)
         self.observers.notify([track.id for track in tracks])
+
+    def delete_all(self) -> None:
+        """Delete all tracks."""
+        self.tracks = {}
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """

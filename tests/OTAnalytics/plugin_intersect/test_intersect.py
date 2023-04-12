@@ -91,3 +91,19 @@ class TestShapelyIntersector:
         distance = intersector.distance_point_point(first_point, second_point)
 
         assert distance == 1
+
+    def test_are_points_within_polygon(self) -> None:
+        coords = ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0))
+        polygon = Polygon(coords)
+        points: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (0.5, 0.5),
+            (2.0, 2.0),
+            (0.1, 0.0),
+        ]
+
+        intersector = ShapelyIntersector()
+        result_mask = intersector.are_points_within_polygon(points, polygon)
+        expected_mask = [False, True, False, False]
+
+        assert result_mask == expected_mask

@@ -38,7 +38,9 @@ class SectionParser(ABC):
 
 class EventListParser(ABC):
     @abstractmethod
-    def serialize(self, events: Iterable[Event], file: Path) -> None:
+    def serialize(
+        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+    ) -> None:
         pass
 
 
@@ -208,7 +210,17 @@ class Datastore:
         self._track_repository.add_all(tracks)
 
     def get_all_tracks(self) -> Iterable[Track]:
+        """
+        Retrieve all tracks of the repository as iterable.
+
+        Returns:
+            Iterable[Track]: all tracks of the repository
+        """
         return self._track_repository.get_all()
+
+    def delete_all_tracks(self) -> None:
+        """Delete all tracks in repository."""
+        self._track_repository.delete_all()
 
     def load_section_file(self, file: Path) -> None:
         """
@@ -244,6 +256,7 @@ class Datastore:
         """
         self._event_list_parser.serialize(
             self._event_repository.get_all(),
+            self._section_repository.get_all(),
             file=file,
         )
 
