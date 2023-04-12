@@ -12,10 +12,6 @@ class EventHandler(ABC):
 
 
 class CanvasObserver(ABC):
-    """
-    The Observer interface declares the update method, used by subjects.
-    """
-
     def attach_to(self, event_handler: EventHandler) -> None:
         event_handler.attach_observer(self)
 
@@ -24,7 +20,5 @@ class CanvasObserver(ABC):
 
     @abstractmethod
     def update(self, coordinates: tuple[int, int], event_type: str) -> None:
-        """
-        Receive update from canvas event handler.
-        """
+        """Receives and processes updates from canvas event handler"""
         raise NotImplementedError

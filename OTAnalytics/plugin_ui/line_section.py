@@ -24,7 +24,7 @@ class LineSectionGeometryBuilderObserver(ABC):
         self, start: tuple[int, int], end: tuple[int, int]
     ) -> None:
         """
-        Receive line section start and end coordinates from LineSectionGeometryBuilder.
+        Receives line section start and end coordinates from LineSectionGeometryBuilder.
         """
         raise NotImplementedError
 
@@ -67,6 +67,15 @@ class LineSectionGeometryUpdater:
     def update_section(
         self, id: str, start: tuple[int, int], end: tuple[int, int]
     ) -> None:
+        """Updates the coordinates of a line_section.
+        This is a faster alternative to deleting and repainting a line_section.
+        Currently used, when line_section is updated very often.
+
+        Args:
+            id (str): ID of the line_section
+            start (tuple[int, int]): Tuple of the sections start coordinates
+            end (tuple[int, int]): Tuple of the sections end coordinates
+        """
         x0, y0 = start
         x1, y1 = end
         self._canvas.coords(id, x0, y0, x1, y1)
@@ -77,8 +86,8 @@ class LineSectionGeometryDeleter:
         self._canvas = canvas
 
     def delete_sections(self, tag_or_id: str) -> None:
-        """If a tag is given, deletes all sections from a self._canvas with a given tag.
-        If an id is given, deletes the section with this id.
+        """Deletes all sections from a canvas with a given tag or
+        a specific section with a specific id.
 
         Args:
             tag (str): Tag given when creating a canvas item (e.g. "line_section")
@@ -187,6 +196,13 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver):
     def set_section_geometry(
         self, start: tuple[int, int], end: tuple[int, int]
     ) -> None:
+        """Sets a line section geomatry from the GeometryBuilder and triggers
+        further tasks.
+
+        Args:
+            start (tuple[int, int]): Tuple of the sections start coordinates
+            end (tuple[int, int]): Tuple of the sections end coordinates
+        """
         self._start = start
         self._end = end
         self._get_metadata()
