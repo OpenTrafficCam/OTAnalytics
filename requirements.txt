@@ -1,4 +1,5 @@
 customtkinter==5.1.2
+matplotlib==3.7.1
 moviepy==1.0.3
 numpy==1.24.2
 shapely==2.0.1
