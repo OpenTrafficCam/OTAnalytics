@@ -3,15 +3,8 @@
 from abc import ABC, abstractmethod
 
 from OTAnalytics.plugin_ui.abstract_canvas_background import AbstractCanvasBackground
-from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.section import (
-    SectionGeometryBuilder,
-    SectionGeometryDeleter,
-    SectionGeometryPainter,
-    SectionGeometryUpdater,
-)
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.view_model import ViewModel
 
@@ -36,7 +29,64 @@ class LineSectionGeometryBuilderObserver(ABC):
         raise NotImplementedError
 
 
-class LineSectionGeometryBuilder(SectionGeometryBuilder, CanvasObserver):
+class LineSectionGeometryPainter:
+    def __init__(self, canvas: AbstractCanvasBackground) -> None:
+        self._canvas = canvas
+
+    def draw_section(
+        self,
+        tags: list[str],
+        id: str,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        line_width: int = LINE_WIDTH,
+        line_color: str = LINE_COLOR,
+    ) -> None:
+        """Draws a line section on a canvas.
+
+        Args:
+            tag (str): Tag for groups of line_sections
+            id (str): ID of the line section. Has to be unique among all line sections.
+            start (tuple[int, int]): _description_
+            end (tuple[int, int]): _description_
+            line_width (int, optional): _description_. Defaults to LINE_WIDTH.
+            line_color (str, optional): _description_. Defaults to LINE_COLOR.
+        """
+        tkinter_tags = (id,) + tuple(tags)
+        x0, y0 = start
+        x1, y1 = end
+        self._canvas.create_line(
+            x0, y0, x1, y1, width=line_width, fill=line_color, tags=tkinter_tags
+        )
+
+
+class LineSectionGeometryUpdater:
+    def __init__(self, canvas: AbstractCanvasBackground) -> None:
+        self._canvas = canvas
+
+    def update_section(
+        self, id: str, start: tuple[int, int], end: tuple[int, int]
+    ) -> None:
+        x0, y0 = start
+        x1, y1 = end
+        self._canvas.coords(id, x0, y0, x1, y1)
+
+
+class LineSectionGeometryDeleter:
+    def __init__(self, canvas: AbstractCanvasBackground) -> None:
+        self._canvas = canvas
+
+    def delete_sections(self, tag_or_id: str) -> None:
+        """If a tag is given, deletes all sections from a self._canvas with a given tag.
+        If an id is given, deletes the section with this id.
+
+        Args:
+            tag (str): Tag given when creating a canvas item (e.g. "line_section")
+        """
+        self._canvas.delete(tag_or_id)
+
+
+class LineSectionGeometryBuilder(CanvasObserver):
     def __init__(
         self,
         observer: LineSectionGeometryBuilderObserver,
@@ -56,30 +106,36 @@ class LineSectionGeometryBuilder(SectionGeometryBuilder, CanvasObserver):
         self._tmp_end: tuple[int, int] | None = None
         self._end: tuple[int, int] | None = None
 
-        self.setup()
+        self._setup()
 
-    def setup(self) -> None:
+    def _setup(self) -> None:
         self.attach_to(self._canvas.event_handler)
         # self.gui_state_changer = StateChanger()
         # self.gui_state_changer.disable_frames(frames=self._frames_to_disable)
 
     def update(self, coordinates: tuple[int, int], event_type: str) -> None:
+        """Receives and reacts to updates issued by the canvas event handler
+
+        Args:
+            coordinates (tuple[int, int]): Coordinates clicked on canvas
+            event_type (str): Event type of canvas click
+        """
         if self._start is None and event_type == "left_mousebutton_up":
-            self.set_start(coordinates)
+            self._set_start(coordinates)
         elif self._start is not None and event_type == "mouse_motion":
-            self.set_tmp_end(coordinates)
+            self._set_tmp_end(coordinates)
         elif self._start is not None and event_type == "left_mousebutton_up":
             self._set_end(coordinates)
 
-    def set_start(self, coordinates: tuple[int, int]) -> None:
+    def _set_start(self, coordinates: tuple[int, int]) -> None:
         self._start = coordinates
 
-    def set_tmp_end(self, coordinates: tuple[int, int]) -> None:
+    def _set_tmp_end(self, coordinates: tuple[int, int]) -> None:
         if self._start is None:
             raise ValueError("self.start as to be set before listening to mouse motion")
         if self._tmp_end is None:
             self.line_section_drawer.draw_section(
-                tag="temporary_line_section",
+                tags=["temporary_line_section"],
                 id=self._temporary_id,
                 start=self._start,
                 end=coordinates,
@@ -95,75 +151,20 @@ class LineSectionGeometryBuilder(SectionGeometryBuilder, CanvasObserver):
 
     def _set_end(self, coordinates: tuple[int, int]) -> None:
         self._end = coordinates
-        self.finish_building()
+        self._finish_building()
 
-    def finish_building(self) -> None:
+    def _finish_building(self) -> None:
         if self._start is None or self._end is None:
             raise ValueError(
                 "Both self.start and self.end have to be set to finish building"
             )
         self._observer.set_section_geometry(self._start, self._end)
-        self.teardown()
+        self._teardown()
 
-    def teardown(self) -> None:
+    def _teardown(self) -> None:
         self.detach_from(self._canvas.event_handler)
         self.line_section_deleter.delete_sections(tag_or_id="temporary_line_section")
         # self.gui_state_changer.reset_states()
-
-
-class LineSectionGeometryPainter(SectionGeometryPainter):
-    def __init__(self, canvas: AbstractCanvasBackground) -> None:
-        self._canvas = canvas
-
-    def draw_section(
-        self,
-        tag: str,
-        id: str,
-        start: tuple[int, int],
-        end: tuple[int, int],
-        line_width: int = LINE_WIDTH,
-        line_color: str = LINE_COLOR,
-    ) -> None:
-        x0, y0 = start
-        x1, y1 = end
-        self._canvas.create_line(
-            x0, y0, x1, y1, width=line_width, fill=line_color, tags=(tag, id)
-        )
-
-
-class LineSectionGeometryUpdater(SectionGeometryUpdater):
-    def __init__(self, canvas: AbstractCanvasBackground) -> None:
-        self._canvas = canvas
-
-    def update_section(
-        self, id: str, start: tuple[int, int], end: tuple[int, int]
-    ) -> None:
-        x0, y0 = start
-        x1, y1 = end
-        self._canvas.coords(id, x0, y0, x1, y1)
-
-
-class LineSectionGeometryDeleter(SectionGeometryDeleter):
-    def __init__(self, canvas: AbstractCanvasBackground) -> None:
-        self._canvas = canvas
-
-    def delete_sections(self, tag_or_id: str) -> None:
-        """If a tag is given, deletes all sections from a self._canvas with a given tag.
-        If an id is given, deletes the section with this id.
-
-        Args:
-            tag (str): Tag given when creating a canvas item (e.g. "line_section")
-        """
-        self._canvas.delete(tag_or_id)
-
-
-class LineSectionTreeviewWriter:
-    def __init__(self, treeview: AbstractTreeviewSections) -> None:
-        self._treeview = treeview
-
-    def write_items(self, line_sections: list[dict[str, str]]) -> None:
-        for line_section in line_sections:
-            self._treeview.add_section(id=line_section["id"], name=line_section["name"])
 
 
 class LineSectionBuilder(LineSectionGeometryBuilderObserver):

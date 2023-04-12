@@ -12,18 +12,6 @@ class AbstractCanvasBackground(CTkCanvas):
     # def event_handler(self) -> EventHandler:
     #     pass
 
-    # @abstractmethod
-    # def create_line(self, x0: int, y0: int, x1: int, y1: int, tags: str) -> None:
-    #     pass
-
-    # @abstractmethod
-    # def coords(self, id: str, x0: int, y0: int, x1: int, y1: int) -> None:
-    #     pass
-
-    # @abstractmethod
-    # def delete(self, id: str) -> None:
-    #     pass
-
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass

@@ -218,7 +218,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         line_section_drawer = LineSectionGeometryPainter(canvas=self._canvas)
         for line_section in self._sections:
             line_section_drawer.draw_section(
-                tag="line_section",
+                tags=["line_section"],
                 id=line_section["id"],
                 start=line_section["start"],
                 end=line_section["end"],
