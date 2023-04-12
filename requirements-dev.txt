@@ -3,7 +3,7 @@ flake8==6.0.0
 interrogate==1.5.0
 isort==5.12.0
 mypy==1.1.1
-pre-commit==3.2.1
-pytest==7.2.2
+pre-commit==3.2.2
+pytest==7.3.0
 pytest-cov==4.0.0
 yamllint==1.30.0
