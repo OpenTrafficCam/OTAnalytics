@@ -298,7 +298,7 @@ def ottrk_path(test_data_dir: Path) -> Path:
 
 @pytest.fixture(scope="module")
 def otsection_file(test_data_dir: Path) -> Path:
-    name = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00_sections.json.bz2"
+    name = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otflow"
     return test_data_dir / name
 
 
