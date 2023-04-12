@@ -63,7 +63,7 @@ class Configuration:
     platform (suffix)
     """
 
-    _otvision_path: Path
+    _otanalytics_path: Path
     _files: list[Path]
     _additional_files: list[Path]
     _suffix: str
@@ -85,7 +85,7 @@ class Configuration:
         zip_output_folder(temp_directory, zip_file)
 
     def _copy_to_output_directory(self, output_directory: Path) -> None:
-        files = collect_files(base_path=self._otvision_path, file_extension=".py")
+        files = collect_files(base_path=self._otanalytics_path, file_extension=".py")
         self._copy_files(files, output_directory=output_directory)
 
         self._copy_files(self._files, output_directory=output_directory)
@@ -119,9 +119,9 @@ class Configuration:
 
 build_path = Path("build")
 distribution_path = Path("dist")
-output_file_name = "otvision"
+output_file_name = "otanalytics"
 
-otvision_path = Path("OTAnalytics")
+otanalytics_path = Path("OTAnalytics")
 
 base_files = [
     Path("LICENSE"),
@@ -141,19 +141,19 @@ unix_files = [
 
 configurations: list[Configuration] = [
     Configuration(
-        _otvision_path=otvision_path,
+        _otanalytics_path=otanalytics_path,
         _files=base_files,
         _additional_files=windows_files,
         _suffix="win",
     ),
     Configuration(
-        _otvision_path=otvision_path,
+        _otanalytics_path=otanalytics_path,
         _files=base_files,
         _additional_files=unix_files,
         _suffix="linux",
     ),
     Configuration(
-        _otvision_path=otvision_path,
+        _otanalytics_path=otanalytics_path,
         _files=base_files,
         _additional_files=unix_files,
         _suffix="macOS",
