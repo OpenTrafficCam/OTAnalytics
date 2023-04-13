@@ -1,12 +1,14 @@
+import tkinter
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import customtkinter
-from customtkinter import CTkFrame
-from moviepy.editor import VideoFileClip
-from PIL import Image, ImageTk
+from customtkinter import CTkCheckBox, CTkFrame
+from PIL import ImageTk
 
+from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.application.state import TrackViewState
+from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver, EventHandler
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
@@ -14,32 +16,27 @@ from OTAnalytics.plugin_ui.view_model import ViewModel
 
 
 @dataclass
-class TrackImage:
-    path: Path
-
-    def load_image(self) -> Any:
-        video = VideoFileClip(str(self.path))
-        return video.get_frame(0)
+class DisplayableImage:
+    _image: TrackImage
 
     def width(self) -> int:
-        return self.pillow_image.width
+        return self._image.width()
 
     def height(self) -> int:
-        return self.pillow_image.height
-
-    def convert_image(self) -> None:
-        self.pillow_image = Image.fromarray(self.load_image())
+        return self._image.height()
 
     def create_photo(self) -> ImageTk.PhotoImage:
-        self.convert_image()
-        self.pillow_photo_image = ImageTk.PhotoImage(image=self.pillow_image)
-        return self.pillow_photo_image
+        return ImageTk.PhotoImage(image=self._image.as_image())
 
 
 class FrameCanvas(CTkFrame):
-    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
+    def __init__(
+        self, viewmodel: ViewModel, application: OTAnalyticsApplication, **kwargs: Any
+    ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self._application = application
+        self._show_tracks = tkinter.BooleanVar()
         self._get_widgets()
         self._place_widgets()
 
@@ -47,21 +44,46 @@ class FrameCanvas(CTkFrame):
         self.canvas_background = CanvasBackground(
             master=self, viewmodel=self._viewmodel
         )
+        self.button_show_tracks = CTkCheckBox(
+            master=self,
+            text="Show tracks",
+            command=self._show_tracks_command,
+            variable=self._show_tracks,
+            onvalue=True,
+            offvalue=False,
+        )
 
     def _place_widgets(self) -> None:
         PADY = 10
         self.canvas_background.grid(
+            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.button_show_tracks.grid(
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
-    def add_image(self, image: TrackImage) -> None:
-        self.canvas_background.add_image(image)
-        PADX = 10
-        PADY = 5
-        STICKY = "NESW"
-        self.canvas_background.grid(
-            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
+    def notify(self, image: Optional[TrackImage]) -> None:
+        if image:
+            self._image = image
+            self.add_image(DisplayableImage(self._image), layer="background")
+
+    def add_image(self, image: DisplayableImage, layer: str) -> None:
+        self.canvas_background.add_image(image, layer)
+
+    def remove_layer(self, layer: str) -> None:
+        self.canvas_background.remove_layer(layer)
+
+    def register_at(self, view_state: TrackViewState) -> None:
+        self._view_state = view_state
+        view_state.background_image.register(self.notify)
+        view_state.show_tracks.register(self._update_show_tracks)
+
+    def _update_show_tracks(self, value: Optional[bool]) -> None:
+        new_value = value or False
+        self._show_tracks.set(new_value)
+
+    def _show_tracks_command(self) -> None:
+        self._view_state.show_tracks.set(self._show_tracks.get())
 
 
 class CanvasBackground(AbstractCanvas):
@@ -71,17 +93,29 @@ class CanvasBackground(AbstractCanvas):
         self.event_handler = CanvasEventHandler(canvas=self)
         self.introduce_to_viewmodel()
 
-    # @property
-    # def event_handler(self) -> EventHandler:
-    #     return self.event_handler
+        # @property
+        # def event_handler(self) -> EventHandler:
+        #     return self.event_handler
 
-    # @event_handler.setter
-    # def event_handler(self, value: EventHandler) -> None:
-    #     self.event_handler = value
+        # @event_handler.setter
+        # def event_handler(self, value: EventHandler) -> None:
+        #     self.event_handler = value
+        self._current_image: ImageTk.PhotoImage
+        self._current_id: Any = None
 
-    def add_image(self, image: TrackImage) -> None:
-        self.create_image(0, 0, image=image.create_photo(), anchor=customtkinter.NW)
-        self.config(width=image.width(), height=image.height())
+    def add_image(self, image: DisplayableImage, layer: str) -> None:
+        if self._current_id:
+            self.delete(self._current_id)
+        self._current_image = image.create_photo()
+        self._draw()
+
+    def _draw(self) -> None:
+        self._current_id = self.create_image(
+            0, 0, image=self._current_image, anchor=customtkinter.NW
+        )
+        self.config(
+            width=self._current_image.width(), height=self._current_image.height()
+        )
         self.config(highlightthickness=0)
         # self.master.master.update_idletasks()
 

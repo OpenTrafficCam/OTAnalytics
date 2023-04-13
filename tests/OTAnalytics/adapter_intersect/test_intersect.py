@@ -1,13 +1,15 @@
 from unittest.mock import Mock
 
 import pytest
+from matplotlib import pyplot
 from shapely import GeometryCollection, LineString
 
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
+from OTAnalytics.adapter_intersect.mapping import ShapelyMapper
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain.event import EventType, SectionEventBuilder
+from OTAnalytics.domain.event import Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
     Line,
@@ -15,10 +17,11 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
 )
 from OTAnalytics.domain.intersect import (
+    IntersectAreaByTrackPoints,
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
 )
-from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 
@@ -37,6 +40,35 @@ def section_event_builder() -> SectionEventBuilder:
     return SectionEventBuilder()
 
 
+def plot_tracks_and_sections(tracks: list[Track], sections: list[Section]) -> None:
+    """Plot tracks and sections."""
+
+    mapper = ShapelyMapper()
+
+    _, ax = pyplot.subplots()
+
+    for section in sections:
+        if isinstance(section, LineSection):
+            shapely_line_section = mapper.map_to_shapely_line_string(
+                Line([section.start, section.end])
+            )
+            ax.plot(*shapely_line_section.xy)
+        elif isinstance(section, Area):
+            shapely_area_section = mapper.map_to_shapely_polygon(
+                Polygon(section.coordinates)
+            )
+            ax.plot(*shapely_area_section.exterior.xy)
+
+    for track in tracks:
+        detection_coords = [
+            Coordinate(detection.x, detection.y) for detection in track.detections
+        ]
+        shapely_track = mapper.map_to_shapely_line_string(Line(detection_coords))
+        ax.plot(*shapely_track.xy)
+
+    pyplot.gca().invert_yaxis()
+
+
 class TestDetectSectionActivity:
     def test_intersect_by_small_track_components(
         self,
@@ -46,7 +78,7 @@ class TestDetectSectionActivity:
     ) -> None:
         # Setup
         line_section = LineSection(
-            id="NE",
+            id=SectionId("NE"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -66,10 +98,8 @@ class TestDetectSectionActivity:
 
         # Actual usage
 
-        enter_events = section_action_detector.detect_enter_actions(
-            sections=[line_section], tracks=tracks
-        )
-        assert len(enter_events) == 7
+        events = section_action_detector.detect(sections=[line_section], tracks=tracks)
+        assert len(events) == 7
 
     def test_intersect_by_single_track_line(
         self,
@@ -79,7 +109,7 @@ class TestDetectSectionActivity:
     ) -> None:
         # Setup
         line_section = LineSection(
-            id="NE",
+            id=SectionId("NE"),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -99,10 +129,54 @@ class TestDetectSectionActivity:
 
         # Actual usage
 
-        enter_events = section_action_detector.detect_enter_actions(
-            sections=[line_section], tracks=tracks
+        events = section_action_detector.detect(sections=[line_section], tracks=tracks)
+        assert len(events) == 7
+
+    def test_intersect_area_by_track_points(
+        self,
+        tracks: list[Track],
+        shapely_intersection_adapter: ShapelyIntersectImplementationAdapter,
+        section_event_builder: SectionEventBuilder,
+    ) -> None:
+        coordinates: list[Coordinate] = [
+            Coordinate(112, 187),
+            Coordinate(377, 127),
+            Coordinate(467, 118),
+            Coordinate(121, 222),
+            Coordinate(112, 187),
+        ]
+        area_section = Area(
+            id=SectionId("NE"),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0),
+                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0, 0),
+            },
+            plugin_data={},
+            coordinates=coordinates,
         )
-        assert len(enter_events) == 7
+
+        area_intersector = IntersectAreaByTrackPoints(
+            shapely_intersection_adapter, area_section
+        )
+        section_action_detector = SectionActionDetector(
+            intersector=area_intersector, section_event_builder=section_event_builder
+        )
+        events = section_action_detector.detect(sections=[area_section], tracks=tracks)
+
+        enter_events: list[Event] = []
+        leave_events: list[Event] = []
+
+        for event in events:
+            match event.event_type:
+                case EventType.SECTION_ENTER:
+                    enter_events.append(event)
+                case EventType.SECTION_LEAVE:
+                    leave_events.append(event)
+                case _:
+                    continue
+
+        assert len(enter_events) == 5
+        assert len(leave_events) == 5
 
 
 class TestShapelyIntersectImplementationAdapter:
@@ -126,9 +200,14 @@ class TestShapelyIntersectImplementationAdapter:
 
     @pytest.fixture
     def polygon(self) -> Polygon:
-        return Polygon(
-            [Coordinate(0, 0), Coordinate(1, 0), Coordinate(2, 0), Coordinate(0, 0)],
-        )
+        polygon_coordinates = [
+            Coordinate(0, 0),
+            Coordinate(0, 1),
+            Coordinate(1, 1),
+            Coordinate(1, 0),
+            Coordinate(0, 0),
+        ]
+        return Polygon(polygon_coordinates)
 
     def test_line_intersects_line(self, first_line: Line, second_line: Line) -> None:
         mock_shapely_intersector = Mock(spec=ShapelyIntersector)
@@ -187,7 +266,7 @@ class TestShapelyIntersectImplementationAdapter:
         assert len(mock_shapely_intersector.method_calls) == 1
         assert result_splitted_line is None
 
-    def test_distance_coord_coord(self) -> None:
+    def test_distance_between(self) -> None:
         first_coordinate = Coordinate(0, 0)
         second_coordinate = Coordinate(1, 0)
 
@@ -201,3 +280,28 @@ class TestShapelyIntersectImplementationAdapter:
 
         assert len(mock_shapely_intersector.method_calls) == 1
         assert result_splitted_line == 1
+
+    def test_are_coordinates_within_polygon(self, polygon: Polygon) -> None:
+        coordinates = [Coordinate(0, 0), Coordinate(0.5, 0.5), Coordinate(2, 2)]
+
+        mock_shapely_intersector = Mock()
+        mock_shapely_intersector.are_points_within_polygon.return_value = [
+            False,
+            True,
+            False,
+        ]
+        mock_shapely_mapper = Mock()
+        mock_shapely_mapper.map_to_tuple_coordinates.return_value = [
+            (0, 0),
+            (0.5, 0.5),
+            (2, 2),
+        ]
+        adapter = ShapelyIntersectImplementationAdapter(
+            mock_shapely_intersector, mock_shapely_mapper
+        )
+
+        result_mask = adapter.are_coordinates_within_polygon(coordinates, polygon)
+
+        mock_shapely_mapper.map_to_tuple_coordinates.assert_called_once()
+        mock_shapely_intersector.are_points_within_polygon.assert_called_once()
+        assert result_mask == [False, True, False]

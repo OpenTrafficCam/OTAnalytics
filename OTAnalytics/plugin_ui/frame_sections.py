@@ -1,23 +1,35 @@
+from pathlib import Path
 from tkinter import Listbox
+from tkinter.filedialog import askopenfilename
 from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 from plugin_ui.view_model import ViewModel
 
+from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 
 
 class FrameSections(CTkFrame):
-    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        viewmodel: ViewModel,
+        application: OTAnalyticsApplication,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
-        self._get_widgets()
+        self._application = application
+        self._get_widgets(self._application)
         self._place_widgets()
 
-    def _get_widgets(self) -> None:
+    def _get_widgets(self, application: OTAnalyticsApplication) -> None:
         self.label = CTkLabel(master=self, text="Sections")
-        self.listbox_sections = TreeviewSections(master=self, viewmodel=self._viewmodel)
+        self.listbox_sections = TreeviewSections(
+            viewmodel=self._viewmodel, application=application, master=self
+        )
         self.button_load_sections = CTkButton(
             master=self, text="Load", command=self._viewmodel.load_sections
         )
@@ -63,15 +75,27 @@ class FrameSections(CTkFrame):
             row=7, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
+    def _load_sections_in_file(self) -> None:
+        sections_file = askopenfilename(
+            title="Load sections file", filetypes=[("sections file", "*.otflow")]
+        )
+        print(f"Sections file to load: {sections_file}")
+        self._application.add_sections_of_file(Path(sections_file))
 
-class TreeviewSections(AbstractTreeviewSections):
-    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
+
+class TreeviewSections(AbstractTreeviewSections, SectionListObserver):
+    def __init__(
+        self, viewmodel: ViewModel, application: OTAnalyticsApplication, **kwargs: Any
+    ) -> None:
         super().__init__(show="tree", selectmode="browse", **kwargs)
         self._viewmodel = viewmodel
+        self.application = application
+        self.application.register_sections_observer(self)
         self.bind("<ButtonRelease-2>", self._deselect_sections)
         self.bind("<<TreeviewSelect>>", self.notify_viewmodel)
         self._define_columns()
         self.introduce_to_viewmodel()
+        self._update_sections()
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)
@@ -82,8 +106,22 @@ class TreeviewSections(AbstractTreeviewSections):
         self.column(column="Section", anchor="center", width=80, minwidth=40)
         self["displaycolumns"] = "Section"
 
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        self._update_sections()
+
     def add_section(self, id: str, name: str) -> None:
         self.insert(parent="", index="end", iid=id, text="", values=[name])
+
+    def _update_sections(self) -> None:
+        self.delete(*self.get_children())
+        sections = [section.id for section in self.application.get_all_sections()]
+        self.add_sections(sections=sections)
+
+    def add_sections(self, sections: list[SectionId]) -> None:
+        for section in sections:
+            self.insert(
+                parent="", index="end", iid=section.id, text="", values=[section.id]
+            )
 
     def _deselect_sections(self, event: Any) -> None:
         for item in self.selection():

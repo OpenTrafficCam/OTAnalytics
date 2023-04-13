@@ -1,9 +1,10 @@
 import copy
 import uuid
+from pathlib import Path
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from typing import TypedDict, cast
 
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
@@ -45,8 +46,8 @@ class MissingInjectedInstanceError(Exception):
 
 
 class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
-    def __init__(self, datastore: Datastore) -> None:
-        self._datastore = datastore
+    def __init__(self, application: OTAnalyticsApplication) -> None:
+        self._application = application
         self._canvas: AbstractCanvas | None = None
         self._treeview_sections: AbstractTreeviewSections | None
         self._new_section: dict = {}
@@ -68,7 +69,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             title="Load tracks file", filetypes=[("tracks file", "*.ottrk")]
         )
         print(f"Tracks file to load: {tracks_file}")
-        # TODO: @briemla retrieve, store and show tracks via model
+        self._application.add_tracks_of_file(track_file=Path(tracks_file))
 
     def load_sections(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
@@ -79,6 +80,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             return
         print(f"Sections file to load: {sections_file}")
         # TODO: @briemla retrieve line_sections from file via model
+        self._application.add_sections_of_file(sections_file=Path(sections_file))
         self._sections = copy.deepcopy(DUMMY_SECTIONS)
         self._refresh_sections_on_gui()
 
