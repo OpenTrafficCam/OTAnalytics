@@ -127,9 +127,6 @@ class TreeviewSections(AbstractTreeviewSections, SectionListObserver):
         for item in self.selection():
             self.selection_remove(item)
 
-    def get_selected_section(self) -> str:
-        return self.focus()
-
     def notify_viewmodel(self, event: Any) -> None:
         selection = self.selection()
         if len(selection) == 0:

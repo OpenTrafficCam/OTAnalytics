@@ -30,13 +30,6 @@ class DummySection(TypedDict):
     end: tuple[int, int]
 
 
-DUMMY_SECTIONS: list[DummySection] = [
-    {"id": "section1", "name": "West", "start": (50, 50), "end": (100, 100)},
-    {"id": "section2", "name": "East", "start": (200, 200), "end": (300, 200)},
-    {"id": "section3", "name": "North", "start": (300, 300), "end": (300, 400)},
-]
-
-
 class MissingInjectedInstanceError(Exception):
     """Raises when no instance of an object was injected before referencing it"""
 
@@ -208,9 +201,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
 
     def _refresh_sections_on_gui(self) -> None:
         self._remove_all_sections_from_canvas()
-        self._remove_all_sections_from_treeview()
         self._draw_all_sections_on_canvas()
-        self._list_all_sections_in_treeview()
 
     def _draw_all_sections_on_canvas(self) -> None:
         if self._canvas is None:
@@ -230,16 +221,3 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
             tag_or_id="line_section"
         )
-
-    def _list_all_sections_in_treeview(self) -> None:
-        if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(injected_object="treeview_sections")
-        for line_section in self._sections:
-            self._treeview_sections.add_section(
-                id=line_section["id"], name=line_section["name"]
-            )
-
-    def _remove_all_sections_from_treeview(self) -> None:
-        if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(injected_object="treeview_sections")
-        self._treeview_sections.delete(*self._treeview_sections.get_children())
