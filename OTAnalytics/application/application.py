@@ -63,6 +63,24 @@ class OTAnalyticsApplication:
         """
         self._datastore.load_section_file(file=sections_file)
 
+    def add_section(self, section: Section) -> None:
+        """
+        Add a new section
+
+        Args:
+            section (Section): section to add
+        """
+        self._datastore.add_section(section)
+
+    def save_sections(self, file: Path) -> None:
+        """
+        Save the section repository into a file.
+
+        Args:
+            file (Path): file to save the sections to
+        """
+        self._datastore.save_section_file(file)
+
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
         Retrieve an image for the given track.

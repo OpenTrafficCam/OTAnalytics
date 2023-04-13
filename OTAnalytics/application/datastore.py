@@ -157,6 +157,10 @@ class VideoParser(ABC):
         pass
 
 
+class NoSectionsToSave(Exception):
+    pass
+
+
 class Datastore:
     """
     Central element to hold data in the application.
@@ -239,10 +243,13 @@ class Datastore:
         Args:
             file (Path): file to save sections to
         """
-        self._section_parser.serialize(
-            self._section_repository.get_all(),
-            file=file,
-        )
+        if sections := self._section_repository.get_all():
+            self._section_parser.serialize(
+                sections,
+                file=file,
+            )
+        else:
+            raise NoSectionsToSave()
 
     def get_all_sections(self) -> Iterable[Section]:
         return self._section_repository.get_all()

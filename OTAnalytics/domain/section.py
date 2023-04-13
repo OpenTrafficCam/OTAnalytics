@@ -300,13 +300,13 @@ class SectionRepository:
             self._add(section)
         self.observers.notify([section.id for section in sections])
 
-    def get_all(self) -> Iterable[Section]:
+    def get_all(self) -> list[Section]:
         """Get all sections from the repository.
 
         Returns:
             Iterable[Section]: the sections
         """
-        return self._sections.values()
+        return list(self._sections.values())
 
     def remove(self, section: Section) -> None:
         """Remove section from the repository.

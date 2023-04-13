@@ -1,10 +1,12 @@
-import copy
-import uuid
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from typing import TypedDict, cast
 
 from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.application.datastore import NoSectionsToSave
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.section import LineSection, SectionId
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
@@ -81,11 +83,16 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         print(f"Sections file to load: {sections_file}")
         # TODO: @briemla retrieve line_sections from file via model
         self._application.add_sections_of_file(sections_file=Path(sections_file))
-        self._sections = copy.deepcopy(DUMMY_SECTIONS)
         self._refresh_sections_on_gui()
 
     def save_sections(self) -> None:
-        if not self._sections:
+        sections_file = asksaveasfilename(
+            title="Save sections file as", filetypes=[("sections file", "*.otflow")]
+        )
+        print(f"Sections file to save: {sections_file}")
+        try:
+            self._application.save_sections(Path(sections_file))
+        except NoSectionsToSave:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(injected_object="treeview_sections")
             position = get_widget_position(widget=self._treeview_sections)
@@ -94,10 +101,6 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
                 initial_position=position,
             )
             return
-        sections_file = asksaveasfilename(
-            title="Save sections file as", filetypes=[("sections file", "*.otflow")]
-        )
-        print(f"Sections file to save: {sections_file}")
 
     def add_section(self) -> None:
         if self._canvas is None:
@@ -110,15 +113,17 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         end: tuple[int, int],
         metadata: dict[str, str],
     ) -> None:
-        # TODO: @briemla delete block and connect to model
         name = metadata["name"]
-        new_section = DummySection(
-            id=str(uuid.uuid1()),
-            name=name,
-            start=start,
-            end=end,
+        line_section = LineSection(
+            id=SectionId(name),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=Coordinate(start[0], start[1]),
+            end=Coordinate(end[0], end[1]),
         )
-        self._sections.append(new_section)
+        self._application.add_section(line_section)
         print(f"New line_section created with name={name}, start={start} and end={end}")
 
         self._refresh_sections_on_gui()
