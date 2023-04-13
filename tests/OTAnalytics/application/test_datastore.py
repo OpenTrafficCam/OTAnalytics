@@ -7,7 +7,10 @@ from numpy import array, int32
 from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore, Video, VideoReader
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.types import EventType
 
 
 class MockVideoReader(VideoReader):
@@ -89,6 +92,17 @@ class TestDatastore:
             video_parser=video_parser,
         )
         some_file = Mock()
+        store.add_section(
+            LineSection(
+                id=SectionId("section"),
+                relative_offset_coordinates={
+                    EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                },
+                plugin_data={},
+                start=Coordinate(0, 0),
+                end=Coordinate(1, 1),
+            )
+        )
         store.save_section_file(some_file)
 
         section_parser.serialize.assert_called()
