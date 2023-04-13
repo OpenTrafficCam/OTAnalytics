@@ -269,6 +269,14 @@ class Datastore:
         """
         self._section_repository.add(section)
 
+    def add_events(self, events: Iterable[Event]) -> None:
+        """Add multiple events to the repository.
+
+        Args:
+            events (Iterable[Event]): events to add
+        """
+        self._event_repository.add_all(events)
+
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
         Retrieve an image for the given track.
