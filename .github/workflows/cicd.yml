@@ -38,4 +38,4 @@ jobs:
         run: |
           mypy .
       - name: Test with pytest
-        run: pytest --cov=OTVision tests/
+        run: pytest --cov=OTAnalytics tests/
