@@ -17,6 +17,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def load_tracks(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def load_sections(self) -> None:
         raise NotImplementedError
 

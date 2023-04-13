@@ -67,11 +67,11 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         print(f"New line section selected in treeview: id={id}")
 
     def load_tracks(self) -> None:
-        tracks_file = askopenfilename(
+        track_file = askopenfilename(
             title="Load tracks file", filetypes=[("tracks file", "*.ottrk")]
         )
-        print(f"Tracks file to load: {tracks_file}")
-        self._application.add_tracks_of_file(track_file=Path(tracks_file))
+        print(f"Tracks file to load: {track_file}")
+        self._application.add_tracks_of_file(track_file=Path(track_file))
 
     def load_sections(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
@@ -81,7 +81,6 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         if not sections_file:
             return
         print(f"Sections file to load: {sections_file}")
-        # TODO: @briemla retrieve line_sections from file via model
         self._application.add_sections_of_file(sections_file=Path(sections_file))
         self._refresh_sections_on_gui()
 
