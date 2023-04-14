@@ -408,13 +408,13 @@ class TrackRepository:
         Returns:
             Optional[Track]: track if it exists
         """
-        return self.tracks[id]
+        return self.tracks.get(id)
 
-    def get_all(self) -> Iterable[Track]:
+    def get_all(self) -> list[Track]:
         """
         Retrieve all tracks.
 
         Returns:
-            Iterable[Track]: all tracks within the repository
+            list[Track]: all tracks within the repository
         """
-        return iter(self.tracks.values())
+        return list(self.tracks.values())

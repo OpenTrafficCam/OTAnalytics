@@ -15,7 +15,10 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
-from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
+from OTAnalytics.domain.track import (
+    CalculateTrackClassificationByMaxConfidence,
+    TrackRepository,
+)
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
@@ -119,12 +122,21 @@ class ApplicationStarter:
     def _create_datastore(self) -> Datastore:
         """
         Build all required objects and inject them where necessary
-        """
-        track_parser = OttrkParser(CalculateTrackClassificationByMaxConfidence())
+        """,
+        track_repository = TrackRepository()
+        track_parser = OttrkParser(
+            CalculateTrackClassificationByMaxConfidence(), track_repository
+        )
         section_parser = OtsectionParser()
         event_list_parser = OtEventListParser()
         video_parser = OttrkVideoParser(MoviepyVideoReader())
-        return Datastore(track_parser, section_parser, event_list_parser, video_parser)
+        return Datastore(
+            track_repository,
+            track_parser,
+            section_parser,
+            event_list_parser,
+            video_parser,
+        )
 
     def _create_track_state(self) -> TrackState:
         return TrackState()
