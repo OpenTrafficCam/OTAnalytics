@@ -80,7 +80,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             return
         print(f"Sections file to load: {sections_file}")
         self._application.add_sections_of_file(sections_file=Path(sections_file))
-        self._refresh_sections_on_gui()
+        self.refresh_sections_on_gui()
 
     def save_sections(self) -> None:
         sections_file = asksaveasfilename(
@@ -125,7 +125,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         self._application.add_section(line_section)
         print(f"New line_section created with name={name}, start={start} and end={end}")
 
-        self._refresh_sections_on_gui()
+        self.refresh_sections_on_gui()
 
     def edit_section_geometry(self) -> None:
         if self._selected_section_id is None:
@@ -147,7 +147,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
                 section["end"] = end
         print(f"Updated line_section geometry with start={start} and end={end}")
 
-        self._refresh_sections_on_gui()
+        self.refresh_sections_on_gui()
 
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:
@@ -170,7 +170,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         self._set_section_metadata(
             id=self._selected_section_id, metadata=updated_section_metadata
         )
-        self._refresh_sections_on_gui()
+        self.refresh_sections_on_gui()
         print(f"Updated line_section Metadata: {updated_section_metadata}")
 
     def _get_section_metadata(self, id: str) -> dict:
@@ -204,9 +204,9 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             if section["id"] == self._selected_section_id:
                 self._sections.remove(section)
                 print(f"This section was removed: {section}")
-        self._refresh_sections_on_gui()
+        self.refresh_sections_on_gui()
 
-    def _refresh_sections_on_gui(self) -> None:
+    def refresh_sections_on_gui(self) -> None:
         self._remove_all_sections_from_canvas()
         self._draw_all_sections_on_canvas()
 

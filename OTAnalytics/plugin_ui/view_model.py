@@ -52,3 +52,7 @@ class ViewModel(ABC):
     @abstractmethod
     def remove_section(self) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def refresh_sections_on_gui(self) -> None:
+        pass
