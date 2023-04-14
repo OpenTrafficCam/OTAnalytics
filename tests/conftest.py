@@ -14,6 +14,7 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackId,
+    TrackRepository,
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser, OttrkParser
@@ -314,7 +315,10 @@ def cyclist_video(test_data_dir: Path) -> Path:
 
 @pytest.fixture(scope="module")
 def tracks(ottrk_path: Path) -> list[Track]:
-    ottrk_parser = OttrkParser(CalculateTrackClassificationByMaxConfidence())
+    ottrk_parser = OttrkParser(
+        CalculateTrackClassificationByMaxConfidence(),
+        TrackRepository(),
+    )
     return ottrk_parser.parse(ottrk_path)
 
 
