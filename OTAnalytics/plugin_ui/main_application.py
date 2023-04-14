@@ -20,7 +20,10 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
-from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
+from OTAnalytics.domain.track import (
+    CalculateTrackClassificationByMaxConfidence,
+    TrackRepository,
+)
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
@@ -122,7 +125,7 @@ class ApplicationStarter:
 
     def build_cli_dependencies(self) -> dict[str, Any]:
         return {
-            "track_parser": self._create_track_parser(),
+            "track_parser": self._create_track_parser(self._create_track_repository()),
             "section_parser": self._create_section_parser(),
             "event_list_parser": self._create_event_list_parser(),
             "intersect": self._create_intersect(),
@@ -131,15 +134,27 @@ class ApplicationStarter:
     def _create_datastore(self) -> Datastore:
         """
         Build all required objects and inject them where necessary
-        """
-        track_parser = self._create_track_parser()
+        """,
+        track_repository = self._create_track_repository()
+        track_parser = self._create_track_parser(track_repository)
         section_parser = self._create_section_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = OttrkVideoParser(MoviepyVideoReader())
-        return Datastore(track_parser, section_parser, event_list_parser, video_parser)
+        return Datastore(
+            track_repository,
+            track_parser,
+            section_parser,
+            event_list_parser,
+            video_parser,
+        )
 
-    def _create_track_parser(self) -> TrackParser:
-        return OttrkParser(CalculateTrackClassificationByMaxConfidence())
+    def _create_track_repository(self) -> TrackRepository:
+        return TrackRepository()
+
+    def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
+        return OttrkParser(
+            CalculateTrackClassificationByMaxConfidence(), track_repository
+        )
 
     def _create_section_parser(self) -> SectionParser:
         return OtsectionParser()

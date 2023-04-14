@@ -1,6 +1,7 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 import ujson
@@ -29,7 +30,9 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
     Track,
+    TrackClassificationCalculator,
     TrackId,
+    TrackRepository,
 )
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
@@ -45,24 +48,32 @@ from tests.conftest import TrackBuilder
 
 @pytest.fixture
 def track_builder_setup_with_sample_data(track_builder: TrackBuilder) -> TrackBuilder:
-    track_builder.add_frame(1)
-    track_builder.add_microsecond(1)
+    return append_sample_data(track_builder, frame_offset=0, microsecond_offset=0)
+
+
+def append_sample_data(
+    track_builder: TrackBuilder,
+    frame_offset: int = 0,
+    microsecond_offset: int = 0,
+) -> TrackBuilder:
+    track_builder.add_frame(frame_offset + 1)
+    track_builder.add_microsecond(microsecond_offset + 1)
     track_builder.append_detection()
 
-    track_builder.add_frame(2)
-    track_builder.add_microsecond(2)
+    track_builder.add_frame(frame_offset + 2)
+    track_builder.add_microsecond(microsecond_offset + 2)
     track_builder.append_detection()
 
-    track_builder.add_frame(3)
-    track_builder.add_microsecond(3)
+    track_builder.add_frame(frame_offset + 3)
+    track_builder.add_microsecond(microsecond_offset + 3)
     track_builder.append_detection()
 
-    track_builder.add_frame(4)
-    track_builder.add_microsecond(4)
+    track_builder.add_frame(frame_offset + 4)
+    track_builder.add_microsecond(microsecond_offset + 4)
     track_builder.append_detection()
 
-    track_builder.add_frame(5)
-    track_builder.add_microsecond(5)
+    track_builder.add_frame(frame_offset + 5)
+    track_builder.add_microsecond(microsecond_offset + 5)
     track_builder.append_detection()
 
     return track_builder
@@ -88,9 +99,17 @@ def example_json(test_data_tmp_dir: Path) -> tuple[Path, dict]:
     return json_file, content
 
 
+def mocked_track_repository() -> Mock:
+    repository = Mock(spec=TrackRepository)
+    repository.get_for.return_value = None
+    return repository
+
+
 class TestOttrkParser:
+    _track_repository = mocked_track_repository()
     ottrk_parser: OttrkParser = OttrkParser(
-        CalculateTrackClassificationByMaxConfidence()
+        CalculateTrackClassificationByMaxConfidence(),
+        _track_repository,
     )
 
     def test_parse_whole_ottrk(self, ottrk_path: Path) -> None:
@@ -155,6 +174,35 @@ class TestOttrkParser:
 
         assert expected_sorted == result_sorted_input
         assert expected_sorted == result_unsorted_input
+
+    def test_parse_tracks_merge_with_existing(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        detections: list[
+            dict
+        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        deserialized_detections = (
+            track_builder_setup_with_sample_data.build_detections()
+        )
+        existing_track_builder = TrackBuilder()
+        append_sample_data(
+            existing_track_builder,
+            frame_offset=0,
+            microsecond_offset=len(detections),
+        )
+        existing_track = existing_track_builder.build_track()
+        merged_classification = "car"
+        classificator = Mock(spec=TrackClassificationCalculator)
+        classificator.calculate.return_value = merged_classification
+        self._track_repository.get_for.return_value = existing_track
+        all_detections = deserialized_detections + existing_track.detections
+        merged_track = Track(existing_track.id, merged_classification, all_detections)
+
+        result_sorted_input = self.ottrk_parser._parse_tracks(detections)
+
+        expected_sorted = [merged_track]
+
+        assert expected_sorted == result_sorted_input
 
     def assert_detection_equal(self, d1: Detection, d2: Detection) -> None:
         assert d1.classification == d2.classification
