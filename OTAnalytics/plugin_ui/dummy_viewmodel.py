@@ -1,11 +1,12 @@
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from typing import TypedDict, cast
+from typing import Iterable, TypedDict, cast
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave
+from OTAnalytics.domain import geometry
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import LineSection, SectionId
+from OTAnalytics.domain.section import END, ID, START, LineSection, SectionId
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
@@ -20,6 +21,8 @@ from OTAnalytics.plugin_ui.line_section import (
 from OTAnalytics.plugin_ui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.view_model import ViewModel
+
+LINE_SECTION: str = "line_section"
 
 
 # TODO: @briemla delete code for dummy sections
@@ -211,17 +214,34 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
         line_section_drawer = LineSectionGeometryPainter(canvas=self._canvas)
-        for line_section in self._sections:
+        for line_section in self._get_sections():
             line_section_drawer.draw_section(
-                tags=["line_section"],
-                id=line_section["id"],
-                start=line_section["start"],
-                end=line_section["end"],
+                tags=[LINE_SECTION],
+                id=line_section[ID],
+                start=line_section[START],
+                end=line_section[END],
             )
+
+    def _get_sections(self) -> Iterable[dict]:
+        return map(
+            lambda section: self._transform_coordinates(section),
+            map(
+                lambda section: section.to_dict(),
+                self._application.get_all_sections(),
+            ),
+        )
+
+    def _transform_coordinates(self, section: dict) -> dict:
+        section[START] = self._to_coordinate_tuple(section[START])
+        section[END] = self._to_coordinate_tuple(section[END])
+        return section
+
+    def _to_coordinate_tuple(self, coordinate: dict) -> tuple[int, int]:
+        return (coordinate[geometry.X], coordinate[geometry.Y])
 
     def _remove_all_sections_from_canvas(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
         LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
-            tag_or_id="line_section"
+            tag_or_id=LINE_SECTION
         )
