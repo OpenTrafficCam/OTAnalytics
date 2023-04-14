@@ -15,7 +15,10 @@ from OTAnalytics.application.datastore import (
     SectionParser,
     TrackParser,
 )
-from OTAnalytics.domain.track import CalculateTrackClassificationByMaxConfidence
+from OTAnalytics.domain.track import (
+    CalculateTrackClassificationByMaxConfidence,
+    TrackRepository,
+)
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
@@ -112,7 +115,7 @@ class TestOTAnalyticsCli:
     def cli_dependencies(self) -> dict[str, Any]:
         return {
             self.TRACK_PARSER: OttrkParser(
-                CalculateTrackClassificationByMaxConfidence()
+                CalculateTrackClassificationByMaxConfidence(), TrackRepository()
             ),
             self.SECTION_PARSER: OtsectionParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
