@@ -63,6 +63,8 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         track_file = askopenfilename(
             title="Load tracks file", filetypes=[("tracks file", "*.ottrk")]
         )
+        if not track_file:
+            return
         print(f"Tracks file to load: {track_file}")
         self._application.add_tracks_of_file(track_file=Path(track_file))
 
@@ -81,6 +83,8 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         sections_file = asksaveasfilename(
             title="Save sections file as", filetypes=[("sections file", "*.otflow")]
         )
+        if not sections_file:
+            return
         print(f"Sections file to save: {sections_file}")
         try:
             self._application.save_sections(Path(sections_file))
