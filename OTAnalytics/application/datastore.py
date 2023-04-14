@@ -4,7 +4,12 @@ from pathlib import Path
 from typing import Iterable, Optional, Tuple
 
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.section import Section, SectionListObserver, SectionRepository
+from OTAnalytics.domain.section import (
+    Section,
+    SectionId,
+    SectionListObserver,
+    SectionRepository,
+)
 from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
@@ -275,6 +280,15 @@ class Datastore:
             section (Section): section to add
         """
         self._section_repository.add(section)
+
+    def remove_section(self, section: SectionId) -> None:
+        """
+        Remove the section
+
+        Args:
+            section (SectionId): section to remove
+        """
+        self._section_repository.remove(section)
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """

@@ -91,9 +91,11 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         print(f"Sections file to save: {sections_file}")
         try:
             self._application.save_sections(Path(sections_file))
-        except NoSectionsToSave:
+        except NoSectionsToSave as cause:
             if self._treeview_sections is None:
-                raise MissingInjectedInstanceError(injected_object="treeview_sections")
+                raise MissingInjectedInstanceError(
+                    injected_object="treeview_sections"
+                ) from cause
             position = get_widget_position(widget=self._treeview_sections)
             InfoBox(
                 message="No sections to save, please add new sections first",
@@ -200,10 +202,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
                 message="Please select a section to remove", initial_position=position
             )
             return
-        for section in self._sections:
-            if section["id"] == self._selected_section_id:
-                self._sections.remove(section)
-                print(f"This section was removed: {section}")
+        self._application.remove_section(SectionId(self._selected_section_id))
         self.refresh_sections_on_gui()
 
     def refresh_sections_on_gui(self) -> None:

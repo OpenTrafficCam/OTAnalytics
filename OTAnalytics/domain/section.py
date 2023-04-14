@@ -308,10 +308,10 @@ class SectionRepository:
         """
         return list(self._sections.values())
 
-    def remove(self, section: Section) -> None:
+    def remove(self, section: SectionId) -> None:
         """Remove section from the repository.
 
         Args:
             section (Section): the section to be removed
         """
-        del self._sections[section.id]
+        del self._sections[section]

@@ -4,7 +4,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
-from OTAnalytics.domain.section import Section, SectionListObserver
+from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackImage
 
 
@@ -71,6 +71,15 @@ class OTAnalyticsApplication:
             section (Section): section to add
         """
         self._datastore.add_section(section)
+
+    def remove_section(self, section: SectionId) -> None:
+        """
+        Remove the section
+
+        Args:
+            section (SectionId): section to remove
+        """
+        self._datastore.remove_section(section)
 
     def save_sections(self, file: Path) -> None:
         """
