@@ -24,6 +24,7 @@ from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
     TrackId,
+    TrackRepository,
 )
 
 ENCODING: str = "UTF-8"
@@ -62,9 +63,11 @@ class OttrkParser(TrackParser):
     """
 
     def __init__(
-        self, track_classification_calculator: TrackClassificationCalculator
+        self,
+        track_classification_calculator: TrackClassificationCalculator,
+        track_repository: TrackRepository,
     ) -> None:
-        super().__init__(track_classification_calculator)
+        super().__init__(track_classification_calculator, track_repository)
 
     def parse(self, ottrk_file: Path) -> list[Track]:
         """Parse ottrk file and convert its content to domain level objects namely
@@ -95,7 +98,11 @@ class OttrkParser(TrackParser):
         tracks_dict = self._parse_detections(dets)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
-            sort_dets_by_occurrence = sorted(detections, key=lambda det: det.occurrence)
+            existing_detections = self._get_existing_detections(track_id)
+            all_detections = existing_detections + detections
+            sort_dets_by_occurrence = sorted(
+                all_detections, key=lambda det: det.occurrence
+            )
             classification = self._track_classification_calculator.calculate(detections)
             try:
                 current_track = Track(
@@ -110,6 +117,21 @@ class OttrkParser(TrackParser):
                 print(build_error)
 
         return tracks
+
+    def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:
+        """
+        Returns the detections of an already existing track with the same id or
+        an empty list
+
+        Args:
+            track_id (TrackId): track id to search for
+
+        Returns:
+            list[Detection]: detections of the already existing track or an empty list
+        """
+        if existing_track := self._track_repository.get_for(track_id):
+            return existing_track.detections
+        return []
 
     def _parse_detections(self, det_list: list[dict]) -> dict[TrackId, list[Detection]]:
         """Convert dict to Detection objects and group them by their track id."""

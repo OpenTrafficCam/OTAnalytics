@@ -22,9 +22,12 @@ from OTAnalytics.domain.track import (
 
 class TrackParser(ABC):
     def __init__(
-        self, track_classification_calculator: TrackClassificationCalculator
+        self,
+        track_classification_calculator: TrackClassificationCalculator,
+        track_repository: TrackRepository,
     ) -> None:
         self._track_classification_calculator = track_classification_calculator
+        self._track_repository = track_repository
 
     @abstractmethod
     def parse(self, file: Path) -> list[Track]:
@@ -177,6 +180,7 @@ class Datastore:
 
     def __init__(
         self,
+        track_repository: TrackRepository,
         track_parser: TrackParser,
         section_parser: SectionParser,
         event_list_parser: EventListParser,
@@ -186,7 +190,7 @@ class Datastore:
         self._section_parser = section_parser
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
-        self._track_repository = TrackRepository()
+        self._track_repository = track_repository
         self._section_repository = SectionRepository()
         self._event_repository = EventRepository()
         self._video_repository = VideoRepository()

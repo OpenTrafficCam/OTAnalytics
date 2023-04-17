@@ -9,7 +9,7 @@ from PIL import Image
 from OTAnalytics.application.datastore import Datastore, Video, VideoReader
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection, SectionId
-from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
 
 
@@ -64,6 +64,7 @@ class TestDatastore:
         video_parser = Mock()
         video_parser.parse.return_value = [some_track_id], [some_video]
         store = Datastore(
+            track_repository=TrackRepository(),
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
@@ -86,6 +87,7 @@ class TestDatastore:
         video_parser = Mock()
         video_parser.parse.return_value = []
         store = Datastore(
+            track_repository=TrackRepository(),
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
@@ -115,6 +117,7 @@ class TestDatastore:
         video_parser = Mock()
         video_parser.parse.return_value = []
         store = Datastore(
+            track_repository=TrackRepository(),
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
