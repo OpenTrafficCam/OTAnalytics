@@ -259,6 +259,9 @@ class Datastore:
     def get_all_sections(self) -> Iterable[Section]:
         return self._section_repository.get_all()
 
+    def get_section_for(self, section_id: SectionId) -> Optional[Section]:
+        return self._section_repository.get(section_id)
+
     def save_event_list_file(self, file: Path) -> None:
         """
         Save events from the event list in an event file.
@@ -283,12 +286,21 @@ class Datastore:
 
     def remove_section(self, section: SectionId) -> None:
         """
-        Remove the section
+        Remove the section from the repository.
 
         Args:
             section (SectionId): section to remove
         """
         self._section_repository.remove(section)
+
+    def update_section(self, section: Section) -> None:
+        """
+        Update the section in the repository.
+
+        Args:
+            section (Section): updated section
+        """
+        self._section_repository.update(section)
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """

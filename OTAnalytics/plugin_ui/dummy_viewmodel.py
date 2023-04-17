@@ -142,14 +142,19 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
     def set_section_geometry(
         self, start: tuple[int, int], end: tuple[int, int]
     ) -> None:
-        # TODO: @briemla delete block and connect to model
-        for section in self._sections:
-            if section["id"] == self._selected_section_id:
-                section["start"] = start
-                section["end"] = end
-        print(f"Updated line_section geometry with start={start} and end={end}")
-
-        self.refresh_sections_on_gui()
+        if self._selected_section_id:
+            section_id = SectionId(self._selected_section_id)
+            if selected_section := self._application.get_section_for(section_id):
+                new_section = LineSection(
+                    section_id,
+                    selected_section.relative_offset_coordinates,
+                    selected_section.plugin_data,
+                    start=Coordinate(start[0], start[1]),
+                    end=Coordinate(end[0], end[1]),
+                )
+                self._application.update_section(new_section)
+                print(f"Updated line_section geometry with start={start} and end={end}")
+                self.refresh_sections_on_gui()
 
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:

@@ -41,6 +41,9 @@ class OTAnalyticsApplication:
     def get_all_sections(self) -> Iterable[Section]:
         return self._datastore.get_all_sections()
 
+    def get_section_for(self, section_id: SectionId) -> Optional[Section]:
+        return self._datastore.get_section_for(section_id)
+
     def add_tracks_of_file(self, track_file: Path) -> None:
         """
         Load a single track file.
@@ -80,6 +83,15 @@ class OTAnalyticsApplication:
             section (SectionId): section to remove
         """
         self._datastore.remove_section(section)
+
+    def update_section(self, section: Section) -> None:
+        """
+        Update the section.
+
+        Args:
+            section (Section): updated section
+        """
+        self._datastore.update_section(section)
 
     def save_sections(self, file: Path) -> None:
         """

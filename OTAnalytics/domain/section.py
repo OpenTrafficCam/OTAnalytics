@@ -308,6 +308,17 @@ class SectionRepository:
         """
         return list(self._sections.values())
 
+    def get(self, id: SectionId) -> Optional[Section]:
+        """Get the section for the given id or nothing, if the id is missing.
+
+        Args:
+            id (SectionId): id to get section for
+
+        Returns:
+            Optional[Section]: section if present
+        """
+        return self._sections.get(id)
+
     def remove(self, section: SectionId) -> None:
         """Remove section from the repository.
 
@@ -315,3 +326,11 @@ class SectionRepository:
             section (Section): the section to be removed
         """
         del self._sections[section]
+
+    def update(self, section: Section) -> None:
+        """Update the section in the repository.
+
+        Args:
+            section (Section): updated section
+        """
+        self._sections[section.id] = section
