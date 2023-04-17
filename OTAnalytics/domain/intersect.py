@@ -8,7 +8,7 @@ from OTAnalytics.domain.geometry import (
     Polygon,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.section import Area, LineSection
+from OTAnalytics.domain.section import Area, LineSection, Section
 from OTAnalytics.domain.track import Detection, Track
 
 
@@ -147,6 +147,21 @@ class Intersector(ABC):
             y=detection.y + detection.h * offset.y,
         )
 
+    @staticmethod
+    def _extract_offset_from_section(
+        section: Section, offset_type: EventType
+    ) -> RelativeOffsetCoordinate:
+        """Extract the section offset.
+
+        Args:
+            section (Section): the section to extract the offset from
+            offset_type (EventType): the type offset to extract
+
+        Returns:
+            RelativeOffsetCoordinate: the extracted offset
+        """
+        return section.relative_offset_coordinates[offset_type]
+
 
 class LineSectionIntersector(Intersector):
     """Determines whether a line section intersects with a track.
@@ -240,16 +255,16 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
         line_section_as_geometry = Line(
             [self._line_section.start, self._line_section.end]
         )
-        if not self._track_line_intersects_section(track, line_section_as_geometry):
-            return events
 
         event_builder.add_road_user_type(track.classification)
-        if event_builder.event_type is None:
-            raise ValueError("Event type not set in section builder")
+        offset = self._extract_offset_from_section(
+            self._line_section, EventType.SECTION_ENTER
+        )
 
-        offset = self._line_section.relative_offset_coordinates[
-            event_builder.event_type
-        ]
+        if not self._track_line_intersects_section(
+            track, line_section_as_geometry, offset
+        ):
+            return events
 
         for current_detection, next_detection in zip(
             track.detections[0:-1], track.detections[1:]
@@ -268,10 +283,15 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
 
         return events
 
-    def _track_line_intersects_section(self, track: Track, line_section: Line) -> bool:
+    def _track_line_intersects_section(
+        self, track: Track, line_section: Line, offset: RelativeOffsetCoordinate
+    ) -> bool:
         """Whether a track line defined by all its detections intersects the section"""
         track_as_geometry = Line(
-            [Coordinate(detection.x, detection.y) for detection in track.detections]
+            [
+                self._select_coordinate_in_detection(detection, offset)
+                for detection in track.detections
+            ]
         )
 
         return self.implementation.line_intersects_line(line_section, track_as_geometry)
@@ -306,7 +326,7 @@ class IntersectAreaByTrackPoints(AreaIntersector):
             bool: `True` if area intersects detection. Otherwise `False`.
         """
         area_as_polygon = Polygon(self._area.coordinates)
-        offset = self._area.relative_offset_coordinates[EventType.SECTION_ENTER]
+        offset = self._extract_offset_from_section(self._area, EventType.SECTION_ENTER)
 
         track_coordinates: list[Coordinate] = [
             self._select_coordinate_in_detection(detection, offset)
