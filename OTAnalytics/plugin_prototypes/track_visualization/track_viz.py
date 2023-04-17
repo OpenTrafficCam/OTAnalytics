@@ -225,6 +225,14 @@ class MatplotlibTrackPlotter(TrackPlotter):
             CLASS_BICYCLE: "lime",
             CLASS_TRAIN: "gold",
         }
+        class_order = [
+            CLASS_CAR,
+            CLASS_TRUCK,
+            CLASS_MOTORCYCLE,
+            CLASS_PERSON,
+            CLASS_BICYCLE,
+            CLASS_TRAIN,
+        ]
         seaborn.lineplot(
             x="x",
             y="y",
@@ -237,6 +245,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
             alpha=alpha,
             ax=axes,
             palette=color_palette,
+            hue_order=class_order,
         )
 
     def _plot_start_end_points(self, track_df: DataFrame, axes: Axes) -> None:
