@@ -37,6 +37,10 @@ class SectionParser(ABC):
         pass
 
     @abstractmethod
+    def parse_section(self, entry: dict) -> Section:
+        pass
+
+    @abstractmethod
     def serialize(self, sections: Iterable[Section], file: Path) -> None:
         pass
 

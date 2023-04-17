@@ -2,6 +2,7 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
 
+from OTAnalytics.domain.section import ID
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 
 
@@ -15,7 +16,7 @@ class ToplevelSections(CTkToplevel):
     ) -> None:
         super().__init__(**kwargs)
         self.title(title)
-        self.input_values: dict = {"name": ""} if input_values is None else input_values
+        self.input_values: dict = {ID: ""} if input_values is None else input_values
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
         self._get_widgets()
@@ -27,7 +28,7 @@ class ToplevelSections(CTkToplevel):
     def _get_widgets(self) -> None:
         self.label_name = CTkLabel(master=self, text="Name:")
         self.entry_name = CTkEntry(master=self)
-        self.entry_name.insert(0, self.input_values["name"])
+        self.entry_name.insert(0, self.input_values[ID])
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
 
     def _place_widgets(self) -> None:
@@ -48,7 +49,7 @@ class ToplevelSections(CTkToplevel):
         self.entry_name.bind("<Return>", self.close)
 
     def close(self, event: Any = None) -> None:
-        self.input_values["name"] = self.entry_name.get()
+        self.input_values[ID] = self.entry_name.get()
         self.destroy()
         self.update()
 

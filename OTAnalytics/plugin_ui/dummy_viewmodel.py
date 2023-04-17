@@ -1,12 +1,12 @@
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from typing import Iterable, TypedDict, cast
+from typing import Iterable
 
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.datastore import NoSectionsToSave
+from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import END, ID, START, LineSection, SectionId
+from OTAnalytics.domain.section import END, ID, START, LineSection, Section, SectionId
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
@@ -25,14 +25,6 @@ from OTAnalytics.plugin_ui.view_model import ViewModel
 LINE_SECTION: str = "line_section"
 
 
-# TODO: @briemla delete code for dummy sections
-class DummySection(TypedDict):
-    id: str
-    name: str
-    start: tuple[int, int]
-    end: tuple[int, int]
-
-
 class MissingInjectedInstanceError(Exception):
     """Raises when no instance of an object was injected before referencing it"""
 
@@ -44,12 +36,16 @@ class MissingInjectedInstanceError(Exception):
 
 
 class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
-    def __init__(self, application: OTAnalyticsApplication) -> None:
+    def __init__(
+        self,
+        application: OTAnalyticsApplication,
+        section_parser: SectionParser,
+    ) -> None:
         self._application = application
+        self._section_parser: SectionParser = section_parser
         self._canvas: AbstractCanvas | None = None
         self._treeview_sections: AbstractTreeviewSections | None
         self._new_section: dict = {}
-        self._sections: list[DummySection] = []
         self._selected_section_id: str | None = None
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
@@ -114,7 +110,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         end: tuple[int, int],
         metadata: dict[str, str],
     ) -> None:
-        name = metadata["name"]
+        name = metadata[ID]
         line_section = LineSection(
             id=SectionId(name),
             relative_offset_coordinates={
@@ -165,38 +161,32 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
                 message="Please select a section to edit", initial_position=position
             )
             return
-        current_metadata = self._get_section_metadata(self._selected_section_id)
+        if self._selected_section_id:
+            section_id = SectionId(self._selected_section_id)
+            if selected_section := self._application.get_section_for(section_id):
+                self._update_metadata(selected_section)
+
+    def _update_metadata(self, selected_section: Section) -> None:
+        current_data = selected_section.to_dict()
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
         position = get_widget_position(widget=self._canvas)
-        updated_section_metadata = ToplevelSections(
+        updated_section_data = ToplevelSections(
             title="Edit section",
             initial_position=position,
-            input_values=current_metadata,
+            input_values=current_data,
         ).get_metadata()
-        self._set_section_metadata(
-            id=self._selected_section_id, metadata=updated_section_metadata
+        self._set_section_data(
+            id=selected_section.id,
+            data=updated_section_data,
         )
         self.refresh_sections_on_gui()
-        print(f"Updated line_section Metadata: {updated_section_metadata}")
+        print(f"Updated line_section Metadata: {updated_section_data}")
 
-    def _get_section_metadata(self, id: str) -> dict:
-        # TODO: @briemla delete block and connect to model
-        for section in self._sections:
-            if section["id"] == id:
-                current_metadata = {k: v for k, v in section.items() if k in ["name"]}
-                break
-        return current_metadata
-
-    def _set_section_metadata(self, id: str, metadata: dict) -> None:
-        # TODO: @briemla delete block and connect to model
-        new_metadata = metadata
-        for index, section in enumerate(self._sections):
-            if section["id"] == id:
-                new_data = dict(section) | new_metadata
-                updated_section = cast(DummySection, new_data)
-                self._sections[index] = updated_section
-                break
+    def _set_section_data(self, id: SectionId, data: dict) -> None:
+        section = self._section_parser.parse_section(data)
+        self._application.remove_section(id)
+        self._application.add_section(section)
 
     def remove_section(self) -> None:
         if self._treeview_sections is None:

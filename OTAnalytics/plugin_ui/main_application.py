@@ -8,7 +8,7 @@ from OTAnalytics.adapter_intersect.intersect import (
 )
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.datastore import Datastore, SectionParser
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
@@ -119,7 +119,8 @@ class ApplicationStarter:
 
     def start_gui(self) -> None:
         application = OTAnalyticsApplication(**self.build_dependencies())
-        dummy_viewmodel = DummyViewModel(application=application)
+        section_parser: SectionParser = application._datastore._section_parser
+        dummy_viewmodel = DummyViewModel(application, section_parser)
         OTAnalyticsGui(application, dummy_viewmodel).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
