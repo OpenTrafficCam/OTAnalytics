@@ -91,7 +91,7 @@ class SectionListSubject:
     """
 
     def __init__(self) -> None:
-        self.observers: set[SectionListObserver] = set()
+        self.observers: list[SectionListObserver] = []
 
     def register(self, observer: SectionListObserver) -> None:
         """
@@ -100,7 +100,7 @@ class SectionListSubject:
         Args:
             observer (SectionListObserver): listener to add
         """
-        self.observers.add(observer)
+        self.observers.append(observer)
 
     def notify(self, sections: list[SectionId]) -> None:
         """
