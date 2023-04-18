@@ -68,6 +68,7 @@ class OTAnalyticsGui:
         self._get_widgets()
         self._place_widgets()
         self._wire_widgets()
+        self._application.connect_observers()
         self._app.mainloop()
 
     def _get_widgets(self) -> None:

@@ -26,9 +26,8 @@ class OTAnalyticsApplication:
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self._intersect = intersect
-        self._connect_observers()
 
-    def _connect_observers(self) -> None:
+    def connect_observers(self) -> None:
         """
         Connect the observers with the repositories to listen to domain object changes.
         """
