@@ -19,22 +19,8 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
     SectionListSubject,
-    SectionObserver,
     SectionRepository,
-    SectionSubject,
 )
-
-
-class TestSectionSubject:
-    def test_notify_observer(self) -> None:
-        changed_track = SectionId("north")
-        observer = Mock(spec=SectionObserver)
-        subject = SectionSubject()
-        subject.register(observer)
-
-        subject.notify(changed_track)
-
-        observer.notify_section.assert_called_with(changed_track)
 
 
 class TestSectionListSubject:

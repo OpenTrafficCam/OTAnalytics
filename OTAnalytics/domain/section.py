@@ -42,49 +42,6 @@ class SectionListObserver(ABC):
         pass
 
 
-class SectionObserver(ABC):
-    """
-    Interface to listen to changes of a single section.
-    """
-
-    @abstractmethod
-    def notify_section(self, section_id: Optional[SectionId]) -> None:
-        """
-        Notifies that the section of the given id has changed.
-
-        Args:
-            track_id (Optional[SectionId]): id of the changed section
-        """
-        pass
-
-
-class SectionSubject:
-    """
-    Helper class to handle and notify observers
-    """
-
-    def __init__(self) -> None:
-        self.observers: set[SectionObserver] = set()
-
-    def register(self, observer: SectionObserver) -> None:
-        """
-        Listen to events.
-
-        Args:
-            observer (SectionObserver): listener to add
-        """
-        self.observers.add(observer)
-
-    def notify(self, section_id: Optional[SectionId]) -> None:
-        """
-        Notifies observers about the section id.
-
-        Args:
-            track_id (Optional[SectionId]): id of the changed section
-        """
-        [observer.notify_section(section_id) for observer in self.observers]
-
-
 class SectionListSubject:
     """
     Helper class to handle and notify observers
