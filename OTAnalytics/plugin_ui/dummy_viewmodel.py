@@ -13,7 +13,6 @@ from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.line_section import (
     LineSectionBuilder,
-    LineSectionGeometryBuilder,
     LineSectionGeometryBuilderObserver,
     LineSectionGeometryDeleter,
     LineSectionGeometryPainter,
@@ -133,7 +132,12 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
             tag_or_id=self._selected_section_id
         )
-        LineSectionGeometryBuilder(observer=self, canvas=self._canvas)
+        current_section = None
+        if self._selected_section_id:
+            current_section = self._application.get_section_for(
+                SectionId(self._selected_section_id)
+            )
+        LineSectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
 
     def set_section_geometry(
         self, start: tuple[int, int], end: tuple[int, int]

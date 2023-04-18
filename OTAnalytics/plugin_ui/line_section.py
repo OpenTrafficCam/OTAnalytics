@@ -1,6 +1,9 @@
 # from customtkinter import CTkFrame
 
 from abc import ABC, abstractmethod
+from typing import Optional
+
+from domain.section import ID, Section
 
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver
@@ -95,7 +98,7 @@ class LineSectionGeometryDeleter:
         self._canvas.delete(tag_or_id)
 
 
-class LineSectionGeometryBuilder(CanvasObserver):
+class LineSectionGeometryBuilder:
     def __init__(
         self,
         observer: LineSectionGeometryBuilderObserver,
@@ -114,27 +117,6 @@ class LineSectionGeometryBuilder(CanvasObserver):
         self._start: tuple[int, int] | None = None
         self._tmp_end: tuple[int, int] | None = None
         self._end: tuple[int, int] | None = None
-
-        self._setup()
-
-    def _setup(self) -> None:
-        self.attach_to(self._canvas.event_handler)
-        # self.gui_state_changer = StateChanger()
-        # self.gui_state_changer.disable_frames(frames=self._frames_to_disable)
-
-    def update(self, coordinates: tuple[int, int], event_type: str) -> None:
-        """Receives and reacts to updates issued by the canvas event handler
-
-        Args:
-            coordinates (tuple[int, int]): Coordinates clicked on canvas
-            event_type (str): Event type of canvas click
-        """
-        if self._start is None and event_type == "left_mousebutton_up":
-            self._set_start(coordinates)
-        elif self._start is not None and event_type == "mouse_motion":
-            self._set_tmp_end(coordinates)
-        elif self._start is not None and event_type == "left_mousebutton_up":
-            self._set_end(coordinates)
 
     def _set_start(self, coordinates: tuple[int, int]) -> None:
         self._start = coordinates
@@ -168,30 +150,55 @@ class LineSectionGeometryBuilder(CanvasObserver):
                 "Both self.start and self.end have to be set to finish building"
             )
         self._observer.set_section_geometry(self._start, self._end)
-        self._teardown()
-
-    def _teardown(self) -> None:
-        self.detach_from(self._canvas.event_handler)
         self.line_section_deleter.delete_sections(tag_or_id="temporary_line_section")
-        # self.gui_state_changer.reset_states()
 
 
-class LineSectionBuilder(LineSectionGeometryBuilderObserver):
+class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
     def __init__(
         self,
         viewmodel: ViewModel,
         canvas: AbstractCanvas,
+        section: Optional[Section] = None,
     ) -> None:
         self._viewmodel = viewmodel
         self._canvas = canvas
+        self.attach_to(self._canvas.event_handler)
         self.geometry_builder = LineSectionGeometryBuilder(
             observer=self, canvas=self._canvas
         )
 
-        self._start: tuple[int, int] | None = None
-        self._end: tuple[int, int] | None = None
-        self._name: str | None = None
+        self._start: Optional[tuple[int, int]] = None
+        self._end: Optional[tuple[int, int]] = None
+        self._name: Optional[str] = None
         self._metadata: dict[str, str] = {}
+        self._initialise_with(section)
+
+    def _initialise_with(self, section: Optional[Section]) -> None:
+        if template := section:
+            start_coordinate = template.get_coordinates()[0]
+            end_coordinate = template.get_coordinates()[-1]
+            self._start = (start_coordinate.x, start_coordinate.y)
+            self._end = (end_coordinate.x, end_coordinate.y)
+            self._name = template.id
+            self._metadata = template.to_dict()
+
+    def update(self, coordinates: tuple[int, int], event_type: str) -> None:
+        """Receives and reacts to updates issued by the canvas event handler
+
+        Args:
+            coordinates (tuple[int, int]): Coordinates clicked on canvas
+            event_type (str): Event type of canvas click
+        """
+        if self.geometry_builder._start is None and event_type == "left_mousebutton_up":
+            self.geometry_builder._set_start(coordinates)
+        elif self.geometry_builder._start is not None and event_type == "mouse_motion":
+            self.geometry_builder._set_tmp_end(coordinates)
+        elif (
+            self.geometry_builder._start is not None
+            and event_type == "left_mousebutton_up"
+        ):
+            self.geometry_builder._set_end(coordinates)
+            self.detach_from(self._canvas.event_handler)
 
     def set_section_geometry(
         self, start: tuple[int, int], end: tuple[int, int]
@@ -205,14 +212,15 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver):
         """
         self._start = start
         self._end = end
-        self._get_metadata()
+        if ID not in self._metadata:
+            self._get_metadata()
+        self._finish_building()
 
     def _get_metadata(self) -> None:
         toplevel_position = get_widget_position(widget=self._canvas)
         self._metadata = ToplevelSections(
             title="New section", initial_position=toplevel_position
         ).get_metadata()
-        self._finish_building()
 
     def _finish_building(self) -> None:
         if self._start is None or self._end is None:
