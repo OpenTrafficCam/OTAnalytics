@@ -12,9 +12,9 @@ from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.line_section import (
+    CanvasElementDeleter,
     LineSectionBuilder,
     LineSectionGeometryBuilderObserver,
-    LineSectionGeometryDeleter,
     LineSectionGeometryPainter,
 )
 from OTAnalytics.plugin_ui.messagebox import InfoBox
@@ -136,7 +136,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             return
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
-        LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
+        CanvasElementDeleter(canvas=self._canvas).delete(
             tag_or_id=self._selected_section_id
         )
         current_section = None
@@ -245,6 +245,4 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
     def _remove_all_sections_from_canvas(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
-        LineSectionGeometryDeleter(canvas=self._canvas).delete_sections(
-            tag_or_id=LINE_SECTION
-        )
+        CanvasElementDeleter(canvas=self._canvas).delete(tag_or_id=LINE_SECTION)

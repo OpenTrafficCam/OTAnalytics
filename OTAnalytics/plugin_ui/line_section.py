@@ -80,13 +80,12 @@ class LineSectionGeometryUpdater:
         self._canvas.coords(id, x0, y0, x1, y1)
 
 
-class LineSectionGeometryDeleter:
+class CanvasElementDeleter:
     def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def delete_sections(self, tag_or_id: str) -> None:
-        """Deletes all sections from a canvas with a given tag or
-        a specific section with a specific id.
+    def delete(self, tag_or_id: str) -> None:
+        """Deletes all elements from a canvas with a given tag or id.
 
         Args:
             tag (str): Tag given when creating a canvas item (e.g. "line_section")
@@ -104,7 +103,7 @@ class LineSectionGeometryBuilder:
 
         self.line_section_drawer = LineSectionGeometryPainter(canvas=canvas)
         self.line_section_updater = LineSectionGeometryUpdater(canvas=canvas)
-        self.line_section_deleter = LineSectionGeometryDeleter(canvas=canvas)
+        self.line_section_deleter = CanvasElementDeleter(canvas=canvas)
 
         self._temporary_id: str = TEMPORARY_SECTION_ID
         self._start: tuple[int, int] | None = None
@@ -143,7 +142,7 @@ class LineSectionGeometryBuilder:
                 "Both self.start and self.end have to be set to finish building"
             )
         self._observer.finish_building(self._start, self._end)
-        self.line_section_deleter.delete_sections(tag_or_id="temporary_line_section")
+        self.line_section_deleter.delete(tag_or_id="temporary_line_section")
 
 
 class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
