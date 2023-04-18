@@ -1,7 +1,7 @@
 from pathlib import Path
 from tkinter import Listbox
 from tkinter.filedialog import askopenfilename
-from typing import Any
+from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 from plugin_ui.view_model import ViewModel
@@ -96,6 +96,7 @@ class TreeviewSections(AbstractTreeviewSections, SectionListObserver):
         self._define_columns()
         self.introduce_to_viewmodel()
         self._update_sections()
+        self.application.section_state.selected_section.register(self._update_selection)
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)
@@ -123,7 +124,16 @@ class TreeviewSections(AbstractTreeviewSections, SectionListObserver):
                 parent="", index="end", iid=section.id, text="", values=[section.id]
             )
 
+    def _update_selection(self, section_id: Optional[SectionId]) -> None:
+        if section_id:
+            self.selection_set(section_id.id)
+        else:
+            self._deselect_all()
+
     def _deselect_sections(self, event: Any) -> None:
+        self._deselect_all()
+
+    def _deselect_all(self) -> None:
         for item in self.selection():
             self.selection_remove(item)
 
@@ -132,10 +142,10 @@ class TreeviewSections(AbstractTreeviewSections, SectionListObserver):
         if len(selection) == 0:
             line_section_id = None
         elif len(selection) == 1:
-            line_section_id = selection[0]
+            line_section_id = SectionId(selection[0])
         else:
             raise ValueError("Only one item in TreeviewSections shall be selected")
-        self._viewmodel.set_selected_section_id(id=line_section_id)
+        self.application.section_state.selected_section.set(line_section_id)
 
 
 class ListboxSections(Listbox):

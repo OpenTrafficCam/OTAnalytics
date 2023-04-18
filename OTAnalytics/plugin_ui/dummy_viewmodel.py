@@ -1,6 +1,6 @@
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from typing import Iterable
+from typing import Iterable, Optional
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
@@ -46,6 +46,9 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
         self._treeview_sections: AbstractTreeviewSections | None
         self._new_section: dict = {}
         self._selected_section_id: str | None = None
+        self._application.section_state.selected_section.register(
+            self._update_selected_section
+        )
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
@@ -53,7 +56,11 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
     def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:
         self._treeview_sections = treeview
 
-    def set_selected_section_id(self, id: str) -> None:
+    def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
+        current_id = section_id.id if section_id else None
+        self.set_selected_section_id(current_id)
+
+    def set_selected_section_id(self, id: Optional[str]) -> None:
         self._selected_section_id = id
         print(f"New line section selected in treeview: id={id}")
 
