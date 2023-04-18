@@ -142,6 +142,7 @@ class EventBuilder(ABC):
         self.road_user_type: Optional[str] = None
         self.event_type: Optional[EventType] = None
         self.direction_vector: Optional[DirectionVector2D] = None
+        self.event_coordinate: Optional[ImageCoordinate] = None
 
     @abstractmethod
     def create_event(self, detection: Detection) -> Event:
@@ -212,6 +213,15 @@ class EventBuilder(ABC):
             x1=detection_2.x - detection_1.x, x2=detection_2.y - detection_1.y
         )
 
+    def add_event_coordinate(self, x: float, y: float) -> None:
+        """Add event coordinate to the event to be build.
+
+        Args:
+            x (float): the x component coordinate
+            y (float): the y component coordinate
+        """
+        self.event_coordinate = ImageCoordinate(x, y)
+
 
 class SectionEventBuilder(EventBuilder):
     """A builder to build section events."""
@@ -238,6 +248,7 @@ class SectionEventBuilder(EventBuilder):
             IncompleteEventBuilderSetup: if attribute 'section_id' is not set
             IncompleteEventBuilderSetup: if attribute 'event_type' is not set
             IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
+            IncompleteEventBuilderSetup: attribute 'event_coordinate' is not set
 
         Returns:
             Event: the section event
@@ -254,6 +265,9 @@ class SectionEventBuilder(EventBuilder):
         if not self.road_user_type:
             raise IncompleteEventBuilderSetup("attribute 'road_user_type' is not set")
 
+        if not self.event_coordinate:
+            raise IncompleteEventBuilderSetup("attribute 'event_coordinate' is not set")
+
         return Event(
             road_user_id=detection.track_id.id,
             road_user_type=self.road_user_type,
@@ -261,7 +275,7 @@ class SectionEventBuilder(EventBuilder):
             occurrence=detection.occurrence,
             frame_number=detection.frame,
             section_id=self.section_id,
-            event_coordinate=ImageCoordinate(detection.x, detection.y),
+            event_coordinate=self.event_coordinate,
             event_type=self.event_type,
             direction_vector=self.direction_vector,
             video_name=detection.input_file_path.name,
@@ -283,6 +297,7 @@ class SceneEventBuilder(EventBuilder):
         Raises:
             IncompleteEventBuilderSetup: if attribute 'event_type' is not set
             IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
+            IncompleteEventBuilderSetup: attribute 'event_coordinate' is not set
 
         Returns:
             Event: the scene event
@@ -293,6 +308,9 @@ class SceneEventBuilder(EventBuilder):
         if not self.direction_vector:
             raise IncompleteEventBuilderSetup("attribute 'direction_vector' is not set")
 
+        if not self.event_coordinate:
+            raise IncompleteEventBuilderSetup("attribute 'event_coordinate' is not set")
+
         return Event(
             road_user_id=detection.track_id.id,
             road_user_type=detection.classification,
@@ -300,7 +318,7 @@ class SceneEventBuilder(EventBuilder):
             occurrence=detection.occurrence,
             frame_number=detection.frame,
             section_id=None,
-            event_coordinate=ImageCoordinate(detection.x, detection.y),
+            event_coordinate=self.event_coordinate,
             event_type=self.event_type,
             direction_vector=self.direction_vector,
             video_name=detection.input_file_path.name,
