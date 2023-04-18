@@ -131,6 +131,16 @@ class Section(DataclassValidation):
     plugin_data: dict[str, Any]
 
     @abstractmethod
+    def get_coordinates(self) -> list[Coordinate]:
+        """
+        Returns a list of all coordinates of this section.
+
+        Returns:
+            list[Coordinate]: all coordinates of this section
+        """
+        pass
+
+    @abstractmethod
     def to_dict(self) -> dict:
         """
         Convert section into dict to interact with other parts of the system,
@@ -198,6 +208,9 @@ class LineSection(Section):
                 )
             )
 
+    def get_coordinates(self) -> list[Coordinate]:
+        return [self.start, self.end]
+
     def to_dict(self) -> dict:
         """
         Convert section into dict to interact with other parts of the system,
@@ -248,6 +261,9 @@ class Area(Section):
 
         if self.coordinates[0] != self.coordinates[-1]:
             raise ValueError("Coordinates do not define a closed area")
+
+    def get_coordinates(self) -> list[Coordinate]:
+        return self.coordinates.copy()
 
     def to_dict(self) -> dict:
         """
