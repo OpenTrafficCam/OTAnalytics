@@ -13,9 +13,9 @@ from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.line_section import (
     CanvasElementDeleter,
+    CanvasElementPainter,
     LineSectionBuilder,
     LineSectionGeometryBuilderObserver,
-    LineSectionGeometryPainter,
 )
 from OTAnalytics.plugin_ui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
@@ -216,9 +216,9 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
     def _draw_all_sections_on_canvas(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
-        line_section_drawer = LineSectionGeometryPainter(canvas=self._canvas)
+        painter = CanvasElementPainter(canvas=self._canvas)
         for line_section in self._get_sections():
-            line_section_drawer.draw_section(
+            painter.draw(
                 tags=[LINE_SECTION],
                 id=line_section[ID],
                 start=line_section[START],

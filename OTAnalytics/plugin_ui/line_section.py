@@ -28,11 +28,11 @@ class LineSectionGeometryBuilderObserver(ABC):
         raise NotImplementedError
 
 
-class LineSectionGeometryPainter:
+class CanvasElementPainter:
     def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def draw_section(
+    def draw(
         self,
         tags: list[str],
         id: str,
@@ -59,13 +59,11 @@ class LineSectionGeometryPainter:
         )
 
 
-class LineSectionGeometryUpdater:
+class CanvasElementUpdater:
     def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def update_section(
-        self, id: str, start: tuple[int, int], end: tuple[int, int]
-    ) -> None:
+    def update(self, id: str, start: tuple[int, int], end: tuple[int, int]) -> None:
         """Updates the coordinates of a line_section.
         This is a faster alternative to deleting and repainting a line_section.
         Currently used, when line_section is updated very often.
@@ -101,9 +99,9 @@ class LineSectionGeometryBuilder:
     ) -> None:
         self._observer = observer
 
-        self.line_section_drawer = LineSectionGeometryPainter(canvas=canvas)
-        self.line_section_updater = LineSectionGeometryUpdater(canvas=canvas)
-        self.line_section_deleter = CanvasElementDeleter(canvas=canvas)
+        self.painter = CanvasElementPainter(canvas=canvas)
+        self.updater = CanvasElementUpdater(canvas=canvas)
+        self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self._temporary_id: str = TEMPORARY_SECTION_ID
         self._start: tuple[int, int] | None = None
@@ -117,7 +115,7 @@ class LineSectionGeometryBuilder:
         if self._start is None:
             raise ValueError("self.start as to be set before listening to mouse motion")
         if self._tmp_end is None:
-            self.line_section_drawer.draw_section(
+            self.painter.draw(
                 tags=["temporary_line_section"],
                 id=self._temporary_id,
                 start=self._start,
@@ -125,7 +123,7 @@ class LineSectionGeometryBuilder:
                 line_color="red",
             )
         else:
-            self.line_section_updater.update_section(
+            self.updater.update(
                 id=self._temporary_id,
                 start=self._start,
                 end=coordinates,
@@ -142,7 +140,7 @@ class LineSectionGeometryBuilder:
                 "Both self.start and self.end have to be set to finish building"
             )
         self._observer.finish_building(self._start, self._end)
-        self.line_section_deleter.delete(tag_or_id="temporary_line_section")
+        self.deleter.delete(tag_or_id="temporary_line_section")
 
 
 class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
