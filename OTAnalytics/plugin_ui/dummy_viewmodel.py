@@ -139,9 +139,7 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             )
         LineSectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
 
-    def set_section_geometry(
-        self, start: tuple[int, int], end: tuple[int, int]
-    ) -> None:
+    def finish_building(self, start: tuple[int, int], end: tuple[int, int]) -> None:
         if self._selected_section_id:
             section_id = SectionId(self._selected_section_id)
             if selected_section := self._application.get_section_for(section_id):

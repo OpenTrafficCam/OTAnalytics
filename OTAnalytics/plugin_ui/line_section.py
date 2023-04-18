@@ -11,8 +11,6 @@ from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.view_model import ViewModel
 
-# from OTAnalytics.plugin_ui.state import StateChanger
-
 TEMPORARY_SECTION_ID: str = "temporary_section"
 LINE_WIDTH: int = 4
 LINE_COLOR: str = "lightgreen"
@@ -23,9 +21,7 @@ LINE_COLOR: str = "lightgreen"
 
 class LineSectionGeometryBuilderObserver(ABC):
     @abstractmethod
-    def set_section_geometry(
-        self, start: tuple[int, int], end: tuple[int, int]
-    ) -> None:
+    def finish_building(self, start: tuple[int, int], end: tuple[int, int]) -> None:
         """
         Receives line section start and end coordinates from LineSectionGeometryBuilder.
         """
@@ -103,11 +99,8 @@ class LineSectionGeometryBuilder:
         self,
         observer: LineSectionGeometryBuilderObserver,
         canvas: AbstractCanvas,
-        # frames_to_disable: list[CTkFrame],
     ) -> None:
         self._observer = observer
-        self._canvas = canvas
-        # self._frames_to_disable = frames_to_disable
 
         self.line_section_drawer = LineSectionGeometryPainter(canvas=canvas)
         self.line_section_updater = LineSectionGeometryUpdater(canvas=canvas)
@@ -149,7 +142,7 @@ class LineSectionGeometryBuilder:
             raise ValueError(
                 "Both self.start and self.end have to be set to finish building"
             )
-        self._observer.set_section_geometry(self._start, self._end)
+        self._observer.finish_building(self._start, self._end)
         self.line_section_deleter.delete_sections(tag_or_id="temporary_line_section")
 
 
@@ -200,9 +193,7 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
             self.geometry_builder._set_end(coordinates)
             self.detach_from(self._canvas.event_handler)
 
-    def set_section_geometry(
-        self, start: tuple[int, int], end: tuple[int, int]
-    ) -> None:
+    def finish_building(self, start: tuple[int, int], end: tuple[int, int]) -> None:
         """Sets a line section geomatry from the GeometryBuilder and triggers
         further tasks.
 
