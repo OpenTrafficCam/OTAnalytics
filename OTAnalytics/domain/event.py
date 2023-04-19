@@ -195,22 +195,13 @@ class EventBuilder(ABC):
         """
         self.event_type = event_type
 
-    def add_direction_vector(
-        self, detection_1: Detection, detection_2: Detection
-    ) -> None:
-        """Build direction vector from two detections and add to the event to be build.
-
-        Let x1 be `detection_1.x` and x2 be `detection_1.y` be a coordinate x = (x1,x2).
-        Let y1 be `detection_2.x` and y2 be `detection_2.y` be a coordinate y = (x1,x2).
-        The direction vector v is calculated by v = y-x.
+    def add_direction_vector(self, vector: DirectionVector2D) -> None:
+        """Add direction vector to add to the event to be build.
 
         Args:
-            detection_1 (Detection): the first detection
-            detection_2 (Detection): the second detection
+            vector (DirectionVector2D): the direction vector to be build
         """
-        self.direction_vector = DirectionVector2D(
-            x1=detection_2.x - detection_1.x, x2=detection_2.y - detection_1.y
-        )
+        self.direction_vector = vector
 
 
 class SectionEventBuilder(EventBuilder):

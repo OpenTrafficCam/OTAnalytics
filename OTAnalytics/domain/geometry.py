@@ -151,3 +151,24 @@ class RelativeOffsetCoordinate(Coordinate):
                     f"but is {self.y}"
                 )
             )
+
+
+def calculate_direction_vector(
+    x1: float, x2: float, y1: float, y2: float
+) -> DirectionVector2D:
+    """Calculate direction vector from coordinates x and y.
+
+    Let x = (x1, x2)^T and y = (y1, y2)^T.
+
+    Calculate direction vector with: direction_vector = y - x.
+
+    Args:
+        x1 (float): the first component of coordinate x
+        x2 (float): the second component of coordinate x
+        y1 (float): the first component of coordinate y
+        y2 (float): the second component of coordinate y
+
+    Returns:
+        DirectionVector2D: the two dimensional direction vector
+    """
+    return DirectionVector2D(x1=y1 - x1, x2=y2 - x2)

@@ -277,6 +277,10 @@ class EventBuilder:
         self.event_coordinate_x = x
         self.event_coordinate_y = y
 
+    def add_direction_vector(self, x: float, y: float) -> None:
+        self.direction_vector_x = x
+        self.direction_vector_y = y
+
 
 @pytest.fixture(scope="module")
 def test_data_tmp_dir() -> YieldFixture[Path]:
