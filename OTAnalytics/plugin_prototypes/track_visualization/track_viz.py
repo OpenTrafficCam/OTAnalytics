@@ -82,8 +82,10 @@ class MatplotlibTrackPlotter(TrackPlotter):
             filter_classes, num_min_frames, start_time, end_time, track_df
         )
 
-        figure = self._create_figure()
-        axes = self._create_axes(width, height, figure)
+        image_width = width / DPI
+        image_height = height / DPI
+        figure = self._create_figure(width=image_width, height=image_height)
+        axes = self._create_axes(image_width, image_height, figure)
         self._plot_tracks(track_df, alpha, axes)
         if start_end:
             self._plot_start_end_points(track_df, axes)
@@ -146,7 +148,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
             track_df[track.TRACK_ID].isin(self._min_frames(track_df, num_min_frames))
         ]
 
-    def _create_axes(self, width: int, height: int, figure: Figure) -> Axes:
+    def _create_axes(self, width: float, height: float, figure: Figure) -> Axes:
         """
         Create axes to plot on.
 
@@ -160,16 +162,14 @@ class MatplotlibTrackPlotter(TrackPlotter):
         """
         # The first items are for padding and the second items are for the axes.
         # sizes are in inch.
-        image_width = width / DPI
-        image_height = height / DPI
-        h = [Size.Fixed(0.0), Size.Fixed(image_width)]
-        v = [Size.Fixed(0.0), Size.Fixed(image_height)]
+        horizontal = [Size.Fixed(0.0), Size.Fixed(width)]
+        vertical = [Size.Fixed(0.0), Size.Fixed(height)]
 
         divider = Divider(
             fig=figure,
             pos=(0, 0, 1, 1),
-            horizontal=h,
-            vertical=v,
+            horizontal=horizontal,
+            vertical=vertical,
             aspect=False,
         )
         # The width and height of the rectangle are ignored.
@@ -197,14 +197,14 @@ class MatplotlibTrackPlotter(TrackPlotter):
         axes.patch.set_alpha(0.0)
         axes.invert_yaxis()
 
-    def _create_figure(self) -> Figure:
+    def _create_figure(self, width: float, height: float) -> Figure:
         """
         Create figure to be plotted on.
 
         Returns:
             Figure: figure to be plotted on
         """
-        figure = Figure(figsize=(10, 10), dpi=DPI)
+        figure = Figure(figsize=(width, height), dpi=DPI)
         figure.patch.set_alpha(0.0)
         return figure
 
