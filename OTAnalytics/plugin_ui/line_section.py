@@ -3,8 +3,9 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from domain.section import ID, Section
-
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.section import ID, LineSection, Section, SectionId
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.helpers import get_widget_position
@@ -21,7 +22,12 @@ LINE_COLOR: str = "lightgreen"
 
 class LineSectionGeometryBuilderObserver(ABC):
     @abstractmethod
-    def finish_building(self, start: tuple[int, int], end: tuple[int, int]) -> None:
+    def finish_building(
+        self,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        coordinates: list[tuple[int, int]],
+    ) -> None:
         """
         Receives line section start and end coordinates from LineSectionGeometryBuilder.
         """
@@ -107,9 +113,11 @@ class LineSectionGeometryBuilder:
         self._start: tuple[int, int] | None = None
         self._tmp_end: tuple[int, int] | None = None
         self._end: tuple[int, int] | None = None
+        self._coordinates: list[tuple[int, int]] = []
 
-    def _set_start(self, coordinates: tuple[int, int]) -> None:
-        self._start = coordinates
+    def _set_start(self, coordinate: tuple[int, int]) -> None:
+        self._start = coordinate
+        self._coordinates.append(coordinate)
 
     def _set_tmp_end(self, coordinates: tuple[int, int]) -> None:
         if self._start is None:
@@ -130,8 +138,9 @@ class LineSectionGeometryBuilder:
             )
         self._tmp_end = coordinates
 
-    def _set_end(self, coordinates: tuple[int, int]) -> None:
-        self._end = coordinates
+    def _set_end(self, coordinate: tuple[int, int]) -> None:
+        self._end = coordinate
+        self._coordinates.append(coordinate)
         self._finish_building()
 
     def _finish_building(self) -> None:
@@ -139,7 +148,7 @@ class LineSectionGeometryBuilder:
             raise ValueError(
                 "Both self.start and self.end have to be set to finish building"
             )
-        self._observer.finish_building(self._start, self._end)
+        self._observer.finish_building(self._start, self._end, self._coordinates)
         self.deleter.delete(tag_or_id="temporary_line_section")
 
 
@@ -167,9 +176,9 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
         if template := section:
             start_coordinate = template.get_coordinates()[0]
             end_coordinate = template.get_coordinates()[-1]
-            self._start = (start_coordinate.x, start_coordinate.y)
-            self._end = (end_coordinate.x, end_coordinate.y)
-            self._name = template.id
+            self._start = (int(start_coordinate.x), int(start_coordinate.y))
+            self._end = (int(end_coordinate.x), int(end_coordinate.y))
+            self._name = template.id.id
             self._metadata = template.to_dict()
 
     def update(self, coordinates: tuple[int, int], event_type: str) -> None:
@@ -190,7 +199,12 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
             self.geometry_builder._set_end(coordinates)
             self.detach_from(self._canvas.event_handler)
 
-    def finish_building(self, start: tuple[int, int], end: tuple[int, int]) -> None:
+    def finish_building(
+        self,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        coordinates: list[tuple[int, int]],
+    ) -> None:
         """Sets a line section geomatry from the GeometryBuilder and triggers
         further tasks.
 
@@ -200,9 +214,10 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
         """
         self._start = start
         self._end = end
+        self._coordinates = coordinates
         if ID not in self._metadata:
             self._get_metadata()
-        self._finish_building()
+        self._create_section()
 
     def _get_metadata(self) -> None:
         toplevel_position = get_widget_position(widget=self._canvas)
@@ -210,11 +225,19 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
             title="New section", initial_position=toplevel_position
         ).get_metadata()
 
-    def _finish_building(self) -> None:
+    def _create_section(self) -> None:
         if self._start is None or self._end is None:
             raise ValueError("Start and end of line_section are not defined")
         if self._metadata == {}:
             raise ValueError("Metadata of line_section are not defined")
-        self._viewmodel.set_new_section(
-            metadata=self._metadata, start=self._start, end=self._end
+        name = self._metadata[ID]
+        line_section = LineSection(
+            id=SectionId(name),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            start=Coordinate(self._start[0], self._start[1]),
+            end=Coordinate(self._end[0], self._end[1]),
         )
+        self._viewmodel.set_new_section(line_section)

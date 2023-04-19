@@ -5,9 +5,8 @@ from typing import Iterable, Optional
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
-from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import END, ID, START, LineSection, Section, SectionId
-from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
@@ -15,7 +14,6 @@ from OTAnalytics.plugin_ui.line_section import (
     CanvasElementDeleter,
     CanvasElementPainter,
     LineSectionBuilder,
-    LineSectionGeometryBuilderObserver,
 )
 from OTAnalytics.plugin_ui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
@@ -34,7 +32,7 @@ class MissingInjectedInstanceError(Exception):
         super().__init__(message)
 
 
-class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
+class DummyViewModel(ViewModel):
     def __init__(
         self,
         application: OTAnalyticsApplication,
@@ -110,24 +108,12 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             raise MissingInjectedInstanceError(injected_object="canvas")
         LineSectionBuilder(viewmodel=self, canvas=self._canvas)
 
-    def set_new_section(
-        self,
-        start: tuple[int, int],
-        end: tuple[int, int],
-        metadata: dict[str, str],
-    ) -> None:
-        name = metadata[ID]
-        line_section = LineSection(
-            id=SectionId(name),
-            relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
-            },
-            plugin_data={},
-            start=Coordinate(start[0], start[1]),
-            end=Coordinate(end[0], end[1]),
+    def set_new_section(self, section: Section) -> None:
+        self._application.add_section(section)
+        print(
+            f"New line_section created with name={section.id},"
+            + f"coordinates={section.get_coordinates()}"
         )
-        self._application.add_section(line_section)
-        print(f"New line_section created with name={name}, start={start} and end={end}")
 
         self.refresh_sections_on_gui()
 
@@ -146,7 +132,12 @@ class DummyViewModel(ViewModel, LineSectionGeometryBuilderObserver):
             )
         LineSectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
 
-    def finish_building(self, start: tuple[int, int], end: tuple[int, int]) -> None:
+    def __finish_building(
+        self,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        coordinates: list[tuple[int, int]],
+    ) -> None:
         if self._selected_section_id:
             section_id = SectionId(self._selected_section_id)
             if selected_section := self._application.get_section_for(section_id):

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from domain.section import Section
+
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 
 
@@ -33,12 +35,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_new_section(
-        self,
-        start: tuple[int, int],
-        end: tuple[int, int],
-        metadata: dict[str, str],
-    ) -> None:
+    def set_new_section(self, section: Section) -> None:
         raise NotImplementedError
 
     @abstractmethod
