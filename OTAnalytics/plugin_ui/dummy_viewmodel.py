@@ -13,7 +13,7 @@ from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.line_section import (
     CanvasElementDeleter,
     CanvasElementPainter,
-    LineSectionBuilder,
+    SectionBuilder,
 )
 from OTAnalytics.plugin_ui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
@@ -106,7 +106,7 @@ class DummyViewModel(ViewModel):
     def add_section(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
-        LineSectionBuilder(viewmodel=self, canvas=self._canvas)
+        SectionBuilder(viewmodel=self, canvas=self._canvas)
 
     def set_new_section(self, section: Section) -> None:
         self._application.add_section(section)
@@ -130,7 +130,7 @@ class DummyViewModel(ViewModel):
             current_section = self._application.get_section_for(
                 SectionId(self._selected_section_id)
             )
-        LineSectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
+        SectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
 
     def __finish_building(
         self,
