@@ -6,7 +6,15 @@ import pytest
 from numpy import array, int32
 from PIL import Image
 
-from OTAnalytics.application.datastore import Datastore, Video, VideoReader
+from OTAnalytics.application.datastore import (
+    Datastore,
+    EventListParser,
+    SectionParser,
+    TrackParser,
+    Video,
+    VideoParser,
+    VideoReader,
+)
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 
 
@@ -47,18 +55,39 @@ class TestVideo:
         )
 
 
+@pytest.fixture
+def track_parser() -> Mock:
+    return Mock(spec=TrackParser)
+
+
+@pytest.fixture
+def section_parser() -> Mock:
+    return Mock(spec=SectionParser)
+
+
+@pytest.fixture
+def video_parser() -> Mock:
+    return Mock(spec=VideoParser)
+
+
+@pytest.fixture
+def event_list_parser() -> Mock:
+    return Mock(spec=EventListParser)
+
+
 class TestDatastore:
-    def test_load_track_file(self) -> None:
-        video_reader = Mock()
+    def test_load_track_file(
+        self,
+        track_parser: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        event_list_parser: Mock,
+    ) -> None:
         some_track = Mock()
         some_track_id = TrackId(1)
         some_track.id = some_track_id
-        some_video = Video(video_reader=video_reader, path=Path(""))
-        track_parser = Mock()
+        some_video = Video(video_reader=Mock(), path=Path(""))
         track_parser.parse.return_value = [some_track]
-        section_parser = Mock()
-        event_list_parser = Mock()
-        video_parser = Mock()
         video_parser.parse.return_value = [some_track_id], [some_video]
         store = Datastore(
             track_repository=TrackRepository(),
@@ -76,12 +105,14 @@ class TestDatastore:
         assert some_track in store._track_repository.get_all()
         assert some_video == store._video_repository.get_video_for(some_track.id)
 
-    def test_save_section_file(self) -> None:
-        track_parser = Mock()
+    def test_save_section_file(
+        self,
+        track_parser: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        event_list_parser: Mock,
+    ) -> None:
         track_parser.parse.return_value = []
-        section_parser = Mock()
-        event_list_parser = Mock()
-        video_parser = Mock()
         video_parser.parse.return_value = []
         store = Datastore(
             track_repository=TrackRepository(),
@@ -95,12 +126,14 @@ class TestDatastore:
 
         section_parser.serialize.assert_called()
 
-    def test_save_event_list_file(self) -> None:
-        track_parser = Mock()
+    def test_save_event_list_file(
+        self,
+        track_parser: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        event_list_parser: Mock,
+    ) -> None:
         track_parser.parse.return_value = []
-        section_parser = Mock()
-        event_list_parser = Mock()
-        video_parser = Mock()
         video_parser.parse.return_value = []
         store = Datastore(
             track_repository=TrackRepository(),
