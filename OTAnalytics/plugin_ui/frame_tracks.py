@@ -1,5 +1,5 @@
 from pathlib import Path
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilenames
 from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
@@ -30,8 +30,9 @@ class FrameTracks(CTkFrame):
         )
 
     def _load_tracks_in_file(self) -> None:
-        track_file = askopenfilename(
-            title="Load tracks file", filetypes=[("tracks file", "*.ottrk")]
+        track_files = askopenfilenames(
+            title="Load track files", filetypes=[("tracks file", "*.ottrk")]
         )
-        print(f"Tracks file to load: {track_file}")
-        self.application.add_tracks_of_file(track_file=Path(track_file))
+        print(f"Tracks files to load: {track_files}")
+        track_paths = [Path(file) for file in track_files]
+        self.application.add_tracks_of_files(track_files=track_paths)

@@ -105,6 +105,48 @@ class TestDatastore:
         assert some_track in store._track_repository.get_all()
         assert some_video == store._video_repository.get_video_for(some_track.id)
 
+    def test_load_track_files(
+        self,
+        track_parser: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        event_list_parser: Mock,
+    ) -> None:
+        some_track = Mock()
+        some_track_id = TrackId(1)
+        some_track.id = some_track_id
+        some_video = Video(video_reader=Mock(), path=Path(""))
+        other_track = Mock()
+        other_track_id = TrackId(2)
+        other_track.id = other_track_id
+        other_video = Video(video_reader=Mock(), path=Path(""))
+        track_parser.parse.side_effect = [[some_track], [other_track]]
+        video_parser.parse.side_effect = [
+            [[some_track_id], [some_video]],
+            [[other_track_id], [other_video]],
+        ]
+        store = Datastore(
+            track_repository=TrackRepository(),
+            track_parser=track_parser,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            video_parser=video_parser,
+        )
+        some_file = Path("some.file.ottrk")
+        other_file = Path("other.file.ottrk")
+
+        store.load_track_files([some_file, other_file])
+
+        assert some_track in store._track_repository.get_all()
+        assert other_track in store._track_repository.get_all()
+        assert some_video == store._video_repository.get_video_for(some_track_id)
+        assert other_video == store._video_repository.get_video_for(other_track_id)
+
+        track_parser.parse.assert_any_call(some_file)
+        track_parser.parse.assert_any_call(other_file)
+        video_parser.parse.assert_any_call(some_file, [some_track_id])
+        video_parser.parse.assert_any_call(other_file, [other_track_id])
+
     def test_save_section_file(
         self,
         track_parser: Mock,

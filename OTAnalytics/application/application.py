@@ -50,6 +50,15 @@ class OTAnalyticsApplication:
         """
         self._datastore.load_track_file(file=track_file)
 
+    def add_tracks_of_files(self, track_files: list[Path]) -> None:
+        """
+        Load a multiple track files.
+
+        Args:
+            track_files (list[Path]): files in ottrk format
+        """
+        self._datastore.load_track_files(files=track_files)
+
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""
         self._datastore.delete_all_tracks()
