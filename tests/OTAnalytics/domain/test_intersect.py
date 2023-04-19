@@ -126,7 +126,7 @@ class TestIntersector:
 
 
 class TestIntersectBySplittingTrackLine:
-    def test_intersect(self, detection: Detection, track: Track) -> None:
+    def test_intersect(self, track: Track) -> None:
         # Setup mock intersection implementation
         mock_implementation = Mock(spec=IntersectImplementation)
         intersection_result: list[Line] = [
@@ -139,7 +139,6 @@ class TestIntersectBySplittingTrackLine:
         event_builder = SectionEventBuilder()
         event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
-        event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
             id=SectionId("N"),
@@ -166,7 +165,7 @@ class TestIntersectBySplittingTrackLine:
         assert result_event.frame_number == expected_detection.frame
         assert result_event.section_id == line_section.id
         assert result_event.event_type == EventType.SECTION_ENTER
-        assert result_event.direction_vector.x1 == 0
+        assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
         assert result_event.video_name == expected_detection.input_file_path.name
 
@@ -188,7 +187,6 @@ class TestIntersectBySmallTrackComponents:
         event_builder = SectionEventBuilder()
         event_builder.add_section_id(SectionId("N"))
         event_builder.add_event_type(EventType.SECTION_ENTER)
-        event_builder.add_direction_vector(detection, detection)
 
         line_section = LineSection(
             id=SectionId("N"),
@@ -214,7 +212,7 @@ class TestIntersectBySmallTrackComponents:
         assert result_event.frame_number == expected_detection.frame
         assert result_event.section_id == line_section.id
         assert result_event.event_type == EventType.SECTION_ENTER
-        assert result_event.direction_vector.x1 == 0
+        assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
         assert result_event.video_name == expected_detection.input_file_path.name
 
@@ -241,7 +239,6 @@ class TestIntersectAreaByTrackPoints:
     def test_intersect_track_starts_outside_section(
         self,
         area: Area,
-        detection: Detection,
         track_builder: TrackBuilder,
         event_builder: EventBuilder,
     ) -> None:
@@ -278,7 +275,6 @@ class TestIntersectAreaByTrackPoints:
 
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
-        section_event_builder.add_direction_vector(detection, detection)
 
         intersector = IntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
@@ -287,12 +283,14 @@ class TestIntersectAreaByTrackPoints:
         event_builder.add_frame_number(2)
         event_builder.add_event_coordinate(1.5, 1.5)
         event_builder.add_event_type("section-enter")
+        event_builder.add_direction_vector(1, 0)
         event_builder.append_section_event()
 
         event_builder.add_microsecond(2)
         event_builder.add_frame_number(3)
         event_builder.add_event_coordinate(3, 1.5)
         event_builder.add_event_type("section-leave")
+        event_builder.add_direction_vector(1.5, 0)
         event_builder.append_section_event()
         expected_events = event_builder.build_events()
         assert result_events == expected_events
@@ -300,7 +298,6 @@ class TestIntersectAreaByTrackPoints:
     def test_intersect_track_starts_inside_section(
         self,
         area: Area,
-        detection: Detection,
         track_builder: TrackBuilder,
         event_builder: EventBuilder,
     ) -> None:
@@ -339,7 +336,6 @@ class TestIntersectAreaByTrackPoints:
 
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
-        section_event_builder.add_direction_vector(detection, detection)
 
         intersector = IntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
@@ -348,12 +344,14 @@ class TestIntersectAreaByTrackPoints:
         event_builder.add_frame_number(1)
         event_builder.add_event_coordinate(1.5, 1.5)
         event_builder.add_event_type("section-enter")
+        event_builder.add_direction_vector(1.5, 0)
         event_builder.append_section_event()
 
         event_builder.add_microsecond(2)
         event_builder.add_frame_number(2)
         event_builder.add_event_coordinate(3, 1.5)
         event_builder.add_event_type("section-leave")
+        event_builder.add_direction_vector(1.5, 0)
         event_builder.append_section_event()
 
         expected_events = event_builder.build_events()
@@ -363,7 +361,6 @@ class TestIntersectAreaByTrackPoints:
     def test_intersect_track_is_inside_section(
         self,
         area: Area,
-        detection: Detection,
         track_builder: TrackBuilder,
         event_builder: EventBuilder,
     ) -> None:
@@ -401,7 +398,6 @@ class TestIntersectAreaByTrackPoints:
 
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
-        section_event_builder.add_direction_vector(detection, detection)
 
         intersector = IntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
@@ -410,13 +406,15 @@ class TestIntersectAreaByTrackPoints:
         event_builder.add_frame_number(1)
         event_builder.add_event_coordinate(1.5, 1.5)
         event_builder.add_event_type("section-enter")
+        # 1.7 - 1.5 != 0.2 but 0.19999999999999996 due to FP precision error
+        event_builder.add_direction_vector(1.7 - 1.5, 1.5 - 1.5)
         event_builder.append_section_event()
         expected_events = event_builder.build_events()
 
         assert result_events == expected_events
 
     def test_intersect_track_starts_outside_and_stays_inside_section(
-        self, area: Area, detection: Detection, track_builder: TrackBuilder
+        self, area: Area, track_builder: TrackBuilder
     ) -> None:
         mock_implementation = Mock()
         mock_implementation.are_coordinates_within_polygon.return_value = [False, True]
@@ -447,7 +445,6 @@ class TestIntersectAreaByTrackPoints:
 
         event_builder = SectionEventBuilder()
         event_builder.add_section_id(area.id)
-        event_builder.add_direction_vector(detection, detection)
 
         intersector = IntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, event_builder)
@@ -461,7 +458,7 @@ class TestIntersectAreaByTrackPoints:
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(1.5, 1.5),
                 event_type=EventType.SECTION_ENTER,
-                direction_vector=DirectionVector2D(0, 0),
+                direction_vector=DirectionVector2D(1, 0),
                 video_name="myhostname_file.otdet",
             )
         ]
@@ -470,7 +467,6 @@ class TestIntersectAreaByTrackPoints:
     def test_intersect_track_starts_outside_section_with_multiple_intersections(
         self,
         area: Area,
-        detection: Detection,
         track_builder: TrackBuilder,
         event_builder: EventBuilder,
     ) -> None:
@@ -510,7 +506,6 @@ class TestIntersectAreaByTrackPoints:
 
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
-        section_event_builder.add_direction_vector(detection, detection)
 
         intersector = IntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
@@ -519,24 +514,28 @@ class TestIntersectAreaByTrackPoints:
         event_builder.add_frame_number(2)
         event_builder.add_event_coordinate(1.5, 1.5)
         event_builder.add_event_type("section-enter")
+        event_builder.add_direction_vector(1, 0)
         event_builder.append_section_event()
 
         event_builder.add_microsecond(2)
         event_builder.add_frame_number(3)
         event_builder.add_event_coordinate(3, 1.5)
         event_builder.add_event_type("section-leave")
+        event_builder.add_direction_vector(1.5, 0)
         event_builder.append_section_event()
 
         event_builder.add_microsecond(3)
         event_builder.add_frame_number(4)
         event_builder.add_event_coordinate(1.5, 1.5)
         event_builder.add_event_type("section-enter")
+        event_builder.add_direction_vector(-1.5, 0)
         event_builder.append_section_event()
 
         event_builder.add_microsecond(4)
         event_builder.add_frame_number(5)
         event_builder.add_event_coordinate(3, 1.5)
         event_builder.add_event_type("section-leave")
+        event_builder.add_direction_vector(1.5, 0)
         event_builder.append_section_event()
 
         expected_events = event_builder.build_events()
@@ -546,7 +545,6 @@ class TestIntersectAreaByTrackPoints:
     def test_intersect_track_starts_inside_section_with_multiple_intersections(
         self,
         area: Area,
-        detection: Detection,
         track_builder: TrackBuilder,
         event_builder: EventBuilder,
     ) -> None:
@@ -587,7 +585,6 @@ class TestIntersectAreaByTrackPoints:
 
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
-        section_event_builder.add_direction_vector(detection, detection)
 
         intersector = IntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
@@ -596,24 +593,28 @@ class TestIntersectAreaByTrackPoints:
         event_builder.add_frame_number(2)
         event_builder.add_event_coordinate(1.5, 1.5)
         event_builder.add_event_type("section-enter")
+        event_builder.add_direction_vector(1.5, 0)
         event_builder.append_section_event()
 
         event_builder.add_microsecond(2)
         event_builder.add_frame_number(3)
         event_builder.add_event_coordinate(3, 1.5)
         event_builder.add_event_type("section-leave")
+        event_builder.add_direction_vector(1.5, 0)
         event_builder.append_section_event()
 
         event_builder.add_microsecond(3)
         event_builder.add_frame_number(4)
         event_builder.add_event_coordinate(1.5, 1.5)
         event_builder.add_event_type("section-enter")
+        event_builder.add_direction_vector(-1.5, 0)
         event_builder.append_section_event()
 
         event_builder.add_microsecond(4)
         event_builder.add_frame_number(5)
         event_builder.add_event_coordinate(3, 1.5)
         event_builder.add_event_type("section-leave")
+        event_builder.add_direction_vector(1.5, 0)
         event_builder.append_section_event()
 
         expected_events = event_builder.build_events()
