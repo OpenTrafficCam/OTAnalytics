@@ -401,7 +401,7 @@ class IntersectAreaByTrackPoints(AreaIntersector):
                 )
             )
             event_builder.add_event_coordinate(
-                track_coordinates[0].x, track_coordinates[0].y
+                first_detection_coordinate.x, first_detection_coordinate.y
             )
             event = event_builder.create_event(first_detection)
             events.append(event)
@@ -421,11 +421,6 @@ class IntersectAreaByTrackPoints(AreaIntersector):
                 self._calculate_direction_vector(
                     prev_detection_coordinate, current_detection_coordinate
                 )
-            )
-
-            current_coordinate = track_coordinates[current_index]
-            event_builder.add_event_coordinate(
-                current_coordinate.x, current_coordinate.y
             )
 
             current_coordinate = track_coordinates[current_index]

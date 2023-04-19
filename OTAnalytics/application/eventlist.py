@@ -88,7 +88,6 @@ class SceneActionDetector:
         Returns:
             list[Event]: the enter scene event
         """
-        first_detection = track.detections[0]
         self._event_builder.add_event_type(EventType.ENTER_SCENE)
         first_detection = track.detections[0]
         next_detection = track.detections[1]
