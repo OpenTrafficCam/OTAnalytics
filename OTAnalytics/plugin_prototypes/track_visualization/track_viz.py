@@ -18,6 +18,13 @@ from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
 ENCODING = "UTF-8"
 DPI = 100
 
+CLASS_CAR = "car"
+CLASS_MOTORCYCLE = "motorcycle"
+CLASS_PERSON = "person"
+CLASS_TRUCK = "truck"
+CLASS_BICYCLE = "bicycle"
+CLASS_TRAIN = "train"
+
 
 class MatplotlibTrackPlotter(TrackPlotter):
     """
@@ -31,12 +38,12 @@ class MatplotlibTrackPlotter(TrackPlotter):
         width: int,
         height: int,
         filter_classes: Iterable[str] = (
-            "car",
-            "motorcycle",
-            "person",
-            "truck",
-            "bicycle",
-            "train",
+            CLASS_CAR,
+            CLASS_MOTORCYCLE,
+            CLASS_PERSON,
+            CLASS_TRUCK,
+            CLASS_BICYCLE,
+            CLASS_TRAIN,
         ),
         num_min_frames: int = 30,
         start_time: str = "",
@@ -210,6 +217,22 @@ class MatplotlibTrackPlotter(TrackPlotter):
             alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
+        color_palette = {
+            CLASS_CAR: "blue",
+            CLASS_MOTORCYCLE: "skyblue",
+            CLASS_PERSON: "salmon",
+            CLASS_TRUCK: "purple",
+            CLASS_BICYCLE: "lime",
+            CLASS_TRAIN: "gold",
+        }
+        class_order = [
+            CLASS_CAR,
+            CLASS_TRUCK,
+            CLASS_MOTORCYCLE,
+            CLASS_PERSON,
+            CLASS_BICYCLE,
+            CLASS_TRAIN,
+        ]
         seaborn.lineplot(
             x="x",
             y="y",
@@ -221,6 +244,8 @@ class MatplotlibTrackPlotter(TrackPlotter):
             sort=False,
             alpha=alpha,
             ax=axes,
+            palette=color_palette,
+            hue_order=class_order,
         )
 
     def _plot_start_end_points(self, track_df: DataFrame, axes: Axes) -> None:
