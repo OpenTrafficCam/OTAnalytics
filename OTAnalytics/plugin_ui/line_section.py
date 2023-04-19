@@ -24,8 +24,6 @@ class LineSectionGeometryBuilderObserver(ABC):
     @abstractmethod
     def finish_building(
         self,
-        start: tuple[int, int],
-        end: tuple[int, int],
         coordinates: list[tuple[int, int]],
     ) -> None:
         """
@@ -148,8 +146,12 @@ class LineSectionGeometryBuilder:
             raise ValueError(
                 "Both self.start and self.end have to be set to finish building"
             )
-        self._observer.finish_building(self._start, self._end, self._coordinates)
+        self._observer.finish_building(self._coordinates)
         self.deleter.delete(tag_or_id="temporary_line_section")
+
+
+class MissingCoordinate(Exception):
+    pass
 
 
 class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
@@ -165,23 +167,21 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
         self.geometry_builder = LineSectionGeometryBuilder(
             observer=self, canvas=self._canvas
         )
-
-        self._start: Optional[tuple[int, int]] = None
-        self._end: Optional[tuple[int, int]] = None
         self._name: Optional[str] = None
+        self._coordinates: list[tuple[int, int]] = []
         self._metadata: dict[str, str] = {}
         self._initialise_with(section)
 
     def _initialise_with(self, section: Optional[Section]) -> None:
         if template := section:
-            start_coordinate = template.get_coordinates()[0]
-            end_coordinate = template.get_coordinates()[-1]
-            self._start = (int(start_coordinate.x), int(start_coordinate.y))
-            self._end = (int(end_coordinate.x), int(end_coordinate.y))
+            self._coordinates = [
+                (int(coordinate.x), int(coordinate.y))
+                for coordinate in template.get_coordinates()
+            ]
             self._name = template.id.id
             self._metadata = template.to_dict()
 
-    def update(self, coordinates: tuple[int, int], event_type: str) -> None:
+    def update(self, coordinate: tuple[int, int], event_type: str) -> None:
         """Receives and reacts to updates issued by the canvas event handler
 
         Args:
@@ -189,20 +189,18 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
             event_type (str): Event type of canvas click
         """
         if self.geometry_builder._start is None and event_type == "left_mousebutton_up":
-            self.geometry_builder._set_start(coordinates)
+            self.geometry_builder._set_start(coordinate)
         elif self.geometry_builder._start is not None and event_type == "mouse_motion":
-            self.geometry_builder._set_tmp_end(coordinates)
+            self.geometry_builder._set_tmp_end(coordinate)
         elif (
             self.geometry_builder._start is not None
             and event_type == "left_mousebutton_up"
         ):
-            self.geometry_builder._set_end(coordinates)
+            self.geometry_builder._set_end(coordinate)
             self.detach_from(self._canvas.event_handler)
 
     def finish_building(
         self,
-        start: tuple[int, int],
-        end: tuple[int, int],
         coordinates: list[tuple[int, int]],
     ) -> None:
         """Sets a line section geomatry from the GeometryBuilder and triggers
@@ -212,8 +210,6 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
             start (tuple[int, int]): Tuple of the sections start coordinates
             end (tuple[int, int]): Tuple of the sections end coordinates
         """
-        self._start = start
-        self._end = end
         self._coordinates = coordinates
         if ID not in self._metadata:
             self._get_metadata()
@@ -226,7 +222,7 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
         ).get_metadata()
 
     def _create_section(self) -> None:
-        if self._start is None or self._end is None:
+        if self._start() is None or self._end() is None:
             raise ValueError("Start and end of line_section are not defined")
         if self._metadata == {}:
             raise ValueError("Metadata of line_section are not defined")
@@ -237,7 +233,17 @@ class LineSectionBuilder(LineSectionGeometryBuilderObserver, CanvasObserver):
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(self._start[0], self._start[1]),
-            end=Coordinate(self._end[0], self._end[1]),
+            start=Coordinate(self._start()[0], self._start()[1]),
+            end=Coordinate(self._end()[0], self._end()[1]),
         )
         self._viewmodel.set_new_section(line_section)
+
+    def _start(self) -> tuple[int, int]:
+        if len(self._coordinates) > 0:
+            return self._coordinates[0]
+        raise MissingCoordinate("Start coordinate missing")
+
+    def _end(self) -> tuple[int, int]:
+        if len(self._coordinates) > 1:
+            return self._coordinates[-1]
+        raise MissingCoordinate("End coordinate missing")
