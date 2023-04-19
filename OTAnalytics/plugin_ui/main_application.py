@@ -1,5 +1,3 @@
-from typing import Any
-
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
@@ -59,29 +57,32 @@ class ApplicationStarter:
     def start_gui(self) -> None:
         from plugin_ui.customtkinter_gui.gui import OTAnalyticsGui
 
-        application = OTAnalyticsApplication(**self.build_dependencies())
+        datastore = self._create_datastore()
+        track_state = self._create_track_state()
+        track_view_state = self._create_track_view_state(datastore)
+        section_state = self._create_section_state()
+        intersect = self._create_intersect()
+        application = OTAnalyticsApplication(
+            datastore=datastore,
+            track_state=track_state,
+            track_view_state=track_view_state,
+            section_state=section_state,
+            intersect=intersect,
+        )
         OTAnalyticsGui(application).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
-        OTAnalyticsCli(cli_args, **self.build_cli_dependencies()).start()
-
-    def build_dependencies(self) -> dict[str, Any]:
-        datastore = self._create_datastore()
-        return {
-            "datastore": datastore,
-            "track_state": self._create_track_state(),
-            "track_view_state": self._create_track_view_state(datastore),
-            "section_state": self._create_section_state(),
-            "intersect": self._create_intersect(),
-        }
-
-    def build_cli_dependencies(self) -> dict[str, Any]:
-        return {
-            "track_parser": self._create_track_parser(self._create_track_repository()),
-            "section_parser": self._create_section_parser(),
-            "event_list_parser": self._create_event_list_parser(),
-            "intersect": self._create_intersect(),
-        }
+        track_parser = self._create_track_parser(self._create_track_repository())
+        section_parser = self._create_section_parser()
+        event_list_parser = self._create_event_list_parser()
+        intersect = self._create_intersect()
+        OTAnalyticsCli(
+            cli_args,
+            track_parser=track_parser,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            intersect=intersect,
+        ).start()
 
     def _create_datastore(self) -> Datastore:
         """
