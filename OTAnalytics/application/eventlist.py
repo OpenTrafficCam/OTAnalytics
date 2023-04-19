@@ -4,6 +4,7 @@ from OTAnalytics.domain.event import (
     SceneEventBuilder,
     SectionEventBuilder,
 )
+from OTAnalytics.domain.geometry import calculate_direction_vector
 from OTAnalytics.domain.intersect import Intersector
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
@@ -62,9 +63,6 @@ class SectionActionDetector:
         """
         self.section_event_builder.add_section_id(section.id)
         self.section_event_builder.add_event_type(EventType.SECTION_ENTER)
-        self.section_event_builder.add_direction_vector(
-            detection_1=track.detections[0], detection_2=track.detections[-1]
-        )
         events: list[Event] = self.intersector.intersect(
             track, event_builder=self.section_event_builder
         )
@@ -92,8 +90,12 @@ class SceneActionDetector:
         """
         first_detection = track.detections[0]
         self._event_builder.add_event_type(EventType.ENTER_SCENE)
+        first_detection = track.detections[0]
+        next_detection = track.detections[1]
         self._event_builder.add_direction_vector(
-            track.detections[0], track.detections[-1]
+            calculate_direction_vector(
+                first_detection.x, first_detection.y, next_detection.x, next_detection.y
+            )
         )
         self._event_builder.add_event_coordinate(first_detection.x, first_detection.y)
 
@@ -109,8 +111,11 @@ class SceneActionDetector:
             list[Event]: the leave scene event
         """
         last_detection = track.detections[-1]
+        prev_detection = track.detections[-2]
         self._event_builder.add_direction_vector(
-            track.detections[0], track.detections[-1]
+            calculate_direction_vector(
+                prev_detection.x, prev_detection.y, last_detection.x, last_detection.y
+            )
         )
         self._event_builder.add_event_type(EventType.LEAVE_SCENE)
         self._event_builder.add_event_coordinate(last_detection.x, last_detection.y)
