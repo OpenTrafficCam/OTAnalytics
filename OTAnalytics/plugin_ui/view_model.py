@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
-from domain.section import Section
-
+from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 
 
 class ViewModel(ABC):
@@ -11,7 +11,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_treeview_sections(self, canvas: AbstractCanvas) -> None:
+    def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:
         raise NotImplementedError
 
     @abstractmethod

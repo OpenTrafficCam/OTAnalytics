@@ -4,12 +4,12 @@ from tkinter.filedialog import askopenfilename
 from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
-from plugin_ui.view_model import ViewModel
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.view_model import ViewModel
 
 
 class FrameSections(CTkFrame):
