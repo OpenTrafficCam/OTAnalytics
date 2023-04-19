@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -124,6 +124,20 @@ class TestIntersector:
         assert coordinate.x == detection.x + detection.w * 0.5
         assert coordinate.y == detection.y + detection.h * 0.5
 
+    def test_extract_offset_from_section(self) -> None:
+        offset = RelativeOffsetCoordinate(0.5, 0.5)
+        section = LineSection(
+            SectionId("N"),
+            {EventType.SECTION_ENTER: offset},
+            {},
+            start=Coordinate(0, 0),
+            end=Coordinate(1, 1),
+        )
+        result = Intersector._extract_offset_from_section(
+            section, EventType.SECTION_ENTER
+        )
+        assert result == offset
+
 
 class TestIntersectBySplittingTrackLine:
     def test_intersect(self, track: Track) -> None:
@@ -215,6 +229,33 @@ class TestIntersectBySmallTrackComponents:
         assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
         assert result_event.video_name == expected_detection.input_file_path.name
+
+    @patch("OTAnalytics.domain.intersect.Intersector._select_coordinate_in_detection")
+    def test_track_line_intersects_section_offset_applied(
+        self,
+        mock_select_coordinate_in_detection: Mock,
+        track: Track,
+    ) -> None:
+        # Setup mock intersection implementation
+        intersect_implementation = Mock()
+        line_section = Mock()
+        intersector = IntersectBySmallTrackComponents(
+            intersect_implementation, line_section
+        )
+
+        mock_select_coordinate_in_detection.side_effect = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(3, 0),
+            Coordinate(4, 1),
+        ]
+
+        mock_line_section = Mock()
+        offset = RelativeOffsetCoordinate(1, 1)
+        intersector._track_line_intersects_section(track, mock_line_section, offset)
+
+        assert mock_select_coordinate_in_detection.call_count == 5
 
 
 class TestIntersectAreaByTrackPoints:
