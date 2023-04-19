@@ -125,7 +125,7 @@ class TestIntersector:
         assert coordinate.y == detection.y + detection.h * 0.5
 
     def test_extract_offset_from_section(self) -> None:
-        offset = RelativeOffsetCoordinate(0, 0)
+        offset = RelativeOffsetCoordinate(0.5, 0.5)
         section = LineSection(
             SectionId("N"),
             {EventType.SECTION_ENTER: offset},
