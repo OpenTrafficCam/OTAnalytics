@@ -2,10 +2,12 @@ import pytest
 
 from OTAnalytics.domain.geometry import (
     Coordinate,
+    DirectionVector2D,
     ImageCoordinate,
     Line,
     Polygon,
     RelativeOffsetCoordinate,
+    calculate_direction_vector,
 )
 
 
@@ -90,3 +92,8 @@ class TestRelativeOffset:
         offset = RelativeOffsetCoordinate(0, 0)
         assert offset.x == 0
         assert offset.y == 0
+
+
+def test_calculate_direction_vector() -> None:
+    result = calculate_direction_vector(0, 0, 1, 1)
+    assert result == DirectionVector2D(1, 1)
