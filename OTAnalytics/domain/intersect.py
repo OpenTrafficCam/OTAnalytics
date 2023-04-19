@@ -166,16 +166,13 @@ class Intersector(ABC):
 
     @staticmethod
     def _calculate_direction_vector(
-        first: Detection, second: Detection
+        first: Coordinate, second: Coordinate
     ) -> DirectionVector2D:
-        """Calculate direction vector from two detections.
-
-        The direction vector will be calculated by taking the x and y values of the
-        detection's bounding box.
+        """Calculate direction vector from two coordinates.
 
         Args:
-            first (Detection): the first detection
-            second (Detection): the second detection
+            first (Coordinate): the first coordinate
+            second (Coordinate): the second coordinate
 
         Returns:
             DirectionVector2D: the direction vector
@@ -247,10 +244,16 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
                 # Subtract by 2n to account for intersection points
                 detection_index = current_idx - 2 * n + 1
                 selected_detection = track.detections[detection_index]
-                previous_detection = track.detections[detection_index - 1]
+
+                selected_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index
+                ]
+                previous_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index - 1
+                ]
                 event_builder.add_direction_vector(
                     self._calculate_direction_vector(
-                        previous_detection, selected_detection
+                        previous_detection_coordinate, selected_detection_coordinate
                     )
                 )
 
@@ -318,7 +321,9 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
             )
             if intersects:
                 event_builder.add_direction_vector(
-                    self._calculate_direction_vector(current_detection, next_detection)
+                    self._calculate_direction_vector(
+                        current_detection_coordinate, next_detection_coordinate
+                    )
                 )
                 event_builder.add_event_coordinate(
                     next_detection_coordinate.x, next_detection_coordinate.y
@@ -385,12 +390,15 @@ class IntersectAreaByTrackPoints(AreaIntersector):
 
         if track_starts_inside_area:
             first_detection = track.detections[0]
-            second_detection = track.detections[1]
+            first_detection_coordinate = track_coordinates[0]
+            second_detection_coordinate = track_coordinates[1]
 
             event_builder.add_event_type(EventType.SECTION_ENTER)
             event_builder.add_road_user_type(first_detection.classification)
             event_builder.add_direction_vector(
-                self._calculate_direction_vector(first_detection, second_detection)
+                self._calculate_direction_vector(
+                    first_detection_coordinate, second_detection_coordinate
+                )
             )
             event_builder.add_event_coordinate(
                 track_coordinates[0].x, track_coordinates[0].y
@@ -406,10 +414,13 @@ class IntersectAreaByTrackPoints(AreaIntersector):
             entered = section_entered_mask[current_index]
             if section_currently_entered == entered:
                 continue
-            prev_detection = track.detections[current_index - 1]
+            current_detection_coordinate = track_coordinates[current_index]
+            prev_detection_coordinate = track_coordinates[current_index - 1]
 
             event_builder.add_direction_vector(
-                self._calculate_direction_vector(prev_detection, current_detection)
+                self._calculate_direction_vector(
+                    prev_detection_coordinate, current_detection_coordinate
+                )
             )
 
             current_coordinate = track_coordinates[current_index]
