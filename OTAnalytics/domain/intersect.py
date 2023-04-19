@@ -4,11 +4,13 @@ from typing import Optional
 from OTAnalytics.domain.event import Event, EventBuilder, EventType
 from OTAnalytics.domain.geometry import (
     Coordinate,
+    DirectionVector2D,
     Line,
     Polygon,
     RelativeOffsetCoordinate,
+    calculate_direction_vector,
 )
-from OTAnalytics.domain.section import Area, LineSection
+from OTAnalytics.domain.section import Area, LineSection, Section
 from OTAnalytics.domain.track import Detection, Track
 
 
@@ -147,6 +149,37 @@ class Intersector(ABC):
             y=detection.y + detection.h * offset.y,
         )
 
+    @staticmethod
+    def _extract_offset_from_section(
+        section: Section, offset_type: EventType
+    ) -> RelativeOffsetCoordinate:
+        """Extract the section offset.
+
+        Args:
+            section (Section): the section to extract the offset from
+            offset_type (EventType): the type offset to extract
+
+        Returns:
+            RelativeOffsetCoordinate: the extracted offset
+        """
+        return section.relative_offset_coordinates[offset_type]
+
+    @staticmethod
+    def _calculate_direction_vector(
+        first: Coordinate, second: Coordinate
+    ) -> DirectionVector2D:
+        """Calculate direction vector from two coordinates.
+
+        Args:
+            first (Coordinate): the first coordinate
+            second (Coordinate): the second coordinate
+
+        Returns:
+            DirectionVector2D: the direction vector
+        """
+        result = calculate_direction_vector(first.x, first.y, second.x, second.y)
+        return result
+
 
 class LineSectionIntersector(Intersector):
     """Determines whether a line section intersects with a track.
@@ -211,6 +244,26 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
                 # Subtract by 2n to account for intersection points
                 detection_index = current_idx - 2 * n + 1
                 selected_detection = track.detections[detection_index]
+
+                selected_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index
+                ]
+                previous_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index - 1
+                ]
+                event_builder.add_direction_vector(
+                    self._calculate_direction_vector(
+                        previous_detection_coordinate, selected_detection_coordinate
+                    )
+                )
+
+                selected_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index
+                ]
+                event_builder.add_event_coordinate(
+                    selected_detection_coordinate.x, selected_detection_coordinate.y
+                )
+
                 events.append(event_builder.create_event(selected_detection))
                 current_idx += len(splitted_line.coordinates)
         return events
@@ -240,38 +293,53 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
         line_section_as_geometry = Line(
             [self._line_section.start, self._line_section.end]
         )
-        if not self._track_line_intersects_section(track, line_section_as_geometry):
-            return events
 
         event_builder.add_road_user_type(track.classification)
-        if event_builder.event_type is None:
-            raise ValueError("Event type not set in section builder")
+        offset = self._extract_offset_from_section(
+            self._line_section, EventType.SECTION_ENTER
+        )
 
-        offset = self._line_section.relative_offset_coordinates[
-            event_builder.event_type
-        ]
+        if not self._track_line_intersects_section(
+            track, line_section_as_geometry, offset
+        ):
+            return events
 
         for current_detection, next_detection in zip(
             track.detections[0:-1], track.detections[1:]
         ):
+            current_detection_coordinate = self._select_coordinate_in_detection(
+                current_detection, offset
+            )
+            next_detection_coordinate = self._select_coordinate_in_detection(
+                next_detection, offset
+            )
             detection_as_geometry = Line(
-                [
-                    self._select_coordinate_in_detection(current_detection, offset),
-                    self._select_coordinate_in_detection(next_detection, offset),
-                ]
+                [current_detection_coordinate, next_detection_coordinate]
             )
             intersects = self.implementation.line_intersects_line(
                 line_section_as_geometry, detection_as_geometry
             )
             if intersects:
+                event_builder.add_direction_vector(
+                    self._calculate_direction_vector(
+                        current_detection_coordinate, next_detection_coordinate
+                    )
+                )
+                event_builder.add_event_coordinate(
+                    next_detection_coordinate.x, next_detection_coordinate.y
+                )
                 events.append(event_builder.create_event(next_detection))
-
         return events
 
-    def _track_line_intersects_section(self, track: Track, line_section: Line) -> bool:
+    def _track_line_intersects_section(
+        self, track: Track, line_section: Line, offset: RelativeOffsetCoordinate
+    ) -> bool:
         """Whether a track line defined by all its detections intersects the section"""
         track_as_geometry = Line(
-            [Coordinate(detection.x, detection.y) for detection in track.detections]
+            [
+                self._select_coordinate_in_detection(detection, offset)
+                for detection in track.detections
+            ]
         )
 
         return self.implementation.line_intersects_line(line_section, track_as_geometry)
@@ -306,31 +374,59 @@ class IntersectAreaByTrackPoints(AreaIntersector):
             bool: `True` if area intersects detection. Otherwise `False`.
         """
         area_as_polygon = Polygon(self._area.coordinates)
-        offset = self._area.relative_offset_coordinates[EventType.SECTION_ENTER]
+        offset = self._extract_offset_from_section(self._area, EventType.SECTION_ENTER)
 
         track_coordinates: list[Coordinate] = [
             self._select_coordinate_in_detection(detection, offset)
             for detection in track.detections
         ]
-        mask = self.implementation.are_coordinates_within_polygon(
+        section_entered_mask = self.implementation.are_coordinates_within_polygon(
             track_coordinates, area_as_polygon
         )
         events: list[Event] = []
 
         event_builder.add_road_user_type(track.classification)
-        track_starts_inside_area = mask[0]
+        track_starts_inside_area = section_entered_mask[0]
 
         if track_starts_inside_area:
             first_detection = track.detections[0]
+            first_detection_coordinate = track_coordinates[0]
+            second_detection_coordinate = track_coordinates[1]
+
             event_builder.add_event_type(EventType.SECTION_ENTER)
             event_builder.add_road_user_type(first_detection.classification)
+            event_builder.add_direction_vector(
+                self._calculate_direction_vector(
+                    first_detection_coordinate, second_detection_coordinate
+                )
+            )
+            event_builder.add_event_coordinate(
+                first_detection_coordinate.x, first_detection_coordinate.y
+            )
             event = event_builder.create_event(first_detection)
             events.append(event)
 
         section_currently_entered = track_starts_inside_area
-        for current_detection, entered in zip(track.detections[1:], mask[1:]):
+
+        for current_index, current_detection in enumerate(
+            track.detections[1:], start=1
+        ):
+            entered = section_entered_mask[current_index]
             if section_currently_entered == entered:
                 continue
+            current_detection_coordinate = track_coordinates[current_index]
+            prev_detection_coordinate = track_coordinates[current_index - 1]
+
+            event_builder.add_direction_vector(
+                self._calculate_direction_vector(
+                    prev_detection_coordinate, current_detection_coordinate
+                )
+            )
+
+            current_coordinate = track_coordinates[current_index]
+            event_builder.add_event_coordinate(
+                current_coordinate.x, current_coordinate.y
+            )
 
             if entered:
                 event_builder.add_event_type(EventType.SECTION_ENTER)
