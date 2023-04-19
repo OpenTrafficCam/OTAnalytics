@@ -130,7 +130,7 @@ def line_section() -> LineSection:
 
 
 class TestSectionActionDetector:
-    def test_detect_enter(self, line_section: LineSection, track: Track) -> None:
+    def test_detect_action(self, line_section: LineSection, track: Track) -> None:
         mock_intersector = Mock(spec=Intersector)
         mock_section_event_builder = Mock(spec=SectionEventBuilder)
         mock_event = Mock(spec=Event)
@@ -144,13 +144,10 @@ class TestSectionActionDetector:
 
         mock_section_event_builder.add_section_id.assert_called()
         mock_section_event_builder.add_event_type.assert_called()
-        mock_section_event_builder.add_direction_vector.assert_called()
         mock_intersector.intersect.assert_called()
         assert mock_event == result_event
 
-    def test_detect_enter_actions(
-        self, line_section: LineSection, track: Track
-    ) -> None:
+    def test_detect_actions(self, line_section: LineSection, track: Track) -> None:
         mock_intersector = Mock(spec=Intersector)
         mock_section_event_builder = Mock(spec=SectionEventBuilder)
         mock_event = Mock(spec=Event)
@@ -169,9 +166,6 @@ class TestSceneActionDetector:
     def test_detect_enter_scene(self, track: Track) -> None:
         scene_event_builder = SceneEventBuilder()
         scene_event_builder.add_event_type(EventType.ENTER_SCENE)
-        scene_event_builder.add_direction_vector(
-            track.detections[0], track.detections[1]
-        )
         scene_action_detector = SceneActionDetector(scene_event_builder)
         event = scene_action_detector.detect_enter_scene(track)
         assert event == Event(
@@ -183,16 +177,13 @@ class TestSceneActionDetector:
             section_id=None,
             event_coordinate=ImageCoordinate(0.0, 5.0),
             event_type=EventType.ENTER_SCENE,
-            direction_vector=DirectionVector2D(25, 0),
+            direction_vector=DirectionVector2D(10, 0),
             video_name="myhostname_something.otdet",
         )
 
     def test_detect_leave_scene(self, track: Track) -> None:
         scene_event_builder = SceneEventBuilder()
         scene_event_builder.add_event_type(EventType.LEAVE_SCENE)
-        scene_event_builder.add_direction_vector(
-            track.detections[0], track.detections[1]
-        )
         scene_action_detector = SceneActionDetector(scene_event_builder)
         event = scene_action_detector.detect_leave_scene(track)
         assert event == Event(
@@ -204,6 +195,6 @@ class TestSceneActionDetector:
             section_id=None,
             event_coordinate=ImageCoordinate(25, 5),
             event_type=EventType.LEAVE_SCENE,
-            direction_vector=DirectionVector2D(25, 0),
+            direction_vector=DirectionVector2D(5, 0),
             video_name="myhostname_something.otdet",
         )

@@ -4,7 +4,7 @@ from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.domain.event import Event, EventRepository, SectionEventBuilder
 from OTAnalytics.domain.intersect import (
     IntersectAreaByTrackPoints,
-    IntersectBySplittingTrackLine,
+    IntersectBySmallTrackComponents,
     IntersectImplementation,
 )
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionRepository
@@ -46,7 +46,7 @@ class RunIntersect:
         for _track in tracks:
             for _section in sections:
                 if isinstance(_section, LineSection):
-                    line_section_intersector = IntersectBySplittingTrackLine(
+                    line_section_intersector = IntersectBySmallTrackComponents(
                         implementation=self._intersect_implementation,
                         line_section=_section,
                     )
