@@ -5,8 +5,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
-from OTAnalytics.domain.geometry import Coordinate
-from OTAnalytics.domain.section import END, ID, START, LineSection, Section, SectionId
+from OTAnalytics.domain.section import END, ID, START, Section, SectionId
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
@@ -131,26 +130,6 @@ class DummyViewModel(ViewModel):
                 SectionId(self._selected_section_id)
             )
         SectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
-
-    def __finish_building(
-        self,
-        start: tuple[int, int],
-        end: tuple[int, int],
-        coordinates: list[tuple[int, int]],
-    ) -> None:
-        if self._selected_section_id:
-            section_id = SectionId(self._selected_section_id)
-            if selected_section := self._application.get_section_for(section_id):
-                new_section = LineSection(
-                    section_id,
-                    selected_section.relative_offset_coordinates,
-                    selected_section.plugin_data,
-                    start=Coordinate(start[0], start[1]),
-                    end=Coordinate(end[0], end[1]),
-                )
-                self._application.update_section(new_section)
-                print(f"Updated line_section geometry with start={start} and end={end}")
-                self.refresh_sections_on_gui()
 
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:
