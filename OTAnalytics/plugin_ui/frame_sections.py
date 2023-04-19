@@ -8,8 +8,8 @@ from customtkinter import CTkButton, CTkFrame, CTkLabel
 
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.domain.section import SectionId, SectionListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
+from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 
 
 class FrameSections(CTkFrame):

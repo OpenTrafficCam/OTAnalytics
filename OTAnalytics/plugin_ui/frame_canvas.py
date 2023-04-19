@@ -9,7 +9,7 @@ from PIL import ImageTk
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.constants import PADX, STICKY
 
 
 @dataclass
