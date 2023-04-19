@@ -172,14 +172,14 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         self.geometry_builder = SectionGeometryBuilder(
             observer=self,
             canvas=self._canvas,
-            is_finished=self._is_line,
+            is_finished=self._is_line_finished,
         )
         self._name: Optional[str] = None
         self._coordinates: list[tuple[int, int]] = []
         self._metadata: dict[str, str] = {}
         self._initialise_with(section)
 
-    def _is_line(self, coordinates: list[tuple[int, int]]) -> bool:
+    def _is_line_finished(self, coordinates: list[tuple[int, int]]) -> bool:
         return len(coordinates) == 2
 
     def _initialise_with(self, section: Optional[Section]) -> None:
