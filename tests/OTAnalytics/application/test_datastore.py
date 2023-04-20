@@ -112,6 +112,7 @@ class TestDatastore:
         video_parser: Mock,
         event_list_parser: Mock,
     ) -> None:
+        track_repository = Mock(spec=TrackRepository)
         some_track = Mock()
         some_track_id = TrackId(1)
         some_track.id = some_track_id
@@ -126,7 +127,7 @@ class TestDatastore:
             [[other_track_id], [other_video]],
         ]
         store = Datastore(
-            track_repository=TrackRepository(),
+            track_repository=track_repository,
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
@@ -137,13 +138,13 @@ class TestDatastore:
 
         store.load_track_files([some_file, other_file])
 
-        assert some_track in store._track_repository.get_all()
-        assert other_track in store._track_repository.get_all()
         assert some_video == store._video_repository.get_video_for(some_track_id)
         assert other_video == store._video_repository.get_video_for(other_track_id)
 
         track_parser.parse.assert_any_call(some_file)
         track_parser.parse.assert_any_call(other_file)
+        track_repository.add_all.assert_any_call([some_track])
+        track_repository.add_all.assert_any_call([other_track])
         video_parser.parse.assert_any_call(some_file, [some_track_id])
         video_parser.parse.assert_any_call(other_file, [other_track_id])
 
