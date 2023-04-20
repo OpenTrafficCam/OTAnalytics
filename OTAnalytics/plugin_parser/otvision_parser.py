@@ -44,13 +44,52 @@ def _parse_bz2(path: Path) -> dict:
 
 
 def _write_bz2(data: dict, path: Path) -> None:
-    """Parse JSON bz2.
+    """Serialize JSON bz2.
 
     Args:
         dict: The content of the JSON file.
         path (Path): Path to bz2 JSON.
     """
     with bz2.open(path, "wt", encoding=ENCODING) as file:
+        ujson.dump(data, file)
+
+
+def _parse_json(path: Path) -> dict:
+    """Parse JSON.
+
+    Args:
+        path (Path): Path to JSON.
+
+    Returns:
+        dict: The content of the JSON file.
+    """
+    with open(path, "rt", encoding=ENCODING) as file:
+        return ujson.load(file)
+
+
+def _parse(path: Path) -> dict:
+    """Parse file as JSON or bzip2 compressed JSON.
+
+    Args:
+        path (Path): Path to file
+
+    Returns:
+        dict: The content of the JSON file.
+    """
+    try:
+        return _parse_json(path)
+    except UnicodeDecodeError:
+        return _parse_bz2(path)
+
+
+def _write(data: dict, path: Path) -> None:
+    """Serialize JSON.
+
+    Args:
+        dict: The content of the JSON file.
+        path (Path): Path to JSON.
+    """
+    with open(path, "wt", encoding=ENCODING) as file:
         ujson.dump(data, file)
 
 
@@ -191,7 +230,7 @@ class OtsectionParser(SectionParser):
         Returns:
             list[Section]: list of Section objects
         """
-        content: dict = _parse_bz2(file)
+        content: dict = _parse(file)
         sections: list[Section] = [
             self._parse_section(entry) for entry in content.get(section.SECTIONS, [])
         ]
@@ -353,7 +392,7 @@ class OtsectionParser(SectionParser):
             file (Path): file to serialize sections to
         """
         content = self._convert(sections)
-        _write_bz2(content, file)
+        _write(content, file)
 
     def _convert(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
         """Convert sections into dictionary.
