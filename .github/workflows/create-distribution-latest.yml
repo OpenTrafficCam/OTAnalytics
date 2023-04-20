@@ -28,7 +28,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Create distributions
         run: python build.py
-      - name: Release
+      - name: Release latest version
         uses: softprops/action-gh-release@v1
         with:
           body: |
