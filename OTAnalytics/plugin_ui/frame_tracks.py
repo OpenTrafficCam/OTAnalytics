@@ -63,9 +63,11 @@ class FrameTracks(CTkFrame):
             self._offset_y.set(offset.y)
 
     def _place_widgets(self) -> None:
-        self.label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.label.grid(
+            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self.button_load_tracks.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._label_offset.grid(
             row=2, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
