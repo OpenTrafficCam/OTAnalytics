@@ -47,6 +47,11 @@ class FrameTracks(CTkFrame):
             text="Update Plot",
             command=self._change_offset,
         )
+        self.button_change_to_section_offset = CTkButton(
+            master=self,
+            text="Update with section offset",
+            command=self._change_to_section_offset,
+        )
         self.application.track_view_state.track_offset.register(self._update_offset)
         self._update_offset(self.application.track_view_state.track_offset.get())
 
@@ -79,6 +84,9 @@ class FrameTracks(CTkFrame):
         self.button_update_offset.grid(
             row=5, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self.button_change_to_section_offset.grid(
+            row=6, column=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
 
     def _load_tracks_in_file(self) -> None:
         track_file = askopenfilename(
@@ -94,3 +102,6 @@ class FrameTracks(CTkFrame):
         x = self._offset_x.get()
         y = self._offset_y.get()
         return RelativeOffsetCoordinate(x, y)
+
+    def _change_to_section_offset(self) -> None:
+        self.application.change_to_section_offset()

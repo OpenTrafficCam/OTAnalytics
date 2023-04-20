@@ -6,6 +6,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
 from OTAnalytics.domain.section import Section, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.types import EventType
 
 
 class OTAnalyticsApplication:
@@ -91,3 +92,20 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def change_to_section_offset(
+        self, event_type: EventType = EventType.SECTION_ENTER
+    ) -> None:
+        """
+        Change the offset to visualize tracks to the offset of the currently selected
+        section.
+
+        Args:
+            event_type (EventType, optional): event type of the offset at the section.
+            Defaults to EventType.SECTION_ENTER.
+        """
+        # TODO update after line section PR has been merged
+        if section_id := self.section_state.selected_section:
+            if section := self._datastore._section_repository._sections.get(section_id):
+                if offset := section.relative_offset_coordinates.get(event_type):
+                    self.track_view_state.track_offset.set(offset)
