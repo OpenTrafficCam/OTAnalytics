@@ -30,6 +30,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
+          body: latest Release
           generate_release_notes: True
           draft: True
           files: dist/*.zip
