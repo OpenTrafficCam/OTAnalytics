@@ -1,7 +1,5 @@
 {
-    "python.analysis.extraPaths": [
-        "./OTAnalytics"
-    ],
+    "python.analysis.importFormat": "absolute",
     "editor.formatOnSave": true,
     "python.formatting.provider": "black",
     "[python]": {
