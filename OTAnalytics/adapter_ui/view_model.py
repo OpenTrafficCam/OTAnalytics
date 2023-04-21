@@ -26,7 +26,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_tracks_canvas(self, tracks_frame: AbstractTracksCanvas) -> None:
+    def set_tracks_canvas(self, tracks_canvas: AbstractTracksCanvas) -> None:
         pass
 
     @abstractmethod
