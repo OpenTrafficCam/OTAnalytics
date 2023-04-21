@@ -232,11 +232,11 @@ class OtsectionParser(SectionParser):
         """
         content: dict = _parse(file)
         sections: list[Section] = [
-            self._parse_section(entry) for entry in content.get(section.SECTIONS, [])
+            self.parse_section(entry) for entry in content.get(section.SECTIONS, [])
         ]
         return sections
 
-    def _parse_section(self, entry: dict) -> Section:
+    def parse_section(self, entry: dict) -> Section:
         """Parse sections by type.
 
         Args:

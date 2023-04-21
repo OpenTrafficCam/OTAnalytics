@@ -275,7 +275,7 @@ class TestOtsectionParser:
     def test_validate(self) -> None:
         parser = OtsectionParser()
         pytest.raises(
-            InvalidSectionData, parser._parse_section, {section.TYPE: section.LINE}
+            InvalidSectionData, parser.parse_section, {section.TYPE: section.LINE}
         )
 
     def test_convert_section(self) -> None:
