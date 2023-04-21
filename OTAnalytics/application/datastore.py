@@ -4,7 +4,12 @@ from pathlib import Path
 from typing import Iterable, Optional, Tuple
 
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.section import Section, SectionListObserver, SectionRepository
+from OTAnalytics.domain.section import (
+    Section,
+    SectionId,
+    SectionListObserver,
+    SectionRepository,
+)
 from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
@@ -32,6 +37,10 @@ class TrackParser(ABC):
 class SectionParser(ABC):
     @abstractmethod
     def parse(self, file: Path) -> list[Section]:
+        pass
+
+    @abstractmethod
+    def parse_section(self, entry: dict) -> Section:
         pass
 
     @abstractmethod
@@ -160,6 +169,10 @@ class VideoParser(ABC):
         pass
 
 
+class NoSectionsToSave(Exception):
+    pass
+
+
 class Datastore:
     """
     Central element to hold data in the application.
@@ -243,13 +256,19 @@ class Datastore:
         Args:
             file (Path): file to save sections to
         """
-        self._section_parser.serialize(
-            self._section_repository.get_all(),
-            file=file,
-        )
+        if sections := self._section_repository.get_all():
+            self._section_parser.serialize(
+                sections,
+                file=file,
+            )
+        else:
+            raise NoSectionsToSave()
 
     def get_all_sections(self) -> Iterable[Section]:
         return self._section_repository.get_all()
+
+    def get_section_for(self, section_id: SectionId) -> Optional[Section]:
+        return self._section_repository.get(section_id)
 
     def save_event_list_file(self, file: Path) -> None:
         """
@@ -272,6 +291,24 @@ class Datastore:
             section (Section): section to add
         """
         self._section_repository.add(section)
+
+    def remove_section(self, section: SectionId) -> None:
+        """
+        Remove the section from the repository.
+
+        Args:
+            section (SectionId): section to remove
+        """
+        self._section_repository.remove(section)
+
+    def update_section(self, section: Section) -> None:
+        """
+        Update the section in the repository.
+
+        Args:
+            section (Section): updated section
+        """
+        self._section_repository.update(section)
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
