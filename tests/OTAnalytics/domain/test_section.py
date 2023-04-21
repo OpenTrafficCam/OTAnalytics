@@ -19,22 +19,8 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
     SectionListSubject,
-    SectionObserver,
     SectionRepository,
-    SectionSubject,
 )
-
-
-class TestSectionSubject:
-    def test_notify_observer(self) -> None:
-        changed_track = SectionId("north")
-        observer = Mock(spec=SectionObserver)
-        subject = SectionSubject()
-        subject.register(observer)
-
-        subject.notify(changed_track)
-
-        observer.notify_section.assert_called_with(changed_track)
 
 
 class TestSectionListSubject:
@@ -257,11 +243,13 @@ class TestSectionRepository:
 
     def test_remove(self) -> None:
         first_section = Mock()
+        first_section.id = SectionId("first")
         second_section = Mock()
+        second_section.id = SectionId("second")
         repository = SectionRepository()
         repository.add_all([first_section, second_section])
 
-        repository.remove(first_section)
+        repository.remove(first_section.id)
 
         assert first_section not in repository.get_all()
         assert second_section in repository.get_all()
