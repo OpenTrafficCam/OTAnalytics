@@ -1,44 +1,48 @@
-from pathlib import Path
 from tkinter import Listbox
-from tkinter.filedialog import askopenfilename, asksaveasfilename
-from tkinter.ttk import Treeview
-from typing import Any
+from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
-from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.domain.section import SectionId, SectionListObserver
+from OTAnalytics.adapter_ui.abstract_treeview import AbstractTreeviewSections
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
 
 
 class FrameSections(CTkFrame):
     def __init__(
         self,
-        application: OTAnalyticsApplication,
+        viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self._application = application
-        self._get_widgets(self._application)
+        self._viewmodel = viewmodel
+        self._get_widgets()
         self._place_widgets()
 
-    def _get_widgets(self, application: OTAnalyticsApplication) -> None:
+    def _get_widgets(self) -> None:
         self.label = CTkLabel(master=self, text="Sections")
-        self.listbox_sections = TreeviewSections(application, master=self)
+        self.listbox_sections = TreeviewSections(viewmodel=self._viewmodel, master=self)
         self.button_load_sections = CTkButton(
-            master=self, text="Load", command=self._load_sections_in_file
+            master=self, text="Load", command=self._viewmodel.load_sections
         )
-        self.button_save_sections = ButtonSaveSections(master=self, text="Save")
-        self.button_new_section = ButtonNewSection(master=self, text="New")
-        self.button_delete_selected_sections = ButtonDeleteSelectedSections(
-            master=self, text="Remove"
+        self.button_save_sections = CTkButton(
+            master=self, text="Save", command=self._viewmodel.save_sections
         )
-        self.button_edit_geometry_selected_section = (
-            ButtonUpdateSelectedSectionGeometry(master=self, text="Edit geometry")
+        self.button_new_section = CTkButton(
+            master=self, text="New", command=self._viewmodel.add_section
         )
-        self.button_edit_metadata_selected_section = (
-            ButtonUpdateSelectedSectionMetadata(master=self, text="Edit metadata")
+        self.button_delete_section = CTkButton(
+            master=self, text="Remove", command=self._viewmodel.remove_section
+        )
+        self.button_edit_section_geometry = CTkButton(
+            master=self,
+            text="Edit geometry",
+            command=self._viewmodel.edit_section_geometry,
+        )
+        self.button_edit_section_metadata = CTkButton(
+            master=self,
+            text="Edit metadata",
+            command=self._viewmodel.edit_section_metadata,
         )
 
     def _place_widgets(self) -> None:
@@ -53,33 +57,29 @@ class FrameSections(CTkFrame):
         self.button_new_section.grid(
             row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_edit_geometry_selected_section.grid(
+        self.button_edit_section_geometry.grid(
             row=5, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_edit_metadata_selected_section.grid(
+        self.button_edit_section_metadata.grid(
             row=6, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_delete_selected_sections.grid(
+        self.button_delete_section.grid(
             row=7, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
-    def _load_sections_in_file(self) -> None:
-        sections_file = askopenfilename(
-            title="Load sections file", filetypes=[("sections file", "*.otflow")]
-        )
-        print(f"Sections file to load: {sections_file}")
-        self._application.add_sections_of_file(Path(sections_file))
 
-
-class TreeviewSections(Treeview, SectionListObserver):
-    def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
-        super().__init__(show="tree", **kwargs)
-        self.application = application
-        self.application.register_sections_observer(self)
-        self.bind("<ButtonRelease-3>", self._deselect_sections)
+class TreeviewSections(AbstractTreeviewSections):
+    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
+        super().__init__(show="tree", selectmode="browse", **kwargs)
+        self._viewmodel = viewmodel
+        self.bind("<ButtonRelease-2>", self._on_deselect)
+        self.bind("<<TreeviewSelect>>", self._on_select)
         self._define_columns()
-        # This call should come from outside later
-        self._update_sections()
+        self.introduce_to_viewmodel()
+        self.update_sections()
+
+    def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_treeview_sections(self)
 
     def _define_columns(self) -> None:
         self["columns"] = "Section"
@@ -87,23 +87,47 @@ class TreeviewSections(Treeview, SectionListObserver):
         self.column(column="Section", anchor="center", width=80, minwidth=40)
         self["displaycolumns"] = "Section"
 
-    def notify_sections(self, sections: list[SectionId]) -> None:
-        self._update_sections()
+    def add_section(self, id: str, name: str) -> None:
+        self.insert(parent="", index="end", iid=id, text="", values=[name])
 
-    def _update_sections(self) -> None:
+    def update_sections(self) -> None:
         self.delete(*self.get_children())
-        sections = [section.id for section in self.application.get_all_sections()]
-        self.add_sections(sections=sections)
+        section_ids = [section.id.id for section in self._viewmodel.get_all_sections()]
+        self.add_sections(section_ids=section_ids)
 
-    def add_sections(self, sections: list[SectionId]) -> None:
-        for section in sections:
-            self.insert(
-                parent="", index="end", iid=section.id, text="", values=[section.id]
-            )
+    def add_sections(self, section_ids: list[str]) -> None:
+        for id in section_ids:
+            self.insert(parent="", index="end", iid=id, text="", values=[id])
 
-    def _deselect_sections(self, event: Any) -> None:
+    def update_selection(self, section_id: Optional[str]) -> None:
+        if section_id == self.get_current_selection():
+            return
+
+        if section_id:
+            self.selection_set(section_id)
+        else:
+            self._deselect_all()
+
+    def _on_deselect(self, event: Any) -> None:
+        self._deselect_all()
+
+    def _deselect_all(self) -> None:
         for item in self.selection():
             self.selection_remove(item)
+
+    def _on_select(self, event: Any) -> None:
+        line_section_id = self.get_current_selection()
+        self._viewmodel.set_selected_section_id(line_section_id)
+
+    def get_current_selection(self) -> Optional[str]:
+        selection = self.selection()
+        if len(selection) == 0:
+            line_section_id = None
+        elif len(selection) == 1:
+            line_section_id = selection[0]
+        else:
+            raise ValueError("Only one item in TreeviewSections shall be selected")
+        return line_section_id
 
 
 class ListboxSections(Listbox):
@@ -117,97 +141,3 @@ class ListboxSections(Listbox):
     def show(self, sections: list[str]) -> None:
         for i, section in enumerate(sections):
             self.insert(i, section)
-
-
-class ButtonSaveSections(CTkButton):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-        self.bind("<ButtonRelease-1>", self.on_click)
-
-    def on_click(self, events: Any) -> None:
-        self.sections_file = asksaveasfilename(
-            title="Load sections file", filetypes=[("sections file", "*.otflow")]
-        )
-        print(f"Sections file to save: {self.sections_file}")
-
-
-class ButtonNewSection(CTkButton):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-        self.toplevel_sections: ToplevelSections | None = None
-
-        self.bind("<ButtonRelease-1>", self.on_click)
-
-        self.toplevel_sections = None
-
-    def on_click(self, events: Any) -> None:
-        # TODO: Enter drawing mode
-        self.get_metadata()
-        # TODO: Yield geometry and metadata
-        print(
-            "Add new section with geometry = <TODO> and"
-            + f"metadata = {self.section_metadata}"
-        )
-
-    def get_metadata(self) -> None:
-        if self.toplevel_sections is None or not self.toplevel_sections.winfo_exists():
-            self.toplevel_sections = ToplevelSections(title="New section")
-        else:
-            self.toplevel_sections.focus()
-        self.section_metadata = self.toplevel_sections.show()
-
-
-class ButtonUpdateSelectedSectionGeometry(CTkButton):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-        self.bind("<ButtonRelease-1>", self.on_click)
-
-    def on_click(self, events: Any) -> None:
-        # TODO: Make sure only one section is selected
-        # TODO: Get currently selected section
-        # TODO: Enter drawing mode (there, old section is deleted, first)
-        # TODO: Yield updated geometry
-        print("Update geometry of selected section")
-
-
-class ButtonUpdateSelectedSectionMetadata(CTkButton):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-        self.toplevel_sections: ToplevelSections | None = None
-
-        self.bind("<ButtonRelease-1>", self.on_click)
-
-        self.toplevel_sections = None
-
-    def on_click(self, events: Any) -> None:
-        # TODO: Make sure only one section is selected
-        # TODO: Get currently selected section
-        self.get_metadata()
-        # TODO: Yield updated metadata
-        print(f"Update selected section with metadata={self.section_metadata}")
-
-    def get_metadata(self) -> None:
-        # TODO: Retrieve sections metadata via ID from selection in Treeview
-        INPUT_VALUES: dict = {"name": "Existing Section"}
-        if self.toplevel_sections is None or not self.toplevel_sections.winfo_exists():
-            self.toplevel_sections = ToplevelSections(
-                title="New section", input_values=INPUT_VALUES
-            )
-        else:
-            self.toplevel_sections.focus()
-        self.section_metadata = self.toplevel_sections.show()
-
-
-class ButtonDeleteSelectedSections(CTkButton):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-        self.bind("<ButtonRelease-1>", self.on_click)
-
-    def on_click(self, events: Any) -> None:
-        # TODO: Get currently selected sections (?)
-        print("Delete selected sections")
