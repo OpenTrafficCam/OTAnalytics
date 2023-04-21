@@ -152,7 +152,6 @@ class OTAnalyticsApplication:
             event_type (EventType, optional): event type of the offset at the section.
             Defaults to EventType.SECTION_ENTER.
         """
-        # TODO update after line section PR has been merged
         if section_id := self.section_state.selected_section.get():
             if section := self._datastore.get_section_for(section_id):
                 if offset := section.relative_offset_coordinates.get(event_type):
