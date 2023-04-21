@@ -93,7 +93,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def set_tracks_frame(self, tracks_frame: AbstractTracksCanvas) -> None:
+    def set_tracks_canvas(self, tracks_frame: AbstractTracksCanvas) -> None:
         self._tracks_canvas = tracks_frame
 
     def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:
