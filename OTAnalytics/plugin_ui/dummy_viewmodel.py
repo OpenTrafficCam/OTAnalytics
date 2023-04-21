@@ -48,7 +48,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
     ) -> None:
         self._application = application
         self._section_parser: SectionParser = section_parser
-        self._tracks_frame: Optional[AbstractTracksCanvas] = None
+        self._tracks_canvas: Optional[AbstractTracksCanvas] = None
         self._canvas: AbstractCanvas | None = None
         self._treeview_sections: AbstractTreeviewSections | None
         self._new_section: dict = {}
@@ -69,18 +69,18 @@ class DummyViewModel(ViewModel, SectionListObserver):
         )
 
     def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
-        if self._tracks_frame is None:
+        if self._tracks_canvas is None:
             raise MissingInjectedInstanceError("tracks_frame")
 
         new_value = value or False
-        self._tracks_frame.update_show_tracks(new_value)
+        self._tracks_canvas.update_show_tracks(new_value)
 
     def _on_background_updated(self, image: Optional[TrackImage]) -> None:
-        if self._tracks_frame is None:
+        if self._tracks_canvas is None:
             raise MissingInjectedInstanceError("tracks_frame")
 
         if image:
-            self._tracks_frame.update_background(image)
+            self._tracks_canvas.update_background(image)
 
     def update_show_tracks_state(self, value: bool) -> None:
         self._application.track_view_state.show_tracks.set(value)
@@ -94,7 +94,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._canvas = canvas
 
     def set_tracks_frame(self, tracks_frame: AbstractTracksCanvas) -> None:
-        self._tracks_frame = tracks_frame
+        self._tracks_canvas = tracks_frame
 
     def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:
         self._treeview_sections = treeview
