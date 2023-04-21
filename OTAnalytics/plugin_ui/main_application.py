@@ -114,7 +114,6 @@ class ApplicationStarter:
         application = OTAnalyticsApplication(**self.build_dependencies())
         section_parser: SectionParser = application._datastore._section_parser
         dummy_viewmodel = DummyViewModel(application, section_parser)
-        dummy_viewmodel.connect_observers()
         application.connect_observers()
         OTAnalyticsGui(dummy_viewmodel).start()
 

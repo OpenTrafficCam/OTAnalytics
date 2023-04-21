@@ -9,7 +9,7 @@ from OTAnalytics.domain.section import Section
 
 class ViewModel(ABC):
     @abstractmethod
-    def connect_observers(self) -> None:
+    def register_to_subjects(self) -> None:
         pass
 
     @abstractmethod

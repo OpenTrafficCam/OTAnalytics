@@ -53,8 +53,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._treeview_sections: AbstractTreeviewSections | None
         self._new_section: dict = {}
         self._selected_section_id: str | None = None
+        self.register_to_subjects()
 
-    def connect_observers(self) -> None:
+    def register_to_subjects(self) -> None:
         self._application.register_sections_observer(self)
 
         self._application.track_view_state.show_tracks.register(
