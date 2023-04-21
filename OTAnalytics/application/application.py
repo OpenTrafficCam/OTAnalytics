@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackImage
 
@@ -151,3 +152,11 @@ class OTAnalyticsApplication:
             section_id = None
 
         self.section_state.selected_section.set(section_id)
+
+    def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
+        """Get the current track offset.
+
+        Returns:
+            Optional[RelativeOffsetCoordinate]: the current track offset.
+        """
+        return self.track_view_state.track_offset.get()

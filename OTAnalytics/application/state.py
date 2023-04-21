@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import (
     Track,
@@ -99,8 +100,8 @@ class ObservableProperty(Generic[VALUE]):
     Represents a property of the given type that informs its observers about changes.
     """
 
-    def __init__(self) -> None:
-        self._property: Optional[VALUE] = None
+    def __init__(self, default: Optional[VALUE] = None) -> None:
+        self._property: Optional[VALUE] = default
         self._subject: Subject[VALUE] = Subject[VALUE]()
 
     def register(self, observer: Observer[VALUE]) -> None:
@@ -141,6 +142,9 @@ class TrackViewState:
     def __init__(self) -> None:
         self.background_image = ObservableProperty[TrackImage]()
         self.show_tracks = ObservableProperty[bool]()
+        self.track_offset = ObservableProperty[RelativeOffsetCoordinate](
+            RelativeOffsetCoordinate(0, 0)
+        )
 
 
 class TrackPlotter(ABC):
@@ -169,6 +173,7 @@ class TrackPlotter(ABC):
         start_end: bool = True,
         plot_sections: bool = True,
         alpha: float = 0.1,
+        offset: Optional[RelativeOffsetCoordinate] = RelativeOffsetCoordinate(0, 0),
     ) -> TrackImage:
         pass
 
@@ -189,6 +194,7 @@ class TrackImageUpdater(TrackListObserver):
         self._track_view_state = track_view_state
         self._track_plotter = track_plotter
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
+        self._track_view_state.track_offset.register(self._notify_track_offset)
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """
@@ -211,6 +217,21 @@ class TrackImageUpdater(TrackListObserver):
         Args:
             show_tracks (Optional[bool]): current value
         """
+        self._update()
+
+    def _notify_track_offset(self, offset: Optional[RelativeOffsetCoordinate]) -> None:
+        """
+        Will update the image according to changes of the track offset property.
+
+        Args:
+            offset (Optional[RelativeOffsetCoordinate]): current value
+        """
+        self._update()
+
+    def _update(self) -> None:
+        """
+        Update the image if at least one track is available.
+        """
         if track := next(iter(self._datastore.get_all_tracks())):
             self._update_image(track.id)
 
@@ -228,6 +249,7 @@ class TrackImageUpdater(TrackListObserver):
                     self._datastore.get_all_sections(),
                     width=new_image.width(),
                     height=new_image.height(),
+                    offset=self._track_view_state.track_offset.get(),
                 )
                 combined_image = new_image.add(track_image)
                 self._track_view_state.background_image.set(combined_image)
