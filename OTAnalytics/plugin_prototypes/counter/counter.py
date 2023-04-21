@@ -117,6 +117,7 @@ class Counter:
         self,
         filter_sections: list = [],
         filter_directions: list = [],
+        filter_classes: list = [],
         return_table: bool = True,
     ) -> pd.DataFrame:
         if not hasattr(self, "FLOWS"):
@@ -177,6 +178,7 @@ class Counter:
 
         # Set time intervals
         intervals = self.INTERVALS
+
         # Import Sectionlist
         section_list = [section.id.id for section in self.SECTIONS]
 
@@ -192,11 +194,17 @@ class Counter:
         else:
             direction_list = self.DIRECTION_NAMES
 
+        # Import Classes
+        class_list = self.FLOWS["road_user_type"].unique()
+
+        if filter_classes != []:
+            class_list = [c for c in class_list if c in filter_classes]
+
         # Create table template
         counts_template = pd.DataFrame()
         for i in intervals:
             for j in direction_list:
-                for k in self.FLOWS["road_user_type"].unique():
+                for k in class_list:
                     counts_to_add = pd.DataFrame(
                         {
                             "section_id": section_list,
