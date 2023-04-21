@@ -42,56 +42,13 @@ class SectionListObserver(ABC):
         pass
 
 
-class SectionObserver(ABC):
-    """
-    Interface to listen to changes of a single section.
-    """
-
-    @abstractmethod
-    def notify_section(self, section_id: Optional[SectionId]) -> None:
-        """
-        Notifies that the section of the given id has changed.
-
-        Args:
-            track_id (Optional[SectionId]): id of the changed section
-        """
-        pass
-
-
-class SectionSubject:
-    """
-    Helper class to handle and notify observers
-    """
-
-    def __init__(self) -> None:
-        self.observers: set[SectionObserver] = set()
-
-    def register(self, observer: SectionObserver) -> None:
-        """
-        Listen to events.
-
-        Args:
-            observer (SectionObserver): listener to add
-        """
-        self.observers.add(observer)
-
-    def notify(self, section_id: Optional[SectionId]) -> None:
-        """
-        Notifies observers about the section id.
-
-        Args:
-            track_id (Optional[SectionId]): id of the changed section
-        """
-        [observer.notify_section(section_id) for observer in self.observers]
-
-
 class SectionListSubject:
     """
     Helper class to handle and notify observers
     """
 
     def __init__(self) -> None:
-        self.observers: set[SectionListObserver] = set()
+        self.observers: list[SectionListObserver] = []
 
     def register(self, observer: SectionListObserver) -> None:
         """
@@ -100,7 +57,7 @@ class SectionListSubject:
         Args:
             observer (SectionListObserver): listener to add
         """
-        self.observers.add(observer)
+        self.observers.append(observer)
 
     def notify(self, sections: list[SectionId]) -> None:
         """
@@ -129,6 +86,16 @@ class Section(DataclassValidation):
     id: SectionId
     relative_offset_coordinates: dict[EventType, RelativeOffsetCoordinate]
     plugin_data: dict[str, Any]
+
+    @abstractmethod
+    def get_coordinates(self) -> list[Coordinate]:
+        """
+        Returns a list of all coordinates of this section.
+
+        Returns:
+            list[Coordinate]: all coordinates of this section
+        """
+        pass
 
     @abstractmethod
     def to_dict(self) -> dict:
@@ -198,6 +165,9 @@ class LineSection(Section):
                 )
             )
 
+    def get_coordinates(self) -> list[Coordinate]:
+        return [self.start, self.end]
+
     def to_dict(self) -> dict:
         """
         Convert section into dict to interact with other parts of the system,
@@ -248,6 +218,9 @@ class Area(Section):
 
         if self.coordinates[0] != self.coordinates[-1]:
             raise ValueError("Coordinates do not define a closed area")
+
+    def get_coordinates(self) -> list[Coordinate]:
+        return self.coordinates.copy()
 
     def to_dict(self) -> dict:
         """
@@ -300,18 +273,38 @@ class SectionRepository:
             self._add(section)
         self.observers.notify([section.id for section in sections])
 
-    def get_all(self) -> Iterable[Section]:
+    def get_all(self) -> list[Section]:
         """Get all sections from the repository.
 
         Returns:
             Iterable[Section]: the sections
         """
-        return self._sections.values()
+        return list(self._sections.values())
 
-    def remove(self, section: Section) -> None:
+    def get(self, id: SectionId) -> Optional[Section]:
+        """Get the section for the given id or nothing, if the id is missing.
+
+        Args:
+            id (SectionId): id to get section for
+
+        Returns:
+            Optional[Section]: section if present
+        """
+        return self._sections.get(id)
+
+    def remove(self, section: SectionId) -> None:
         """Remove section from the repository.
 
         Args:
             section (Section): the section to be removed
         """
-        del self._sections[section.id]
+        del self._sections[section]
+        self.observers.notify([section])
+
+    def update(self, section: Section) -> None:
+        """Update the section in the repository.
+
+        Args:
+            section (Section): updated section
+        """
+        self._sections[section.id] = section
