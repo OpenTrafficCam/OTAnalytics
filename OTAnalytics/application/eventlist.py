@@ -88,7 +88,6 @@ class SceneActionDetector:
         Returns:
             list[Event]: the enter scene event
         """
-
         self._event_builder.add_event_type(EventType.ENTER_SCENE)
         first_detection = track.detections[0]
         next_detection = track.detections[1]
@@ -97,7 +96,8 @@ class SceneActionDetector:
                 first_detection.x, first_detection.y, next_detection.x, next_detection.y
             )
         )
-        first_detection = track.detections[0]
+        self._event_builder.add_event_coordinate(first_detection.x, first_detection.y)
+
         return self._event_builder.create_event(first_detection)
 
     def detect_leave_scene(self, track: Track) -> Event:
@@ -117,5 +117,6 @@ class SceneActionDetector:
             )
         )
         self._event_builder.add_event_type(EventType.LEAVE_SCENE)
-        first_detection = track.detections[-1]
-        return self._event_builder.create_event(first_detection)
+        self._event_builder.add_event_coordinate(last_detection.x, last_detection.y)
+
+        return self._event_builder.create_event(last_detection)
