@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Optional
 
 import numpy
 import pandas
@@ -12,6 +12,7 @@ from PIL import Image
 
 from OTAnalytics.application.state import TrackPlotter
 from OTAnalytics.domain import track
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
 
@@ -51,6 +52,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
         start_end: bool = True,
         plot_sections: bool = False,
         alpha: float = 0.5,
+        offset: Optional[RelativeOffsetCoordinate] = RelativeOffsetCoordinate(0, 0),
     ) -> TrackImage:
         """
         Plot the tracks and section as image.
@@ -76,6 +78,8 @@ class MatplotlibTrackPlotter(TrackPlotter):
             TrackImage: image containing tracks and sections
         """
         track_df = self._convert_tracks(tracks)
+
+        track_df = self._apply_offset(track_df, offset)
 
         # % Filter times
         track_df = self._filter_tracks(
@@ -320,6 +324,14 @@ class MatplotlibTrackPlotter(TrackPlotter):
             # tracks[ottrk_format.DATA][ottrk_format.DETECTIONS]
         )
         return converted.sort_values([track.TRACK_ID, track.FRAME])
+
+    def _apply_offset(
+        self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
+    ) -> DataFrame:
+        if new_offset := offset:
+            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
+            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
+        return tracks
 
     def convert_to_track_image(self, figure: Figure, axes: Axes) -> TrackImage:
         """

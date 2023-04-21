@@ -1,10 +1,45 @@
 import os
 import shutil
 import zipfile
+from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
 from zipfile import ZipFile
+
+
+class File(ABC):
+    @abstractmethod
+    def source(self) -> Path:
+        pass
+
+    @abstractmethod
+    def destination(self) -> Path:
+        pass
+
+
+@dataclass(frozen=True)
+class SameNameFile(File):
+    _path: Path
+
+    def source(self) -> Path:
+        return self._path
+
+    def destination(self) -> Path:
+        return self._path
+
+
+@dataclass(frozen=True)
+class DifferentNameFile(File):
+    _source: Path
+    _destination: Path
+
+    def source(self) -> Path:
+        return self._source
+
+    def destination(self) -> Path:
+        return self._destination
+
 
 ENCODING: str = "UTF-8"
 
@@ -51,7 +86,7 @@ class CliArgumentParser:
 def collect_files(
     base_path: Path,
     file_extension: str = ".py",
-) -> list[Path]:
+) -> list[File]:
     """Collect all files in the file tree.
 
     Args:
@@ -62,12 +97,12 @@ def collect_files(
     Returns:
         list[Path]: list of collected files.
     """
-    paths: list[Path] = []
+    paths: list[File] = []
     for folder_name, subfolders, file_names in os.walk(base_path):
         for file_name in file_names:
             if file_name.endswith(file_extension):
                 file_path = Path(folder_name, file_name)
-                paths.append(file_path)
+                paths.append(SameNameFile(file_path))
     return paths
 
 
@@ -107,8 +142,8 @@ class Configuration:
 
     _package_version: str
     _package_path: Path
-    _files: list[Path]
-    _additional_files: list[Path]
+    _files: list[File]
+    _additional_files: list[File]
     _suffix: str
 
     def create_zip(
@@ -139,7 +174,7 @@ class Configuration:
         self._copy_files(self._files, output_directory=output_directory)
         self._copy_files(self._additional_files, output_directory=output_directory)
 
-    def _copy_files(self, files: list[Path], output_directory: Path) -> None:
+    def _copy_files(self, files: list[File], output_directory: Path) -> None:
         """Copies all files into the output directory. The directory structure will
         remain.
 
@@ -148,9 +183,9 @@ class Configuration:
             output_directory (Path): directory to copy the files to.
         """
         for file in files:
-            output_file = Path(output_directory, file)
+            output_file = Path(output_directory, file.destination())
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(file, output_file)
+            shutil.copy(file.source(), output_file)
 
     def _update_version_file_in(self, directory: Path) -> None:
         version_file = Path(directory, self._package_path, "version.py")
@@ -167,20 +202,25 @@ output_file_name = "otanalytics"
 
 package_path = Path("OTAnalytics")
 
-base_files = [
-    Path("LICENSE"),
-    Path("README.md"),
-    Path("requirements.txt"),
+base_files: list[File] = [
+    SameNameFile(Path("LICENSE")),
+    SameNameFile(Path("README.md")),
+    SameNameFile(Path("requirements.txt")),
 ]
 
-windows_files = [
-    Path("install.cmd"),
-    Path("start_gui.cmd"),
+windows_files: list[File] = [
+    SameNameFile(Path("install.cmd")),
+    SameNameFile(Path("start_gui.cmd")),
 ]
 
-unix_files = [
-    Path("install.sh"),
-    Path("start_gui.sh"),
+linux_files: list[File] = [
+    SameNameFile(Path("install.sh")),
+    SameNameFile(Path("start_gui.sh")),
+]
+
+mac_files: list[File] = [
+    DifferentNameFile(Path("install.sh"), Path("install.command")),
+    DifferentNameFile(Path("start_gui.sh"), Path("start_gui.command")),
 ]
 
 configurations: list[Configuration] = [
@@ -195,14 +235,14 @@ configurations: list[Configuration] = [
         _package_version=cli_args.package_version,
         _package_path=package_path,
         _files=base_files,
-        _additional_files=unix_files,
+        _additional_files=linux_files,
         _suffix="linux",
     ),
     Configuration(
         _package_version=cli_args.package_version,
         _package_path=package_path,
         _files=base_files,
-        _additional_files=unix_files,
+        _additional_files=mac_files,
         _suffix="macOS",
     ),
 ]

@@ -226,6 +226,20 @@ class Datastore:
         self._video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 
+    def load_track_files(self, files: list[Path]) -> None:
+        """
+        Load and parse the given track file together with the corresponding video file.
+
+        Args:
+            file (Path): file in ottrk format
+        """
+        for file in files:
+            tracks = self._track_parser.parse(file)
+            track_ids = [track.id for track in tracks]
+            track_ids, videos = self._video_parser.parse(file, track_ids)
+            self._video_repository.add_all(track_ids, videos)
+            self._track_repository.add_all(tracks)
+
     def get_all_tracks(self) -> Iterable[Track]:
         """
         Retrieve all tracks of the repository as iterable.

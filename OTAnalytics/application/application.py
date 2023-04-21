@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackImage
 
@@ -51,6 +52,15 @@ class OTAnalyticsApplication:
             track_file (Path): file in ottrk format
         """
         self._datastore.load_track_file(file=track_file)
+
+    def add_tracks_of_files(self, track_files: list[Path]) -> None:
+        """
+        Load a multiple track files.
+
+        Args:
+            track_files (list[Path]): files in ottrk format
+        """
+        self._datastore.load_track_files(files=track_files)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""
@@ -142,3 +152,11 @@ class OTAnalyticsApplication:
             section_id = None
 
         self.section_state.selected_section.set(section_id)
+
+    def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
+        """Get the current track offset.
+
+        Returns:
+            Optional[RelativeOffsetCoordinate]: the current track offset.
+        """
+        return self.track_view_state.track_offset.get()
