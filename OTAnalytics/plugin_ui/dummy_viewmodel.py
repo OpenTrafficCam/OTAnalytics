@@ -49,10 +49,10 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._application = application
         self._section_parser: SectionParser = section_parser
         self._tracks_canvas: Optional[AbstractTracksCanvas] = None
-        self._canvas: AbstractCanvas | None = None
-        self._treeview_sections: AbstractTreeviewSections | None
+        self._canvas: Optional[AbstractCanvas] = None
+        self._treeview_sections: Optional[AbstractTreeviewSections]
         self._new_section: dict = {}
-        self._selected_section_id: str | None = None
+        self._selected_section_id: Optional[str] = None
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
