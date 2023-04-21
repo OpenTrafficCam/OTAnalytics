@@ -2,12 +2,25 @@
 from pathlib import Path
 
 import pandas as pd
+from pandas import DataFrame, read_json
 
 import OTAnalytics.plugin_parser.otvision_parser as otvp
-from OTAnalytics.plugin_parser.otanalytics_parser import PandasDataFrameParser
 
 
-class EventProcessor:
+class PandasDataFrameParser:
+    @staticmethod
+    def from_json(f: Path) -> DataFrame:
+        return read_json(f)
+
+    @staticmethod
+    def from_dict(d: dict, transpose: bool = False) -> DataFrame:
+        df = DataFrame(d)
+        if transpose:
+            return df.transpose()
+        return df
+
+
+class EventParser:
     def __init__(self, config: dict):
         self.TIME_FORMAT = config["TIME_FORMAT"]
         self.FILTER_CLASS = config["FILTER_CLASS"]
