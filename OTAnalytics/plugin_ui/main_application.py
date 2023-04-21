@@ -102,12 +102,15 @@ class ApplicationStarter:
         return CliArgumentParser()
 
     def start_gui(self) -> None:
-        application = OTAnalyticsApplication(**self.build_dependencies())
+        application = self.build_application()
         OTAnalyticsGui(application).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
         datastore = OTAnalyticsApplication(**self.build_dependencies())
         OTAnalyticsCli(datastore, cli_args).start()
+
+    def build_application(self) -> OTAnalyticsApplication:
+        return OTAnalyticsApplication(**self.build_dependencies())
 
     def build_dependencies(self) -> dict[str, Any]:
         datastore = self._create_datastore()
