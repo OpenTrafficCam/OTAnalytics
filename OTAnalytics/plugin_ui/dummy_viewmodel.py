@@ -1,5 +1,5 @@
 from pathlib import Path
-from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
 from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
@@ -120,13 +120,14 @@ class DummyViewModel(ViewModel, SectionListObserver):
         print(f"New line section selected in treeview: id={id}")
 
     def load_tracks(self) -> None:
-        track_file = askopenfilename(
-            title="Load tracks file", filetypes=[("tracks file", "*.ottrk")]
+        track_files = askopenfilenames(
+            title="Load track files", filetypes=[("tracks file", "*.ottrk")]
         )
-        if not track_file:
+        if not track_files:
             return
-        print(f"Tracks file to load: {track_file}")
-        self._application.add_tracks_of_file(track_file=Path(track_file))
+        print(f"Tracks files to load: {track_files}")
+        track_paths = [Path(file) for file in track_files]
+        self._application.add_tracks_of_files(track_files=track_paths)
 
     def load_sections(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
