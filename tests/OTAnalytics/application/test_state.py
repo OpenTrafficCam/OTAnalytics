@@ -4,6 +4,8 @@ import pytest
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    ObservableProperty,
+    Observer,
     SectionState,
     TrackImageUpdater,
     TrackObserver,
@@ -11,7 +13,7 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
-from OTAnalytics.domain.section import Section, SectionId, SectionObserver
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId, TrackImage
 
 
@@ -46,19 +48,19 @@ class TestTrackState:
             TrackState().notify_tracks([])
 
 
-class TestSectionState:
+class TestObservableProperty:
     def test_notify_observer(self) -> None:
         first_section = SectionId("north")
         changed_section = SectionId("south")
-        observer = Mock(spec=SectionObserver)
-        state = SectionState()
+        observer = Mock(spec=Observer)
+        state = ObservableProperty[SectionId]()
         state.register(observer)
 
-        state.select(first_section)
-        state.select(changed_section)
-        state.select(changed_section)
+        state.set(first_section)
+        state.set(changed_section)
+        state.set(changed_section)
 
-        assert observer.notify_section.call_args_list == [
+        assert observer.call_args_list == [
             call(first_section),
             call(changed_section),
         ]
@@ -70,7 +72,7 @@ class TestSectionState:
 
         state.notify_sections([first, second])
 
-        assert state.selected_section == first
+        assert state.selected_section.get() == first
 
     def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
         with pytest.raises(IndexError):
