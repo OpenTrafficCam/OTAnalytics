@@ -1,9 +1,51 @@
 import os
 import shutil
 import zipfile
+from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
 from zipfile import ZipFile
+
+ENCODING: str = "UTF-8"
+
+
+@dataclass(frozen=True)
+class CliArguments:
+    package_version: str
+
+
+class CliArgumentParser:
+    """OT build command line interface argument parser.
+
+    Acts as a wrapper to `argparse.ArgumentParser`.
+
+    Args:
+        arg_parser (ArgumentParser, optional): the argument parser.
+            Defaults to ArgumentParser("OT build").
+    """
+
+    def __init__(self, arg_parser: ArgumentParser = ArgumentParser("OT build")) -> None:
+        self._parser = arg_parser
+        self._setup()
+
+    def _setup(self) -> None:
+        """Sets up the argument parser by defining the command line arguments."""
+        self._parser.add_argument(
+            "--package_version",
+            type=str,
+            help="Version of the package. Defaults to 0.0",
+            required=False,
+            default="0.0",
+        )
+
+    def parse(self) -> CliArguments:
+        """Parse and checks for cli arg
+
+        Returns:
+            CliArguments: _description_
+        """
+        args = self._parser.parse_args()
+        return CliArguments(args.package_version)
 
 
 def collect_files(
@@ -63,7 +105,8 @@ class Configuration:
     platform (suffix)
     """
 
-    _otanalytics_path: Path
+    _package_version: str
+    _package_path: Path
     _files: list[Path]
     _additional_files: list[Path]
     _suffix: str
@@ -80,13 +123,17 @@ class Configuration:
             temp_directory (Path): directory for temporal artifacts.
         """
         clean_directory(build_path)
-        zip_file = Path(output_directory, f"{file_name}-{self._suffix}.zip")
+        zip_file = Path(output_directory, self._build_file_name(file_name))
         self._copy_to_output_directory(temp_directory)
+        self._update_version_file_in(temp_directory)
         zip_output_folder(temp_directory, zip_file)
         clean_directory(build_path)
 
+    def _build_file_name(self, file_name: str) -> str:
+        return f"{file_name}-{self._suffix}-{self._package_version}.zip"
+
     def _copy_to_output_directory(self, output_directory: Path) -> None:
-        files = collect_files(base_path=self._otanalytics_path, file_extension=".py")
+        files = collect_files(base_path=self._package_path, file_extension=".py")
         self._copy_files(files, output_directory=output_directory)
 
         self._copy_files(self._files, output_directory=output_directory)
@@ -105,24 +152,20 @@ class Configuration:
             output_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(file, output_file)
 
-    def _read_requirements(self, requirements_file: Path) -> str:
-        """Read content of existing requirements file.
+    def _update_version_file_in(self, directory: Path) -> None:
+        version_file = Path(directory, self._package_path, "version.py")
+        content = f'__version__ = "{self._package_version}"'
+        with open(version_file, "wt", encoding=ENCODING) as file:
+            file.write(content)
 
-        Args:
-            requirements_file (Path): path to requirements.txt
 
-        Returns:
-            str: content of requirements.txt
-        """
-        with open(requirements_file, "r") as requirements:
-            return requirements.read()
-
+cli_args = CliArgumentParser().parse()
 
 build_path = Path("build")
 distribution_path = Path("dist")
 output_file_name = "otanalytics"
 
-otanalytics_path = Path("OTAnalytics")
+package_path = Path("OTAnalytics")
 
 base_files = [
     Path("LICENSE"),
@@ -142,19 +185,22 @@ unix_files = [
 
 configurations: list[Configuration] = [
     Configuration(
-        _otanalytics_path=otanalytics_path,
+        _package_version=cli_args.package_version,
+        _package_path=package_path,
         _files=base_files,
         _additional_files=windows_files,
         _suffix="win",
     ),
     Configuration(
-        _otanalytics_path=otanalytics_path,
+        _package_version=cli_args.package_version,
+        _package_path=package_path,
         _files=base_files,
         _additional_files=unix_files,
         _suffix="linux",
     ),
     Configuration(
-        _otanalytics_path=otanalytics_path,
+        _package_version=cli_args.package_version,
+        _package_path=package_path,
         _files=base_files,
         _additional_files=unix_files,
         _suffix="macOS",
