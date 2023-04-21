@@ -43,7 +43,12 @@ class Counter:
             freq=f"{config['INTERVAL_LENGTH_MIN']}min",
         )
 
-    def get_flows(self, all_timestamps: bool = False) -> pd.DataFrame:
+    def get_flows(
+        self,
+        all_timestamps: bool = False,
+        filter_sections: list = [],
+        filter_classes: list = [],
+    ) -> pd.DataFrame:
         # Create counting table
         # Get direction for each track (first and last event!)
         events = self.EVENTS.sort_values(["road_user_id", "occurrence"])
@@ -110,6 +115,16 @@ class Counter:
                     axis=1,
                 )
             )
+
+        if filter_sections != []:
+            flows_section = flows_section[
+                (flows_section["from_section"].isin(filter_sections))
+                & (flows_section["to_section"].isin(filter_sections))
+            ]
+        if filter_classes != []:
+            flows_section = flows_section[
+                (flows_section["road_user_type"].isin(filter_classes))
+            ]
 
         return flows_section
 
