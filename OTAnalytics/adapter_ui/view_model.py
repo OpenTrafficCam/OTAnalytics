@@ -94,5 +94,5 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def change_to_section_offset(self) -> None:
+    def change_track_offset_to_section_offset(self) -> None:
         pass
