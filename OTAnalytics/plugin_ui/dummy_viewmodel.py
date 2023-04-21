@@ -70,14 +70,14 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
         if self._tracks_canvas is None:
-            raise MissingInjectedInstanceError("tracks_frame")
+            raise MissingInjectedInstanceError(AbstractTracksCanvas.__name__)
 
         new_value = value or False
         self._tracks_canvas.update_show_tracks(new_value)
 
     def _on_background_updated(self, image: Optional[TrackImage]) -> None:
         if self._tracks_canvas is None:
-            raise MissingInjectedInstanceError("tracks_frame")
+            raise MissingInjectedInstanceError(AbstractTracksCanvas.__name__)
 
         if image:
             self._tracks_canvas.update_background(image)
@@ -87,7 +87,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(injected_object="treeview_sections")
+            raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
         self._treeview_sections.update_sections()
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
@@ -104,7 +104,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._selected_section_id = current_id
 
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError("treeview_sections")
+            raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
         self._treeview_sections.update_selection(current_id)
 
     def set_selected_section_id(self, id: Optional[str]) -> None:
@@ -145,7 +145,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
-                    injected_object="treeview_sections"
+                    AbstractTreeviewSections.__name__
                 ) from cause
             position = get_widget_position(widget=self._treeview_sections)
             InfoBox(
@@ -156,7 +156,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def add_section(self) -> None:
         if self._canvas is None:
-            raise MissingInjectedInstanceError(injected_object="canvas")
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         SectionBuilder(viewmodel=self, canvas=self._canvas)
 
     def set_new_section(self, section: Section) -> None:
@@ -172,7 +172,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if self._selected_section_id is None:
             return
         if self._canvas is None:
-            raise MissingInjectedInstanceError(injected_object="canvas")
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         CanvasElementDeleter(canvas=self._canvas).delete(
             tag_or_id=self._selected_section_id
         )
@@ -187,7 +187,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:
             if self._treeview_sections is None:
-                raise MissingInjectedInstanceError(injected_object="treeview_sections")
+                raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
             position = get_widget_position(self._treeview_sections)
             InfoBox(
                 message="Please select a section to edit", initial_position=position
@@ -201,7 +201,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def _update_metadata(self, selected_section: Section) -> None:
         current_data = selected_section.to_dict()
         if self._canvas is None:
-            raise MissingInjectedInstanceError(injected_object="canvas")
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         position = get_widget_position(widget=self._canvas)
         updated_section_data = ToplevelSections(
             title="Edit section",
@@ -222,7 +222,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def remove_section(self) -> None:
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(injected_object="treeview_sections")
+            raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
         if not self._selected_section_id:
             position = get_widget_position(widget=self._treeview_sections)
             InfoBox(
@@ -238,7 +238,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def _draw_all_sections_on_canvas(self) -> None:
         if self._canvas is None:
-            raise MissingInjectedInstanceError(injected_object="canvas")
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         painter = CanvasElementPainter(canvas=self._canvas)
         for line_section in self._get_sections():
             painter.draw(
@@ -267,7 +267,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def _remove_all_sections_from_canvas(self) -> None:
         if self._canvas is None:
-            raise MissingInjectedInstanceError(injected_object="canvas")
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         CanvasElementDeleter(canvas=self._canvas).delete(tag_or_id=LINE_SECTION)
 
     def get_all_sections(self) -> Iterable[Section]:
