@@ -6,6 +6,7 @@ from customtkinter import CTk
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore, SectionParser
@@ -41,7 +42,6 @@ from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.frame_canvas import TracksCanvas
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
-from OTAnalytics.plugin_ui.view_model import ViewModel
 from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
 
 

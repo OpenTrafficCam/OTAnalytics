@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional
 
+from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.domain.section import Section
-from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.plugin_ui.abstract_frame import AbstractTracksCanvas
-from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 
 
 class ViewModel(ABC):

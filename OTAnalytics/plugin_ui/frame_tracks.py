@@ -2,8 +2,8 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.view_model import ViewModel
 
 
 class FrameTracks(CTkFrame):

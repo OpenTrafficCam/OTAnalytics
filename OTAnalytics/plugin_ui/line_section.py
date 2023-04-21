@@ -3,14 +3,14 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
+from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import ID, LineSection, Section, SectionId
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
-from OTAnalytics.plugin_ui.view_model import ViewModel
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
 LINE_WIDTH: int = 4

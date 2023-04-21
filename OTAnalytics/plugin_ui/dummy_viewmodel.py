@@ -2,6 +2,10 @@ from pathlib import Path
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from typing import Iterable, Optional
 
+from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_treeview import AbstractTreeviewSections
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
@@ -14,9 +18,6 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
 )
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.plugin_ui.abstract_frame import AbstractTracksCanvas
-from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.line_section import (
     CanvasElementDeleter,
@@ -25,7 +26,6 @@ from OTAnalytics.plugin_ui.line_section import (
 )
 from OTAnalytics.plugin_ui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
-from OTAnalytics.plugin_ui.view_model import ViewModel
 
 LINE_SECTION: str = "line_section"
 
