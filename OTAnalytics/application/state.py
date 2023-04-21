@@ -3,13 +3,7 @@ from typing import Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import (
-    Section,
-    SectionId,
-    SectionListObserver,
-    SectionObserver,
-    SectionSubject,
-)
+from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import (
     Track,
     TrackId,
@@ -126,8 +120,9 @@ class ObservableProperty(Generic[VALUE]):
         Args:
             value (Optional[VALUE]): new value to be set
         """
-        self._property = value
-        self._subject.notify(value)
+        if self._property != value:
+            self._property = value
+            self._subject.notify(value)
 
     def get(self) -> Optional[VALUE]:
         """
@@ -229,7 +224,7 @@ class TrackImageUpdater(TrackListObserver):
         Will update the image according to changes of the track offset property.
 
         Args:
-            offset (Optional[RelativeOffsetCoordinate]): curren value
+            offset (Optional[RelativeOffsetCoordinate]): current value
         """
         self._update()
 
@@ -268,34 +263,7 @@ class SectionState(SectionListObserver):
     """
 
     def __init__(self) -> None:
-        self.selected_section: Optional[SectionId] = None
-        self.observers: SectionSubject = SectionSubject()
-
-    def register(self, observer: SectionObserver) -> None:
-        """
-        Listen to changes of the currently selected section.
-
-        Args:
-            observer (SectionObserver): listener to be notified about changes
-        """
-        self.observers.register(observer)
-
-    def select(self, section_id: SectionId) -> None:
-        """
-        Select the given section.
-
-        Args:
-            section_id (SectionId): section to be selected
-        """
-        if self.selected_section != section_id:
-            self.selected_section = section_id
-            self._notify_observers()
-
-    def _notify_observers(self) -> None:
-        """
-        Notify observers about the currently selected section.
-        """
-        self.observers.notify(self.selected_section)
+        self.selected_section = ObservableProperty[SectionId]()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         """
@@ -309,4 +277,4 @@ class SectionState(SectionListObserver):
         """
         if not sections:
             raise IndexError("No section to select")
-        self.select(sections[0])
+        self.selected_section.set(sections[0])
