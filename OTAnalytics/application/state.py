@@ -224,7 +224,7 @@ class TrackImageUpdater(TrackListObserver):
         Will update the image according to changes of the track offset property.
 
         Args:
-            offset (Optional[RelativeOffsetCoordinate]): curren value
+            offset (Optional[RelativeOffsetCoordinate]): current value
         """
         self._update()
 
