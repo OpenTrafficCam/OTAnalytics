@@ -5,24 +5,22 @@ from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkEntry, CTkFrame, CTkLabel
 
-from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 
 
 class FrameTracks(CTkFrame):
-    def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
+    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.application = application
+        self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
 
     def _get_widgets(self) -> None:
         self.label = CTkLabel(master=self, text="Tracks")
         self.button_load_tracks = CTkButton(
-            master=self,
-            text="Load tracks",
-            command=self._load_tracks_in_file,
+            master=self, text="Load tracks", command=self._viewmodel.load_tracks
         )
         self._offset_x = DoubleVar()
         self._offset_y = DoubleVar()
