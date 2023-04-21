@@ -3,8 +3,6 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
-from matplotlib import pyplot as plt
-from mpl_chord_diagram import chord_diagram
 
 from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser
 
@@ -45,9 +43,9 @@ class Counter:
 
     def get_flows(
         self,
-        all_timestamps: bool = False,
         filter_sections: list = [],
         filter_classes: list = [],
+        all_timestamps: bool = False,
     ) -> pd.DataFrame:
         # Create counting table
         # Get direction for each track (first and last event!)
@@ -245,7 +243,7 @@ class Counter:
         if return_table:
             return self.COUNTING_TABLE
 
-    def convert_flow_table_SH(
+    def convert_flow_table(
         self,
         flows: pd.DataFrame,
         flow_names: dict,
@@ -298,9 +296,14 @@ class Counter:
 
         return ret_table
 
-    def create_flow_table(self, return_table: bool = True) -> pd.DataFrame:
+    def create_flow_table(
+        self,
+        filter_sections: list = [],
+        filter_classes: list = [],
+        return_table: bool = True,
+    ) -> pd.DataFrame:
         if not hasattr(self, "FLOWS"):
-            self.FLOWS = self.get_flows()
+            self.FLOWS = self.get_flows(filter_sections, filter_classes)
         flows_section = (
             self.FLOWS.groupby(
                 [
@@ -324,8 +327,16 @@ class Counter:
         # Set time intervals
         intervals = self.INTERVALS
         # Import Sectionlist
-
         section_list = [section.id.id for section in self.SECTIONS]
+
+        if filter_sections != []:
+            section_list = [s for s in section_list if s in filter_sections]
+
+        # Import Classes
+        class_list = self.FLOWS["road_user_type"].unique()
+
+        if filter_classes != []:
+            class_list = [c for c in class_list if c in filter_classes]
 
         # Create table template
         flows_template = pd.DataFrame()
@@ -386,64 +397,28 @@ class Counter:
         )
         fig.show()
 
-    def plot_flows(self) -> None:
-        nodes = [section.id for section in self.SECTIONS]
+    def plot_flows(
+        self, flows_section: pd.DataFrame = pd.DataFrame(), intersection_name: str = ""
+    ) -> None:
+        if len(flows_section) < 1:
+            flows_section = self.FLOW_TABLE
 
-        flows = self.FLOW_TABLE
-        time_intervals = self.INTERVALS
-
-        road_user_types = self.FLOWS["road_user_type"].unique()
-
-        # Plot flows
-        fig, axs = plt.subplots(
-            len(time_intervals),
-            len(road_user_types),
-            dpi=300,
-            figsize=(5 * len(time_intervals), 5 * len(road_user_types)),
+        # Set the time format for plotting
+        flows_section["Datum, Uhrzeit"] = (
+            flows_section["Datum"] + ", " + flows_section["Uhrzeit"]
         )
-        for i in range(0, len(time_intervals)):
-            for j in range(0, len(road_user_types)):
-                if len(road_user_types) > 1 and len(time_intervals) > 1:
-                    axs_ij = axs[i, j]
-                elif len(road_user_types) > 1 and len(time_intervals) == 1:
-                    axs_ij = axs[j]
-                elif len(road_user_types) == 1 and len(time_intervals) > 1:
-                    axs_ij = axs[i]
-                flow_matrix = pd.pivot_table(
-                    flows[
-                        (flows["time_interval"] == time_intervals[i])
-                        & (flows["road_user_type"] == road_user_types[j])
-                    ],
-                    index="from_section",
-                    columns="to_section",
-                    values="n_vehicles",
-                    aggfunc="sum",
-                    sort=False,
-                ).to_numpy(na_value=0)
 
-                chord_diagram(
-                    flow_matrix,
-                    names=nodes,
-                    order=None,
-                    width=0.05,
-                    pad=30.0,
-                    gap=0.03,
-                    chordwidth=0.5,
-                    ax=axs_ij,
-                    colors=None,
-                    cmap=None,
-                    alpha=0.6,
-                    use_gradient=False,
-                    chord_colors=None,
-                    start_at=45,
-                    extent=360,
-                    directed=True,
-                    show=False,
-                )
-                times = self._set_time_format(
-                    pd.Series(time_intervals), self.TIME_FORMAT
-                )
-                axs_ij.set_title(
-                    f"Time Interval: {times[i]},\nRoad User: {road_user_types[j]}",
-                    loc="Left",
-                )
+        # % Create counting plot
+        fig = px.bar(
+            flows_section,
+            x="Datum, Uhrzeit",
+            y="Anzahl",
+            color="Fzg-Typ",
+            barmode="stack",
+            facet_row="Strom-Bezeichnung",
+            facet_col_spacing=0.05,
+            facet_row_spacing=0.2,
+            height=len(flows_section["Strom-Bezeichnung"].unique()) * 400,
+        )
+
+        fig.show()
