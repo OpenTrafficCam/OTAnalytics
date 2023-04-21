@@ -82,7 +82,7 @@ def _parse(path: Path) -> dict:
         return _parse_bz2(path)
 
 
-def _write(data: dict, path: Path) -> None:
+def _write_json(data: dict, path: Path) -> None:
     """Serialize JSON.
 
     Args:
@@ -392,7 +392,7 @@ class OtsectionParser(SectionParser):
             file (Path): file to serialize sections to
         """
         content = self._convert(sections)
-        _write(content, file)
+        _write_json(content, file)
 
     def _convert(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
         """Convert sections into dictionary.
