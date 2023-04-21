@@ -3,13 +3,12 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import customtkinter
-from customtkinter import CTkCheckBox, CTkFrame
+from customtkinter import CTkCheckBox
 from PIL import ImageTk
 
-from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.plugin_ui.abstract_frame import AbstractTracksCanvas
 from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver, EventHandler
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.view_model import ViewModel
@@ -29,16 +28,17 @@ class DisplayableImage:
         return ImageTk.PhotoImage(image=self._image.as_image())
 
 
-class FrameCanvas(CTkFrame):
-    def __init__(
-        self, viewmodel: ViewModel, application: OTAnalyticsApplication, **kwargs: Any
-    ) -> None:
+class TracksCanvas(AbstractTracksCanvas):
+    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
-        self._application = application
         self._show_tracks = tkinter.BooleanVar()
         self._get_widgets()
         self._place_widgets()
+        self.introduce_to_viewmodel()
+
+    def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_tracks_frame(self)
 
     def _get_widgets(self) -> None:
         self.canvas_background = CanvasBackground(
@@ -47,7 +47,7 @@ class FrameCanvas(CTkFrame):
         self.button_show_tracks = CTkCheckBox(
             master=self,
             text="Show tracks",
-            command=self._show_tracks_command,
+            command=self._update_show_tracks_state,
             variable=self._show_tracks,
             onvalue=True,
             offvalue=False,
@@ -62,10 +62,8 @@ class FrameCanvas(CTkFrame):
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
-    def notify(self, image: Optional[TrackImage]) -> None:
-        if image:
-            self._image = image
-            self.add_image(DisplayableImage(self._image), layer="background")
+    def update_background(self, image: TrackImage) -> None:
+        self.add_image(DisplayableImage(image), layer="background")
 
     def add_image(self, image: DisplayableImage, layer: str) -> None:
         self.canvas_background.add_image(image, layer)
@@ -73,17 +71,13 @@ class FrameCanvas(CTkFrame):
     def remove_layer(self, layer: str) -> None:
         self.canvas_background.remove_layer(layer)
 
-    def register_at(self, view_state: TrackViewState) -> None:
-        self._view_state = view_state
-        view_state.background_image.register(self.notify)
-        view_state.show_tracks.register(self._update_show_tracks)
-
-    def _update_show_tracks(self, value: Optional[bool]) -> None:
+    def update_show_tracks(self, value: Optional[bool]) -> None:
         new_value = value or False
         self._show_tracks.set(new_value)
 
-    def _show_tracks_command(self) -> None:
-        self._view_state.show_tracks.set(self._show_tracks.get())
+    def _update_show_tracks_state(self) -> None:
+        new_value = self._show_tracks.get()
+        self._viewmodel.update_show_tracks_state(new_value)
 
 
 class CanvasBackground(AbstractCanvas):
@@ -131,8 +125,8 @@ class CanvasEventHandler(EventHandler):
         self._bind_events()
 
     def _bind_events(self) -> None:
-        self._canvas.bind("<ButtonRelease-1>", self.left_mousebutton_up)
-        self._canvas.bind("<ButtonRelease-2>", self.right_mousebutton_up)
+        self._canvas.bind("<ButtonRelease-1>", self.on_left_mousebutton_up)
+        self._canvas.bind("<ButtonRelease-2>", self.on_right_mousebutton_up)
         self._canvas.bind("<Motion>", self.on_mouse_motion)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
@@ -145,11 +139,11 @@ class CanvasEventHandler(EventHandler):
         for observer in self._observers:
             observer.update(coordinates, event_type)
 
-    def left_mousebutton_up(self, event: Any) -> None:
+    def on_left_mousebutton_up(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, "left_mousebutton_up")
 
-    def right_mousebutton_up(self, event: Any) -> None:
+    def on_right_mousebutton_up(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, "right_mousebutton_up")
 

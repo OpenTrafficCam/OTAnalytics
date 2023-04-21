@@ -129,3 +129,16 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def set_selected_section(self, id: Optional[str]) -> None:
+        """Set the current selected section in the UI.
+
+        Args:
+            id (SectionId): the id of the currently selected section
+        """
+        if id:
+            section_id = SectionId(id)
+        else:
+            section_id = None
+
+        self.section_state.selected_section.set(section_id)

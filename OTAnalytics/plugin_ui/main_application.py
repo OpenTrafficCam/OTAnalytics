@@ -38,7 +38,7 @@ from OTAnalytics.plugin_ui.cli import (
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.dummy_viewmodel import DummyViewModel
 from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
-from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas
+from OTAnalytics.plugin_ui.frame_canvas import TracksCanvas
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
 from OTAnalytics.plugin_ui.view_model import ViewModel
@@ -48,11 +48,9 @@ from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
 class OTAnalyticsGui:
     def __init__(
         self,
-        application: OTAnalyticsApplication,
         view_model: ViewModel,
         app: CTk = CTk(),
     ) -> None:
-        self._application = application
         self._view_model = view_model
         self._app: CTk = app
 
@@ -67,29 +65,23 @@ class OTAnalyticsGui:
 
         self._get_widgets()
         self._place_widgets()
-        self._wire_widgets()
-        self._application.connect_observers()
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
-        self.frame_canvas = FrameCanvas(
+        self.frame_canvas = TracksCanvas(
             master=self._app,
             viewmodel=self._view_model,
-            application=self._application,
         )
         self.frame_tracks = FrameTracks(
             master=self._app,
             viewmodel=self._view_model,
-            application=self._application,
         )
         self.frame_sections = FrameSections(
             master=self._app,
             viewmodel=self._view_model,
-            application=self._application,
         )
         self.frame_analysis = FrameAnalysis(
-            master=self._app,
-            application=self._application,
+            master=self._app, viewmodel=self._view_model
         )
 
     def _place_widgets(self) -> None:
@@ -100,9 +92,6 @@ class OTAnalyticsGui:
         self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_sections.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-
-    def _wire_widgets(self) -> None:
-        self.frame_canvas.register_at(self._application.track_view_state)
 
 
 class ApplicationStarter:
@@ -125,7 +114,9 @@ class ApplicationStarter:
         application = OTAnalyticsApplication(**self.build_dependencies())
         section_parser: SectionParser = application._datastore._section_parser
         dummy_viewmodel = DummyViewModel(application, section_parser)
-        OTAnalyticsGui(application, dummy_viewmodel).start()
+        dummy_viewmodel.connect_observers()
+        application.connect_observers()
+        OTAnalyticsGui(dummy_viewmodel).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
         application = OTAnalyticsApplication(**self.build_dependencies())

@@ -2,17 +2,13 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
-from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.view_model import ViewModel
 
 
 class FrameTracks(CTkFrame):
-    def __init__(
-        self, application: OTAnalyticsApplication, viewmodel: ViewModel, **kwargs: Any
-    ) -> None:
+    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.application = application
         self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()

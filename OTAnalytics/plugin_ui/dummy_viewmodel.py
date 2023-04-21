@@ -5,8 +5,17 @@ from typing import Iterable, Optional
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
-from OTAnalytics.domain.section import END, ID, START, Section, SectionId
+from OTAnalytics.domain.section import (
+    END,
+    ID,
+    START,
+    Section,
+    SectionId,
+    SectionListObserver,
+)
+from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.plugin_ui.abstract_frame import AbstractTracksCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.line_section import (
@@ -22,7 +31,7 @@ LINE_SECTION: str = "line_section"
 
 
 class MissingInjectedInstanceError(Exception):
-    """Raises when no instance of an object was injected before referencing it"""
+    """Raise when no instance of an object was injected before referencing it"""
 
     def __init__(self, injected_object: str):
         message = (
@@ -31,7 +40,7 @@ class MissingInjectedInstanceError(Exception):
         super().__init__(message)
 
 
-class DummyViewModel(ViewModel):
+class DummyViewModel(ViewModel, SectionListObserver):
     def __init__(
         self,
         application: OTAnalyticsApplication,
@@ -39,26 +48,68 @@ class DummyViewModel(ViewModel):
     ) -> None:
         self._application = application
         self._section_parser: SectionParser = section_parser
+        self._tracks_frame: Optional[AbstractTracksCanvas] = None
         self._canvas: AbstractCanvas | None = None
         self._treeview_sections: AbstractTreeviewSections | None
         self._new_section: dict = {}
         self._selected_section_id: str | None = None
+
+    def connect_observers(self) -> None:
+        self._application.register_sections_observer(self)
+
+        self._application.track_view_state.show_tracks.register(
+            self._on_show_tracks_state_updated
+        )
         self._application.section_state.selected_section.register(
             self._update_selected_section
         )
+        self._application.track_view_state.background_image.register(
+            self._on_background_updated
+        )
+
+    def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
+        if self._tracks_frame is None:
+            raise MissingInjectedInstanceError("tracks_frame")
+
+        new_value = value or False
+        self._tracks_frame.update_show_tracks(new_value)
+
+    def _on_background_updated(self, image: Optional[TrackImage]) -> None:
+        if self._tracks_frame is None:
+            raise MissingInjectedInstanceError("tracks_frame")
+
+        if image:
+            self._tracks_frame.update_background(image)
+
+    def update_show_tracks_state(self, value: bool) -> None:
+        self._application.track_view_state.show_tracks.set(value)
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(injected_object="treeview_sections")
+        self._treeview_sections.update_sections()
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
+
+    def set_tracks_frame(self, tracks_frame: AbstractTracksCanvas) -> None:
+        self._tracks_frame = tracks_frame
 
     def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:
         self._treeview_sections = treeview
 
     def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
         current_id = section_id.id if section_id else None
-        self.set_selected_section_id(current_id)
+        self._selected_section_id = current_id
+
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError("treeview_sections")
+        self._treeview_sections.update_selection(current_id)
 
     def set_selected_section_id(self, id: Optional[str]) -> None:
         self._selected_section_id = id
+        self._application.set_selected_section(id)
+
         print(f"New line section selected in treeview: id={id}")
 
     def load_tracks(self) -> None:
@@ -130,6 +181,7 @@ class DummyViewModel(ViewModel):
                 SectionId(self._selected_section_id)
             )
         SectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
+        self.refresh_sections_on_gui()
 
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:
@@ -216,3 +268,12 @@ class DummyViewModel(ViewModel):
         if self._canvas is None:
             raise MissingInjectedInstanceError(injected_object="canvas")
         CanvasElementDeleter(canvas=self._canvas).delete(tag_or_id=LINE_SECTION)
+
+    def get_all_sections(self) -> Iterable[Section]:
+        return self._application.get_all_sections()
+
+    def start_analysis(self) -> None:
+        self._application.start_analysis()
+
+    def save_events(self, file: str) -> None:
+        self._application.save_events(Path(file))

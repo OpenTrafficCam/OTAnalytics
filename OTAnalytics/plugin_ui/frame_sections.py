@@ -1,12 +1,8 @@
-from pathlib import Path
 from tkinter import Listbox
-from tkinter.filedialog import askopenfilename
 from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
-from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.view_model import ViewModel
@@ -16,20 +12,16 @@ class FrameSections(CTkFrame):
     def __init__(
         self,
         viewmodel: ViewModel,
-        application: OTAnalyticsApplication,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
-        self._application = application
-        self._get_widgets(self._application)
+        self._get_widgets()
         self._place_widgets()
 
-    def _get_widgets(self, application: OTAnalyticsApplication) -> None:
+    def _get_widgets(self) -> None:
         self.label = CTkLabel(master=self, text="Sections")
-        self.listbox_sections = TreeviewSections(
-            viewmodel=self._viewmodel, application=application, master=self
-        )
+        self.listbox_sections = TreeviewSections(viewmodel=self._viewmodel, master=self)
         self.button_load_sections = CTkButton(
             master=self, text="Load", command=self._viewmodel.load_sections
         )
@@ -75,28 +67,16 @@ class FrameSections(CTkFrame):
             row=7, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
-    def _load_sections_in_file(self) -> None:
-        sections_file = askopenfilename(
-            title="Load sections file", filetypes=[("sections file", "*.otflow")]
-        )
-        print(f"Sections file to load: {sections_file}")
-        self._application.add_sections_of_file(Path(sections_file))
 
-
-class TreeviewSections(AbstractTreeviewSections, SectionListObserver):
-    def __init__(
-        self, viewmodel: ViewModel, application: OTAnalyticsApplication, **kwargs: Any
-    ) -> None:
+class TreeviewSections(AbstractTreeviewSections):
+    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(show="tree", selectmode="browse", **kwargs)
         self._viewmodel = viewmodel
-        self.application = application
-        self.application.register_sections_observer(self)
-        self.bind("<ButtonRelease-2>", self._deselect_sections)
-        self.bind("<<TreeviewSelect>>", self.notify_viewmodel)
+        self.bind("<ButtonRelease-2>", self._on_deselect)
+        self.bind("<<TreeviewSelect>>", self._on_select)
         self._define_columns()
         self.introduce_to_viewmodel()
-        self._update_sections()
-        self.application.section_state.selected_section.register(self._update_selection)
+        self.update_sections()
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)
@@ -107,45 +87,47 @@ class TreeviewSections(AbstractTreeviewSections, SectionListObserver):
         self.column(column="Section", anchor="center", width=80, minwidth=40)
         self["displaycolumns"] = "Section"
 
-    def notify_sections(self, sections: list[SectionId]) -> None:
-        self._update_sections()
-
     def add_section(self, id: str, name: str) -> None:
         self.insert(parent="", index="end", iid=id, text="", values=[name])
 
-    def _update_sections(self) -> None:
+    def update_sections(self) -> None:
         self.delete(*self.get_children())
-        sections = [section.id for section in self.application.get_all_sections()]
-        self.add_sections(sections=sections)
+        section_ids = [section.id.id for section in self._viewmodel.get_all_sections()]
+        self.add_sections(section_ids=section_ids)
 
-    def add_sections(self, sections: list[SectionId]) -> None:
-        for section in sections:
-            self.insert(
-                parent="", index="end", iid=section.id, text="", values=[section.id]
-            )
+    def add_sections(self, section_ids: list[str]) -> None:
+        for id in section_ids:
+            self.insert(parent="", index="end", iid=id, text="", values=[id])
 
-    def _update_selection(self, section_id: Optional[SectionId]) -> None:
+    def update_selection(self, section_id: Optional[str]) -> None:
+        if section_id == self.get_current_selection():
+            return
+
         if section_id:
-            self.selection_set(section_id.id)
+            self.selection_set(section_id)
         else:
             self._deselect_all()
 
-    def _deselect_sections(self, event: Any) -> None:
+    def _on_deselect(self, event: Any) -> None:
         self._deselect_all()
 
     def _deselect_all(self) -> None:
         for item in self.selection():
             self.selection_remove(item)
 
-    def notify_viewmodel(self, event: Any) -> None:
+    def _on_select(self, event: Any) -> None:
+        line_section_id = self.get_current_selection()
+        self._viewmodel.set_selected_section_id(line_section_id)
+
+    def get_current_selection(self) -> Optional[str]:
         selection = self.selection()
         if len(selection) == 0:
             line_section_id = None
         elif len(selection) == 1:
-            line_section_id = SectionId(selection[0])
+            line_section_id = selection[0]
         else:
             raise ValueError("Only one item in TreeviewSections shall be selected")
-        self.application.section_state.selected_section.set(line_section_id)
+        return line_section_id
 
 
 class ListboxSections(Listbox):

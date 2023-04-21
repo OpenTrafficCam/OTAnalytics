@@ -1,11 +1,17 @@
 from abc import ABC, abstractmethod
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.plugin_ui.abstract_frame import AbstractTracksCanvas
 from OTAnalytics.plugin_ui.abstract_treeview import AbstractTreeviewSections
 
 
 class ViewModel(ABC):
+    @abstractmethod
+    def connect_observers(self) -> None:
+        pass
+
     @abstractmethod
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         raise NotImplementedError
@@ -15,7 +21,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_selected_section_id(self, id: str) -> None:
+    def set_tracks_frame(self, tracks_frame: AbstractTracksCanvas) -> None:
+        pass
+
+    @abstractmethod
+    def set_selected_section_id(self, id: Optional[str]) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -35,6 +45,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_all_sections(self) -> Iterable[Section]:
+        pass
+
+    @abstractmethod
     def set_new_section(self, section: Section) -> None:
         raise NotImplementedError
 
@@ -52,4 +66,16 @@ class ViewModel(ABC):
 
     @abstractmethod
     def refresh_sections_on_gui(self) -> None:
+        pass
+
+    @abstractmethod
+    def start_analysis(self) -> None:
+        pass
+
+    @abstractmethod
+    def save_events(self, file: str) -> None:
+        pass
+
+    @abstractmethod
+    def update_show_tracks_state(self, value: bool) -> None:
         pass

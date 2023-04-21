@@ -212,7 +212,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         self,
         coordinates: list[tuple[int, int]],
     ) -> None:
-        """Sets a line section geomatry from the GeometryBuilder and triggers
+        """Sets a line section geometry from the GeometryBuilder and triggers
         further tasks.
 
         Args:

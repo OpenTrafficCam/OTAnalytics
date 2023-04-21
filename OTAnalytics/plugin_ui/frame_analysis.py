@@ -1,16 +1,15 @@
-from pathlib import Path
 from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
-from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.view_model import ViewModel
 
 
 class FrameAnalysis(CTkFrame):
-    def __init__(self, application: OTAnalyticsApplication, **kwargs: Any) -> None:
+    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._application = application
+        self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
 
@@ -38,14 +37,14 @@ class FrameAnalysis(CTkFrame):
 
     def _start_analysis(self) -> None:
         print("Start analysis")
-        self._application.start_analysis()
+        self._viewmodel.start_analysis()
 
     def _save_eventlist(self) -> None:
-        file = Path("./events.json.bz2")
+        file = "./events.json.bz2"
         # asksaveasfilename(
         #     title="Load sections file",
         #     filetypes=[("events file", "*.json.bz2")],
         #     initialdir=Path("."),
         # )
         print(f"Eventlist file to save: {file}")
-        self._application.save_events(file=Path(file))
+        self._viewmodel.save_events(file)
