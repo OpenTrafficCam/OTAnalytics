@@ -49,7 +49,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
         start_time: str = "",
         end_time: str = "",
         start_end: bool = True,
-        plot_sections: bool = True,
+        plot_sections: bool = False,
         alpha: float = 0.5,
     ) -> TrackImage:
         """
