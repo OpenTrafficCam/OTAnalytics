@@ -6,9 +6,10 @@ from customtkinter import CTk
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.datastore import Datastore, SectionParser
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
@@ -36,16 +37,21 @@ from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsCli,
 )
 from OTAnalytics.plugin_ui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.dummy_viewmodel import DummyViewModel
 from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
-from OTAnalytics.plugin_ui.frame_canvas import FrameCanvas
+from OTAnalytics.plugin_ui.frame_canvas import TracksCanvas
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
 from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
 
 
 class OTAnalyticsGui:
-    def __init__(self, application: OTAnalyticsApplication, app: CTk = CTk()) -> None:
-        self._application = application
+    def __init__(
+        self,
+        view_model: ViewModel,
+        app: CTk = CTk(),
+    ) -> None:
+        self._view_model = view_model
         self._app: CTk = app
 
     def start(self) -> None:
@@ -59,17 +65,23 @@ class OTAnalyticsGui:
 
         self._get_widgets()
         self._place_widgets()
-        self._wire_widgets()
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
-        self.frame_canvas = FrameCanvas(master=self._app, application=self._application)
-        self.frame_tracks = FrameTracks(master=self._app, application=self._application)
+        self.frame_canvas = TracksCanvas(
+            master=self._app,
+            viewmodel=self._view_model,
+        )
+        self.frame_tracks = FrameTracks(
+            master=self._app,
+            viewmodel=self._view_model,
+        )
         self.frame_sections = FrameSections(
-            master=self._app, application=self._application
+            master=self._app,
+            viewmodel=self._view_model,
         )
         self.frame_analysis = FrameAnalysis(
-            master=self._app, application=self._application
+            master=self._app, viewmodel=self._view_model
         )
 
     def _place_widgets(self) -> None:
@@ -80,9 +92,6 @@ class OTAnalyticsGui:
         self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_sections.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-
-    def _wire_widgets(self) -> None:
-        self.frame_canvas.register_at(self._application.track_view_state)
 
 
 class ApplicationStarter:
@@ -103,11 +112,14 @@ class ApplicationStarter:
 
     def start_gui(self) -> None:
         application = self.build_application()
-        OTAnalyticsGui(application).start()
+        section_parser: SectionParser = application._datastore._section_parser
+        dummy_viewmodel = DummyViewModel(application, section_parser)
+        application.connect_observers()
+        OTAnalyticsGui(dummy_viewmodel).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
-        datastore = OTAnalyticsApplication(**self.build_dependencies())
-        OTAnalyticsCli(datastore, cli_args).start()
+        application = OTAnalyticsApplication(**self.build_dependencies())
+        OTAnalyticsCli(application, cli_args).start()
 
     def build_application(self) -> OTAnalyticsApplication:
         return OTAnalyticsApplication(**self.build_dependencies())
