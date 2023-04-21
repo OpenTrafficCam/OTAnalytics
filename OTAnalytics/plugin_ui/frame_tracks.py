@@ -1,21 +1,23 @@
-from pathlib import Path
 from tkinter import DoubleVar
-from tkinter.filedialog import askopenfilename
-from typing import Any, Optional
+from typing import Any
 
-from customtkinter import CTkButton, CTkEntry, CTkFrame, CTkLabel
+from customtkinter import CTkButton, CTkEntry, CTkLabel
 
+from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 
 
-class FrameTracks(CTkFrame):
+class TracksFrame(AbstractTracksFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
+        self.introduce_to_viewmodel()
+
+    def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_tracks_frame(self)
 
     def _get_widgets(self) -> None:
         self.label = CTkLabel(master=self, text="Tracks")
@@ -43,10 +45,11 @@ class FrameTracks(CTkFrame):
         self.button_update_offset = CTkButton(
             master=self,
             text="Update Plot",
-            command=self._change_offset,
+            command=self._on_change_offset,
         )
-        self.application.track_view_state.track_offset.register(self._update_offset)
-        self._update_offset(self.application.track_view_state.track_offset.get())
+        current_track_offset = self._viewmodel.get_track_offset()
+        if current_track_offset:
+            self.update_offset(*current_track_offset)
 
     def _validate_offset(self, value: str) -> bool:
         try:
@@ -55,10 +58,9 @@ class FrameTracks(CTkFrame):
         except ValueError:
             return False
 
-    def _update_offset(self, new_offset: Optional[RelativeOffsetCoordinate]) -> None:
-        if offset := new_offset:
-            self._offset_x.set(offset.x)
-            self._offset_y.set(offset.y)
+    def update_offset(self, new_offset_x: float, new_offset_y: float) -> None:
+        self._offset_x.set(new_offset_x)
+        self._offset_y.set(new_offset_y)
 
     def _place_widgets(self) -> None:
         self.label.grid(
@@ -78,17 +80,5 @@ class FrameTracks(CTkFrame):
             row=5, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
 
-    def _load_tracks_in_file(self) -> None:
-        track_file = askopenfilename(
-            title="Load tracks file", filetypes=[("tracks file", "*.ottrk")]
-        )
-        print(f"Tracks file to load: {track_file}")
-        self.application.add_tracks_of_file(track_file=Path(track_file))
-
-    def _change_offset(self) -> None:
-        self.application.track_view_state.track_offset.set(self._offset_from_text())
-
-    def _offset_from_text(self) -> RelativeOffsetCoordinate:
-        x = self._offset_x.get()
-        y = self._offset_y.get()
-        return RelativeOffsetCoordinate(x, y)
+    def _on_change_offset(self) -> None:
+        self._viewmodel.set_track_offset(self._offset_x.get(), self._offset_y.get())

@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
 from OTAnalytics.adapter_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
@@ -48,6 +49,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
     ) -> None:
         self._application = application
         self._section_parser: SectionParser = section_parser
+        self._tracks_frame: Optional[AbstractTracksFrame] = None
         self._tracks_canvas: Optional[AbstractTracksCanvas] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._treeview_sections: Optional[AbstractTreeviewSections]
@@ -67,6 +69,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._application.track_view_state.background_image.register(
             self._on_background_updated
         )
+        self._application.track_view_state.track_offset.register(self._update_offset)
 
     def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
         if self._tracks_canvas is None:
@@ -89,6 +92,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
         self._treeview_sections.update_sections()
+
+    def set_tracks_frame(self, tracks_frame: AbstractTracksFrame) -> None:
+        self._tracks_frame = tracks_frame
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
@@ -278,3 +284,22 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def save_events(self, file: str) -> None:
         self._application.save_events(Path(file))
+
+    def set_track_offset(self, offset_x: float, offset_y: float) -> None:
+        offset = geometry.RelativeOffsetCoordinate(offset_x, offset_y)
+        self._application.track_view_state.track_offset.set(offset)
+
+    def get_track_offset(self) -> Optional[tuple[float, float]]:
+        current_offset = self._application.get_current_track_offset()
+        if current_offset:
+            return (current_offset.x, current_offset.y)
+        return None
+
+    def _update_offset(
+        self, offset: Optional[geometry.RelativeOffsetCoordinate]
+    ) -> None:
+        if self._tracks_frame is None:
+            raise MissingInjectedInstanceError(AbstractTracksFrame.__name__)
+
+        if offset:
+            self._tracks_frame.update_offset(offset.x, offset.y)
