@@ -305,4 +305,4 @@ class DummyViewModel(ViewModel, SectionListObserver):
             self._tracks_frame.update_offset(offset.x, offset.y)
 
     def change_track_offset_to_section_offset(self) -> None:
-        return self._application.change_to_section_offset()
+        return self._application.change_track_offset_to_section_offset()

@@ -141,7 +141,7 @@ class OTAnalyticsApplication:
         """
         self._datastore.save_event_list_file(file)
 
-    def change_to_section_offset(
+    def change_track_offset_to_section_offset(
         self, event_type: EventType = EventType.SECTION_ENTER
     ) -> None:
         """
