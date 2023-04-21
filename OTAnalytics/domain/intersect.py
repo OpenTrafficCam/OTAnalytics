@@ -166,16 +166,13 @@ class Intersector(ABC):
 
     @staticmethod
     def _calculate_direction_vector(
-        first: Detection, second: Detection
+        first: Coordinate, second: Coordinate
     ) -> DirectionVector2D:
-        """Calculate direction vector from two detections.
-
-        The direction vector will be calculated by taking the x and y values of the
-        detection's bounding box.
+        """Calculate direction vector from two coordinates.
 
         Args:
-            first (Detection): the first detection
-            second (Detection): the second detection
+            first (Coordinate): the first coordinate
+            second (Coordinate): the second coordinate
 
         Returns:
             DirectionVector2D: the direction vector
@@ -247,13 +244,26 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
                 # Subtract by 2n to account for intersection points
                 detection_index = current_idx - 2 * n + 1
                 selected_detection = track.detections[detection_index]
-                previous_detection = track.detections[detection_index - 1]
 
+                selected_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index
+                ]
+                previous_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index - 1
+                ]
                 event_builder.add_direction_vector(
                     self._calculate_direction_vector(
-                        previous_detection, selected_detection
+                        previous_detection_coordinate, selected_detection_coordinate
                     )
                 )
+
+                selected_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index
+                ]
+                event_builder.add_event_coordinate(
+                    selected_detection_coordinate.x, selected_detection_coordinate.y
+                )
+
                 events.append(event_builder.create_event(selected_detection))
                 current_idx += len(splitted_line.coordinates)
         return events
@@ -297,18 +307,26 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
         for current_detection, next_detection in zip(
             track.detections[0:-1], track.detections[1:]
         ):
+            current_detection_coordinate = self._select_coordinate_in_detection(
+                current_detection, offset
+            )
+            next_detection_coordinate = self._select_coordinate_in_detection(
+                next_detection, offset
+            )
             detection_as_geometry = Line(
-                [
-                    self._select_coordinate_in_detection(current_detection, offset),
-                    self._select_coordinate_in_detection(next_detection, offset),
-                ]
+                [current_detection_coordinate, next_detection_coordinate]
             )
             intersects = self.implementation.line_intersects_line(
                 line_section_as_geometry, detection_as_geometry
             )
             if intersects:
                 event_builder.add_direction_vector(
-                    self._calculate_direction_vector(current_detection, next_detection)
+                    self._calculate_direction_vector(
+                        current_detection_coordinate, next_detection_coordinate
+                    )
+                )
+                event_builder.add_event_coordinate(
+                    next_detection_coordinate.x, next_detection_coordinate.y
                 )
                 events.append(event_builder.create_event(next_detection))
         return events
@@ -362,36 +380,52 @@ class IntersectAreaByTrackPoints(AreaIntersector):
             self._select_coordinate_in_detection(detection, offset)
             for detection in track.detections
         ]
-        mask = self.implementation.are_coordinates_within_polygon(
+        section_entered_mask = self.implementation.are_coordinates_within_polygon(
             track_coordinates, area_as_polygon
         )
         events: list[Event] = []
 
         event_builder.add_road_user_type(track.classification)
-        track_starts_inside_area = mask[0]
+        track_starts_inside_area = section_entered_mask[0]
 
         if track_starts_inside_area:
             first_detection = track.detections[0]
-            second_detection = track.detections[1]
+            first_detection_coordinate = track_coordinates[0]
+            second_detection_coordinate = track_coordinates[1]
 
             event_builder.add_event_type(EventType.SECTION_ENTER)
             event_builder.add_road_user_type(first_detection.classification)
             event_builder.add_direction_vector(
-                self._calculate_direction_vector(first_detection, second_detection)
+                self._calculate_direction_vector(
+                    first_detection_coordinate, second_detection_coordinate
+                )
+            )
+            event_builder.add_event_coordinate(
+                first_detection_coordinate.x, first_detection_coordinate.y
             )
             event = event_builder.create_event(first_detection)
             events.append(event)
 
         section_currently_entered = track_starts_inside_area
-        for index, (current_detection, entered) in enumerate(
-            zip(track.detections[1:], mask[1:]), start=1
+
+        for current_index, current_detection in enumerate(
+            track.detections[1:], start=1
         ):
+            entered = section_entered_mask[current_index]
             if section_currently_entered == entered:
                 continue
-            prev_detection = track.detections[index - 1]
+            current_detection_coordinate = track_coordinates[current_index]
+            prev_detection_coordinate = track_coordinates[current_index - 1]
 
             event_builder.add_direction_vector(
-                self._calculate_direction_vector(prev_detection, current_detection)
+                self._calculate_direction_vector(
+                    prev_detection_coordinate, current_detection_coordinate
+                )
+            )
+
+            current_coordinate = track_coordinates[current_index]
+            event_builder.add_event_coordinate(
+                current_coordinate.x, current_coordinate.y
             )
 
             if entered:
