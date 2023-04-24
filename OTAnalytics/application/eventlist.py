@@ -1,3 +1,5 @@
+from typing import Iterable
+
 from OTAnalytics.domain.event import (
     Event,
     EventType,
@@ -80,13 +82,13 @@ class SceneActionDetector:
         self._event_builder = scene_event_builder
 
     def detect_enter_scene(self, track: Track) -> Event:
-        """Detect the first time a road user enters the  scene.
+        """Detect the first time a road user enters the scene.
 
         Args:
-            tracks (list[Track]): the track associated with the road user
+            tracks (Track): the track associated with the road user
 
         Returns:
-            list[Event]: the enter scene event
+            Iterable[Event]: the enter scene event
         """
         self._event_builder.add_event_type(EventType.ENTER_SCENE)
         first_detection = track.detections[0]
@@ -101,22 +103,40 @@ class SceneActionDetector:
         return self._event_builder.create_event(first_detection)
 
     def detect_leave_scene(self, track: Track) -> Event:
-        """Detect the last time before a road user leaves the  scene.
+        """Detect the last time a road user is seen before leaving the scene.
 
         Args:
-            tracks (list[Track]): the track associated with the road user
+            tracks (Track): the track associated with the road user
 
         Returns:
-            list[Event]: the leave scene event
+            Iterable[Event]: the leave scene event
         """
+        self._event_builder.add_event_type(EventType.LEAVE_SCENE)
         last_detection = track.detections[-1]
-        prev_detection = track.detections[-2]
+        second_to_last_detection = track.detections[-2]
         self._event_builder.add_direction_vector(
             calculate_direction_vector(
-                prev_detection.x, prev_detection.y, last_detection.x, last_detection.y
+                second_to_last_detection.x,
+                second_to_last_detection.y,
+                last_detection.x,
+                last_detection.y,
             )
         )
-        self._event_builder.add_event_type(EventType.LEAVE_SCENE)
         self._event_builder.add_event_coordinate(last_detection.x, last_detection.y)
 
         return self._event_builder.create_event(last_detection)
+
+    def detect(self, tracks: Iterable[Track]) -> Iterable[Event]:
+        """Detect all enter and leave scene events.
+
+        Args:
+            tracks (Iterable[Track]): the tracks under inspection
+
+        Returns:
+            Iterable[Event]: the scene events
+        """
+        events: list[Event] = []
+        for track in tracks:
+            events.append(self.detect_enter_scene(track))
+            events.append(self.detect_leave_scene(track))
+        return events

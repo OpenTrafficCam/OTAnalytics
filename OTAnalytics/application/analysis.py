@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from OTAnalytics.application.eventlist import SectionActionDetector
+from OTAnalytics.application.eventlist import SceneActionDetector, SectionActionDetector
 from OTAnalytics.domain.event import Event, EventRepository, SectionEventBuilder
 from OTAnalytics.domain.intersect import (
     IntersectAreaByTrackPoints,
@@ -74,3 +74,11 @@ class RunIntersect:
                     )
                     events.extend(_events)
         return events
+
+
+class SceneEventDetectionRunner:
+    def __init__(self, scene_action_detector: SceneActionDetector) -> None:
+        self._scene_action_detector = scene_action_detector
+
+    def run(self, tracks: Iterable[Track]) -> Iterable[Event]:
+        return self._scene_action_detector.detect(tracks)

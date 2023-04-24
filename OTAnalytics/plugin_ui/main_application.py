@@ -1,13 +1,15 @@
 from typing import Any
 
 import customtkinter
+from application.eventlist import SceneActionDetector
 from customtkinter import CTk
+from domain.event import SceneEventBuilder
 
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.analysis import RunIntersect
+from OTAnalytics.application.analysis import RunIntersect, SceneEventDetectionRunner
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore, SectionParser
 from OTAnalytics.application.state import (
@@ -129,6 +131,7 @@ class ApplicationStarter:
             "track_view_state": self._create_track_view_state(datastore),
             "section_state": self._create_section_state(),
             "intersect": self._create_intersect(datastore),
+            "scene_event_detection_runner": self._create_scene_event_detection_runner(),
         }
 
     def _create_datastore(self) -> Datastore:
@@ -172,3 +175,6 @@ class ApplicationStarter:
                 ShapelyIntersector()
             ),
         )
+
+    def _create_scene_event_detection_runner(self) -> SceneEventDetectionRunner:
+        return SceneEventDetectionRunner(SceneActionDetector(SceneEventBuilder()))
