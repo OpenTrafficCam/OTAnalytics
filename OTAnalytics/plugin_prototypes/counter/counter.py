@@ -68,7 +68,7 @@ class Counter:
             intersection event with the second section of the flow. Defaults to False.
 
         Returns:
-            pd.DataFrame: Pandas dataframe of single flows.
+            pd.DataFrame: Pandas dataframe of single movements.
         """
         # Get direction for each track (first and last event!)
         events = self.EVENTS.sort_values(["road_user_id", "occurrence"])
@@ -447,8 +447,8 @@ class Counter:
         ´create_counting_table´ function.
 
         Args:
-            counts_section (pd.DataFrame, optional): Data frame of countings. If not
-            provided, the counting table stored in the Counter class is used.
+            counts_section (pd.DataFrame, optional): Pandas dataframe of countings.
+            If not provided, the counting table stored in the Counter class is used.
             Defaults to pd.DataFrame().
             intersection_name (str, optional): Name of the intersection for
             the plot titel. Defaults to "".
@@ -492,7 +492,7 @@ class Counter:
         ´create_flow_table´ function.
 
         Args:
-            flows_section (pd.DataFrame, optional): Data frame of flows. If not
+            flows_section (pd.DataFrame, optional): Pandas dataframe of flows. If not
             provided, the flow table stored in the Counter class is used.
             Defaults to pd.DataFrame().
             intersection_name (str, optional): Name of the intersection for
