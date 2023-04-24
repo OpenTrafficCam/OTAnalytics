@@ -8,6 +8,15 @@ from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser
 
 
 class Counter:
+    """Class to create counting tables and plots for single sections
+    or flows for one camera view.
+
+    Args:
+        config (dict): Dict that stores information about: time format,
+        file path to an *.otflow file, start and end time, interval
+        lenght in minutes and a dict of names for the different directions.
+    """
+
     def __init__(self, config: dict, events: pd.DataFrame) -> None:
         self.TIME_FORMAT = config["TIME_FORMAT"]
         self.FROM_TIME = config["FROM_TIME"]
@@ -45,13 +54,26 @@ class Counter:
         self,
         filter_sections: list = [],
         filter_classes: list = [],
-        all_timestamps: bool = False,
+        both_timestamps: bool = False,
     ) -> pd.DataFrame:
-        # Create counting table
+        """Get a pandas dataframe of flows from a pandas dataframe of single events.
+
+        Args:
+            filter_sections (list, optional): Get flows only for certain sections.
+            Has to be a minimum of two sections. Defaults to [] (all sections are
+            included).
+            filter_classes (list, optional): Get flows only for certain road user types.
+            Defaults to [] (all road users are included).
+            both_timestamps (bool, optional): Return also the timestamp of the
+            intersection event with the second section of the flow. Defaults to False.
+
+        Returns:
+            pd.DataFrame: Pandas dataframe of single flows.
+        """
         # Get direction for each track (first and last event!)
         events = self.EVENTS.sort_values(["road_user_id", "occurrence"])
         events["section_id2"] = events["section_id"]
-        if all_timestamps:
+        if both_timestamps:
             events["occurrence2"] = events["occurrence"]
 
             flows_section = (
@@ -133,6 +155,25 @@ class Counter:
         filter_classes: list = [],
         return_table: bool = True,
     ) -> pd.DataFrame:
+        """Create a simple counting table for a section. The counting table is stored
+        in the Counter class as well as returned as pandas dataframe (optional).
+
+        Args:
+            filter_sections (list, optional): Get flows only for certain sections.
+            Has to be a minimum of two sections. Defaults to [] (all sections are
+            included).
+            filter_directions (list, optional): Get flows only for certain directions.
+            Defaults to [] (all directions are included).
+            filter_classes (list, optional): Get flows only for certain road user types.
+            Defaults to [] (all road users are included).
+            return_table (bool, optional): When True, returns the dataframe. Otherwise,
+            the dataframe is only stored in Counter class for plotting.
+            Defaults to True.
+
+        Returns:
+            pd.DataFrame: Pandas dataframe containing the number of road users for
+            each time interval, section, direction and class.
+        """
         if not hasattr(self, "FLOWS"):
             self.FLOWS = self.get_flows()
         counts_section_first_last = (
@@ -250,6 +291,18 @@ class Counter:
         mode_mapper: dict,
         aggregated: bool = False,
     ) -> pd.DataFrame:
+        """Convert the format of a flow table to the format for the customer SH.
+
+        Args:
+            flows (pd.DataFrame): _description_
+            flow_names (dict): _description_
+            mode_mapper (dict): _description_
+            aggregated (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            pd.DataFrame: Pandas dataframe of flow table in the format
+            for the customer SH.
+        """
         ret_table = pd.DataFrame()
         for flow, value in flow_names.items():
             tmp_flows = flows[
@@ -302,6 +355,25 @@ class Counter:
         filter_classes: list = [],
         return_table: bool = True,
     ) -> pd.DataFrame:
+        """Create a simple flow table for the flows between all (filtered) sections.
+        A flow is defined as a movement from a section to another section.
+        The flow table is stored in the Counter class as well as
+        returned as pandas dataframe (optional).
+
+        Args:
+            filter_sections (list, optional): Get flows only for certain sections.
+            Has to be a minimum of two sections. Defaults to [] (all sections are
+            included).
+            filter_classes (list, optional): Get flows only for certain road user types.
+            Defaults to [] (all road users are included).
+            return_table (bool, optional): When True, returns the dataframe. Otherwise,
+            the dataframe is only stored in Counter class for plotting.
+            Defaults to True.
+
+        Returns:
+            pd.DataFrame: Pandas dataframe containing the number of road users for
+            each time interval, flow and class.
+        """
         if not hasattr(self, "FLOWS"):
             self.FLOWS = self.get_flows(filter_sections, filter_classes)
         flows_section = (
@@ -367,8 +439,23 @@ class Counter:
     def _set_time_format(self, series: pd.Series, format: str) -> pd.Series:
         return series.map(lambda x: x.strftime(format))
 
-    def plot_counts(self, intersection_name: str = "") -> None:
-        counts_section = self.COUNTING_TABLE
+    def plot_counts(
+        self, counts_section: pd.DataFrame = pd.DataFrame(), intersection_name: str = ""
+    ) -> None:
+        """Plot the counts for all (filtered) sections in a bar plot.
+        The counting table needs to be created first using the
+        ´create_counting_table´ function.
+
+        Args:
+            counts_section (pd.DataFrame, optional): Data frame of countings. If not
+            provided, the counting table stored in the Counter class is used.
+            Defaults to pd.DataFrame().
+            intersection_name (str, optional): Name of the intersection for
+            the plot titel. Defaults to "".
+        """
+
+        if len(counts_section) < 1:
+            counts_section = self.COUNTING_TABLE
 
         # Set the time format for plotting
         counts_section["time_interval"] = self._set_time_format(
@@ -400,6 +487,17 @@ class Counter:
     def plot_flows(
         self, flows_section: pd.DataFrame = pd.DataFrame(), intersection_name: str = ""
     ) -> None:
+        """Plot the flows for all (filtered) sections in a bar plot.
+        A flow table needs to be created first using the
+        ´create_flow_table´ function.
+
+        Args:
+            flows_section (pd.DataFrame, optional): Data frame of flows. If not
+            provided, the flow table stored in the Counter class is used.
+            Defaults to pd.DataFrame().
+            intersection_name (str, optional): Name of the intersection for
+            the plot titel. Defaults to "".
+        """
         if len(flows_section) < 1:
             flows_section = self.FLOW_TABLE
 
