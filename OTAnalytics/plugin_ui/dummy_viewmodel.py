@@ -287,8 +287,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._application.track_view_state.track_offset.set(offset)
 
     def get_track_offset(self) -> Optional[tuple[float, float]]:
-        current_offset = self._application.get_current_track_offset()
-        if current_offset:
+        if current_offset := self._application.get_current_track_offset():
             return (current_offset.x, current_offset.y)
         return None
 
@@ -300,3 +299,6 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
         if offset:
             self._tracks_frame.update_offset(offset.x, offset.y)
+
+    def change_track_offset_to_section_offset(self) -> None:
+        return self._application.change_track_offset_to_section_offset()

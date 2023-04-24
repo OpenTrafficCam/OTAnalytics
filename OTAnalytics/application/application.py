@@ -7,6 +7,7 @@ from OTAnalytics.application.state import SectionState, TrackState, TrackViewSta
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.types import EventType
 
 
 class OTAnalyticsApplication:
@@ -129,7 +130,10 @@ class OTAnalyticsApplication:
         Intersect all tracks with all sections and write the events into the event
         repository
         """
-        self._intersect.run()
+        tracks = self._datastore.get_all_tracks()
+        sections = self._datastore.get_all_sections()
+        events = self._intersect.run(tracks, sections)
+        self._datastore.add_events(events)
 
     def save_events(self, file: Path) -> None:
         """
@@ -139,6 +143,22 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def change_track_offset_to_section_offset(
+        self, event_type: EventType = EventType.SECTION_ENTER
+    ) -> None:
+        """
+        Change the offset to visualize tracks to the offset of the currently selected
+        section.
+
+        Args:
+            event_type (EventType, optional): event type of the offset at the section.
+            Defaults to EventType.SECTION_ENTER.
+        """
+        if section_id := self.section_state.selected_section.get():
+            if section := self._datastore.get_section_for(section_id):
+                if offset := section.relative_offset_coordinates.get(event_type):
+                    self.track_view_state.track_offset.set(offset)
 
     def set_selected_section(self, id: Optional[str]) -> None:
         """Set the current selected section in the UI.

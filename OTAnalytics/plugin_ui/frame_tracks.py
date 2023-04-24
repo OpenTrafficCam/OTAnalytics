@@ -47,8 +47,12 @@ class TracksFrame(AbstractTracksFrame):
             text="Update Plot",
             command=self._on_change_offset,
         )
-        current_track_offset = self._viewmodel.get_track_offset()
-        if current_track_offset:
+        self.button_change_to_section_offset = CTkButton(
+            master=self,
+            text="Update with section offset",
+            command=self._on_change_to_section_offset,
+        )
+        if current_track_offset := self._viewmodel.get_track_offset():
             self.update_offset(*current_track_offset)
 
     def _validate_offset(self, value: str) -> bool:
@@ -79,6 +83,12 @@ class TracksFrame(AbstractTracksFrame):
         self.button_update_offset.grid(
             row=5, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self.button_change_to_section_offset.grid(
+            row=6, column=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
 
     def _on_change_offset(self) -> None:
         self._viewmodel.set_track_offset(self._offset_x.get(), self._offset_y.get())
+
+    def _on_change_to_section_offset(self) -> None:
+        self._viewmodel.change_track_offset_to_section_offset()

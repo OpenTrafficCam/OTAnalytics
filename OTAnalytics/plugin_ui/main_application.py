@@ -1,5 +1,3 @@
-from typing import Any
-
 import customtkinter
 from customtkinter import CTk
 
@@ -9,7 +7,12 @@ from OTAnalytics.adapter_intersect.intersect import (
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.datastore import Datastore, SectionParser
+from OTAnalytics.application.datastore import (
+    Datastore,
+    EventListParser,
+    SectionParser,
+    TrackParser,
+)
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
@@ -111,36 +114,44 @@ class ApplicationStarter:
         return CliArgumentParser()
 
     def start_gui(self) -> None:
-        application = OTAnalyticsApplication(**self.build_dependencies())
+        datastore = self._create_datastore()
+        track_state = self._create_track_state()
+        track_view_state = self._create_track_view_state(datastore)
+        section_state = self._create_section_state()
+        intersect = self._create_intersect()
+        application = OTAnalyticsApplication(
+            datastore=datastore,
+            track_state=track_state,
+            track_view_state=track_view_state,
+            section_state=section_state,
+            intersect=intersect,
+        )
         section_parser: SectionParser = application._datastore._section_parser
         dummy_viewmodel = DummyViewModel(application, section_parser)
         application.connect_observers()
         OTAnalyticsGui(dummy_viewmodel).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
-        application = OTAnalyticsApplication(**self.build_dependencies())
-        OTAnalyticsCli(application, cli_args).start()
-
-    def build_dependencies(self) -> dict[str, Any]:
-        datastore = self._create_datastore()
-        return {
-            "datastore": datastore,
-            "track_state": self._create_track_state(),
-            "track_view_state": self._create_track_view_state(datastore),
-            "section_state": self._create_section_state(),
-            "intersect": self._create_intersect(datastore),
-        }
+        track_parser = self._create_track_parser(self._create_track_repository())
+        section_parser = self._create_section_parser()
+        event_list_parser = self._create_event_list_parser()
+        intersect = self._create_intersect()
+        OTAnalyticsCli(
+            cli_args,
+            track_parser=track_parser,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            intersect=intersect,
+        ).start()
 
     def _create_datastore(self) -> Datastore:
         """
         Build all required objects and inject them where necessary
         """,
-        track_repository = TrackRepository()
-        track_parser = OttrkParser(
-            CalculateTrackClassificationByMaxConfidence(), track_repository
-        )
-        section_parser = OtsectionParser()
-        event_list_parser = OtEventListParser()
+        track_repository = self._create_track_repository()
+        track_parser = self._create_track_parser(track_repository)
+        section_parser = self._create_section_parser()
+        event_list_parser = self._create_event_list_parser()
         video_parser = OttrkVideoParser(MoviepyVideoReader())
         return Datastore(
             track_repository,
@@ -149,6 +160,20 @@ class ApplicationStarter:
             event_list_parser,
             video_parser,
         )
+
+    def _create_track_repository(self) -> TrackRepository:
+        return TrackRepository()
+
+    def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
+        return OttrkParser(
+            CalculateTrackClassificationByMaxConfidence(), track_repository
+        )
+
+    def _create_section_parser(self) -> SectionParser:
+        return OtsectionParser()
+
+    def _create_event_list_parser(self) -> EventListParser:
+        return OtEventListParser()
 
     def _create_track_state(self) -> TrackState:
         return TrackState()
@@ -163,11 +188,8 @@ class ApplicationStarter:
     def _create_section_state(self) -> SectionState:
         return SectionState()
 
-    def _create_intersect(self, datastore: Datastore) -> RunIntersect:
+    def _create_intersect(self) -> RunIntersect:
         return RunIntersect(
-            datastore._track_repository,
-            datastore._section_repository,
-            datastore._event_repository,
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
             ),
