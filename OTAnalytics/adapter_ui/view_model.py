@@ -3,6 +3,7 @@ from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
 from OTAnalytics.adapter_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.domain.section import Section
 
@@ -10,6 +11,10 @@ from OTAnalytics.domain.section import Section
 class ViewModel(ABC):
     @abstractmethod
     def register_to_subjects(self) -> None:
+        pass
+
+    @abstractmethod
+    def set_tracks_frame(self, tracks_frame: AbstractTracksFrame) -> None:
         pass
 
     @abstractmethod
@@ -21,7 +26,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_tracks_frame(self, tracks_frame: AbstractTracksCanvas) -> None:
+    def set_tracks_canvas(self, tracks_canvas: AbstractTracksCanvas) -> None:
         pass
 
     @abstractmethod
@@ -78,4 +83,16 @@ class ViewModel(ABC):
 
     @abstractmethod
     def update_show_tracks_state(self, value: bool) -> None:
+        pass
+
+    @abstractmethod
+    def set_track_offset(self, offset_x: float, offset_y: float) -> None:
+        pass
+
+    @abstractmethod
+    def get_track_offset(self) -> Optional[tuple[float, float]]:
+        pass
+
+    @abstractmethod
+    def change_track_offset_to_section_offset(self) -> None:
         pass

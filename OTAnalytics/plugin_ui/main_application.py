@@ -41,7 +41,7 @@ from OTAnalytics.plugin_ui.dummy_viewmodel import DummyViewModel
 from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.frame_canvas import TracksCanvas
 from OTAnalytics.plugin_ui.frame_sections import FrameSections
-from OTAnalytics.plugin_ui.frame_tracks import FrameTracks
+from OTAnalytics.plugin_ui.frame_tracks import TracksFrame
 from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
 
 
@@ -72,7 +72,7 @@ class OTAnalyticsGui:
             master=self._app,
             viewmodel=self._view_model,
         )
-        self.frame_tracks = FrameTracks(
+        self.frame_tracks = TracksFrame(
             master=self._app,
             viewmodel=self._view_model,
         )
