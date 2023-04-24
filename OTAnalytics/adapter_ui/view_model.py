@@ -92,3 +92,7 @@ class ViewModel(ABC):
     @abstractmethod
     def get_track_offset(self) -> Optional[tuple[float, float]]:
         pass
+
+    @abstractmethod
+    def change_track_offset_to_section_offset(self) -> None:
+        pass
