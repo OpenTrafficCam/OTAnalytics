@@ -10,10 +10,28 @@ import OTAnalytics.plugin_parser.otvision_parser as otvp
 class PandasDataFrameParser:
     @staticmethod
     def from_json(f: Path) -> DataFrame:
+        """Imports a json file and converts it to a pandas dataframe.
+
+        Args:
+            f (Path): Path to json file
+
+        Returns:
+            DataFrame: Data frame from the imported json file.
+        """
         return read_json(f)
 
     @staticmethod
     def from_dict(d: dict, transpose: bool = False) -> DataFrame:
+        """Converts a dict to a pandas dataframe.
+
+        Args:
+            d (dict): dict to convert
+            transpose (bool, optional): Transposes the datafame if True.
+            Defaults to False.
+
+        Returns:
+            DataFrame: Data from the dict as data frame.
+        """
         df = DataFrame(d)
         if transpose:
             return df.transpose()
@@ -21,6 +39,14 @@ class PandasDataFrameParser:
 
 
 class EventParser:
+    """Class to import and filter an *.otevents file.
+
+    Args:
+        config (dict): Dict that stores information about: time format, class and/or
+        section filters, file paths to *.otevents and *.otflow files, start and end
+        time and interval lenght in minutes.
+    """
+
     def __init__(self, config: dict):
         self.TIME_FORMAT = config["TIME_FORMAT"]
         self.FILTER_CLASS = config["FILTER_CLASS"]
@@ -49,6 +75,12 @@ class EventParser:
         return events.sort_values(["occurrence"])
 
     def process_events(self) -> pd.DataFrame:
+        """Function to generate a pandas dataframe with (filtered) single events from
+        one or more *.otevent files.
+
+        Returns:
+            pd.DataFrame: Single events as pandas dataframe.
+        """
         # Import Eventlist
         events_df = self._import_eventlists()
 
