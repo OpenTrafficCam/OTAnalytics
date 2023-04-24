@@ -3,8 +3,8 @@ matplotlib==3.7.1
 moviepy==1.0.3
 numpy==1.24.2
 pandas==2.0.0
-pillow==9.4.0
+pillow==9.5.0
 seaborn==0.12.2
 shapely==2.0.1
-tqdm==4.64.1
+tqdm==4.65.0
 ujson==5.7.0
