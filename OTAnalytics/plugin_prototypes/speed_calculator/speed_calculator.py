@@ -12,6 +12,23 @@ from OTAnalytics.plugin_prototypes.counter.counter import Counter
 
 
 class SpeedCalculator:
+    """Class to calculate and plot average speeds for flows between two sections
+    for one camera view.
+
+    Args:
+        config (dict): Dict that stores information about: time format,
+        file path to an *.otflow file, start and end time, interval
+        lenght in minutes and a dict of names for the different directions.
+        events (pd.DataFrame): _description_
+        filter_sections (list, optional): Get speeds only for certain sections.
+        Has to be a minimum of two sections. Defaults to [] (all sections are
+        included).
+        filter_directions (list, optional): Get speeds only for certain directions.
+        Defaults to [] (all directions are included).
+        filter_classes (list, optional): Get speeds only for certain road user types.
+        Defaults to [] (all road users are included).
+    """
+
     def __init__(
         self,
         config: dict,
@@ -30,7 +47,7 @@ class SpeedCalculator:
         counts_processor = Counter(config, events)
 
         self.MOVEMENTS = counts_processor.get_flows(
-            filter_sections, filter_classes, all_timestamps=True
+            filter_sections, filter_classes, both_timestamps=True
         )
 
         self.COUNTING_TABLES = counts_processor.create_counting_table(
@@ -45,6 +62,19 @@ class SpeedCalculator:
         self,
         return_table: bool = True,
     ) -> pd.DataFrame:
+        """Calculate average speeds for each flow between two sections. **Note: only
+        flows that have distances provided within the plugin_data of the *.otflow file
+        will be considered!**
+
+        Args:
+            return_table (bool, optional): When True, returns the dataframe. Otherwise,
+            the dataframe is only stored in SpeedCalculator class for plotting.
+            Defaults to True.
+
+        Returns:
+            pd.DataFrame: Pandas dataframe containing each movement as returned by
+            the ´get_flows´ function of the Counter class with average speed.
+        """
         from_sections = []
         to_sections = []
         distances = []
@@ -108,11 +138,20 @@ class SpeedCalculator:
 
     def plot_v_hist(
         self,
-        col: Optional[str] = None,
         row: Optional[str] = None,
         section_name: str = "",
         nbins: int = 30,
     ) -> None:
+        """Create one or more histograms for average speeds by road user class.
+
+        Args:
+            row (Optional[str], optional): Create multiple plots distiguished
+            by any column of the Pandas dataframe. Defaults to None.
+            section_name (str, optional): Name of the section for
+            the plot titel. Defaults to "".
+            nbins (int, optional): Number of bin used in the histogram plot.
+            Defaults to 30.
+        """
         speed_table = self.SPEED_TABLE.copy()
 
         # Set the time format for plotting
@@ -125,10 +164,10 @@ class SpeedCalculator:
             speed_table,
             x="speed",
             barmode="relative",
+            color="road_user_type",
             # barnorm="overlay",
             nbins=nbins,
             histnorm="percent",
-            facet_col=col,
             facet_row=row,
             facet_col_spacing=0.05,
             facet_row_spacing=0.1,
@@ -144,10 +183,19 @@ class SpeedCalculator:
 
     def plot_q_v(
         self,
-        col: Optional[str] = None,
         row: Optional[str] = None,
         section_name: str = "",
     ) -> None:
+        """Create one or more acetter plots of the average speed of each
+        movement over the number of overall road users in the respective
+        time interval.
+
+        Args:
+            row (Optional[str], optional): Create multiple plots distiguished
+            by any column of the Pandas dataframe. Defaults to None.
+            section_name (str, optional): Name of the section for
+            the plot titel. Defaults to "".
+        """
         speed_table = self.SPEED_TABLE.copy()
 
         # Set the time format for plotting
@@ -161,7 +209,6 @@ class SpeedCalculator:
             x="n_vehicles",
             y="speed",
             color="road_user_type",
-            facet_col=col,
             facet_row=row,
             facet_col_spacing=0.05,
             facet_row_spacing=0.1,
