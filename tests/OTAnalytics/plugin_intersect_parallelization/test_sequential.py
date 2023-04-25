@@ -23,4 +23,4 @@ class TestSequentialIntersect:
         mock_intersect.assert_any_call(tracks[0], sections)
 
         mock_intersect.assert_any_call(tracks[1], sections)
-        mock_intersect.call_count == 2
+        assert mock_intersect.call_count == 2
