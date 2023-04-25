@@ -12,7 +12,7 @@ class SequentialIntersect(IntersectParallelizationStrategy):
         intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],
         tracks: Iterable[Track],
         sections: Iterable[Section],
-    ) -> Iterable[Event]:
+    ) -> list[Event]:
         events: list[Event] = []
         for _track in tracks:
             events.extend(intersect(_track, sections))

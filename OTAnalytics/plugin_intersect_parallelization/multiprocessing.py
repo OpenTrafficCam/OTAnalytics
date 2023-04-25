@@ -15,7 +15,7 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
         intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],
         tracks: Iterable[Track],
         sections: Iterable[Section],
-    ) -> Iterable[Event]:
+    ) -> list[Event]:
         with Pool(processes=cpu_count()) as pool:
             events = pool.starmap(
                 intersect,
@@ -23,5 +23,5 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
             )
         return self._flatten_events(events)
 
-    def _flatten_events(self, events: Iterable[Iterable[Event]]) -> Iterable[Event]:
+    def _flatten_events(self, events: Iterable[Iterable[Event]]) -> list[Event]:
         return list(itertools.chain.from_iterable(events))

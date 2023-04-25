@@ -21,7 +21,7 @@ class IntersectParallelizationStrategy(ABC):
         intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],
         tracks: Iterable[Track],
         sections: Iterable[Section],
-    ) -> Iterable[Event]:
+    ) -> list[Event]:
         """Parallelizes the intersection of tracks with sections.
 
         Args:
