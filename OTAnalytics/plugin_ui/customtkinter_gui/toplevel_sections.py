@@ -5,8 +5,8 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
 from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
 from OTAnalytics.domain.section import ID, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.frame_bbox_offset import FrameBboxOffset
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
 
 
 class ToplevelSections(CTkToplevel):
