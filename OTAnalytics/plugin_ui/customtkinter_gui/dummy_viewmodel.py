@@ -19,14 +19,14 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
 )
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.plugin_ui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.line_section import (
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     CanvasElementDeleter,
     CanvasElementPainter,
     SectionBuilder,
 )
-from OTAnalytics.plugin_ui.messagebox import InfoBox
-from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 LINE_SECTION: str = "line_section"
 

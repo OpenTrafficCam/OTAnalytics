@@ -14,9 +14,9 @@ from OTAnalytics.domain.section import (
     SectionId,
 )
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver
-from OTAnalytics.plugin_ui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
+from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
 LINE_WIDTH: int = 4

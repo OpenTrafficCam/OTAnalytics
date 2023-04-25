@@ -44,12 +44,12 @@ from OTAnalytics.plugin_ui.cli import (
     CliParseError,
     OTAnalyticsCli,
 )
-from OTAnalytics.plugin_ui.constants import PADX, STICKY
-from OTAnalytics.plugin_ui.dummy_viewmodel import DummyViewModel
-from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
-from OTAnalytics.plugin_ui.frame_canvas import TracksCanvas
-from OTAnalytics.plugin_ui.frame_sections import FrameSections
-from OTAnalytics.plugin_ui.frame_tracks import TracksFrame
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import DummyViewModel
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import TracksCanvas
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import FrameSections
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
 from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
 
 
