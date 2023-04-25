@@ -3,6 +3,7 @@ from typing import Any
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
 
 from OTAnalytics.domain.section import ID, RELATIVE_OFFSET_COORDINATES
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.frame_bbox_offset import FrameBboxOffset
 
@@ -22,7 +23,7 @@ class ToplevelSections(CTkToplevel):
             {
                 ID: "",
                 RELATIVE_OFFSET_COORDINATES: {
-                    "section-enter": {"x": 0.5, "y": 0.5},
+                    EventType.SECTION_ENTER.serialize(): {"x": 0.5, "y": 0.5},
                     "section-leave": {"x": 0.5, "y": 0.5},
                 },
             }
@@ -46,7 +47,7 @@ class ToplevelSections(CTkToplevel):
             master=self,
             relative_offset_coordinates_enter=self.input_values[
                 RELATIVE_OFFSET_COORDINATES
-            ]["section-enter"],
+            ][EventType.SECTION_ENTER.serialize()],
         )
 
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
@@ -74,7 +75,7 @@ class ToplevelSections(CTkToplevel):
     def close(self, event: Any = None) -> None:
         self.input_values[ID] = self.entry_name.get()
         self.input_values[RELATIVE_OFFSET_COORDINATES][
-            "section-enter"
+            EventType.SECTION_ENTER.serialize()
         ] = self.frame_bbox_offset.get_relative_offset_coordintes_enter()
         self.destroy()
         self.update()
