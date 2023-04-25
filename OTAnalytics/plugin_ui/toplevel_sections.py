@@ -24,7 +24,6 @@ class ToplevelSections(CTkToplevel):
                 ID: "",
                 RELATIVE_OFFSET_COORDINATES: {
                     EventType.SECTION_ENTER.serialize(): {"x": 0.5, "y": 0.5},
-                    "section-leave": {"x": 0.5, "y": 0.5},
                 },
             }
             if input_values is None
