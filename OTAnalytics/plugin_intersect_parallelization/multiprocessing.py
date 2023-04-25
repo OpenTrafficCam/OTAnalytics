@@ -10,6 +10,8 @@ from OTAnalytics.domain.track import Track
 
 
 class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
+    """Executes the intersection of tracks and sections in parallel."""
+
     def execute(
         self,
         intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],

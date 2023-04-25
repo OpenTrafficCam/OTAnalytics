@@ -7,6 +7,8 @@ from OTAnalytics.domain.track import Track
 
 
 class SequentialIntersect(IntersectParallelizationStrategy):
+    """Executes the intersection of tracks and sections in sequential order."""
+
     def execute(
         self,
         intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],

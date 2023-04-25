@@ -22,14 +22,14 @@ class IntersectParallelizationStrategy(ABC):
         tracks: Iterable[Track],
         sections: Iterable[Section],
     ) -> list[Event]:
-        """Parallelizes the intersection of tracks with sections.
+        """Executes the intersection of tracks with sections with the implemented
+        parallelization strategy.
 
         Args:
             intersect (Callable[[Track, Iterable[Section]], Iterable[Event]]): the
-                function to be executed on an iterable of tracks and sections in
-                parallel.
-            tracks (Iterable[Track]): the tracks to be processed in parallel.
-            sections (Iterable[Section]): the sections to be processed in parallel.
+                function to be executed on an iterable of tracks and sections.
+            tracks (Iterable[Track]): the tracks to be processed.
+            sections (Iterable[Section]): the sections to be processed.
 
         Returns:
             Iterable[Event]: the generated events.
