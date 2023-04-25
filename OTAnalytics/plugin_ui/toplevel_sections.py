@@ -44,9 +44,10 @@ class ToplevelSections(CTkToplevel):
 
         self.frame_bbox_offset = FrameBboxOffset(
             master=self,
-            relative_offset_coordinates_enter=self.input_values[
-                RELATIVE_OFFSET_COORDINATES
-            ][EventType.SECTION_ENTER.serialize()],
+            frame_heading="Bounding Box offset for enter-events:",
+            relative_offset_coordinates=self.input_values[RELATIVE_OFFSET_COORDINATES][
+                EventType.SECTION_ENTER.serialize()
+            ],
         )
 
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
@@ -75,7 +76,7 @@ class ToplevelSections(CTkToplevel):
         self.input_values[ID] = self.entry_name.get()
         self.input_values[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
-        ] = self.frame_bbox_offset.get_relative_offset_coordintes_enter()
+        ] = self.frame_bbox_offset.get_relative_offset_coordintes()
         self.destroy()
         self.update()
 

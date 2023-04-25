@@ -9,17 +9,19 @@ from OTAnalytics.plugin_ui.constants import PADX
 class FrameBboxOffset(CTkFrame):
     def __init__(
         self,
-        relative_offset_coordinates_enter: dict,
+        frame_heading: str,
+        relative_offset_coordinates: dict,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self._relative_offset_coordinates_enter = relative_offset_coordinates_enter
+        self._relative_offset_coordinates = relative_offset_coordinates
+        self._frame_heading = frame_heading
         self._get_widgets()
         self._place_widgets()
         self._set_initial_values()
 
     def _get_widgets(self) -> None:
-        self.label = CTkLabel(master=self, text="Bounding Box offset for enter-events:")
+        self.label = CTkLabel(master=self, text=self._frame_heading)
         self.label_x = CTkLabel(master=self, text="X:")
         self.label_y = CTkLabel(master=self, text="Y:")
         self.label_x_value = CTkLabel(master=self, width=20)
@@ -51,13 +53,12 @@ class FrameBboxOffset(CTkFrame):
         self.label_y_value.grid(row=2, column=3, padx=PADX, sticky="W")
 
     def _set_initial_values(self) -> None:
-        self.slider_x.set(self._relative_offset_coordinates_enter["x"])
-        self.slider_y.set(self._relative_offset_coordinates_enter["y"])
-        self.label_x_value.configure(text=self._relative_offset_coordinates_enter["x"])
-        self.label_y_value.configure(text=self._relative_offset_coordinates_enter["y"])
+        self.slider_x.set(self._relative_offset_coordinates["x"])
+        self.slider_y.set(self._relative_offset_coordinates["y"])
+        self.label_x_value.configure(text=self._relative_offset_coordinates["x"])
+        self.label_y_value.configure(text=self._relative_offset_coordinates["y"])
 
-    def get_relative_offset_coordintes_enter(self) -> dict:
-        # sourcery skip: merge-dict-assign
+    def get_relative_offset_coordintes(self) -> dict:
         x = round(self.slider_x.get(), 2)
         y = round(self.slider_y.get(), 2)
         return {geometry.X: x, geometry.Y: y}
