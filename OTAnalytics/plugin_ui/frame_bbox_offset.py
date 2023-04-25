@@ -2,6 +2,7 @@ from typing import Any
 
 from customtkinter import CTkFrame, CTkLabel, CTkSlider
 
+from OTAnalytics.domain import geometry
 from OTAnalytics.plugin_ui.constants import PADX
 
 
@@ -57,7 +58,6 @@ class FrameBboxOffset(CTkFrame):
 
     def get_relative_offset_coordintes_enter(self) -> dict:
         # sourcery skip: merge-dict-assign
-        relative_offset_coordinates_enter: dict = {}
-        relative_offset_coordinates_enter["x"] = round(self.slider_x.get(), 2)
-        relative_offset_coordinates_enter["y"] = round(self.slider_y.get(), 2)
-        return relative_offset_coordinates_enter
+        x = round(self.slider_x.get(), 2)
+        y = round(self.slider_y.get(), 2)
+        return {geometry.X: x, geometry.Y: y}
