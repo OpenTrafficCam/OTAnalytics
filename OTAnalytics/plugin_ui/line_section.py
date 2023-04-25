@@ -246,7 +246,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             raise ValueError("Metadata of line_section are not defined")
         name = self._metadata[ID]
         relative_offset_coordinates_enter = self._metadata[RELATIVE_OFFSET_COORDINATES][
-            "section-enter"
+            EventType.SECTION_ENTER.serialize()
         ]
         line_section = LineSection(
             id=SectionId(name),
