@@ -5,7 +5,7 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel
 
 from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 
 
 class TracksFrame(AbstractTracksFrame):

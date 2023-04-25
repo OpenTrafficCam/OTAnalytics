@@ -9,17 +9,22 @@ import pytest
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
-from OTAnalytics.application.analysis import RunIntersect
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import (
     EventListParser,
     SectionParser,
     TrackParser,
 )
+from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.domain.event import SceneEventBuilder
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
 )
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
+    MultiprocessingIntersectParallelization,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtsectionParser,
@@ -101,6 +106,7 @@ class TestOTAnalyticsCli:
     SECTION_PARSER: str = "section_parser"
     EVENT_LIST_PARSER: str = "event_list_parser"
     INTERSECT: str = "intersect"
+    SCENE_EVENT_DETECTION: str = "scene_event_detection"
 
     @pytest.fixture
     def mock_cli_dependencies(self) -> dict[str, Any]:
@@ -109,6 +115,7 @@ class TestOTAnalyticsCli:
             self.SECTION_PARSER: Mock(spec=SectionParser),
             self.EVENT_LIST_PARSER: Mock(spec=EventListParser),
             self.INTERSECT: Mock(spec=RunIntersect),
+            self.SCENE_EVENT_DETECTION: Mock(spec=RunSceneEventDetection),
         }
 
     @pytest.fixture
@@ -120,7 +127,11 @@ class TestOTAnalyticsCli:
             self.SECTION_PARSER: OtsectionParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.INTERSECT: RunIntersect(
-                ShapelyIntersectImplementationAdapter(ShapelyIntersector())
+                ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
+                MultiprocessingIntersectParallelization(),
+            ),
+            self.SCENE_EVENT_DETECTION: RunSceneEventDetection(
+                SceneActionDetector(SceneEventBuilder())
             ),
         }
 

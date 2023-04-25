@@ -6,11 +6,17 @@ from typing import Callable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import ID, LineSection, Section, SectionId
+from OTAnalytics.domain.section import (
+    ID,
+    RELATIVE_OFFSET_COORDINATES,
+    LineSection,
+    Section,
+    SectionId,
+)
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.canvas_observer import CanvasObserver
-from OTAnalytics.plugin_ui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
+from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
 LINE_WIDTH: int = 4
@@ -176,7 +182,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         )
         self._name: Optional[str] = None
         self._coordinates: list[tuple[int, int]] = []
-        self._metadata: dict[str, str] = {}
+        self._metadata: dict = {}
         self._initialise_with(section)
 
     def _is_line_finished(self, coordinates: list[tuple[int, int]]) -> bool:
@@ -220,7 +226,10 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             end (tuple[int, int]): Tuple of the sections end coordinates
         """
         self._coordinates = coordinates
-        if ID not in self._metadata:
+        if (
+            ID not in self._metadata
+            or RELATIVE_OFFSET_COORDINATES not in self._metadata
+        ):
             self._get_metadata()
         self._create_section()
 
@@ -236,10 +245,15 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         if self._metadata == {}:
             raise ValueError("Metadata of line_section are not defined")
         name = self._metadata[ID]
+        relative_offset_coordinates_enter = self._metadata[RELATIVE_OFFSET_COORDINATES][
+            EventType.SECTION_ENTER.serialize()
+        ]
         line_section = LineSection(
             id=SectionId(name),
             relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(
+                    **relative_offset_coordinates_enter
+                )
             },
             plugin_data={},
             start=self._to_coordinate(self._start()),
