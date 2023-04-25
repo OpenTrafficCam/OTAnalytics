@@ -5,8 +5,6 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from application.eventlist import SceneActionDetector
-from domain.event import SceneEventBuilder
 
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
@@ -17,6 +15,8 @@ from OTAnalytics.application.datastore import (
     SectionParser,
     TrackParser,
 )
+from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.domain.event import SceneEventBuilder
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
