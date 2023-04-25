@@ -202,7 +202,6 @@ class ApplicationStarter:
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
             ),
-            # intersect_parallelizer=RayIntersectParallelization(),
             intersect_parallelizer=MultiprocessingIntersectParallelization(),
         )
 

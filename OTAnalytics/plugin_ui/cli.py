@@ -140,7 +140,6 @@ class OTAnalyticsCli:
         for ottrk_file in tqdm(ottrk_files, desc="Analyzed files", unit=" files"):
             save_path = self._determine_eventlist_save_path(ottrk_file)
             tracks = self._parse_tracks(ottrk_file)
-            # events = self._intersect.run_parallel(tracks, sections)
             events = self._intersect.run(tracks, sections)
             events.extend(self._scene_event_detection.run(tracks))
             self._event_list_parser.serialize(events, sections, save_path)
