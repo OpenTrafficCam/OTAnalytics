@@ -20,6 +20,9 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
+    MultiprocessingIntersectParallelization,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtsectionParser,
@@ -120,7 +123,8 @@ class TestOTAnalyticsCli:
             self.SECTION_PARSER: OtsectionParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.INTERSECT: RunIntersect(
-                ShapelyIntersectImplementationAdapter(ShapelyIntersector())
+                ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
+                MultiprocessingIntersectParallelization(),
             ),
         }
 
