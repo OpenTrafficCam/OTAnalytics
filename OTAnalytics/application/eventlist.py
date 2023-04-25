@@ -126,7 +126,7 @@ class SceneActionDetector:
 
         return self._event_builder.create_event(last_detection)
 
-    def detect(self, tracks: Iterable[Track]) -> Iterable[Event]:
+    def detect(self, tracks: Iterable[Track]) -> list[Event]:
         """Detect all enter and leave scene events.
 
         Args:

@@ -23,9 +23,7 @@ class RunIntersect:
     ) -> None:
         self._intersect_implementation = intersect_implementation
 
-    def run(
-        self, tracks: Iterable[Track], sections: Iterable[Section]
-    ) -> Iterable[Event]:
+    def run(self, tracks: Iterable[Track], sections: Iterable[Section]) -> list[Event]:
         """
         Intersect all tracks with all sections and write the result into the event
         repository.
@@ -68,5 +66,5 @@ class RunSceneEventDetection:
     def __init__(self, scene_action_detector: SceneActionDetector) -> None:
         self._scene_action_detector = scene_action_detector
 
-    def run(self, tracks: Iterable[Track]) -> Iterable[Event]:
+    def run(self, tracks: Iterable[Track]) -> list[Event]:
         return self._scene_action_detector.detect(tracks)
