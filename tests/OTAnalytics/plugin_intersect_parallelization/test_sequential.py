@@ -21,6 +21,5 @@ class TestSequentialIntersect:
         result = sequential_intersect.execute(mock_intersect, tracks, sections)
         assert result == [event_1, event_2]
         mock_intersect.assert_any_call(tracks[0], sections)
-
         mock_intersect.assert_any_call(tracks[1], sections)
         assert mock_intersect.call_count == 2
