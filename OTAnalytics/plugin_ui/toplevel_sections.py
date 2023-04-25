@@ -2,6 +2,7 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
 
+from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
 from OTAnalytics.domain.section import ID, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
@@ -23,7 +24,10 @@ class ToplevelSections(CTkToplevel):
             {
                 ID: "",
                 RELATIVE_OFFSET_COORDINATES: {
-                    EventType.SECTION_ENTER.serialize(): {"x": 0.5, "y": 0.5},
+                    EventType.SECTION_ENTER.serialize(): {
+                        "x": RELATIVE_SECTION_OFFSET.x,
+                        "y": RELATIVE_SECTION_OFFSET.y,
+                    },
                 },
             }
             if input_values is None
