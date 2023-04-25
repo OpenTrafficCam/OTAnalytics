@@ -2,8 +2,11 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
 
-from OTAnalytics.domain.section import ID
+from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
+from OTAnalytics.domain.section import ID, RELATIVE_OFFSET_COORDINATES
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.frame_bbox_offset import FrameBboxOffset
 
 
 class ToplevelSections(CTkToplevel):
@@ -16,7 +19,20 @@ class ToplevelSections(CTkToplevel):
     ) -> None:
         super().__init__(**kwargs)
         self.title(title)
-        self.input_values: dict = {ID: ""} if input_values is None else input_values
+        # TODO: Get default values elsewhere!
+        self.input_values: dict = (
+            {
+                ID: "",
+                RELATIVE_OFFSET_COORDINATES: {
+                    EventType.SECTION_ENTER.serialize(): {
+                        "x": RELATIVE_SECTION_OFFSET.x,
+                        "y": RELATIVE_SECTION_OFFSET.y,
+                    },
+                },
+            }
+            if input_values is None
+            else input_values
+        )
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
         self._get_widgets()
@@ -27,15 +43,27 @@ class ToplevelSections(CTkToplevel):
 
     def _get_widgets(self) -> None:
         self.label_name = CTkLabel(master=self, text="Name:")
-        self.entry_name = CTkEntry(master=self)
+        self.entry_name = CTkEntry(master=self, width=180)
         self.entry_name.insert(0, self.input_values[ID])
+
+        self.frame_bbox_offset = FrameBboxOffset(
+            master=self,
+            frame_heading="Bounding Box offset for enter-events:",
+            relative_offset_coordinates=self.input_values[RELATIVE_OFFSET_COORDINATES][
+                EventType.SECTION_ENTER.serialize()
+            ],
+        )
+
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
 
     def _place_widgets(self) -> None:
         self.label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky="E")
         self.entry_name.grid(row=0, column=1, padx=PADX, pady=PADY, sticky="W")
+        self.frame_bbox_offset.grid(
+            row=1, column=0, columnspan=2, padx=PADX, sticky=STICKY
+        )
         self.button_ok.grid(
-            row=1, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=3, column=0, columnspan=3, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _set_initial_position(self) -> None:
@@ -50,6 +78,9 @@ class ToplevelSections(CTkToplevel):
 
     def close(self, event: Any = None) -> None:
         self.input_values[ID] = self.entry_name.get()
+        self.input_values[RELATIVE_OFFSET_COORDINATES][
+            EventType.SECTION_ENTER.serialize()
+        ] = self.frame_bbox_offset.get_relative_offset_coordintes()
         self.destroy()
         self.update()
 

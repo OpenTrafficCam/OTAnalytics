@@ -168,11 +168,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def set_new_section(self, section: Section) -> None:
         self._application.add_section(section)
-        print(
-            f"New line_section created with name={section.id},"
-            + f"coordinates={section.get_coordinates()}"
-        )
-
+        print(f"New line_section created: {section}")
         self.refresh_sections_on_gui()
 
     def edit_section_geometry(self) -> None:
