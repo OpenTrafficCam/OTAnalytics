@@ -13,10 +13,10 @@ files = ["requirements.txt"]
 [tool.black]
 line-length = 88
 
-[isort]
+[tool.isort]
 profile = "black"
 
-[mypy]
+[tool.mypy]
 ignore_missing_imports = true
 ignore_missing_imports_per_module = true
 disallow_untyped_defs = true
