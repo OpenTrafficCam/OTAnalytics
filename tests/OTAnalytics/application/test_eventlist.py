@@ -217,5 +217,5 @@ class TestSceneActionDetector:
         mock_detect_enter_scene.assert_any_call(mock_track_2)
         mock_detect_leave_scene.assert_any_call(mock_track_2)
 
-        mock_detect_enter_scene.call_count == 2
-        mock_detect_leave_scene.call_count == 2
+        assert mock_detect_enter_scene.call_count == 2
+        assert mock_detect_leave_scene.call_count == 2
