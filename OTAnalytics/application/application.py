@@ -1,11 +1,13 @@
 from pathlib import Path
 from typing import Iterable, Optional
 
-from OTAnalytics.application.analysis import RunIntersect
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.types import EventType
 
 
 class OTAnalyticsApplication:
@@ -20,12 +22,14 @@ class OTAnalyticsApplication:
         track_view_state: TrackViewState,
         section_state: SectionState,
         intersect: RunIntersect,
+        scene_event_detection: RunSceneEventDetection,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self._intersect = intersect
+        self._scene_event_detection = scene_event_detection
 
     def connect_observers(self) -> None:
         """
@@ -51,6 +55,15 @@ class OTAnalyticsApplication:
             track_file (Path): file in ottrk format
         """
         self._datastore.load_track_file(file=track_file)
+
+    def add_tracks_of_files(self, track_files: list[Path]) -> None:
+        """
+        Load a multiple track files.
+
+        Args:
+            track_files (list[Path]): files in ottrk format
+        """
+        self._datastore.load_track_files(files=track_files)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""
@@ -119,7 +132,13 @@ class OTAnalyticsApplication:
         Intersect all tracks with all sections and write the events into the event
         repository
         """
-        self._intersect.run()
+        tracks = self._datastore.get_all_tracks()
+        sections = self._datastore.get_all_sections()
+        events = self._intersect.run(tracks, sections)
+        self._datastore.add_events(events)
+
+        scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
+        self._datastore.add_events(scene_events)
 
     def save_events(self, file: Path) -> None:
         """
@@ -129,6 +148,22 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def change_track_offset_to_section_offset(
+        self, event_type: EventType = EventType.SECTION_ENTER
+    ) -> None:
+        """
+        Change the offset to visualize tracks to the offset of the currently selected
+        section.
+
+        Args:
+            event_type (EventType, optional): event type of the offset at the section.
+            Defaults to EventType.SECTION_ENTER.
+        """
+        if section_id := self.section_state.selected_section.get():
+            if section := self._datastore.get_section_for(section_id):
+                if offset := section.relative_offset_coordinates.get(event_type):
+                    self.track_view_state.track_offset.set(offset)
 
     def set_selected_section(self, id: Optional[str]) -> None:
         """Set the current selected section in the UI.
@@ -142,3 +177,11 @@ class OTAnalyticsApplication:
             section_id = None
 
         self.section_state.selected_section.set(section_id)
+
+    def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
+        """Get the current track offset.
+
+        Returns:
+            Optional[RelativeOffsetCoordinate]: the current track offset.
+        """
+        return self.track_view_state.track_offset.get()

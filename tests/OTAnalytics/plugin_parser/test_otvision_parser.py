@@ -46,8 +46,10 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtsectionParser,
     OttrkParser,
+    _parse,
     _parse_bz2,
     _write_bz2,
+    _write_json,
 )
 from tests.conftest import TrackBuilder
 
@@ -109,6 +111,21 @@ def mocked_track_repository() -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_for.return_value = None
     return repository
+
+
+def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> None:
+    content = {"some": "value", "other": "values"}
+    json_file = test_data_tmp_dir / "section.json"
+    bzip2_file = test_data_tmp_dir / "section.json.bz2"
+    json_file.touch()
+    bzip2_file.touch()
+    _write_json(content, json_file)
+    _write_bz2(content, bzip2_file)
+    json_content = _parse(json_file)
+    bzip2_content = _parse(bzip2_file)
+
+    assert json_content == content
+    assert bzip2_content == content
 
 
 class TestOttrkParser:
@@ -331,7 +348,7 @@ class TestOtsectionParser:
             ]
         }
         save_path = test_data_tmp_dir / "sections.otflow"
-        _write_bz2(section_data, save_path)
+        _write_json(section_data, save_path)
 
         parser = OtsectionParser()
         sections = parser.parse(save_path)
@@ -375,7 +392,7 @@ class TestOtsectionParser:
             ]
         }
         save_path = test_data_tmp_dir / "sections.otflow"
-        _write_bz2(section_data, save_path)
+        _write_json(section_data, save_path)
 
         parser = OtsectionParser()
         sections = parser.parse(save_path)

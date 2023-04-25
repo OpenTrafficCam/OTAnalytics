@@ -1,14 +1,14 @@
 from typing import Iterable
 
-from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain.event import Event, EventRepository, SectionEventBuilder
+from OTAnalytics.application.eventlist import SceneActionDetector, SectionActionDetector
+from OTAnalytics.domain.event import Event, SectionEventBuilder
 from OTAnalytics.domain.intersect import (
     IntersectAreaByTrackPoints,
     IntersectBySmallTrackComponents,
     IntersectImplementation,
 )
-from OTAnalytics.domain.section import Area, LineSection, Section, SectionRepository
-from OTAnalytics.domain.track import Track, TrackRepository
+from OTAnalytics.domain.section import Area, LineSection, Section
+from OTAnalytics.domain.track import Track
 
 
 class RunIntersect:
@@ -19,29 +19,15 @@ class RunIntersect:
 
     def __init__(
         self,
-        track_repository: TrackRepository,
-        section_repository: SectionRepository,
-        event_repository: EventRepository,
         intersect_implementation: IntersectImplementation,
     ) -> None:
-        self._track_repository = track_repository
-        self._section_repository = section_repository
-        self._event_repository = event_repository
         self._intersect_implementation = intersect_implementation
 
-    def run(self) -> None:
+    def run(self, tracks: Iterable[Track], sections: Iterable[Section]) -> list[Event]:
         """
         Intersect all tracks with all sections and write the result into the event
         repository.
         """
-        tracks = self._track_repository.get_all()
-        sections = self._section_repository.get_all()
-        events = self._intersect(tracks, sections)
-        self._event_repository.add_all(events)
-
-    def _intersect(
-        self, tracks: Iterable[Track], sections: Iterable[Section]
-    ) -> list[Event]:
         events: list[Event] = []
         for _track in tracks:
             for _section in sections:
@@ -74,3 +60,11 @@ class RunIntersect:
                     )
                     events.extend(_events)
         return events
+
+
+class RunSceneEventDetection:
+    def __init__(self, scene_action_detector: SceneActionDetector) -> None:
+        self._scene_action_detector = scene_action_detector
+
+    def run(self, tracks: Iterable[Track]) -> list[Event]:
+        return self._scene_action_detector.detect(tracks)

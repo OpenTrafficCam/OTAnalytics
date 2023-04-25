@@ -1,10 +1,18 @@
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
 from tqdm import tqdm
 
-from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
+from OTAnalytics.application.datastore import (
+    EventListParser,
+    SectionParser,
+    TrackParser,
+)
+from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.track import Track
 
 EVENTLIST_FILE_TYPE = "otevents"
 TRACK_FILE_TYPE = "ottrk"
@@ -88,23 +96,42 @@ class OTAnalyticsCli:
     """
 
     def __init__(
-        self, application: OTAnalyticsApplication, cli_args: CliArguments
+        self,
+        cli_args: CliArguments,
+        track_parser: TrackParser,
+        section_parser: SectionParser,
+        event_list_parser: EventListParser,
+        intersect: RunIntersect,
+        scene_event_detection: RunSceneEventDetection,
     ) -> None:
-        self._application = application
-
         self._validate_cli_args(cli_args)
         self.cli_args = cli_args
+
+        self._track_parser = track_parser
+        self._section_parser = section_parser
+        self._event_list_parser = event_list_parser
+        self._intersect = intersect
+        self._scene_event_detection = scene_event_detection
 
     def start(self) -> None:
         """Start analysis."""
         # TODO parse config and add track and section files
-        ottrk_files: set[Path] = self._parse_ottrk_files(self.cli_args.track_files)
-        sections_file: Path = self._parse_sections_file(self.cli_args.sections_file)
+        ottrk_files: set[Path] = self._get_ottrk_files(self.cli_args.track_files)
+        sections_file: Path = self._get_sections_file(self.cli_args.sections_file)
 
-        self._application.add_sections_of_file(sections_file)
-        self._run_analysis(ottrk_files)
+        sections = self._parse_sections(sections_file)
 
-    def _run_analysis(self, ottrk_files: set[Path]) -> None:
+        self._run_analysis(ottrk_files, sections)
+
+    def _parse_sections(self, sections_file: Path) -> Iterable[Section]:
+        return self._section_parser.parse(sections_file)
+
+    def _parse_tracks(self, track_file: Path) -> Iterable[Track]:
+        return self._track_parser.parse(track_file)
+
+    def _run_analysis(
+        self, ottrk_files: set[Path], sections: Iterable[Section]
+    ) -> None:
         """Run analysis.
 
         Args:
@@ -112,10 +139,10 @@ class OTAnalyticsCli:
         """
         for ottrk_file in tqdm(ottrk_files, desc="Analyzed files", unit=" files"):
             save_path = self._determine_eventlist_save_path(ottrk_file)
-            self._application.add_tracks_of_file(ottrk_file)
-            self._application.start_analysis()
-            self._application.save_events(save_path)
-            self._application.delete_all_tracks()
+            tracks = self._parse_tracks(ottrk_file)
+            events = self._intersect.run(tracks, sections)
+            events.extend(self._scene_event_detection.run(tracks))
+            self._event_list_parser.serialize(events, sections, save_path)
             print(f"Analysis finished. Event list saved at '{save_path}'")
 
     @staticmethod
@@ -151,7 +178,7 @@ class OTAnalyticsCli:
             raise CliParseError("No otflow file passed. Abort analysis.")
 
     @staticmethod
-    def _parse_ottrk_files(files: list[str]) -> set[Path]:
+    def _get_ottrk_files(files: list[str]) -> set[Path]:
         """Parse ottrk files.
 
         Files that do not exist will be skipped.
@@ -178,7 +205,7 @@ class OTAnalyticsCli:
         return ottrk_files
 
     @staticmethod
-    def _parse_sections_file(file: str) -> Path:
+    def _get_sections_file(file: str) -> Path:
         """Parse sections file.
 
         Args:
