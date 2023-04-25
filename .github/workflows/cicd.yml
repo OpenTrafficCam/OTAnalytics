@@ -60,7 +60,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Create distributions
-        run: python build.py --package_version ${{ github.ref_name }}
+        run: python build-otc.py --package_version ${{ github.ref_name }}
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
