@@ -64,7 +64,7 @@ class RunIntersect:
         return events
 
 
-class SceneEventDetectionRunner:
+class RunSceneEventDetection:
     def __init__(self, scene_action_detector: SceneActionDetector) -> None:
         self._scene_action_detector = scene_action_detector
 

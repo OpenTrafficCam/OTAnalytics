@@ -5,7 +5,7 @@ from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.analysis import RunIntersect, SceneEventDetectionRunner
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
     Datastore,
@@ -121,14 +121,14 @@ class ApplicationStarter:
         track_view_state = self._create_track_view_state(datastore)
         section_state = self._create_section_state()
         intersect = self._create_intersect()
-        scene_event_detection_runner = self._create_scene_event_detection_runner()
+        scene_event_detection = self._create_scene_event_detection()
         application = OTAnalyticsApplication(
             datastore=datastore,
             track_state=track_state,
             track_view_state=track_view_state,
             section_state=section_state,
             intersect=intersect,
-            scene_event_detection_runner=scene_event_detection_runner,
+            scene_event_detection=scene_event_detection,
         )
         section_parser: SectionParser = application._datastore._section_parser
         dummy_viewmodel = DummyViewModel(application, section_parser)
@@ -140,14 +140,14 @@ class ApplicationStarter:
         section_parser = self._create_section_parser()
         event_list_parser = self._create_event_list_parser()
         intersect = self._create_intersect()
-        scene_event_detection_runner = self._create_scene_event_detection_runner()
+        scene_event_detection = self._create_scene_event_detection()
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             intersect=intersect,
-            scene_event_detection_runner=scene_event_detection_runner,
+            scene_event_detection=scene_event_detection,
         ).start()
 
     def _create_datastore(self) -> Datastore:
@@ -201,5 +201,5 @@ class ApplicationStarter:
             ),
         )
 
-    def _create_scene_event_detection_runner(self) -> SceneEventDetectionRunner:
-        return SceneEventDetectionRunner(SceneActionDetector(SceneEventBuilder()))
+    def _create_scene_event_detection(self) -> RunSceneEventDetection:
+        return RunSceneEventDetection(SceneActionDetector(SceneEventBuilder()))

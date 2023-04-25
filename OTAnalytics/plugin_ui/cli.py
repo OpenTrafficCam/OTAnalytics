@@ -5,7 +5,7 @@ from typing import Iterable
 
 from tqdm import tqdm
 
-from OTAnalytics.application.analysis import RunIntersect, SceneEventDetectionRunner
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import (
     EventListParser,
     SectionParser,
@@ -102,7 +102,7 @@ class OTAnalyticsCli:
         section_parser: SectionParser,
         event_list_parser: EventListParser,
         intersect: RunIntersect,
-        scene_event_detection_runner: SceneEventDetectionRunner,
+        scene_event_detection: RunSceneEventDetection,
     ) -> None:
         self._validate_cli_args(cli_args)
         self.cli_args = cli_args
@@ -111,6 +111,7 @@ class OTAnalyticsCli:
         self._section_parser = section_parser
         self._event_list_parser = event_list_parser
         self._intersect = intersect
+        self._scene_event_detection = scene_event_detection
 
     def start(self) -> None:
         """Start analysis."""
