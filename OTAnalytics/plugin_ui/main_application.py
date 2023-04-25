@@ -1,9 +1,7 @@
 from typing import Any
 
 import customtkinter
-from application.eventlist import SceneActionDetector
 from customtkinter import CTk
-from domain.event import SceneEventBuilder
 
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
@@ -12,12 +10,14 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis import RunIntersect, SceneEventDetectionRunner
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import Datastore, SectionParser
+from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.domain.event import SceneEventBuilder
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
