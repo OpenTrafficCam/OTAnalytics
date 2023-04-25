@@ -5,7 +5,7 @@ from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.analysis import RunIntersect
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
     Datastore,
@@ -13,12 +13,14 @@ from OTAnalytics.application.datastore import (
     SectionParser,
     TrackParser,
 )
+from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.domain.event import SceneEventBuilder
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
@@ -119,12 +121,14 @@ class ApplicationStarter:
         track_view_state = self._create_track_view_state(datastore)
         section_state = self._create_section_state()
         intersect = self._create_intersect()
+        scene_event_detection = self._create_scene_event_detection()
         application = OTAnalyticsApplication(
             datastore=datastore,
             track_state=track_state,
             track_view_state=track_view_state,
             section_state=section_state,
             intersect=intersect,
+            scene_event_detection=scene_event_detection,
         )
         section_parser: SectionParser = application._datastore._section_parser
         dummy_viewmodel = DummyViewModel(application, section_parser)
@@ -136,12 +140,14 @@ class ApplicationStarter:
         section_parser = self._create_section_parser()
         event_list_parser = self._create_event_list_parser()
         intersect = self._create_intersect()
+        scene_event_detection = self._create_scene_event_detection()
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             intersect=intersect,
+            scene_event_detection=scene_event_detection,
         ).start()
 
     def _create_datastore(self) -> Datastore:
@@ -194,3 +200,6 @@ class ApplicationStarter:
                 ShapelyIntersector()
             ),
         )
+
+    def _create_scene_event_detection(self) -> RunSceneEventDetection:
+        return RunSceneEventDetection(SceneActionDetector(SceneEventBuilder()))
