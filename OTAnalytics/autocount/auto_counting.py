@@ -270,18 +270,18 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
             file_helper.list_of_analyses[analyse_index].tracks_df["Crossed_Frames"] = ""
 
             create_section_geometry_object()
-            file_helper.list_of_analyses[analyse_index].tracks_df =file_helper.list_of_analyses[analyse_index].tracks_df.apply(lambda row: find_intersection(row), axis=1)
+            file_helper.list_of_analyses[analyse_index].tracks_df = file_helper.list_of_analyses[analyse_index].tracks_df.apply(lambda row: find_intersection(row), axis=1)
             file_helper.list_of_analyses[analyse_index].tracks_df["Movement"] = file_helper.list_of_analyses[analyse_index].tracks_df.apply(lambda row: assign_movement(row), axis=1)
             file_helper.list_of_analyses[analyse_index].tracks_df["Appearance"] = time_calculation_dataframe(file_helper.list_of_analyses[analyse_index].tracks_df)
             eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.list_of_analyses[file_helper.list_of_analyses_index],fps=None, datetime_obj=None)
 
             tracks_df_result = clean_dataframe(file_helper.list_of_analyses[analyse_index].tracks_df)
 
-            # # if for_drawing:
+            # if for_drawing:
 
                 #return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
 
-            safe_to_csv(file_helper.list_of_analyses[analyse_index],tracks_df_result, eventbased_dataframe)
+            safe_to_csv(file_helper.list_of_analyses[analyse_index],eventbased_dataframe)
         else:
             logging.info(f"\n Could not compute File: {file_helper.list_of_analyses[analyse_index].analyse_name}")
 

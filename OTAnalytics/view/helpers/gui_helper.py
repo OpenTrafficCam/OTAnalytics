@@ -1,6 +1,6 @@
 from tkinter import messagebox
 import helpers.file_helper as file_helper
-import helpers.config
+
 
 # TODO Create statepanelclass
 
@@ -38,6 +38,7 @@ statepanel_txt = {
     "Add_movement_information": "select and add section while movement is highlighted",
 }
 
+
 def reset_buttons_tracks():
     global button_bool
     button_bool["tracks_imported"] = False
@@ -46,7 +47,6 @@ def reset_buttons_tracks():
     button_bool["display_bb"] = False
     button_bool["display_live_track"] = False
 
-    
 
 def button_play_video_switch(button_play, button_rewind):
     """Toggle video play function.
@@ -92,7 +92,7 @@ def button_rewind_switch(button_rewind, button_play):
         button_rewind.configure(text="Rewind")
 
 
-def button_line_switch(button_linedetector, button_polygondetector):
+def button_line_switch(button_linedetector):
     """Prints information on the statepanel when linedetector button is pressed.
 
     Args:
@@ -101,14 +101,14 @@ def button_line_switch(button_linedetector, button_polygondetector):
     """
     button_bool["linedetector_toggle"] = not button_bool["linedetector_toggle"]
 
-    button_bool["polygondetector_toggle"] = False
+    #button_bool["polygondetector_toggle"] = False
 
     if button_bool["linedetector_toggle"]:
-        button_linedetector.configure(text="Finish")
-        button_polygondetector.configure(text="Add Polygon")
+        button_linedetector.configure(text="finish")
+        # button_polygondetector.configure(text="Add Polygon")
         # statepanel.update_statepanel(statepanel_txt["Linedetector_information"])
     else:
-        button_linedetector.configure(text="Add Line")
+        button_linedetector.configure(text="new")
         # statepanel.update_statepanel("")
 
 

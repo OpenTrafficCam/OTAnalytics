@@ -50,7 +50,7 @@ class gui(tk.Tk):
 
         self.frame_sections = FrameSection(master=self.frame_controll_panel)
         self.frame_sections.grid(
-            **{"padx": (10, 2.5), "pady": 0}, row=2, column=0, sticky="new"
+            **{"padx": (10, 2.5), "pady": 0}, row=2, column=0, sticky="new", rowspan=3
         )
 
         self.frame_objects = FrameObject(master=self.frame_controll_panel)
@@ -58,21 +58,21 @@ class gui(tk.Tk):
             **{"padx": (2.5, 10), "pady": 0}, row=2, column=1, sticky="new", rowspan=3
         )
 
-        self.frame_movements = FrameMovements(master=self.frame_controll_panel)
-        self.frame_movements.grid(
-            **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
-        )
+        # self.frame_movements = FrameMovements(master=self.frame_controll_panel)
+        # self.frame_movements.grid(
+        #     **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
+        # )
 
         # Add clear all
-        self.button_clear_all = tk.Button(
-            master=self.frame_controll_panel,
-            text="Clear all",
-            command=self.clear_treeviews,
-        )
-        # pixel alignment
-        self.button_clear_all.grid(
-            **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
-        )
+        # self.button_clear_all = tk.Button(
+        #     master=self.frame_controll_panel,
+        #     text="Clear all",
+        #     command=self.clear_treeviews,
+        # )
+        # # pixel alignment
+        # self.button_clear_all.grid(
+        #     **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
+        # )
 
         self.frame_files.button_remove_video.configure(
             command=lambda: [
@@ -84,13 +84,13 @@ class gui(tk.Tk):
         )
 
         # bind function to button (function effects to treeview)
-        self.frame_sections.button_add_section_to_movement.configure(
-            command=lambda: [
-                self.frame_sections.add_section_to_movement(
-                    self.frame_movements.tree_movements
-                )
-            ]
-        )
+        # self.frame_sections.button_add_section_to_movement.configure(
+        #     command=lambda: [
+        #         self.frame_sections.add_section_to_movement(
+        #             self.frame_movements.tree_movements
+        #         )
+        #     ]
+        # )
 
         self.frame_files.button_add_video.configure(
             command=self.load_video_and_add_frame
@@ -291,8 +291,8 @@ def main():
         tearoff=1,
     )
 
-    file.add_command(label="Import flowfile", command=app.import_flowfile)
-    file.add_command(label="Save configuration", command=view.sections.save_flowfile)
+    file.add_command(label="load flowfile", command=app.import_flowfile)
+    file.add_command(label="Save flowfile", command=view.sections.save_flowfile)
     file.add_separator()
     file.add_command(label="Exit", command=app.quit)
     menubar.add_cascade(label="File", menu=file)
