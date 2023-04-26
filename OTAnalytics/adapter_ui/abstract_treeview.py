@@ -1,9 +1,8 @@
 from abc import abstractmethod
-from tkinter.ttk import Treeview
 from typing import Optional
 
 
-class AbstractTreeviewSections(Treeview):
+class AbstractTreeviewSections:
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass

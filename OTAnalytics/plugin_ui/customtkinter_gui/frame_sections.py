@@ -1,4 +1,5 @@
 from tkinter import Listbox
+from tkinter.ttk import Treeview
 from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
@@ -68,7 +69,7 @@ class FrameSections(CTkFrame):
         )
 
 
-class TreeviewSections(AbstractTreeviewSections):
+class TreeviewSections(AbstractTreeviewSections, Treeview):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(show="tree", selectmode="browse", **kwargs)
         self._viewmodel = viewmodel
