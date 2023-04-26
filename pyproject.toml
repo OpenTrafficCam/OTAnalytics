@@ -10,6 +10,9 @@ dynamic = ["dependencies"]
 [tool.hatch.metadata.hooks.requirements_txt]
 files = ["requirements.txt"]
 
+[tool.hatch.version]
+path = "OTAnalytics/version.py"
+
 [tool.black]
 line-length = 88
 
