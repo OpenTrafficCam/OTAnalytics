@@ -221,6 +221,16 @@ class TestTrackRepository:
         assert track in repository.get_all()
         observer.notify_tracks.assert_called_with([track_id])
 
+    def test_add_nothing(self) -> None:
+        observer = Mock(spec=TrackListObserver)
+        repository = TrackRepository()
+        repository.register_tracks_observer(observer)
+
+        repository.add_all([])
+
+        assert 0 == len(repository.get_all())
+        observer.notify_tracks.assert_not_called()
+
     def test_add_all(self) -> None:
         first_id = TrackId(1)
         second_id = TrackId(2)
