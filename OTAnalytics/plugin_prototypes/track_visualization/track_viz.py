@@ -10,7 +10,7 @@ from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
 
-from OTAnalytics.application.state import TrackPlotter
+from OTAnalytics.application.plotting import TrackPlotter
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section
