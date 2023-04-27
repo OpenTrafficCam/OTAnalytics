@@ -252,8 +252,8 @@ class gui(tk.Tk):
                 if analyse.track_file:
                     path = file_helper.list_of_analyses[file_helper.list_of_analyses_index].folder_path
                     filepath = f"{path}/{analyse.track_file}"
-                    files = open(filepath, "r")
-                    files = files.read()    
+                    # files = open(filepath, "r")
+                    # files = files.read()    
 
                     (analyse.raw_detections,
                     analyse.tracks_dic,
@@ -263,12 +263,12 @@ class gui(tk.Tk):
                         x_resize_factor=analyse.videoobject.x_resize_factor,
                         y_resize_factor=analyse.videoobject.y_resize_factor,
                         autoimport=True,
-                        files=files,)
+                        filepath=filepath, filename = analyse.track_file)
                     self.fill_track_treeview()      
         else:
             for analyse in file_helper.list_of_analyses:
                 # delete found trackfile from analyse class
-                analyse.track_file = None 
+                analyse.track_file = None
     
 
     def fill_track_treeview(self):
