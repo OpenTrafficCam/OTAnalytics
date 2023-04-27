@@ -4,8 +4,8 @@ from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_item_table import AbstractItemTable
 from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
-from OTAnalytics.adapter_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
@@ -52,7 +52,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._tracks_frame: Optional[AbstractTracksFrame] = None
         self._tracks_canvas: Optional[AbstractTracksCanvas] = None
         self._canvas: Optional[AbstractCanvas] = None
-        self._treeview_sections: Optional[AbstractTreeviewSections]
+        self._treeview_sections: Optional[AbstractItemTable]
         self._new_section: dict = {}
         self._selected_section_id: Optional[str] = None
         self.register_to_subjects()
@@ -90,8 +90,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
-        self._treeview_sections.update_sections()
+            raise MissingInjectedInstanceError(AbstractItemTable.__name__)
+        self._treeview_sections.update_items()
 
     def set_tracks_frame(self, tracks_frame: AbstractTracksFrame) -> None:
         self._tracks_frame = tracks_frame
@@ -102,7 +102,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def set_tracks_canvas(self, tracks_canvas: AbstractTracksCanvas) -> None:
         self._tracks_canvas = tracks_canvas
 
-    def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:
+    def set_treeview_sections(self, treeview: AbstractItemTable) -> None:
         self._treeview_sections = treeview
 
     def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
@@ -110,8 +110,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._selected_section_id = current_id
 
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
-        self._treeview_sections.update_selection(current_id)
+            raise MissingInjectedInstanceError(AbstractItemTable.__name__)
+        self._treeview_sections.update_selected_items(current_id)
 
     def set_selected_section_id(self, id: Optional[str]) -> None:
         self._selected_section_id = id
@@ -152,9 +152,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
-                    AbstractTreeviewSections.__name__
+                    AbstractItemTable.__name__
                 ) from cause
-            position = get_widget_position(widget=self._treeview_sections)
+            position = self._treeview_sections.get_position()
             InfoBox(
                 message="No sections to save, please add new sections first",
                 initial_position=position,
@@ -190,8 +190,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:
             if self._treeview_sections is None:
-                raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
-            position = get_widget_position(self._treeview_sections)
+                raise MissingInjectedInstanceError(AbstractItemTable.__name__)
+            position = position = self._treeview_sections.get_position()
             InfoBox(
                 message="Please select a section to edit", initial_position=position
             )
@@ -225,9 +225,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def remove_section(self) -> None:
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
+            raise MissingInjectedInstanceError(AbstractItemTable.__name__)
         if not self._selected_section_id:
-            position = get_widget_position(widget=self._treeview_sections)
+            position = position = self._treeview_sections.get_position()
             InfoBox(
                 message="Please select a section to remove", initial_position=position
             )

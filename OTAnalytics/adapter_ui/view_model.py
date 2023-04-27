@@ -3,8 +3,8 @@ from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_item_table import AbstractItemTable
 from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
-from OTAnalytics.adapter_ui.abstract_treeview import AbstractTreeviewSections
 from OTAnalytics.domain.section import Section
 
 
@@ -22,7 +22,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_treeview_sections(self, treeview: AbstractTreeviewSections) -> None:
+    def set_treeview_sections(self, treeview: AbstractItemTable) -> None:
         raise NotImplementedError
 
     @abstractmethod
