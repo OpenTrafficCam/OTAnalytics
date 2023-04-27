@@ -20,11 +20,13 @@ ENCODING = "UTF-8"
 DPI = 100
 
 CLASS_CAR = "car"
-CLASS_MOTORCYCLE = "motorcycle"
-CLASS_PERSON = "person"
+CLASS_MOTORCYCLIST = "motorcyclist"
+CLASS_PEDESTRIAN = "pedestrian"
 CLASS_TRUCK = "truck"
-CLASS_BICYCLE = "bicycle"
-CLASS_TRAIN = "train"
+CLASS_TRUCK_TRAILER = "truck_with_trailer"
+CLASS_TRUCK_SEMITRAILER = "truck_with_semitrailer"
+CLASS_BICYCLIST = "bicyclist"
+CLASS_DELVAN = "delivery_van"
 
 
 class MatplotlibTrackPlotter(TrackPlotter):
@@ -40,18 +42,20 @@ class MatplotlibTrackPlotter(TrackPlotter):
         height: int,
         filter_classes: Iterable[str] = (
             CLASS_CAR,
-            CLASS_MOTORCYCLE,
-            CLASS_PERSON,
+            CLASS_MOTORCYCLIST,
+            CLASS_PEDESTRIAN,
             CLASS_TRUCK,
-            CLASS_BICYCLE,
-            CLASS_TRAIN,
+            CLASS_TRUCK_TRAILER,
+            CLASS_TRUCK_SEMITRAILER,
+            CLASS_BICYCLIST,
+            CLASS_DELVAN,
         ),
         num_min_frames: int = 30,
         start_time: str = "",
         end_time: str = "",
         start_end: bool = True,
         plot_sections: bool = False,
-        alpha: float = 0.5,
+        alpha: float = 0.2,
         offset: Optional[RelativeOffsetCoordinate] = RelativeOffsetCoordinate(0, 0),
     ) -> TrackImage:
         """
@@ -223,19 +227,23 @@ class MatplotlibTrackPlotter(TrackPlotter):
         """
         color_palette = {
             CLASS_CAR: "blue",
-            CLASS_MOTORCYCLE: "skyblue",
-            CLASS_PERSON: "salmon",
-            CLASS_TRUCK: "purple",
-            CLASS_BICYCLE: "lime",
-            CLASS_TRAIN: "gold",
+            CLASS_MOTORCYCLIST: "skyblue",
+            CLASS_PEDESTRIAN: "brown",
+            CLASS_TRUCK: "red",
+            CLASS_TRUCK_TRAILER: "purple",
+            CLASS_TRUCK_SEMITRAILER: "pink",
+            CLASS_BICYCLIST: "lime",
+            CLASS_DELVAN: "yellow",
         }
         class_order = [
             CLASS_CAR,
+            CLASS_MOTORCYCLIST,
+            CLASS_PEDESTRIAN,
             CLASS_TRUCK,
-            CLASS_MOTORCYCLE,
-            CLASS_PERSON,
-            CLASS_BICYCLE,
-            CLASS_TRAIN,
+            CLASS_TRUCK_TRAILER,
+            CLASS_TRUCK_SEMITRAILER,
+            CLASS_BICYCLIST,
+            CLASS_DELVAN,
         ]
         seaborn.lineplot(
             x="x",
@@ -250,6 +258,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
             ax=axes,
             palette=color_palette,
             hue_order=class_order,
+            zorder=1,
         )
 
     def _plot_start_end_points(self, track_df: DataFrame, axes: Axes) -> None:
@@ -260,20 +269,39 @@ class MatplotlibTrackPlotter(TrackPlotter):
             track_df (DataFrame): tracks to plot start and end points of
             axes (Axes): axes to plot on
         """
-        track_df_start_end = pandas.concat(
-            [
-                track_df.groupby(track.TRACK_ID).first().reset_index(),
-                # track_df.groupby("track-id").last().reset_index(),
-            ]
-        ).sort_values([track.TRACK_ID, track.FRAME])
+
+        color_palette = {
+            CLASS_CAR: "blue",
+            CLASS_MOTORCYCLIST: "skyblue",
+            CLASS_PEDESTRIAN: "salmon",
+            CLASS_TRUCK: "red",
+            CLASS_TRUCK_TRAILER: "purple",
+            CLASS_TRUCK_SEMITRAILER: "pink",
+            CLASS_BICYCLIST: "lime",
+            CLASS_DELVAN: "yellow",
+        }
+
+        track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
+        track_df_start["type"] = "start"
+
+        track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
+        track_df_end["type"] = "end"
+
+        track_df_start_end = pandas.concat([track_df_start, track_df_end]).sort_values(
+            [track.TRACK_ID, track.FRAME]
+        )
         seaborn.scatterplot(
             x="x",
             y="y",
             hue=track.CLASSIFICATION,
             data=track_df_start_end,
+            style="type",
+            markers=[">", "$x$"],
             legend=False,
-            s=3,
+            s=15,
             ax=axes,
+            palette=color_palette,
+            zorder=2,
         )
 
     def _plot_sections(self, sections: Iterable[Section], axes: Axes) -> None:
