@@ -217,10 +217,7 @@ class gui(tk.Tk):
 
             if response_track_file == "yes":
 
-
-                filepath = f"{path}/{file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file}"
-
-     
+                filepath = f"{path}/{file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file}"    
 
                 (
                 file_helper.list_of_analyses[file_helper.list_of_analyses_index].raw_detections,

@@ -139,7 +139,7 @@ class FrameFiles(tk.LabelFrame):
                 file_helper.list_of_analyses_index = i 
                 file_helper.list_of_analyses.insert(0,Analyse(video_source))
 
-        self.update_tree_files()
+            self.update_tree_files()
 
     def add_folder(self):
         videpath_folder = filedialog.askdirectory()
