@@ -1,5 +1,4 @@
-import customtkinter
-from customtkinter import CTk
+from customtkinter import CTk, set_appearance_mode, set_default_color_theme
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
@@ -22,8 +21,8 @@ class OTAnalyticsGui:
         self._show_gui()
 
     def _show_gui(self) -> None:
-        customtkinter.set_appearance_mode("System")
-        customtkinter.set_default_color_theme("green")
+        set_appearance_mode("System")
+        set_default_color_theme("green")
 
         self._app.title("OTAnalytics")
 
