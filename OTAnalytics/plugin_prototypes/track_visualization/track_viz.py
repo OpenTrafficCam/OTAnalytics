@@ -88,6 +88,46 @@ class PlotterPrototype(Plotter):
         return None
 
 
+class PandasTrackPlotterImplementation(ABC):
+    @abstractmethod
+    def plot(self, data: DataFrame) -> Optional[TrackImage]:
+        pass
+
+
+class PandasTrackPlotter(Plotter):
+    def __init__(
+        self,
+        datastore: Datastore,
+        plotter: PandasTrackPlotterImplementation,
+    ) -> None:
+        self._datastore = datastore
+        self._plotter = plotter
+
+    def plot(self) -> Optional[TrackImage]:
+        tracks = self._datastore.get_all_tracks()
+        data = self._convert_tracks(tracks)
+        return self._plotter.plot(data)
+
+    def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
+        """
+        Convert tracks into a dataframe.
+
+        Args:
+            tracks (Iterable[Track]): tracks to convert
+
+        Returns:
+            DataFrame: tracks as dataframe
+        """
+        detections: list[Detection] = []
+        for current_track in tracks:
+            detections.extend(current_track.detections)
+        prepared = [detection.to_dict() for detection in detections]
+        converted = DataFrame(prepared)
+        if (track.TRACK_ID in converted.columns) and (track.FRAME in converted.columns):
+            return converted.sort_values([track.TRACK_ID, track.FRAME])
+        return converted
+
+
 class MatplotlibTrackPlotter(TrackPlotter):
     """
     Implementation of the TrackPlotter interface using matplotlib.

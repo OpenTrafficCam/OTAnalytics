@@ -5,6 +5,8 @@ from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track, TrackId, TrackImage
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    PandasTrackPlotter,
+    PandasTrackPlotterImplementation,
     PlotterPrototype,
     TrackPlotter,
 )
@@ -36,3 +38,18 @@ class TestPlotterPrototype:
         image = plotter.plot()
 
         assert image == combined_image
+
+
+class TestPandasTrackPlotter:
+    def test_plot(self) -> None:
+        plotted_image = Mock(spec=TrackImage)
+        datastore = Mock(spec=Datastore)
+        implementation = Mock(PandasTrackPlotterImplementation)
+        datastore.get_all_tracks.return_value = []
+        implementation.plot.return_value = plotted_image
+        plotter = PandasTrackPlotter(datastore, implementation)
+
+        image = plotter.plot()
+
+        implementation.plot.assert_called_once()
+        assert image == plotted_image
