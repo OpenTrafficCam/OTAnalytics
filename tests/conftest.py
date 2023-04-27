@@ -25,6 +25,7 @@ YieldFixture = Generator[T, None, None]
 
 @dataclass
 class TrackBuilder:
+    otdet_version = "1.1"
     track_id: int = 1
     track_class: str = "car"
     detection_class: str = "car"
@@ -52,6 +53,9 @@ class TrackBuilder:
 
     def build_detections(self) -> list[Detection]:
         return self._detections
+
+    def set_otdet_version(self, otdet_version: str) -> None:
+        self.otdet_version = otdet_version
 
     def append_detection(self) -> None:
         self._detections.append(
@@ -118,9 +122,9 @@ class TrackBuilder:
         self.x = x
         self.y = y
 
-    def get_example_metadata(self) -> dict:
+    def get_metadata(self) -> dict:
         return {
-            "otdet_version": "1.0",
+            "otdet_version": self.otdet_version,
             "video": {
                 "filename": "path/to/myhostname_file",
                 "filetype": ".mp4",
@@ -203,7 +207,7 @@ class TrackBuilder:
     def build_ottrk(self) -> dict:
         detections = self.build_serialized_detections()
         return {
-            ottrk_dataformat.METADATA: self.get_example_metadata(),
+            ottrk_dataformat.METADATA: self.get_metadata(),
             ottrk_dataformat.DATA: {ottrk_dataformat.DETECTIONS: detections},
         }
 
