@@ -3,7 +3,7 @@ from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilen
 from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_item_table import AbstractItemTable
 from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -50,7 +50,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._application = application
         self._section_parser: SectionParser = section_parser
         self._tracks_frame: Optional[AbstractTracksFrame] = None
-        self._tracks_canvas: Optional[AbstractTracksCanvas] = None
+        self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._treeview_sections: Optional[AbstractItemTable]
         self._new_section: dict = {}
@@ -72,18 +72,18 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._application.track_view_state.track_offset.register(self._update_offset)
 
     def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
-        if self._tracks_canvas is None:
-            raise MissingInjectedInstanceError(AbstractTracksCanvas.__name__)
+        if self._frame_canvas is None:
+            raise MissingInjectedInstanceError(AbstractFrameCanvas.__name__)
 
         new_value = value or False
-        self._tracks_canvas.update_show_tracks(new_value)
+        self._frame_canvas.update_show_tracks(new_value)
 
     def _on_background_updated(self, image: Optional[TrackImage]) -> None:
-        if self._tracks_canvas is None:
-            raise MissingInjectedInstanceError(AbstractTracksCanvas.__name__)
+        if self._frame_canvas is None:
+            raise MissingInjectedInstanceError(AbstractFrameCanvas.__name__)
 
         if image:
-            self._tracks_canvas.update_background(image)
+            self._frame_canvas.update_background(image)
 
     def update_show_tracks_state(self, value: bool) -> None:
         self._application.track_view_state.show_tracks.set(value)
@@ -99,8 +99,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def set_tracks_canvas(self, tracks_canvas: AbstractTracksCanvas) -> None:
-        self._tracks_canvas = tracks_canvas
+    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
+        self._frame_canvas = tracks_canvas
 
     def set_treeview_sections(self, treeview: AbstractItemTable) -> None:
         self._treeview_sections = treeview

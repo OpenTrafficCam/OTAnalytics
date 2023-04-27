@@ -4,7 +4,7 @@ from customtkinter import CTk
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import TracksCanvas
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import FrameSections
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
 
@@ -32,7 +32,7 @@ class OTAnalyticsGui:
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
-        self.frame_canvas = TracksCanvas(
+        self.frame_canvas = FrameCanvas(
             master=self._app,
             viewmodel=self._view_model,
         )
