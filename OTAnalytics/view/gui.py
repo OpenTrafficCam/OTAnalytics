@@ -50,7 +50,7 @@ class gui(tk.Tk):
 
         self.frame_sections = FrameSection(master=self.frame_controll_panel)
         self.frame_sections.grid(
-            **{"padx": (10, 2.5), "pady": 0}, row=2, column=0, sticky="new", rowspan=3
+            **{"padx": (10, 2.5), "pady": 0}, row=2, column=0, sticky="new"
         )
 
         self.frame_objects = FrameObject(master=self.frame_controll_panel)
@@ -58,21 +58,21 @@ class gui(tk.Tk):
             **{"padx": (2.5, 10), "pady": 0}, row=2, column=1, sticky="new", rowspan=3
         )
 
-        # self.frame_movements = FrameMovements(master=self.frame_controll_panel)
-        # self.frame_movements.grid(
-        #     **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
-        # )
+        self.frame_movements = FrameMovements(master=self.frame_controll_panel)
+        self.frame_movements.grid(
+            **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
+        )
 
         # Add clear all
-        # self.button_clear_all = tk.Button(
-        #     master=self.frame_controll_panel,
-        #     text="Clear all",
-        #     command=self.clear_treeviews,
-        # )
-        # # pixel alignment
-        # self.button_clear_all.grid(
-        #     **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
-        # )
+        self.button_clear_all = tk.Button(
+            master=self.frame_controll_panel,
+            text="Clear all",
+            command=self.clear_treeviews,
+        )
+        # pixel alignment
+        self.button_clear_all.grid(
+            **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
+        )
 
         self.frame_files.button_remove_video.configure(
             command=lambda: [
@@ -264,8 +264,12 @@ class gui(tk.Tk):
                         y_resize_factor=analyse.videoobject.y_resize_factor,
                         autoimport=True,
                         files=files,)
-            self.fill_track_treeview()       
-            
+                    self.fill_track_treeview()      
+        else:
+            for analyse in file_helper.list_of_analyses:
+                # delete found trackfile from analyse class
+                analyse.track_file = None 
+    
 
     def fill_track_treeview(self):
         for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:

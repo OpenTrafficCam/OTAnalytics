@@ -32,7 +32,7 @@ def deload_trackfile():
         reset_buttons_tracks()
 
 
-def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=None):
+def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, filepath=None, filename=None):
 
     """_summary_
     Args:
@@ -47,8 +47,6 @@ def load_and_convert(x_resize_factor, y_resize_factor,autoimport=False, files=No
 
     start_time = time.time()   
     tracks_dic = {}
-
-    filepath = files
 
     if not autoimport:
         filepath, filename = load_trackfile()
