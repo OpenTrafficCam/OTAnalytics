@@ -10,7 +10,7 @@ from OTAnalytics.application.datastore import (
     TrackParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.plotting import LayeredPlotter, PlotterPrototype
+from OTAnalytics.application.plotting import LayeredPlotter
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
@@ -34,6 +34,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     MatplotlibTrackPlotter,
+    PlotterPrototype,
 )
 from OTAnalytics.plugin_ui.cli import (
     CliArgumentParser,

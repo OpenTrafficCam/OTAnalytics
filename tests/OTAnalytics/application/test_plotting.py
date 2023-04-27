@@ -1,11 +1,12 @@
 from unittest.mock import Mock
 
-from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.plotting import (
-    LayeredPlotter,
+from plugin_prototypes.track_visualization.track_viz import (
     PlotterPrototype,
     TrackPlotter,
 )
+
+from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.plotting import LayeredPlotter
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track, TrackId, TrackImage
