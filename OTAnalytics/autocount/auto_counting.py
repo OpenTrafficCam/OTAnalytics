@@ -93,7 +93,7 @@ def assign_movement(row):
     return movement[0] if movement else None
         
 # %%
-def safe_to_csv(analyse,dataframe_autocount, dataframe_eventbased=None ):
+def safe_to_csv(analyse,  dataframe_eventbased=None ):
     """Safe dataframe as cvs and asks for filepath.
 
     Args:
@@ -103,14 +103,14 @@ def safe_to_csv(analyse,dataframe_autocount, dataframe_eventbased=None ):
     #dataframe_list = [dataframe_autocount, dataframe_eventbased]
 
     filepath_event = os.path.join(analyse.folder_path, analyse.analyse_name + '_events.csv')
-    filepath_autocount = os.path.join(analyse.folder_path, analyse.analyse_name + '_count.csv')
+    #filepath_autocount = os.path.join(analyse.folder_path, analyse.analyse_name + '_count.csv')
     
     # for dataframe in dataframe_list:
     #     file_path = filedialog.asksaveasfilename(
     #         defaultextension=".csv", filetypes=[("CSV", "*.csv")]
     #     )
     dataframe_eventbased.to_csv(filepath_event)
-    dataframe_autocount.to_csv(filepath_autocount)
+    #dataframe_autocount.to_csv(filepath_autocount)
 
 
 # %%
@@ -241,6 +241,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
+
     #create log
     logging.basicConfig(filename="log.txt", level=logging.INFO,
                         format="%(asctime)s %(message)s",  filemode="w")
@@ -255,14 +256,13 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
 
     else:
         for index in file_helper.selectionlist_videofiles:
-
+    
             analyse_indexes.append(index)
 
     for analyse_index in analyse_indexes:
     # create necessary columns
         #try:
-        print(bool(file_helper.list_of_analyses[analyse_index].tracks_dic))
-        print(bool(file_helper.flow_dict["Detectors"]))
+
         if file_helper.list_of_analyses[analyse_index].tracks_dic and file_helper.flow_dict["Detectors"]:
             file_helper.list_of_analyses_index = analyse_index
 
@@ -270,18 +270,18 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
             file_helper.list_of_analyses[analyse_index].tracks_df["Crossed_Frames"] = ""
 
             create_section_geometry_object()
-            file_helper.list_of_analyses[analyse_index].tracks_df =file_helper.list_of_analyses[analyse_index].tracks_df.apply(lambda row: find_intersection(row), axis=1)
+            file_helper.list_of_analyses[analyse_index].tracks_df = file_helper.list_of_analyses[analyse_index].tracks_df.apply(lambda row: find_intersection(row), axis=1)
             file_helper.list_of_analyses[analyse_index].tracks_df["Movement"] = file_helper.list_of_analyses[analyse_index].tracks_df.apply(lambda row: assign_movement(row), axis=1)
             file_helper.list_of_analyses[analyse_index].tracks_df["Appearance"] = time_calculation_dataframe(file_helper.list_of_analyses[analyse_index].tracks_df)
             eventbased_dataframe = eventased_dictionary_to_dataframe(file_helper.list_of_analyses[file_helper.list_of_analyses_index],fps=None, datetime_obj=None)
 
             tracks_df_result = clean_dataframe(file_helper.list_of_analyses[analyse_index].tracks_df)
 
-            # # if for_drawing:
+            # if for_drawing:
 
                 #return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
 
-            safe_to_csv(file_helper.list_of_analyses[analyse_index],tracks_df_result, eventbased_dataframe)
+            safe_to_csv(file_helper.list_of_analyses[analyse_index],eventbased_dataframe)
         else:
             logging.info(f"\n Could not compute File: {file_helper.list_of_analyses[analyse_index].analyse_name}")
 

@@ -9,6 +9,8 @@ from view.helpers.gui_helper import (
     button_bool,
     button_display_tracks_switch,
 )
+import autocount.auto_counting
+
 import keyboard
 from helpers.config import TRANSFORMED_COORDS
 import helpers.file_helper as file_helper
@@ -58,20 +60,28 @@ class gui(tk.Tk):
             **{"padx": (2.5, 10), "pady": 0}, row=2, column=1, sticky="new", rowspan=3
         )
 
-        self.frame_movements = FrameMovements(master=self.frame_controll_panel)
-        self.frame_movements.grid(
-            **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
-        )
+        # self.frame_movements = FrameMovements(master=self.frame_controll_panel)
+        # self.frame_movements.grid(
+        #     **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
+        # )
 
-        # Add clear all
-        self.button_clear_all = tk.Button(
-            master=self.frame_controll_panel,
-            text="Clear all",
-            command=self.clear_treeviews,
-        )
+        # # Add clear all
+        # self.button_clear_all = tk.Button(
+        #     master=self.frame_controll_panel,
+        #     text="Clear all",
+        #     command=self.clear_treeviews,
+        # )
         # pixel alignment
-        self.button_clear_all.grid(
-            **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
+        # self.button_clear_all.grid(
+        #     **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
+        # )
+
+        self.button_create_eventlist = tk.Button(master=self.frame_controll_panel, text="Generate event list",
+        command=lambda :autocount.auto_counting.automated_counting())
+
+        #pixel alignment
+        self.button_create_eventlist.grid(
+            **{"padx": 10, "pady": 10}, row=5, column=0, columnspan=2, sticky="ew"
         )
 
         self.frame_files.button_remove_video.configure(
@@ -84,13 +94,13 @@ class gui(tk.Tk):
         )
 
         # bind function to button (function effects to treeview)
-        self.frame_sections.button_add_section_to_movement.configure(
-            command=lambda: [
-                self.frame_sections.add_section_to_movement(
-                    self.frame_movements.tree_movements
-                )
-            ]
-        )
+        # self.frame_sections.button_add_section_to_movement.configure(
+        #     command=lambda: [
+        #         self.frame_sections.add_section_to_movement(
+        #             self.frame_movements.tree_movements
+        #         )
+        #     ]
+        # )
 
         self.frame_files.button_add_video.configure(
             command=self.load_video_and_add_frame
@@ -102,7 +112,7 @@ class gui(tk.Tk):
 
         self.frame_sections.button_remove_section.configure(
             command=lambda: [
-                self.frame_sections.delete_section(self.frame_movements.tree_movements)
+                self.frame_sections.delete_section()
             ]
         )
         self.frame_files.tree_files.bind('<ButtonRelease-1>',self.reupdate_tree_objects, add="+")
@@ -150,9 +160,9 @@ class gui(tk.Tk):
         view.image_alteration.manipulate_image()
 
         file_helper.fill_tree_views(
-            3,
-            self.frame_movements.tree_movements,
-            self.frame_sections.tree_sections,
+            2,
+            tree_movements=None,
+            tree_sections = self.frame_sections.tree_sections,
         )
 
     def clear_treeviews(self):
@@ -173,7 +183,6 @@ class gui(tk.Tk):
             file_helper.re_initialize()
 
             file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.initialize_empty_image()
-
 
             view.image_alteration.manipulate_image()
 
@@ -203,9 +212,9 @@ class gui(tk.Tk):
             #stop asking
             file_helper.ask_to_import_flowfile = False
             file_helper.fill_tree_views(
-            3,
-            self.frame_movements.tree_movements,
-            self.frame_sections.tree_sections,
+            2,
+            tree_movements = None,
+            tree_sections = self.frame_sections.tree_sections,
         )
 
         if file_helper.list_of_analyses[file_helper.list_of_analyses_index].trackfile_existence and file_helper.ask_to_import_trackfile:
@@ -217,10 +226,7 @@ class gui(tk.Tk):
 
             if response_track_file == "yes":
 
-
-                filepath = f"{path}/{file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file}"
-
-     
+                filepath = f"{path}/{file_helper.list_of_analyses[file_helper.list_of_analyses_index].track_file}"    
 
                 (
                 file_helper.list_of_analyses[file_helper.list_of_analyses_index].raw_detections,
@@ -231,7 +237,7 @@ class gui(tk.Tk):
                     x_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor,
                     y_resize_factor=file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor,
                     autoimport=True,
-                    files=filepath,
+                    filepath=filepath,
                 )
                 button_display_tracks_switch(self.frame_objects.button_show_tracks)
 
@@ -252,8 +258,8 @@ class gui(tk.Tk):
                 if analyse.track_file:
                     path = file_helper.list_of_analyses[file_helper.list_of_analyses_index].folder_path
                     filepath = f"{path}/{analyse.track_file}"
-                    files = open(filepath, "r")
-                    files = files.read()    
+                    # files = open(filepath, "r")
+                    # files = files.read()    
 
                     (analyse.raw_detections,
                     analyse.tracks_dic,
@@ -263,9 +269,13 @@ class gui(tk.Tk):
                         x_resize_factor=analyse.videoobject.x_resize_factor,
                         y_resize_factor=analyse.videoobject.y_resize_factor,
                         autoimport=True,
-                        files=files,)
-            self.fill_track_treeview()       
-            
+                        filepath=filepath, filename = analyse.track_file)
+                    self.fill_track_treeview()      
+        else:
+            for analyse in file_helper.list_of_analyses:
+                # delete found trackfile from analyse class
+                analyse.track_file = None
+    
 
     def fill_track_treeview(self):
         for object in file_helper.list_of_analyses[file_helper.list_of_analyses_index].tracks_df.index:
@@ -291,8 +301,8 @@ def main():
         tearoff=1,
     )
 
-    file.add_command(label="Import flowfile", command=app.import_flowfile)
-    file.add_command(label="Save configuration", command=view.sections.save_flowfile)
+    file.add_command(label="Load flowfile", command=app.import_flowfile)
+    file.add_command(label="Save flowfile", command=view.sections.save_flowfile)
     file.add_separator()
     file.add_command(label="Exit", command=app.quit)
     menubar.add_cascade(label="File", menu=file)
