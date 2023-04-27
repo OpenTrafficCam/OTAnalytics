@@ -73,6 +73,7 @@ class Counter:
         # Get direction for each track (first and last event!)
         events = self.EVENTS.sort_values(["road_user_id", "occurrence"])
         events["section_id2"] = events["section_id"]
+        events = events[events["event_type"] == "section-enter"]
         if both_timestamps:
             events["occurrence2"] = events["occurrence"]
 
@@ -485,7 +486,9 @@ class Counter:
         fig.show()
 
     def plot_flows(
-        self, flows_section: pd.DataFrame = pd.DataFrame(), intersection_name: str = ""
+        self,
+        flows_section: pd.DataFrame = pd.DataFrame(),
+        intersection_name: str = "",
     ) -> None:
         """Plot the flows for all (filtered) sections in a bar plot.
         A flow table needs to be created first using the
