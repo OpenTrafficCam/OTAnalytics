@@ -307,8 +307,8 @@ class Counter:
         ret_table = pd.DataFrame()
         for flow, value in flow_names.items():
             tmp_flows = flows[
-                (flows["from_section"] == value["from"])
-                & (flows["to_section"] == value["to"])
+                (flows["from_section"].isin(value["from"]))
+                & (flows["to_section"].isin(value["to"]))
                 & (flows["road_user_type"].isin(value["classes"]))
             ]
             if aggregated:
