@@ -178,7 +178,6 @@ def load_flowfile(TRANSFORMED_COORDS):
 
         file_helper.flow_dict.update(flow_dict_new)
 
-
         for detector in flow_dict_new["Detectors"]:
             print(detector)
             file_helper.flow_dict["Detectors"][detector]["start_x"] = file_helper.flow_dict["Detectors"][detector]["start_x"] * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.x_resize_factor

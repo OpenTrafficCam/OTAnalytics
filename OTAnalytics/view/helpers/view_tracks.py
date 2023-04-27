@@ -15,7 +15,7 @@ import autocount.auto_counting
 
 class FrameObject(tk.LabelFrame):
     def __init__(self, **kwargs):
-        super().__init__(text="Road Users", **kwargs)
+        super().__init__(text="Tracks", **kwargs)
         self.frame_tree = tk.Frame(master=self)
         self.frame_tree.pack(fill="x")
 
@@ -109,7 +109,7 @@ class FrameObject(tk.LabelFrame):
         self.button_clear_tracks.grid(row=0, column=4, padx=(0, 25), sticky="ew")
 
 
-        self.button_create_eventlist = tk.Button(master=self.frame_control_objects, text="create eventlist",
+        self.button_create_eventlist = tk.Button(master=self.frame_control_objects, text="Generate event list",
         command=lambda :autocount.auto_counting.automated_counting())
         self.button_create_eventlist.grid(
             row=1, column=0, columnspan=2, padx=(10, 0), pady=(0, 12), sticky="ew"

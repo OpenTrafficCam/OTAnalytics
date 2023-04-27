@@ -58,21 +58,21 @@ class gui(tk.Tk):
             **{"padx": (2.5, 10), "pady": 0}, row=2, column=1, sticky="new", rowspan=3
         )
 
-        self.frame_movements = FrameMovements(master=self.frame_controll_panel)
-        self.frame_movements.grid(
-            **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
-        )
+        # self.frame_movements = FrameMovements(master=self.frame_controll_panel)
+        # self.frame_movements.grid(
+        #     **{"padx": (10, 2.5), "pady": 0}, row=3, column=0, sticky="new"
+        # )
 
-        # Add clear all
-        self.button_clear_all = tk.Button(
-            master=self.frame_controll_panel,
-            text="Clear all",
-            command=self.clear_treeviews,
-        )
+        # # Add clear all
+        # self.button_clear_all = tk.Button(
+        #     master=self.frame_controll_panel,
+        #     text="Clear all",
+        #     command=self.clear_treeviews,
+        # )
         # pixel alignment
-        self.button_clear_all.grid(
-            **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
-        )
+        # self.button_clear_all.grid(
+        #     **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
+        # )
 
         self.frame_files.button_remove_video.configure(
             command=lambda: [
@@ -150,9 +150,9 @@ class gui(tk.Tk):
         view.image_alteration.manipulate_image()
 
         file_helper.fill_tree_views(
-            3,
-            self.frame_movements.tree_movements,
-            self.frame_sections.tree_sections,
+            2,
+            tree_movements=None,
+            tree_sections = self.frame_sections.tree_sections,
         )
 
     def clear_treeviews(self):
@@ -203,9 +203,9 @@ class gui(tk.Tk):
             #stop asking
             file_helper.ask_to_import_flowfile = False
             file_helper.fill_tree_views(
-            3,
-            self.frame_movements.tree_movements,
-            self.frame_sections.tree_sections,
+            2,
+            tree_movements = None,
+            tree_sections = self.frame_sections.tree_sections,
         )
 
         if file_helper.list_of_analyses[file_helper.list_of_analyses_index].trackfile_existence and file_helper.ask_to_import_trackfile:
