@@ -187,7 +187,6 @@ def load_flowfile(TRANSFORMED_COORDS):
             file_helper.flow_dict["Detectors"][detector]["end_y"] = file_helper.flow_dict["Detectors"][detector]["end_y"] * file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.y_resize_factor
             #de geometry key because it cant be saved
 
-        print(file_helper.flow_dict)
 
 
 def dump_to_flowdictionary(detector_name):

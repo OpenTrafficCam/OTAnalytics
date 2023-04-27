@@ -295,7 +295,7 @@ def main():
         tearoff=1,
     )
 
-    file.add_command(label="load flowfile", command=app.import_flowfile)
+    file.add_command(label="Load flowfile", command=app.import_flowfile)
     file.add_command(label="Save flowfile", command=view.sections.save_flowfile)
     file.add_separator()
     file.add_command(label="Exit", command=app.quit)
