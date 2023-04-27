@@ -7,8 +7,7 @@ class ExcelCountParser:
     def __init__(self, id_dict: dict, CONFIG: dict):
         self.path = Path(CONFIG["EXCEL_PATH"])
         self.id_to_class = id_dict["id_to_class"]
-        self.id_to_from_section = id_dict["id_to_from_section"]
-        self.id_to_to_section = id_dict["id_to_to_section"]
+        self.id_flows = id_dict["id_flows"]
         self.CONFIG = CONFIG
 
     def _read_excel(self) -> pd.DataFrame:
@@ -49,43 +48,49 @@ class ExcelCountParser:
             columns={
                 "Klasse": "road_user_type",
                 "Zeitstempel": "time_interval",
-                "Strom": "n_vehicles",
             },
             inplace=True,
         )
 
         # Replacing vehicle class IDs by the proper vehicle names
-        formatted_table["road_user_type"] = formatted_table["road_user_type"].map(
+        formatted_table["Fzg-Typ"] = formatted_table["road_user_type"].map(
             self.id_to_class
         )
 
         # Getting sections of origin and destination from "Strom"
         # in two different columns
-        formatted_table["from_section"] = formatted_table["n_vehicles"].map(
-            self.id_to_from_section
+        formatted_table["Strom-Bezeichnung"] = formatted_table["Strom"].map(
+            self.id_flows
         )
-        formatted_table["to_section"] = formatted_table["n_vehicles"].map(
-            self.id_to_to_section
-        )
+
+        formatted_table["Anzahl"] = 1
 
         # Group by sections, time interval, and road user type
         formatted_table = (
             formatted_table.groupby(
                 [
-                    "from_section",
-                    "to_section",
+                    "Strom-Bezeichnung",
                     pd.Grouper(
                         freq=str(self.CONFIG["INTERVAL_LENGTH_MIN"]) + "min",
                         key="time_interval",
                     ),
-                    "road_user_type",
+                    "Fzg-Typ",
                 ]
             )
             .count()
             .reset_index()
         )
 
-        return formatted_table
+        formatted_table["Datum"] = formatted_table["time_interval"].dt.strftime(
+            "%d.%m.%Y"
+        )
+        formatted_table["Uhrzeit"] = formatted_table["time_interval"].dt.strftime(
+            "%H:%M:%S"
+        )
+
+        return formatted_table.drop(
+            ["road_user_type", "time_interval", "Strom"], axis=1
+        )
 
     def excel_parser(self) -> pd.DataFrame:
         return self._formatting(self._read_excel())
