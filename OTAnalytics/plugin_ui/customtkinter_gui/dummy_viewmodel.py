@@ -4,8 +4,8 @@ from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
-from OTAnalytics.adapter_ui.abstract_item_table import AbstractItemTable
-from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
+from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
+from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
@@ -26,9 +26,28 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     SectionBuilder,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
+    END_SECTION,
+    START_SECTION,
+    ToplevelFlows,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 LINE_SECTION: str = "line_section"
+
+
+class FlowId:
+    # TODO: @briemla: Delete this dummy class
+    def __init__(self, id: str) -> None:
+        pass
+
+
+class Flow:
+    # TODO: @briemla: Delete this dummy class
+    id: FlowId
+
+    def to_dict(self) -> dict:
+        raise NotImplementedError
 
 
 class MissingInjectedInstanceError(Exception):
@@ -49,12 +68,14 @@ class DummyViewModel(ViewModel, SectionListObserver):
     ) -> None:
         self._application = application
         self._section_parser: SectionParser = section_parser
-        self._tracks_frame: Optional[AbstractTracksFrame] = None
+        self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._canvas: Optional[AbstractCanvas] = None
-        self._treeview_sections: Optional[AbstractItemTable]
+        self._treeview_sections: Optional[AbstractTreeviewInterface]
+        self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._new_section: dict = {}
         self._selected_section_id: Optional[str] = None
+        self._selected_flow_id: Optional[str] = None
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
@@ -90,11 +111,17 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(AbstractItemTable.__name__)
+            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self._treeview_sections.update_items()
 
-    def set_tracks_frame(self, tracks_frame: AbstractTracksFrame) -> None:
-        self._tracks_frame = tracks_frame
+    # TODO: @briemla connect to application
+    def notify_flows(self, flows: list[SectionId]) -> None:
+        if self._treeview_flows is None:
+            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        self._treeview_flows.update_items()
+
+    def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
+        self._frame_tracks = tracks_frame
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
@@ -102,15 +129,18 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         self._frame_canvas = tracks_canvas
 
-    def set_treeview_sections(self, treeview: AbstractItemTable) -> None:
+    def set_treeview_sections(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_sections = treeview
+
+    def set_treeview_flows(self, treeview: AbstractTreeviewInterface) -> None:
+        self._treeview_flows = treeview
 
     def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
         current_id = section_id.id if section_id else None
         self._selected_section_id = current_id
 
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(AbstractItemTable.__name__)
+            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self._treeview_sections.update_selected_items(current_id)
 
     def set_selected_section_id(self, id: Optional[str]) -> None:
@@ -152,7 +182,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
-                    AbstractItemTable.__name__
+                    type(self._treeview_sections).__name__
                 ) from cause
             position = self._treeview_sections.get_position()
             InfoBox(
@@ -190,7 +220,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:
             if self._treeview_sections is None:
-                raise MissingInjectedInstanceError(AbstractItemTable.__name__)
+                raise MissingInjectedInstanceError(
+                    type(self._treeview_sections).__name__
+                )
             position = position = self._treeview_sections.get_position()
             InfoBox(
                 message="Please select a section to edit", initial_position=position
@@ -225,7 +257,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def remove_section(self) -> None:
         if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(AbstractItemTable.__name__)
+            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         if not self._selected_section_id:
             position = position = self._treeview_sections.get_position()
             InfoBox(
@@ -276,6 +308,89 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def get_all_sections(self) -> Iterable[Section]:
         return self._application.get_all_sections()
 
+    def add_flow(self) -> None:
+        if self._treeview_flows is None:
+            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        position = self._treeview_flows.get_position()
+        section_ids = [section.id.id for section in self.get_all_sections()]
+        if len(section_ids) < 2:
+            InfoBox(
+                message="To add a flow, at least two sections are needed",
+                initial_position=position,
+            )
+            return
+        flow_data = ToplevelFlows(
+            title="Add flow",
+            initial_position=position,
+            section_ids=section_ids,
+        ).get_data()
+        flow_data["id"] = f"{flow_data[START_SECTION]} -> {flow_data[END_SECTION]}"
+        # TODO: @briemla: Connect to application
+        print(f"Added new flow: {flow_data}")
+
+    def edit_flow(self) -> None:
+        if self._selected_flow_id is None:
+            if self._treeview_flows is None:
+                raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+            position = position = self._treeview_flows.get_position()
+            InfoBox(message="Please select a flow to edit", initial_position=position)
+            return
+        if self._selected_flow_id:
+            # TODO: @briemla: Connect to application
+            # section_id = FlowId(self._selected_flow_id)
+            # if selected_flow := self._application.get_flow_for(flow_id):
+            #     self._update_metadata(selected_flow)
+            pass
+
+    def _update_flow(self, selected_flow: Flow) -> None:
+        if self._treeview_flows is None:
+            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        current_data = selected_flow.to_dict()
+        section_ids = [section.id.id for section in self.get_all_sections()]
+        updated_flow_data = ToplevelFlows(
+            title="Edit flow",
+            initial_position=self._treeview_flows.get_position(),
+            section_ids=section_ids,
+            input_values=current_data,
+        ).get_data()
+        updated_flow_data[
+            "id"
+        ] = f"{updated_flow_data[START_SECTION]} -> {updated_flow_data[END_SECTION]}"
+        self._set_flow_data(
+            id=selected_flow.id,
+            data=updated_flow_data,
+        )
+        print(f"Updated flow: {updated_flow_data}")
+
+    def _set_flow_data(self, id: FlowId, data: dict) -> None:
+        # TODO: @briemla: Connect to application
+        # flow = self._flow_parser.parse_flow(data)
+        # self._application.remove_flow(id)
+        # self._application.add_flow(flow)
+        pass
+
+    def set_selected_flow_id(self, id: Optional[str]) -> None:
+        self._selected_flow_id = id
+        # TODO: @briemla: Connect to application
+        # self._application.set_selected_flow(id)
+
+        print(f"New line section selected in treeview: id={id}")
+
+    def get_all_flows(self) -> Iterable[Flow]:
+        # TODO: @briemla: Connect to application and overwrite dummy list
+        # return self._application.get_all_flows()
+        return [Flow(), Flow(), Flow(), Flow()]
+
+    def remove_flow(self) -> None:
+        if self._treeview_flows is None:
+            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        if not self._selected_flow_id:
+            position = self._treeview_flows.get_position()
+            InfoBox(message="Please select a flow to remove", initial_position=position)
+            return
+        # TODO: @briemla: Connect to application
+        # self._application.remove_flow(FlowId(self._selected_flow_id))
+
     def start_analysis(self) -> None:
         self._application.start_analysis()
 
@@ -294,11 +409,11 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def _update_offset(
         self, offset: Optional[geometry.RelativeOffsetCoordinate]
     ) -> None:
-        if self._tracks_frame is None:
-            raise MissingInjectedInstanceError(AbstractTracksFrame.__name__)
+        if self._frame_tracks is None:
+            raise MissingInjectedInstanceError(AbstractFrameTracks.__name__)
 
         if offset:
-            self._tracks_frame.update_offset(offset.x, offset.y)
+            self._frame_tracks.update_offset(offset.x, offset.y)
 
     def change_track_offset_to_section_offset(self) -> None:
         return self._application.change_track_offset_to_section_offset()

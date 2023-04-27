@@ -4,7 +4,9 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import FrameSections
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
+    FrameConfiguration,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
 
 
@@ -39,9 +41,8 @@ class OTAnalyticsGui:
             master=self._app,
             viewmodel=self._view_model,
         )
-        self.frame_sections = FrameSections(
-            master=self._app,
-            viewmodel=self._view_model,
+        self.tabview_configuration = FrameConfiguration(
+            master=self._app, viewmodel=self._view_model
         )
         self.frame_analysis = FrameAnalysis(
             master=self._app, viewmodel=self._view_model
@@ -53,5 +54,7 @@ class OTAnalyticsGui:
             row=0, column=0, rowspan=3, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-        self.frame_sections.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self.tabview_configuration.grid(
+            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)

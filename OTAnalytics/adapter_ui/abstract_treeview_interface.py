@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Optional
 
 
-class AbstractItemTable:
+class AbstractTreeviewInterface:
     # TODO: add property viewmodel
 
     @abstractmethod

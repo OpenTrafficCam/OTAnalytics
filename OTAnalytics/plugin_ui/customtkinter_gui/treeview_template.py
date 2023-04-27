@@ -2,10 +2,10 @@ from abc import abstractmethod
 from tkinter.ttk import Treeview
 from typing import Any, Optional
 
-from OTAnalytics.adapter_ui.abstract_item_table import AbstractItemTable
+from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 
 
-class TreeviewTemplate(AbstractItemTable, Treeview):
+class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(show="tree", selectmode="browse", **kwargs)
         self.bind("<ButtonRelease-2>", self._on_deselect)
