@@ -234,11 +234,7 @@ class Datastore:
             file (Path): file in ottrk format
         """
         for file in files:
-            tracks = self._track_parser.parse(file)
-            track_ids = [track.id for track in tracks]
-            track_ids, videos = self._video_parser.parse(file, track_ids)
-            self._video_repository.add_all(track_ids, videos)
-            self._track_repository.add_all(tracks)
+            self.load_track_file(file)
 
     def get_all_tracks(self) -> Iterable[Track]:
         """
@@ -305,6 +301,14 @@ class Datastore:
             section (Section): section to add
         """
         self._section_repository.add(section)
+
+    def add_events(self, events: Iterable[Event]) -> None:
+        """Add multiple events to the repository.
+
+        Args:
+            events (Iterable[Event]): events to add
+        """
+        self._event_repository.add_all(events)
 
     def remove_section(self, section: SectionId) -> None:
         """

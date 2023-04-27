@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -198,3 +198,24 @@ class TestSceneActionDetector:
             direction_vector=DirectionVector2D(5, 0),
             video_name="myhostname_something.otdet",
         )
+
+    @patch.object(SceneActionDetector, "detect_leave_scene")
+    @patch.object(SceneActionDetector, "detect_enter_scene")
+    def test_detect(
+        self, mock_detect_enter_scene: Mock, mock_detect_leave_scene: Mock
+    ) -> None:
+        mock_track_1 = Mock(spec=Track)
+        mock_track_2 = Mock(spec=Track)
+        mock_tracks = [mock_track_1, mock_track_2]
+        mock_event_builder = Mock(spec=SceneEventBuilder)
+
+        scene_action_detector = SceneActionDetector(mock_event_builder)
+        scene_action_detector.detect(mock_tracks)
+
+        mock_detect_enter_scene.assert_any_call(mock_track_1)
+        mock_detect_leave_scene.assert_any_call(mock_track_1)
+        mock_detect_enter_scene.assert_any_call(mock_track_2)
+        mock_detect_leave_scene.assert_any_call(mock_track_2)
+
+        assert mock_detect_enter_scene.call_count == 2
+        assert mock_detect_leave_scene.call_count == 2

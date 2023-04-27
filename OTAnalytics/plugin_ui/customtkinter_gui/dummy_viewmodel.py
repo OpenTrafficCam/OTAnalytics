@@ -19,14 +19,14 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
 )
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.plugin_ui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.line_section import (
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     CanvasElementDeleter,
     CanvasElementPainter,
     SectionBuilder,
 )
-from OTAnalytics.plugin_ui.messagebox import InfoBox
-from OTAnalytics.plugin_ui.toplevel_sections import ToplevelSections
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 LINE_SECTION: str = "line_section"
 
@@ -168,11 +168,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def set_new_section(self, section: Section) -> None:
         self._application.add_section(section)
-        print(
-            f"New line_section created with name={section.id},"
-            + f"coordinates={section.get_coordinates()}"
-        )
-
+        print(f"New line_section created: {section}")
         self.refresh_sections_on_gui()
 
     def edit_section_geometry(self) -> None:

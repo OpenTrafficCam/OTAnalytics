@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Iterable, Optional
 
-from OTAnalytics.application.analysis import RunIntersect
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
@@ -22,12 +22,14 @@ class OTAnalyticsApplication:
         track_view_state: TrackViewState,
         section_state: SectionState,
         intersect: RunIntersect,
+        scene_event_detection: RunSceneEventDetection,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self._intersect = intersect
+        self._scene_event_detection = scene_event_detection
 
     def connect_observers(self) -> None:
         """
@@ -130,7 +132,13 @@ class OTAnalyticsApplication:
         Intersect all tracks with all sections and write the events into the event
         repository
         """
-        self._intersect.run()
+        tracks = self._datastore.get_all_tracks()
+        sections = self._datastore.get_all_sections()
+        events = self._intersect.run(tracks, sections)
+        self._datastore.add_events(events)
+
+        scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
+        self._datastore.add_events(scene_events)
 
     def save_events(self, file: Path) -> None:
         """
