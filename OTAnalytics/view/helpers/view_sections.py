@@ -15,7 +15,7 @@ import view.sections
 
 class FrameSection(tk.LabelFrame):
     def __init__(self, **kwargs):
-        super().__init__(text="Section", **kwargs)
+        super().__init__(text="Sections", **kwargs)
         self.frame_tree = tk.Frame(master=self)
         self.frame_tree.pack(fill="x")
 
