@@ -75,7 +75,7 @@ class gui(tk.Tk):
         # self.button_clear_all.grid(
         #     **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
         # )
-        
+
         self.button_create_eventlist = tk.Button(master=self.frame_controll_panel, text="Generate event list",
         command=lambda :autocount.auto_counting.automated_counting())
 
@@ -112,7 +112,7 @@ class gui(tk.Tk):
 
         self.frame_sections.button_remove_section.configure(
             command=lambda: [
-                self.frame_sections.delete_section(self.frame_movements.tree_movements)
+                self.frame_sections.delete_section()
             ]
         )
         self.frame_files.tree_files.bind('<ButtonRelease-1>',self.reupdate_tree_objects, add="+")
