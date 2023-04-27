@@ -130,6 +130,7 @@ class FrameFiles(tk.LabelFrame):
         video_sources = filedialog.askopenfilenames(
             filetypes=[("Videofiles", "*.mkv"), ("Videofiles", "*.mp4")]
         )
+
         if video_sources:
             i=0
             for video_source in video_sources:

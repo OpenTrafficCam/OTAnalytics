@@ -93,7 +93,7 @@ def assign_movement(row):
     return movement[0] if movement else None
         
 # %%
-def safe_to_csv(analyse,dataframe_autocount, dataframe_eventbased=None ):
+def safe_to_csv(analyse,  dataframe_eventbased=None ):
     """Safe dataframe as cvs and asks for filepath.
 
     Args:
@@ -103,14 +103,14 @@ def safe_to_csv(analyse,dataframe_autocount, dataframe_eventbased=None ):
     #dataframe_list = [dataframe_autocount, dataframe_eventbased]
 
     filepath_event = os.path.join(analyse.folder_path, analyse.analyse_name + '_events.csv')
-    filepath_autocount = os.path.join(analyse.folder_path, analyse.analyse_name + '_count.csv')
+    #filepath_autocount = os.path.join(analyse.folder_path, analyse.analyse_name + '_count.csv')
     
     # for dataframe in dataframe_list:
     #     file_path = filedialog.asksaveasfilename(
     #         defaultextension=".csv", filetypes=[("CSV", "*.csv")]
     #     )
     dataframe_eventbased.to_csv(filepath_event)
-    dataframe_autocount.to_csv(filepath_autocount)
+    #dataframe_autocount.to_csv(filepath_autocount)
 
 
 # %%
@@ -241,6 +241,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
+    print("started creating eventlist")
     #create log
     logging.basicConfig(filename="log.txt", level=logging.INFO,
                         format="%(asctime)s %(message)s",  filemode="w")
@@ -255,9 +256,9 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
 
     else:
         for index in file_helper.selectionlist_videofiles:
-
+    
             analyse_indexes.append(index)
-
+    print("started creating eventlist")
     for analyse_index in analyse_indexes:
     # create necessary columns
         #try:
@@ -282,6 +283,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
                 #return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
 
             safe_to_csv(file_helper.list_of_analyses[analyse_index],eventbased_dataframe)
+
         else:
             logging.info(f"\n Could not compute File: {file_helper.list_of_analyses[analyse_index].analyse_name}")
 

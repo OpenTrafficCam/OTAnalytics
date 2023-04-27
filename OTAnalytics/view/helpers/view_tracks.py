@@ -110,7 +110,7 @@ class FrameObject(tk.LabelFrame):
 
 
         self.button_create_eventlist = tk.Button(master=self.frame_control_objects, text="create eventlist",
-        command=autocount.auto_counting.automated_counting)
+        command=lambda :autocount.auto_counting.automated_counting())
         self.button_create_eventlist.grid(
             row=1, column=0, columnspan=2, padx=(10, 0), pady=(0, 12), sticky="ew"
         )
