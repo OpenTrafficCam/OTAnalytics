@@ -241,7 +241,7 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
     Returns:
         (dataframe): Dateframe with counted vehicles and further information.
     """
-    print("started creating eventlist")
+
     #create log
     logging.basicConfig(filename="log.txt", level=logging.INFO,
                         format="%(asctime)s %(message)s",  filemode="w")
@@ -258,12 +258,11 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
         for index in file_helper.selectionlist_videofiles:
     
             analyse_indexes.append(index)
-    print("started creating eventlist")
+
     for analyse_index in analyse_indexes:
     # create necessary columns
         #try:
-        print(bool(file_helper.list_of_analyses[analyse_index].tracks_dic))
-        print(bool(file_helper.flow_dict["Detectors"]))
+
         if file_helper.list_of_analyses[analyse_index].tracks_dic and file_helper.flow_dict["Detectors"]:
             file_helper.list_of_analyses_index = analyse_index
 
@@ -283,7 +282,6 @@ def automated_counting(entry_interval=None, entry_timedelta=None, for_drawing=Fa
                 #return file_helper.list_of_analyses[file_helper.list_of_analyses_index].cleaned_dataframe
 
             safe_to_csv(file_helper.list_of_analyses[analyse_index],eventbased_dataframe)
-
         else:
             logging.info(f"\n Could not compute File: {file_helper.list_of_analyses[analyse_index].analyse_name}")
 

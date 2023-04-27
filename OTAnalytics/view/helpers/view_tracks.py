@@ -106,14 +106,14 @@ class FrameObject(tk.LabelFrame):
                 view.image_alteration.manipulate_image()
                 ]
             )
-        self.button_clear_tracks.grid(row=0, column=4, padx=(0, 25), sticky="ew")
+        self.button_clear_tracks.grid(row=0, column=4, padx=(0, 25),pady = 10, sticky="ew")
 
 
-        self.button_create_eventlist = tk.Button(master=self.frame_control_objects, text="Generate event list",
-        command=lambda :autocount.auto_counting.automated_counting())
-        self.button_create_eventlist.grid(
-            row=1, column=0, columnspan=2, padx=(10, 0), pady=(0, 12), sticky="ew"
-        )
+        # self.button_create_eventlist = tk.Button(master=self.frame_control_objects, text="Generate event list",
+        # command=lambda :autocount.auto_counting.automated_counting())
+        # self.button_create_eventlist.grid(
+        #     row=1, column=0, columnspan=2, padx=(10, 0), pady=(0, 12), sticky="ew"
+        # )
 
         # autocount
         # self.button_autocount = tk.Button(

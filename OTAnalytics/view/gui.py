@@ -9,6 +9,8 @@ from view.helpers.gui_helper import (
     button_bool,
     button_display_tracks_switch,
 )
+import autocount.auto_counting
+
 import keyboard
 from helpers.config import TRANSFORMED_COORDS
 import helpers.file_helper as file_helper
@@ -73,6 +75,14 @@ class gui(tk.Tk):
         # self.button_clear_all.grid(
         #     **{"padx": 10, "pady": 10}, row=4, column=0, columnspan=2, sticky="ew"
         # )
+        
+        self.button_create_eventlist = tk.Button(master=self.frame_controll_panel, text="Generate event list",
+        command=lambda :autocount.auto_counting.automated_counting())
+
+        #pixel alignment
+        self.button_create_eventlist.grid(
+            **{"padx": 10, "pady": 10}, row=5, column=0, columnspan=2, sticky="ew"
+        )
 
         self.frame_files.button_remove_video.configure(
             command=lambda: [
@@ -173,7 +183,6 @@ class gui(tk.Tk):
             file_helper.re_initialize()
 
             file_helper.list_of_analyses[file_helper.list_of_analyses_index].videoobject.initialize_empty_image()
-
 
             view.image_alteration.manipulate_image()
 
