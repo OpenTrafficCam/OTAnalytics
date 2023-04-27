@@ -80,7 +80,7 @@ class TestDetectSectionActivity:
         line_section = LineSection(
             id=SectionId("NE"),
             relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)
             },
             plugin_data={},
             start=Coordinate(103, 194),
@@ -111,7 +111,7 @@ class TestDetectSectionActivity:
         line_section = LineSection(
             id=SectionId("NE"),
             relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)
             },
             plugin_data={},
             start=Coordinate(103, 194),
@@ -148,8 +148,8 @@ class TestDetectSectionActivity:
         area_section = Area(
             id=SectionId("NE"),
             relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0),
-                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0, 0),
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
+                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
             },
             plugin_data={},
             coordinates=coordinates,
