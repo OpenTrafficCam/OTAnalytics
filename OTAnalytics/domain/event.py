@@ -289,6 +289,7 @@ class SceneEventBuilder(EventBuilder):
             IncompleteEventBuilderSetup: if attribute 'event_type' is not set
             IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
             IncompleteEventBuilderSetup: attribute 'event_coordinate' is not set
+            IncompleteEventBuilderSetup: attribute 'road_user_type' is not set
 
         Returns:
             Event: the scene event
@@ -302,9 +303,12 @@ class SceneEventBuilder(EventBuilder):
         if not self.event_coordinate:
             raise IncompleteEventBuilderSetup("attribute 'event_coordinate' is not set")
 
+        if not self.road_user_type:
+            raise IncompleteEventBuilderSetup("attribute 'road_user_type' is not set")
+
         return Event(
             road_user_id=detection.track_id.id,
-            road_user_type=detection.classification,
+            road_user_type=self.road_user_type,
             hostname=self.extract_hostname(detection.input_file_path),
             occurrence=detection.occurrence,
             frame_number=detection.frame,

@@ -269,10 +269,11 @@ class TestSceneEventBuilder:
         event_builder.add_direction_vector(direction_vector)
         event_builder.add_event_type(EventType.ENTER_SCENE)
         event_builder.add_event_coordinate(0, 0)
+        event_builder.add_road_user_type("car")
         event = event_builder.create_event(valid_detection)
 
         assert event.road_user_id == valid_detection.track_id.id
-        assert event.road_user_type == valid_detection.classification
+        assert event.road_user_type == "car"
         assert event.hostname == "myhostname"
         assert event.occurrence == valid_detection.occurrence
         assert event.frame_number == valid_detection.frame
