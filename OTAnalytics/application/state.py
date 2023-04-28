@@ -151,6 +151,22 @@ class TrackViewState:
         self.view_height = ObservableProperty[int]()
 
 
+class TrackPropertiesUpdater(TrackListObserver):
+    def __init__(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+    ) -> None:
+        self._datastore = datastore
+        self._track_view_state = track_view_state
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        if track := next(iter(self._datastore.get_all_tracks())):
+            if new_image := self._datastore.get_image_of_track(track.id):
+                self._track_view_state.view_width.set(new_image.width())
+                self._track_view_state.view_height.set(new_image.height())
+
+
 class Plotter(ABC):
     """Abstraction to plot the background image."""
 

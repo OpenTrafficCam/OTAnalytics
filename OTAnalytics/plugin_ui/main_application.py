@@ -15,6 +15,7 @@ from OTAnalytics.application.state import (
     Plotter,
     SectionState,
     TrackImageUpdater,
+    TrackPropertiesUpdater,
     TrackState,
     TrackViewState,
 )
@@ -153,8 +154,10 @@ class ApplicationStarter:
         )
         layers = [track_geometry_plotter, track_start_end_point_plotter]
         plotter = LayeredPlotter(layers=layers)
-        updater = TrackImageUpdater(datastore, state, plotter)
-        datastore.register_tracks_observer(updater)
+        properties_updater = TrackPropertiesUpdater(datastore, state)
+        image_updater = TrackImageUpdater(datastore, state, plotter)
+        datastore.register_tracks_observer(properties_updater)
+        datastore.register_tracks_observer(image_updater)
         return state
 
     def _create_track_geometry_plotter(

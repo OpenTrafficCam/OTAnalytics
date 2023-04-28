@@ -4,7 +4,6 @@ from typing import Iterable, Optional
 import numpy
 import pandas
 import seaborn
-from domain.track import TrackImage
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
@@ -16,10 +15,12 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import Detection, PilImage, Track
+from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
 
 ENCODING = "UTF-8"
 DPI = 100
+DEFAULT_WIDTH = 800
+DEFAULT_HEIGHT = 600
 
 CLASS_CAR = "car"
 CLASS_MOTORCYCLE = "motorcycle"
@@ -69,15 +70,19 @@ class PlotterPrototype(Plotter):
             if new_image := self._datastore.get_image_of_track(track.id):
                 if self._track_view_state.show_tracks.get():
                     track_image = self._track_plotter.plot(
-                        width=new_image.width(),
-                        height=new_image.height(),
-                        # width=self._track_view_state.view_width.get(),
-                        # height=self._track_view_state.view_height.get(),
+                        width=self.__get_plotting_width(),
+                        height=self.__get_plotting_height(),
                     )
                     return new_image.add(track_image)
                 else:
                     return new_image
         return None
+
+    def __get_plotting_height(self) -> int:
+        return self._track_view_state.view_height.get_or_default(DEFAULT_HEIGHT)
+
+    def __get_plotting_width(self) -> int:
+        return self._track_view_state.view_width.get_or_default(DEFAULT_WIDTH)
 
 
 class PandasTrackProvider:
