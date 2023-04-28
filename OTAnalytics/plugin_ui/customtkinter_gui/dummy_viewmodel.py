@@ -223,7 +223,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 raise MissingInjectedInstanceError(
                     type(self._treeview_sections).__name__
                 )
-            position = position = self._treeview_sections.get_position()
+            position = self._treeview_sections.get_position()
             InfoBox(
                 message="Please select a section to edit", initial_position=position
             )
@@ -259,7 +259,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         if not self._selected_section_id:
-            position = position = self._treeview_sections.get_position()
+            position = self._treeview_sections.get_position()
             InfoBox(
                 message="Please select a section to remove", initial_position=position
             )
