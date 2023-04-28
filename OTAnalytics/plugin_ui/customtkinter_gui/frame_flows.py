@@ -63,8 +63,6 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
         self._viewmodel.set_selected_flow_id(flow_id)
 
     def update_items(self) -> None:
-        # self.delete(*self.get_children())
-        # TODO: @briemla connect to application
-        # item_ids = [section.id.id for section in self._viewmodel.get_all_flows()]
-        # self.add_items(item_ids=item_ids)
-        pass
+        self.delete(*self.get_children())
+        item_ids = self._viewmodel.get_all_flows()
+        self.add_items(item_ids=item_ids)

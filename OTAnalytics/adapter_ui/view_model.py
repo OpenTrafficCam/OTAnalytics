@@ -84,6 +84,10 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def get_all_flows(self) -> list[str]:
+        pass
+
+    @abstractmethod
     def add_flow(self) -> None:
         raise NotImplementedError
 

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
 from typing import Iterable, Optional
@@ -35,20 +36,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 LINE_SECTION: str = "line_section"
-
-
-class FlowId:
-    # TODO: @briemla: Delete this dummy class
-    def __init__(self, id: str) -> None:
-        pass
-
-
-class Flow:
-    # TODO: @briemla: Delete this dummy class
-    id: FlowId
-
-    def to_dict(self) -> dict:
-        raise NotImplementedError
+TO_SECTION = "to_section"
+FROM_SECTION = "from_section"
 
 
 class MissingInjectedInstanceError(Exception):
@@ -59,6 +48,21 @@ class MissingInjectedInstanceError(Exception):
             f"An instance of {injected_object} has to be injected before referencing it"
         )
         super().__init__(message)
+
+
+def flow_id(from_section: str, to_section: str) -> str:
+    return f"{from_section} -> {to_section}"
+
+
+@dataclass(frozen=True)
+class FlowId:
+    from_section: str
+    to_section: str
+
+
+def parse_flow_id(id: str) -> FlowId:
+    parts = id.split(" -> ")
+    return FlowId(from_section=parts[0], to_section=parts[1])
 
 
 class DummyViewModel(ViewModel, SectionListObserver):
@@ -306,7 +310,22 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def get_all_sections(self) -> Iterable[Section]:
         return self._application.get_all_sections()
 
+    def get_all_flows(self) -> list[str]:
+        flows: list[str] = []
+        for section in self.get_all_sections():
+            distances = section.plugin_data.get(DISTANCES, {})
+            flows.extend(
+                flow_id(section.id.id, other_section)
+                for other_section in distances.keys()
+            )
+        return flows
+
     def add_flow(self) -> None:
+        flow_data = self._show_distances_window()
+        self.__update_flow_data(flow_data)
+        print(f"Added new flow: {flow_data}")
+
+    def _show_distances_window(self, input_values: dict = {}) -> dict:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
@@ -316,16 +335,18 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 message="To add a flow, at least two sections are needed",
                 initial_position=position,
             )
-            return
-        flow_data = ToplevelFlows(
+            return {}
+        return ToplevelFlows(
             title="Add flow",
             initial_position=position,
             section_ids=section_ids,
+            input_values=input_values,
         ).get_data()
+
+    def __update_flow_data(self, flow_data: dict) -> None:
         section_id = SectionId(flow_data[START_SECTION])
         data = {flow_data[END_SECTION]: flow_data[DISTANCE]}
         self._application.update_section_plugin_data(section_id, DISTANCES, data)
-        print(f"Added new flow: {flow_data}")
 
     def edit_flow(self) -> None:
         if self._selected_flow_id is None:
@@ -334,17 +355,24 @@ class DummyViewModel(ViewModel, SectionListObserver):
             position = position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to edit", initial_position=position)
             return
-        if self._selected_flow_id:
-            # TODO: @briemla: Connect to application
-            # section_id = FlowId(self._selected_flow_id)
-            # if selected_flow := self._application.get_flow_for(flow_id):
-            #     self._update_metadata(selected_flow)
-            pass
+        flow = parse_flow_id(self._selected_flow_id)
+        if from_section := self._application.get_section_for(
+            SectionId(flow.from_section)
+        ):
+            distances = from_section.plugin_data.get(DISTANCES, {})
+            distance: str = distances.get(flow.to_section, {})
+            input_data = {
+                START_SECTION: flow.from_section,
+                END_SECTION: flow.to_section,
+                DISTANCE: distance,
+            }
+            flow_data = self._show_distances_window(input_values=input_data)
+            self.__update_flow_data(flow_data)
 
-    def _update_flow(self, selected_flow: Flow) -> None:
+    def _update_flow(self, selected_flow: dict) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        current_data = selected_flow.to_dict()
+        current_data = selected_flow.copy()  # TODO .to_dict()
         section_ids = [section.id.id for section in self.get_all_sections()]
         updated_flow_data = ToplevelFlows(
             title="Edit flow",
@@ -356,12 +384,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
             "id"
         ] = f"{updated_flow_data[START_SECTION]} -> {updated_flow_data[END_SECTION]}"
         self._set_flow_data(
-            id=selected_flow.id,
+            id=selected_flow[ID],  # TODO.id,
             data=updated_flow_data,
         )
         print(f"Updated flow: {updated_flow_data}")
 
-    def _set_flow_data(self, id: FlowId, data: dict) -> None:
+    def _set_flow_data(self, id: str, data: dict) -> None:
         # TODO: @briemla: Connect to application
         # flow = self._flow_parser.parse_flow(data)
         # self._application.remove_flow(id)
@@ -375,10 +403,10 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
         print(f"New line section selected in treeview: id={id}")
 
-    def get_all_flows(self) -> Iterable[Flow]:
-        # TODO: @briemla: Connect to application and overwrite dummy list
-        # return self._application.get_all_flows()
-        return [Flow(), Flow(), Flow(), Flow()]
+    # def get_all_flows(self) -> Iterable[Flow]:
+    #     # TODO: @briemla: Connect to application and overwrite dummy list
+    #     # return self._application.get_all_flows()
+    #     return [Flow(), Flow(), Flow(), Flow()]
 
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
