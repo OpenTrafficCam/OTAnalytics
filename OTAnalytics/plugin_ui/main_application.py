@@ -34,7 +34,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     MatplotlibTrackPlotter,
+    PandasTrackProvider,
     PlotterPrototype,
+    TrackGeometryPlotter,
 )
 from OTAnalytics.plugin_ui.cli import (
     CliArgumentParser,
@@ -137,7 +139,13 @@ class ApplicationStarter:
 
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
-        track_plotter = MatplotlibTrackPlotter()
+        pandas_data_provider = PandasTrackProvider(
+            datastore,
+            state,
+        )
+        track_plotter = MatplotlibTrackPlotter(
+            TrackGeometryPlotter(pandas_data_provider),
+        )
         prototype = PlotterPrototype(
             datastore=datastore,
             track_view_state=state,
