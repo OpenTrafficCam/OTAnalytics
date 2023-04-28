@@ -45,6 +45,8 @@ class TrackPlotter(ABC):
 
 
 class TrackBackgroundPlotter(Plotter):
+    """Plot video frame as background."""
+
     def __init__(self, datastore: Datastore) -> None:
         self._datastore = datastore
 
@@ -55,6 +57,8 @@ class TrackBackgroundPlotter(Plotter):
 
 
 class PlotterPrototype(Plotter):
+    """Convinience Class to add prototype plotters to the layer structure."""
+
     def __init__(
         self,
         track_view_state: TrackViewState,
@@ -79,6 +83,8 @@ class PlotterPrototype(Plotter):
 
 
 class PandasTrackProvider:
+    """Provides tracks as pandas DataFrame."""
+
     def __init__(
         self,
         datastore: Datastore,
@@ -191,13 +197,17 @@ class PandasTrackProvider:
         ]
 
 
-class PlotterImplementation(ABC):
+class MatplotlibPlotterImplementation(ABC):
+    """Abstraction to plot on a matplotlib axes"""
+
     @abstractmethod
     def plot(self, axes: Axes) -> None:
         pass
 
 
-class TrackGeometryPlotter(PlotterImplementation):
+class TrackGeometryPlotter(MatplotlibPlotterImplementation):
+    """Plot geometry of tracks."""
+
     def __init__(
         self,
         data_provider: PandasTrackProvider,
@@ -251,7 +261,9 @@ class TrackGeometryPlotter(PlotterImplementation):
         )
 
 
-class TrackStartEndPointPlotter(PlotterImplementation):
+class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
+    """Plot start and end points of tracks"""
+
     def __init__(
         self,
         data_provider: PandasTrackProvider,
@@ -289,7 +301,9 @@ class TrackStartEndPointPlotter(PlotterImplementation):
         )
 
 
-class SectionGeometryPlotter(PlotterImplementation):
+class SectionGeometryPlotter(MatplotlibPlotterImplementation):
+    """Plot geometry of sections."""
+
     def __init__(self, datastore: Datastore) -> None:
         self._datastore = datastore
 
@@ -331,7 +345,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
 
     def __init__(
         self,
-        plotter: PlotterImplementation,
+        plotter: MatplotlibPlotterImplementation,
     ) -> None:
         self._plotter = plotter
 
@@ -344,21 +358,8 @@ class MatplotlibTrackPlotter(TrackPlotter):
         Plot the tracks and section as image.
 
         Args:
-            tracks (Iterable[Track]): tracks to be plotted
-            sections (Iterable[Section]): sections to be plotted
             width (int): width of the image
             height (int): height of the image
-            filter_classes (Iterable[str], optional): classes to filter tracks.
-            Defaults to ( "car", "motorcycle", "person", "truck", "bicycle", "train", ).
-            num_min_frames (int, optional): minimum number of frames of a track to be
-            shown. Defaults to 30.
-            start_time (str, optional): start of time period to show tracks. Defaults
-            to "".
-            end_time (_type_, optional): end of time period to show tracks. Defaults to
-            "".
-            start_end (bool, optional): show start and end points. Defaults to True.
-            plot_sections (bool, optional): show sections. Defaults to True.
-            alpha (float, optional): transparency of tracks. Defaults to 0.1.
 
         Returns:
             TrackImage: image containing tracks and sections

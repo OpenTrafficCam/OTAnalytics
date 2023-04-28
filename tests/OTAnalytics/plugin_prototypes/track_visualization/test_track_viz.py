@@ -3,8 +3,8 @@ from unittest.mock import Mock
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.track import Track, TrackId, TrackImage
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    MatplotlibPlotterImplementation,
     MatplotlibTrackPlotter,
-    PlotterImplementation,
     PlotterPrototype,
     TrackPlotter,
 )
@@ -31,7 +31,7 @@ class TestPandasDataProvider:
     def test_plot(self) -> None:
         width = 100
         height = 100
-        plotter_implementation = Mock(spec=PlotterImplementation)
+        plotter_implementation = Mock(spec=MatplotlibPlotterImplementation)
         plotter = MatplotlibTrackPlotter(plotter_implementation)
 
         image = plotter.plot(width=width, height=height)

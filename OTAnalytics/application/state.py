@@ -133,6 +133,15 @@ class ObservableProperty(Generic[VALUE]):
         return self._property
 
     def get_or_default(self, default: VALUE) -> VALUE:
+        """
+        Get the current value if present. Otherwise return the given default value.
+
+        Args:
+            default (VALUE): value to return in absence of the property value
+
+        Returns:
+            VALUE: value or default value
+        """
         return self._property if self._property else default
 
 
@@ -152,6 +161,11 @@ class TrackViewState:
 
 
 class TrackPropertiesUpdater(TrackListObserver):
+    """
+    This class listens to track changes and updates the width and height of the view
+    state.
+    """
+
     def __init__(
         self,
         datastore: Datastore,
