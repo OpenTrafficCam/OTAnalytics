@@ -132,6 +132,9 @@ class ObservableProperty(Generic[VALUE]):
         """
         return self._property
 
+    def get_or_default(self, default: VALUE) -> VALUE:
+        return self._property if self._property else default
+
 
 class TrackViewState:
     """
