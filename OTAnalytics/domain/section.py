@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -85,7 +85,7 @@ class Section(DataclassValidation):
 
     id: SectionId
     relative_offset_coordinates: dict[EventType, RelativeOffsetCoordinate]
-    plugin_data: dict[str, Any]
+    plugin_data: dict[str, dict]
 
     @abstractmethod
     def get_coordinates(self) -> list[Coordinate]:
