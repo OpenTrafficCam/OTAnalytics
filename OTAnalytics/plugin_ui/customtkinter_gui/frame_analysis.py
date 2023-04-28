@@ -43,8 +43,9 @@ class FrameAnalysis(CTkFrame):
     def _save_eventlist(self) -> None:
         file = asksaveasfilename(
             title="Save event list file as",
-            filetypes=[("events file", "*.json.bz2")],  # BUG: doesnt accept two dots
-            # initialdir=Path("."),
+            filetypes=[("events file", "*.otevents")],
+            defaultextension=".otevents",
         )
-        print(f"Eventlist file to save: {file}")
+        if not file:
+            return
         self._viewmodel.save_events(file)
