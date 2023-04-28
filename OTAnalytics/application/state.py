@@ -144,6 +144,8 @@ class TrackViewState:
         self.track_offset = ObservableProperty[RelativeOffsetCoordinate](
             RelativeOffsetCoordinate(0, 0)
         )
+        self.view_width = ObservableProperty[int]()
+        self.view_height = ObservableProperty[int]()
 
 
 class Plotter(ABC):

@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 import numpy
 import pandas
 import seaborn
+from domain.track import TrackImage
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
@@ -15,7 +16,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
+from OTAnalytics.domain.track import Detection, PilImage, Track
 
 ENCODING = "UTF-8"
 DPI = 100
@@ -42,6 +43,16 @@ class TrackPlotter(ABC):
         pass
 
 
+class TrackBackgroundPlotter(Plotter):
+    def __init__(self, datastore: Datastore) -> None:
+        self._datastore = datastore
+
+    def plot(self) -> Optional[TrackImage]:
+        if track := next(iter(self._datastore.get_all_tracks())):
+            return self._datastore.get_image_of_track(track.id)
+        return None
+
+
 class PlotterPrototype(Plotter):
     def __init__(
         self,
@@ -60,6 +71,8 @@ class PlotterPrototype(Plotter):
                     track_image = self._track_plotter.plot(
                         width=new_image.width(),
                         height=new_image.height(),
+                        # width=self._track_view_state.view_width.get(),
+                        # height=self._track_view_state.view_height.get(),
                     )
                     return new_image.add(track_image)
                 else:
@@ -191,17 +204,13 @@ class TrackGeometryPlotter(PlotterImplementation):
         self,
         data_provider: PandasTrackProvider,
         alpha: float = 0.5,
-        start_end: bool = True,
     ) -> None:
         self._data_provider = data_provider
         self._alpha = alpha
-        self._start_end = start_end
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
         self._plot_tracks(data, self._alpha, axes)
-        if self._start_end:
-            self._plot_start_end_points(data, axes)
 
     def _plot_tracks(self, track_df: DataFrame, alpha: float, axes: Axes) -> None:
         """
@@ -243,7 +252,21 @@ class TrackGeometryPlotter(PlotterImplementation):
             hue_order=class_order,
         )
 
-    def _plot_start_end_points(self, track_df: DataFrame, axes: Axes) -> None:
+
+class TrackStartEndPointPlotter(PlotterImplementation):
+    def __init__(
+        self,
+        data_provider: PandasTrackProvider,
+        alpha: float = 0.5,
+    ) -> None:
+        self._data_provider = data_provider
+        self._alpha = alpha
+
+    def plot(self, axes: Axes) -> None:
+        data = self._data_provider.get_data()
+        self.__plot_start_end_points(data, axes)
+
+    def __plot_start_end_points(self, track_df: DataFrame, axes: Axes) -> None:
         """
         Plot start and end points of given tracks on the axes.
 
@@ -428,4 +451,4 @@ class MatplotlibTrackPlotter(TrackPlotter):
 
         image_array = numpy.frombuffer(bbox_contents.to_string(), dtype=numpy.uint8)
         image_array = image_array.reshape([top - bottom, right - left, 4])
-        return PilImage(Image.fromarray(image_array))
+        return PilImage(Image.fromarray(image_array, mode="RGBA"))
