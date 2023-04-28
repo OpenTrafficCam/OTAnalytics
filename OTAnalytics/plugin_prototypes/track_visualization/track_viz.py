@@ -57,25 +57,18 @@ class TrackBackgroundPlotter(Plotter):
 class PlotterPrototype(Plotter):
     def __init__(
         self,
-        datastore: Datastore,
         track_view_state: TrackViewState,
         track_plotter: TrackPlotter,
     ) -> None:
-        self._datastore = datastore
         self._track_view_state = track_view_state
         self._track_plotter = track_plotter
 
     def plot(self) -> Optional[TrackImage]:
-        if track := next(iter(self._datastore.get_all_tracks())):
-            if new_image := self._datastore.get_image_of_track(track.id):
-                if self._track_view_state.show_tracks.get():
-                    track_image = self._track_plotter.plot(
-                        width=self.__get_plotting_width(),
-                        height=self.__get_plotting_height(),
-                    )
-                    return new_image.add(track_image)
-                else:
-                    return new_image
+        if self._track_view_state.show_tracks.get():
+            return self._track_plotter.plot(
+                width=self.__get_plotting_width(),
+                height=self.__get_plotting_height(),
+            )
         return None
 
     def __get_plotting_height(self) -> int:

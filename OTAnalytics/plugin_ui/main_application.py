@@ -38,6 +38,8 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     MatplotlibTrackPlotter,
     PandasTrackProvider,
     PlotterPrototype,
+    SectionGeometryPlotter,
+    TrackBackgroundPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
@@ -142,17 +144,28 @@ class ApplicationStarter:
 
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
+        background_image_plotter = TrackBackgroundPlotter(datastore)
         pandas_data_provider = PandasTrackProvider(
             datastore,
             state,
         )
         track_geometry_plotter = self._create_track_geometry_plotter(
-            datastore, state, pandas_data_provider
+            state,
+            pandas_data_provider,
         )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            datastore, state, pandas_data_provider
+            state,
+            pandas_data_provider,
         )
-        layers = [track_geometry_plotter, track_start_end_point_plotter]
+        section_plotter = PlotterPrototype(
+            state, MatplotlibTrackPlotter(SectionGeometryPlotter(datastore))
+        )
+        layers = [
+            background_image_plotter,
+            track_geometry_plotter,
+            track_start_end_point_plotter,
+            section_plotter,
+        ]
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, state)
         image_updater = TrackImageUpdater(datastore, state, plotter)
@@ -162,33 +175,23 @@ class ApplicationStarter:
 
     def _create_track_geometry_plotter(
         self,
-        datastore: Datastore,
         state: TrackViewState,
         pandas_data_provider: PandasTrackProvider,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackGeometryPlotter(pandas_data_provider),
         )
-        return PlotterPrototype(
-            datastore=datastore,
-            track_view_state=state,
-            track_plotter=track_plotter,
-        )
+        return PlotterPrototype(state, track_plotter)
 
     def _create_track_start_end_point_plotter(
         self,
-        datastore: Datastore,
         state: TrackViewState,
         pandas_data_provider: PandasTrackProvider,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackStartEndPointPlotter(pandas_data_provider),
         )
-        return PlotterPrototype(
-            datastore=datastore,
-            track_view_state=state,
-            track_plotter=track_plotter,
-        )
+        return PlotterPrototype(state, track_plotter)
 
     def _create_section_state(self) -> SectionState:
         return SectionState()
