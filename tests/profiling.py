@@ -213,6 +213,14 @@ class ProfileWriter:
         return "\n".join([",".join(map(str, row)) for row in rows])
 
     def write_to_file(self, csv: str, func_name: str) -> None:
+        """Writes the given csv string into an output file.
+        The output file is specified by the ProfileWriter's
+        output template.
+
+        Args:
+            csv (str): the csv string to be saved to file
+            func_name (str): the name of the profiled function
+        """
         path = self.create_file_name(func_name)
 
         file = Path(path)
@@ -220,6 +228,15 @@ class ProfileWriter:
         file.write_text(csv)
 
     def create_file_name(self, func_name: str) -> str:
+        """Renders the output file template using the
+        given function name as well as current time and date.
+
+        Args:
+            func_name (str): name of the profiled function
+
+        Returns:
+            str: the rendered output file template
+        """
         now = datetime.now()
 
         path = self.output
@@ -231,15 +248,45 @@ class ProfileWriter:
 
 
 class Profiler:
+    """Profiler is a class to execute profiling on a given function.
+
+    Args:
+        writer (ProfileWriter): the ProfileWriter to be used
+            for writing measurements to files.
+        repeat (int): the number of measured executions.
+        warmup (int): the number of unmeasured warmup executions.
+        return_index (int): index of which execution's result should be returned.
+            Defaults to -1.
+    """
+
     def __init__(
         self, writer: ProfileWriter, repeat: int, warmup: int, return_index: int = -1
     ) -> None:
+        """Creates a new Profiler.
+
+        Args:
+            writer (ProfileWriter): the ProfileWriter to be used
+                for writing measurements to files.
+            repeat (int): the number of measured executions.
+            warmup (int): the number of unmeasured warmup executions.
+            return_index (int): index of which execution's result should be returned.
+                Defaults to -1.
+        """
         self.writer = writer
         self.repeat = repeat
         self.warmup = warmup
         self.return_index = return_index
 
     def run(self, execution: Callable) -> tuple[list, Profile]:
+        """Runs the warmup and profiling executions of the given function.
+
+        Args:
+            execution (Callable): the function to be profiled
+
+        Returns:
+            tuple[list, Profile]: the list of execution results
+                and the generated Profile
+        """
         results = []
 
         for _ in range(self.warmup):
@@ -255,6 +302,16 @@ class Profiler:
         return results, profile
 
     def as_decorator(self, func: Callable) -> Callable:
+        """Converts the Profiler to a decorator by creating
+        a wrapper for the given function which executes the profiling.
+
+        Args:
+            func (Callable): the function to be profiled.
+
+        Returns:
+            Callable: a wrapper for the given function
+        """
+
         @functools.wraps(func)
         def profiling_wrapper(*args: Any, **kwargs: Any) -> Any:
             results, profile = self.run(lambda: func(*args, **kwargs))
@@ -267,22 +324,25 @@ class Profiler:
 
 class ProfilePlotter:
     def as_pie(self, file: str) -> None:
-        data = pd.read_csv(file, sep=";")
+        data = pd.read_csv(file)
         print(data)
 
-        funcs = set(data["caller"].unique())
-        funcs.union(set(data["callee"]))
-        func_ids = {f: i for i, f in enumerate(funcs)}
+        data["called_by"].fillna("")
+        funcs = set(data["function"].unique())
+        func_ids = {f: i for i, f in enumerate(funcs, start=1)}
+        func_ids[""] = 0
 
-        ids = data["callee"].map(func_ids)
-        labels = data["callee"]
-        parents = data["caller"].map(func_ids)
+        ids = data["function"].map(func_ids)
+        labels = data["function"]
+        parents = data["called_by"].map(func_ids)
         values = data["cumtime"]
 
-        traces = [go.Sunburst(ids=ids, labels=labels, parents=parents, values=values)]
+        trace = go.Sunburst(
+            ids=ids, labels=labels, parents=parents, values=values, branchvalues="total"
+        )
         layout = go.Layout(template="plotly_white", title="tests")
 
-        fig = go.Figure(data=traces, layout=layout)
+        fig = go.Figure(data=[trace], layout=layout)
         fig.show()
 
 
@@ -315,3 +375,4 @@ def sort_elements(counts: dict) -> dict:
 if __name__ == "__main__":
     p = random_list(100_000)
     count_and_sort(p)
+    ProfilePlotter().as_pie("profiles/profile_count_and_sort_28-04-2023_17-58-25.csv")
