@@ -23,7 +23,7 @@ class FrameAnalysis(CTkFrame):
         )
         self.button_save_eventlist = CTkButton(
             master=self,
-            text="Save Eventlist",
+            text="Save eventlist",
             command=self._save_eventlist,
         )
 
