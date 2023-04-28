@@ -173,6 +173,10 @@ class NoSectionsToSave(Exception):
     pass
 
 
+class MissingSection(Exception):
+    pass
+
+
 class Datastore:
     """
     Central element to hold data in the application.
@@ -327,6 +331,27 @@ class Datastore:
             section (Section): updated section
         """
         self._section_repository.update(section)
+
+    def update_section_plugin_data(
+        self,
+        section_id: SectionId,
+        key: str,
+        value: dict,
+    ) -> None:
+        """
+        Update the section's plugin data.
+
+        Args:
+            key (str): key within the plugin data
+            value (dict): value to be stored for the key
+        """
+        section = self.get_section_for(section_id)
+        if section is None:
+            raise MissingSection(f"Section for id: {section_id} could not be found.")
+        if key in section.plugin_data:
+            section.plugin_data[key].update(value)
+        else:
+            section.plugin_data[key] = value
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """

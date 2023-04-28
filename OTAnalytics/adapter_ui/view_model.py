@@ -7,6 +7,8 @@ from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.domain.section import Section
 
+DISTANCES: str = "distances"
+
 
 class ViewModel(ABC):
     @abstractmethod

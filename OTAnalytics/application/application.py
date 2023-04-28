@@ -105,6 +105,21 @@ class OTAnalyticsApplication:
         """
         self._datastore.update_section(section)
 
+    def update_section_plugin_data(
+        self,
+        section_id: SectionId,
+        key: str,
+        value: dict,
+    ) -> None:
+        """
+        Update the section's plugin data.
+
+        Args:
+            key (str): key within the plugin data
+            value (dict): value to be stored for the key
+        """
+        self._datastore.update_section_plugin_data(section_id, key, value)
+
     def save_sections(self, file: Path) -> None:
         """
         Save the section repository into a file.

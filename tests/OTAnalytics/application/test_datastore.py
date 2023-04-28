@@ -203,3 +203,73 @@ class TestDatastore:
         store.save_event_list_file(some_file)
 
         event_list_parser.serialize.assert_called()
+
+    def test_update_section_plugin_data_not_existing(
+        self,
+        track_parser: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        event_list_parser: Mock,
+    ) -> None:
+        store = Datastore(
+            track_repository=TrackRepository(),
+            track_parser=track_parser,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            video_parser=video_parser,
+        )
+        section_id = SectionId("my section")
+        key = "my data for plugins"
+        value = {"some": "value"}
+
+        section = LineSection(
+            section_id,
+            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+            {},
+            start=Coordinate(0, 0),
+            end=Coordinate(10, 10),
+        )
+
+        store.add_section(section)
+        store.update_section_plugin_data(section_id, key, value)
+
+        stored_section = store.get_section_for(section_id)
+
+        assert stored_section == section
+        assert section.plugin_data == {key: value}
+
+    def test_update_section_plugin_data_with_existing_data(
+        self,
+        track_parser: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        event_list_parser: Mock,
+    ) -> None:
+        store = Datastore(
+            track_repository=TrackRepository(),
+            track_parser=track_parser,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            video_parser=video_parser,
+        )
+        section_id = SectionId("my section")
+        key = "my data for plugins"
+        value = {"some": "value"}
+        new_value = {"other": "new_value"}
+        combined = {"some": "value", "other": "new_value"}
+
+        section = LineSection(
+            section_id,
+            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+            {key: value},
+            start=Coordinate(0, 0),
+            end=Coordinate(10, 10),
+        )
+
+        store.add_section(section)
+        store.update_section_plugin_data(section_id, key, new_value)
+
+        stored_section = store.get_section_for(section_id)
+
+        assert stored_section == section
+        assert section.plugin_data == {key: combined}

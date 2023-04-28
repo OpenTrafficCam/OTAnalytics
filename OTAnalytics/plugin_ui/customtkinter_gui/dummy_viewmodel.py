@@ -6,7 +6,7 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.adapter_ui.view_model import DISTANCES, ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
@@ -27,6 +27,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
+    DISTANCE,
     END_SECTION,
     START_SECTION,
     ToplevelFlows,
@@ -112,12 +113,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-        self._treeview_sections.update_items()
-
-    # TODO: @briemla connect to application
-    def notify_flows(self, flows: list[SectionId]) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        self._treeview_sections.update_items()
         self._treeview_flows.update_items()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
@@ -324,8 +322,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
             initial_position=position,
             section_ids=section_ids,
         ).get_data()
-        flow_data["id"] = f"{flow_data[START_SECTION]} -> {flow_data[END_SECTION]}"
-        # TODO: @briemla: Connect to application
+        section_id = SectionId(flow_data[START_SECTION])
+        data = {flow_data[END_SECTION]: flow_data[DISTANCE]}
+        self._application.update_section_plugin_data(section_id, DISTANCES, data)
         print(f"Added new flow: {flow_data}")
 
     def edit_flow(self) -> None:
