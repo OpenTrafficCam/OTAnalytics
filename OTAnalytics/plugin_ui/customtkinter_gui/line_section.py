@@ -75,6 +75,11 @@ STYLE_UPDATES_SELECTED_SECTION = {
     KNOB: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
 }
 
+STYLE_UPDATES_EDITED_SECTION = {
+    LINE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 4, LINE_DASH: "-"},
+    KNOB: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
+}
+
 # TODO: If possible make this classes reusable for other canvas items
 # TODO: Rename to more canvas specific names, as LineSection also has metadata
 
@@ -102,8 +107,10 @@ class CanvasElementPainter:
         start: tuple[int, int],
         end: tuple[int, int],
         is_selected: bool = False,
+        is_edited: bool = False,
         default_style: dict = DEFAULT_SECTION_STYLE,
         style_updates_selected: dict = STYLE_UPDATES_SELECTED_SECTION,
+        style_updates_edited: dict = STYLE_UPDATES_EDITED_SECTION,
     ) -> None:  # sourcery skip: dict-assign-update-to-union
         """Draws a line section on a canvas.
 
@@ -121,6 +128,8 @@ class CanvasElementPainter:
         style = dict(default_style)
         if is_selected:
             style.update(style_updates_selected)
+        if is_edited:
+            style.update(style_updates_edited)
         self._canvas.create_line(x0, y0, x1, y1, tags=tkinter_tags, **style[LINE])
         self._create_circle(tags=tkinter_tags, x=x0, y=y0, **style[KNOB])
         self._create_circle(tags=tkinter_tags, x=x1, y=y1, **style[KNOB])
@@ -187,6 +196,7 @@ class SectionGeometryBuilder:
             start=self._start(),
             end=coordinates,
             is_selected=True,
+            is_edited=True,
         )
         # self._tmp_end = coordinates
 
