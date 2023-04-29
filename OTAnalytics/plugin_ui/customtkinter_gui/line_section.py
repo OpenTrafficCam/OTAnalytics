@@ -283,6 +283,8 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             or RELATIVE_OFFSET_COORDINATES not in self._metadata
         ):
             self._get_metadata()
+        if not self._metadata[ID]:
+            return
         self._create_section()
 
     def _get_metadata(self) -> None:

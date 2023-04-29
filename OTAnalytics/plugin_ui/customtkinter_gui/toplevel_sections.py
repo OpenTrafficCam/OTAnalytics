@@ -7,6 +7,7 @@ from OTAnalytics.domain.section import ID, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
 
 class ToplevelSections(CTkToplevel):
@@ -33,7 +34,7 @@ class ToplevelSections(CTkToplevel):
             if input_values is None
             else input_values
         )
-        self.protocol("WM_DELETE_WINDOW", self.close)
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
         self._initial_position = initial_position
         self._get_widgets()
         self._place_widgets()
@@ -77,12 +78,24 @@ class ToplevelSections(CTkToplevel):
         self.entry_name.bind("<Return>", self.close)
 
     def close(self, event: Any = None) -> None:
+        if not self._name_is_valid():
+            return
         self.input_values[ID] = self.entry_name.get()
         self.input_values[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
         ] = self.frame_bbox_offset.get_relative_offset_coordintes()
         self.destroy()
         self.update()
+
+    def _name_is_valid(self) -> bool:
+        if self.entry_name.get().strip() == "":
+            position = (self.winfo_x(), self.winfo_y())
+            InfoBox(
+                message="Please choose a name for the section!",
+                initial_position=position,
+            )
+            return False
+        return True
 
     def get_metadata(self) -> dict:
         self.wait_window()
