@@ -70,12 +70,12 @@ DEFAULT_SECTION_STYLE = {
     KNOB: {FILL_COLOR: "#47936B", LINE_WIDTH: 0, RADIUS: 5},
 }
 
-STYLE_UPDATES_SELECTED_SECTION = {
+SELECTED_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 4},
     KNOB: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
 }
 
-STYLE_UPDATES_EDITED_SECTION = {
+EDITED_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 4, LINE_DASH: "-"},
     KNOB: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
 }
@@ -108,9 +108,9 @@ class CanvasElementPainter:
         end: tuple[int, int],
         is_selected: bool = False,
         is_edited: bool = False,
-        default_style: dict = DEFAULT_SECTION_STYLE,
-        style_updates_selected: dict = STYLE_UPDATES_SELECTED_SECTION,
-        style_updates_edited: dict = STYLE_UPDATES_EDITED_SECTION,
+        style_default: dict = DEFAULT_SECTION_STYLE,
+        style_selected: dict = SELECTED_SECTION_STYLE,
+        style_edited: dict = EDITED_SECTION_STYLE,
     ) -> None:  # sourcery skip: dict-assign-update-to-union
         """Draws a line section on a canvas.
 
@@ -125,11 +125,11 @@ class CanvasElementPainter:
         tkinter_tags = (id,) + tuple(tags)
         x0, y0 = start
         x1, y1 = end
-        style = dict(default_style)
+        style = dict(style_default)
         if is_selected:
-            style.update(style_updates_selected)
+            style = dict(style_selected)
         if is_edited:
-            style.update(style_updates_edited)
+            style = dict(style_edited)
         self._canvas.create_line(x0, y0, x1, y1, tags=tkinter_tags, **style[LINE])
         self._create_circle(tags=tkinter_tags, x=x0, y=y0, **style[KNOB])
         self._create_circle(tags=tkinter_tags, x=x1, y=y1, **style[KNOB])
