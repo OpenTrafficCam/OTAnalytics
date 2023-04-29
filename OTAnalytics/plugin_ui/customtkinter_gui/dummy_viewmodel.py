@@ -112,6 +112,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(AbstractTreeviewSections.__name__)
         self._treeview_sections.update_selection(current_id)
+        self.refresh_sections_on_gui()
 
     def set_selected_section_id(self, id: Optional[str]) -> None:
         self._selected_section_id = id
@@ -162,6 +163,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
             return
 
     def add_section(self) -> None:
+        self.set_selected_section_id(None)
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         SectionBuilder(viewmodel=self, canvas=self._canvas)
@@ -243,12 +245,14 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         painter = CanvasElementPainter(canvas=self._canvas)
-        for line_section in self._get_sections():
+        for section in self._get_sections():
+            is_selected = section[ID] == self._selected_section_id
             painter.draw(
                 tags=[LINE_SECTION],
-                id=line_section[ID],
-                start=line_section[START],
-                end=line_section[END],
+                id=section[ID],
+                start=section[START],
+                end=section[END],
+                is_selected=is_selected,
             )
 
     def _get_sections(self) -> Iterable[dict]:
