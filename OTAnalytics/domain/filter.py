@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Callable, Generic, Iterable, Optional, TypeVar
+from typing import Generic, Iterable, TypeVar
 
 T = TypeVar("T")
 S = TypeVar("S")
@@ -17,12 +17,7 @@ class Predicate(ABC, Generic[T, S]):
             If none is supplied, the predicate implemented in this class will be used.
     """
 
-    def __init__(self, predicate: Optional[Callable[[T], S]]) -> None:
-        if not predicate:
-            self._predicate: Callable[[T], S] = self.test
-        else:
-            self._predicate = predicate
-
+    @abstractmethod
     def test(self, to_test: T) -> S:
         """Test value against this predicate.
 
@@ -32,7 +27,7 @@ class Predicate(ABC, Generic[T, S]):
         Returns:
             S: whether the value fulfills the predicate.
         """
-        return self._predicate(to_test)
+        pass
 
     @abstractmethod
     def conjunct_with(self, other: "Predicate[T,S]") -> "Predicate[T, S]":
@@ -47,6 +42,20 @@ class Predicate(ABC, Generic[T, S]):
             Predicate[T, S]: the conjunction
         """
         pass
+
+
+class Conjunction(Predicate[T, S]):
+    def __init__(
+        self, first_predicate: Predicate[T, S], second_predicate: Predicate[T, S]
+    ) -> None:
+        """Conjuncts two predicates.
+
+        Args:
+            first_predicate (Predicate[T, S]): the first predicate to conjunct with
+            second_predicate (Predicate[T, S]): the second predicate to conjunct with
+        """
+        self._first_predicate = first_predicate
+        self._second_predicate = second_predicate
 
 
 class Filter(ABC, Generic[T, S]):

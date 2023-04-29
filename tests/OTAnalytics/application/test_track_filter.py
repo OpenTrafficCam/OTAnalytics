@@ -8,7 +8,6 @@ from OTAnalytics.application.track_filter import (
     TrackFilterBuilder,
     TrackHasClassifications,
     TrackIsWithinDate,
-    TrackPredicate,
 )
 from OTAnalytics.domain.track import Track
 from tests.conftest import TrackBuilder
@@ -23,20 +22,6 @@ def track(track_builder: TrackBuilder) -> Track:
     track_builder.append_detection()
     track_builder.append_detection()
     return track_builder.build_track()
-
-
-class TestTrackPredicate:
-    def test_init(self) -> None:
-        TrackPredicate.__abstractmethods__ = frozenset()
-        track_predicate = TrackPredicate()
-        assert track_predicate._predicate == track_predicate.test
-
-    def test_init_with_existing_predicate(self) -> None:
-        predicate = Mock()
-
-        TrackPredicate.__abstractmethods__ = frozenset()
-        track_predicate = TrackPredicate(predicate)
-        assert track_predicate._predicate == predicate
 
 
 class TestTrackIsWithinDate:

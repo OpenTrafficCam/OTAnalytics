@@ -1,27 +1,44 @@
 from datetime import datetime
-from typing import Callable, Iterable, Optional
+from typing import Iterable, Optional
 
-from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterBuildError, Predicate
+from OTAnalytics.domain.filter import (
+    Conjunction,
+    Filter,
+    FilterBuilder,
+    FilterBuildError,
+    Predicate,
+)
 from OTAnalytics.domain.track import Track
 
 
-class TrackPredicate(Predicate[Track, bool]):
-    """A predicate that takes in a `Track` to test against.
+class TrackConjunction(Conjunction[Track, bool]):
+    def __init__(
+        self,
+        first_predicate: Predicate[Track, bool],
+        second_predicate: Predicate[Track, bool],
+    ) -> None:
+        """Represents the conjunction of two track predicates.
 
-    Args:
-        predicate (Callable[[Track], bool] | None): Optional to supply a complex
-            predicate. If none is supplied, the predicate implemented in this class
-            will be used.
-    """
+        Args:
+            first_predicate (Predicate[Track, bool]): first predicate to conjunct with
+            second_predicate (Predicate[Track, bool]): second predicate to conjunct with
+        """
+        super().__init__(first_predicate, second_predicate)
 
-    def __init__(self, predicate: Callable[[Track], bool] | None = None) -> None:
-        super().__init__(predicate)
+    def test(self, to_test: Track) -> bool:
+        return self._first_predicate.test(to_test) and self._second_predicate.test(
+            to_test
+        )
 
     def conjunct_with(self, other: Predicate[Track, bool]) -> Predicate[Track, bool]:
-        combined_predicate: Callable[[Track], bool] = lambda track: self.test(
-            track
-        ) and other.test(track)
-        return TrackPredicate(combined_predicate)
+        return TrackConjunction(self, other)
+
+
+class TrackPredicate(Predicate[Track, bool]):
+    """A predicate that takes in a `Track` to test against."""
+
+    def conjunct_with(self, other: Predicate[Track, bool]) -> Predicate[Track, bool]:
+        return TrackConjunction(self, other)
 
 
 class TrackIsWithinDate(TrackPredicate):
@@ -30,18 +47,13 @@ class TrackIsWithinDate(TrackPredicate):
     Args:
         start_date (datetime): start date of the date range
         end_date (datetime): end date of the date range
-        predicate (Callable[[Track], bool] | None, optional): Optional to supply a
-            complex predicate. If none is supplied, the predicate implemented in this
-            class will be used. Defaults to None.
     """
 
     def __init__(
         self,
         start_date: datetime,
         end_date: datetime,
-        predicate: Callable[[Track], bool] | None = None,
     ) -> None:
-        super().__init__(predicate)
         self._start_date = start_date
         self._end_date = end_date
 
@@ -57,17 +69,12 @@ class TrackHasClassifications(TrackPredicate):
 
     Args:
         classification (list[str]): the classifications to be tested against
-        predicate (Callable[[Track], bool] | None, optional): Optional to supply a
-        complex predicate. If none is supplied, the predicate implemented in this
-        class will be used. Defaults to None.
     """
 
     def __init__(
         self,
         classification: list[str],
-        predicate: Callable[[Track], bool] | None = None,
     ) -> None:
-        super().__init__(predicate)
         self._classifications = classification
 
     def test(self, to_test: Track) -> bool:
@@ -83,11 +90,7 @@ class TrackHasClassifications(TrackPredicate):
 
 
 class TrackFilter(Filter[Track, bool]):
-    """A `Track` filter.
-
-    Args:
-        predicate (Predicate[Track, bool]): the predicate to test the tracks against
-    """
+    """A `Track` filter."""
 
     def __init__(self, predicate: Predicate[Track, bool]) -> None:
         super().__init__(predicate)
