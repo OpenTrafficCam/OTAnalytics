@@ -166,6 +166,7 @@ class TestSceneActionDetector:
     def test_detect_enter_scene(self, track: Track) -> None:
         scene_event_builder = SceneEventBuilder()
         scene_event_builder.add_event_type(EventType.ENTER_SCENE)
+        scene_event_builder.add_road_user_type("car")
         scene_action_detector = SceneActionDetector(scene_event_builder)
         event = scene_action_detector.detect_enter_scene(track)
         assert event == Event(
@@ -184,6 +185,7 @@ class TestSceneActionDetector:
     def test_detect_leave_scene(self, track: Track) -> None:
         scene_event_builder = SceneEventBuilder()
         scene_event_builder.add_event_type(EventType.LEAVE_SCENE)
+        scene_event_builder.add_road_user_type("car")
         scene_action_detector = SceneActionDetector(scene_event_builder)
         event = scene_action_detector.detect_leave_scene(track)
         assert event == Event(
