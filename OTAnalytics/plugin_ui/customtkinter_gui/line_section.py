@@ -151,25 +151,6 @@ class CanvasElementPainter:
         )
 
 
-class CanvasElementUpdater:
-    def __init__(self, canvas: AbstractCanvas) -> None:
-        self._canvas = canvas
-
-    def update(self, id: str, start: tuple[int, int], end: tuple[int, int]) -> None:
-        """Updates the coordinates of a line_section.
-        This is a faster alternative to deleting and repainting a line_section.
-        Currently used, when line_section is updated very often.
-
-        Args:
-            id (str): ID of the line_section
-            start (tuple[int, int]): Tuple of the sections start coordinates
-            end (tuple[int, int]): Tuple of the sections end coordinates
-        """
-        x0, y0 = start
-        x1, y1 = end
-        self._canvas.coords(id, x0, y0, x1, y1)
-
-
 class CanvasElementDeleter:
     def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
@@ -194,7 +175,6 @@ class SectionGeometryBuilder:
         self._is_finished = is_finished
 
         self.painter = CanvasElementPainter(canvas=canvas)
-        self.updater = CanvasElementUpdater(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self._temporary_id: str = TEMPORARY_SECTION_ID
