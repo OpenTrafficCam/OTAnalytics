@@ -121,10 +121,6 @@ class CanvasElementPainter:
         style = dict(default_style)
         if is_selected:
             style.update(style_updates_selected)
-
-        print(start)
-        print(end)
-
         self._canvas.create_line(x0, y0, x1, y1, tags=tkinter_tags, **style[LINE])
         self._create_circle(tags=tkinter_tags, x=x0, y=y0, **style[KNOB])
         self._create_circle(tags=tkinter_tags, x=x1, y=y1, **style[KNOB])
