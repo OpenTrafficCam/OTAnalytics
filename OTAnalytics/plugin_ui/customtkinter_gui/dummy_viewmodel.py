@@ -367,6 +367,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 DISTANCE: distance,
             }
             flow_data = self._show_distances_window(input_values=input_data)
+            # TODO delete old flow
             self.__update_flow_data(flow_data)
 
     def _update_flow(self, selected_flow: dict) -> None:
