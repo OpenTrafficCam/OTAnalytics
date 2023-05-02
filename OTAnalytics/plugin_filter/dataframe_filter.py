@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Iterable, Optional
 
@@ -68,8 +66,8 @@ class DataFrameIsWithinDate(DataFramePredicate):
 
     Args:
         column_name (str): the DataFrame column name to apply the predicate to
-        start_date (datetime): the start date of the date range
-        end_date (datetime): the end date of the date range
+        start_date (datetime): the start date of the date range (inclusive)
+        end_date (datetime): the end date of the date range (inclusive)
     """
 
     def __init__(

@@ -46,7 +46,7 @@ class TrackIsWithinDate(TrackPredicate):
 
     Args:
         start_date (datetime): start date of the date range (inclusive)
-        end_date (datetime): end date of the date range (exclusive)
+        end_date (datetime): end date of the date range (inclusive)
     """
 
     def __init__(
@@ -58,7 +58,7 @@ class TrackIsWithinDate(TrackPredicate):
         self._end_date = end_date
 
     def test(self, to_test: Track) -> bool:
-        return self._start_date <= to_test.detections[0].occurrence < self._end_date
+        return self._start_date <= to_test.detections[0].occurrence <= self._end_date
 
 
 class TrackHasClassifications(TrackPredicate):
