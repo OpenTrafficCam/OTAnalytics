@@ -143,7 +143,7 @@ class TestTrackFilterBuilder:
         result = track_filter.apply([track])
         assert result == [track]
 
-    def test_add_multiple_predicates_not_fulfills(self, track: Track) -> None:
+    def test_add_multiple_predicates_not_fulfilled(self, track: Track) -> None:
         start_date = datetime(2000, 1, 1)
         end_date = datetime(2000, 1, 3)
         classifications = ["bicycle", "truck"]
