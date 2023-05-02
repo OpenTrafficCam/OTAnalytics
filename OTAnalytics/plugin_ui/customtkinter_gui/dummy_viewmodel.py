@@ -280,6 +280,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._application.start_analysis()
 
     def save_events(self, file: str) -> None:
+        print(f"Eventlist file to save: {file}")
         self._application.save_events(Path(file))
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
