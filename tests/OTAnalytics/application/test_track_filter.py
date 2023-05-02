@@ -111,7 +111,7 @@ class TestTrackFilter:
 class TestTrackFilterBuilder:
     def test_add_is_within_date_predicate(self) -> None:
         start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 1)
+        end_date = datetime(2000, 1, 3)
 
         builder = TrackFilterBuilder()
         builder.add_is_within_date_predicate(start_date, end_date)
@@ -119,7 +119,7 @@ class TestTrackFilterBuilder:
         track_filter = builder.build()
         assert type(track_filter._predicate) == TrackIsWithinDate
         assert track_filter._predicate._start_date == start_date
-        assert track_filter._predicate._end_date == start_date
+        assert track_filter._predicate._end_date == end_date
 
     def test_add_has_classifications_predicate(self) -> None:
         classifications = ["car", "truck"]
