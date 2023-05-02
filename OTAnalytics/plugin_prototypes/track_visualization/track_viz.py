@@ -106,7 +106,7 @@ class PandasTrackProvider:
         num_min_frames: int = 30,
         start_time: str = "",
         end_time: str = "",
-    ) -> Optional[TrackImage]:
+    ) -> DataFrame:
         offset = self._track_view_state.track_offset.get()
         tracks = self._datastore.get_all_tracks()
         data = self._convert_tracks(tracks)
