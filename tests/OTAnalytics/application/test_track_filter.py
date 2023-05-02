@@ -8,6 +8,7 @@ from OTAnalytics.application.track_filter import (
     TrackFilterBuilder,
     TrackHasClassifications,
     TrackIsWithinDate,
+    TrackPredicate,
 )
 from OTAnalytics.domain.track import Track
 from tests.conftest import TrackBuilder
@@ -155,3 +156,22 @@ class TestTrackFilterBuilder:
 
         result = track_filter.apply([track])
         assert result == []
+
+    def test_conjunct_first_predicate_added(self) -> None:
+        predicate = Mock(spec=TrackPredicate)
+        builder = TrackFilterBuilder()
+        builder._conjunct(predicate)
+
+        assert builder._complex_predicate == predicate
+
+    def test_conjunct_complex_predicate(self) -> None:
+        first_predicate = Mock(spec=TrackPredicate)
+        second_predicate = Mock(spec=TrackPredicate)
+        complex_predicate = Mock(spec=TrackPredicate)
+        first_predicate.conjunct_with.return_value = complex_predicate
+
+        builder = TrackFilterBuilder()
+        builder._conjunct(first_predicate)
+        builder._conjunct(second_predicate)
+
+        assert builder._complex_predicate == complex_predicate

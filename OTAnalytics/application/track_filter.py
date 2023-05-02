@@ -104,19 +104,13 @@ class TrackFilterBuilder(FilterBuilder):
 
     def add_has_classifications_predicate(self, classifications: list[str]) -> None:
         predicate = TrackHasClassifications(classifications)
-        if self._complex_predicate:
-            self._complex_predicate = self._complex_predicate.conjunct_with(predicate)
-        else:
-            self._complex_predicate = predicate
+        self._conjunct(predicate)
 
     def add_is_within_date_predicate(
         self, start_date: datetime, end_date: datetime
     ) -> None:
         predicate = TrackIsWithinDate(start_date, end_date)
-        if self._complex_predicate:
-            self._complex_predicate = self._complex_predicate.conjunct_with(predicate)
-        else:
-            self._complex_predicate = predicate
+        self._conjunct(predicate)
 
     def build(self) -> TrackFilter:
         if not self._complex_predicate:
@@ -125,3 +119,12 @@ class TrackFilterBuilder(FilterBuilder):
                 " not set."
             )
         return TrackFilter(self._complex_predicate)
+
+    def _conjunct(self, predicate: Predicate[Track, bool]) -> None:
+        """Conjuncts a new predicate if an existing predicate was already built by
+        the builder.
+        """
+        if self._complex_predicate:
+            self._complex_predicate = self._complex_predicate.conjunct_with(predicate)
+        else:
+            self._complex_predicate = predicate
