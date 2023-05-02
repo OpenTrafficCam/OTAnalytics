@@ -10,6 +10,7 @@ from OTAnalytics.application.datastore import (
     TrackParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.plotting import LayeredPlotter
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
@@ -33,6 +34,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     MatplotlibTrackPlotter,
+    PlotterPrototype,
 )
 from OTAnalytics.plugin_ui.cli import (
     CliArgumentParser,
@@ -136,7 +138,13 @@ class ApplicationStarter:
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
         track_plotter = MatplotlibTrackPlotter()
-        updater = TrackImageUpdater(datastore, state, track_plotter)
+        prototype = PlotterPrototype(
+            datastore=datastore,
+            track_view_state=state,
+            track_plotter=track_plotter,
+        )
+        plotter = LayeredPlotter(layers=[prototype])
+        updater = TrackImageUpdater(datastore, state, plotter)
         datastore.register_tracks_observer(updater)
         return state
 
