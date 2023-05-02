@@ -140,7 +140,7 @@ class DataFrameFilterBuilder(FilterBuilder):
         if self._occurrence_column is None:
             raise FilterBuildError(
                 f"Unable to build '{DataFrameIsWithinDate.__name__}' predicate. "
-                "Builder property 'classification_column' is not set."
+                "Builder property 'occurrence_column' is not set."
             )
 
         self._extend_complex_predicate(
