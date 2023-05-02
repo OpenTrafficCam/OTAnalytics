@@ -85,7 +85,7 @@ class TestDataFrameHasClassification:
         assert result.equals(Series([True, True, True, True, True]))
 
     def test_has_not_classifications(self, track_dataframe: DataFrame) -> None:
-        predicate = DataFrameHasClassifications(CLASSIFICATION, ["truck"])
+        predicate = DataFrameHasClassifications(CLASSIFICATION, ["bicycle", "truck"])
         result = predicate.test(track_dataframe)
 
         assert result.equals(Series([False, False, False, False, False]))
