@@ -57,7 +57,7 @@ class TrackBackgroundPlotter(Plotter):
 
 
 class PlotterPrototype(Plotter):
-    """Convinience Class to add prototype plotters to the layer structure."""
+    """Convenience Class to add prototype plotters to the layer structure."""
 
     def __init__(
         self,
