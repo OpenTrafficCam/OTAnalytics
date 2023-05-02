@@ -104,7 +104,7 @@ class ApplicationStarter:
     def _create_datastore(self) -> Datastore:
         """
         Build all required objects and inject them where necessary
-        """,
+        """
         track_repository = self._create_track_repository()
         track_parser = self._create_track_parser(track_repository)
         section_parser = self._create_section_parser()
