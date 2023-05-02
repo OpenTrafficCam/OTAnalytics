@@ -128,7 +128,7 @@ class TestDataFrameFilter:
         has_class_and_within_date = is_within_date.conjunct_with(has_classifications)
         dataframe_filter = DataFrameFilter(has_class_and_within_date)
 
-        result = [dataframe for dataframe in dataframe_filter.apply([track_dataframe])]
+        result = list(dataframe_filter.apply([track_dataframe]))
 
         assert result[0].equals(track_dataframe)
 
