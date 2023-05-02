@@ -105,8 +105,8 @@ class FilterBuilder:
         """Add is within date predicate.
 
         Args:
-            start_date (datetime): the start date
-            end_date (datetime): the end date
+            start_date (datetime): the start date (inclusive)
+            end_date (datetime): the end date (exclusive)
         """
         pass
 
@@ -124,8 +124,8 @@ class FilterElement:
     """Contains all filter information.
 
     Args:
-        start_date (Optional[datetime]): the start date to filter
-        end_date (Optional[datetime]): the end date to filter
+        start_date (Optional[datetime]): the start date to filter (inclusive)
+        end_date (Optional[datetime]): the end date to filter (exclusive)
         classifications (list[str]): the classifications to filter
     """
 

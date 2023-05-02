@@ -45,8 +45,8 @@ class TrackIsWithinDate(TrackPredicate):
     """Checks if a track is within a date range.
 
     Args:
-        start_date (datetime): start date of the date range
-        end_date (datetime): end date of the date range
+        start_date (datetime): start date of the date range (inclusive)
+        end_date (datetime): end date of the date range (exclusive)
     """
 
     def __init__(
