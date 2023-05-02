@@ -26,6 +26,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     SectionBuilder,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.style import (
+    DEFAULT_SECTION_STYLE,
+    EDITED_SECTION_STYLE,
+    SELECTED_SECTION_STYLE,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 LINE_SECTION: str = "line_section"
@@ -166,7 +171,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self.set_selected_section_id(None)
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
-        SectionBuilder(viewmodel=self, canvas=self._canvas)
+        SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
 
     def set_new_section(self, section: Section) -> None:
         self._application.add_section(section)
@@ -186,7 +191,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
             current_section = self._application.get_section_for(
                 SectionId(self._selected_section_id)
             )
-        SectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
+        SectionBuilder(
+            viewmodel=self,
+            canvas=self._canvas,
+            section=current_section,
+            style=EDITED_SECTION_STYLE,
+        )
         self.refresh_sections_on_gui()
 
     def edit_section_metadata(self) -> None:
@@ -246,13 +256,16 @@ class DummyViewModel(ViewModel, SectionListObserver):
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         painter = CanvasElementPainter(canvas=self._canvas)
         for section in self._get_sections():
-            is_selected = section[ID] == self._selected_section_id
+            if section[ID] == self._selected_section_id:
+                style = SELECTED_SECTION_STYLE
+            else:
+                style = DEFAULT_SECTION_STYLE
             painter.draw(
                 tags=[LINE_SECTION],
                 id=section[ID],
                 start=section[START],
                 end=section[END],
-                is_selected=is_selected,
+                style=style,
             )
 
     def _get_sections(self) -> Iterable[dict]:

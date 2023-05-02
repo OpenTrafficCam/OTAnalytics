@@ -16,13 +16,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.customtkinter_gui.style import (
-    DEFAULT_SECTION_STYLE,
-    EDITED_SECTION_STYLE,
-    KNOB,
-    LINE,
-    SELECTED_SECTION_STYLE,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.style import KNOB, LINE
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
@@ -53,35 +47,26 @@ class CanvasElementPainter:
         id: str,
         start: tuple[int, int],
         end: tuple[int, int],
-        is_selected: bool = False,
-        is_edited: bool = False,
-        style_default: dict = DEFAULT_SECTION_STYLE,
-        style_selected: dict = SELECTED_SECTION_STYLE,
-        style_edited: dict = EDITED_SECTION_STYLE,
+        style: dict,
     ) -> None:  # sourcery skip: dict-assign-update-to-union
         """Draws a line section on a canvas.
 
         Args:
             tag (str): Tag for groups of line_sections
             id (str): ID of the line section. Has to be unique among all line sections.
-            start (tuple[int, int]): _description_
-            end (tuple[int, int]): _description_
-            line_width (int, optional): _description_. Defaults to LINE_WIDTH.
-            line_color (str, optional): _description_. Defaults to LINE_COLOR.
+            start (tuple[int, int]): First point of the line section
+            end (tuple[int, int]): Second Point of the line section
+            style (dict): Dict of style options for tkinter canvas items.
         """
         tkinter_tags = (id,) + tuple(tags)
         x0, y0 = start
         x1, y1 = end
-        style = dict(style_default)
-        if is_selected:
-            style = dict(style_selected)
-        if is_edited:
-            style = dict(style_edited)
         self._canvas.create_line(x0, y0, x1, y1, tags=tkinter_tags, **style[LINE])
-        self._create_circle(tags=tkinter_tags, x=x0, y=y0, **style[KNOB])
-        self._create_circle(tags=tkinter_tags, x=x1, y=y1, **style[KNOB])
+        if KNOB in style:
+            self._create_knob(tags=tkinter_tags, x=x0, y=y0, **style[KNOB])
+            self._create_knob(tags=tkinter_tags, x=x1, y=y1, **style[KNOB])
 
-    def _create_circle(
+    def _create_knob(
         self,
         tags: tuple[str, ...],
         x: int,
@@ -122,9 +107,11 @@ class SectionGeometryBuilder:
         observer: SectionGeometryBuilderObserver,
         canvas: AbstractCanvas,
         is_finished: Callable[[list[tuple[int, int]]], bool],
+        style: dict,
     ) -> None:
         self._observer = observer
         self._is_finished = is_finished
+        self._style = style
 
         self.painter = CanvasElementPainter(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
@@ -142,8 +129,7 @@ class SectionGeometryBuilder:
             id=self._temporary_id,
             start=self._start(),
             end=coordinates,
-            is_selected=True,
-            is_edited=True,
+            style=self._style,
         )
         # self._tmp_end = coordinates
 
@@ -179,14 +165,17 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         self,
         viewmodel: ViewModel,
         canvas: AbstractCanvas,
+        style: dict,
         section: Optional[Section] = None,
     ) -> None:
         self._viewmodel = viewmodel
         self._canvas = canvas
+        self._style = style
         self.attach_to(self._canvas.event_handler)
         self.geometry_builder = SectionGeometryBuilder(
             observer=self,
             canvas=self._canvas,
+            style=self._style,
             is_finished=self._is_line_finished,
         )
         self._name: Optional[str] = None
