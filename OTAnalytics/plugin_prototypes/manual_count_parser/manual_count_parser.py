@@ -40,7 +40,9 @@ class ExcelCountParser:
 
         return countings.sort_values(["Zeitstempel"])
 
-    def _formatting(self, excel_table: pd.DataFrame) -> pd.DataFrame:
+    def _formatting(
+        self, excel_table: pd.DataFrame, aggregate: bool = True
+    ) -> pd.DataFrame:
         formatted_table = excel_table
 
         # Renaming columns to match column names in flow_table
@@ -66,20 +68,21 @@ class ExcelCountParser:
         formatted_table["Anzahl"] = 1
 
         # Group by sections, time interval, and road user type
-        formatted_table = (
-            formatted_table.groupby(
-                [
-                    "Strom-Bezeichnung",
-                    pd.Grouper(
-                        freq=str(self.CONFIG["INTERVAL_LENGTH_MIN"]) + "min",
-                        key="time_interval",
-                    ),
-                    "Fzg-Typ",
-                ]
+        if aggregate:
+            formatted_table = (
+                formatted_table.groupby(
+                    [
+                        "Strom-Bezeichnung",
+                        pd.Grouper(
+                            freq=str(self.CONFIG["INTERVAL_LENGTH_MIN"]) + "min",
+                            key="time_interval",
+                        ),
+                        "Fzg-Typ",
+                    ]
+                )
+                .count()
+                .reset_index()
             )
-            .count()
-            .reset_index()
-        )
 
         formatted_table["Datum"] = formatted_table["time_interval"].dt.strftime(
             "%d.%m.%Y"
@@ -92,5 +95,17 @@ class ExcelCountParser:
             ["road_user_type", "time_interval", "Strom"], axis=1
         )
 
-    def excel_parser(self) -> pd.DataFrame:
-        return self._formatting(self._read_excel())
+    def excel_parser(self, aggregate: bool = False) -> pd.DataFrame:
+        """Function to import Excel files from manual counts in the
+        QuerPlaner/platomo format
+
+        Args:
+            aggregate (bool, optional): When set to True, aggregated counting
+            data for each time interval set in the config dict are returned.
+            Defaults to False.
+
+        Returns:
+            pd.DataFrame: Pandas dataframe of manual counting data in
+            the SH format.
+        """
+        return self._formatting(self._read_excel(), aggregate)
