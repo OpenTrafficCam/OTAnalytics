@@ -321,6 +321,32 @@ class Counter:
                         "Anzahl": tmp_flows["n_vehicles"],
                     }
                 )
+                if len(new_flows) == 0:
+                    dates = flows["time_interval"].dt.strftime("%d.%m.%Y").unique()
+                    times = flows["time_interval"].dt.strftime("%H:%M:%S").unique()
+                    ru_types = value["classes"]
+
+                    new_flows = pd.DataFrame(
+                        {
+                            "Datum": [
+                                e
+                                for x in zip(
+                                    *[list(dates)] * len(times) * len(ru_types)
+                                )
+                                for e in x
+                            ],
+                            "Uhrzeit": [
+                                e
+                                for x in zip(*[list(times)] * len(ru_types))
+                                for e in x
+                            ]
+                            * len(dates),
+                            "Strom-Bezeichnung": flow,
+                            "Fzg-Typ": list(ru_types) * len(dates) * len(times),
+                            "Anzahl": 0,
+                        }
+                    )
+
             else:
                 new_flows = pd.DataFrame(
                     {
