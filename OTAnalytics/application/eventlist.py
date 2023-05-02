@@ -91,6 +91,7 @@ class SceneActionDetector:
             Iterable[Event]: the enter scene event
         """
         self._event_builder.add_event_type(EventType.ENTER_SCENE)
+        self._event_builder.add_road_user_type(track.classification)
         first_detection = track.detections[0]
         next_detection = track.detections[1]
         self._event_builder.add_direction_vector(
@@ -112,6 +113,7 @@ class SceneActionDetector:
             Iterable[Event]: the leave scene event
         """
         self._event_builder.add_event_type(EventType.LEAVE_SCENE)
+        self._event_builder.add_road_user_type(track.classification)
         last_detection = track.detections[-1]
         second_to_last_detection = track.detections[-2]
         self._event_builder.add_direction_vector(
