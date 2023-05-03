@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Generic, Iterable, TypeVar
+from typing import Generic, Iterable, Optional, TypeVar
 
 T = TypeVar("T")
 S = TypeVar("S")
@@ -66,7 +66,7 @@ class Filter(ABC, Generic[T, S]):
             against.
     """
 
-    def __init__(self, predicate: Predicate[T, S]) -> None:
+    def __init__(self, predicate: Optional[Predicate[T, S]]) -> None:
         self._predicate = predicate
 
     @abstractmethod
@@ -77,7 +77,9 @@ class Filter(ABC, Generic[T, S]):
             iterable (Iterable[T]): the iterable to apply the filter on
 
         Returns:
-            Iterable[T]: all elements in the iterable that fulfill the predicate
+            Iterable[T]: all elements in the iterable that fulfill the predicate.
+                If there is no predicate to filter against, the original iterable will
+                be returned.
         """
         pass
 
@@ -106,7 +108,7 @@ class FilterBuilder:
 
         Args:
             start_date (datetime): the start date (inclusive)
-            end_date (datetime): the end date (exclusive)
+            end_date (datetime): the end date (inclusive)
         """
         pass
 
@@ -130,7 +132,10 @@ class FilterElement:
     """
 
     def __init__(
-        self, start_date: datetime, end_date: datetime, classifications: list[str]
+        self,
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+        classifications: list[str],
     ) -> None:
         self.start_date = start_date
         self.end_date = end_date

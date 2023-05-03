@@ -1,13 +1,7 @@
 from datetime import datetime
 from typing import Iterable, Optional
 
-from OTAnalytics.domain.filter import (
-    Conjunction,
-    Filter,
-    FilterBuilder,
-    FilterBuildError,
-    Predicate,
-)
+from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
 from OTAnalytics.domain.track import Track
 
 
@@ -89,10 +83,12 @@ class TrackHasClassifications(TrackPredicate):
 class TrackFilter(Filter[Track, bool]):
     """A `Track` filter."""
 
-    def __init__(self, predicate: Predicate[Track, bool]) -> None:
+    def __init__(self, predicate: Optional[Predicate[Track, bool]]) -> None:
         super().__init__(predicate)
 
     def apply(self, data: Iterable[Track]) -> Iterable[Track]:
+        if self._predicate is None:
+            return data
         return [datum for datum in data if self._predicate.test(datum)]
 
 
@@ -113,11 +109,6 @@ class TrackFilterBuilder(FilterBuilder):
         self._conjunct(predicate)
 
     def build(self) -> TrackFilter:
-        if not self._complex_predicate:
-            raise FilterBuildError(
-                "Unable to build track filter. Builder property 'complex_predicate' is"
-                " not set."
-            )
         return TrackFilter(self._complex_predicate)
 
     def _conjunct(self, predicate: Predicate[Track, bool]) -> None:

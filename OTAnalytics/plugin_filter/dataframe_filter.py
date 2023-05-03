@@ -48,16 +48,18 @@ class DataFramePredicate(Predicate[DataFrame, Series]):
 
 
 class DataFrameFilter(Filter[DataFrame, Series]):
-    def __init__(self, predicate: Predicate[DataFrame, Series]) -> None:
+    def __init__(self, predicate: Optional[Predicate[DataFrame, Series]]) -> None:
         """A `DataFrame` filter.
 
         Args:
-            predicate (Predicate[DataFrame, Series]): the predicate to test the
-                DataFrame against.
+            predicate (Optional[Predicate[DataFrame, Series]]): the predicate to test
+                the DataFrame against.
         """
         super().__init__(predicate)
 
     def apply(self, data: Iterable[DataFrame]) -> Iterable[DataFrame]:
+        if self._predicate is None:
+            return data
         return [datum[self._predicate.test(datum)] for datum in data]
 
 
@@ -115,10 +117,6 @@ class DataFrameFilterBuilder(FilterBuilder):
         self._occurrence_column: Optional[str] = None
 
     def build(self) -> DataFrameFilter:
-        if not self._complex_predicate:
-            raise FilterBuildError(
-                f"Unable to build {DataFrameFilter.__name__}. No predicates built!"
-            )
         return DataFrameFilter(self._complex_predicate)
 
     def add_has_classifications_predicate(self, classifications: list[str]) -> None:
