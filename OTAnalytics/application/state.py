@@ -90,7 +90,7 @@ class Subject(Generic[VALUE]):
         Notifies observers about the changed value.
 
         Args:
-            value (Optional[VALUD]): changed value
+            value (Optional[VALUE]): changed value
         """
         [observer(value) for observer in self.observers]
 
