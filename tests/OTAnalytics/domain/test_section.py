@@ -16,6 +16,8 @@ from OTAnalytics.domain.section import (
     TYPE,
     Area,
     LineSection,
+    Section,
+    SectionChangedObserver,
     SectionId,
     SectionListObserver,
     SectionListSubject,
@@ -253,3 +255,122 @@ class TestSectionRepository:
 
         assert first_section not in repository.get_all()
         assert second_section in repository.get_all()
+
+    def test_update(self) -> None:
+        section_id = Mock()
+        section_id.id = SectionId("first")
+        original_section = Mock(spec=Section)
+        original_section.id = section_id
+        updated_section = Mock(spec=Section)
+        updated_section.id = section_id
+        observer = Mock(spec=SectionChangedObserver)
+        repository = SectionRepository()
+        repository.register_section_changed_observer(observer)
+
+        repository.add(original_section)
+        repository.update(original_section)
+
+        observer.assert_called_once_with(section_id)
+
+    def test_update_section_plugin_data_not_existing(self) -> None:
+        key = "my data for plugins"
+        section_id = SectionId("my section")
+        old_value: dict = {}
+        new_value = {"some": "new_value"}
+
+        section = LineSection(
+            section_id,
+            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+            {},
+            start=Coordinate(0, 0),
+            end=Coordinate(10, 10),
+        )
+
+        repository = SectionRepository()
+
+        repository.add(section)
+        repository.update_plugin_data(
+            key=key,
+            new_section_id=section_id,
+            new_value=new_value,
+            old_section_id=section_id,
+            old_value=old_value,
+        )
+
+        stored_section = repository.get(section_id)
+
+        assert stored_section == section
+        assert section.plugin_data == {key: new_value}
+
+    def test_update_section_plugin_data_with_existing_data(self) -> None:
+        key = "my data for plugins"
+        section_id = SectionId("my section")
+        old_value = {"some": "value"}
+        new_value = {"other": "new_value"}
+        combined = {"some": "value", "other": "new_value"}
+
+        section = LineSection(
+            section_id,
+            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+            {key: old_value},
+            start=Coordinate(0, 0),
+            end=Coordinate(10, 10),
+        )
+
+        repository = SectionRepository()
+        repository.add(section)
+        repository.update_plugin_data(
+            key=key,
+            new_section_id=section_id,
+            new_value=new_value,
+            old_section_id=section_id,
+            old_value=old_value,
+        )
+
+        stored_section = repository.get(section_id)
+
+        assert stored_section == section
+        assert section.plugin_data == {key: combined}
+
+    def test_update_section_plugin_data_with_existing_data_to_other_section(
+        self,
+    ) -> None:
+        key = "my data for plugins"
+        first_section_id = SectionId("first section")
+        second_section_id = SectionId("second section")
+        old_value = {"some": "value"}
+        new_value = {"other": "new_value"}
+
+        first_section = LineSection(
+            first_section_id,
+            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+            {key: old_value},
+            start=Coordinate(0, 0),
+            end=Coordinate(10, 10),
+        )
+
+        second_section = LineSection(
+            second_section_id,
+            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+            {},
+            start=Coordinate(0, 0),
+            end=Coordinate(10, 10),
+        )
+
+        repository = SectionRepository()
+        repository.add_all([first_section, second_section])
+        repository.update_plugin_data(
+            key=key,
+            new_section_id=second_section_id,
+            new_value=new_value,
+            old_section_id=first_section_id,
+            old_value=old_value,
+        )
+
+        first_section_in_repository = repository.get(first_section_id)
+        second_section_in_repository = repository.get(second_section_id)
+
+        assert first_section_in_repository is first_section
+        assert second_section_in_repository is second_section
+        assert first_section.plugin_data == {}
+        assert second_section.plugin_data == {key: new_value}

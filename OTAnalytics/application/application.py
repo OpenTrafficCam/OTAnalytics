@@ -5,7 +5,12 @@ from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetectio
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
+from OTAnalytics.domain.section import (
+    Section,
+    SectionChangedObserver,
+    SectionId,
+    SectionListObserver,
+)
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
 
@@ -40,6 +45,11 @@ class OTAnalyticsApplication:
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
         self._datastore.register_sections_observer(observer)
+
+    def register_section_changed_observer(
+        self, observer: SectionChangedObserver
+    ) -> None:
+        self._datastore.register_section_changed_observer(observer)
 
     def get_all_sections(self) -> Iterable[Section]:
         return self._datastore.get_all_sections()
@@ -107,18 +117,30 @@ class OTAnalyticsApplication:
 
     def update_section_plugin_data(
         self,
-        section_id: SectionId,
         key: str,
-        value: dict,
+        new_section_id: SectionId,
+        new_value: dict,
+        old_section_id: SectionId,
+        old_value: dict,
     ) -> None:
         """
         Update the section's plugin data.
 
         Args:
             key (str): key within the plugin data
-            value (dict): value to be stored for the key
+            new_section_id (SectionId): section id to attached the plugin data to or to
+            change it at
+            new_value (dict): value to be stored for the key
+            old_section_id (SectionId): section id to remove the plugin data from
+            old_value (dict): value already stored for the key
         """
-        self._datastore.update_section_plugin_data(section_id, key, value)
+        self._datastore.update_section_plugin_data(
+            key=key,
+            new_section_id=new_section_id,
+            new_value=new_value,
+            old_section_id=old_section_id,
+            old_value=old_value,
+        )
 
     def save_sections(self, file: Path) -> None:
         """

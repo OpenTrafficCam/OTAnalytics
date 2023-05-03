@@ -85,6 +85,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def register_to_subjects(self) -> None:
         self._application.register_sections_observer(self)
+        self._application.register_section_changed_observer(self._on_section_changed)
 
         self._application.track_view_state.show_tracks.register(
             self._on_show_tracks_state_updated
@@ -96,6 +97,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
             self._on_background_updated
         )
         self._application.track_view_state.track_offset.register(self._update_offset)
+
+    def _on_section_changed(self, section_id: SectionId) -> None:
+        self.notify_sections([section_id])
 
     def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
         if self._frame_canvas is None:
@@ -325,7 +329,11 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self.__update_flow_data(flow_data)
         print(f"Added new flow: {flow_data}")
 
-    def _show_distances_window(self, input_values: dict = {}) -> dict:
+    def _show_distances_window(
+        self,
+        input_values: dict = {},
+        title: str = "Add flow",
+    ) -> dict:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
@@ -337,16 +345,24 @@ class DummyViewModel(ViewModel, SectionListObserver):
             )
             return {}
         return ToplevelFlows(
-            title="Add flow",
+            title=title,
             initial_position=position,
             section_ids=section_ids,
             input_values=input_values,
         ).get_data()
 
-    def __update_flow_data(self, flow_data: dict) -> None:
-        section_id = SectionId(flow_data[START_SECTION])
-        data = {flow_data[END_SECTION]: flow_data[DISTANCE]}
-        self._application.update_section_plugin_data(section_id, DISTANCES, data)
+    def __update_flow_data(self, new_flow: dict, old_flow: dict = {}) -> None:
+        new_section_id = SectionId(new_flow[START_SECTION])
+        new_data = {new_flow[END_SECTION]: new_flow[DISTANCE]}
+        old_section_id = SectionId(old_flow[START_SECTION])
+        old_data = {old_flow[END_SECTION]: old_flow[DISTANCE]}
+        self._application.update_section_plugin_data(
+            key=DISTANCES,
+            new_section_id=new_section_id,
+            new_value=new_data,
+            old_section_id=old_section_id,
+            old_value=old_data,
+        )
 
     def edit_flow(self) -> None:
         if self._selected_flow_id is None:
@@ -366,29 +382,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 END_SECTION: flow.to_section,
                 DISTANCE: distance,
             }
-            flow_data = self._show_distances_window(input_values=input_data)
-            # TODO delete old flow
-            self.__update_flow_data(flow_data)
-
-    def _update_flow(self, selected_flow: dict) -> None:
-        if self._treeview_flows is None:
-            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        current_data = selected_flow.copy()  # TODO .to_dict()
-        section_ids = [section.id.id for section in self.get_all_sections()]
-        updated_flow_data = ToplevelFlows(
-            title="Edit flow",
-            initial_position=self._treeview_flows.get_position(),
-            section_ids=section_ids,
-            input_values=current_data,
-        ).get_data()
-        updated_flow_data[
-            "id"
-        ] = f"{updated_flow_data[START_SECTION]} -> {updated_flow_data[END_SECTION]}"
-        self._set_flow_data(
-            id=selected_flow[ID],  # TODO.id,
-            data=updated_flow_data,
-        )
-        print(f"Updated flow: {updated_flow_data}")
+            old_flow_data = input_data.copy()
+            flow_data = self._show_distances_window(
+                input_values=input_data,
+                title="Edit flow",
+            )
+            self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
 
     def _set_flow_data(self, id: str, data: dict) -> None:
         # TODO: @briemla: Connect to application

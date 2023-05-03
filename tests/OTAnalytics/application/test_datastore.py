@@ -16,7 +16,7 @@ from OTAnalytics.application.datastore import (
     VideoReader,
 )
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import LineSection, SectionId
+from OTAnalytics.domain.section import LineSection, SectionId, SectionRepository
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
 
@@ -64,6 +64,11 @@ def track_parser() -> Mock:
 
 
 @pytest.fixture
+def section_repository() -> Mock:
+    return Mock(spec=SectionRepository)
+
+
+@pytest.fixture
 def section_parser() -> Mock:
     return Mock(spec=SectionParser)
 
@@ -82,6 +87,7 @@ class TestDatastore:
     def test_load_track_file(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -95,6 +101,7 @@ class TestDatastore:
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -111,6 +118,7 @@ class TestDatastore:
     def test_load_track_files(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -132,6 +140,7 @@ class TestDatastore:
         store = Datastore(
             track_repository=track_repository,
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -154,6 +163,7 @@ class TestDatastore:
     def test_save_section_file(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -163,6 +173,7 @@ class TestDatastore:
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -186,6 +197,7 @@ class TestDatastore:
     def test_save_event_list_file(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -195,6 +207,7 @@ class TestDatastore:
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -207,6 +220,7 @@ class TestDatastore:
     def test_update_section_plugin_data_not_existing(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -214,13 +228,15 @@ class TestDatastore:
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
         )
         section_id = SectionId("my section")
         key = "my data for plugins"
-        value = {"some": "value"}
+        old_value = {"some": "old_value"}
+        new_value = {"some": "new_value"}
 
         section = LineSection(
             section_id,
@@ -231,16 +247,20 @@ class TestDatastore:
         )
 
         store.add_section(section)
-        store.update_section_plugin_data(section_id, key, value)
+        store.update_section_plugin_data(
+            key=key,
+            new_section_id=section_id,
+            new_value=new_value,
+            old_section_id=section_id,
+            old_value=old_value,
+        )
 
-        stored_section = store.get_section_for(section_id)
-
-        assert stored_section == section
-        assert section.plugin_data == {key: value}
+        section_repository.update_plugin_data.called_once_with(section_id)
 
     def test_update_section_plugin_data_with_existing_data(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -248,28 +268,31 @@ class TestDatastore:
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
         )
         section_id = SectionId("my section")
         key = "my data for plugins"
-        value = {"some": "value"}
+        old_value = {"some": "old_value"}
         new_value = {"other": "new_value"}
-        combined = {"some": "value", "other": "new_value"}
 
         section = LineSection(
             section_id,
             {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
-            {key: value},
+            {key: old_value},
             start=Coordinate(0, 0),
             end=Coordinate(10, 10),
         )
 
         store.add_section(section)
-        store.update_section_plugin_data(section_id, key, new_value)
+        store.update_section_plugin_data(
+            key=key,
+            new_section_id=section_id,
+            new_value=new_value,
+            old_section_id=section_id,
+            old_value=old_value,
+        )
 
-        stored_section = store.get_section_for(section_id)
-
-        assert stored_section == section
-        assert section.plugin_data == {key: combined}
+        section_repository.update_plugin_data.called_once_with(section_id)

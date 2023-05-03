@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkOptionMenu, CTkToplevel
 
@@ -16,21 +16,13 @@ class ToplevelFlows(CTkToplevel):
         title: str,
         initial_position: tuple[int, int],
         section_ids: list[str],
-        input_values: dict | None = None,
+        input_values: dict | None = {},
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self.title(title)
         self._section_ids = section_ids
-        self.input_values: dict = (
-            {
-                START_SECTION: "",
-                END_SECTION: "",
-                DISTANCE: 0,
-            }
-            if input_values is None
-            else input_values
-        )
+        self.input_values: dict = self.__create_input_values(input_values)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
         self._get_widgets()
@@ -38,6 +30,15 @@ class ToplevelFlows(CTkToplevel):
         self._set_initial_position()
         self._set_focus()
         self._set_close_on_return_key()
+
+    def __create_input_values(self, input_values: Optional[dict]) -> dict:
+        if input_values:
+            return input_values
+        return {
+            START_SECTION: "",
+            END_SECTION: "",
+            DISTANCE: 0,
+        }
 
     def _get_widgets(self) -> None:
         self.label_section_start = CTkLabel(master=self, text="First section:")

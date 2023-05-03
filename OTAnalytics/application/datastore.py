@@ -6,6 +6,7 @@ from typing import Iterable, Optional, Tuple
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import (
     Section,
+    SectionChangedObserver,
     SectionId,
     SectionListObserver,
     SectionRepository,
@@ -173,10 +174,6 @@ class NoSectionsToSave(Exception):
     pass
 
 
-class MissingSection(Exception):
-    pass
-
-
 class Datastore:
     """
     Central element to hold data in the application.
@@ -186,6 +183,7 @@ class Datastore:
         self,
         track_repository: TrackRepository,
         track_parser: TrackParser,
+        section_repository: SectionRepository,
         section_parser: SectionParser,
         event_list_parser: EventListParser,
         video_parser: VideoParser,
@@ -195,7 +193,7 @@ class Datastore:
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
         self._track_repository = track_repository
-        self._section_repository = SectionRepository()
+        self._section_repository = section_repository
         self._event_repository = EventRepository()
         self._video_repository = VideoRepository()
 
@@ -323,6 +321,17 @@ class Datastore:
         """
         self._section_repository.remove(section)
 
+    def register_section_changed_observer(
+        self, observer: SectionChangedObserver
+    ) -> None:
+        """
+        Listen to changes of sections in the repository.
+
+        Args:
+            observer (SectionChangedObserver): observer to notify about changes
+        """
+        self._section_repository.register_section_changed_observer(observer)
+
     def update_section(self, section: Section) -> None:
         """
         Update the section in the repository.
@@ -334,24 +343,30 @@ class Datastore:
 
     def update_section_plugin_data(
         self,
-        section_id: SectionId,
         key: str,
-        value: dict,
+        new_section_id: SectionId,
+        new_value: dict,
+        old_section_id: SectionId,
+        old_value: dict,
     ) -> None:
         """
         Update the section's plugin data.
 
         Args:
             key (str): key within the plugin data
-            value (dict): value to be stored for the key
+            new_section_id (SectionId): section id to attached the plugin data to or to
+            change it at
+            new_value (dict): value to be stored for the key
+            old_section_id (SectionId): section id to remove the plugin data from
+            old_value (dict): value already stored for the key
         """
-        section = self.get_section_for(section_id)
-        if section is None:
-            raise MissingSection(f"Section for id: {section_id} could not be found.")
-        if key in section.plugin_data:
-            section.plugin_data[key].update(value)
-        else:
-            section.plugin_data[key] = value
+        self._section_repository.update_plugin_data(
+            key=key,
+            new_section_id=new_section_id,
+            new_value=new_value,
+            old_section_id=old_section_id,
+            old_value=old_value,
+        )
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """

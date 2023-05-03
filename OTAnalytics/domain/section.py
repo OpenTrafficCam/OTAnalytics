@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -40,6 +40,39 @@ class SectionListObserver(ABC):
             sections (list[SectionId]): list of added sections
         """
         pass
+
+
+VALUE = TypeVar("VALUE")
+
+
+SectionChangedObserver = Callable[[SectionId], None]
+
+
+class SectionChangedSubject(Generic[VALUE]):
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[SectionChangedObserver] = set()
+
+    def register(self, observer: SectionChangedObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (SectionChangedObserver): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, value: SectionId) -> None:
+        """
+        Notifies observers about the changed value.
+
+        Args:
+            value (SectionId): changed value
+        """
+        [observer(value) for observer in self.observers]
 
 
 class SectionListSubject:
@@ -236,15 +269,25 @@ class Area(Section):
         }
 
 
+class MissingSection(Exception):
+    pass
+
+
 class SectionRepository:
     """Repository used to store sections."""
 
     def __init__(self) -> None:
         self._sections: dict[SectionId, Section] = {}
-        self.observers: SectionListSubject = SectionListSubject()
+        self._repository_content_observers: SectionListSubject = SectionListSubject()
+        self._section_content_observers: SectionChangedSubject = SectionChangedSubject()
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
-        self.observers.register(observer)
+        self._repository_content_observers.register(observer)
+
+    def register_section_changed_observer(
+        self, observer: SectionChangedObserver
+    ) -> None:
+        self._section_content_observers.register(observer)
 
     def add(self, section: Section) -> None:
         """Add a section to the repository.
@@ -253,7 +296,7 @@ class SectionRepository:
             section (Section): the section to add
         """
         self._add(section)
-        self.observers.notify([section.id])
+        self._repository_content_observers.notify([section.id])
 
     def _add(self, section: Section) -> None:
         """Internal method to add sections without notifying observers.
@@ -271,7 +314,7 @@ class SectionRepository:
         """
         for section in sections:
             self._add(section)
-        self.observers.notify([section.id for section in sections])
+        self._repository_content_observers.notify([section.id for section in sections])
 
     def get_all(self) -> list[Section]:
         """Get all sections from the repository.
@@ -299,7 +342,7 @@ class SectionRepository:
             section (Section): the section to be removed
         """
         del self._sections[section]
-        self.observers.notify([section])
+        self._repository_content_observers.notify([section])
 
     def update(self, section: Section) -> None:
         """Update the section in the repository.
@@ -308,3 +351,60 @@ class SectionRepository:
             section (Section): updated section
         """
         self._sections[section.id] = section
+        self._section_content_observers.notify(section.id)
+
+    def update_plugin_data(
+        self,
+        key: str,
+        new_section_id: SectionId,
+        new_value: dict,
+        old_section_id: SectionId,
+        old_value: dict,
+    ) -> None:
+        """
+        Update the section's plugin data.
+
+        Args:
+
+        Args:
+            key (str): key within the plugin data
+            new_section_id (SectionId): section id to attached the plugin data to or to
+            change it at
+            new_value (dict): value to be stored for the key
+            old_section_id (SectionId): section id to remove the plugin data from
+            old_value (dict): value already stored for the key
+        """
+        if new_section_id != old_section_id:
+            self.remove_plugin_data(key, old_section_id)
+
+        self._update_plugin_data(key, new_section_id, new_value)
+
+    def _update_plugin_data(self, key: str, section_id: SectionId, value: dict) -> None:
+        """
+        Set the plugin data to the given value or merge the existing value with the
+        given one.
+
+        Args:
+            key (str): key within the plugin data
+            section_id (SectionId): section id to set or merge the plugin data
+            value (dict): value to be stored for the key
+
+        Raises:
+            MissingSection: if no section for the section_id can be found
+        """
+        section = self.get(section_id)
+        if section is None:
+            raise MissingSection(f"Section for id: {section_id} could not be found.")
+        if key in section.plugin_data:
+            section.plugin_data[key].update(value)
+        else:
+            section.plugin_data[key] = value
+        self._section_content_observers.notify(section.id)
+
+    def remove_plugin_data(self, key: str, section_id: SectionId) -> None:
+        section = self.get(section_id)
+        if section is None:
+            raise MissingSection(f"Section for id: {section_id} could not be found.")
+        if key in section.plugin_data:
+            del section.plugin_data[key]
+            self._section_content_observers.notify(section.id)
