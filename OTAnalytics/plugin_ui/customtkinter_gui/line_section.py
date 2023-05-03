@@ -116,7 +116,7 @@ class SectionGeometryBuilder:
         self,
         observer: SectionGeometryBuilderObserver,
         canvas: AbstractCanvas,
-        is_finished: Callable[[list[tuple[int, int]]], bool],
+        is_finished: Callable[[], bool],
         style: dict,
     ) -> None:
         self._observer = observer
@@ -130,37 +130,29 @@ class SectionGeometryBuilder:
         # self._tmp_end: tuple[int, int] | None = None
         self._coordinates: list[tuple[int, int]] = []
 
-    def set_tmp_end(self, coordinate: tuple[int, int]) -> None:
-        if not self.has_start():
-            raise ValueError("self.start as to be set before listening to mouse motion")
+    def add_temporary_coordinate(self, coordinate: tuple[int, int]) -> None:
+        if self.number_of_coordinates() == 0:
+            raise ValueError(
+                "First coordinate has to be set before listening to mouse motion"
+            )
         self.deleter.delete(tag_or_id="temporary_line_section")
         self.painter.draw(
             tags=["temporary_line_section"],
             id=self._temporary_id,
-            coordinates=[self._start(), coordinate],
+            coordinates=self._coordinates + [coordinate],
             style=self._style,
         )
         # self._tmp_end = coordinates
 
-    def has_start(self) -> bool:
-        return len(self._coordinates) >= 1
-
-    def _start(self) -> tuple[int, int]:
-        if len(self._coordinates) > 0:
-            return self._coordinates[0]
-        raise MissingCoordinate("Start coordinate missing")
-
-    def _end(self) -> tuple[int, int]:
-        if len(self._coordinates) > 1:
-            return self._coordinates[-1]
-        raise MissingCoordinate("End coordinate missing")
+    def number_of_coordinates(self) -> int:
+        return len(self._coordinates)
 
     def add_coordinate(self, coordinate: tuple[int, int]) -> None:
         self._coordinates.append(coordinate)
-        if self._is_finished(self._coordinates):
-            self._finish_building()
+        if self._is_finished():
+            self.finish_building()
 
-    def _finish_building(self) -> None:
+    def finish_building(self) -> None:
         self._observer.finish_building(self._coordinates)
         self.deleter.delete(tag_or_id="temporary_line_section")
 
@@ -185,15 +177,16 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             observer=self,
             canvas=self._canvas,
             style=self._style,
-            is_finished=self._is_line_finished,
+            is_finished=self._is_geometry_finished,
         )
+        self._geometry_finished: bool = False
         self._name: Optional[str] = None
         self._coordinates: list[tuple[int, int]] = []
         self._metadata: dict = {}
         self._initialise_with(section)
 
-    def _is_line_finished(self, coordinates: list[tuple[int, int]]) -> bool:
-        return len(coordinates) == 2
+    def _is_geometry_finished(self) -> bool:
+        return self._geometry_finished
 
     def _initialise_with(self, section: Optional[Section]) -> None:
         if template := section:
@@ -203,6 +196,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             ]
             self._name = template.id.id
             self._metadata = template.to_dict()
+            self._geometry_finished = True
 
     def update(self, coordinate: tuple[int, int], event_type: str) -> None:
         """Receives and reacts to updates issued by the canvas event handler
@@ -211,14 +205,21 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             coordinates (tuple[int, int]): Coordinates clicked on canvas
             event_type (str): Event type of canvas click
         """
-        if (not self.geometry_builder.has_start()) and (
-            event_type == "left_mousebutton_up"
+        if event_type == "left_mousebutton_up":
+            print("left_mousebutton_up")
+            self.geometry_builder.add_coordinate(coordinate)
+        elif (
+            self.geometry_builder.number_of_coordinates() >= 1
+            and event_type == "mouse_motion"
         ):
-            self.geometry_builder.add_coordinate(coordinate)
-        elif self.geometry_builder.has_start() and event_type == "mouse_motion":
-            self.geometry_builder.set_tmp_end(coordinate)
-        elif self.geometry_builder.has_start() and event_type == "left_mousebutton_up":
-            self.geometry_builder.add_coordinate(coordinate)
+            self.geometry_builder.add_temporary_coordinate(coordinate)
+        elif (
+            self.geometry_builder.number_of_coordinates() >= 2
+            and event_type == "right_mousebutton_up"
+        ):
+            print("right_mousebutton_up")
+            self._geometry_finished = True
+            self.geometry_builder.finish_building()
             self.detach_from(self._canvas.event_handler)
 
     def finish_building(
@@ -249,8 +250,10 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         ).get_metadata()
 
     def _create_section(self) -> None:
-        if self._start() is None or self._end() is None:
-            raise ValueError("Start and end of line_section are not defined")
+        if self.number_of_coordinates() == 0:
+            raise MissingCoordinate("First coordinate is missing")
+        elif self.number_of_coordinates() == 1:
+            raise MissingCoordinate("Second coordinate is missing")
         if self._metadata == {}:
             raise ValueError("Metadata of line_section are not defined")
         name = self._metadata[ID]
@@ -271,15 +274,8 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         )
         self._viewmodel.set_new_section(line_section)
 
-    def _start(self) -> tuple[int, int]:
-        if len(self._coordinates) > 0:
-            return self._coordinates[0]
-        raise MissingCoordinate("Start coordinate missing")
-
-    def _end(self) -> tuple[int, int]:
-        if len(self._coordinates) > 1:
-            return self._coordinates[-1]
-        raise MissingCoordinate("End coordinate missing")
-
     def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
         return Coordinate(coordinate[0], coordinate[1])
+
+    def number_of_coordinates(self) -> int:
+        return len(self._coordinates)
