@@ -10,8 +10,6 @@ SECTIONS: str = "sections"
 ID: str = "id"
 TYPE: str = "type"
 LINE: str = "line"
-START: str = "start"
-END: str = "end"
 AREA: str = "area"
 COORDINATES: str = "coordinates"
 RELATIVE_OFFSET_COORDINATES: str = "relative_offset_coordinates"
@@ -153,11 +151,16 @@ class LineSection(Section):
         end (Coordinate): the end coordinate
     """
 
-    start: Coordinate
-    end: Coordinate
+    coordinates: list[Coordinate]
 
     def _validate(self) -> None:
-        if self.start == self.end:
+        if len(self.coordinates) < 2:
+            raise ValueError(
+                "The number of coordinates to make up a line must be greater equal 2, "
+                f"but is {len(self.coordinates)}"
+            )
+
+        if self.coordinates[0] == self.coordinates[-1]:
             raise ValueError(
                 (
                     "Start and end point of coordinate must be different to be a line, "
@@ -166,7 +169,7 @@ class LineSection(Section):
             )
 
     def get_coordinates(self) -> list[Coordinate]:
-        return [self.start, self.end]
+        return self.coordinates.copy()
 
     def to_dict(self) -> dict:
         """
@@ -177,8 +180,7 @@ class LineSection(Section):
             ID: self.id.serialize(),
             TYPE: LINE,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
-            START: self.start.to_dict(),
-            END: self.end.to_dict(),
+            COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
             PLUGIN_DATA: self.plugin_data,
         }
 

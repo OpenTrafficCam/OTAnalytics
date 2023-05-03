@@ -256,8 +256,9 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
                 )
             },
             plugin_data={},
-            start=self._to_coordinate(self._start()),
-            end=self._to_coordinate(self._end()),
+            coordinates=[
+                self._to_coordinate(coordinate) for coordinate in self._coordinates
+            ],
         )
         self._viewmodel.set_new_section(line_section)
 

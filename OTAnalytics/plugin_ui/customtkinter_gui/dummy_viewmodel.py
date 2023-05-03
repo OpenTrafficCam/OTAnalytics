@@ -11,9 +11,8 @@ from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.section import (
-    END,
+    COORDINATES,
     ID,
-    START,
     Section,
     SectionId,
     SectionListObserver,
@@ -263,8 +262,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
             painter.draw(
                 tags=[LINE_SECTION],
                 id=section[ID],
-                start=section[START],
-                end=section[END],
+                start=section[COORDINATES][0],
+                end=section[COORDINATES][-1],
                 style=style,
             )
 
@@ -278,8 +277,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
         )
 
     def _transform_coordinates(self, section: dict) -> dict:
-        section[START] = self._to_coordinate_tuple(section[START])
-        section[END] = self._to_coordinate_tuple(section[END])
+        section[COORDINATES] = [
+            self._to_coordinate_tuple(coordinate) for coordinate in section[COORDINATES]
+        ]
         return section
 
     def _to_coordinate_tuple(self, coordinate: dict) -> tuple[int, int]:
