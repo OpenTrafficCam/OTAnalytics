@@ -353,58 +353,17 @@ class SectionRepository:
         self._sections[section.id] = section
         self._section_content_observers.notify(section.id)
 
-    def update_plugin_data(
-        self,
-        key: str,
-        new_section_id: SectionId,
-        new_value: dict,
-        old_section_id: SectionId,
-        old_value: dict,
-    ) -> None:
+    def set_section_plugin_data(self, section_id: SectionId, plugin_data: dict) -> None:
         """
-        Update the section's plugin data.
+        Set the plugin data of the section. The data will be overridden.
 
         Args:
-
-        Args:
-            key (str): key within the plugin data
-            new_section_id (SectionId): section id to attached the plugin data to or to
-            change it at
-            new_value (dict): value to be stored for the key
-            old_section_id (SectionId): section id to remove the plugin data from
-            old_value (dict): value already stored for the key
-        """
-        if new_section_id != old_section_id:
-            self.remove_plugin_data(key, old_section_id)
-
-        self._update_plugin_data(key, new_section_id, new_value)
-
-    def _update_plugin_data(self, key: str, section_id: SectionId, value: dict) -> None:
-        """
-        Set the plugin data to the given value or merge the existing value with the
-        given one.
-
-        Args:
-            key (str): key within the plugin data
-            section_id (SectionId): section id to set or merge the plugin data
-            value (dict): value to be stored for the key
-
-        Raises:
-            MissingSection: if no section for the section_id can be found
+            section_id (SectionId): section id to override the plugin data at
+            plugin_data (dict): value of the new plugin data
         """
         section = self.get(section_id)
         if section is None:
             raise MissingSection(f"Section for id: {section_id} could not be found.")
-        if key in section.plugin_data:
-            section.plugin_data[key].update(value)
-        else:
-            section.plugin_data[key] = value
-        self._section_content_observers.notify(section.id)
-
-    def remove_plugin_data(self, key: str, section_id: SectionId) -> None:
-        section = self.get(section_id)
-        if section is None:
-            raise MissingSection(f"Section for id: {section_id} could not be found.")
-        if key in section.plugin_data:
-            del section.plugin_data[key]
-            self._section_content_observers.notify(section.id)
+        section.plugin_data.clear()
+        section.plugin_data.update(plugin_data)
+        self._section_content_observers.notify(section_id)

@@ -15,6 +15,7 @@ from OTAnalytics.domain.section import (
     END,
     ID,
     START,
+    MissingSection,
     Section,
     SectionId,
     SectionListObserver,
@@ -353,16 +354,34 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def __update_flow_data(self, new_flow: dict, old_flow: dict = {}) -> None:
         new_section_id = SectionId(new_flow[START_SECTION])
-        new_data = {new_flow[END_SECTION]: new_flow[DISTANCE]}
-        old_section_id = SectionId(old_flow[START_SECTION])
-        old_data = {old_flow[END_SECTION]: old_flow[DISTANCE]}
-        self._application.update_section_plugin_data(
-            key=DISTANCES,
-            new_section_id=new_section_id,
-            new_value=new_data,
-            old_section_id=old_section_id,
-            old_value=old_data,
-        )
+        if section := self._application.get_section_for(section_id=new_section_id):
+            self.__clear_old_flow_data(flow=old_flow)
+            self._set_new_flow_data(section=section, flow=new_flow)
+        else:
+            raise MissingSection(f"Could not find section for id {new_section_id}")
+
+    def _set_new_flow_data(self, section: Section, flow: dict) -> None:
+        plugin_data = section.plugin_data.copy()
+        distance_data = plugin_data.get(DISTANCES, {})
+        new_data = {flow[END_SECTION]: flow[DISTANCE]}
+        distance_data.update(new_data)
+        plugin_data[DISTANCES] = distance_data
+        self._application.set_section_plugin_data(section.id, plugin_data)
+
+    def __clear_old_flow_data(self, flow: dict = {}) -> None:
+        if flow:
+            old_section_id = SectionId(flow[START_SECTION])
+            if old_section := self._application.get_section_for(
+                section_id=old_section_id
+            ):
+                old_end_section = flow[END_SECTION]
+                old_plugin_data = old_section.plugin_data.copy()
+                old_distance_data = old_plugin_data.get(DISTANCES, {})
+                del old_distance_data[old_end_section]
+                old_plugin_data[DISTANCES] = old_distance_data
+                self._application.set_section_plugin_data(
+                    old_section_id, old_plugin_data
+                )
 
     def edit_flow(self) -> None:
         if self._selected_flow_id is None:

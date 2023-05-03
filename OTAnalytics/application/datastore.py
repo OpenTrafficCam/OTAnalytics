@@ -341,31 +341,16 @@ class Datastore:
         """
         self._section_repository.update(section)
 
-    def update_section_plugin_data(
-        self,
-        key: str,
-        new_section_id: SectionId,
-        new_value: dict,
-        old_section_id: SectionId,
-        old_value: dict,
-    ) -> None:
+    def set_section_plugin_data(self, section_id: SectionId, plugin_data: dict) -> None:
         """
-        Update the section's plugin data.
+        Set the plugin data of the section. The data will be overridden.
 
         Args:
-            key (str): key within the plugin data
-            new_section_id (SectionId): section id to attached the plugin data to or to
-            change it at
-            new_value (dict): value to be stored for the key
-            old_section_id (SectionId): section id to remove the plugin data from
-            old_value (dict): value already stored for the key
+            section_id (SectionId): section id to override the plugin data at
+            plugin_data (dict): value of the new plugin data
         """
-        self._section_repository.update_plugin_data(
-            key=key,
-            new_section_id=new_section_id,
-            new_value=new_value,
-            old_section_id=old_section_id,
-            old_value=old_value,
+        self._section_repository.set_section_plugin_data(
+            section_id=section_id, plugin_data=plugin_data
         )
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:

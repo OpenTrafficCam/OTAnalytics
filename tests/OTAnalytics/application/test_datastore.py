@@ -234,28 +234,14 @@ class TestDatastore:
             video_parser=video_parser,
         )
         section_id = SectionId("my section")
-        key = "my data for plugins"
-        old_value = {"some": "old_value"}
-        new_value = {"some": "new_value"}
+        plugin_data = {"some": "new_value"}
 
-        section = LineSection(
-            section_id,
-            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
-            {},
-            start=Coordinate(0, 0),
-            end=Coordinate(10, 10),
+        store.set_section_plugin_data(
+            section_id=section_id,
+            plugin_data=plugin_data,
         )
 
-        store.add_section(section)
-        store.update_section_plugin_data(
-            key=key,
-            new_section_id=section_id,
-            new_value=new_value,
-            old_section_id=section_id,
-            old_value=old_value,
-        )
-
-        section_repository.update_plugin_data.called_once_with(section_id)
+        section_repository.set_section_plugin_data.called_once_with(section_id)
 
     def test_update_section_plugin_data_with_existing_data(
         self,
@@ -274,25 +260,11 @@ class TestDatastore:
             video_parser=video_parser,
         )
         section_id = SectionId("my section")
-        key = "my data for plugins"
-        old_value = {"some": "old_value"}
-        new_value = {"other": "new_value"}
+        new_plugin_data = {"other": "new_value"}
 
-        section = LineSection(
-            section_id,
-            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
-            {key: old_value},
-            start=Coordinate(0, 0),
-            end=Coordinate(10, 10),
+        store.set_section_plugin_data(
+            section_id=section_id,
+            plugin_data=new_plugin_data,
         )
 
-        store.add_section(section)
-        store.update_section_plugin_data(
-            key=key,
-            new_section_id=section_id,
-            new_value=new_value,
-            old_section_id=section_id,
-            old_value=old_value,
-        )
-
-        section_repository.update_plugin_data.called_once_with(section_id)
+        section_repository.set_section_plugin_data.called_once_with(section_id)
