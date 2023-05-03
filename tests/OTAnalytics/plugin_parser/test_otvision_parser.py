@@ -36,7 +36,7 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
-from OTAnalytics.plugin_parser import dataformat_versions
+from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
     METADATA,
@@ -45,6 +45,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     InvalidSectionData,
     OtEventListParser,
     OtsectionParser,
+    OttrkFormatFixer,
     OttrkParser,
     _parse,
     _parse_bz2,
@@ -128,6 +129,47 @@ def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> N
     assert bzip2_content == content
 
 
+class TestOttrkFormatFixer:
+    def test_no_fixes_in_newest_version(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        track_builder_setup_with_sample_data.set_otdet_version("1.1")
+        content = track_builder_setup_with_sample_data.build_ottrk()
+        fixer = OttrkFormatFixer()
+
+        fixed_content = fixer.fix(content)
+
+        assert fixed_content == content
+
+    def test_fix_x_y_coordinates(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        track_builder_setup_with_sample_data.set_otdet_version("1.0")
+        content = track_builder_setup_with_sample_data.build_ottrk()
+        input_detections = self.__build_expected_detections(
+            track_builder_setup_with_sample_data
+        )
+        fixer = OttrkFormatFixer()
+
+        fixed_content = fixer.fix(content)
+
+        fixed_detections = fixed_content[ottrk_dataformat.DATA][
+            ottrk_dataformat.DETECTIONS
+        ]
+        assert fixed_detections == input_detections
+
+    def __build_expected_detections(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> list[dict]:
+        input_detections = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
+        for detection in input_detections:
+            detection[ottrk_dataformat.X] = -5
+            detection[ottrk_dataformat.Y] = -5
+        return input_detections
+
+
 class TestOttrkParser:
     _track_repository = mocked_track_repository()
     ottrk_parser: OttrkParser = OttrkParser(
@@ -136,6 +178,7 @@ class TestOttrkParser:
     )
 
     def test_parse_whole_ottrk(self, ottrk_path: Path) -> None:
+        # TODO What is the expected result?
         self.ottrk_parser.parse(ottrk_path)
 
     def test_parse_ottrk_sample(
@@ -252,8 +295,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "key_2": "some_data"},
-            start=first_coordinate,
-            end=second_coordinate,
+            coordinates=[first_coordinate, second_coordinate],
         )
         area_section: Section = Area(
             id=SectionId("other"),
@@ -291,8 +333,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 1),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
         )
         other_section: Section = LineSection(
             id=SectionId("other"),
@@ -300,8 +341,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(1, 0),
-            end=Coordinate(0, 1),
+            coordinates=[Coordinate(1, 0), Coordinate(0, 1)],
         )
         sections = [some_section, other_section]
         parser = OtsectionParser()
@@ -321,8 +361,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=start,
-            end=end,
+            coordinates=[start, end],
         )
 
         section_data = {
@@ -336,14 +375,16 @@ class TestOtsectionParser:
                             geometry.Y: 0,
                         }
                     },
-                    section.START: {
-                        geometry.X: 0,
-                        geometry.Y: 0,
-                    },
-                    section.END: {
-                        geometry.X: 1,
-                        geometry.Y: 1,
-                    },
+                    section.COORDINATES: [
+                        {
+                            geometry.X: 0,
+                            geometry.Y: 0,
+                        },
+                        {
+                            geometry.X: 1,
+                            geometry.Y: 1,
+                        },
+                    ],
                 }
             ]
         }
@@ -364,8 +405,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "1": "some_data"},
-            start=start,
-            end=end,
+            coordinates=[start, end],
         )
 
         section_data = {
@@ -379,14 +419,10 @@ class TestOtsectionParser:
                             geometry.Y: 0,
                         }
                     },
-                    section.START: {
-                        geometry.X: 0,
-                        geometry.Y: 0,
-                    },
-                    section.END: {
-                        geometry.X: 1,
-                        geometry.Y: 1,
-                    },
+                    section.COORDINATES: [
+                        {geometry.X: 0, geometry.Y: 0},
+                        {geometry.X: 1, geometry.Y: 1},
+                    ],
                     section.PLUGIN_DATA: {"key_1": "some_data", "1": "some_data"},
                 }
             ]
@@ -439,8 +475,7 @@ class TestOtEventListParser:
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
             },
             plugin_data={"foo": "bar"},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 0),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
         )
         area_section = Area(
             id=SectionId("S"),

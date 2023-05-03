@@ -50,7 +50,7 @@ def plot_tracks_and_sections(tracks: list[Track], sections: list[Section]) -> No
     for section in sections:
         if isinstance(section, LineSection):
             shapely_line_section = mapper.map_to_shapely_line_string(
-                Line([section.start, section.end])
+                Line(section.get_coordinates())
             )
             ax.plot(*shapely_line_section.xy)
         elif isinstance(section, Area):
@@ -80,11 +80,10 @@ class TestDetectSectionActivity:
         line_section = LineSection(
             id=SectionId("NE"),
             relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)
             },
             plugin_data={},
-            start=Coordinate(103, 194),
-            end=Coordinate(366, 129),
+            coordinates=[Coordinate(103, 194), Coordinate(366, 129)],
         )
 
         line_section_intersector = IntersectBySmallTrackComponents(
@@ -111,11 +110,10 @@ class TestDetectSectionActivity:
         line_section = LineSection(
             id=SectionId("NE"),
             relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)
             },
             plugin_data={},
-            start=Coordinate(103, 194),
-            end=Coordinate(366, 129),
+            coordinates=[Coordinate(103, 194), Coordinate(366, 129)],
         )
 
         line_section_intersector = IntersectBySplittingTrackLine(
@@ -148,8 +146,8 @@ class TestDetectSectionActivity:
         area_section = Area(
             id=SectionId("NE"),
             relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0),
-                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0, 0),
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
+                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
             },
             plugin_data={},
             coordinates=coordinates,

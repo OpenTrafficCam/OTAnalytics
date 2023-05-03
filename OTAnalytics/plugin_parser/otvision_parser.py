@@ -1,4 +1,5 @@
 import bz2
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Tuple
@@ -99,6 +100,99 @@ def _write_json(data: dict, path: Path) -> None:
         ujson.dump(data, file)
 
 
+class IncorrectVersionFormat(Exception):
+    pass
+
+
+@dataclass(frozen=True, order=True)
+class Version:
+    major: int
+    minor: int
+
+    @staticmethod
+    def from_str(version_string: str) -> "Version":
+        splitted = version_string.split(".")
+        if len(splitted) < 2:
+            message = (
+                "Version must contain major and minor separated by '.' "
+                + f"but was {version_string}"
+            )
+            raise IncorrectVersionFormat(message)
+        minor = int(splitted[1])
+        major = int(splitted[0])
+        return Version(major=major, minor=minor)
+
+
+class OttrkFormatFixer:
+    def fix(self, content: dict) -> dict:
+        """Fix formate changes from older ottrk and otdet format versions to the
+        current version.
+
+        Args:
+            content (dict): ottrk file content
+
+        Returns:
+            dict: fixed ottrk file content
+        """
+        version = self.__parse_otdet_version(content)
+        return self.__fix_bounding_boxes(content, version)
+
+    def __parse_otdet_version(self, content: dict) -> Version:
+        """Parse the otdet format version from the input.
+
+        Args:
+            content (dict): ottrk file content
+
+        Returns:
+            Version: otdet format version
+        """
+        version = content[ottrk_format.METADATA][ottrk_format.OTDET_VERSION]
+        return Version.from_str(version)
+
+    def __fix_bounding_boxes(
+        self, content: dict, otdet_format_version: Version
+    ) -> dict:
+        """Fix all bounding boxes of detections.
+
+        Args:
+            content (dict): ottrk file content
+            otdet_format_version (Version): otdet format version
+
+        Returns:
+            dict: fixed ottrk file content
+        """
+        detections = content[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        fixed_detections: list[dict] = []
+        for detection in detections:
+            fixed_detection = self.__fix_bounding_box(detection, otdet_format_version)
+            fixed_detections.append(fixed_detection)
+        content[ottrk_format.DATA][ottrk_format.DETECTIONS] = fixed_detections
+        return content
+
+    def __fix_bounding_box(
+        self, detection: dict, otdet_format_version: Version
+    ) -> dict:
+        """This method fixes different coordinate formats of otdet format version
+        <= 1.0.
+
+        Args:
+            content (dict): dictionary containing detection information
+
+        Returns:
+            dict: fixed dictionary
+        """
+        x_input = detection[ottrk_format.X]
+        y_input = detection[ottrk_format.Y]
+        w = detection[ottrk_format.W]
+        h = detection[ottrk_format.H]
+        if otdet_format_version <= Version(1, 0):
+            x = x_input - w / 2
+            y = y_input - h / 2
+            detection[ottrk_format.X] = x
+            detection[ottrk_format.Y] = y
+        return detection
+
+
 class OttrkParser(TrackParser):
     """Parse an ottrk file and convert its contents to our domain objects namely
     `Tracks`.
@@ -111,8 +205,10 @@ class OttrkParser(TrackParser):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
     ) -> None:
         super().__init__(track_classification_calculator, track_repository)
+        self._format_fixer = format_fixer
 
     def parse(self, ottrk_file: Path) -> list[Track]:
         """Parse ottrk file and convert its content to domain level objects namely
@@ -125,7 +221,8 @@ class OttrkParser(TrackParser):
             list[Track]: the tracks.
         """
         ottrk_dict = _parse_bz2(ottrk_file)
-        dets_list: list[dict] = ottrk_dict[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        fixed_ottrk = self._format_fixer.fix(ottrk_dict)
+        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
         return self._parse_tracks(dets_list)
 
     def _parse_tracks(self, dets: list[dict]) -> list[Track]:
@@ -275,17 +372,14 @@ class OtsectionParser(SectionParser):
             attributes=[
                 section.ID,
                 section.RELATIVE_OFFSET_COORDINATES,
-                section.START,
-                section.END,
             ],
         )
         section_id = self._parse_section_id(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
-        start = self._parse_coordinate(data[section.START])
-        end = self._parse_coordinate(data[section.END])
+        coordinates = self._parse_coordinates(data)
         plugin_data = self._parse_plugin_data(data)
         return LineSection(
-            section_id, relative_offset_coordinates, plugin_data, start, end
+            section_id, relative_offset_coordinates, plugin_data, coordinates
         )
 
     def _parse_section_id(self, data: dict) -> SectionId:

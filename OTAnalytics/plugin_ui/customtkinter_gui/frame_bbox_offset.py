@@ -3,7 +3,7 @@ from typing import Any
 from customtkinter import CTkFrame, CTkLabel, CTkSlider
 
 from OTAnalytics.domain import geometry
-from OTAnalytics.plugin_ui.constants import PADX
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX
 
 
 class FrameBboxOffset(CTkFrame):

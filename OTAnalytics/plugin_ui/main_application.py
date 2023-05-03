@@ -1,10 +1,6 @@
-import customtkinter
-from customtkinter import CTk
-
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
-from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
@@ -14,6 +10,7 @@ from OTAnalytics.application.datastore import (
     TrackParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.plotting import LayeredPlotter
 from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
@@ -26,6 +23,9 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
+    MultiprocessingIntersectParallelization,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtsectionParser,
@@ -34,6 +34,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     MatplotlibTrackPlotter,
+    PlotterPrototype,
 )
 from OTAnalytics.plugin_ui.cli import (
     CliArgumentParser,
@@ -41,62 +42,7 @@ from OTAnalytics.plugin_ui.cli import (
     CliParseError,
     OTAnalyticsCli,
 )
-from OTAnalytics.plugin_ui.constants import PADX, STICKY
-from OTAnalytics.plugin_ui.dummy_viewmodel import DummyViewModel
-from OTAnalytics.plugin_ui.frame_analysis import FrameAnalysis
-from OTAnalytics.plugin_ui.frame_canvas import TracksCanvas
-from OTAnalytics.plugin_ui.frame_sections import FrameSections
-from OTAnalytics.plugin_ui.frame_tracks import TracksFrame
 from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
-
-
-class OTAnalyticsGui:
-    def __init__(
-        self,
-        view_model: ViewModel,
-        app: CTk = CTk(),
-    ) -> None:
-        self._view_model = view_model
-        self._app: CTk = app
-
-    def start(self) -> None:
-        self._show_gui()
-
-    def _show_gui(self) -> None:
-        customtkinter.set_appearance_mode("System")
-        customtkinter.set_default_color_theme("green")
-
-        self._app.title("OTAnalytics")
-
-        self._get_widgets()
-        self._place_widgets()
-        self._app.mainloop()
-
-    def _get_widgets(self) -> None:
-        self.frame_canvas = TracksCanvas(
-            master=self._app,
-            viewmodel=self._view_model,
-        )
-        self.frame_tracks = TracksFrame(
-            master=self._app,
-            viewmodel=self._view_model,
-        )
-        self.frame_sections = FrameSections(
-            master=self._app,
-            viewmodel=self._view_model,
-        )
-        self.frame_analysis = FrameAnalysis(
-            master=self._app, viewmodel=self._view_model
-        )
-
-    def _place_widgets(self) -> None:
-        PADY = 10
-        self.frame_canvas.grid(
-            row=0, column=0, rowspan=3, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-        self.frame_sections.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-        self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
 
 class ApplicationStarter:
@@ -116,6 +62,11 @@ class ApplicationStarter:
         return CliArgumentParser()
 
     def start_gui(self) -> None:
+        from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
+            DummyViewModel,
+        )
+        from OTAnalytics.plugin_ui.customtkinter_gui.gui import OTAnalyticsGui
+
         datastore = self._create_datastore()
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state(datastore)
@@ -153,7 +104,7 @@ class ApplicationStarter:
     def _create_datastore(self) -> Datastore:
         """
         Build all required objects and inject them where necessary
-        """,
+        """
         track_repository = self._create_track_repository()
         track_parser = self._create_track_parser(track_repository)
         section_parser = self._create_section_parser()
@@ -187,7 +138,13 @@ class ApplicationStarter:
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
         track_plotter = MatplotlibTrackPlotter()
-        updater = TrackImageUpdater(datastore, state, track_plotter)
+        prototype = PlotterPrototype(
+            datastore=datastore,
+            track_view_state=state,
+            track_plotter=track_plotter,
+        )
+        plotter = LayeredPlotter(layers=[prototype])
+        updater = TrackImageUpdater(datastore, state, plotter)
         datastore.register_tracks_observer(updater)
         return state
 
@@ -199,6 +156,7 @@ class ApplicationStarter:
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
             ),
+            intersect_parallelizer=MultiprocessingIntersectParallelization(),
         )
 
     def _create_scene_event_detection(self) -> RunSceneEventDetection:
