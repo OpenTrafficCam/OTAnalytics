@@ -45,8 +45,7 @@ class CanvasElementPainter:
         self,
         tags: list[str],
         id: str,
-        start: tuple[int, int],
-        end: tuple[int, int],
+        coordinates: list[tuple[int, int]],
         style: dict,
     ) -> None:  # sourcery skip: dict-assign-update-to-union
         """Draws a line section on a canvas.
@@ -59,12 +58,23 @@ class CanvasElementPainter:
             style (dict): Dict of style options for tkinter canvas items.
         """
         tkinter_tags = (id,) + tuple(tags)
-        x0, y0 = start
-        x1, y1 = end
-        self._canvas.create_line(x0, y0, x1, y1, tags=tkinter_tags, **style[LINE])
-        if KNOB in style:
-            self._create_knob(tags=tkinter_tags, x=x0, y=y0, **style[KNOB])
-            self._create_knob(tags=tkinter_tags, x=x1, y=y1, **style[KNOB])
+
+        start: tuple[int, int] | None = None
+        for coordinate in coordinates:
+            if start is not None:
+                self._canvas.create_line(
+                    start[0],
+                    start[1],
+                    coordinate[0],
+                    coordinate[1],
+                    tags=tkinter_tags,
+                    **style[LINE],
+                )
+            if KNOB in style:
+                self._create_knob(
+                    tags=tkinter_tags, x=coordinate[0], y=coordinate[1], **style[KNOB]
+                )
+            start = coordinate
 
     def _create_knob(
         self,
@@ -120,15 +130,14 @@ class SectionGeometryBuilder:
         # self._tmp_end: tuple[int, int] | None = None
         self._coordinates: list[tuple[int, int]] = []
 
-    def set_tmp_end(self, coordinates: tuple[int, int]) -> None:
+    def set_tmp_end(self, coordinate: tuple[int, int]) -> None:
         if not self.has_start():
             raise ValueError("self.start as to be set before listening to mouse motion")
         self.deleter.delete(tag_or_id="temporary_line_section")
         self.painter.draw(
             tags=["temporary_line_section"],
             id=self._temporary_id,
-            start=self._start(),
-            end=coordinates,
+            coordinates=[self._start(), coordinate],
             style=self._style,
         )
         # self._tmp_end = coordinates

@@ -262,8 +262,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
             painter.draw(
                 tags=[LINE_SECTION],
                 id=section[ID],
-                start=section[COORDINATES][0],
-                end=section[COORDINATES][-1],
+                coordinates=section[COORDINATES],
                 style=style,
             )
 
