@@ -1,7 +1,7 @@
 # from customtkinter import CTkFrame
 
 from abc import ABC, abstractmethod
-from typing import Callable, Optional
+from typing import Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -116,11 +116,9 @@ class SectionGeometryBuilder:
         self,
         observer: SectionGeometryBuilderObserver,
         canvas: AbstractCanvas,
-        is_finished: Callable[[], bool],
         style: dict,
     ) -> None:
         self._observer = observer
-        self._is_finished = is_finished
         self._style = style
 
         self.painter = CanvasElementPainter(canvas=canvas)
@@ -149,8 +147,6 @@ class SectionGeometryBuilder:
 
     def add_coordinate(self, coordinate: tuple[int, int]) -> None:
         self._coordinates.append(coordinate)
-        if self._is_finished():
-            self.finish_building()
 
     def finish_building(self) -> None:
         self._observer.finish_building(self._coordinates)
@@ -177,16 +173,11 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             observer=self,
             canvas=self._canvas,
             style=self._style,
-            is_finished=self._is_geometry_finished,
         )
-        self._geometry_finished: bool = False
         self._name: Optional[str] = None
         self._coordinates: list[tuple[int, int]] = []
         self._metadata: dict = {}
         self._initialise_with(section)
-
-    def _is_geometry_finished(self) -> bool:
-        return self._geometry_finished
 
     def _initialise_with(self, section: Optional[Section]) -> None:
         if template := section:
@@ -196,7 +187,6 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             ]
             self._name = template.id.id
             self._metadata = template.to_dict()
-            self._geometry_finished = True
 
     def update(self, coordinate: tuple[int, int], event_type: str) -> None:
         """Receives and reacts to updates issued by the canvas event handler
@@ -218,7 +208,6 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             and event_type == "right_mousebutton_up"
         ):
             print("right_mousebutton_up")
-            self._geometry_finished = True
             self.geometry_builder.finish_building()
             self.detach_from(self._canvas.event_handler)
 
