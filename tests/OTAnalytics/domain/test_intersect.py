@@ -130,8 +130,7 @@ class TestIntersector:
             SectionId("N"),
             {EventType.SECTION_ENTER: offset},
             {},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 1),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
         )
         result = Intersector._extract_offset_from_section(
             section, EventType.SECTION_ENTER
@@ -160,8 +159,7 @@ class TestIntersectBySplittingTrackLine:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(5, 0),
-            end=Coordinate(5, 10),
+            coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
         )
 
         intersector = IntersectBySplittingTrackLine(mock_implementation, line_section)
@@ -205,8 +203,7 @@ class TestIntersectBySplittingTrackLine:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(1, 1)
             },
             plugin_data={},
-            start=Coordinate(5, 0),
-            end=Coordinate(5, 10),
+            coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
         )
 
         intersector = IntersectBySplittingTrackLine(mock_implementation, line_section)
@@ -254,8 +251,7 @@ class TestIntersectBySmallTrackComponents:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(5, 0),
-            end=Coordinate(5, 10),
+            coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
         )
 
         intersector = IntersectBySmallTrackComponents(mock_implementation, line_section)
@@ -301,8 +297,7 @@ class TestIntersectBySmallTrackComponents:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(1, 1)
             },
             plugin_data={},
-            start=Coordinate(5, 0),
-            end=Coordinate(5, 10),
+            coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
         )
 
         intersector = IntersectBySmallTrackComponents(mock_implementation, line_section)

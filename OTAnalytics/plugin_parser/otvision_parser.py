@@ -366,17 +366,14 @@ class OtsectionParser(SectionParser):
             attributes=[
                 section.ID,
                 section.RELATIVE_OFFSET_COORDINATES,
-                section.START,
-                section.END,
             ],
         )
         section_id = self._parse_section_id(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
-        start = self._parse_coordinate(data[section.START])
-        end = self._parse_coordinate(data[section.END])
+        coordinates = self._parse_coordinates(data)
         plugin_data = self._parse_plugin_data(data)
         return LineSection(
-            section_id, relative_offset_coordinates, plugin_data, start, end
+            section_id, relative_offset_coordinates, plugin_data, coordinates
         )
 
     def _parse_section_id(self, data: dict) -> SectionId:
