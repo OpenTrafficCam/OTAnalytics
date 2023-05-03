@@ -149,6 +149,13 @@ class SectionGeometryBuilder:
         self._coordinates.append(coordinate)
 
     def finish_building(self) -> None:
+        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.painter.draw(
+            tags=["temporary_line_section"],
+            id=self._temporary_id,
+            coordinates=self._coordinates,
+            style=self._style,
+        )
         self._observer.finish_building(self._coordinates)
         self.deleter.delete(tag_or_id="temporary_line_section")
 
