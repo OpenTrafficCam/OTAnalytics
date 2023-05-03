@@ -237,9 +237,7 @@ class IntersectBySplittingTrackLine(LineSectionIntersector):
         super().__init__(implementation, line_section)
 
     def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
-        line_section_as_geometry = Line(
-            [self._line_section.start, self._line_section.end]
-        )
+        line_section_as_geometry = Line(self._line_section.get_coordinates())
         if event_builder.event_type is None:
             raise ValueError("Event type not set in section builder")
 
@@ -313,9 +311,7 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
     def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
         events: list[Event] = []
 
-        line_section_as_geometry = Line(
-            [self._line_section.start, self._line_section.end]
-        )
+        line_section_as_geometry = Line(self._line_section.get_coordinates())
 
         event_builder.add_road_user_type(track.classification)
         offset = self._extract_offset_from_section(

@@ -124,8 +124,7 @@ def line_section() -> LineSection:
             EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
         },
         plugin_data={},
-        start=Coordinate(5, 0),
-        end=Coordinate(5, 10),
+        coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
     )
 
 
