@@ -1,9 +1,11 @@
-from unittest.mock import Mock, call
+from datetime import datetime
+from unittest.mock import Mock, call, patch
 
 import pytest
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    FilterElementState,
     ObservableProperty,
     Observer,
     Plotter,
@@ -13,6 +15,7 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Track, TrackId, TrackImage
 
@@ -87,7 +90,8 @@ class TestTrackImageUpdater:
         track_id = TrackId(1)
         track = Mock(spec=Track)
         datastore = Mock(spec=Datastore)
-        track_view_state = TrackViewState()
+        filter_element_state = Mock(spec=FilterElementState)
+        track_view_state = TrackViewState(filter_element_state)
         track_view_state.show_tracks.set(True)
         track.id = track_id
         updater = TrackImageUpdater(datastore, track_view_state, plotter)
@@ -98,3 +102,47 @@ class TestTrackImageUpdater:
         assert track_view_state.background_image.get() == background_image
 
         plotter.plot.assert_called_once()
+
+
+class TestFilterElementState:
+    def test_getters(self) -> None:
+        start_date = datetime(2000, 1, 1)
+        end_date = datetime(2000, 1, 3)
+        classifications = ["car", "truck"]
+        filter_element = FilterElement(start_date, end_date, classifications)
+
+        filter_element_state = FilterElementState(filter_element)
+
+        assert filter_element_state.start_date == start_date
+        assert filter_element_state.end_date == end_date
+        assert filter_element_state.classifications == classifications
+
+    @patch("OTAnalytics.application.state.Subject.notify")
+    def test_setters_do_notify(self, mock_notify: Mock) -> None:
+        start_date = datetime(2000, 1, 1)
+        end_date = datetime(2000, 1, 3)
+        classifications = ["car", "truck"]
+        filter_element = FilterElement(None, None, [])
+
+        filter_element_state = FilterElementState(filter_element)
+        filter_element_state.start_date = start_date
+        filter_element_state.end_date = end_date
+        filter_element_state.classifications = classifications
+
+        mock_notify.assert_called_with(filter_element)
+        assert mock_notify.call_count == 3
+
+        assert filter_element_state.start_date == start_date
+        assert filter_element_state.end_date == end_date
+        assert filter_element_state.classifications == classifications
+
+    @patch("OTAnalytics.application.state.Subject.register")
+    def test_register(self, mock_register: Mock) -> None:
+        observer = Mock(spec=Observer)
+        filter_element = Mock(spec=FilterElement)
+
+        filter_element_state = FilterElementState(filter_element)
+        filter_element_state.register(observer)
+
+        mock_register.assert_called_once_with(observer)
+        assert mock_register.call_count == 1
