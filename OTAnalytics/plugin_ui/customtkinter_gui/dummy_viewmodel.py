@@ -81,7 +81,6 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._new_section: dict = {}
         self._selected_section_id: Optional[str] = None
-        self._selected_flow_id: Optional[str] = None
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
@@ -93,6 +92,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
         )
         self._application.section_state.selected_section.register(
             self._update_selected_section
+        )
+        self._application.section_state.selected_flow.register(
+            self._update_selected_flow
         )
         self._application.track_view_state.background_image.register(
             self._on_background_updated
@@ -148,7 +150,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-        self._treeview_sections.update_selected_items(current_id)
+        self._treeview_sections.update_selected_items(self._selected_section_id)
+
+    def _update_selected_flow(self, flow_id: Optional[str]) -> None:
+        if self._treeview_flows is None:
+            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        self._treeview_flows.update_selected_items(flow_id)
 
     def set_selected_section_id(self, id: Optional[str]) -> None:
         self._selected_section_id = id
@@ -383,14 +390,18 @@ class DummyViewModel(ViewModel, SectionListObserver):
                     old_section_id, old_plugin_data
                 )
 
+    def __selected_flow(self) -> Optional[str]:
+        return self._application.section_state.selected_flow.get()
+
     def edit_flow(self) -> None:
-        if self._selected_flow_id is None:
+        selected_flow = self.__selected_flow()
+        if selected_flow is None:
             if self._treeview_flows is None:
                 raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
             position = position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to edit", initial_position=position)
             return
-        flow = parse_flow_id(self._selected_flow_id)
+        flow = parse_flow_id(selected_flow)
         if from_section := self._application.get_section_for(
             SectionId(flow.from_section)
         ):
@@ -408,29 +419,13 @@ class DummyViewModel(ViewModel, SectionListObserver):
             )
             self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
 
-    def _set_flow_data(self, id: str, data: dict) -> None:
-        # TODO: @briemla: Connect to application
-        # flow = self._flow_parser.parse_flow(data)
-        # self._application.remove_flow(id)
-        # self._application.add_flow(flow)
-        pass
-
     def set_selected_flow_id(self, id: Optional[str]) -> None:
-        self._selected_flow_id = id
-        # TODO: @briemla: Connect to application
-        # self._application.set_selected_flow(id)
-
-        print(f"New line section selected in treeview: id={id}")
-
-    # def get_all_flows(self) -> Iterable[Flow]:
-    #     # TODO: @briemla: Connect to application and overwrite dummy list
-    #     # return self._application.get_all_flows()
-    #     return [Flow(), Flow(), Flow(), Flow()]
+        self._application.section_state.selected_flow.set(id)
 
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        if not self._selected_flow_id:
+        if not self.__selected_flow():
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
             return
