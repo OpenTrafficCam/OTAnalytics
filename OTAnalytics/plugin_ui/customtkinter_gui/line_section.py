@@ -67,12 +67,15 @@ class CanvasElementPainter:
                     start[1],
                     coordinate[0],
                     coordinate[1],
-                    tags=tkinter_tags,
+                    tags=tkinter_tags + (LINE,),
                     **style[LINE],
                 )
             if KNOB in style:
                 self._create_knob(
-                    tags=tkinter_tags, x=coordinate[0], y=coordinate[1], **style[KNOB]
+                    tags=tkinter_tags + (KNOB,),
+                    x=coordinate[0],
+                    y=coordinate[1],
+                    **style[KNOB],
                 )
             start = coordinate
 
