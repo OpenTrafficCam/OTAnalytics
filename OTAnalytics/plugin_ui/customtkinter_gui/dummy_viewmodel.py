@@ -157,6 +157,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self._treeview_flows.update_selected_items(flow_id)
 
+    def get_selected_flow(self) -> Optional[str]:
+        return self._application.section_state.selected_flow.get()
+
+    def set_selected_flow_id(self, id: Optional[str]) -> None:
+        self._application.section_state.selected_flow.set(id)
+
     def set_selected_section_id(self, id: Optional[str]) -> None:
         self._selected_section_id = id
         self._application.set_selected_section(id)
@@ -390,11 +396,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
                     old_section_id, old_plugin_data
                 )
 
-    def __selected_flow(self) -> Optional[str]:
-        return self._application.section_state.selected_flow.get()
-
     def edit_flow(self) -> None:
-        selected_flow = self.__selected_flow()
+        selected_flow = self.get_selected_flow()
         if selected_flow is None:
             if self._treeview_flows is None:
                 raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
@@ -419,13 +422,10 @@ class DummyViewModel(ViewModel, SectionListObserver):
             )
             self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
 
-    def set_selected_flow_id(self, id: Optional[str]) -> None:
-        self._application.section_state.selected_flow.set(id)
-
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        if not self.__selected_flow():
+        if not self.get_selected_flow():
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
             return
