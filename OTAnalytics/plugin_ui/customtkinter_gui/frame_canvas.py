@@ -133,6 +133,7 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<Motion>", self.on_mouse_motion)
         self._canvas.bind("<Enter>", lambda event: self._canvas.focus_set())
         self._canvas.bind("<Return>", self.on_return)
+        self._canvas.bind("<Escape>", self.on_escape)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)
@@ -159,6 +160,10 @@ class CanvasEventHandler(EventHandler):
     def on_return(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, "return")
+
+    def on_escape(self, event: Any) -> None:
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, "escape")
 
     def _get_mouse_coordinates(self, event: Any) -> tuple[int, int]:
         """Returns coordinates of event on canvas taking into account the horizontal and

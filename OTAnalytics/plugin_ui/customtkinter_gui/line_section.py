@@ -159,6 +159,9 @@ class SectionGeometryBuilder:
         self._observer.finish_building(self._coordinates)
         self.deleter.delete(tag_or_id="temporary_line_section")
 
+    def abort(self) -> None:
+        self.deleter.delete(tag_or_id="temporary_line_section")
+
 
 class MissingCoordinate(Exception):
     pass
@@ -215,6 +218,9 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         ):
             print("right_mousebutton_up")
             self.geometry_builder.finish_building()
+            self.detach_from(self._canvas.event_handler)
+        elif event_type == "escape":
+            self.geometry_builder.abort()
             self.detach_from(self._canvas.event_handler)
 
     def finish_building(
