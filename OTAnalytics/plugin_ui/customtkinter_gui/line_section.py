@@ -210,9 +210,8 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             and event_type == "mouse_motion"
         ):
             self.geometry_builder.add_temporary_coordinate(coordinate)
-        elif (
-            self.geometry_builder.number_of_coordinates() >= 2
-            and event_type == "right_mousebutton_up"
+        elif self.geometry_builder.number_of_coordinates() >= 2 and (
+            event_type in {"right_mousebutton_up", "return"}
         ):
             print("right_mousebutton_up")
             self.geometry_builder.finish_building()

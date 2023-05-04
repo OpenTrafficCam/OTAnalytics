@@ -131,6 +131,8 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<ButtonRelease-1>", self.on_left_mousebutton_up)
         self._canvas.bind("<ButtonRelease-2>", self.on_right_mousebutton_up)
         self._canvas.bind("<Motion>", self.on_mouse_motion)
+        self._canvas.bind("<Enter>", lambda event: self._canvas.focus_set())
+        self._canvas.bind("<Return>", self.on_return)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)
@@ -153,6 +155,10 @@ class CanvasEventHandler(EventHandler):
     def on_mouse_motion(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, "mouse_motion")
+
+    def on_return(self, event: Any) -> None:
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, "return")
 
     def _get_mouse_coordinates(self, event: Any) -> tuple[int, int]:
         """Returns coordinates of event on canvas taking into account the horizontal and
