@@ -12,14 +12,12 @@ from OTAnalytics.application.datastore import (
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.plotting import LayeredPlotter
 from OTAnalytics.application.state import (
-    FilterElementState,
     SectionState,
     TrackImageUpdater,
     TrackState,
     TrackViewState,
 )
 from OTAnalytics.domain.event import SceneEventBuilder
-from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
@@ -71,8 +69,7 @@ class ApplicationStarter:
 
         datastore = self._create_datastore()
         track_state = self._create_track_state()
-        filter_element = self._create_filter_element()
-        track_view_state = self._create_track_view_state(filter_element, datastore)
+        track_view_state = self._create_track_view_state(datastore)
         section_state = self._create_section_state()
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
@@ -138,10 +135,8 @@ class ApplicationStarter:
     def _create_track_state(self) -> TrackState:
         return TrackState()
 
-    def _create_track_view_state(
-        self, filter_element: FilterElement, datastore: Datastore
-    ) -> TrackViewState:
-        state = TrackViewState(FilterElementState(filter_element))
+    def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
+        state = TrackViewState()
         track_plotter = MatplotlibTrackPlotter()
         prototype = PlotterPrototype(
             datastore=datastore,
@@ -166,6 +161,3 @@ class ApplicationStarter:
 
     def _create_scene_event_detection(self) -> RunSceneEventDetection:
         return RunSceneEventDetection(SceneActionDetector(SceneEventBuilder()))
-
-    def _create_filter_element(self) -> FilterElement:
-        return FilterElement(None, None, [])

@@ -1,13 +1,12 @@
 from datetime import datetime
-from unittest.mock import Mock, call, patch
+from typing import Callable, Optional
+from unittest.mock import Mock, call
 
 import pytest
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
-    FilterElementState,
-    ObservableProperty,
-    Observer,
+    ObservableOptionalProperty,
     Plotter,
     SectionState,
     TrackImageUpdater,
@@ -53,10 +52,40 @@ class TestTrackState:
 
 class TestObservableProperty:
     def test_notify_observer(self) -> None:
+        first_filter_element = FilterElement(None, None, [])
+        changed_filter_element = FilterElement(
+            datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
+        )
+        observer = Mock(spec=Callable[[FilterElement], None])
+        state = ObservableOptionalProperty[FilterElement]()
+        state.register(observer)
+
+        state.set(first_filter_element)
+        state.set(changed_filter_element)
+        state.set(changed_filter_element)
+
+        assert observer.call_args_list == [
+            call(first_filter_element),
+            call(changed_filter_element),
+        ]
+
+    def test_update_filter_element_on_on_notify_filter_element(self) -> None:
+        filter_element = FilterElement(
+            datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
+        )
+        state = TrackViewState()
+
+        state.filter_element.set(filter_element)
+
+        assert state.filter_element.get() == filter_element
+
+
+class TestOptionalObservableProperty:
+    def test_notify_observer(self) -> None:
         first_section = SectionId("north")
         changed_section = SectionId("south")
-        observer = Mock(spec=Observer)
-        state = ObservableProperty[SectionId]()
+        observer = Mock(spec=Callable[[Optional[SectionId]], None])
+        state = ObservableOptionalProperty[SectionId]()
         state.register(observer)
 
         state.set(first_section)
@@ -90,8 +119,7 @@ class TestTrackImageUpdater:
         track_id = TrackId(1)
         track = Mock(spec=Track)
         datastore = Mock(spec=Datastore)
-        filter_element_state = Mock(spec=FilterElementState)
-        track_view_state = TrackViewState(filter_element_state)
+        track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
         track.id = track_id
         updater = TrackImageUpdater(datastore, track_view_state, plotter)
@@ -102,47 +130,3 @@ class TestTrackImageUpdater:
         assert track_view_state.background_image.get() == background_image
 
         plotter.plot.assert_called_once()
-
-
-class TestFilterElementState:
-    def test_getters(self) -> None:
-        start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
-        classifications = ["car", "truck"]
-        filter_element = FilterElement(start_date, end_date, classifications)
-
-        filter_element_state = FilterElementState(filter_element)
-
-        assert filter_element_state.start_date == start_date
-        assert filter_element_state.end_date == end_date
-        assert filter_element_state.classifications == classifications
-
-    @patch("OTAnalytics.application.state.Subject.notify")
-    def test_setters_do_notify(self, mock_notify: Mock) -> None:
-        start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
-        classifications = ["car", "truck"]
-        filter_element = FilterElement(None, None, [])
-
-        filter_element_state = FilterElementState(filter_element)
-        filter_element_state.start_date = start_date
-        filter_element_state.end_date = end_date
-        filter_element_state.classifications = classifications
-
-        mock_notify.assert_called_with(filter_element)
-        assert mock_notify.call_count == 3
-
-        assert filter_element_state.start_date == start_date
-        assert filter_element_state.end_date == end_date
-        assert filter_element_state.classifications == classifications
-
-    @patch("OTAnalytics.application.state.Subject.register")
-    def test_register(self, mock_register: Mock) -> None:
-        observer = Mock(spec=Observer)
-        filter_element = Mock(spec=FilterElement)
-
-        filter_element_state = FilterElementState(filter_element)
-        filter_element_state.register(observer)
-
-        mock_register.assert_called_once_with(observer)
-        assert mock_register.call_count == 1

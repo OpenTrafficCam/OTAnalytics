@@ -1,8 +1,7 @@
 from unittest.mock import Mock
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import FilterElementState, TrackViewState
-from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track, TrackId, TrackImage
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
@@ -21,9 +20,7 @@ class TestPlotterPrototype:
         plotted_tracks = Mock(spec=TrackImage)
         combined_image = Mock(spec=TrackImage)
         datastore = Mock(spec=Datastore)
-        filter_element = FilterElement(None, None, [])
-        filter_element_state = FilterElementState(filter_element)
-        track_view_state = TrackViewState(filter_element_state)
+        track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
         track_plotter = Mock(sepc=TrackPlotter)
         track.id = track_id

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Callable, Generic, Optional, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
@@ -66,7 +65,6 @@ class TrackState(TrackListObserver):
 
 
 VALUE = TypeVar("VALUE")
-Observer = Callable[[Optional[VALUE]], None]
 
 
 class Subject(Generic[VALUE]):
@@ -75,9 +73,9 @@ class Subject(Generic[VALUE]):
     """
 
     def __init__(self) -> None:
-        self.observers: set[Observer[VALUE]] = set()
+        self.observers: set[Callable[[VALUE], None]] = set()
 
-    def register(self, observer: Observer[VALUE]) -> None:
+    def register(self, observer: Callable[[VALUE], None]) -> None:
         """
         Listen to events.
 
@@ -86,7 +84,7 @@ class Subject(Generic[VALUE]):
         """
         self.observers.add(observer)
 
-    def notify(self, value: Optional[VALUE]) -> None:
+    def notify(self, value: VALUE) -> None:
         """
         Notifies observers about the changed value.
 
@@ -98,14 +96,55 @@ class Subject(Generic[VALUE]):
 
 class ObservableProperty(Generic[VALUE]):
     """
-    Represents a property of the given type that informs its observers about changes.
+    Represents a property of the given type that informs its observers about
+    changes.
+    """
+
+    def __init__(self, default: VALUE) -> None:
+        self._property: VALUE = default
+        self._subject: Subject[VALUE] = Subject[VALUE]()
+
+    def register(self, observer: Callable[[VALUE], None]) -> None:
+        """
+        Listen to property changes.
+
+        Args:
+            observer (Observer[VALUE]): observer to be notified about changes
+        """
+        self._subject.register(observer)
+
+    def set(self, value: VALUE) -> None:
+        """
+        Change the current value of the property
+
+        Args:
+            value (VALUE): new value to be set
+        """
+        if self._property != value:
+            self._property = value
+            self._subject.notify(value)
+
+    def get(self) -> VALUE:
+        """
+        Get the current value of the property.
+
+        Returns:
+            VALUE: current value
+        """
+        return self._property
+
+
+class ObservableOptionalProperty(Generic[VALUE]):
+    """
+    Represents an optional property of the given type that informs its observers about
+    changes.
     """
 
     def __init__(self, default: Optional[VALUE] = None) -> None:
         self._property: Optional[VALUE] = default
-        self._subject: Subject[VALUE] = Subject[VALUE]()
+        self._subject: Subject[Optional[VALUE]] = Subject[Optional[VALUE]]()
 
-    def register(self, observer: Observer[VALUE]) -> None:
+    def register(self, observer: Callable[[Optional[VALUE]], None]) -> None:
         """
         Listen to property changes.
 
@@ -135,62 +174,6 @@ class ObservableProperty(Generic[VALUE]):
         return self._property
 
 
-class FilterElementState:
-    """This state represents the current filter settings in the UI.
-
-    Args:
-        filter_element (FilterElement): the filter element whose properties are to be
-            updated by this class
-    """
-
-    def __init__(
-        self,
-        filter_element: FilterElement,
-    ) -> None:
-        """_summary_
-
-        Args:
-        """
-        self._subject = Subject[FilterElement]()
-        self._filter_element = filter_element
-
-    @property
-    def start_date(self) -> Optional[datetime]:
-        return self._filter_element.start_date
-
-    @start_date.setter
-    def start_date(self, start_date: datetime) -> None:
-        self._filter_element.start_date = start_date
-        self._subject.notify(self._filter_element)
-
-    @property
-    def end_date(self) -> Optional[datetime]:
-        return self._filter_element.end_date
-
-    @end_date.setter
-    def end_date(self, end_date: datetime) -> None:
-        self._filter_element.end_date = end_date
-        self._subject.notify(self._filter_element)
-
-    @property
-    def classifications(self) -> list[str]:
-        return self._filter_element.classifications
-
-    @classifications.setter
-    def classifications(self, classifications: list[str]) -> None:
-        self._filter_element.classifications = classifications
-        self._subject.notify(self._filter_element)
-
-    def register(self, observer: Observer["FilterElement"]) -> None:
-        """Listen to filter element changes.
-
-        Args:
-            observer (Observer[&quot;FilterElement&quot;]): observer to be notified
-                about changes_
-        """
-        self._subject.register(observer)
-
-
 class TrackViewState:
     """
     This state represents the information to be shown on the ui.
@@ -199,13 +182,15 @@ class TrackViewState:
         filter_element_state (FilterElementState): the filter element state
     """
 
-    def __init__(self, filter_element_state: FilterElementState) -> None:
-        self.background_image = ObservableProperty[TrackImage]()
-        self.show_tracks = ObservableProperty[bool]()
-        self.track_offset = ObservableProperty[RelativeOffsetCoordinate](
+    def __init__(self) -> None:
+        self.background_image = ObservableOptionalProperty[TrackImage]()
+        self.show_tracks = ObservableOptionalProperty[bool]()
+        self.track_offset = ObservableOptionalProperty[RelativeOffsetCoordinate](
             RelativeOffsetCoordinate(0, 0)
         )
-        self.filter_element_state = filter_element_state
+        self.filter_element = ObservableProperty[FilterElement](
+            FilterElement(None, None, [])
+        )
 
 
 class Plotter(ABC):
@@ -233,9 +218,7 @@ class TrackImageUpdater(TrackListObserver):
         self._plotter = plotter
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
-        self._track_view_state.filter_element_state.register(
-            self._notify_filter_element
-        )
+        self._track_view_state.filter_element.register(self._notify_filter_element)
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """
@@ -269,7 +252,7 @@ class TrackImageUpdater(TrackListObserver):
         """
         self._update()
 
-    def _notify_filter_element(self, _: Optional[FilterElement]) -> None:
+    def _notify_filter_element(self, _: FilterElement) -> None:
         self._update()
 
     def _update(self) -> None:
@@ -294,7 +277,7 @@ class SectionState(SectionListObserver):
     """
 
     def __init__(self) -> None:
-        self.selected_section = ObservableProperty[SectionId]()
+        self.selected_section = ObservableOptionalProperty[SectionId]()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         """
