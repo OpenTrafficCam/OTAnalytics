@@ -114,6 +114,129 @@ class CanvasElementDeleter:
         self._canvas.delete(tag_or_id)
 
 
+class SectionKnobEditor:
+    def __init__(self, coordinate: tuple[int, int]):
+        self._initial_coordinate = coordinate
+
+
+class SectionGeometryEditor(CanvasObserver):
+    # TODO: Split responsibilities in SectionGeometryEditor and SectionKnobEditor
+    def __init__(
+        self,
+        viewmodel: ViewModel,
+        canvas: AbstractCanvas,
+        section: Section,
+        style: dict,
+    ) -> None:
+        self._viewmodel = viewmodel
+        self._canvas = canvas
+        self._section = section
+        self._style = style
+
+        self._selected_knob_coordinate: tuple[int, int] | None = None
+        self._temporary_id: str = TEMPORARY_SECTION_ID
+
+        self._get_coordinates()
+        self._get_name()
+
+        self.painter = CanvasElementPainter(canvas=canvas)
+        self.deleter = CanvasElementDeleter(canvas=canvas)
+
+    def _get_coordinates(self) -> None:
+        self._coordinates = [
+            (int(coordinate.x), int(coordinate.y))
+            for coordinate in self._section.get_coordinates()
+        ]
+        self._temporary_coordinates = self._coordinates.copy()
+
+    def _get_name(self) -> None:
+        self._name = self._section.id.id
+
+    def update(self, coordinate: tuple[int, int], event_type: str) -> None:
+        """Receives and reacts to updates issued by the canvas event handler
+
+        Args:
+            coordinates (tuple[int, int]): Coordinates clicked on canvas
+            event_type (str): Event type of canvas click
+        """
+        print(event_type)
+        if event_type == "left_mousebutton_down":
+            self._set_selected_knob_coordinate(coordinate)
+        elif event_type == "delete" and self._selected_knob_coordinate is not None:
+            self._delete_coordinate(coordinate_to_remove=coordinate)
+            self._redraw_temporary_section()
+        elif (
+            event_type == "mouse_motion" and self._selected_knob_coordinate is not None
+        ):
+            self._update_coordinate(temporary_coordinate=coordinate)
+            self._redraw_temporary_section()
+        elif (
+            event_type == "left_mousebutton_up"
+            and self._selected_knob_coordinate is not None
+        ):
+            self._update_coordinate(temporary_coordinate=coordinate)
+            self._redraw_temporary_section()
+            self._coordinates = self._temporary_coordinates.copy()
+            self._selected_knob_coordinate = None
+        elif event_type in {"return", "right_mousebutton_up"}:
+            self._finish()
+            self.detach_from(self._canvas.event_handler)
+        elif event_type == "escape":
+            self._abort()
+            self.detach_from(self._canvas.event_handler)
+
+    def _set_selected_knob_coordinate(
+        self, selected_coordinate: tuple[int, int]
+    ) -> None:
+        items_of_section = self._canvas.find_withtag(self._name)
+        knobs_on_canvas = self._canvas.find_withtag(KNOB)
+        items_in_and_by_distance = self._canvas.find_closest(
+            x=selected_coordinate[0], y=selected_coordinate[1]
+        )
+        unordered_knobs_to_consider = tuple(
+            set(items_in_and_by_distance)
+            .intersection(set(items_of_section))
+            .intersection(set(knobs_on_canvas))
+        )
+        ordered_knobs_to_consider = tuple(
+            filter(lambda x: x in items_in_and_by_distance, unordered_knobs_to_consider)
+        )
+        closest_knob_bbox = self._canvas.coords(ordered_knobs_to_consider[0])
+        self._selected_knob_coordinate = (
+            closest_knob_bbox[3] - closest_knob_bbox[0],
+            closest_knob_bbox[2] - closest_knob_bbox[1],
+        )
+
+    def _update_coordinate(self, temporary_coordinate: tuple[int, int]) -> None:
+        self._temporary_coordinates = [
+            temporary_coordinate if _ == self._selected_knob_coordinate else _
+            for _ in self._coordinates
+        ]
+
+    def _delete_coordinate(self, coordinate_to_remove: tuple[int, int]) -> None:
+        self._temporary_coordinates = [
+            _ for _ in self._coordinates if _ != coordinate_to_remove
+        ]
+
+    def _redraw_temporary_section(self) -> None:
+        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.painter.draw(
+            tags=["temporary_line_section"],
+            id=self._temporary_id,
+            coordinates=self._temporary_coordinates,
+            style=self._style,
+        )
+
+    def _finish(self) -> None:
+        self._create_section()
+
+    def _create_section(self) -> None:
+        pass  # TODO: See SectionBuilder
+
+    def _abort(self) -> None:
+        self.deleter.delete(tag_or_id="temporary_line_section")
+
+
 class SectionGeometryBuilder:
     def __init__(
         self,
