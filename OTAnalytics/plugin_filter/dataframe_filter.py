@@ -48,19 +48,24 @@ class DataFramePredicate(Predicate[DataFrame, Series]):
 
 
 class DataFrameFilter(Filter[DataFrame, Series]):
-    def __init__(self, predicate: Optional[Predicate[DataFrame, Series]]) -> None:
+    def __init__(self, predicate: Predicate[DataFrame, Series]) -> None:
         """A `DataFrame` filter.
 
         Args:
             predicate (Optional[Predicate[DataFrame, Series]]): the predicate to test
-                the DataFrame against.
+                the DataFrame against
         """
-        super().__init__(predicate)
+        self._predicate = predicate
 
     def apply(self, data: Iterable[DataFrame]) -> Iterable[DataFrame]:
-        if self._predicate is None:
-            return data
         return [datum[self._predicate.test(datum)] for datum in data]
+
+
+class NoOpDataFrameFilter(Filter[DataFrame, Series]):
+    """Returns the DataFrame as is without any filtering."""
+
+    def apply(self, iterable: Iterable[DataFrame]) -> Iterable[DataFrame]:
+        return iterable
 
 
 class DataFrameIsWithinDate(DataFramePredicate):
@@ -116,7 +121,9 @@ class DataFrameFilterBuilder(FilterBuilder):
         self._classification_column: Optional[str] = None
         self._occurrence_column: Optional[str] = None
 
-    def build(self) -> DataFrameFilter:
+    def build(self) -> Filter[DataFrame, Series]:
+        if self._complex_predicate is None:
+            return NoOpDataFrameFilter()
         return DataFrameFilter(self._complex_predicate)
 
     def add_has_classifications_predicate(self, classifications: list[str]) -> None:

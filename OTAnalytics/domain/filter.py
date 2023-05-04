@@ -45,29 +45,22 @@ class Predicate(ABC, Generic[T, S]):
 
 
 class Conjunction(Predicate[T, S]):
+    """Conjuncts two predicates.
+
+    Args:
+        first_predicate (Predicate[T, S]): the first predicate to conjunct with
+        second_predicate (Predicate[T, S]): the second predicate to conjunct with
+    """
+
     def __init__(
         self, first_predicate: Predicate[T, S], second_predicate: Predicate[T, S]
     ) -> None:
-        """Conjuncts two predicates.
-
-        Args:
-            first_predicate (Predicate[T, S]): the first predicate to conjunct with
-            second_predicate (Predicate[T, S]): the second predicate to conjunct with
-        """
         self._first_predicate = first_predicate
         self._second_predicate = second_predicate
 
 
 class Filter(ABC, Generic[T, S]):
-    """Filter out elements of an iterable that don't fulfill the predicate.
-
-    Args:
-        predicate (Predicate[T, S]): the predicate which is used to test the elements
-            against.
-    """
-
-    def __init__(self, predicate: Optional[Predicate[T, S]]) -> None:
-        self._predicate = predicate
+    """Filter out elements of an iterable that don't fulfill the predicate."""
 
     @abstractmethod
     def apply(self, iterable: Iterable[T]) -> Iterable[T]:
@@ -77,9 +70,7 @@ class Filter(ABC, Generic[T, S]):
             iterable (Iterable[T]): the iterable to apply the filter on
 
         Returns:
-            Iterable[T]: all elements in the iterable that fulfill the predicate.
-                If there is no predicate to filter against, the original iterable will
-                be returned.
+            Iterable[T]: the filtered iterable
         """
         pass
 

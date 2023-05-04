@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Iterable
+from unittest.mock import Mock
 
 import pytest
 from pandas import DataFrame, Series
@@ -16,11 +17,11 @@ from OTAnalytics.domain.track import (
     Track,
 )
 from OTAnalytics.plugin_filter.dataframe_filter import (
-    DataFrameConjunction,
     DataFrameFilter,
     DataFrameFilterBuilder,
     DataFrameHasClassifications,
     DataFrameIsWithinDate,
+    NoOpDataFrameFilter,
 )
 from tests.conftest import TrackBuilder
 
@@ -133,6 +134,14 @@ class TestDataFrameFilter:
         assert result[0].equals(track_dataframe)
 
 
+class TestNoOpDataFrameFilter:
+    def test_apply(self) -> None:
+        track_filter = NoOpDataFrameFilter()
+        iterable = [Mock()]
+        result = track_filter.apply(iterable)
+        assert result == iterable
+
+
 class TestDataFrameFilterBuilder:
     def test_add_is_within_predicate(self) -> None:
         start_date = datetime(2000, 1, 1)
@@ -143,6 +152,7 @@ class TestDataFrameFilterBuilder:
         builder.add_is_within_date_predicate(start_date, end_date)
 
         dataframe_filter = builder.build()
+        assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) == DataFrameIsWithinDate
         assert dataframe_filter._predicate._start_date == start_date
         assert dataframe_filter._predicate._end_date == end_date
@@ -155,6 +165,7 @@ class TestDataFrameFilterBuilder:
         builder.add_has_classifications_predicate(classifications)
 
         dataframe_filter = builder.build()
+        assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) == DataFrameHasClassifications
         assert dataframe_filter._predicate._classifications == classifications
 
@@ -186,8 +197,7 @@ class TestDataFrameFilterBuilder:
         builder.add_has_classifications_predicate(classifications)
 
         dataframe_filter = builder.build()
-        assert type(dataframe_filter._predicate) == DataFrameConjunction
-
+        assert hasattr(dataframe_filter, "_predicate")
         assert (
             type(dataframe_filter._predicate._first_predicate) == DataFrameIsWithinDate
         )
@@ -198,3 +208,9 @@ class TestDataFrameFilterBuilder:
 
         assert dataframe_filter._predicate._first_predicate._start_date == start_date
         assert dataframe_filter._predicate._first_predicate._end_date == end_date
+
+    def test_create_noop_filter_if_no_predicate_added(self) -> None:
+        builder = DataFrameFilterBuilder()
+        track_filter = builder.build()
+
+        assert type(track_filter) == NoOpDataFrameFilter

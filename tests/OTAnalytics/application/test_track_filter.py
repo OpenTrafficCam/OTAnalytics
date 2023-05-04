@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from OTAnalytics.application.track_filter import (
+    NoOpTrackFilter,
     TrackFilter,
     TrackFilterBuilder,
     TrackHasClassifications,
@@ -109,6 +110,14 @@ class TestTrackFilter:
         assert result == [track]
 
 
+class TestNoOpTrackFilter:
+    def test_apply(self) -> None:
+        track_filter = NoOpTrackFilter()
+        iterable = [Mock()]
+        result = track_filter.apply(iterable)
+        assert result == iterable
+
+
 class TestTrackFilterBuilder:
     def test_add_is_within_date_predicate(self) -> None:
         start_date = datetime(2000, 1, 1)
@@ -118,6 +127,7 @@ class TestTrackFilterBuilder:
         builder.add_is_within_date_predicate(start_date, end_date)
 
         track_filter = builder.build()
+        assert hasattr(track_filter, "_predicate")
         assert type(track_filter._predicate) == TrackIsWithinDate
         assert track_filter._predicate._start_date == start_date
         assert track_filter._predicate._end_date == end_date
@@ -128,6 +138,7 @@ class TestTrackFilterBuilder:
         builder.add_has_classifications_predicate(classifications)
 
         track_filter = builder.build()
+        assert hasattr(track_filter, "_predicate")
         assert type(track_filter._predicate) == TrackHasClassifications
         assert track_filter._predicate._classifications == classifications
 
@@ -175,3 +186,9 @@ class TestTrackFilterBuilder:
         builder._conjunct(second_predicate)
 
         assert builder._complex_predicate == complex_predicate
+
+    def test_create_noop_filter_if_no_predicate_added(self) -> None:
+        builder = TrackFilterBuilder()
+        track_filter = builder.build()
+
+        assert type(track_filter) == NoOpTrackFilter

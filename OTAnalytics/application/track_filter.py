@@ -81,15 +81,26 @@ class TrackHasClassifications(TrackPredicate):
 
 
 class TrackFilter(Filter[Track, bool]):
-    """A `Track` filter."""
+    """A `Track` filter.
 
-    def __init__(self, predicate: Optional[Predicate[Track, bool]]) -> None:
-        super().__init__(predicate)
+    Args:
+        Filter (Filter[Track, bool]): extends the `Filter` interface
+        predicate (Predicate[Track, bool]): the predicate to test against during
+            filtering
+    """
+
+    def __init__(self, predicate: Predicate[Track, bool]) -> None:
+        self._predicate = predicate
 
     def apply(self, data: Iterable[Track]) -> Iterable[Track]:
-        if self._predicate is None:
-            return data
         return [datum for datum in data if self._predicate.test(datum)]
+
+
+class NoOpTrackFilter(Filter[Track, bool]):
+    """Returns the tracks as is without any filtering."""
+
+    def apply(self, iterable: Iterable[Track]) -> Iterable[Track]:
+        return iterable
 
 
 class TrackFilterBuilder(FilterBuilder):
@@ -108,7 +119,10 @@ class TrackFilterBuilder(FilterBuilder):
         predicate = TrackIsWithinDate(start_date, end_date)
         self._conjunct(predicate)
 
-    def build(self) -> TrackFilter:
+    def build(self) -> Filter[Track, bool]:
+        if self._complex_predicate is None:
+            return NoOpTrackFilter()
+
         return TrackFilter(self._complex_predicate)
 
     def _conjunct(self, predicate: Predicate[Track, bool]) -> None:
