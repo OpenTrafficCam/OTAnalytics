@@ -62,7 +62,7 @@ def track_dataframe(track: Track) -> DataFrame:
 
 
 class TestDataFrameStartsAtOrAfterDate:
-    def test_within_range(self, track_dataframe: DataFrame) -> None:
+    def test_starts_at_or_after_date(self, track_dataframe: DataFrame) -> None:
         start_date = datetime(2000, 1, 1)
 
         predicate = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)

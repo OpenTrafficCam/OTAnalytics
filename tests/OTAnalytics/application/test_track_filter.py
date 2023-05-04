@@ -28,7 +28,7 @@ def track(track_builder: TrackBuilder) -> Track:
 
 
 class TestTrackStartsAtOrAfterDate:
-    def test_date_within_range(self, track: Track) -> None:
+    def test_starts_at_or_after_date(self, track: Track) -> None:
         start_date = datetime(2000, 1, 1)
 
         predicate = TrackStartsAtOrAfterDate(start_date)
@@ -44,7 +44,7 @@ class TestTrackStartsAtOrAfterDate:
 
 
 class TestTrackEndBeforeOrAtDate:
-    def test_date_within_range(self, track: Track) -> None:
+    def test_ends_before_or_at_date(self, track: Track) -> None:
         end_date = datetime(2000, 1, 3)
 
         predicate = TrackEndsBeforeOrAtDate(end_date)
