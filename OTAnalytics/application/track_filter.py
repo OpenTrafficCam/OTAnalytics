@@ -35,24 +35,32 @@ class TrackPredicate(Predicate[Track, bool]):
         return TrackConjunction(self, other)
 
 
-class TrackIsWithinDate(TrackPredicate):
-    """Checks if a track is within a date range.
+class TrackStartsAtOrAfterDate(TrackPredicate):
+    """Checks if a track starts at or after date.
 
     Args:
-        start_date (datetime): start date of the date range (inclusive)
-        end_date (datetime): end date of the date range (inclusive)
+        start_date (datetime): the start date to evaluate against (inclusive)
     """
 
-    def __init__(
-        self,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> None:
+    def __init__(self, start_date: datetime) -> None:
         self._start_date = start_date
+
+    def test(self, to_test: Track) -> bool:
+        return self._start_date <= to_test.detections[0].occurrence
+
+
+class TrackEndsBeforeOrAtDate(TrackPredicate):
+    """Checks if a track ends before or at date.
+
+    Args:
+        end_date (datetime): the end date to evaluate against (inclusive)
+    """
+
+    def __init__(self, end_date: datetime) -> None:
         self._end_date = end_date
 
     def test(self, to_test: Track) -> bool:
-        return self._start_date <= to_test.detections[0].occurrence <= self._end_date
+        return to_test.detections[0].occurrence <= self._end_date
 
 
 class TrackHasClassifications(TrackPredicate):
@@ -113,10 +121,12 @@ class TrackFilterBuilder(FilterBuilder):
         predicate = TrackHasClassifications(classifications)
         self._conjunct(predicate)
 
-    def add_is_within_date_predicate(
-        self, start_date: datetime, end_date: datetime
-    ) -> None:
-        predicate = TrackIsWithinDate(start_date, end_date)
+    def add_starts_at_or_after_date_predicate(self, start_date: datetime) -> None:
+        predicate = TrackStartsAtOrAfterDate(start_date)
+        self._conjunct(predicate)
+
+    def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
+        predicate = TrackEndsBeforeOrAtDate(end_date)
         self._conjunct(predicate)
 
     def build(self) -> Filter[Track, bool]:

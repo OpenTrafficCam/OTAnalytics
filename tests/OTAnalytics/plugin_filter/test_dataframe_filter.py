@@ -17,10 +17,11 @@ from OTAnalytics.domain.track import (
     Track,
 )
 from OTAnalytics.plugin_filter.dataframe_filter import (
+    DataFrameEndsBeforeOrAtDate,
     DataFrameFilter,
     DataFrameFilterBuilder,
     DataFrameHasClassifications,
-    DataFrameIsWithinDate,
+    DataFrameStartsAtOrAfterDate,
     NoOpDataFrameFilter,
 )
 from tests.conftest import TrackBuilder
@@ -60,20 +61,18 @@ def track_dataframe(track: Track) -> DataFrame:
     return convert_tracks_to_dataframe([track])
 
 
-class TestDataFrameIsWithinDate:
+class TestDataFrameStartsAtOrAfterDate:
     def test_within_range(self, track_dataframe: DataFrame) -> None:
         start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
 
-        predicate = DataFrameIsWithinDate(OCCURRENCE, start_date, end_date)
+        predicate = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
         result = predicate.test(track_dataframe)
         assert result.equals(Series([True, True, True, True, True]))
 
     def test_outside_range(self, track_dataframe: DataFrame) -> None:
         start_date = datetime(2000, 1, 10)
-        end_date = datetime(2000, 1, 12)
 
-        predicate = DataFrameIsWithinDate(OCCURRENCE, start_date, end_date)
+        predicate = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
         result = predicate.test(track_dataframe)
         assert result.equals(Series([False, False, False, False, False]))
 
@@ -95,24 +94,26 @@ class TestDataFrameHasClassification:
 class TestDataFramePredicateConjunction:
     def test_conjunct_predicate_fulfilled(self, track_dataframe: DataFrame) -> None:
         start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
-        is_within_date = DataFrameIsWithinDate(OCCURRENCE, start_date, end_date)
+        starts_at_or_after_date = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
         has_classifications = DataFrameHasClassifications(
             CLASSIFICATION, ["car", "truck"]
         )
-        has_class_and_within_date = is_within_date.conjunct_with(has_classifications)
+        has_class_and_within_date = starts_at_or_after_date.conjunct_with(
+            has_classifications
+        )
         result = has_class_and_within_date.test(track_dataframe)
 
         assert result.equals(Series([True, True, True, True, True]))
 
     def test_conjunct_predicate_not_fulfilled(self, track_dataframe: DataFrame) -> None:
-        start_date = datetime(2000, 1, 10)
-        end_date = datetime(2000, 1, 11)
-        is_within_date = DataFrameIsWithinDate(OCCURRENCE, start_date, end_date)
+        start_date = datetime(2000, 1, 11)
+        starts_at_or_after_date = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
         has_classifications = DataFrameHasClassifications(
             CLASSIFICATION, ["car", "truck"]
         )
-        has_class_and_within_date = is_within_date.conjunct_with(has_classifications)
+        has_class_and_within_date = starts_at_or_after_date.conjunct_with(
+            has_classifications
+        )
         result = has_class_and_within_date.test(track_dataframe)
 
         assert result.equals(Series([False, False, False, False, False]))
@@ -121,12 +122,13 @@ class TestDataFramePredicateConjunction:
 class TestDataFrameFilter:
     def test_filter_tracks_fulfill_all(self, track_dataframe: DataFrame) -> None:
         start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
-        is_within_date = DataFrameIsWithinDate(OCCURRENCE, start_date, end_date)
+        starts_at_or_after_date = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
         has_classifications = DataFrameHasClassifications(
             CLASSIFICATION, ["car", "truck"]
         )
-        has_class_and_within_date = is_within_date.conjunct_with(has_classifications)
+        has_class_and_within_date = starts_at_or_after_date.conjunct_with(
+            has_classifications
+        )
         dataframe_filter = DataFrameFilter(has_class_and_within_date)
 
         result = list(dataframe_filter.apply([track_dataframe]))
@@ -143,18 +145,28 @@ class TestNoOpDataFrameFilter:
 
 
 class TestDataFrameFilterBuilder:
-    def test_add_is_within_predicate(self) -> None:
+    def test_add_starts_at_or_after_date_predicate(self) -> None:
         start_date = datetime(2000, 1, 1)
+
+        builder = DataFrameFilterBuilder()
+        builder.set_occurrence_column(OCCURRENCE)
+        builder.add_starts_at_or_after_date_predicate(start_date)
+
+        dataframe_filter = builder.build()
+        assert hasattr(dataframe_filter, "_predicate")
+        assert type(dataframe_filter._predicate) == DataFrameStartsAtOrAfterDate
+        assert dataframe_filter._predicate._start_date == start_date
+
+    def test_add_ends_before_or_at_date_predicate(self) -> None:
         end_date = datetime(2000, 1, 3)
 
         builder = DataFrameFilterBuilder()
         builder.set_occurrence_column(OCCURRENCE)
-        builder.add_is_within_date_predicate(start_date, end_date)
+        builder.add_ends_before_or_at_date_predicate(end_date)
 
         dataframe_filter = builder.build()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) == DataFrameIsWithinDate
-        assert dataframe_filter._predicate._start_date == start_date
+        assert type(dataframe_filter._predicate) == DataFrameEndsBeforeOrAtDate
         assert dataframe_filter._predicate._end_date == end_date
 
     def test_add_has_classifications_predicate(self) -> None:
@@ -176,22 +188,27 @@ class TestDataFrameFilterBuilder:
         with pytest.raises(FilterBuildError):
             builder.add_has_classifications_predicate(classifications)
 
-    def test_add_is_within_date_predicate_raise_error(self) -> None:
+    def test_add_starts_at_or_after_date_predicate_raise_error(self) -> None:
         start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
         builder = DataFrameFilterBuilder()
 
         with pytest.raises(FilterBuildError):
-            builder.add_is_within_date_predicate(start_date, end_date)
+            builder.add_starts_at_or_after_date_predicate(start_date)
+
+    def test_add_ends_before_or_date_predicate_raise_error(self) -> None:
+        end_date = datetime(2000, 1, 1)
+        builder = DataFrameFilterBuilder()
+
+        with pytest.raises(FilterBuildError):
+            builder.add_ends_before_or_at_date_predicate(end_date)
 
     def test_add_multiple_predicates(self) -> None:
-        start_date = datetime(2000, 1, 1)
         end_date = datetime(2000, 1, 3)
         classifications = ["car", "truck"]
 
         builder = DataFrameFilterBuilder()
         builder.set_occurrence_column(OCCURRENCE)
-        builder.add_is_within_date_predicate(start_date, end_date)
+        builder.add_ends_before_or_at_date_predicate(end_date)
 
         builder.set_classification_column(CLASSIFICATION)
         builder.add_has_classifications_predicate(classifications)
@@ -199,14 +216,14 @@ class TestDataFrameFilterBuilder:
         dataframe_filter = builder.build()
         assert hasattr(dataframe_filter, "_predicate")
         assert (
-            type(dataframe_filter._predicate._first_predicate) == DataFrameIsWithinDate
+            type(dataframe_filter._predicate._first_predicate)
+            == DataFrameEndsBeforeOrAtDate
         )
         assert (
             type(dataframe_filter._predicate._second_predicate)
             == DataFrameHasClassifications
         )
 
-        assert dataframe_filter._predicate._first_predicate._start_date == start_date
         assert dataframe_filter._predicate._first_predicate._end_date == end_date
 
     def test_create_noop_filter_if_no_predicate_added(self) -> None:

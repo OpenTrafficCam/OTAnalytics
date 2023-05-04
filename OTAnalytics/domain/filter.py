@@ -92,13 +92,18 @@ class FilterBuilder:
         pass
 
     @abstractmethod
-    def add_is_within_date_predicate(
-        self, start_date: datetime, end_date: datetime
-    ) -> None:
-        """Add is within date predicate.
+    def add_starts_at_or_after_date_predicate(self, start_date: datetime) -> None:
+        """Add starts at or after date predicate.
 
         Args:
             start_date (datetime): the start date (inclusive)
+        """
+        pass
+
+    def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
+        """Add is ends before or at date predicate.
+
+        Args:
             end_date (datetime): the end date (inclusive)
         """
         pass
@@ -145,5 +150,9 @@ class FilterElement:
             filter_builder.add_has_classifications_predicate(self.classifications)
 
         if self.start_date and self.end_date:
-            filter_builder.add_is_within_date_predicate(self.start_date, self.end_date)
+            filter_builder.add_starts_at_or_after_date_predicate(self.start_date)
+
+        if self.end_date:
+            filter_builder.add_ends_before_or_at_date_predicate(self.end_date)
+
         return filter_builder.build()
