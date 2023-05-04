@@ -44,7 +44,7 @@ class TracksFrame(AbstractFrameTracks):
         )
         self.button_update_offset = CTkButton(
             master=self,
-            text="Update Plot",
+            text="Update plot",
             command=self._on_change_offset,
         )
         self.button_change_to_section_offset = CTkButton(

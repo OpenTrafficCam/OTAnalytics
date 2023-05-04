@@ -1,3 +1,4 @@
+from tkinter.filedialog import asksaveasfilename
 from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
@@ -22,7 +23,7 @@ class FrameAnalysis(CTkFrame):
         )
         self.button_save_eventlist = CTkButton(
             master=self,
-            text="Save Eventlist",
+            text="Save eventlist",
             command=self._save_eventlist,
         )
 
@@ -40,11 +41,11 @@ class FrameAnalysis(CTkFrame):
         self._viewmodel.start_analysis()
 
     def _save_eventlist(self) -> None:
-        file = "./events.json.bz2"
-        # asksaveasfilename(
-        #     title="Load sections file",
-        #     filetypes=[("events file", "*.json.bz2")],
-        #     initialdir=Path("."),
-        # )
-        print(f"Eventlist file to save: {file}")
+        file = asksaveasfilename(
+            title="Save event list file as",
+            filetypes=[("events file", "*.otevents")],
+            defaultextension=".otevents",
+        )
+        if not file:
+            return
         self._viewmodel.save_events(file)

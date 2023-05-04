@@ -7,12 +7,10 @@ from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate, X,
 from OTAnalytics.domain.section import (
     AREA,
     COORDINATES,
-    END,
     ID,
     LINE,
     PLUGIN_DATA,
     RELATIVE_OFFSET_COORDINATES,
-    START,
     TYPE,
     Area,
     LineSection,
@@ -46,8 +44,7 @@ class TestLineSection:
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
                 plugin_data={},
-                start=Coordinate(0, 0),
-                end=Coordinate(0, 0),
+                coordinates=[Coordinate(0, 0), Coordinate(0, 0)],
             )
 
     def test_valid_line_section(self) -> None:
@@ -57,22 +54,21 @@ class TestLineSection:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 0),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
         )
 
     def test_to_dict(self) -> None:
         section_id = SectionId("some")
         start = Coordinate(0, 0)
         end = Coordinate(1, 1)
+        coordinates = [start, end]
         section = LineSection(
             id=section_id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=start,
-            end=end,
+            coordinates=coordinates,
         )
 
         section_dict = section.to_dict()
@@ -83,8 +79,7 @@ class TestLineSection:
             RELATIVE_OFFSET_COORDINATES: {
                 EventType.SECTION_ENTER.serialize(): {X: 0, Y: 0}
             },
-            START: start.to_dict(),
-            END: end.to_dict(),
+            COORDINATES: [coordinate.to_dict() for coordinate in coordinates],
             PLUGIN_DATA: {},
         }
 
@@ -93,19 +88,18 @@ class TestLineSection:
         id = "N"
         start = Coordinate(0, 0)
         end = Coordinate(10, 10)
+        coordinates = [start, end]
         line = LineSection(
             id=SectionId(id),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data=plugin_data,
-            start=start,
-            end=end,
+            coordinates=coordinates,
         )
         assert line.id == SectionId(id)
         assert line.plugin_data == plugin_data
-        assert line.start == start
-        assert line.end == end
+        assert line.coordinates == coordinates
 
 
 class TestAreaSection:
@@ -280,8 +274,7 @@ class TestSectionRepository:
             section_id,
             {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
             {},
-            start=Coordinate(0, 0),
-            end=Coordinate(10, 10),
+            coordinates=[Coordinate(0, 0), Coordinate(10, 10)],
         )
 
         repository = SectionRepository()
@@ -307,8 +300,7 @@ class TestSectionRepository:
             section_id,
             {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
             {key: old_plugin_data},
-            start=Coordinate(0, 0),
-            end=Coordinate(10, 10),
+            coordinates=[Coordinate(0, 0), Coordinate(10, 10)],
         )
 
         repository = SectionRepository()

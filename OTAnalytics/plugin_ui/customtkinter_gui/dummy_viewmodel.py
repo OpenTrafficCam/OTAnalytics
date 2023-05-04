@@ -12,9 +12,8 @@ from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.section import (
-    END,
+    COORDINATES,
     ID,
-    START,
     MissingSection,
     Section,
     SectionId,
@@ -28,6 +27,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     SectionBuilder,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.style import (
+    DEFAULT_SECTION_STYLE,
+    EDITED_SECTION_STYLE,
+    SELECTED_SECTION_STYLE,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
@@ -126,6 +130,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        self.refresh_sections_on_gui()
         self._treeview_sections.update_items()
         self._treeview_flows.update_items()
 
@@ -150,6 +155,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
+        self.refresh_sections_on_gui()
         self._treeview_sections.update_selected_items(self._selected_section_id)
 
     def _update_selected_flow(self, flow_id: Optional[str]) -> None:
@@ -162,6 +168,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def set_selected_flow_id(self, id: Optional[str]) -> None:
         self._application.section_state.selected_flow.set(id)
+        self.refresh_sections_on_gui()
 
     def set_selected_section_id(self, id: Optional[str]) -> None:
         self._selected_section_id = id
@@ -212,14 +219,15 @@ class DummyViewModel(ViewModel, SectionListObserver):
             return
 
     def add_section(self) -> None:
+        self.set_selected_section_id(None)
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
-        SectionBuilder(viewmodel=self, canvas=self._canvas)
+        SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
 
     def set_new_section(self, section: Section) -> None:
         self._application.add_section(section)
         print(f"New line_section created: {section}")
-        self.refresh_sections_on_gui()
+        self._update_selected_section(section.id)
 
     def edit_section_geometry(self) -> None:
         if self._selected_section_id is None:
@@ -234,7 +242,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
             current_section = self._application.get_section_for(
                 SectionId(self._selected_section_id)
             )
-        SectionBuilder(viewmodel=self, canvas=self._canvas, section=current_section)
+        SectionBuilder(
+            viewmodel=self,
+            canvas=self._canvas,
+            section=current_section,
+            style=EDITED_SECTION_STYLE,
+        )
         self.refresh_sections_on_gui()
 
     def edit_section_metadata(self) -> None:
@@ -295,12 +308,17 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         painter = CanvasElementPainter(canvas=self._canvas)
-        for line_section in self._get_sections():
+        for section in self._get_sections():
+            if section[ID] == self._selected_section_id:
+                style = SELECTED_SECTION_STYLE
+            else:
+                style = DEFAULT_SECTION_STYLE
             painter.draw(
                 tags=[LINE_SECTION],
-                id=line_section[ID],
-                start=line_section[START],
-                end=line_section[END],
+                id=section[ID],
+                start=section[COORDINATES][0],
+                end=section[COORDINATES][-1],
+                style=style,
             )
 
     def _get_sections(self) -> Iterable[dict]:
@@ -313,8 +331,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
         )
 
     def _transform_coordinates(self, section: dict) -> dict:
-        section[START] = self._to_coordinate_tuple(section[START])
-        section[END] = self._to_coordinate_tuple(section[END])
+        section[COORDINATES] = [
+            self._to_coordinate_tuple(coordinate) for coordinate in section[COORDINATES]
+        ]
         return section
 
     def _to_coordinate_tuple(self, coordinate: dict) -> tuple[int, int]:
@@ -440,6 +459,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._application.start_analysis()
 
     def save_events(self, file: str) -> None:
+        print(f"Eventlist file to save: {file}")
         self._application.save_events(Path(file))
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:

@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 import ujson
 
+from OTAnalytics import version
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
@@ -35,8 +36,12 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
-from OTAnalytics.plugin_parser import ottrk_dataformat
+from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
+    EVENT_FORMAT_VERSION,
+    METADATA,
+    SECTION_FORMAT_VERSION,
+    VERSION,
     InvalidSectionData,
     OtEventListParser,
     OtsectionParser,
@@ -290,8 +295,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "key_2": "some_data"},
-            start=first_coordinate,
-            end=second_coordinate,
+            coordinates=[first_coordinate, second_coordinate],
         )
         area_section: Section = Area(
             id=SectionId("other"),
@@ -329,8 +333,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 1),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
         )
         other_section: Section = LineSection(
             id=SectionId("other"),
@@ -338,8 +341,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(1, 0),
-            end=Coordinate(0, 1),
+            coordinates=[Coordinate(1, 0), Coordinate(0, 1)],
         )
         sections = [some_section, other_section]
         parser = OtsectionParser()
@@ -359,8 +361,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=start,
-            end=end,
+            coordinates=[start, end],
         )
 
         section_data = {
@@ -374,14 +375,16 @@ class TestOtsectionParser:
                             geometry.Y: 0,
                         }
                     },
-                    section.START: {
-                        geometry.X: 0,
-                        geometry.Y: 0,
-                    },
-                    section.END: {
-                        geometry.X: 1,
-                        geometry.Y: 1,
-                    },
+                    section.COORDINATES: [
+                        {
+                            geometry.X: 0,
+                            geometry.Y: 0,
+                        },
+                        {
+                            geometry.X: 1,
+                            geometry.Y: 1,
+                        },
+                    ],
                 }
             ]
         }
@@ -402,8 +405,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "1": "some_data"},
-            start=start,
-            end=end,
+            coordinates=[start, end],
         )
 
         section_data = {
@@ -417,14 +419,10 @@ class TestOtsectionParser:
                             geometry.Y: 0,
                         }
                     },
-                    section.START: {
-                        geometry.X: 0,
-                        geometry.Y: 0,
-                    },
-                    section.END: {
-                        geometry.X: 1,
-                        geometry.Y: 1,
-                    },
+                    section.COORDINATES: [
+                        {geometry.X: 0, geometry.Y: 0},
+                        {geometry.X: 1, geometry.Y: 1},
+                    ],
                     section.PLUGIN_DATA: {"key_1": "some_data", "1": "some_data"},
                 }
             ]
@@ -477,8 +475,7 @@ class TestOtEventListParser:
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
             },
             plugin_data={"foo": "bar"},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 0),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
         )
         area_section = Area(
             id=SectionId("S"),
@@ -502,6 +499,11 @@ class TestOtEventListParser:
         content = event_list_parser._convert(events, sections)
 
         assert content == {
+            METADATA: {
+                VERSION: version.__version__,
+                SECTION_FORMAT_VERSION: dataformat_versions.otsection_version(),
+                EVENT_FORMAT_VERSION: dataformat_versions.otevent_version(),
+            },
             SECTIONS: [line_section.to_dict(), area_section.to_dict()],
             EVENT_LIST: [first_event.to_dict(), second_event.to_dict()],
         }

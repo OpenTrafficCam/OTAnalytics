@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, Iterable, Optional, TypeVar
+from typing import Callable, Generic, Optional, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
+from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.domain.track import (
-    Track,
     TrackId,
     TrackImage,
     TrackListObserver,
@@ -147,34 +146,11 @@ class TrackViewState:
         )
 
 
-class TrackPlotter(ABC):
-    """
-    Abstraction to plot the background image.
-    """
+class Plotter(ABC):
+    """Abstraction to plot the background image."""
 
     @abstractmethod
-    def plot(
-        self,
-        tracks: Iterable[Track],
-        sections: Iterable[Section],
-        width: int,
-        height: int,
-        filter_classes: Iterable[str] = (
-            "car",
-            "motorcycle",
-            "person",
-            "truck",
-            "bicycle",
-            "train",
-        ),
-        num_min_frames: int = 30,
-        start_time: str = "",
-        end_time: str = "2022-09-15 07:05:00",
-        start_end: bool = True,
-        plot_sections: bool = True,
-        alpha: float = 0.1,
-        offset: Optional[RelativeOffsetCoordinate] = RelativeOffsetCoordinate(0, 0),
-    ) -> TrackImage:
+    def plot(self) -> Optional[TrackImage]:
         pass
 
 
@@ -188,11 +164,11 @@ class TrackImageUpdater(TrackListObserver):
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
-        track_plotter: TrackPlotter,
+        plotter: Plotter,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
-        self._track_plotter = track_plotter
+        self._plotter = plotter
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
 
@@ -208,7 +184,7 @@ class TrackImageUpdater(TrackListObserver):
         """
         if not tracks:
             raise IndexError("No tracks changed")
-        self._update_image(tracks[0])
+        self._update_image()
 
     def _notify_show_tracks(self, show_tracks: Optional[bool]) -> None:
         """
@@ -232,29 +208,16 @@ class TrackImageUpdater(TrackListObserver):
         """
         Update the image if at least one track is available.
         """
-        if track := next(iter(self._datastore.get_all_tracks())):
-            self._update_image(track.id)
+        self._update_image()
 
-    def _update_image(self, track_id: TrackId) -> None:
+    def _update_image(self) -> None:
         """
         Updates the current background image with or without tracks and sections.
 
         Args:
             track_id (TrackId): track id used to get the video image
         """
-        if new_image := self._datastore.get_image_of_track(track_id):
-            if self._track_view_state.show_tracks.get():
-                track_image = self._track_plotter.plot(
-                    self._datastore.get_all_tracks(),
-                    self._datastore.get_all_sections(),
-                    width=new_image.width(),
-                    height=new_image.height(),
-                    offset=self._track_view_state.track_offset.get(),
-                )
-                combined_image = new_image.add(track_image)
-                self._track_view_state.background_image.set(combined_image)
-            else:
-                self._track_view_state.background_image.set(new_image)
+        self._track_view_state.background_image.set(self._plotter.plot())
 
 
 class SectionState(SectionListObserver):

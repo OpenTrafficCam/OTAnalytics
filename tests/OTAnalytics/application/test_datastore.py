@@ -186,8 +186,7 @@ class TestDatastore:
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
                 plugin_data={},
-                start=Coordinate(0, 0),
-                end=Coordinate(1, 1),
+                coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
             )
         )
         store.save_section_file(some_file)
