@@ -6,14 +6,14 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     ObservableProperty,
     Observer,
+    Plotter,
     SectionState,
     TrackImageUpdater,
     TrackObserver,
-    TrackPlotter,
     TrackState,
     TrackViewState,
 )
-from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Track, TrackId, TrackImage
 
 
@@ -81,28 +81,20 @@ class TestObservableProperty:
 
 class TestTrackImageUpdater:
     def test_update_image(self) -> None:
+        plotter = Mock(spec=Plotter)
+        background_image = Mock(spec=TrackImage)
+        plotter.plot.return_value = background_image
         track_id = TrackId(1)
         track = Mock(spec=Track)
-        all_tracks = [track]
-        all_sections = [Mock(spec=Section)]
-        background_image = Mock(spec=TrackImage)
-        plotted_tracks = Mock(spec=TrackImage)
-        combined_image = Mock(spec=TrackImage)
         datastore = Mock(spec=Datastore)
         track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
-        track_plotter = Mock(sepc=TrackPlotter)
         track.id = track_id
-        datastore.get_all_tracks.return_value = all_tracks
-        datastore.get_all_sections.return_value = all_sections
-        background_image.width.return_value = 100
-        background_image.height.return_value = 100
-        background_image.add.return_value = combined_image
-        datastore.get_image_of_track.return_value = background_image
-        track_plotter.plot.return_value = plotted_tracks
-        updater = TrackImageUpdater(datastore, track_view_state, track_plotter)
+        updater = TrackImageUpdater(datastore, track_view_state, plotter)
         tracks: list[TrackId] = [track_id]
 
         updater.notify_tracks(tracks)
 
-        assert track_view_state.background_image.get() == combined_image
+        assert track_view_state.background_image.get() == background_image
+
+        plotter.plot.assert_called_once()
