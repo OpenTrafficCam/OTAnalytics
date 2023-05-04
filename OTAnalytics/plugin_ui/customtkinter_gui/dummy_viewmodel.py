@@ -424,12 +424,17 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        if not self.get_selected_flow():
+        selected_flow = self.get_selected_flow()
+        if not selected_flow:
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
             return
-        # TODO: @briemla: Connect to application
-        # self._application.remove_flow(FlowId(self._selected_flow_id))
+        flow = parse_flow_id(selected_flow)
+        data = {
+            START_SECTION: flow.from_section,
+            END_SECTION: flow.to_section,
+        }
+        self.__clear_flow_data(data)
 
     def start_analysis(self) -> None:
         self._application.start_analysis()
