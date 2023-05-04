@@ -408,19 +408,22 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if from_section := self._application.get_section_for(
             SectionId(flow.from_section)
         ):
-            distances = from_section.plugin_data.get(DISTANCES, {})
-            distance: str = distances.get(flow.to_section, {})
-            input_data = {
-                START_SECTION: flow.from_section,
-                END_SECTION: flow.to_section,
-                DISTANCE: distance,
-            }
-            old_flow_data = input_data.copy()
-            flow_data = self._show_distances_window(
-                input_values=input_data,
-                title="Edit flow",
-            )
-            self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
+            self._edit_flow(flow, from_section)
+
+    def _edit_flow(self, flow: FlowId, from_section: Section) -> None:
+        distances = from_section.plugin_data.get(DISTANCES, {})
+        distance: str = distances.get(flow.to_section, {})
+        input_data = {
+            START_SECTION: flow.from_section,
+            END_SECTION: flow.to_section,
+            DISTANCE: distance,
+        }
+        old_flow_data = input_data.copy()
+        flow_data = self._show_distances_window(
+            input_values=input_data,
+            title="Edit flow",
+        )
+        self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
 
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
