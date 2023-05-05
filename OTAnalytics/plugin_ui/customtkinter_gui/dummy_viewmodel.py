@@ -358,15 +358,15 @@ class DummyViewModel(ViewModel, SectionListObserver):
         return flows
 
     def add_flow(self) -> None:
-        flow_data = self._show_distances_window()
-        self.__update_flow_data(flow_data)
-        print(f"Added new flow: {flow_data}")
+        if flow_data := self._show_distances_window():
+            self.__update_flow_data(flow_data)
+            print(f"Added new flow: {flow_data}")
 
     def _show_distances_window(
         self,
         input_values: dict = {},
         title: str = "Add flow",
-    ) -> dict:
+    ) -> dict | None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
@@ -434,11 +434,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
             DISTANCE: distance,
         }
         old_flow_data = input_data.copy()
-        flow_data = self._show_distances_window(
+
+        if flow_data := self._show_distances_window(
             input_values=input_data,
             title="Edit flow",
-        )
-        self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
+        ):
+            self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
 
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
