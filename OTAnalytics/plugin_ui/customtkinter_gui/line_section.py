@@ -181,9 +181,11 @@ class SectionGeometryEditor(CanvasObserver):
             event_type (str): Event type of canvas click
         """
         if event_type == "mouse_motion":
-            self._highlight_knob_on_hover(coordinate)
+            self._on_hover(coordinate)
+        # elif event_type == "left_mousebutton_up":
+        #     self.
 
-    def _highlight_knob_on_hover(self, coordinate: tuple[int, int]) -> None:
+    def _on_hover(self, coordinate: tuple[int, int]) -> None:
         closest_knob_coordinate = self._get_closest_knob_coordinate(
             coordinate=coordinate
         )
@@ -192,6 +194,10 @@ class SectionGeometryEditor(CanvasObserver):
                 knob_coordinate=closest_knob_coordinate
             )
             self._redraw_temporary_section(highlighted_knob_index=closest_knob_index)
+            if closest_knob_index is not None:
+                self._insert_temporary_coordinate(
+                    index=closest_knob_index, coordinate=closest_knob_coordinate
+                )
 
         # elif event_type == "return":
         #     self._finish()
@@ -238,11 +244,10 @@ class SectionGeometryEditor(CanvasObserver):
     ) -> int | None:
         return self._coordinates.index(knob_coordinate)
 
-    def _update_temporary_coordinates(self, knob_coordinate: tuple[int, int]) -> None:
-        self._temporary_coordinates = [
-            knob_coordinate if _ == self._selected_knob_coordinate else _
-            for _ in self._coordinates
-        ]
+    def _insert_temporary_coordinate(
+        self, index: int, coordinate: tuple[int, int]
+    ) -> None:
+        self._temporary_coordinates[index] = coordinate
 
     def _delete_coordinate(self, coordinate_to_remove: tuple[int, int]) -> None:
         self._temporary_coordinates = [
