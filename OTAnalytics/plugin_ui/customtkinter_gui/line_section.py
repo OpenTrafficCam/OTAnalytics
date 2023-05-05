@@ -190,6 +190,19 @@ class SectionGeometryEditor(CanvasObserver):
             self._selected_knob_coordinate = self._hovered_knob_coordinate
             if self._selected_knob_coordinate is not None:
                 print(f"Selected: {self._selected_knob_coordinate}")
+        elif (
+            event_type == "mouse_motion" and self._selected_knob_coordinate is not None
+        ):
+            selected_knob_index = self._get_knob_index_from_coordinate(
+                knob_coordinate=self._selected_knob_coordinate
+            )
+            if selected_knob_index is not None:
+                self._update_temporary_coordinates(
+                    index=selected_knob_index, coordinate=coordinate
+                )
+                self._redraw_temporary_section(
+                    highlighted_knob_index=selected_knob_index
+                )
 
     def _on_hover(self, coordinate: tuple[int, int]) -> None:
         closest_knob_coordinate = self._get_closest_knob_coordinate(
