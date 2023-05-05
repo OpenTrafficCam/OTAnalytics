@@ -141,6 +141,7 @@ class SectionGeometryEditor(CanvasObserver):
         self._section = section
         self._style = style
 
+        self._hovered_knob_coordinate: tuple[int, int] | None = None
         self._selected_knob_coordinate: tuple[int, int] | None = None
         self._temporary_id: str = TEMPORARY_SECTION_ID
 
@@ -190,14 +191,11 @@ class SectionGeometryEditor(CanvasObserver):
             coordinate=coordinate
         )
         if closest_knob_coordinate is not None:
+            self._hovered_knob_coordinate = closest_knob_coordinate
             closest_knob_index = self._get_knob_index_from_coordinate(
                 knob_coordinate=closest_knob_coordinate
             )
             self._redraw_temporary_section(highlighted_knob_index=closest_knob_index)
-            if closest_knob_index is not None:
-                self._insert_temporary_coordinate(
-                    index=closest_knob_index, coordinate=closest_knob_coordinate
-                )
 
         # elif event_type == "return":
         #     self._finish()
@@ -244,7 +242,7 @@ class SectionGeometryEditor(CanvasObserver):
     ) -> int | None:
         return self._coordinates.index(knob_coordinate)
 
-    def _insert_temporary_coordinate(
+    def _update_temporary_coordinates(
         self, index: int, coordinate: tuple[int, int]
     ) -> None:
         self._temporary_coordinates[index] = coordinate
