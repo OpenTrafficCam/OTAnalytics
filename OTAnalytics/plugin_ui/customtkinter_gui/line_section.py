@@ -199,10 +199,32 @@ class SectionGeometryEditor(CanvasObserver):
             if selected_knob_index is not None:
                 self._update_temporary_coordinates(
                     index=selected_knob_index, coordinate=coordinate
+                )  # TODO: Index instead if coordinate as a class property
+                self._redraw_temporary_section(
+                    highlighted_knob_index=selected_knob_index
+                )
+        elif (
+            event_type == "left_mousebutton_up"
+            and self._selected_knob_coordinate is not None
+        ):
+            selected_knob_index = self._get_knob_index_from_coordinate(
+                knob_coordinate=self._selected_knob_coordinate
+            )
+            if selected_knob_index is not None:
+                self._update_coordinates(
+                    index=selected_knob_index, coordinate=coordinate
                 )
                 self._redraw_temporary_section(
                     highlighted_knob_index=selected_knob_index
                 )
+                self._selected_knob_coordinate = None
+
+        # elif event_type == "return":
+        #     self._finish()
+        #     self.detach_from(self._canvas.event_handler)
+        # elif event_type == "escape":
+        #     self._abort()
+        #     self.detach_from(self._canvas.event_handler)
 
     def _on_hover(self, coordinate: tuple[int, int]) -> None:
         closest_knob_coordinate = self._get_closest_knob_coordinate(
@@ -214,13 +236,6 @@ class SectionGeometryEditor(CanvasObserver):
                 knob_coordinate=closest_knob_coordinate
             )
             self._redraw_temporary_section(highlighted_knob_index=closest_knob_index)
-
-        # elif event_type == "return":
-        #     self._finish()
-        #     self.detach_from(self._canvas.event_handler)
-        # elif event_type == "escape":
-        #     self._abort()
-        #     self.detach_from(self._canvas.event_handler)
 
     def _get_closest_knob_coordinate(
         self, coordinate: tuple[int, int], max_radius: int | None = None
@@ -264,6 +279,9 @@ class SectionGeometryEditor(CanvasObserver):
         self, index: int, coordinate: tuple[int, int]
     ) -> None:
         self._temporary_coordinates[index] = coordinate
+
+    def _update_coordinates(self, index: int, coordinate: tuple[int, int]) -> None:
+        self._coordinates[index] = coordinate
 
     def _delete_coordinate(self, coordinate_to_remove: tuple[int, int]) -> None:
         self._temporary_coordinates = [
