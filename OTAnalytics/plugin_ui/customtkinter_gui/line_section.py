@@ -186,6 +186,7 @@ class SectionGeometryEditor(CanvasObserver):
         elif (
             event_type == "left_mousebutton_up"
             and self._selected_knob_coordinate is None
+            and self._hovered_knob_coordinate is not None
         ):
             self._selected_knob_coordinate = self._hovered_knob_coordinate
             if self._selected_knob_coordinate is not None:
