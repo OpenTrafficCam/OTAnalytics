@@ -219,10 +219,9 @@ class SectionGeometryEditor(CanvasObserver):
                     highlighted_knob_index=selected_knob_index
                 )
                 self._selected_knob_coordinate = None
-
-        # elif event_type == "return":
-        #     self._finish()
-        #     self.detach_from(self._canvas.event_handler)
+        elif event_type in ["return", "right_mousebutton_up"]:
+            self._finish()
+            self.detach_from(self._canvas.event_handler)
         # elif event_type == "escape":
         #     self._abort()
         #     self.detach_from(self._canvas.event_handler)
@@ -303,6 +302,7 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _finish(self) -> None:
         self._create_section()
+        self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
         return Coordinate(coordinate[0], coordinate[1])
