@@ -181,10 +181,15 @@ class SectionGeometryEditor(CanvasObserver):
             coordinates (tuple[int, int]): Coordinates clicked on canvas
             event_type (str): Event type of canvas click
         """
-        if event_type == "mouse_motion":
+        if event_type == "mouse_motion" and self._selected_knob_coordinate is None:
             self._on_hover(coordinate)
-        # elif event_type == "left_mousebutton_up":
-        #     self.
+        elif (
+            event_type == "left_mousebutton_up"
+            and self._selected_knob_coordinate is None
+        ):
+            self._selected_knob_coordinate = self._hovered_knob_coordinate
+            if self._selected_knob_coordinate is not None:
+                print(f"Selected: {self._selected_knob_coordinate}")
 
     def _on_hover(self, coordinate: tuple[int, int]) -> None:
         closest_knob_coordinate = self._get_closest_knob_coordinate(
