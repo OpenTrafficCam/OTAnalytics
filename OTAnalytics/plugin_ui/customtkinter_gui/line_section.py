@@ -222,9 +222,9 @@ class SectionGeometryEditor(CanvasObserver):
         elif event_type in ["return", "right_mousebutton_up"]:
             self._finish()
             self.detach_from(self._canvas.event_handler)
-        # elif event_type == "escape":
-        #     self._abort()
-        #     self.detach_from(self._canvas.event_handler)
+        elif event_type == "escape":
+            self._abort()
+            self.detach_from(self._canvas.event_handler)
 
     def _on_hover(self, coordinate: tuple[int, int]) -> None:
         closest_knob_coordinate = self._get_closest_knob_coordinate(
@@ -333,6 +333,7 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _abort(self) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
+        self._viewmodel.refresh_sections_on_gui()
 
 
 class SectionGeometryBuilder:
