@@ -43,6 +43,9 @@ LINE: str = "line"
 KNOB: str = "knob"
 """A round knob element of the ui representation of a section"""
 
+SELECTED_KNOB: str = "edited-knob"
+"""A round selected knob element of the ui representation of a section"""
+
 DEFAULT_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#47936B", LINE_WIDTH: 3},
     KNOB: {FILL_COLOR: "#47936B", LINE_WIDTH: 0, RADIUS: 1.5},
@@ -56,4 +59,5 @@ SELECTED_SECTION_STYLE = {
 EDITED_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 4, LINE_DASH: "-"},
     KNOB: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
+    SELECTED_KNOB: {LINE_COLOR: "#8CFFC2", LINE_WIDTH: 2, RADIUS: 10},
 }

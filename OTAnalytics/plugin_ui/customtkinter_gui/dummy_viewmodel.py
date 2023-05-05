@@ -23,6 +23,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     CanvasElementDeleter,
     CanvasElementPainter,
     SectionBuilder,
+    SectionGeometryEditor,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
@@ -190,13 +191,13 @@ class DummyViewModel(ViewModel, SectionListObserver):
             current_section = self._application.get_section_for(
                 SectionId(self._selected_section_id)
             )
-        SectionBuilder(
-            viewmodel=self,
-            canvas=self._canvas,
-            section=current_section,
-            style=EDITED_SECTION_STYLE,
-        )
-        self.refresh_sections_on_gui()
+            if current_section is not None:
+                SectionGeometryEditor(
+                    viewmodel=self,
+                    canvas=self._canvas,
+                    section=current_section,
+                    style=EDITED_SECTION_STYLE,
+                )
 
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:

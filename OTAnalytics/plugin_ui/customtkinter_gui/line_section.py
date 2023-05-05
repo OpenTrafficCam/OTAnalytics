@@ -16,7 +16,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.customtkinter_gui.style import KNOB, LINE
+from OTAnalytics.plugin_ui.customtkinter_gui.style import KNOB, LINE, SELECTED_KNOB
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
@@ -47,6 +47,7 @@ class CanvasElementPainter:
         id: str,
         coordinates: list[tuple[int, int]],
         style: dict,
+        highlighted_knob_index: int | None = None,
     ) -> None:  # sourcery skip: dict-assign-update-to-union
         """Draws a line section on a canvas.
 
@@ -60,7 +61,7 @@ class CanvasElementPainter:
         tkinter_tags = (id,) + tuple(tags)
 
         start: tuple[int, int] | None = None
-        for coordinate in coordinates:
+        for index, coordinate in enumerate(coordinates):
             if start is not None:
                 self._canvas.create_line(
                     start[0],
@@ -77,6 +78,13 @@ class CanvasElementPainter:
                     y=coordinate[1],
                     **style[KNOB],
                 )
+                if index == highlighted_knob_index and SELECTED_KNOB in style:
+                    self._create_knob(
+                        tags=tkinter_tags + (SELECTED_KNOB,),
+                        x=coordinate[0],
+                        y=coordinate[1],
+                        **style[SELECTED_KNOB],
+                    )
             start = coordinate
 
     def _create_knob(
@@ -136,11 +144,21 @@ class SectionGeometryEditor(CanvasObserver):
         self._selected_knob_coordinate: tuple[int, int] | None = None
         self._temporary_id: str = TEMPORARY_SECTION_ID
 
+        self.attach_to(self._canvas.event_handler)
+
         self._get_coordinates()
         self._get_name()
+        self._get_matadata()
 
         self.painter = CanvasElementPainter(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
+
+        self.painter.draw(
+            tags=["temporary_line_section"],
+            id=self._temporary_id,
+            coordinates=self._temporary_coordinates,
+            style=self._style,
+        )
 
     def _get_coordinates(self) -> None:
         self._coordinates = [
@@ -152,6 +170,9 @@ class SectionGeometryEditor(CanvasObserver):
     def _get_name(self) -> None:
         self._name = self._section.id.id
 
+    def _get_matadata(self) -> None:
+        self._metadata = self._section.to_dict()
+
     def update(self, coordinate: tuple[int, int], event_type: str) -> None:
         """Receives and reacts to updates issued by the canvas event handler
 
@@ -159,40 +180,36 @@ class SectionGeometryEditor(CanvasObserver):
             coordinates (tuple[int, int]): Coordinates clicked on canvas
             event_type (str): Event type of canvas click
         """
-        print(event_type)
-        if event_type == "left_mousebutton_down":
-            self._set_selected_knob_coordinate(coordinate)
-        elif event_type == "delete" and self._selected_knob_coordinate is not None:
-            self._delete_coordinate(coordinate_to_remove=coordinate)
-            self._redraw_temporary_section()
-        elif (
-            event_type == "mouse_motion" and self._selected_knob_coordinate is not None
-        ):
-            self._update_coordinate(temporary_coordinate=coordinate)
-            self._redraw_temporary_section()
-        elif (
-            event_type == "left_mousebutton_up"
-            and self._selected_knob_coordinate is not None
-        ):
-            self._update_coordinate(temporary_coordinate=coordinate)
-            self._redraw_temporary_section()
-            self._coordinates = self._temporary_coordinates.copy()
-            self._selected_knob_coordinate = None
-        elif event_type in {"return", "right_mousebutton_up"}:
-            self._finish()
-            self.detach_from(self._canvas.event_handler)
-        elif event_type == "escape":
-            self._abort()
-            self.detach_from(self._canvas.event_handler)
+        if event_type == "mouse_motion":
+            self._highlight_knob_on_hover(coordinate)
 
-    def _set_selected_knob_coordinate(
-        self, selected_coordinate: tuple[int, int]
-    ) -> None:
-        items_of_section = self._canvas.find_withtag(self._name)
+    def _highlight_knob_on_hover(self, coordinate: tuple[int, int]) -> None:
+        closest_knob_coordinate = self._get_closest_knob_coordinate(
+            coordinate=coordinate
+        )
+        if closest_knob_coordinate is not None:
+            closest_knob_index = self._get_knob_index_from_coordinate(
+                knob_coordinate=closest_knob_coordinate
+            )
+            self._redraw_temporary_section(highlighted_knob_index=closest_knob_index)
+
+        # elif event_type == "return":
+        #     self._finish()
+        #     self.detach_from(self._canvas.event_handler)
+        # elif event_type == "escape":
+        #     self._abort()
+        #     self.detach_from(self._canvas.event_handler)
+
+    def _get_closest_knob_coordinate(
+        self, coordinate: tuple[int, int], max_radius: int | None = None
+    ) -> tuple[int, int] | None:  # sourcery skip: inline-immediately-returned-variable
+        items_of_section = self._canvas.find_withtag(TEMPORARY_SECTION_ID)
         knobs_on_canvas = self._canvas.find_withtag(KNOB)
         items_in_and_by_distance = self._canvas.find_closest(
-            x=selected_coordinate[0], y=selected_coordinate[1]
-        )
+            x=coordinate[0],
+            y=coordinate[1],
+            halo=max_radius,
+        )  # BUG: "halo" doesnt seem to be like a max_radius
         unordered_knobs_to_consider = tuple(
             set(items_in_and_by_distance)
             .intersection(set(items_of_section))
@@ -201,15 +218,29 @@ class SectionGeometryEditor(CanvasObserver):
         ordered_knobs_to_consider = tuple(
             filter(lambda x: x in items_in_and_by_distance, unordered_knobs_to_consider)
         )
-        closest_knob_bbox = self._canvas.coords(ordered_knobs_to_consider[0])
-        self._selected_knob_coordinate = (
-            closest_knob_bbox[3] - closest_knob_bbox[0],
-            closest_knob_bbox[2] - closest_knob_bbox[1],
+        if not ordered_knobs_to_consider:
+            return None
+        closest_knob_bbox = self._canvas.bbox(ordered_knobs_to_consider[0])
+        closest_knob_coordinate = (
+            int(
+                0.5 * (closest_knob_bbox[2] - closest_knob_bbox[0])
+                + closest_knob_bbox[0]
+            ),
+            int(
+                0.5 * (closest_knob_bbox[3] - closest_knob_bbox[1])
+                + closest_knob_bbox[1]
+            ),
         )
+        return closest_knob_coordinate
 
-    def _update_coordinate(self, temporary_coordinate: tuple[int, int]) -> None:
+    def _get_knob_index_from_coordinate(
+        self, knob_coordinate: tuple[int, int]
+    ) -> int | None:
+        return self._coordinates.index(knob_coordinate)
+
+    def _update_temporary_coordinates(self, knob_coordinate: tuple[int, int]) -> None:
         self._temporary_coordinates = [
-            temporary_coordinate if _ == self._selected_knob_coordinate else _
+            knob_coordinate if _ == self._selected_knob_coordinate else _
             for _ in self._coordinates
         ]
 
@@ -218,20 +249,47 @@ class SectionGeometryEditor(CanvasObserver):
             _ for _ in self._coordinates if _ != coordinate_to_remove
         ]
 
-    def _redraw_temporary_section(self) -> None:
+    def _redraw_temporary_section(
+        self, highlighted_knob_index: int | None = None
+    ) -> None:
         self.deleter.delete(tag_or_id="temporary_line_section")
         self.painter.draw(
             tags=["temporary_line_section"],
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
             style=self._style,
+            highlighted_knob_index=highlighted_knob_index,
         )
 
     def _finish(self) -> None:
         self._create_section()
 
+    def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
+        return Coordinate(coordinate[0], coordinate[1])
+
     def _create_section(self) -> None:
-        pass  # TODO: See SectionBuilder
+        if len(self._coordinates) == 0:
+            raise MissingCoordinate("First coordinate is missing")
+        elif len(self._coordinates) == 1:
+            raise MissingCoordinate("Second coordinate is missing")
+        if self._metadata == {}:
+            raise ValueError("Metadata of line_section are not defined")
+        relative_offset_coordinates_enter = self._metadata[RELATIVE_OFFSET_COORDINATES][
+            EventType.SECTION_ENTER.serialize()
+        ]
+        line_section = LineSection(
+            id=SectionId(self._name),
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(
+                    **relative_offset_coordinates_enter
+                )
+            },
+            plugin_data={},
+            coordinates=[
+                self._to_coordinate(coordinate) for coordinate in self._coordinates
+            ],
+        )
+        self._viewmodel.set_new_section(line_section)
 
     def _abort(self) -> None:
         self.deleter.delete(tag_or_id="temporary_line_section")
