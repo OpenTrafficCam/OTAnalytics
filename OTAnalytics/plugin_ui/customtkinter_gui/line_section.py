@@ -155,7 +155,7 @@ class SectionGeometryEditor(CanvasObserver):
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self.painter.draw(
-            tags=["temporary_line_section"],
+            tags=[TEMPORARY_SECTION_ID],
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
             style=self._style,
@@ -291,9 +291,9 @@ class SectionGeometryEditor(CanvasObserver):
     def _redraw_temporary_section(
         self, highlighted_knob_index: int | None = None
     ) -> None:
-        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
         self.painter.draw(
-            tags=["temporary_line_section"],
+            tags=[TEMPORARY_SECTION_ID],
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
             style=self._style,
@@ -331,7 +331,7 @@ class SectionGeometryEditor(CanvasObserver):
         self._viewmodel.set_new_section(line_section)
 
     def _abort(self) -> None:
-        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
 
 
 class SectionGeometryBuilder:
@@ -356,9 +356,9 @@ class SectionGeometryBuilder:
             raise ValueError(
                 "First coordinate has to be set before listening to mouse motion"
             )
-        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
         self.painter.draw(
-            tags=["temporary_line_section"],
+            tags=[TEMPORARY_SECTION_ID],
             id=self._temporary_id,
             coordinates=self._coordinates + [coordinate],
             style=self._style,
@@ -372,18 +372,18 @@ class SectionGeometryBuilder:
         self._coordinates.append(coordinate)
 
     def finish_building(self) -> None:
-        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
         self.painter.draw(
-            tags=["temporary_line_section"],
+            tags=[TEMPORARY_SECTION_ID],
             id=self._temporary_id,
             coordinates=self._coordinates,
             style=self._style,
         )
         self._observer.finish_building(self._coordinates)
-        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
 
     def abort(self) -> None:
-        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
 
 
 class MissingCoordinate(Exception):
