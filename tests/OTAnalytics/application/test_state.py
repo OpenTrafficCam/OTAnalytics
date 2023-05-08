@@ -78,6 +78,22 @@ class TestObservableProperty:
         with pytest.raises(IndexError):
             SectionState().notify_sections([])
 
+    def test_get_default(self) -> None:
+        default_value = SectionId("default")
+
+        state = ObservableProperty[SectionId]()
+
+        assert state.get_or_default(default_value) == default_value
+
+    def test_get_value(self) -> None:
+        default_value = SectionId("default")
+        value = SectionId("value")
+
+        state = ObservableProperty[SectionId]()
+        state.set(value)
+
+        assert state.get_or_default(default_value) == value
+
 
 class TestTrackImageUpdater:
     def test_update_image(self) -> None:
