@@ -1,4 +1,4 @@
-customtkinter==5.1.2
+customtkinter==5.1.3
 matplotlib==3.7.1
 moviepy==1.0.3
 numpy==1.24.3
