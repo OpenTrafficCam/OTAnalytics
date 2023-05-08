@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 import ujson
 
+from OTAnalytics import version
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
@@ -35,8 +36,12 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
-from OTAnalytics.plugin_parser import ottrk_dataformat
+from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
+    EVENT_FORMAT_VERSION,
+    METADATA,
+    SECTION_FORMAT_VERSION,
+    VERSION,
     InvalidSectionData,
     OtEventListParser,
     OtsectionParser,
@@ -494,6 +499,11 @@ class TestOtEventListParser:
         content = event_list_parser._convert(events, sections)
 
         assert content == {
+            METADATA: {
+                VERSION: version.__version__,
+                SECTION_FORMAT_VERSION: dataformat_versions.otsection_version(),
+                EVENT_FORMAT_VERSION: dataformat_versions.otevent_version(),
+            },
             SECTIONS: [line_section.to_dict(), area_section.to_dict()],
             EVENT_LIST: [first_event.to_dict(), second_event.to_dict()],
         }

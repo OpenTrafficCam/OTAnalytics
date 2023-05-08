@@ -3,12 +3,12 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel
 
-from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
+from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 
 
-class TracksFrame(AbstractTracksFrame):
+class TracksFrame(AbstractFrameTracks):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
