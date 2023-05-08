@@ -1,7 +1,7 @@
 # from customtkinter import CTkFrame
 
 from abc import ABC, abstractmethod
-from typing import Callable, Optional
+from typing import Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -45,8 +45,7 @@ class CanvasElementPainter:
         self,
         tags: list[str],
         id: str,
-        start: tuple[int, int],
-        end: tuple[int, int],
+        coordinates: list[tuple[int, int]],
         style: dict,
     ) -> None:  # sourcery skip: dict-assign-update-to-union
         """Draws a line section on a canvas.
@@ -59,12 +58,23 @@ class CanvasElementPainter:
             style (dict): Dict of style options for tkinter canvas items.
         """
         tkinter_tags = (id,) + tuple(tags)
-        x0, y0 = start
-        x1, y1 = end
-        self._canvas.create_line(x0, y0, x1, y1, tags=tkinter_tags, **style[LINE])
-        if KNOB in style:
-            self._create_knob(tags=tkinter_tags, x=x0, y=y0, **style[KNOB])
-            self._create_knob(tags=tkinter_tags, x=x1, y=y1, **style[KNOB])
+
+        start: tuple[int, int] | None = None
+        for coordinate in coordinates:
+            if start is not None:
+                self._canvas.create_line(
+                    start[0],
+                    start[1],
+                    coordinate[0],
+                    coordinate[1],
+                    tags=tkinter_tags,
+                    **style[LINE],
+                )
+            if KNOB in style:
+                self._create_knob(
+                    tags=tkinter_tags, x=coordinate[0], y=coordinate[1], **style[KNOB]
+                )
+            start = coordinate
 
     def _create_knob(
         self,
@@ -106,11 +116,9 @@ class SectionGeometryBuilder:
         self,
         observer: SectionGeometryBuilderObserver,
         canvas: AbstractCanvas,
-        is_finished: Callable[[list[tuple[int, int]]], bool],
         style: dict,
     ) -> None:
         self._observer = observer
-        self._is_finished = is_finished
         self._style = style
 
         self.painter = CanvasElementPainter(canvas=canvas)
@@ -120,39 +128,38 @@ class SectionGeometryBuilder:
         # self._tmp_end: tuple[int, int] | None = None
         self._coordinates: list[tuple[int, int]] = []
 
-    def set_tmp_end(self, coordinates: tuple[int, int]) -> None:
-        if not self.has_start():
-            raise ValueError("self.start as to be set before listening to mouse motion")
+    def add_temporary_coordinate(self, coordinate: tuple[int, int]) -> None:
+        if self.number_of_coordinates() == 0:
+            raise ValueError(
+                "First coordinate has to be set before listening to mouse motion"
+            )
         self.deleter.delete(tag_or_id="temporary_line_section")
         self.painter.draw(
             tags=["temporary_line_section"],
             id=self._temporary_id,
-            start=self._start(),
-            end=coordinates,
+            coordinates=self._coordinates + [coordinate],
             style=self._style,
         )
         # self._tmp_end = coordinates
 
-    def has_start(self) -> bool:
-        return len(self._coordinates) >= 1
-
-    def _start(self) -> tuple[int, int]:
-        if len(self._coordinates) > 0:
-            return self._coordinates[0]
-        raise MissingCoordinate("Start coordinate missing")
-
-    def _end(self) -> tuple[int, int]:
-        if len(self._coordinates) > 1:
-            return self._coordinates[-1]
-        raise MissingCoordinate("End coordinate missing")
+    def number_of_coordinates(self) -> int:
+        return len(self._coordinates)
 
     def add_coordinate(self, coordinate: tuple[int, int]) -> None:
         self._coordinates.append(coordinate)
-        if self._is_finished(self._coordinates):
-            self._finish_building()
 
-    def _finish_building(self) -> None:
+    def finish_building(self) -> None:
+        self.deleter.delete(tag_or_id="temporary_line_section")
+        self.painter.draw(
+            tags=["temporary_line_section"],
+            id=self._temporary_id,
+            coordinates=self._coordinates,
+            style=self._style,
+        )
         self._observer.finish_building(self._coordinates)
+        self.deleter.delete(tag_or_id="temporary_line_section")
+
+    def abort(self) -> None:
         self.deleter.delete(tag_or_id="temporary_line_section")
 
 
@@ -176,15 +183,11 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             observer=self,
             canvas=self._canvas,
             style=self._style,
-            is_finished=self._is_line_finished,
         )
         self._name: Optional[str] = None
         self._coordinates: list[tuple[int, int]] = []
         self._metadata: dict = {}
         self._initialise_with(section)
-
-    def _is_line_finished(self, coordinates: list[tuple[int, int]]) -> bool:
-        return len(coordinates) == 2
 
     def _initialise_with(self, section: Optional[Section]) -> None:
         if template := section:
@@ -202,14 +205,22 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             coordinates (tuple[int, int]): Coordinates clicked on canvas
             event_type (str): Event type of canvas click
         """
-        if (not self.geometry_builder.has_start()) and (
-            event_type == "left_mousebutton_up"
+        if event_type == "left_mousebutton_up":
+            print("left_mousebutton_up")
+            self.geometry_builder.add_coordinate(coordinate)
+        elif (
+            self.geometry_builder.number_of_coordinates() >= 1
+            and event_type == "mouse_motion"
         ):
-            self.geometry_builder.add_coordinate(coordinate)
-        elif self.geometry_builder.has_start() and event_type == "mouse_motion":
-            self.geometry_builder.set_tmp_end(coordinate)
-        elif self.geometry_builder.has_start() and event_type == "left_mousebutton_up":
-            self.geometry_builder.add_coordinate(coordinate)
+            self.geometry_builder.add_temporary_coordinate(coordinate)
+        elif self.geometry_builder.number_of_coordinates() >= 2 and (
+            event_type in {"right_mousebutton_up", "return"}
+        ):
+            print("right_mousebutton_up")
+            self.geometry_builder.finish_building()
+            self.detach_from(self._canvas.event_handler)
+        elif event_type == "escape":
+            self.geometry_builder.abort()
             self.detach_from(self._canvas.event_handler)
 
     def finish_building(
@@ -240,8 +251,10 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         ).get_metadata()
 
     def _create_section(self) -> None:
-        if self._start() is None or self._end() is None:
-            raise ValueError("Start and end of line_section are not defined")
+        if self.number_of_coordinates() == 0:
+            raise MissingCoordinate("First coordinate is missing")
+        elif self.number_of_coordinates() == 1:
+            raise MissingCoordinate("Second coordinate is missing")
         if self._metadata == {}:
             raise ValueError("Metadata of line_section are not defined")
         name = self._metadata[ID]
@@ -262,15 +275,8 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         )
         self._viewmodel.set_new_section(line_section)
 
-    def _start(self) -> tuple[int, int]:
-        if len(self._coordinates) > 0:
-            return self._coordinates[0]
-        raise MissingCoordinate("Start coordinate missing")
-
-    def _end(self) -> tuple[int, int]:
-        if len(self._coordinates) > 1:
-            return self._coordinates[-1]
-        raise MissingCoordinate("End coordinate missing")
-
     def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
         return Coordinate(coordinate[0], coordinate[1])
+
+    def number_of_coordinates(self) -> int:
+        return len(self._coordinates)
