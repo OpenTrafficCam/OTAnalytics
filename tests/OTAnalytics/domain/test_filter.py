@@ -31,7 +31,7 @@ class TestFilterElement:
         filter_builder.add_has_classifications_predicate.assert_called_once_with(
             classifications
         )
-        filter_builder.add_is_within_date_predicate.assert_called_once_with(
-            start_date, end_date
+        filter_builder.add_starts_at_or_after_date_predicate.assert_called_once_with(
+            start_date
         )
         assert expected_filter == result

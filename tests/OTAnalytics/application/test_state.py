@@ -1,11 +1,13 @@
+from datetime import datetime
+from typing import Callable, Optional
 from unittest.mock import Mock, call
 
 import pytest
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    ObservableOptionalProperty,
     ObservableProperty,
-    Observer,
     Plotter,
     SectionState,
     TrackImageUpdater,
@@ -13,6 +15,7 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Track, TrackId, TrackImage
 
@@ -50,10 +53,54 @@ class TestTrackState:
 
 class TestObservableProperty:
     def test_notify_observer(self) -> None:
+        first_filter_element = FilterElement(None, None, [])
+        changed_filter_element = FilterElement(
+            datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
+        )
+        observer = Mock(spec=Callable[[FilterElement], None])
+        state = ObservableProperty[FilterElement](first_filter_element)
+        state.register(observer)
+
+        state.set(changed_filter_element)
+        state.set(changed_filter_element)
+
+        assert observer.call_args_list == [
+            call(changed_filter_element),
+        ]
+
+    def test_update_filter_element_on_on_notify_filter_element(self) -> None:
+        filter_element = FilterElement(
+            datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
+        )
+        state = TrackViewState()
+
+        state.filter_element.set(filter_element)
+
+        assert state.filter_element.get() == filter_element
+
+    def test_get_default(self) -> None:
+        default_value = SectionId("default")
+
+        state = ObservableProperty[SectionId](default=default_value)
+
+        assert state.get() == default_value
+
+    def test_get_value(self) -> None:
+        default_value = SectionId("default")
+        value = SectionId("value")
+
+        state = ObservableProperty[SectionId](default=default_value)
+        state.set(value)
+
+        assert state.get() == value
+
+
+class TestOptionalObservableProperty:
+    def test_notify_observer(self) -> None:
         first_section = SectionId("north")
         changed_section = SectionId("south")
-        observer = Mock(spec=Observer)
-        state = ObservableProperty[SectionId]()
+        observer = Mock(spec=Callable[[Optional[SectionId]], None])
+        state = ObservableOptionalProperty[SectionId]()
         state.register(observer)
 
         state.set(first_section)
@@ -77,22 +124,6 @@ class TestObservableProperty:
     def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
         with pytest.raises(IndexError):
             SectionState().notify_sections([])
-
-    def test_get_default(self) -> None:
-        default_value = SectionId("default")
-
-        state = ObservableProperty[SectionId]()
-
-        assert state.get_or_default(default_value) == default_value
-
-    def test_get_value(self) -> None:
-        default_value = SectionId("default")
-        value = SectionId("value")
-
-        state = ObservableProperty[SectionId]()
-        state.set(value)
-
-        assert state.get_or_default(default_value) == value
 
 
 class TestTrackImageUpdater:

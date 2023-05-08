@@ -4,11 +4,13 @@ from unittest.mock import Mock, patch
 import pytest
 
 from OTAnalytics.application.track_filter import (
+    NoOpTrackFilter,
+    TrackEndsBeforeOrAtDate,
     TrackFilter,
     TrackFilterBuilder,
     TrackHasClassifications,
-    TrackIsWithinDate,
     TrackPredicate,
+    TrackStartsAtOrAfterDate,
 )
 from OTAnalytics.domain.track import Track
 from tests.conftest import TrackBuilder
@@ -25,54 +27,34 @@ def track(track_builder: TrackBuilder) -> Track:
     return track_builder.build_track()
 
 
-class TestTrackIsWithinDate:
-    def test_date_within_range(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
-
-        predicate = TrackIsWithinDate(start_date, end_date)
-        result = predicate.test(track)
-        assert result is True
-
-    def test_date_outside_range(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 5)
-        end_date = datetime(2000, 1, 10)
-
-        predicate = TrackIsWithinDate(start_date, end_date)
-        result = predicate.test(track)
-        assert result is False
-
-
-class TestTrackHasClassifications:
-    def test_has_same_class(self, track: Track) -> None:
-        predicate = TrackHasClassifications(["car", "truck"])
-        result = predicate.test(track)
-        assert result is True
-
-    def test_has_not_same_class(self, track: Track) -> None:
-        predicate = TrackHasClassifications(["bicycle", "truck"])
-        result = predicate.test(track)
-        assert result is False
-
-
-class TestTrackPredicateConjunction:
-    def test_conjunct_predicate_fulfilled(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
-        is_within_date = TrackIsWithinDate(start_date, end_date)
-        has_classifications = TrackHasClassifications(["truck", "car"])
-        has_class_and_within_date = is_within_date.conjunct_with(has_classifications)
-        result = has_class_and_within_date.test(track)
-        assert result is True
-
-    def test_conjunct_predicate_not_fulfilled(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
-        is_within_date = TrackIsWithinDate(start_date, end_date)
-        has_classifications = TrackHasClassifications(["truck", "bicycle"])
-        has_class_and_within_date = is_within_date.conjunct_with(has_classifications)
-        result = has_class_and_within_date.test(track)
-        assert result is False
+class TestTrackPredicates:
+    @pytest.mark.parametrize(
+        "predicate, expected_result",
+        [
+            (TrackStartsAtOrAfterDate(datetime(2000, 1, 1)), True),
+            (TrackStartsAtOrAfterDate(datetime(2000, 1, 5)), False),
+            (TrackEndsBeforeOrAtDate(datetime(2000, 1, 3)), True),
+            (TrackEndsBeforeOrAtDate(datetime(2000, 1, 1)), False),
+            (TrackHasClassifications(["car", "truck"]), True),
+            (TrackHasClassifications(["bicycle", "truck"]), False),
+            (
+                TrackStartsAtOrAfterDate(datetime(2000, 1, 1)).conjunct_with(
+                    TrackHasClassifications(["truck", "car"])
+                ),
+                True,
+            ),
+            (
+                TrackStartsAtOrAfterDate(datetime(2000, 1, 1)).conjunct_with(
+                    TrackHasClassifications(["truck", "bicycle"])
+                ),
+                False,
+            ),
+        ],
+    )
+    def test_predicates(
+        self, predicate: TrackPredicate, expected_result: bool, track: Track
+    ) -> None:
+        assert predicate.test(track) is expected_result
 
 
 class TestTrackFilter:
@@ -109,17 +91,35 @@ class TestTrackFilter:
         assert result == [track]
 
 
+class TestNoOpTrackFilter:
+    def test_apply(self) -> None:
+        track_filter = NoOpTrackFilter()
+        iterable = [Mock()]
+        result = track_filter.apply(iterable)
+        assert result == iterable
+
+
 class TestTrackFilterBuilder:
-    def test_add_is_within_date_predicate(self) -> None:
+    def test_add_starts_at_or_after_date_predicate(self) -> None:
         start_date = datetime(2000, 1, 1)
+
+        builder = TrackFilterBuilder()
+        builder.add_starts_at_or_after_date_predicate(start_date)
+
+        track_filter = builder.build()
+        assert hasattr(track_filter, "_predicate")
+        assert type(track_filter._predicate) == TrackStartsAtOrAfterDate
+        assert track_filter._predicate._start_date == start_date
+
+    def test_add_ends_before_or_at_predicate(self) -> None:
         end_date = datetime(2000, 1, 3)
 
         builder = TrackFilterBuilder()
-        builder.add_is_within_date_predicate(start_date, end_date)
+        builder.add_ends_before_or_at_date_predicate(end_date)
 
         track_filter = builder.build()
-        assert type(track_filter._predicate) == TrackIsWithinDate
-        assert track_filter._predicate._start_date == start_date
+        assert hasattr(track_filter, "_predicate")
+        assert type(track_filter._predicate) == TrackEndsBeforeOrAtDate
         assert track_filter._predicate._end_date == end_date
 
     def test_add_has_classifications_predicate(self) -> None:
@@ -128,17 +128,17 @@ class TestTrackFilterBuilder:
         builder.add_has_classifications_predicate(classifications)
 
         track_filter = builder.build()
+        assert hasattr(track_filter, "_predicate")
         assert type(track_filter._predicate) == TrackHasClassifications
         assert track_filter._predicate._classifications == classifications
 
     def test_add_multiple_predicates_fulfills(self, track: Track) -> None:
         start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
         classifications = ["car", "truck"]
 
         builder = TrackFilterBuilder()
         builder.add_has_classifications_predicate(classifications)
-        builder.add_is_within_date_predicate(start_date, end_date)
+        builder.add_starts_at_or_after_date_predicate(start_date)
         track_filter = builder.build()
 
         result = track_filter.apply([track])
@@ -146,12 +146,13 @@ class TestTrackFilterBuilder:
 
     def test_add_multiple_predicates_not_fulfilled(self, track: Track) -> None:
         start_date = datetime(2000, 1, 1)
-        end_date = datetime(2000, 1, 3)
         classifications = ["bicycle", "truck"]
 
         builder = TrackFilterBuilder()
         builder.add_has_classifications_predicate(classifications)
-        builder.add_is_within_date_predicate(start_date, end_date)
+        builder.add_starts_at_or_after_date_predicate(
+            start_date,
+        )
         track_filter = builder.build()
 
         result = track_filter.apply([track])
@@ -175,3 +176,9 @@ class TestTrackFilterBuilder:
         builder._conjunct(second_predicate)
 
         assert builder._complex_predicate == complex_predicate
+
+    def test_create_noop_filter_if_no_predicate_added(self) -> None:
+        builder = TrackFilterBuilder()
+        track_filter = builder.build()
+
+        assert type(track_filter) == NoOpTrackFilter

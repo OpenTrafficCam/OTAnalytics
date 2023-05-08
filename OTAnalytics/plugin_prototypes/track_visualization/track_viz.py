@@ -19,8 +19,6 @@ from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
 
 ENCODING = "UTF-8"
 DPI = 100
-DEFAULT_WIDTH = 800
-DEFAULT_HEIGHT = 600
 
 CLASS_CAR = "car"
 CLASS_MOTORCYCLE = "motorcycle"
@@ -76,10 +74,10 @@ class PlotterPrototype(Plotter):
         return None
 
     def __get_plotting_height(self) -> int:
-        return self._track_view_state.view_height.get_or_default(DEFAULT_HEIGHT)
+        return self._track_view_state.view_height.get()
 
     def __get_plotting_width(self) -> int:
-        return self._track_view_state.view_width.get_or_default(DEFAULT_WIDTH)
+        return self._track_view_state.view_width.get()
 
 
 class PandasTrackProvider:
