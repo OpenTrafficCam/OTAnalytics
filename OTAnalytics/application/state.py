@@ -89,7 +89,7 @@ class Subject(Generic[VALUE]):
         Notifies observers about the changed value.
 
         Args:
-            value (Optional[VALUD]): changed value
+            value (Optional[VALUE]): changed value
         """
         [observer(value) for observer in self.observers]
 
@@ -227,6 +227,7 @@ class SectionState(SectionListObserver):
 
     def __init__(self) -> None:
         self.selected_section = ObservableProperty[SectionId]()
+        self.selected_flow = ObservableProperty[str]()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         """
@@ -241,3 +242,4 @@ class SectionState(SectionListObserver):
         if not sections:
             raise IndexError("No section to select")
         self.selected_section.set(sections[0])
+        self.selected_flow.set(None)

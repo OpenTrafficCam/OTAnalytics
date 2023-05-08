@@ -5,7 +5,12 @@ from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetectio
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
+from OTAnalytics.domain.section import (
+    Section,
+    SectionChangedObserver,
+    SectionId,
+    SectionListObserver,
+)
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
 
@@ -40,6 +45,11 @@ class OTAnalyticsApplication:
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
         self._datastore.register_sections_observer(observer)
+
+    def register_section_changed_observer(
+        self, observer: SectionChangedObserver
+    ) -> None:
+        self._datastore.register_section_changed_observer(observer)
 
     def get_all_sections(self) -> Iterable[Section]:
         return self._datastore.get_all_sections()
@@ -104,6 +114,18 @@ class OTAnalyticsApplication:
             section (Section): updated section
         """
         self._datastore.update_section(section)
+
+    def set_section_plugin_data(self, section_id: SectionId, plugin_data: dict) -> None:
+        """
+        Set the plugin data of the section. The data will be overridden.
+
+        Args:
+            section_id (SectionId): section id to override the plugin data at
+            plugin_data (dict): value of the new plugin data
+        """
+        self._datastore.set_section_plugin_data(
+            section_id=section_id, plugin_data=plugin_data
+        )
 
     def save_sections(self, file: Path) -> None:
         """

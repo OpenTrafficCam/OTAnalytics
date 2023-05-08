@@ -16,7 +16,7 @@ from OTAnalytics.application.datastore import (
     VideoReader,
 )
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import LineSection, SectionId
+from OTAnalytics.domain.section import LineSection, SectionId, SectionRepository
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
 
@@ -64,6 +64,11 @@ def track_parser() -> Mock:
 
 
 @pytest.fixture
+def section_repository() -> Mock:
+    return Mock(spec=SectionRepository)
+
+
+@pytest.fixture
 def section_parser() -> Mock:
     return Mock(spec=SectionParser)
 
@@ -82,6 +87,7 @@ class TestDatastore:
     def test_load_track_file(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -95,6 +101,7 @@ class TestDatastore:
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -111,6 +118,7 @@ class TestDatastore:
     def test_load_track_files(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -132,6 +140,7 @@ class TestDatastore:
         store = Datastore(
             track_repository=track_repository,
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -154,6 +163,7 @@ class TestDatastore:
     def test_save_section_file(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -163,6 +173,7 @@ class TestDatastore:
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -185,6 +196,7 @@ class TestDatastore:
     def test_save_event_list_file(
         self,
         track_parser: Mock,
+        section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -194,6 +206,7 @@ class TestDatastore:
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
+            section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -202,3 +215,59 @@ class TestDatastore:
         store.save_event_list_file(some_file)
 
         event_list_parser.serialize.assert_called()
+
+    def test_update_section_plugin_data_not_existing(
+        self,
+        track_parser: Mock,
+        section_repository: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        event_list_parser: Mock,
+    ) -> None:
+        store = Datastore(
+            track_repository=TrackRepository(),
+            track_parser=track_parser,
+            section_repository=section_repository,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            video_parser=video_parser,
+        )
+        section_id = SectionId("my section")
+        plugin_data = {"some": "new_value"}
+
+        store.set_section_plugin_data(
+            section_id=section_id,
+            plugin_data=plugin_data,
+        )
+
+        section_repository.set_section_plugin_data.called_once_with(
+            section_id, plugin_data
+        )
+
+    def test_update_section_plugin_data_with_existing_data(
+        self,
+        track_parser: Mock,
+        section_repository: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        event_list_parser: Mock,
+    ) -> None:
+        store = Datastore(
+            track_repository=TrackRepository(),
+            track_parser=track_parser,
+            section_repository=section_repository,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            video_parser=video_parser,
+        )
+        section_id = SectionId("my section")
+        new_plugin_data = {"other": "new_value"}
+
+        store.set_section_plugin_data(
+            section_id=section_id,
+            plugin_data=new_plugin_data,
+        )
+
+        section_repository.set_section_plugin_data.called_once_with(
+            section_id, new_plugin_data
+        )
