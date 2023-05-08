@@ -78,6 +78,22 @@ class TestObservableProperty:
 
         assert state.filter_element.get() == filter_element
 
+    def test_get_default(self) -> None:
+        default_value = SectionId("default")
+
+        state = ObservableProperty[SectionId](default=default_value)
+
+        assert state.get() == default_value
+
+    def test_get_value(self) -> None:
+        default_value = SectionId("default")
+        value = SectionId("value")
+
+        state = ObservableProperty[SectionId](default=default_value)
+        state.set(value)
+
+        assert state.get() == value
+
 
 class TestOptionalObservableProperty:
     def test_notify_observer(self) -> None:

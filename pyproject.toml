@@ -1,9 +1,25 @@
+[build-system]
+requires = ["hatchling", "hatch-requirements-txt"]
+build-backend = "hatchling.build"
+
 [project]
 name = "OTAnalytics"
+version = "0.0.1"
+dynamic = ["dependencies"]
 
-[build-system]
-requires = ["setuptools", "hatchling"]
-build-backend = "setuptools.build_meta"
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
+
+[tool.hatch.version]
+path = "OTAnalytics/version.py"
 
 [tool.black]
 line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+ignore_missing_imports = true
+ignore_missing_imports_per_module = true
+disallow_untyped_defs = true

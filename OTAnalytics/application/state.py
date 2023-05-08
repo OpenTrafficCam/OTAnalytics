@@ -13,6 +13,9 @@ from OTAnalytics.domain.track import (
     TrackSubject,
 )
 
+DEFAULT_WIDTH = 800
+DEFAULT_HEIGHT = 600
+
 
 class TrackState(TrackListObserver):
     """
@@ -173,6 +176,18 @@ class ObservableOptionalProperty(Generic[VALUE]):
         """
         return self._property
 
+    def get_or_default(self, default: VALUE) -> VALUE:
+        """
+        Get the current value if present. Otherwise return the given default value.
+
+        Args:
+            default (VALUE): value to return in absence of the property value
+
+        Returns:
+            VALUE: value or default value
+        """
+        return self._property if self._property else default
+
 
 class TrackViewState:
     """
@@ -191,6 +206,29 @@ class TrackViewState:
         self.filter_element = ObservableProperty[FilterElement](
             FilterElement(None, None, [])
         )
+        self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
+        self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
+
+
+class TrackPropertiesUpdater(TrackListObserver):
+    """
+    This class listens to track changes and updates the width and height of the view
+    state.
+    """
+
+    def __init__(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+    ) -> None:
+        self._datastore = datastore
+        self._track_view_state = track_view_state
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        if track := next(iter(self._datastore.get_all_tracks())):
+            if new_image := self._datastore.get_image_of_track(track.id):
+                self._track_view_state.view_width.set(new_image.width())
+                self._track_view_state.view_height.set(new_image.height())
 
 
 class Plotter(ABC):
