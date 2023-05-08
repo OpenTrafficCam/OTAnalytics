@@ -6,6 +6,7 @@ from typing import Iterable, Optional, Tuple
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import (
     Section,
+    SectionChangedObserver,
     SectionId,
     SectionListObserver,
     SectionRepository,
@@ -182,6 +183,7 @@ class Datastore:
         self,
         track_repository: TrackRepository,
         track_parser: TrackParser,
+        section_repository: SectionRepository,
         section_parser: SectionParser,
         event_list_parser: EventListParser,
         video_parser: VideoParser,
@@ -191,7 +193,7 @@ class Datastore:
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
         self._track_repository = track_repository
-        self._section_repository = SectionRepository()
+        self._section_repository = section_repository
         self._event_repository = EventRepository()
         self._video_repository = VideoRepository()
 
@@ -319,6 +321,17 @@ class Datastore:
         """
         self._section_repository.remove(section)
 
+    def register_section_changed_observer(
+        self, observer: SectionChangedObserver
+    ) -> None:
+        """
+        Listen to changes of sections in the repository.
+
+        Args:
+            observer (SectionChangedObserver): observer to notify about changes
+        """
+        self._section_repository.register_section_changed_observer(observer)
+
     def update_section(self, section: Section) -> None:
         """
         Update the section in the repository.
@@ -327,6 +340,18 @@ class Datastore:
             section (Section): updated section
         """
         self._section_repository.update(section)
+
+    def set_section_plugin_data(self, section_id: SectionId, plugin_data: dict) -> None:
+        """
+        Set the plugin data of the section. The data will be overridden.
+
+        Args:
+            section_id (SectionId): section id to override the plugin data at
+            plugin_data (dict): value of the new plugin data
+        """
+        self._section_repository.set_section_plugin_data(
+            section_id=section_id, plugin_data=plugin_data
+        )
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """

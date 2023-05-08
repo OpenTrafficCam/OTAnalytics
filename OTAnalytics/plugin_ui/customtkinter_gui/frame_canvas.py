@@ -2,12 +2,11 @@ import tkinter
 from dataclasses import dataclass
 from typing import Any, Optional
 
-import customtkinter
-from customtkinter import CTkCheckBox
+from customtkinter import NW, CTkCheckBox, CTkFrame
 from PIL import ImageTk
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import (
@@ -31,7 +30,7 @@ class DisplayableImage:
         return ImageTk.PhotoImage(image=self._image.as_image())
 
 
-class TracksCanvas(AbstractTracksCanvas):
+class FrameCanvas(AbstractFrameCanvas, CTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -90,13 +89,6 @@ class CanvasBackground(AbstractCanvas):
         self.event_handler = CanvasEventHandler(canvas=self)
         self.introduce_to_viewmodel()
 
-        # @property
-        # def event_handler(self) -> EventHandler:
-        #     return self.event_handler
-
-        # @event_handler.setter
-        # def event_handler(self, value: EventHandler) -> None:
-        #     self.event_handler = value
         self._current_image: ImageTk.PhotoImage
         self._current_id: Any = None
 
@@ -107,9 +99,7 @@ class CanvasBackground(AbstractCanvas):
         self._draw()
 
     def _draw(self) -> None:
-        self._current_id = self.create_image(
-            0, 0, image=self._current_image, anchor=customtkinter.NW
-        )
+        self._current_id = self.create_image(0, 0, image=self._current_image, anchor=NW)
         self.config(
             width=self._current_image.width(), height=self._current_image.height()
         )
