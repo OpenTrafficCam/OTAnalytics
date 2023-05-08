@@ -253,6 +253,12 @@ class TrackImageUpdater(TrackListObserver):
         self._update()
 
     def _notify_filter_element(self, _: FilterElement) -> None:
+        """
+        Will update the image according to changes of the filter element.
+
+        Args:
+            _ (FilterElement): current filter element
+        """
         self._update()
 
     def _update(self) -> None:
