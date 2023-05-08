@@ -2,11 +2,12 @@ import bz2
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Any, Iterable, Tuple
 
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics import version
 from OTAnalytics.application.datastore import (
     EventListParser,
     SectionParser,
@@ -27,8 +28,13 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
+from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
+METADATA: str = "metadata"
+VERSION: str = "version"
+SECTION_FORMAT_VERSION: str = "section_file_version"
+EVENT_FORMAT_VERSION: str = "event_file_version"
 
 
 def _parse_bz2(path: Path) -> dict:
@@ -366,17 +372,14 @@ class OtsectionParser(SectionParser):
             attributes=[
                 section.ID,
                 section.RELATIVE_OFFSET_COORDINATES,
-                section.START,
-                section.END,
             ],
         )
         section_id = self._parse_section_id(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
-        start = self._parse_coordinate(data[section.START])
-        end = self._parse_coordinate(data[section.END])
+        coordinates = self._parse_coordinates(data)
         plugin_data = self._parse_plugin_data(data)
         return LineSection(
-            section_id, relative_offset_coordinates, plugin_data, start, end
+            section_id, relative_offset_coordinates, plugin_data, coordinates
         )
 
     def _parse_section_id(self, data: dict) -> SectionId:
@@ -533,7 +536,7 @@ class OtEventListParser(EventListParser):
 
     def _convert(
         self, events: Iterable[Event], sections: Iterable[Section]
-    ) -> dict[str, list[dict]]:
+    ) -> dict[str, Any]:
         """Convert events to dictionary.
 
         Args:
@@ -543,11 +546,20 @@ class OtEventListParser(EventListParser):
         Returns:
             dict[str, list[dict]]: dictionary containing raw information of events
         """
+        metadata = self._build_metadata()
         converted_sections = self._convert_sections(sections)
         converted_events = self._convert_events(events)
         return {
+            METADATA: metadata,
             section.SECTIONS: converted_sections,
             event.EVENT_LIST: converted_events,
+        }
+
+    def _build_metadata(self) -> dict:
+        return {
+            VERSION: version.__version__,
+            SECTION_FORMAT_VERSION: dataformat_versions.otsection_version(),
+            EVENT_FORMAT_VERSION: dataformat_versions.otevent_version(),
         }
 
     def _convert_events(self, events: Iterable[Event]) -> list[dict]:
