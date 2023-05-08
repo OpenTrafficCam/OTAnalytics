@@ -27,70 +27,34 @@ def track(track_builder: TrackBuilder) -> Track:
     return track_builder.build_track()
 
 
-class TestTrackStartsAtOrAfterDate:
-    def test_starts_at_or_after_date(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 1)
-
-        predicate = TrackStartsAtOrAfterDate(start_date)
-        result = predicate.test(track)
-        assert result is True
-
-    def test_date_outside_range(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 5)
-
-        predicate = TrackStartsAtOrAfterDate(start_date)
-        result = predicate.test(track)
-        assert result is False
-
-
-class TestTrackEndBeforeOrAtDate:
-    def test_ends_before_or_at_date(self, track: Track) -> None:
-        end_date = datetime(2000, 1, 3)
-
-        predicate = TrackEndsBeforeOrAtDate(end_date)
-        result = predicate.test(track)
-        assert result is True
-
-    def test_date_outside_range(self, track: Track) -> None:
-        end_date = datetime(2000, 1, 1)
-
-        predicate = TrackEndsBeforeOrAtDate(end_date)
-        result = predicate.test(track)
-        assert result is False
-
-
-class TestTrackHasClassifications:
-    def test_has_same_class(self, track: Track) -> None:
-        predicate = TrackHasClassifications(["car", "truck"])
-        result = predicate.test(track)
-        assert result is True
-
-    def test_has_not_same_class(self, track: Track) -> None:
-        predicate = TrackHasClassifications(["bicycle", "truck"])
-        result = predicate.test(track)
-        assert result is False
-
-
-class TestTrackPredicateConjunction:
-    def test_conjunct_predicate_fulfilled(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 1)
-        starts_at_or_after_date = TrackStartsAtOrAfterDate(start_date)
-        has_classifications = TrackHasClassifications(["truck", "car"])
-        has_class_and_within_date = starts_at_or_after_date.conjunct_with(
-            has_classifications
-        )
-        result = has_class_and_within_date.test(track)
-        assert result is True
-
-    def test_conjunct_predicate_not_fulfilled(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 1)
-        starts_at_or_after_date = TrackStartsAtOrAfterDate(start_date)
-        has_classifications = TrackHasClassifications(["truck", "bicycle"])
-        has_class_and_within_date = starts_at_or_after_date.conjunct_with(
-            has_classifications
-        )
-        result = has_class_and_within_date.test(track)
-        assert result is False
+class TestTrackPredicates:
+    @pytest.mark.parametrize(
+        "predicate, expected_result",
+        [
+            (TrackStartsAtOrAfterDate(datetime(2000, 1, 1)), True),
+            (TrackStartsAtOrAfterDate(datetime(2000, 1, 5)), False),
+            (TrackEndsBeforeOrAtDate(datetime(2000, 1, 3)), True),
+            (TrackEndsBeforeOrAtDate(datetime(2000, 1, 1)), False),
+            (TrackHasClassifications(["car", "truck"]), True),
+            (TrackHasClassifications(["bicycle", "truck"]), False),
+            (
+                TrackStartsAtOrAfterDate(datetime(2000, 1, 1)).conjunct_with(
+                    TrackHasClassifications(["truck", "car"])
+                ),
+                True,
+            ),
+            (
+                TrackStartsAtOrAfterDate(datetime(2000, 1, 1)).conjunct_with(
+                    TrackHasClassifications(["truck", "bicycle"])
+                ),
+                False,
+            ),
+        ],
+    )
+    def test_predicates(
+        self, predicate: TrackPredicate, expected_result: bool, track: Track
+    ) -> None:
+        assert predicate.test(track) is expected_result
 
 
 class TestTrackFilter:

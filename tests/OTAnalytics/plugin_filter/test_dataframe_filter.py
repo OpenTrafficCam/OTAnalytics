@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Iterable
 from unittest.mock import Mock
@@ -21,6 +19,7 @@ from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameFilter,
     DataFrameFilterBuilder,
     DataFrameHasClassifications,
+    DataFramePredicate,
     DataFrameStartsAtOrAfterDate,
     NoOpDataFrameFilter,
 )
@@ -61,62 +60,51 @@ def track_dataframe(track: Track) -> DataFrame:
     return convert_tracks_to_dataframe([track])
 
 
-class TestDataFrameStartsAtOrAfterDate:
-    def test_starts_at_or_after_date(self, track_dataframe: DataFrame) -> None:
-        start_date = datetime(2000, 1, 1)
-
-        predicate = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
-        result = predicate.test(track_dataframe)
-        assert result.equals(Series([True, True, True, True, True]))
-
-    def test_outside_range(self, track_dataframe: DataFrame) -> None:
-        start_date = datetime(2000, 1, 10)
-
-        predicate = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
-        result = predicate.test(track_dataframe)
-        assert result.equals(Series([False, False, False, False, False]))
-
-
-class TestDataFrameHasClassification:
-    def test_has_classifications(self, track_dataframe: DataFrame) -> None:
-        predicate = DataFrameHasClassifications(CLASSIFICATION, ["car", "truck"])
-        result = predicate.test(track_dataframe)
-
-        assert result.equals(Series([True, True, True, True, True]))
-
-    def test_has_not_classifications(self, track_dataframe: DataFrame) -> None:
-        predicate = DataFrameHasClassifications(CLASSIFICATION, ["bicycle", "truck"])
-        result = predicate.test(track_dataframe)
-
-        assert result.equals(Series([False, False, False, False, False]))
-
-
-class TestDataFramePredicateConjunction:
-    def test_conjunct_predicate_fulfilled(self, track_dataframe: DataFrame) -> None:
-        start_date = datetime(2000, 1, 1)
-        starts_at_or_after_date = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
-        has_classifications = DataFrameHasClassifications(
-            CLASSIFICATION, ["car", "truck"]
-        )
-        has_class_and_within_date = starts_at_or_after_date.conjunct_with(
-            has_classifications
-        )
-        result = has_class_and_within_date.test(track_dataframe)
-
-        assert result.equals(Series([True, True, True, True, True]))
-
-    def test_conjunct_predicate_not_fulfilled(self, track_dataframe: DataFrame) -> None:
-        start_date = datetime(2000, 1, 11)
-        starts_at_or_after_date = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
-        has_classifications = DataFrameHasClassifications(
-            CLASSIFICATION, ["car", "truck"]
-        )
-        has_class_and_within_date = starts_at_or_after_date.conjunct_with(
-            has_classifications
-        )
-        result = has_class_and_within_date.test(track_dataframe)
-
-        assert result.equals(Series([False, False, False, False, False]))
+class TestDataFramePredicates:
+    @pytest.mark.parametrize(
+        "predicate, expected_result",
+        [
+            (
+                DataFrameStartsAtOrAfterDate(OCCURRENCE, datetime(2000, 1, 1)),
+                Series([True, True, True, True, True]),
+            ),
+            (
+                DataFrameStartsAtOrAfterDate(OCCURRENCE, datetime(2000, 1, 10)),
+                Series([False, False, False, False, False]),
+            ),
+            (
+                DataFrameHasClassifications(CLASSIFICATION, ["car", "truck"]),
+                Series([True, True, True, True, True]),
+            ),
+            (
+                DataFrameHasClassifications(CLASSIFICATION, ["bicycle", "truck"]),
+                Series([False, False, False, False, False]),
+            ),
+            (
+                DataFrameStartsAtOrAfterDate(
+                    OCCURRENCE, datetime(2000, 1, 1)
+                ).conjunct_with(
+                    DataFrameHasClassifications(CLASSIFICATION, ["car", "truck"]),
+                ),
+                Series([True, True, True, True, True]),
+            ),
+            (
+                DataFrameStartsAtOrAfterDate(
+                    OCCURRENCE, datetime(2000, 1, 11)
+                ).conjunct_with(
+                    DataFrameHasClassifications(CLASSIFICATION, ["car", "truck"]),
+                ),
+                Series([False, False, False, False, False]),
+            ),
+        ],
+    )
+    def test_predicate(
+        self,
+        predicate: DataFramePredicate,
+        expected_result: Series,
+        track_dataframe: DataFrame,
+    ) -> None:
+        assert predicate.test(track_dataframe).equals(expected_result)
 
 
 class TestDataFrameFilter:

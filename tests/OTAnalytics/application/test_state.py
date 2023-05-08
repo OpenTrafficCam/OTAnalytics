@@ -7,6 +7,7 @@ import pytest
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     ObservableOptionalProperty,
+    ObservableProperty,
     Plotter,
     SectionState,
     TrackImageUpdater,
@@ -57,15 +58,13 @@ class TestObservableProperty:
             datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
         )
         observer = Mock(spec=Callable[[FilterElement], None])
-        state = ObservableOptionalProperty[FilterElement]()
+        state = ObservableProperty[FilterElement](first_filter_element)
         state.register(observer)
 
-        state.set(first_filter_element)
         state.set(changed_filter_element)
         state.set(changed_filter_element)
 
         assert observer.call_args_list == [
-            call(first_filter_element),
             call(changed_filter_element),
         ]
 
