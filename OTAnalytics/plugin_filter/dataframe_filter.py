@@ -52,7 +52,7 @@ class DataFrameFilter(Filter[DataFrame, Series]):
         """A `DataFrame` filter.
 
         Args:
-            predicate (Optional[Predicate[DataFrame, Series]]): the predicate to test
+            predicate (Predicate[DataFrame, Series]): the predicate to test
                 the DataFrame against
         """
         self._predicate = predicate
