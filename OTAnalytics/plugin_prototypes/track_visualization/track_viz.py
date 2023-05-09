@@ -42,18 +42,6 @@ class TrackPlotter(ABC):
         pass
 
 
-class TrackBackgroundPlotter(Plotter):
-    """Plot video frame as background."""
-
-    def __init__(self, datastore: Datastore) -> None:
-        self._datastore = datastore
-
-    def plot(self) -> Optional[TrackImage]:
-        if track := next(iter(self._datastore.get_all_tracks())):
-            return self._datastore.get_image_of_track(track.id)
-        return None
-
-
 class PlotterPrototype(Plotter):
     """Convenience Class to add prototype plotters to the layer structure."""
 

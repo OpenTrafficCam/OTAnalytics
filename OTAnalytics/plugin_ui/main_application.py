@@ -10,7 +10,7 @@ from OTAnalytics.application.datastore import (
     TrackParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.plotting import LayeredPlotter
+from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlotter
 from OTAnalytics.application.state import (
     Plotter,
     SectionState,
@@ -40,7 +40,6 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PandasTrackProvider,
     PlotterPrototype,
     SectionGeometryPlotter,
-    TrackBackgroundPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
