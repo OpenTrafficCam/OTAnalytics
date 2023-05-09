@@ -182,43 +182,22 @@ class SectionGeometryEditor(CanvasObserver):
             event_type (str): Event type of canvas click
         """
         if event_type == "mouse_motion" and self._selected_knob_coordinate is None:
-            self._on_hover(coordinate)
+            self._set_hovered_knob_coordinate(coordinate)
         elif (
             event_type == "left_mousebutton_up"
             and self._selected_knob_coordinate is None
             and self._hovered_knob_coordinate is not None
         ):
-            self._selected_knob_coordinate = self._hovered_knob_coordinate
-            if self._selected_knob_coordinate is not None:
-                print(f"Selected: {self._selected_knob_coordinate}")
+            self._set_selected_knob_coordinate()
         elif (
             event_type == "mouse_motion" and self._selected_knob_coordinate is not None
         ):
-            selected_knob_index = self._get_knob_index_from_coordinate(
-                knob_coordinate=self._selected_knob_coordinate
-            )
-            if selected_knob_index is not None:
-                self._update_temporary_coordinates(
-                    index=selected_knob_index, coordinate=coordinate
-                )  # TODO: Index instead if coordinate as a class property
-                self._redraw_temporary_section(
-                    highlighted_knob_index=selected_knob_index
-                )
+            self._update_temporary_section(coordinate)
         elif (
             event_type == "left_mousebutton_up"
             and self._selected_knob_coordinate is not None
         ):
-            selected_knob_index = self._get_knob_index_from_coordinate(
-                knob_coordinate=self._selected_knob_coordinate
-            )
-            if selected_knob_index is not None:
-                self._update_coordinates(
-                    index=selected_knob_index, coordinate=coordinate
-                )
-                self._redraw_temporary_section(
-                    highlighted_knob_index=selected_knob_index
-                )
-                self._selected_knob_coordinate = None
+            self._update_section(coordinate)
         elif event_type in ["return", "right_mousebutton_up"]:
             self._finish()
             self.detach_from(self._canvas.event_handler)
@@ -226,7 +205,7 @@ class SectionGeometryEditor(CanvasObserver):
             self._abort()
             self.detach_from(self._canvas.event_handler)
 
-    def _on_hover(self, coordinate: tuple[int, int]) -> None:
+    def _set_hovered_knob_coordinate(self, coordinate: tuple[int, int]) -> None:
         closest_knob_coordinate = self._get_closest_knob_coordinate(
             coordinate=coordinate
         )
@@ -238,6 +217,32 @@ class SectionGeometryEditor(CanvasObserver):
             self._redraw_temporary_section(highlighted_knob_index=closest_knob_index)
         else:
             self._redraw_temporary_section()
+
+    def _set_selected_knob_coordinate(self) -> None:
+        self._selected_knob_coordinate = self._hovered_knob_coordinate
+        if self._selected_knob_coordinate is not None:
+            print(f"Selected: {self._selected_knob_coordinate}")
+
+    def _update_temporary_section(self, coordinate: tuple[int, int]) -> None:
+        if self._selected_knob_coordinate is not None:
+            selected_knob_index = self._get_knob_index_from_coordinate(
+                knob_coordinate=self._selected_knob_coordinate
+            )
+        if selected_knob_index is not None:
+            self._update_temporary_coordinates(
+                index=selected_knob_index, coordinate=coordinate
+            )  # TODO: Index instead if coordinate as a class property
+            self._redraw_temporary_section(highlighted_knob_index=selected_knob_index)
+
+    def _update_section(self, coordinate: tuple[int, int]) -> None:
+        if self._selected_knob_coordinate is not None:
+            selected_knob_index = self._get_knob_index_from_coordinate(
+                knob_coordinate=self._selected_knob_coordinate
+            )
+        if selected_knob_index is not None:
+            self._update_coordinates(index=selected_knob_index, coordinate=coordinate)
+            self._redraw_temporary_section(highlighted_knob_index=selected_knob_index)
+            self._selected_knob_coordinate = None
 
     def _get_closest_knob_coordinate(
         self, coordinate: tuple[int, int], max_radius: int | None = None
