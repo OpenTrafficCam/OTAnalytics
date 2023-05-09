@@ -230,12 +230,14 @@ class SectionGeometryEditor(CanvasObserver):
         closest_knob_coordinate = self._get_closest_knob_coordinate(
             coordinate=coordinate
         )
+        self._hovered_knob_coordinate = closest_knob_coordinate
         if closest_knob_coordinate is not None:
-            self._hovered_knob_coordinate = closest_knob_coordinate
             closest_knob_index = self._get_knob_index_from_coordinate(
                 knob_coordinate=closest_knob_coordinate
             )
             self._redraw_temporary_section(highlighted_knob_index=closest_knob_index)
+        else:
+            self._redraw_temporary_section()
 
     def _get_closest_knob_coordinate(
         self, coordinate: tuple[int, int], max_radius: int | None = None
