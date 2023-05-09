@@ -106,7 +106,7 @@ class Video:
         return self.video_reader.get_frame(self.path, index)
 
 
-class VideoRepository:
+class TrackToVideoRepository:
     """
     Repository containing the videos per track.
     """
@@ -195,7 +195,7 @@ class Datastore:
         self._track_repository = track_repository
         self._section_repository = section_repository
         self._event_repository = EventRepository()
-        self._video_repository = VideoRepository()
+        self._track_to_video_repository = TrackToVideoRepository()
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
         """
@@ -225,7 +225,7 @@ class Datastore:
         tracks = self._track_parser.parse(file)
         track_ids = [track.id for track in tracks]
         track_ids, videos = self._video_parser.parse(file, track_ids)
-        self._video_repository.add_all(track_ids, videos)
+        self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 
     def load_track_files(self, files: list[Path]) -> None:
@@ -364,6 +364,6 @@ class Datastore:
             Optional[TrackImage]: an image of the track if the track is available and
             the image can be loaded
         """
-        if video := self._video_repository.get_video_for(track_id):
+        if video := self._track_to_video_repository.get_video_for(track_id):
             return video.get_frame(0)
         return None

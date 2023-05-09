@@ -113,7 +113,9 @@ class TestDatastore:
         track_parser.parse.assert_called_with(some_file)
         video_parser.parse.assert_called_with(some_file, [some_track_id])
         assert some_track in store._track_repository.get_all()
-        assert some_video == store._video_repository.get_video_for(some_track.id)
+        assert some_video == store._track_to_video_repository.get_video_for(
+            some_track.id
+        )
 
     def test_load_track_files(
         self,
@@ -150,8 +152,12 @@ class TestDatastore:
 
         store.load_track_files([some_file, other_file])
 
-        assert some_video == store._video_repository.get_video_for(some_track_id)
-        assert other_video == store._video_repository.get_video_for(other_track_id)
+        assert some_video == store._track_to_video_repository.get_video_for(
+            some_track_id
+        )
+        assert other_video == store._track_to_video_repository.get_video_for(
+            other_track_id
+        )
 
         track_parser.parse.assert_any_call(some_file)
         track_parser.parse.assert_any_call(other_file)
