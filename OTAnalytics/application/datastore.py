@@ -170,8 +170,16 @@ class VideoRepository:
         self._observers.register(observer)
 
     def add(self, video: Video) -> None:
-        self._videos[video.path] = video
+        self.__do_add(video)
         self._observers.notify([video])
+
+    def __do_add(self, video: Video) -> None:
+        self._videos[video.path] = video
+
+    def add_all(self, videos: list[Video]) -> None:
+        for video in videos:
+            self.__do_add(video)
+        self._observers.notify(videos)
 
     def get_all(self) -> list[Video]:
         return list(self._videos.values())
@@ -294,9 +302,9 @@ class Datastore:
         """
         self._section_repository.register_sections_observer(observer)
 
-    def load_video_file(self, file: Path) -> None:
-        video = self._video_parser.parse(file)
-        self._video_repository.add(video)
+    def load_video_files(self, files: list[Path]) -> None:
+        videos = [self._video_parser.parse(file) for file in files]
+        self._video_repository.add_all(videos)
 
     def load_track_file(self, file: Path) -> None:
         """
