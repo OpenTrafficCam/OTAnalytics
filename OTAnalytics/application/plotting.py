@@ -11,6 +11,7 @@ class LayeredPlotter(Plotter):
         self._current_image: Optional[TrackImage] = None
 
     def plot(self) -> Optional[TrackImage]:
+        self._current_image = None
         for layer in self._layers:
             if current_layer := layer.plot():
                 self.__add(current_layer)
