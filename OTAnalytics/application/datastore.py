@@ -329,12 +329,12 @@ class Datastore:
         for file in files:
             self.load_track_file(file)
 
-    def get_all_tracks(self) -> Iterable[Track]:
+    def get_all_tracks(self) -> list[Track]:
         """
-        Retrieve all tracks of the repository as iterable.
+        Retrieve all tracks of the repository as list.
 
         Returns:
-            Iterable[Track]: all tracks of the repository
+            list[Track]: all tracks of the repository
         """
         return self._track_repository.get_all()
 
