@@ -184,6 +184,9 @@ class VideoRepository:
     def get_all(self) -> list[Video]:
         return list(self._videos.values())
 
+    def get(self, file: Path) -> Optional[Video]:
+        return self._videos.get(file)
+
 
 class TrackToVideoRepository:
     """
@@ -443,6 +446,9 @@ class Datastore:
         self._section_repository.set_section_plugin_data(
             section_id=section_id, plugin_data=plugin_data
         )
+
+    def get_video_at(self, file: Path) -> Optional[Video]:
+        return self._video_repository.get(file)
 
     def get_video_for(self, track_id: TrackId) -> Optional[Video]:
         return self._track_to_video_repository.get_video_for(track_id)
