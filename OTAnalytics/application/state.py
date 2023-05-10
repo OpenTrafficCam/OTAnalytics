@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Generic, Optional, TypeVar
 
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.datastore import Datastore, Video
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import SectionId, SectionListObserver
@@ -208,9 +208,12 @@ class TrackViewState:
         )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
+        self.selected_video: ObservableOptionalProperty[
+            Video
+        ] = ObservableOptionalProperty[Video]()
 
 
-class TrackPropertiesUpdater(TrackListObserver):
+class TrackPropertiesUpdater:
     """
     This class listens to track changes and updates the width and height of the view
     state.
@@ -224,11 +227,11 @@ class TrackPropertiesUpdater(TrackListObserver):
         self._datastore = datastore
         self._track_view_state = track_view_state
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
-        if track := next(iter(self._datastore.get_all_tracks())):
-            if new_image := self._datastore.get_image_of_track(track.id):
-                self._track_view_state.view_width.set(new_image.width())
-                self._track_view_state.view_height.set(new_image.height())
+    def notify_video(self, video: Optional[Video]) -> None:
+        if video:
+            image = video.get_frame(0)
+            self._track_view_state.view_width.set(image.width())
+            self._track_view_state.view_height.set(image.height())
 
 
 class Plotter(ABC):
@@ -237,6 +240,18 @@ class Plotter(ABC):
     @abstractmethod
     def plot(self) -> Optional[TrackImage]:
         pass
+
+
+class SelectedVideoUpdate(TrackListObserver):
+    def __init__(self, datastore: Datastore, track_view_state: TrackViewState) -> None:
+        self._datastore = datastore
+        self._track_view_state = track_view_state
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        all_tracks = self._datastore.get_all_tracks()
+        if tracks:
+            video = self._datastore.get_video_for(all_tracks[0].id)
+            self._track_view_state.selected_video.set(video)
 
 
 class TrackImageUpdater(TrackListObserver):
@@ -254,9 +269,22 @@ class TrackImageUpdater(TrackListObserver):
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._plotter = plotter
+        self._track_view_state.selected_video.register(self.notify_video)
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
+
+    def notify_video(self, video: Optional[Video]) -> None:
+        """
+        Will notify this object about changes in the video repository.
+
+        Args:
+            video (list[Video]): list of changed video ids
+
+        Raises:
+            IndexError: if the list is empty
+        """
+        self._update_image()
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """

@@ -16,6 +16,7 @@ from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlot
 from OTAnalytics.application.state import (
     Plotter,
     SectionState,
+    SelectedVideoUpdate,
     TrackImageUpdater,
     TrackPropertiesUpdater,
     TrackState,
@@ -158,7 +159,7 @@ class ApplicationStarter:
 
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
-        background_image_plotter = TrackBackgroundPlotter(datastore)
+        background_image_plotter = TrackBackgroundPlotter(state, datastore)
         pandas_data_provider = PandasTrackProvider(
             datastore,
             state,
@@ -182,8 +183,10 @@ class ApplicationStarter:
         ]
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, state)
+        state.selected_video.register(properties_updater.notify_video)
         image_updater = TrackImageUpdater(datastore, state, plotter)
-        datastore.register_tracks_observer(properties_updater)
+        selected_video_updater = SelectedVideoUpdate(datastore, state)
+        datastore.register_tracks_observer(selected_video_updater)
         datastore.register_tracks_observer(image_updater)
         return state
 

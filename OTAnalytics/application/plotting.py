@@ -1,7 +1,7 @@
 from typing import Optional
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import Plotter
+from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain.track import TrackImage
 
 
@@ -26,10 +26,11 @@ class LayeredPlotter(Plotter):
 class TrackBackgroundPlotter(Plotter):
     """Plot video frame as background."""
 
-    def __init__(self, datastore: Datastore) -> None:
+    def __init__(self, track_view_state: TrackViewState, datastore: Datastore) -> None:
+        self._track_view_state = track_view_state
         self._datastore = datastore
 
     def plot(self) -> Optional[TrackImage]:
-        if track := next(iter(self._datastore.get_all_tracks())):
-            return self._datastore.get_image_of_track(track.id)
+        if video := self._track_view_state.selected_video.get():
+            return video.get_frame(0)
         return None
