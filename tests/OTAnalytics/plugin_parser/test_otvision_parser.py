@@ -7,9 +7,6 @@ import pytest
 import ujson
 
 from OTAnalytics import version
-from OTAnalytics.adapter_intersect.intersect import (
-    ShapelyIntersectImplementationAdapter,
-)
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.domain import geometry, section
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
@@ -18,7 +15,10 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
+from OTAnalytics.domain.intersect import (
+    IntersectBySplittingTrackLine,
+    IntersectImplementation,
+)
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -35,7 +35,6 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
@@ -512,10 +511,9 @@ class TestOtEventListParser:
         self, tracks: list[Track], sections: list[Section], test_data_tmp_dir: Path
     ) -> None:
         # Setup
-        shapely_intersection_adapter = ShapelyIntersectImplementationAdapter(
-            ShapelyIntersector()
-        )
         line_section = sections[0]
+        shapely_intersection_adapter = Mock(spec=IntersectImplementation)
+        shapely_intersection_adapter.split_line_with_line.return_value = []
 
         if isinstance(line_section, LineSection):
             line_section_intersector = IntersectBySplittingTrackLine(
