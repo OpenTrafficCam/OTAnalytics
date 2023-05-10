@@ -133,7 +133,8 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<Motion>", self.on_mouse_motion)
         self._canvas.bind("<Enter>", lambda event: self._canvas.focus_set())
         self._canvas.bind("<Return>", self.on_return)
-        self._canvas.bind("<Delete>", self.on_return)
+        self._canvas.bind("<Delete>", self.on_delete)
+        self._canvas.bind("<BackSpace>", self.on_delete)
         self._canvas.bind("<Escape>", self.on_escape)
 
     def attach_observer(self, observer: CanvasObserver) -> None:

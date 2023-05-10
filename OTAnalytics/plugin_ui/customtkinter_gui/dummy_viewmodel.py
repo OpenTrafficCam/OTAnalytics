@@ -29,6 +29,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
+    HOVERED_KNOB_STYLE,
+    SELECTED_KNOB_STYLE,
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
@@ -196,7 +198,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
                     viewmodel=self,
                     canvas=self._canvas,
                     section=current_section,
-                    style=EDITED_SECTION_STYLE,
+                    section_style=EDITED_SECTION_STYLE,
+                    hovered_knob_style=HOVERED_KNOB_STYLE,
+                    selected_knob_style=SELECTED_KNOB_STYLE,
                 )
 
     def edit_section_metadata(self) -> None:
@@ -264,7 +268,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 tags=[LINE_SECTION],
                 id=section[ID],
                 coordinates=section[COORDINATES],
-                style=style,
+                section_style=style,
             )
 
     def _get_sections(self) -> Iterable[dict]:

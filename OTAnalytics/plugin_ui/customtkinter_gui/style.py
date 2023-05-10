@@ -38,26 +38,45 @@ RADIUS: str = "radius"
 """Radius of a circle on the tkinter canvas"""
 
 LINE: str = "line"
-"""A line element of the ui representation of a section"""
+"""A line representing a segment of a MultiLineSection"""
 
 KNOB: str = "knob"
-"""A round knob element of the ui representation of a section"""
+"""A combination of canvas items containing a filled circle and a perimeter around it
+representing a coordinate of a MultiLinesection"""
 
-SELECTED_KNOB: str = "edited-knob"
-"""A round selected knob element of the ui representation of a section"""
+KNOB_CORE: str = "knob-core"
+"""A filled circle representing a knob itself"""
+
+KNOB_PERIMETER: str = "knob-perimeter"
+"""A circle around a knob to indicate if it is hovered or selected"""
 
 DEFAULT_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#47936B", LINE_WIDTH: 3},
-    KNOB: {FILL_COLOR: "#47936B", LINE_WIDTH: 0, RADIUS: 1.5},
+    KNOB: {
+        KNOB_CORE: {FILL_COLOR: "#47936B", LINE_WIDTH: 0, RADIUS: 1.5},
+    },
 }
 
 SELECTED_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 4},
-    KNOB: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 2},
+    KNOB: {
+        KNOB_CORE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 2},
+    },
 }
 
 EDITED_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 4, LINE_DASH: "-"},
-    KNOB: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
-    SELECTED_KNOB: {LINE_COLOR: "#8CFFC2", LINE_WIDTH: 2, RADIUS: 10},
+    KNOB: {
+        KNOB_CORE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
+    },
+}
+
+HOVERED_KNOB_STYLE = {
+    KNOB_CORE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
+    KNOB_PERIMETER: {LINE_COLOR: "#8CFFC2", LINE_WIDTH: 2, RADIUS: 10},
+}
+
+SELECTED_KNOB_STYLE = {
+    KNOB_CORE: {FILL_COLOR: "#40C9FF", LINE_WIDTH: 0, RADIUS: 6},
+    KNOB_PERIMETER: {LINE_COLOR: "#40C9FF", LINE_WIDTH: 2, RADIUS: 10},
 }
