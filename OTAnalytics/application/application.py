@@ -57,6 +57,9 @@ class OTAnalyticsApplication:
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._datastore.get_section_for(section_id)
 
+    def _add_video(self, file: Path) -> None:
+        self._datastore.load_video_file(file)
+
     def add_tracks_of_file(self, track_file: Path) -> None:
         """
         Load a single track file.

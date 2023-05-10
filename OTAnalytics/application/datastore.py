@@ -237,6 +237,10 @@ class Datastore:
         """
         self._section_repository.register_sections_observer(observer)
 
+    def load_video_file(self, file: Path) -> None:
+        video = self._video_parser.parse(file)
+        self._video_repository.add(video)
+
     def load_track_file(self, file: Path) -> None:
         """
         Load and parse the given track file together with the corresponding video file.
