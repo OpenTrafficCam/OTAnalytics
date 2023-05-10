@@ -122,3 +122,19 @@ class ViewModel(ABC):
     @abstractmethod
     def change_track_offset_to_section_offset(self) -> None:
         pass
+
+    @abstractmethod
+    def validate_date(self, date: str) -> bool:
+        pass
+
+    @abstractmethod
+    def validate_hour(self, hour: str) -> bool:
+        pass
+
+    @abstractmethod
+    def validate_minute(self, minute: str) -> bool:
+        pass
+
+    @abstractmethod
+    def validate_second(self, second: str) -> bool:
+        pass

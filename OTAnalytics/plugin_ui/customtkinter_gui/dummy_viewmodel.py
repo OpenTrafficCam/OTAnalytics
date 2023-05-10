@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
 from typing import Iterable, Optional
@@ -7,10 +8,12 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.default_values import DATE_FORMAT
 from OTAnalytics.adapter_ui.view_model import DISTANCES, ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
+from OTAnalytics.domain.date import validate_hour, validate_minute, validate_second
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
@@ -482,3 +485,28 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def change_track_offset_to_section_offset(self) -> None:
         return self._application.change_track_offset_to_section_offset()
+
+    def validate_date(self, date: str) -> bool:
+        try:
+            datetime.strptime(date, DATE_FORMAT)
+            return True
+        except ValueError:
+            return False
+
+    def validate_hour(self, hour: str) -> bool:
+        try:
+            return validate_hour(int(hour))
+        except ValueError:
+            return False
+
+    def validate_minute(self, minute: str) -> bool:
+        try:
+            return validate_minute(int(minute))
+        except ValueError:
+            return False
+
+    def validate_second(self, second: str) -> bool:
+        try:
+            return validate_second(int(second))
+        except ValueError:
+            return False
