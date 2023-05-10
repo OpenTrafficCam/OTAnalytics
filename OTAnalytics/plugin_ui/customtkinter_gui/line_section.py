@@ -224,7 +224,6 @@ class SectionGeometryEditor(CanvasObserver):
                 self.detach_from(self._canvas.event_handler)
         elif event_type == "mouse_motion":
             self._move_knob(coordinate)
-            print(self._coordinates)
         elif event_type == "left_mousebutton_up":
             self._update_knob(coordinate)
         elif event_type == "delete":
@@ -287,22 +286,21 @@ class SectionGeometryEditor(CanvasObserver):
             self._redraw_temporary_section()
 
     def _get_closest_knob_index(
-        self, coordinate: tuple[int, int], max_radius: int | None = None
+        self, coordinate: tuple[int, int], radius: int = 0
     ) -> int | None:  # sourcery skip: inline-immediately-returned-variable
+        x, y = coordinate[0], coordinate[1]
         items_of_section = self._canvas.find_withtag(TEMPORARY_SECTION_ID)
         knobs_on_canvas = self._canvas.find_withtag(KNOB_CORE)
-        items_in_and_by_distance = self._canvas.find_closest(
-            x=coordinate[0],
-            y=coordinate[1],
-            halo=max_radius,
-        )  # BUG: "halo" doesnt seem to be like a max_radius
+        items_in_radius = self._canvas.find_overlapping(
+            x - radius, y - radius, x + radius, y + radius
+        )
         unordered_knobs_to_consider = tuple(
-            set(items_in_and_by_distance)
+            set(items_in_radius)
             .intersection(set(items_of_section))
             .intersection(set(knobs_on_canvas))
         )
         ordered_knobs_to_consider = tuple(
-            filter(lambda x: x in items_in_and_by_distance, unordered_knobs_to_consider)
+            filter(lambda x: x in items_in_radius, unordered_knobs_to_consider)
         )
         if not ordered_knobs_to_consider:
             return None
