@@ -106,6 +106,23 @@ class Video:
         return self.video_reader.get_frame(self.path, index)
 
 
+class VideoParser(ABC):
+    @abstractmethod
+    def parse(self, file: Path) -> Video:
+        pass
+
+
+class VideoRepository:
+    def __init__(self) -> None:
+        self._videos: dict[Path, Video] = {}
+
+    def add(self, video: Video) -> None:
+        self._videos[video.path] = video
+
+    def get_all(self) -> list[Video]:
+        return list(self._videos.values())
+
+
 class TrackToVideoRepository:
     """
     Repository containing the videos per track.
@@ -148,7 +165,7 @@ class TrackToVideoRepository:
         return self._videos.get(track_id)
 
 
-class VideoParser(ABC):
+class TrackVideoParser(ABC):
     """
     Parse the information about videos from a track file
     """
@@ -187,15 +204,19 @@ class Datastore:
         section_parser: SectionParser,
         event_list_parser: EventListParser,
         track_to_video_repository: TrackToVideoRepository,
+        video_repository: VideoRepository,
         video_parser: VideoParser,
+        track_video_parser: TrackVideoParser,
     ) -> None:
         self._track_parser = track_parser
         self._section_parser = section_parser
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
+        self._track_video_parser = track_video_parser
         self._track_repository = track_repository
         self._section_repository = section_repository
         self._event_repository = EventRepository()
+        self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
@@ -225,7 +246,7 @@ class Datastore:
         """
         tracks = self._track_parser.parse(file)
         track_ids = [track.id for track in tracks]
-        track_ids, videos = self._video_parser.parse(file, track_ids)
+        track_ids, videos = self._track_video_parser.parse(file, track_ids)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 

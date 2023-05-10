@@ -12,9 +12,11 @@ from OTAnalytics.application.datastore import (
     SectionParser,
     TrackParser,
     TrackToVideoRepository,
+    TrackVideoParser,
     Video,
     VideoParser,
     VideoReader,
+    VideoRepository,
 )
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection, SectionId, SectionRepository
@@ -80,8 +82,18 @@ def video_parser() -> Mock:
 
 
 @pytest.fixture
+def track_video_parser() -> Mock:
+    return Mock(spec=TrackVideoParser)
+
+
+@pytest.fixture
 def event_list_parser() -> Mock:
     return Mock(spec=EventListParser)
+
+
+@pytest.fixture
+def video_repository() -> Mock:
+    return Mock(spec=VideoRepository)
 
 
 @pytest.fixture
@@ -96,7 +108,9 @@ class TestDatastore:
         section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
+        track_video_parser: Mock,
         event_list_parser: Mock,
+        video_repository: Mock,
         track_to_video_repository: Mock,
     ) -> None:
         some_track = Mock()
@@ -104,14 +118,16 @@ class TestDatastore:
         some_track.id = some_track_id
         some_video = Video(video_reader=Mock(), path=Path(""))
         track_parser.parse.return_value = [some_track]
-        video_parser.parse.return_value = [some_track_id], [some_video]
+        track_video_parser.parse.return_value = [some_track_id], [some_video]
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
+            video_repository=video_repository,
             video_parser=video_parser,
+            track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
         )
         some_file = Path("some.file.ottrk")
@@ -119,7 +135,7 @@ class TestDatastore:
         store.load_track_file(some_file)
 
         track_parser.parse.assert_called_with(some_file)
-        video_parser.parse.assert_called_with(some_file, [some_track_id])
+        track_video_parser.parse.assert_called_with(some_file, [some_track_id])
         assert some_track in store._track_repository.get_all()
         track_to_video_repository.add.called_with(some_track_id, some_video)
 
@@ -129,7 +145,9 @@ class TestDatastore:
         section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
+        track_video_parser: Mock,
         event_list_parser: Mock,
+        video_repository: Mock,
         track_to_video_repository: Mock,
     ) -> None:
         track_repository = Mock(spec=TrackRepository)
@@ -142,7 +160,7 @@ class TestDatastore:
         other_track.id = other_track_id
         other_video = Video(video_reader=Mock(), path=Path(""))
         track_parser.parse.side_effect = [[some_track], [other_track]]
-        video_parser.parse.side_effect = [
+        track_video_parser.parse.side_effect = [
             [[some_track_id], [some_video]],
             [[other_track_id], [other_video]],
         ]
@@ -153,6 +171,8 @@ class TestDatastore:
             section_parser=section_parser,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
+            video_repository=video_repository,
+            track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
         )
         some_file = Path("some.file.ottrk")
@@ -164,8 +184,8 @@ class TestDatastore:
         track_parser.parse.assert_any_call(other_file)
         track_repository.add_all.assert_any_call([some_track])
         track_repository.add_all.assert_any_call([other_track])
-        video_parser.parse.assert_any_call(some_file, [some_track_id])
-        video_parser.parse.assert_any_call(other_file, [other_track_id])
+        track_video_parser.parse.assert_any_call(some_file, [some_track_id])
+        track_video_parser.parse.assert_any_call(other_file, [other_track_id])
         assert track_to_video_repository.add_all.call_args_list == [
             call([some_track_id], [some_video]),
             call([other_track_id], [other_video]),
@@ -177,18 +197,22 @@ class TestDatastore:
         section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
+        track_video_parser: Mock,
         event_list_parser: Mock,
+        video_repository: Mock,
         track_to_video_repository: Mock,
     ) -> None:
         track_parser.parse.return_value = []
-        video_parser.parse.return_value = []
+        track_video_parser.parse.return_value = []
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
+            video_repository=video_repository,
             video_parser=video_parser,
+            track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
         )
         some_file = Mock()
@@ -212,18 +236,22 @@ class TestDatastore:
         section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
+        track_video_parser: Mock,
         event_list_parser: Mock,
+        video_repository: Mock,
         track_to_video_repository: Mock,
     ) -> None:
         track_parser.parse.return_value = []
-        video_parser.parse.return_value = []
+        track_video_parser.parse.return_value = []
         store = Datastore(
             track_repository=TrackRepository(),
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
+            video_repository=video_repository,
             video_parser=video_parser,
+            track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
         )
         some_file = Mock()
@@ -237,7 +265,9 @@ class TestDatastore:
         section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
+        track_video_parser: Mock,
         event_list_parser: Mock,
+        video_repository: Mock,
         track_to_video_repository: Mock,
     ) -> None:
         store = Datastore(
@@ -246,7 +276,9 @@ class TestDatastore:
             section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
+            video_repository=video_repository,
             video_parser=video_parser,
+            track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
         )
         section_id = SectionId("my section")
@@ -267,7 +299,9 @@ class TestDatastore:
         section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
+        track_video_parser: Mock,
         event_list_parser: Mock,
+        video_repository: Mock,
         track_to_video_repository: Mock,
     ) -> None:
         store = Datastore(
@@ -276,7 +310,9 @@ class TestDatastore:
             section_repository=section_repository,
             section_parser=section_parser,
             event_list_parser=event_list_parser,
+            video_repository=video_repository,
             video_parser=video_parser,
+            track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
         )
         section_id = SectionId("my section")

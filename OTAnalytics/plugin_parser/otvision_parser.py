@@ -12,6 +12,7 @@ from OTAnalytics.application.datastore import (
     EventListParser,
     SectionParser,
     TrackParser,
+    TrackVideoParser,
     Video,
     VideoParser,
     VideoReader,
@@ -506,9 +507,17 @@ class OtsectionParser(SectionParser):
         return {section.SECTIONS: [section.to_dict() for section in sections]}
 
 
-class OttrkVideoParser(VideoParser):
+class SimpleVideoParser(VideoParser):
     def __init__(self, video_reader: VideoReader) -> None:
         self._video_reader = video_reader
+
+    def parse(self, file: Path) -> Video:
+        return Video(self._video_reader, file)
+
+
+class OttrkVideoParser(TrackVideoParser):
+    def __init__(self, video_parser: VideoParser) -> None:
+        self._video_parser = video_parser
 
     def parse(
         self, file: Path, track_ids: list[TrackId]
@@ -516,7 +525,7 @@ class OttrkVideoParser(VideoParser):
         content = _parse_bz2(file)
         metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
         video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
-        video_file_path = Video(self._video_reader, file.parent / video_file)
+        video_file_path = self._video_parser.parse(file.parent / video_file)
         return track_ids, [video_file_path] * len(track_ids)
 
 
