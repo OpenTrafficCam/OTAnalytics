@@ -444,6 +444,9 @@ class Datastore:
             section_id=section_id, plugin_data=plugin_data
         )
 
+    def get_video_for(self, track_id: TrackId) -> Optional[Video]:
+        return self._track_to_video_repository.get_video_for(track_id)
+
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
         Retrieve an image for the given track.
@@ -455,6 +458,4 @@ class Datastore:
             Optional[TrackImage]: an image of the track if the track is available and
             the image can be loaded
         """
-        if video := self._track_to_video_repository.get_video_for(track_id):
-            return video.get_frame(0)
-        return None
+        return video.get_frame(0) if (video := self.get_video_for(track_id)) else None
