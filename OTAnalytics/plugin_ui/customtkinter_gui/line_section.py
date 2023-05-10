@@ -208,13 +208,7 @@ class SectionGeometryEditor(CanvasObserver):
             coordinates (tuple[int, int]): Coordinates clicked on canvas
             event_type (str): Event type of canvas click
         """
-        if event_type in {"return", "right_mousebutton_up"}:
-            self._finish()
-            self.detach_from(self._canvas.event_handler)
-        elif event_type == "escape":
-            self._abort()
-            self.detach_from(self._canvas.event_handler)
-        elif self._selected_knob_index is None:
+        if self._selected_knob_index is None:
             if event_type == "mouse_motion":
                 self._hover_knob(coordinate)
             elif (
@@ -222,6 +216,12 @@ class SectionGeometryEditor(CanvasObserver):
                 and self._hovered_knob_index is not None
             ):
                 self._select_knob()
+            elif event_type in {"return", "right_mousebutton_up"}:
+                self._finish()
+                self.detach_from(self._canvas.event_handler)
+            elif event_type == "escape":
+                self._abort()
+                self.detach_from(self._canvas.event_handler)
         elif event_type == "mouse_motion":
             self._move_knob(coordinate)
             print(self._coordinates)
@@ -229,6 +229,8 @@ class SectionGeometryEditor(CanvasObserver):
             self._update_knob(coordinate)
         elif event_type == "delete":
             self._delete_selected_knob()
+        elif event_type == "escape":
+            self._deselect_knob()
 
     def _hover_knob(self, coordinate: tuple[int, int]) -> None:
         closest_knob_index = self._get_closest_knob_index(coordinate=coordinate)
@@ -249,6 +251,14 @@ class SectionGeometryEditor(CanvasObserver):
                 highlighted_knob_index=self._selected_knob_index,
                 highlighted_knob_style=self._selected_knob_style,
             )
+
+    def _deselect_knob(self) -> None:
+        self._selected_knob_index = None
+        self._temporary_coordinates = self._coordinates.copy()
+        self._redraw_temporary_section(
+            highlighted_knob_index=self._hovered_knob_index,
+            highlighted_knob_style=self._hovered_knob_style,
+        )
 
     def _move_knob(self, coordinate: tuple[int, int]) -> None:
         if self._selected_knob_index is not None:
