@@ -106,6 +106,49 @@ class Video:
         return self.video_reader.get_frame(self.path, index)
 
 
+class VideoListObserver(ABC):
+    """
+    Interface to listen to changes to a list of tracks.
+    """
+
+    @abstractmethod
+    def notify_videos(self, videos: list[Video]) -> None:
+        """
+        Notifies that the given videos have been added.
+
+        Args:
+            tracks (list[Video]): list of added videos
+        """
+        pass
+
+
+class VideoListSubject:
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[VideoListObserver] = set()
+
+    def register(self, observer: VideoListObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (VideoListObserver): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, videos: list[Video]) -> None:
+        """
+        Notifies observers about the list of videos.
+
+        Args:
+            videos (list[Video]): list of added videos
+        """
+        [observer.notify_videos(videos) for observer in self.observers]
+
+
 class VideoParser(ABC):
     @abstractmethod
     def parse(self, file: Path) -> Video:
@@ -115,9 +158,20 @@ class VideoParser(ABC):
 class VideoRepository:
     def __init__(self) -> None:
         self._videos: dict[Path, Video] = {}
+        self._observers = VideoListSubject()
+
+    def register_videos_observer(self, observer: VideoListObserver) -> None:
+        """
+        Listen to changes of the repository.
+
+        Args:
+            observer (VideoListObserver): listener to be notifed about changes
+        """
+        self._observers.register(observer)
 
     def add(self, video: Video) -> None:
         self._videos[video.path] = video
+        self._observers.notify([video])
 
     def get_all(self) -> list[Video]:
         return list(self._videos.values())
@@ -218,6 +272,9 @@ class Datastore:
         self._event_repository = EventRepository()
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
+
+    def register_video_observer(self, observer: VideoListObserver) -> None:
+        self._video_repository.register_videos_observer(observer)
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
         """
