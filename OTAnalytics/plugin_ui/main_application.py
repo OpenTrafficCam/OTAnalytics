@@ -8,6 +8,7 @@ from OTAnalytics.application.datastore import (
     EventListParser,
     SectionParser,
     TrackParser,
+    TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlotter
@@ -117,6 +118,7 @@ class ApplicationStarter:
         section_repository = self._create_section_repository()
         section_parser = self._create_section_parser()
         event_list_parser = self._create_event_list_parser()
+        track_to_video_repository = TrackToVideoRepository()
         video_parser = OttrkVideoParser(MoviepyVideoReader())
         return Datastore(
             track_repository,
@@ -124,6 +126,7 @@ class ApplicationStarter:
             section_repository,
             section_parser,
             event_list_parser,
+            track_to_video_repository,
             video_parser,
         )
 
