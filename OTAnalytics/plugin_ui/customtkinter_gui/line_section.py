@@ -157,11 +157,6 @@ class CanvasElementDeleter:
         self._canvas.delete(tag_or_id)
 
 
-class SectionKnobEditor:
-    def __init__(self, coordinate: tuple[int, int]):
-        self._initial_coordinate = coordinate
-
-
 class SectionGeometryEditor(CanvasObserver):
     def __init__(
         self,
