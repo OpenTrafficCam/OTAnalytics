@@ -221,7 +221,9 @@ class SectionGeometryEditor(CanvasObserver):
 
         Args:
             coordinates (tuple[int, int]): Coordinates clicked on canvas
-            event_type (str): Event type of canvas click
+            event_type (str): Type of event while mouse was on canvas.
+            key (str | None): Key character that has been pressed while mouse was on
+                canvas.
         """
         if self._selected_knob_index is None:
             if event_type == MOTION:
@@ -473,7 +475,9 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
 
         Args:
             coordinates (tuple[int, int]): Coordinates clicked on canvas
-            event_type (str): Event type of canvas click
+            event_type (str): Type of event while mouse was on canvas.
+            key (str | None): Key character that has been pressed while mouse was on
+                canvas.
         """
         if event_type == LEFT_BUTTON_UP:
             self.geometry_builder.add_coordinate(coordinate)
