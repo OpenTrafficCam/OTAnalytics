@@ -219,7 +219,9 @@ class SectionGeometryEditor(CanvasObserver):
     def _get_matadata(self) -> None:
         self._metadata = self._section.to_dict()
 
-    def update(self, coordinate: tuple[int, int], event_type: str) -> None:
+    def update(
+        self, coordinate: tuple[int, int], event_type: str, key: str | None
+    ) -> None:
         """Receives and reacts to updates issued by the canvas event handler
 
         Args:
@@ -469,7 +471,9 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             self._name = template.id.id
             self._metadata = template.to_dict()
 
-    def update(self, coordinate: tuple[int, int], event_type: str) -> None:
+    def update(
+        self, coordinate: tuple[int, int], event_type: str, key: str | None
+    ) -> None:
         """Receives and reacts to updates issued by the canvas event handler
 
         Args:

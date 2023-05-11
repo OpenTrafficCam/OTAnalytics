@@ -18,11 +18,13 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     DELETE_KEYS,
     ENTER_CANVAS,
     ESCAPE_KEY,
+    KEY_SYMBOLS,
     LEAVE_CANVAS,
     LEFT_BUTTON_DOWN,
     LEFT_BUTTON_UP,
     MOTION,
     MOTION_WHILE_LEFT_BUTTON_DOWN,
+    OTHER_KEY,
     PADX,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
@@ -152,6 +154,7 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<Delete>", self.on_delete)
         self._canvas.bind("<BackSpace>", self.on_delete)
         self._canvas.bind("<Escape>", self.on_escape)
+        self._canvas.bind("<KeyRelease>", self.on_other_key)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)
@@ -159,9 +162,11 @@ class CanvasEventHandler(EventHandler):
     def detach_observer(self, observer: CanvasObserver) -> None:
         self._observers.remove(observer)
 
-    def _notify_observers(self, coordinates: tuple[int, int], event_type: str) -> None:
+    def _notify_observers(
+        self, coordinates: tuple[int, int], event_type: str, key: str | None = None
+    ) -> None:
         for observer in self._observers:
-            observer.update(coordinates, event_type)
+            observer.update(coordinates, event_type, key)
 
     def on_left_mousebutton_down(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
@@ -202,8 +207,16 @@ class CanvasEventHandler(EventHandler):
         self._notify_observers(coordinates, DELETE_KEYS)
 
     def on_escape(self, event: Any) -> None:
+        print(ESCAPE_KEY)
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, ESCAPE_KEY)
+
+    def on_other_key(self, event: Any) -> None:
+        if event.keysym in KEY_SYMBOLS:
+            return
+        key = event.char
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, event_type=OTHER_KEY, key=key)
 
     def _get_mouse_coordinates(self, event: Any) -> tuple[int, int]:
         """Returns coordinates of event on canvas taking into account the horizontal and
