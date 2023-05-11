@@ -25,6 +25,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
+PRE_EDIT_SECTION_TAG: str = "pre_edited_section"
 KNOB_INDEX_TAG_PREFIX: str = "knob-index-"
 
 # TODO: If possible make this classes reusable for other canvas items
@@ -158,6 +159,7 @@ class SectionGeometryEditor(CanvasObserver):
         canvas: AbstractCanvas,
         section: Section,
         section_style: dict,
+        pre_edit_section_style: dict,
         hovered_knob_style: dict,
         selected_knob_style: dict,
     ) -> None:
@@ -165,12 +167,14 @@ class SectionGeometryEditor(CanvasObserver):
         self._canvas = canvas
         self._section = section
         self._section_style = section_style
+        self._pre_edit_section_style = pre_edit_section_style
         self._hovered_knob_style = hovered_knob_style
         self._selected_knob_style = selected_knob_style
 
         self._hovered_knob_index: int | None = None
         self._selected_knob_index: int | None = None
         self._temporary_id: str = TEMPORARY_SECTION_ID
+        self._pre_edit_tag: str = PRE_EDIT_SECTION_TAG
 
         self.attach_to(self._canvas.event_handler)
 
@@ -182,7 +186,13 @@ class SectionGeometryEditor(CanvasObserver):
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self.painter.draw(
-            tags=[TEMPORARY_SECTION_ID],
+            tags=[self._pre_edit_tag],
+            id=self._pre_edit_tag,
+            coordinates=self._temporary_coordinates,
+            section_style=self._pre_edit_section_style,
+        )
+        self.painter.draw(
+            tags=[self._temporary_id],
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
             section_style=self._section_style,
@@ -342,7 +352,8 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _finish(self) -> None:
         self._create_section()
-        self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
+        self.deleter.delete(tag_or_id=self._pre_edit_tag)
+        self.deleter.delete(tag_or_id=self._temporary_id)
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
         return Coordinate(coordinate[0], coordinate[1])

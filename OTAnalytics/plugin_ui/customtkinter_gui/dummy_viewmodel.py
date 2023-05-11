@@ -30,6 +30,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
     HOVERED_KNOB_STYLE,
+    PRE_EDIT_SECTION_STYLE,
     SELECTED_KNOB_STYLE,
     SELECTED_SECTION_STYLE,
 )
@@ -199,6 +200,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
                     canvas=self._canvas,
                     section=current_section,
                     section_style=EDITED_SECTION_STYLE,
+                    pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
                     hovered_knob_style=HOVERED_KNOB_STYLE,
                     selected_knob_style=SELECTED_KNOB_STYLE,
                 )
