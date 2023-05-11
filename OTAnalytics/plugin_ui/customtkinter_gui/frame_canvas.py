@@ -145,20 +145,20 @@ class CanvasEventHandler(EventHandler):
         self._bind_events()
 
     def _bind_events(self) -> None:
-        self._canvas.bind("<Enter>", self.on_mouse_enters_canvas)
-        self._canvas.bind("<Leave>", self.on_mouse_leaves_canvas)
-        self._canvas.bind("<ButtonPress-1>", self.on_left_mousebutton_down)
-        self._canvas.bind("<ButtonRelease-1>", self.on_left_mousebutton_up)
-        self._canvas.bind("<ButtonRelease-2>", self.on_right_mousebutton_up)
-        self._canvas.bind("<Motion>", self.on_mouse_motion)
-        self._canvas.bind("<B1-Motion>>", self.on_mouse_motion_while_left_button_down)
-        self._canvas.bind("<Left>", self.on_left)
-        self._canvas.bind("<Right>", self.on_right)
-        self._canvas.bind("<Return>", self.on_return)
-        self._canvas.bind("<Delete>", self.on_delete)
-        self._canvas.bind("<BackSpace>", self.on_delete)
-        self._canvas.bind("<Escape>", self.on_escape)
-        self._canvas.bind("<KeyRelease>", self.on_other_key_up)
+        self._canvas.bind("<Enter>", self._on_mouse_enters_canvas)
+        self._canvas.bind("<Leave>", self._on_mouse_leaves_canvas)
+        self._canvas.bind("<ButtonPress-1>", self._on_left_button_down)
+        self._canvas.bind("<ButtonRelease-1>", self._on_left_button_up)
+        self._canvas.bind("<ButtonRelease-2>", self._on_right_button_up)
+        self._canvas.bind("<Motion>", self._on_mouse_motion)
+        self._canvas.bind("<B1-Motion>>", self._on_motion_while_left_button_down)
+        self._canvas.bind("<Left>", self._on_left)
+        self._canvas.bind("<Right>", self._on_right)
+        self._canvas.bind("<Return>", self._on_return)
+        self._canvas.bind("<Delete>", self._on_delete)
+        self._canvas.bind("<BackSpace>", self._on_delete)
+        self._canvas.bind("<Escape>", self._on_escape)
+        self._canvas.bind("<KeyRelease>", self._on_other_key_up)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)
@@ -172,57 +172,57 @@ class CanvasEventHandler(EventHandler):
         for observer in self._observers:
             observer.update(coordinates, event_type, key)
 
-    def on_left_mousebutton_down(self, event: Any) -> None:
+    def _on_left_button_down(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, LEFT_BUTTON_DOWN)
 
-    def on_left_mousebutton_up(self, event: Any) -> None:
+    def _on_left_button_up(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
 
         self._notify_observers(coordinates, LEFT_BUTTON_UP)
 
-    def on_right_mousebutton_up(self, event: Any) -> None:
+    def _on_right_button_up(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, RIGHT_BUTTON_UP)
 
-    def on_mouse_motion(self, event: Any) -> None:
+    def _on_mouse_motion(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, MOTION)
 
-    def on_mouse_motion_while_left_button_down(self, event: Any) -> None:
+    def _on_motion_while_left_button_down(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, MOTION_WHILE_LEFT_BUTTON_DOWN)
 
-    def on_mouse_leaves_canvas(self, event: Any) -> None:
+    def _on_mouse_leaves_canvas(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, LEAVE_CANVAS)
 
-    def on_mouse_enters_canvas(self, event: Any) -> None:
+    def _on_mouse_enters_canvas(self, event: Any) -> None:
         self._canvas.focus_set()
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, ENTER_CANVAS)
 
-    def on_left(self, event: Any) -> None:
+    def _on_left(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, LEFT_KEY)
 
-    def on_right(self, event: Any) -> None:
+    def _on_right(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, RIGHT_KEY)
 
-    def on_return(self, event: Any) -> None:
+    def _on_return(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, RETURN_KEY)
 
-    def on_delete(self, event: Any) -> None:
+    def _on_delete(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, DELETE_KEYS)
 
-    def on_escape(self, event: Any) -> None:
+    def _on_escape(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, ESCAPE_KEY)
 
-    def on_other_key_up(self, event: Any) -> None:
+    def _on_other_key_up(self, event: Any) -> None:
         if event.keysym in KEY_SYMBOLS:
             return
         key = event.char
