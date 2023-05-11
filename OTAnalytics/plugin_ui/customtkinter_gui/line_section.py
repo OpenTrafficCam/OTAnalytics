@@ -414,10 +414,6 @@ class SectionGeometryBuilder:
         self._coordinates: list[tuple[int, int]] = []
 
     def add_temporary_coordinate(self, coordinate: tuple[int, int]) -> None:
-        if self.number_of_coordinates() == 0:
-            raise ValueError(
-                "First coordinate has to be set before listening to mouse motion"
-            )
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
         self.painter.draw(
             id=self._temporary_id,
@@ -490,9 +486,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         """
         if event_type == LEFT_BUTTON_UP:
             self.geometry_builder.add_coordinate(coordinate)
-        elif (
-            self.geometry_builder.number_of_coordinates() >= 1 and event_type == MOTION
-        ):
+        elif event_type == MOTION:
             self.geometry_builder.add_temporary_coordinate(coordinate)
         elif self.geometry_builder.number_of_coordinates() >= 2 and (
             event_type in {RIGHT_BUTTON_UP, RETURN_KEY}
