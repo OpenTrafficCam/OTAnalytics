@@ -128,10 +128,13 @@ class CanvasEventHandler(EventHandler):
         self._bind_events()
 
     def _bind_events(self) -> None:
+        self._canvas.bind("<ButtonPress-1>", self.on_left_mousebutton_down)
         self._canvas.bind("<ButtonRelease-1>", self.on_left_mousebutton_up)
         self._canvas.bind("<ButtonRelease-2>", self.on_right_mousebutton_up)
         self._canvas.bind("<Motion>", self.on_mouse_motion)
-        self._canvas.bind("<Enter>", lambda event: self._canvas.focus_set())
+        self._canvas.bind("<B1-Motion>>", self.on_mouse_motion_while_left_button_down)
+        self._canvas.bind("<Enter>", self.on_mouse_enters_canvas)
+        self._canvas.bind("<Leave>", self.on_mouse_leaves_canvas)
         self._canvas.bind("<Return>", self.on_return)
         self._canvas.bind("<Delete>", self.on_delete)
         self._canvas.bind("<BackSpace>", self.on_delete)
@@ -147,6 +150,10 @@ class CanvasEventHandler(EventHandler):
         for observer in self._observers:
             observer.update(coordinates, event_type)
 
+    def on_left_mousebutton_down(self, event: Any) -> None:
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, "left_mousebutton_down")
+
     def on_left_mousebutton_up(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, "left_mousebutton_up")
@@ -158,6 +165,19 @@ class CanvasEventHandler(EventHandler):
     def on_mouse_motion(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, "mouse_motion")
+
+    def on_mouse_motion_while_left_button_down(self, event: Any) -> None:
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, "mouse_motion_while_left_button_down")
+
+    def on_mouse_leaves_canvas(self, event: Any) -> None:
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, "mouse_leaves_canvas")
+
+    def on_mouse_enters_canvas(self, event: Any) -> None:
+        self._canvas.focus_set()
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, "mouse_enters_canvas")
 
     def on_return(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
