@@ -17,6 +17,8 @@ class FrameSections(CTkFrame):
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         self._get_widgets()
         self._place_widgets()
 
@@ -63,7 +65,7 @@ class TreeviewSections(TreeviewTemplate, Treeview):
 
     def _define_columns(self) -> None:
         self["columns"] = "Section"
-        self.column(column="#0", width=0)
+        self.column(column="#0", width=0, stretch=False)
         self.column(column="Section", anchor="center", width=150, minwidth=40)
         self["displaycolumns"] = "Section"
 
