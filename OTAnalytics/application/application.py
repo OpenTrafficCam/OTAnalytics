@@ -3,7 +3,12 @@ from typing import Iterable, Optional
 
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.application.state import (
+    SectionState,
+    TracksMetadata,
+    TrackState,
+    TrackViewState,
+)
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -28,6 +33,7 @@ class OTAnalyticsApplication:
         section_state: SectionState,
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
+        tracks_metadata: TracksMetadata,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -35,12 +41,14 @@ class OTAnalyticsApplication:
         self.section_state: SectionState = section_state
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
+        self._tracks_metadata = tracks_metadata
 
     def connect_observers(self) -> None:
         """
         Connect the observers with the repositories to listen to domain object changes.
         """
         self._datastore.register_tracks_observer(self.track_state)
+        self._datastore.register_tracks_observer(self._tracks_metadata)
         self._datastore.register_sections_observer(self.section_state)
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
