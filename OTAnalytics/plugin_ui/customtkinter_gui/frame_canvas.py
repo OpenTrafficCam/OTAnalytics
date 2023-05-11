@@ -19,12 +19,12 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     ENTER_CANVAS,
     ESCAPE_KEY,
     KEY_SYMBOLS,
+    KEY_UP,
     LEAVE_CANVAS,
     LEFT_BUTTON_DOWN,
     LEFT_BUTTON_UP,
     MOTION,
     MOTION_WHILE_LEFT_BUTTON_DOWN,
-    OTHER_KEY,
     PADX,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
@@ -216,7 +216,7 @@ class CanvasEventHandler(EventHandler):
             return
         key = event.char
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, event_type=OTHER_KEY, key=key)
+        self._notify_observers(coordinates, event_type=KEY_UP, key=key)
 
     def _get_mouse_coordinates(self, event: Any) -> tuple[int, int]:
         """Returns coordinates of event on canvas taking into account the horizontal and

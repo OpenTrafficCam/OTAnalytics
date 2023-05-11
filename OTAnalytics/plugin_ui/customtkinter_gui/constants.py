@@ -12,7 +12,7 @@ ENTER_CANVAS = "mouse_enters_canvas"
 RETURN_KEY = "return"
 DELETE_KEYS = "delete"
 ESCAPE_KEY = "escape"
-OTHER_KEY = "other_key"
+KEY_UP = "key_up"
 PLUS_KEX = "+"
 KEY_SYMBOLS = [
     "Alt_L",
