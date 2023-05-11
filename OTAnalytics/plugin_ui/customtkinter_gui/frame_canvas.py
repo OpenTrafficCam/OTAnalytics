@@ -154,7 +154,7 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<Delete>", self.on_delete)
         self._canvas.bind("<BackSpace>", self.on_delete)
         self._canvas.bind("<Escape>", self.on_escape)
-        self._canvas.bind("<KeyRelease>", self.on_other_key)
+        self._canvas.bind("<KeyRelease>", self.on_other_key_up)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)
@@ -211,7 +211,7 @@ class CanvasEventHandler(EventHandler):
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, ESCAPE_KEY)
 
-    def on_other_key(self, event: Any) -> None:
+    def on_other_key_up(self, event: Any) -> None:
         if event.keysym in KEY_SYMBOLS:
             return
         key = event.char
