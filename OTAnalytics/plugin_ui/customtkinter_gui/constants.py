@@ -12,8 +12,11 @@ ENTER_CANVAS = "mouse_enters_canvas"
 RETURN_KEY = "return"
 DELETE_KEYS = "delete"
 ESCAPE_KEY = "escape"
+LEFT_KEY = "left"
+RIGHT_KEY = "right"
 KEY_UP = "key_up"
-PLUS_KEX = "+"
+PLUS_KEY = "+"
+MINUS_KEY = "-"
 KEY_SYMBOLS = [
     "Alt_L",
     "Alt_R",

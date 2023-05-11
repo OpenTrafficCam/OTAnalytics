@@ -16,10 +16,14 @@ from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserv
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     DELETE_KEYS,
     ESCAPE_KEY,
+    KEY_UP,
     LEFT_BUTTON_UP,
+    LEFT_KEY,
     MOTION,
+    PLUS_KEY,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
+    RIGHT_KEY,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
@@ -229,13 +233,19 @@ class SectionGeometryEditor(CanvasObserver):
             if event_type == MOTION:
                 self._hover_knob(coordinate)
             elif event_type == LEFT_BUTTON_UP and self._hovered_knob_index is not None:
-                self._select_knob()
+                self._select_hovered_knob()
+            elif event_type == KEY_UP and key == PLUS_KEY:
+                self._add_knob(coordinate=coordinate)
             elif event_type in {RETURN_KEY, RIGHT_BUTTON_UP}:
                 self._finish()
                 self.detach_from(self._canvas.event_handler)
             elif event_type == ESCAPE_KEY:
                 self._abort()
                 self.detach_from(self._canvas.event_handler)
+        elif event_type == LEFT_KEY:
+            self._shift_selected_knob_backward()
+        elif event_type == RIGHT_KEY:
+            self._shift_selected_knob_forward()
         elif event_type == MOTION:
             self._move_knob(coordinate)
         elif event_type == LEFT_BUTTON_UP:
@@ -257,7 +267,7 @@ class SectionGeometryEditor(CanvasObserver):
         else:
             self._redraw_temporary_section()
 
-    def _select_knob(self) -> None:
+    def _select_hovered_knob(self) -> None:
         self._selected_knob_index = self._hovered_knob_index
         if self._selected_knob_index is not None:
             self._redraw_temporary_section(
@@ -275,7 +285,7 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _move_knob(self, coordinate: tuple[int, int]) -> None:
         if self._selected_knob_index is not None:
-            self._update_temporary_coordinates(
+            self._update_temporary_coordinate(
                 index=self._selected_knob_index, coordinate=coordinate
             )
             self._redraw_temporary_section(
@@ -283,11 +293,39 @@ class SectionGeometryEditor(CanvasObserver):
                 highlighted_knob_style=self._selected_knob_style,
             )
 
+    def _add_knob(self, coordinate: tuple[int, int]) -> None:
+        self._append_temporary_coordinate(coordinate=coordinate)
+        self._selected_knob_index = len(self._temporary_coordinates) - 1
+        self._redraw_temporary_section(
+            highlighted_knob_index=self._selected_knob_index,
+            highlighted_knob_style=self._selected_knob_style,
+        )
+
+    def _shift_selected_knob_forward(self) -> None:
+        i = self._selected_knob_index
+        if i is None or i >= len(self._temporary_coordinates) - 1:
+            return
+        self._swap_temporary_coordinates(index=i, index_other=i + 1)
+        self._selected_knob_index = i + 1
+        self._redraw_temporary_section(
+            highlighted_knob_index=self._selected_knob_index,
+            highlighted_knob_style=self._selected_knob_style,
+        )
+
+    def _shift_selected_knob_backward(self) -> None:
+        i = self._selected_knob_index
+        if i is None or i == 0:
+            return
+        self._swap_temporary_coordinates(index=i, index_other=i - 1)
+        self._selected_knob_index = i - 1
+        self._redraw_temporary_section(
+            highlighted_knob_index=self._selected_knob_index,
+            highlighted_knob_style=self._selected_knob_style,
+        )
+
     def _update_knob(self, coordinate: tuple[int, int]) -> None:
         if self._selected_knob_index is not None:
-            self._update_coordinates(
-                index=self._selected_knob_index, coordinate=coordinate
-            )
+            self._update_coordinates()
             self._redraw_temporary_section(
                 highlighted_knob_index=self._selected_knob_index
             )
@@ -326,13 +364,25 @@ class SectionGeometryEditor(CanvasObserver):
             f"{KNOB_INDEX_TAG_PREFIX} not found in tags of hovered canvas item"
         )
 
-    def _update_temporary_coordinates(
+    def _update_temporary_coordinate(
         self, index: int, coordinate: tuple[int, int]
     ) -> None:
         self._temporary_coordinates[index] = coordinate
 
-    def _update_coordinates(self, index: int, coordinate: tuple[int, int]) -> None:
-        self._coordinates[index] = coordinate
+    def _swap_temporary_coordinates(self, index: int, index_other: int) -> None:
+        (
+            self._temporary_coordinates[index],
+            self._temporary_coordinates[index_other],
+        ) = (
+            self._temporary_coordinates[index_other],
+            self._temporary_coordinates[index],
+        )
+
+    def _append_temporary_coordinate(self, coordinate: tuple[int, int]) -> None:
+        self._temporary_coordinates.append(coordinate)
+
+    def _update_coordinates(self) -> None:
+        self._coordinates = self._temporary_coordinates.copy()
 
     def _delete_coordinate(self, index: int) -> None:
         del self._coordinates[index]
