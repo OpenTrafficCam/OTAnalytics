@@ -199,7 +199,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
                     viewmodel=self,
                     canvas=self._canvas,
                     section=current_section,
-                    section_style=EDITED_SECTION_STYLE,
+                    edited_section_style=EDITED_SECTION_STYLE,
                     pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
                     hovered_knob_style=HOVERED_KNOB_STYLE,
                     selected_knob_style=SELECTED_KNOB_STYLE,
