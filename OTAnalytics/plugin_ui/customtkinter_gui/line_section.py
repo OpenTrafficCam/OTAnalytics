@@ -226,6 +226,7 @@ class SectionGeometryEditor(CanvasObserver):
             self._move_knob(coordinate)
         elif event_type == "left_mousebutton_up":
             self._update_knob(coordinate)
+            self._deselect_knob()
         elif event_type == "delete":
             self._delete_selected_knob()
         elif event_type == "escape":
@@ -277,7 +278,6 @@ class SectionGeometryEditor(CanvasObserver):
             self._redraw_temporary_section(
                 highlighted_knob_index=self._selected_knob_index
             )
-            self._selected_knob_index = None
 
     def _delete_selected_knob(self) -> None:
         if self._selected_knob_index is not None and len(self._coordinates) > 2:
