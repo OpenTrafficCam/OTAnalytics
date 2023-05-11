@@ -1,5 +1,3 @@
-# from customtkinter import CTkFrame
-
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -35,9 +33,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSe
 TEMPORARY_SECTION_ID: str = "temporary_section"
 PRE_EDIT_SECTION_ID: str = "pre_edit_section"
 KNOB_INDEX_TAG_PREFIX: str = "knob-index-"
-
-# TODO: If possible make this classes reusable for other canvas items
-# TODO: Rename to more canvas specific names, as LineSection also has metadata
 
 
 class SectionGeometryBuilderObserver(ABC):
@@ -168,7 +163,6 @@ class SectionKnobEditor:
 
 
 class SectionGeometryEditor(CanvasObserver):
-    # TODO: Split responsibilities in SectionGeometryEditor and SectionKnobEditor
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -284,7 +278,7 @@ class SectionGeometryEditor(CanvasObserver):
         if self._selected_knob_index is not None:
             self._update_temporary_coordinates(
                 index=self._selected_knob_index, coordinate=coordinate
-            )  # TODO: Index instead if coordinate as a class property
+            )
             self._redraw_temporary_section(
                 highlighted_knob_index=self._selected_knob_index,
                 highlighted_knob_style=self._selected_knob_style,
@@ -307,7 +301,7 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _get_closest_knob_index(
         self, coordinate: tuple[int, int], radius: int = 0
-    ) -> int | None:  # sourcery skip: inline-immediately-returned-variable
+    ) -> int | None:
         x, y = coordinate[0], coordinate[1]
         items_of_section = self._canvas.find_withtag(TEMPORARY_SECTION_ID)
         knobs_on_canvas = self._canvas.find_withtag(KNOB_CORE)
@@ -410,7 +404,6 @@ class SectionGeometryBuilder:
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self._temporary_id: str = TEMPORARY_SECTION_ID
-        # self._tmp_end: tuple[int, int] | None = None
         self._coordinates: list[tuple[int, int]] = []
 
     def add_temporary_coordinate(self, coordinate: tuple[int, int]) -> None:
@@ -420,7 +413,6 @@ class SectionGeometryBuilder:
             coordinates=self._coordinates + [coordinate],
             section_style=self._style,
         )
-        # self._tmp_end = coordinates
 
     def number_of_coordinates(self) -> int:
         return len(self._coordinates)
