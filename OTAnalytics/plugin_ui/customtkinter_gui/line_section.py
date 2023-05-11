@@ -168,8 +168,8 @@ class SectionGeometryEditor(CanvasObserver):
         section: Section,
         edited_section_style: dict,
         pre_edit_section_style: dict,
-        hovered_knob_style: dict,
         selected_knob_style: dict,
+        hovered_knob_style: dict | None = None,
     ) -> None:
         self._viewmodel = viewmodel
         self._canvas = canvas
