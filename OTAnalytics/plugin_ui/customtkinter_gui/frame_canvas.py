@@ -14,7 +14,20 @@ from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import (
     CanvasObserver,
     EventHandler,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    DELETE_KEYS,
+    ENTER_CANVAS,
+    ESCAPE_KEY,
+    LEAVE_CANVAS,
+    LEFT_BUTTON_DOWN,
+    LEFT_BUTTON_UP,
+    MOTION,
+    MOTION_WHILE_LEFT_BUTTON_DOWN,
+    PADX,
+    RETURN_KEY,
+    RIGHT_BUTTON_UP,
+    STICKY,
+)
 
 
 @dataclass
@@ -152,44 +165,45 @@ class CanvasEventHandler(EventHandler):
 
     def on_left_mousebutton_down(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "left_mousebutton_down")
+        self._notify_observers(coordinates, LEFT_BUTTON_DOWN)
 
     def on_left_mousebutton_up(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "left_mousebutton_up")
+
+        self._notify_observers(coordinates, LEFT_BUTTON_UP)
 
     def on_right_mousebutton_up(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "right_mousebutton_up")
+        self._notify_observers(coordinates, RIGHT_BUTTON_UP)
 
     def on_mouse_motion(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "mouse_motion")
+        self._notify_observers(coordinates, MOTION)
 
     def on_mouse_motion_while_left_button_down(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "mouse_motion_while_left_button_down")
+        self._notify_observers(coordinates, MOTION_WHILE_LEFT_BUTTON_DOWN)
 
     def on_mouse_leaves_canvas(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "mouse_leaves_canvas")
+        self._notify_observers(coordinates, LEAVE_CANVAS)
 
     def on_mouse_enters_canvas(self, event: Any) -> None:
         self._canvas.focus_set()
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "mouse_enters_canvas")
+        self._notify_observers(coordinates, ENTER_CANVAS)
 
     def on_return(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "return")
+        self._notify_observers(coordinates, RETURN_KEY)
 
     def on_delete(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "delete")
+        self._notify_observers(coordinates, DELETE_KEYS)
 
     def on_escape(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "escape")
+        self._notify_observers(coordinates, ESCAPE_KEY)
 
     def _get_mouse_coordinates(self, event: Any) -> tuple[int, int]:
         """Returns coordinates of event on canvas taking into account the horizontal and

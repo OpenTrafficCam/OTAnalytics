@@ -15,6 +15,14 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    DELETE_KEYS,
+    ESCAPE_KEY,
+    LEFT_BUTTON_UP,
+    MOTION,
+    RETURN_KEY,
+    RIGHT_BUTTON_UP,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB,
@@ -225,27 +233,24 @@ class SectionGeometryEditor(CanvasObserver):
             event_type (str): Event type of canvas click
         """
         if self._selected_knob_index is None:
-            if event_type == "mouse_motion":
+            if event_type == MOTION:
                 self._hover_knob(coordinate)
-            elif (
-                event_type == "left_mousebutton_up"
-                and self._hovered_knob_index is not None
-            ):
+            elif event_type == LEFT_BUTTON_UP and self._hovered_knob_index is not None:
                 self._select_knob()
-            elif event_type in {"return", "right_mousebutton_up"}:
+            elif event_type in {RETURN_KEY, RIGHT_BUTTON_UP}:
                 self._finish()
                 self.detach_from(self._canvas.event_handler)
-            elif event_type == "escape":
+            elif event_type == ESCAPE_KEY:
                 self._abort()
                 self.detach_from(self._canvas.event_handler)
-        elif event_type == "mouse_motion":
+        elif event_type == MOTION:
             self._move_knob(coordinate)
-        elif event_type == "left_mousebutton_up":
+        elif event_type == LEFT_BUTTON_UP:
             self._update_knob(coordinate)
             self._deselect_knob()
-        elif event_type == "delete":
+        elif event_type == DELETE_KEYS:
             self._delete_selected_knob()
-        elif event_type == "escape":
+        elif event_type == ESCAPE_KEY:
             self._deselect_knob()
 
     def _hover_knob(self, coordinate: tuple[int, int]) -> None:
@@ -262,7 +267,6 @@ class SectionGeometryEditor(CanvasObserver):
     def _select_knob(self) -> None:
         self._selected_knob_index = self._hovered_knob_index
         if self._selected_knob_index is not None:
-            print(f"Selected: {self._selected_knob_index}")
             self._redraw_temporary_section(
                 highlighted_knob_index=self._selected_knob_index,
                 highlighted_knob_style=self._selected_knob_style,
@@ -484,21 +488,18 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             coordinates (tuple[int, int]): Coordinates clicked on canvas
             event_type (str): Event type of canvas click
         """
-        if event_type == "left_mousebutton_up":
-            print("left_mousebutton_up")
+        if event_type == LEFT_BUTTON_UP:
             self.geometry_builder.add_coordinate(coordinate)
         elif (
-            self.geometry_builder.number_of_coordinates() >= 1
-            and event_type == "mouse_motion"
+            self.geometry_builder.number_of_coordinates() >= 1 and event_type == MOTION
         ):
             self.geometry_builder.add_temporary_coordinate(coordinate)
         elif self.geometry_builder.number_of_coordinates() >= 2 and (
-            event_type in {"right_mousebutton_up", "return"}
+            event_type in {RIGHT_BUTTON_UP, RETURN_KEY}
         ):
-            print("right_mousebutton_up")
             self.geometry_builder.finish_building()
             self.detach_from(self._canvas.event_handler)
-        elif event_type == "escape":
+        elif event_type == ESCAPE_KEY:
             self.geometry_builder.abort()
             self.detach_from(self._canvas.event_handler)
 
