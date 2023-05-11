@@ -25,7 +25,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
-PRE_EDIT_SECTION_TAG: str = "pre_edited_section"
+PRE_EDIT_SECTION_ID: str = "pre_edit_section"
 KNOB_INDEX_TAG_PREFIX: str = "knob-index-"
 
 # TODO: If possible make this classes reusable for other canvas items
@@ -50,23 +50,30 @@ class CanvasElementPainter:
 
     def draw(
         self,
-        tags: list[str],
         id: str,
         coordinates: list[tuple[int, int]],
         section_style: dict,
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,
-    ) -> None:  # sourcery skip: dict-assign-update-to-union
+        tags: list[str] | None = None,
+    ) -> None:
         """Draws a line section on a canvas.
 
         Args:
-            tag (str): Tag for groups of line_sections
-            id (str): ID of the line section. Has to be unique among all line sections.
-            start (tuple[int, int]): First point of the line section
-            end (tuple[int, int]): Second Point of the line section
-            style (dict): Dict of style options for tkinter canvas items.
+            id (str): ID of the line section.
+                Shall be unique among all sections on the canvas.
+            coordinates (list[tuple[int, int]]): Knob coordinates that define a section.
+            section_style (dict): Dict of style options for tkinter canvas items.
+            highlighted_knob_index (int | None, optional): Index of a knob coordinate
+                that should be highlighted with a unique style.
+                Defaults to None.
+            highlighted_knob_style (dict | None, optional): Dict of style options for a
+                knob coordinate that should be highlighted with a unique style.
+                Defaults to None.
+            tags (list[str] | None, optional): Tags to specify groups of line_sections.
+                Defaults to None.
         """
-        tkinter_tags = (id,) + tuple(tags)
+        tkinter_tags = (id,) + tuple(tags) if tags is not None else (id,)
 
         start: tuple[int, int] | None = None
         for index, coordinate in enumerate(coordinates):
@@ -141,7 +148,8 @@ class CanvasElementDeleter:
         """Deletes all elements from a canvas with a given tag or id.
 
         Args:
-            tag (str): Tag given when creating a canvas item (e.g. "line_section")
+            tag_or_id (str): Tag or id given when creating a canvas item
+                (e.g. "line_section" as a tag or the id of a section as an id)
         """
         self._canvas.delete(tag_or_id)
 
@@ -174,7 +182,7 @@ class SectionGeometryEditor(CanvasObserver):
         self._hovered_knob_index: int | None = None
         self._selected_knob_index: int | None = None
         self._temporary_id: str = TEMPORARY_SECTION_ID
-        self._pre_edit_tag: str = PRE_EDIT_SECTION_TAG
+        self._pre_edit_id: str = PRE_EDIT_SECTION_ID
 
         self.attach_to(self._canvas.event_handler)
 
@@ -186,13 +194,11 @@ class SectionGeometryEditor(CanvasObserver):
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self.painter.draw(
-            tags=[self._pre_edit_tag],
-            id=self._pre_edit_tag,
+            id=self._pre_edit_id,
             coordinates=self._temporary_coordinates,
             section_style=self._pre_edit_section_style,
         )
         self.painter.draw(
-            tags=[self._temporary_id],
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
             section_style=self._pre_edited_section_style,
@@ -342,7 +348,6 @@ class SectionGeometryEditor(CanvasObserver):
     ) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
         self.painter.draw(
-            tags=[TEMPORARY_SECTION_ID],
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
             section_style=self._pre_edited_section_style,
@@ -352,7 +357,7 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _finish(self) -> None:
         self._create_section()
-        self.deleter.delete(tag_or_id=self._pre_edit_tag)
+        self.deleter.delete(tag_or_id=self._pre_edit_id)
         self.deleter.delete(tag_or_id=self._temporary_id)
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
@@ -411,7 +416,6 @@ class SectionGeometryBuilder:
             )
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
         self.painter.draw(
-            tags=[TEMPORARY_SECTION_ID],
             id=self._temporary_id,
             coordinates=self._coordinates + [coordinate],
             section_style=self._style,
@@ -427,7 +431,6 @@ class SectionGeometryBuilder:
     def finish_building(self) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
         self.painter.draw(
-            tags=[TEMPORARY_SECTION_ID],
             id=self._temporary_id,
             coordinates=self._coordinates,
             section_style=self._style,
