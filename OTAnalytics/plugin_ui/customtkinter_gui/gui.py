@@ -30,6 +30,8 @@ class OTAnalyticsGui:
         set_default_color_theme("green")
 
         self._app.title("OTAnalytics")
+        self._app.grid_rowconfigure(1, weight=1)
+        self._app.grid_columnconfigure(0, weight=1)
 
         self._get_widgets()
         self._place_widgets()
