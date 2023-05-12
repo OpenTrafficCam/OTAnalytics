@@ -7,6 +7,7 @@ from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.section import Section
 
 DISTANCES: str = "distances"
@@ -146,9 +147,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def apply_filter_tracks_by_date(
-        self, start_date: Optional[datetime], end_date: Optional[datetime]
-    ) -> None:
+    def apply_filter_tracks_by_date(self, date_range: DateRange) -> None:
         pass
 
     @abstractmethod
@@ -164,7 +163,5 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def get_filter_tracks_by_date_setting(
-        self,
-    ) -> tuple[Optional[datetime], Optional[datetime]]:
+    def get_filter_tracks_by_date_setting(self) -> DateRange:
         pass

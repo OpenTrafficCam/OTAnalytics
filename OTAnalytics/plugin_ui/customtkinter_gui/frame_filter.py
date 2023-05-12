@@ -11,7 +11,6 @@ from customtkinter import (
     CTkToplevel,
     ThemeManager,
 )
-from plugin_ui.customtkinter_gui.messagebox import InfoBox
 
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.default_values import (
@@ -20,7 +19,9 @@ from OTAnalytics.adapter_ui.default_values import (
     DATETIME_FORMAT,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ANCHOR_WEST,
     COLOR_GREEN,
@@ -97,16 +98,13 @@ class FilterTracksByDateFilterButton(FilterButton):
         super().__init__(viewmodel, **kwargs)
 
     def _show_popup(self) -> None:
-        (
-            current_start_date,
-            current_end_date,
-        ) = self._viewmodel.get_filter_tracks_by_date_setting()
+        current_date_range = self._viewmodel.get_filter_tracks_by_date_setting()
 
         FilterTracksByDatePopup(
             viewmodel=self._viewmodel,
             title="Filter tracks by date",
-            default_start_date=current_start_date,
-            default_end_date=current_end_date,
+            default_start_date=current_date_range.start_date,
+            default_end_date=current_date_range.end_date,
         )
 
 
@@ -233,10 +231,9 @@ class FilterTracksByDatePopup(CTkToplevel):
 
     def _on_apply_button_clicked(self) -> None:
         try:
-            start_date = self.get_start_date()
-            end_date = self.get_end_date()
+            date_range = DateRange(self.get_start_date(), self.get_end_date())
 
-            self._viewmodel.apply_filter_tracks_by_date(start_date, end_date)
+            self._viewmodel.apply_filter_tracks_by_date(date_range)
             print("Filter tracks by date applied.")
             self._close()
         except InvalidDatetimeFormatError as e:

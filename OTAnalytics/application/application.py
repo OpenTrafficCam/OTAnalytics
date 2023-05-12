@@ -1,4 +1,3 @@
-from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -10,6 +9,7 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
@@ -218,17 +218,14 @@ class OTAnalyticsApplication:
         """
         return self.track_view_state.track_offset.get()
 
-    def update_date_range_tracks_filter(
-        self, start_date: Optional[datetime], end_date: Optional[datetime]
-    ) -> None:
+    def update_date_range_tracks_filter(self, date_range: DateRange) -> None:
         """Update the date range of the track filter.
 
         Args:
-            start_date (Optional[datetime]): the start date of the range
-            end_date (Optional[datetime]): the end date of the range
+            date_range (DateRange): the date range
         """
         current_filter_element = self.track_view_state.filter_element.get()
 
         self.track_view_state.filter_element.set(
-            FilterElement(start_date, end_date, current_filter_element.classifications)
+            FilterElement(date_range, current_filter_element.classifications)
         )

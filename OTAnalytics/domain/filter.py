@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Generic, Iterable, Optional, TypeVar
 
+from OTAnalytics.domain.date import DateRange
+
 T = TypeVar("T")
 S = TypeVar("S")
 
@@ -117,6 +119,7 @@ class FilterBuilder(ABC, Generic[T, S]):
         """
         pass
 
+    @abstractmethod
     def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
         """Add is ends before or at date predicate.
 
@@ -146,12 +149,10 @@ class FilterElement:
 
     def __init__(
         self,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime],
+        date_range: DateRange,
         classifications: list[str],
     ) -> None:
-        self.start_date = start_date
-        self.end_date = end_date
+        self.date_range = date_range
         self.classifications = classifications
 
     def build_filter(self, filter_builder: FilterBuilder) -> Filter:
@@ -166,11 +167,15 @@ class FilterElement:
         if self.classifications:
             filter_builder.add_has_classifications_predicate(self.classifications)
 
-        if self.start_date and self.end_date:
-            filter_builder.add_starts_at_or_after_date_predicate(self.start_date)
+        if self.date_range.start_date and self.date_range.end_date:
+            filter_builder.add_starts_at_or_after_date_predicate(
+                self.date_range.start_date
+            )
 
-        if self.end_date:
-            filter_builder.add_ends_before_or_at_date_predicate(self.end_date)
+        if self.date_range.end_date:
+            filter_builder.add_ends_before_or_at_date_predicate(
+                self.date_range.end_date
+            )
 
         filter_builder.build()
 

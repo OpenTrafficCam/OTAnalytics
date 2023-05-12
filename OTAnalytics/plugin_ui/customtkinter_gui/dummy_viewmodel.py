@@ -14,7 +14,12 @@ from OTAnalytics.adapter_ui.view_model import DISTANCES, ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
-from OTAnalytics.domain.date import validate_hour, validate_minute, validate_second
+from OTAnalytics.domain.date import (
+    DateRange,
+    validate_hour,
+    validate_minute,
+    validate_second,
+)
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
@@ -516,17 +521,15 @@ class DummyViewModel(ViewModel, SectionListObserver):
         except ValueError:
             return False
 
-    def apply_filter_tracks_by_date(
-        self, start_date: Optional[datetime], end_date: Optional[datetime]
-    ) -> None:
-        self._application.update_date_range_tracks_filter(start_date, end_date)
+    def apply_filter_tracks_by_date(self, date_range: DateRange) -> None:
+        self._application.update_date_range_tracks_filter(date_range)
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
 
         self._frame_filter.set_active_color_on_filter_by_date_button()
 
     def reset_filter_tracks_by_date(self) -> None:
-        self._application.update_date_range_tracks_filter(None, None)
+        self._application.update_date_range_tracks_filter(DateRange(None, None))
 
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
@@ -539,8 +542,6 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def get_last_detection_occurrence(self) -> Optional[datetime]:
         return self._application._tracks_metadata.last_detection_occurrence
 
-    def get_filter_tracks_by_date_setting(
-        self,
-    ) -> tuple[Optional[datetime], Optional[datetime]]:
+    def get_filter_tracks_by_date_setting(self) -> DateRange:
         filter_element = self._application.track_view_state.filter_element.get()
-        return filter_element.start_date, filter_element.end_date
+        return filter_element.date_range

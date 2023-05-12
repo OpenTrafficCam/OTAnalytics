@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import SectionId, SectionListObserver
@@ -207,7 +208,7 @@ class TrackViewState:
             RelativeOffsetCoordinate(0, 0)
         )
         self.filter_element = ObservableProperty[FilterElement](
-            FilterElement(None, None, [])
+            FilterElement(DateRange(None, None), [])
         )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)

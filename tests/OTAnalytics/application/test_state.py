@@ -16,6 +16,7 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
@@ -60,9 +61,9 @@ class TestTrackState:
 
 class TestObservableProperty:
     def test_notify_observer(self) -> None:
-        first_filter_element = FilterElement(None, None, [])
+        first_filter_element = FilterElement(DateRange(None, None), [])
         changed_filter_element = FilterElement(
-            datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
+            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), ["car", "truck"]
         )
         observer = Mock(spec=Callable[[FilterElement], None])
         state = ObservableProperty[FilterElement](first_filter_element)
@@ -77,7 +78,7 @@ class TestObservableProperty:
 
     def test_update_filter_element_on_on_notify_filter_element(self) -> None:
         filter_element = FilterElement(
-            datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
+            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), ["car", "truck"]
         )
         state = TrackViewState()
 

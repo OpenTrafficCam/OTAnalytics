@@ -1,4 +1,12 @@
+from dataclasses import dataclass
 from datetime import datetime, time
+from typing import Optional
+
+
+@dataclass(frozen=True)
+class DateRange:
+    start_date: Optional[datetime]
+    end_date: Optional[datetime]
 
 
 def validate_date(date: str, date_format: str) -> bool:
