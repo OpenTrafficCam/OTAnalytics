@@ -49,7 +49,7 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
         self._introduce_to_viewmodel()
 
     def _get_widgets(self) -> None:
-        self.label = CTkLabel(master=self, text="Filters")
+        self.label = CTkLabel(master=self, text="Visualization Filters")
         self.filter_by_date_button = FilterTracksByDateFilterButton(
             master=self,
             text="Filter By Date",
