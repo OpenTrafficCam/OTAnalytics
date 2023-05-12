@@ -271,6 +271,7 @@ class OttrkParser(TrackParser):
     ) -> None:
         super().__init__(track_classification_calculator, track_repository)
         self._format_fixer = format_fixer
+        self._path_cache: dict[str, Path] = {}
 
     def parse(self, ottrk_file: Path) -> list[Track]:
         """Parse ottrk file and convert its content to domain level objects namely
@@ -341,6 +342,7 @@ class OttrkParser(TrackParser):
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
+            path = self.__get_path(det_dict)
             det = Detection(
                 classification=det_dict[ottrk_format.CLASS],
                 confidence=det_dict[ottrk_format.CONFIDENCE],
@@ -352,7 +354,7 @@ class OttrkParser(TrackParser):
                 occurrence=datetime.fromtimestamp(
                     float(det_dict[ottrk_format.OCCURRENCE])
                 ),
-                input_file_path=Path(det_dict[ottrk_format.INPUT_FILE_PATH]),
+                input_file_path=path,
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
                 track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
             )
@@ -361,6 +363,14 @@ class OttrkParser(TrackParser):
 
             tracks_dict[det.track_id].append(det)  # Group detections by track id
         return tracks_dict
+
+    def __get_path(self, det_dict: dict) -> Path:
+        path_as_string = det_dict[ottrk_format.INPUT_FILE_PATH]
+        if path_as_string in self._path_cache:
+            return self._path_cache[path_as_string]
+        path = Path(path_as_string)
+        self._path_cache[path_as_string] = path
+        return path
 
 
 class UnknownSectionType(Exception):
