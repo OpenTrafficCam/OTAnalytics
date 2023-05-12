@@ -12,6 +12,7 @@ import functools
 from cProfile import Profile
 from datetime import datetime
 from io import StringIO
+from os.path import splitext
 from pathlib import Path
 from pstats import Stats
 from typing import Any, Callable
@@ -28,9 +29,9 @@ SEP = ";"
 def profile(
     repeat: int = 5,
     warmup: int = 0,
-    output: str = "profiles/profile_{N}_{D}_{T}.csv",
+    output: str = "profiles/{N}/profile_{N}_{D}_{T}.csv",
     write_console: bool = False,
-    result: int | str = "path",
+    result: int | str = -1,
     plot: str | None = "all",
 ) -> Callable[[Callable], Callable]:
     """profile decorates an annotated function to profile their execution time.
@@ -63,7 +64,7 @@ def profile(
         result (int | str): indicates what the wrapped function should return.
             Either the index (int) of which execution's result should be returned
             or "path" to return the path of the profiling result file.
-            Defaults to "path".
+            Defaults to -1.
         plot (str | None, optional): the kind of plots to produce.
             "pie", "graph", "sankey", a combination of the three with a
             "|" seperator, "all" or None are supported.
@@ -120,9 +121,26 @@ class ProfileWriter:
             stat_printer=lambda stats: stats.print_stats(),
             line_parser=lambda line: self.parse_measures(line, caller_map),
         )
-
         csv = self.rows_to_csv([self.header()] + rows)
-        return self.write_to_file(csv, func_name)
+
+        path = self.create_file_name(func_name)
+        self.write_to_file(csv, path)
+
+        dump_path = self.to_dump_path(path)
+        profile.dump_stats(dump_path)
+        return path
+
+    def to_dump_path(self, path: str) -> str:
+        """Creates a path for the stats dump derived from the given path.
+            Replaces the file extension by ".dump".
+
+        Args:
+            path (str): the path to be converted to a dump path
+
+        Returns:
+            str: the derived dump path
+        """
+        return splitext(path)[0] + ".dump"
 
     def stats_to_rows(
         self,
@@ -230,25 +248,19 @@ class ProfileWriter:
         """
         return "\n".join([SEP.join(map(str, row)) for row in rows])
 
-    def write_to_file(self, csv: str, func_name: str) -> str:
+    def write_to_file(self, csv: str, path: str) -> None:
         """Writes the given csv string into an output file.
         The output file is specified by the ProfileWriter's
         output template.
 
         Args:
             csv (str): the csv string to be saved to file
-            func_name (str): the name of the profiled function
-
-        Returns:
-            str: the path of the saved file
+            path (str): the path of the result file
         """
-        path = self.create_file_name(func_name)
 
         file = Path(path)
         file.parent.mkdir(exist_ok=True, parents=True)
         file.write_text(csv)
-
-        return path
 
     def create_file_name(self, func_name: str) -> str:
         """Renders the output file template using the
