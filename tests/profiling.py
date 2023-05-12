@@ -44,7 +44,7 @@ def profile(
     using the provided file name template:
     - The placeholder '{N}' is replaced by the annotated functions name
     - The placeholder '{D}' is replaced by the current date (DD-MM-YYY)
-    - The placeholder '{D}' is replaced by the current time (HH-MM-SS)
+    - The placeholder '{T}' is replaced by the current time (HH-MM-SS)
     E.g. the template 'profiles/profile_{N}_{D}_{T}.csv' may result in
     'profiles/profile_my_func_12-08-1979_12-42-07.csv'.
 
@@ -249,9 +249,7 @@ class ProfileWriter:
         return "\n".join([SEP.join(map(str, row)) for row in rows])
 
     def write_to_file(self, csv: str, path: str) -> None:
-        """Writes the given csv string into an output file.
-        The output file is specified by the ProfileWriter's
-        output template.
+        """Writes the given csv string into the file at the given path.
 
         Args:
             csv (str): the csv string to be saved to file
@@ -401,7 +399,7 @@ class ProfilePlotter:
             file (str): path to the file containing the profile results.
             kind (str | None, optional): defines the kind(s) of plots to create.
             Supported kinds are "pie", "graph" and "sankey"
-                or a concatenation of tese with "|" as seperator: e.g. "pie|sankey".
+                or a concatenation of these with "|" as separator: e.g. "pie|sankey".
                 If None or "" are given, no plots re produced.
                 Defaults to "pie".
         """
