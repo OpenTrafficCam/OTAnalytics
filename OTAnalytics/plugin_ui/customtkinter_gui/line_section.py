@@ -566,7 +566,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
     def _get_metadata(self) -> None:
         toplevel_position = get_widget_position(widget=self._canvas)
         self._metadata = ToplevelSections(
-            title="New section", initial_position=toplevel_position
+            title="Add section", initial_position=toplevel_position
         ).get_metadata()
 
     def _create_section(self) -> None:

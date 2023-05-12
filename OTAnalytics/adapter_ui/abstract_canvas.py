@@ -12,6 +12,8 @@ class AbstractCanvas(CTkCanvas):
     # def event_handler(self) -> EventHandler:
     #     pass
 
+    # TODO: Define whole interface (all properties and methods) required by viewmodel
+
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass
