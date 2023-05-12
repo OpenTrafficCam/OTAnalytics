@@ -22,12 +22,13 @@ class TestFilterElement:
         expected_filter = Mock(spec=Filter)
 
         filter_builder = Mock(spec=FilterBuilder)
-        filter_builder.build.return_value = expected_filter
+        filter_builder.get_result.return_value = expected_filter
 
         filter_element = FilterElement(start_date, end_date, classifications)
         result = filter_element.build_filter(filter_builder)
 
         filter_builder.build.assert_called_once()
+        filter_builder.get_result.assert_called_once()
         filter_builder.add_has_classifications_predicate.assert_called_once_with(
             classifications
         )

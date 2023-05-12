@@ -79,16 +79,33 @@ class FilterBuildError(Exception):
     pass
 
 
-class FilterBuilder:
+class FilterBuilder(ABC, Generic[T, S]):
     """Class to build `Filter`s."""
 
-    @abstractmethod
-    def build(self) -> Filter:
-        """Builds a filter.
+    def __init__(self) -> None:
+        self._result: Optional[Filter[T, S]]
+
+    def get_result(self) -> Filter[T, S]:
+        """Returns the built filter.
 
         Returns:
-            Filter: the built filter
+            Filter: the filter
         """
+        if self._result is None:
+            raise FilterBuildError("Filter has not been built by builder yet!")
+
+        result = self._result
+        self._reset()
+        return result
+
+    @abstractmethod
+    def build(self) -> None:
+        """Build the filter."""
+        pass
+
+    @abstractmethod
+    def _reset(self) -> None:
+        """Resets the filter builder."""
         pass
 
     @abstractmethod
@@ -155,4 +172,6 @@ class FilterElement:
         if self.end_date:
             filter_builder.add_ends_before_or_at_date_predicate(self.end_date)
 
-        return filter_builder.build()
+        filter_builder.build()
+
+        return filter_builder.get_result()
