@@ -134,15 +134,32 @@ class FilterTracksByDatePopup(CTkToplevel):
         self.label = CTkLabel(master=self, text="Choose date range")
 
         self.from_date_row = DateRow(
-            master=self, viewmodel=self._viewmodel, name="From"
+            master=self,
+            viewmodel=self._viewmodel,
+            name="From",
+            fg_color=get_default_toplevel_fg_color(),
         )
-        self.to_date_row = DateRow(master=self, viewmodel=self._viewmodel, name="To")
+        self.to_date_row = DateRow(
+            master=self,
+            viewmodel=self._viewmodel,
+            name="To",
+            fg_color=get_default_toplevel_fg_color(),
+        )
         self._get_detection_info_label()
+        self._button_frame = CTkFrame(
+            master=self, fg_color=get_default_toplevel_fg_color()
+        )
         self.apply_button = CTkButton(
-            master=self, text="Apply", command=self._on_apply_button_clicked, width=60
+            master=self._button_frame,
+            text="Apply",
+            command=self._on_apply_button_clicked,
+            width=60,
         )
         self.reset_button = CTkButton(
-            master=self, text="Reset", command=self._on_reset_button_clicked, width=60
+            master=self._button_frame,
+            text="Reset",
+            command=self._on_reset_button_clicked,
+            width=60,
         )
 
     def _get_detection_info_label(self) -> None:
@@ -164,15 +181,17 @@ class FilterTracksByDatePopup(CTkToplevel):
     def _place_widgets(self) -> None:
         self.label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST)
 
-        self.from_date_row.grid(row=1, column=0, sticky=STICKY_WEST)
-        self.to_date_row.grid(row=2, column=0, sticky=STICKY_WEST)
-        self.first_occurrence_info_label.grid(row=3, column=0, sticky=STICKY_WEST)
-        self.last_occurrence_info_label.grid(row=4, column=0, sticky=STICKY_WEST)
+        self.from_date_row.grid(row=1, sticky=STICKY_WEST)
+        self.to_date_row.grid(row=2, sticky=STICKY_WEST)
+        self.first_occurrence_info_label.grid(row=3, sticky=STICKY_WEST)
+        self.last_occurrence_info_label.grid(row=4, sticky=STICKY_WEST)
 
-        self.apply_button.grid(
+        self._button_frame.grid(
             row=5, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST
         )
-        self.reset_button.grid(row=5, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+
+        self.apply_button.grid(row=0, column=0, sticky=STICKY_WEST)
+        self.reset_button.grid(row=0, column=1, padx=(PADX, 0), sticky=STICKY_WEST)
 
     def _bind_events(self) -> None:
         self.bind("<Escape>", self._close)
@@ -412,3 +431,7 @@ class DateRow(CTkFrame):
 class ColonLabel(CTkLabel):
     def __init__(self, **kwargs: Any):
         super().__init__(text=":", **kwargs)
+
+
+def get_default_toplevel_fg_color() -> str:
+    return ThemeManager.theme["CTkToplevel"]["fg_color"]
