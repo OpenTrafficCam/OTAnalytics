@@ -124,6 +124,11 @@ class Version:
         return Version(major=major, minor=minor)
 
 
+VERSION_1_0: Version = Version(1, 0)
+VERSION_1_1: Version = Version(1, 1)
+VERSION_1_2: Version = Version(1, 2)
+
+
 class DetectionFixer(ABC):
     def __init__(
         self,
@@ -142,11 +147,6 @@ class DetectionFixer(ABC):
     @abstractmethod
     def fix(self, detection: dict, current_version: Version) -> dict:
         pass
-
-
-VERSION_1_0: Version = Version(1, 0)
-VERSION_1_1: Version = Version(1, 1)
-VERSION_1_2: Version = Version(1, 2)
 
 
 class Version_1_0_to_1_1(DetectionFixer):
