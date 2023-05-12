@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Generic, Iterable, TypeVar
+from typing import Generic, Iterable, Optional, TypeVar
 
 T = TypeVar("T")
 S = TypeVar("S")
@@ -45,29 +45,22 @@ class Predicate(ABC, Generic[T, S]):
 
 
 class Conjunction(Predicate[T, S]):
+    """Conjuncts two predicates.
+
+    Args:
+        first_predicate (Predicate[T, S]): the first predicate to conjunct with
+        second_predicate (Predicate[T, S]): the second predicate to conjunct with
+    """
+
     def __init__(
         self, first_predicate: Predicate[T, S], second_predicate: Predicate[T, S]
     ) -> None:
-        """Conjuncts two predicates.
-
-        Args:
-            first_predicate (Predicate[T, S]): the first predicate to conjunct with
-            second_predicate (Predicate[T, S]): the second predicate to conjunct with
-        """
         self._first_predicate = first_predicate
         self._second_predicate = second_predicate
 
 
 class Filter(ABC, Generic[T, S]):
-    """Filter out elements of an iterable that don't fulfill the predicate.
-
-    Args:
-        predicate (Predicate[T, S]): the predicate which is used to test the elements
-            against.
-    """
-
-    def __init__(self, predicate: Predicate[T, S]) -> None:
-        self._predicate = predicate
+    """Filter out elements of an iterable that don't fulfill the predicate."""
 
     @abstractmethod
     def apply(self, iterable: Iterable[T]) -> Iterable[T]:
@@ -77,7 +70,7 @@ class Filter(ABC, Generic[T, S]):
             iterable (Iterable[T]): the iterable to apply the filter on
 
         Returns:
-            Iterable[T]: all elements in the iterable that fulfill the predicate
+            Iterable[T]: the filtered iterable
         """
         pass
 
@@ -99,14 +92,19 @@ class FilterBuilder:
         pass
 
     @abstractmethod
-    def add_is_within_date_predicate(
-        self, start_date: datetime, end_date: datetime
-    ) -> None:
-        """Add is within date predicate.
+    def add_starts_at_or_after_date_predicate(self, start_date: datetime) -> None:
+        """Add starts at or after date predicate.
 
         Args:
             start_date (datetime): the start date (inclusive)
-            end_date (datetime): the end date (exclusive)
+        """
+        pass
+
+    def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
+        """Add is ends before or at date predicate.
+
+        Args:
+            end_date (datetime): the end date (inclusive)
         """
         pass
 
@@ -130,7 +128,10 @@ class FilterElement:
     """
 
     def __init__(
-        self, start_date: datetime, end_date: datetime, classifications: list[str]
+        self,
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+        classifications: list[str],
     ) -> None:
         self.start_date = start_date
         self.end_date = end_date
@@ -149,5 +150,9 @@ class FilterElement:
             filter_builder.add_has_classifications_predicate(self.classifications)
 
         if self.start_date and self.end_date:
-            filter_builder.add_is_within_date_predicate(self.start_date, self.end_date)
+            filter_builder.add_starts_at_or_after_date_predicate(self.start_date)
+
+        if self.end_date:
+            filter_builder.add_ends_before_or_at_date_predicate(self.end_date)
+
         return filter_builder.build()

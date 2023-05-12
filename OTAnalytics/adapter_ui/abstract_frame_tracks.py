@@ -3,7 +3,7 @@ from abc import abstractmethod
 from customtkinter import CTkFrame
 
 
-class AbstractTracksFrame(CTkFrame):
+class AbstractFrameTracks(CTkFrame):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass

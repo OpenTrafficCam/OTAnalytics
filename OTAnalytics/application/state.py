@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable, Generic, Optional, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.domain.track import (
@@ -11,6 +12,9 @@ from OTAnalytics.domain.track import (
     TrackObserver,
     TrackSubject,
 )
+
+DEFAULT_WIDTH = 800
+DEFAULT_HEIGHT = 600
 
 
 class TrackState(TrackListObserver):
@@ -64,7 +68,6 @@ class TrackState(TrackListObserver):
 
 
 VALUE = TypeVar("VALUE")
-Observer = Callable[[Optional[VALUE]], None]
 
 
 class Subject(Generic[VALUE]):
@@ -73,9 +76,9 @@ class Subject(Generic[VALUE]):
     """
 
     def __init__(self) -> None:
-        self.observers: set[Observer[VALUE]] = set()
+        self.observers: set[Callable[[VALUE], None]] = set()
 
-    def register(self, observer: Observer[VALUE]) -> None:
+    def register(self, observer: Callable[[VALUE], None]) -> None:
         """
         Listen to events.
 
@@ -84,26 +87,67 @@ class Subject(Generic[VALUE]):
         """
         self.observers.add(observer)
 
-    def notify(self, value: Optional[VALUE]) -> None:
+    def notify(self, value: VALUE) -> None:
         """
         Notifies observers about the changed value.
 
         Args:
-            value (Optional[VALUD]): changed value
+            value (Optional[VALUE]): changed value
         """
         [observer(value) for observer in self.observers]
 
 
 class ObservableProperty(Generic[VALUE]):
     """
-    Represents a property of the given type that informs its observers about changes.
+    Represents a property of the given type that informs its observers about
+    changes.
+    """
+
+    def __init__(self, default: VALUE) -> None:
+        self._property: VALUE = default
+        self._subject: Subject[VALUE] = Subject[VALUE]()
+
+    def register(self, observer: Callable[[VALUE], None]) -> None:
+        """
+        Listen to property changes.
+
+        Args:
+            observer (Observer[VALUE]): observer to be notified about changes
+        """
+        self._subject.register(observer)
+
+    def set(self, value: VALUE) -> None:
+        """
+        Change the current value of the property
+
+        Args:
+            value (VALUE): new value to be set
+        """
+        if self._property != value:
+            self._property = value
+            self._subject.notify(value)
+
+    def get(self) -> VALUE:
+        """
+        Get the current value of the property.
+
+        Returns:
+            VALUE: current value
+        """
+        return self._property
+
+
+class ObservableOptionalProperty(Generic[VALUE]):
+    """
+    Represents an optional property of the given type that informs its observers about
+    changes.
     """
 
     def __init__(self, default: Optional[VALUE] = None) -> None:
         self._property: Optional[VALUE] = default
-        self._subject: Subject[VALUE] = Subject[VALUE]()
+        self._subject: Subject[Optional[VALUE]] = Subject[Optional[VALUE]]()
 
-    def register(self, observer: Observer[VALUE]) -> None:
+    def register(self, observer: Callable[[Optional[VALUE]], None]) -> None:
         """
         Listen to property changes.
 
@@ -132,18 +176,59 @@ class ObservableProperty(Generic[VALUE]):
         """
         return self._property
 
+    def get_or_default(self, default: VALUE) -> VALUE:
+        """
+        Get the current value if present. Otherwise return the given default value.
+
+        Args:
+            default (VALUE): value to return in absence of the property value
+
+        Returns:
+            VALUE: value or default value
+        """
+        return self._property if self._property else default
+
 
 class TrackViewState:
     """
     This state represents the information to be shown on the ui.
+
+    Args:
+        filter_element_state (FilterElementState): the filter element state
     """
 
     def __init__(self) -> None:
-        self.background_image = ObservableProperty[TrackImage]()
-        self.show_tracks = ObservableProperty[bool]()
-        self.track_offset = ObservableProperty[RelativeOffsetCoordinate](
+        self.background_image = ObservableOptionalProperty[TrackImage]()
+        self.show_tracks = ObservableOptionalProperty[bool]()
+        self.track_offset = ObservableOptionalProperty[RelativeOffsetCoordinate](
             RelativeOffsetCoordinate(0, 0)
         )
+        self.filter_element = ObservableProperty[FilterElement](
+            FilterElement(None, None, [])
+        )
+        self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
+        self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
+
+
+class TrackPropertiesUpdater(TrackListObserver):
+    """
+    This class listens to track changes and updates the width and height of the view
+    state.
+    """
+
+    def __init__(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+    ) -> None:
+        self._datastore = datastore
+        self._track_view_state = track_view_state
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        if track := next(iter(self._datastore.get_all_tracks())):
+            if new_image := self._datastore.get_image_of_track(track.id):
+                self._track_view_state.view_width.set(new_image.width())
+                self._track_view_state.view_height.set(new_image.height())
 
 
 class Plotter(ABC):
@@ -171,6 +256,7 @@ class TrackImageUpdater(TrackListObserver):
         self._plotter = plotter
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
+        self._track_view_state.filter_element.register(self._notify_filter_element)
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """
@@ -204,6 +290,15 @@ class TrackImageUpdater(TrackListObserver):
         """
         self._update()
 
+    def _notify_filter_element(self, _: FilterElement) -> None:
+        """
+        Will update the image according to changes of the filter element.
+
+        Args:
+            _ (FilterElement): current filter element
+        """
+        self._update()
+
     def _update(self) -> None:
         """
         Update the image if at least one track is available.
@@ -226,7 +321,8 @@ class SectionState(SectionListObserver):
     """
 
     def __init__(self) -> None:
-        self.selected_section = ObservableProperty[SectionId]()
+        self.selected_section = ObservableOptionalProperty[SectionId]()
+        self.selected_flow = ObservableOptionalProperty[str]()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         """
@@ -241,3 +337,4 @@ class SectionState(SectionListObserver):
         if not sections:
             raise IndexError("No section to select")
         self.selected_section.set(sections[0])
+        self.selected_flow.set(None)

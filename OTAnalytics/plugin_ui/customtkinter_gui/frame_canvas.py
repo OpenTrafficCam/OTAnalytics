@@ -2,12 +2,11 @@ import tkinter
 from dataclasses import dataclass
 from typing import Any, Optional
 
-import customtkinter
-from customtkinter import CTkCheckBox
+from customtkinter import NW, CTkCheckBox, CTkFrame
 from PIL import ImageTk
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.adapter_ui.abstract_frame import AbstractTracksCanvas
+from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import (
@@ -31,7 +30,7 @@ class DisplayableImage:
         return ImageTk.PhotoImage(image=self._image.as_image())
 
 
-class TracksCanvas(AbstractTracksCanvas):
+class FrameCanvas(AbstractFrameCanvas, CTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -90,13 +89,6 @@ class CanvasBackground(AbstractCanvas):
         self.event_handler = CanvasEventHandler(canvas=self)
         self.introduce_to_viewmodel()
 
-        # @property
-        # def event_handler(self) -> EventHandler:
-        #     return self.event_handler
-
-        # @event_handler.setter
-        # def event_handler(self, value: EventHandler) -> None:
-        #     self.event_handler = value
         self._current_image: ImageTk.PhotoImage
         self._current_id: Any = None
 
@@ -107,9 +99,7 @@ class CanvasBackground(AbstractCanvas):
         self._draw()
 
     def _draw(self) -> None:
-        self._current_id = self.create_image(
-            0, 0, image=self._current_image, anchor=customtkinter.NW
-        )
+        self._current_id = self.create_image(0, 0, image=self._current_image, anchor=NW)
         self.config(
             width=self._current_image.width(), height=self._current_image.height()
         )
@@ -131,6 +121,9 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<ButtonRelease-1>", self.on_left_mousebutton_up)
         self._canvas.bind("<ButtonRelease-2>", self.on_right_mousebutton_up)
         self._canvas.bind("<Motion>", self.on_mouse_motion)
+        self._canvas.bind("<Enter>", lambda event: self._canvas.focus_set())
+        self._canvas.bind("<Return>", self.on_return)
+        self._canvas.bind("<Escape>", self.on_escape)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)
@@ -153,6 +146,14 @@ class CanvasEventHandler(EventHandler):
     def on_mouse_motion(self, event: Any) -> None:
         coordinates = self._get_mouse_coordinates(event)
         self._notify_observers(coordinates, "mouse_motion")
+
+    def on_return(self, event: Any) -> None:
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, "return")
+
+    def on_escape(self, event: Any) -> None:
+        coordinates = self._get_mouse_coordinates(event)
+        self._notify_observers(coordinates, "escape")
 
     def _get_mouse_coordinates(self, event: Any) -> tuple[int, int]:
         """Returns coordinates of event on canvas taking into account the horizontal and

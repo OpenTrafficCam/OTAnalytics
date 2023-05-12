@@ -52,38 +52,60 @@ class DataFrameFilter(Filter[DataFrame, Series]):
         """A `DataFrame` filter.
 
         Args:
-            predicate (Predicate[DataFrame, Series]): the predicate to test the
-                DataFrame against.
+            predicate (Predicate[DataFrame, Series]): the predicate to test
+                the DataFrame against
         """
-        super().__init__(predicate)
+        self._predicate = predicate
 
     def apply(self, data: Iterable[DataFrame]) -> Iterable[DataFrame]:
         return [datum[self._predicate.test(datum)] for datum in data]
 
 
-class DataFrameIsWithinDate(DataFramePredicate):
-    """Checks if the DataFrame rows are within a date range.
+class NoOpDataFrameFilter(Filter[DataFrame, Series]):
+    """Returns the DataFrame as is without any filtering."""
+
+    def apply(self, iterable: Iterable[DataFrame]) -> Iterable[DataFrame]:
+        return iterable
+
+
+class DataFrameStartsAtOrAfterDate(DataFramePredicate):
+    """Checks if the DataFrame rows start at or after date.
 
     Args:
         column_name (str): the DataFrame column name to apply the predicate to
-        start_date (datetime): the start date of the date range (inclusive)
-        end_date (datetime): the end date of the date range (inclusive)
+        start_date (datetime): the start date to evaluate against (inclusive)
     """
 
     def __init__(
         self,
         column_name: str,
         start_date: datetime,
-        end_date: datetime,
     ) -> None:
         self.column_name: str = column_name
         self._start_date = start_date
+
+    def test(self, to_test: DataFrame) -> Series:
+        return to_test[self.column_name] >= self._start_date
+
+
+class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
+    """Checks if the DataFrame rows ends before or at date.
+
+    Args:
+        column_name (str): the DataFrame column name to apply the predicate to
+        end_date (datetime): the end date to evaluate against (inclusive)
+    """
+
+    def __init__(
+        self,
+        column_name: str,
+        end_date: datetime,
+    ) -> None:
+        self.column_name: str = column_name
         self._end_date = end_date
 
     def test(self, to_test: DataFrame) -> Series:
-        return (to_test[self.column_name] >= self._start_date) & (
-            to_test[self.column_name] <= self._end_date
-        )
+        return to_test[self.column_name] <= self._end_date
 
 
 class DataFrameHasClassifications(DataFramePredicate):
@@ -114,11 +136,9 @@ class DataFrameFilterBuilder(FilterBuilder):
         self._classification_column: Optional[str] = None
         self._occurrence_column: Optional[str] = None
 
-    def build(self) -> DataFrameFilter:
-        if not self._complex_predicate:
-            raise FilterBuildError(
-                f"Unable to build {DataFrameFilter.__name__}. No predicates built!"
-            )
+    def build(self) -> Filter[DataFrame, Series]:
+        if self._complex_predicate is None:
+            return NoOpDataFrameFilter()
         return DataFrameFilter(self._complex_predicate)
 
     def add_has_classifications_predicate(self, classifications: list[str]) -> None:
@@ -132,17 +152,26 @@ class DataFrameFilterBuilder(FilterBuilder):
             DataFrameHasClassifications(self._classification_column, classifications)
         )
 
-    def add_is_within_date_predicate(
-        self, start_date: datetime, end_date: datetime
-    ) -> None:
+    def add_starts_at_or_after_date_predicate(self, start_date: datetime) -> None:
         if self._occurrence_column is None:
             raise FilterBuildError(
-                f"Unable to build '{DataFrameIsWithinDate.__name__}' predicate. "
+                f"Unable to build '{DataFrameStartsAtOrAfterDate.__name__}' predicate. "
                 "Builder property 'occurrence_column' is not set."
             )
 
         self._extend_complex_predicate(
-            DataFrameIsWithinDate(self._occurrence_column, start_date, end_date)
+            DataFrameStartsAtOrAfterDate(self._occurrence_column, start_date)
+        )
+
+    def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
+        if self._occurrence_column is None:
+            raise FilterBuildError(
+                f"Unable to build '{DataFrameEndsBeforeOrAtDate.__name__}' predicate. "
+                "Builder property 'occurrence_column' is not set."
+            )
+
+        self._extend_complex_predicate(
+            DataFrameEndsBeforeOrAtDate(self._occurrence_column, end_date)
         )
 
     def set_classification_column(self, classification_name: str) -> None:
