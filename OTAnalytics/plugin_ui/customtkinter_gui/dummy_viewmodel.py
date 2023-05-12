@@ -6,6 +6,7 @@ from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
+from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT
@@ -83,6 +84,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._section_parser: SectionParser = section_parser
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
+        self._frame_filter: Optional[AbstractFrameFilter] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
@@ -145,6 +147,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         self._frame_canvas = tracks_canvas
+
+    def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
+        self._frame_filter = filter_frame
 
     def set_treeview_sections(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_sections = treeview
@@ -510,3 +515,32 @@ class DummyViewModel(ViewModel, SectionListObserver):
             return validate_second(int(second))
         except ValueError:
             return False
+
+    def apply_filter_tracks_by_date(
+        self, start_date: Optional[datetime], end_date: Optional[datetime]
+    ) -> None:
+        self._application.update_date_range_tracks_filter(start_date, end_date)
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.set_active_color_on_filter_by_date_button()
+
+    def reset_filter_tracks_by_date(self) -> None:
+        self._application.update_date_range_tracks_filter(None, None)
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.set_inactive_color_on_filter_by_date_button()
+
+    def get_first_detection_occurrence(self) -> Optional[datetime]:
+        return self._application._tracks_metadata.first_detection_occurrence
+
+    def get_last_detection_occurrence(self) -> Optional[datetime]:
+        return self._application._tracks_metadata.last_detection_occurrence
+
+    def get_filter_tracks_by_date_setting(
+        self,
+    ) -> tuple[Optional[datetime], Optional[datetime]]:
+        filter_element = self._application.track_view_state.filter_element.get()
+        return filter_element.start_date, filter_element.end_date

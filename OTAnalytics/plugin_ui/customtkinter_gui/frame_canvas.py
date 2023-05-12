@@ -14,6 +14,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import (
     EventHandler,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 
 
 @dataclass
@@ -54,14 +55,16 @@ class FrameCanvas(AbstractFrameCanvas, CTkFrame):
             onvalue=True,
             offvalue=False,
         )
+        self.frame_filter = FrameFilter(master=self, viewmodel=self._viewmodel)
 
     def _place_widgets(self) -> None:
         PADY = 10
-        self.canvas_background.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
         self.button_show_tracks.grid(
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.frame_filter.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.canvas_background.grid(
+            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def update_background(self, image: TrackImage) -> None:

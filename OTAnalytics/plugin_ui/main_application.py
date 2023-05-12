@@ -26,6 +26,7 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
 )
+from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
@@ -158,9 +159,9 @@ class ApplicationStarter:
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
         background_image_plotter = TrackBackgroundPlotter(datastore)
+        dataframe_filter_builder = self._create_dataframe_filter_builder()
         pandas_data_provider = PandasTrackProvider(
-            datastore,
-            state,
+            datastore, state, dataframe_filter_builder
         )
         track_geometry_plotter = self._create_track_geometry_plotter(
             state,
@@ -224,3 +225,6 @@ class ApplicationStarter:
         self, track_repository: TrackRepository
     ) -> TracksMetadata:
         return TracksMetadata(track_repository)
+
+    def _create_dataframe_filter_builder(self) -> DataFrameFilterBuilder:
+        return DataFrameFilterBuilder()

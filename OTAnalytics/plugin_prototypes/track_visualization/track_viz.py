@@ -16,6 +16,7 @@ from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
+from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
 DPI = 100
@@ -87,9 +88,11 @@ class PandasTrackProvider:
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
+        self._filter_builder = filter_builder
 
     def get_data(
         self,
@@ -102,16 +105,12 @@ class PandasTrackProvider:
             CLASS_TRAIN,
         ),
         num_min_frames: int = 30,
-        start_time: str = "",
-        end_time: str = "",
     ) -> DataFrame:
         offset = self._track_view_state.track_offset.get()
         tracks = self._datastore.get_all_tracks()
         data = self._convert_tracks(tracks)
         data = self._apply_offset(data, offset)
-        return self._filter_tracks(
-            filter_classes, num_min_frames, start_time, end_time, data
-        )
+        return self._filter_tracks(filter_classes, num_min_frames, data)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -164,8 +163,6 @@ class PandasTrackProvider:
         self,
         filter_classes: Iterable[str],
         num_min_frames: int,
-        start_time: str,
-        end_time: str,
         track_df: DataFrame,
     ) -> DataFrame:
         """
@@ -174,18 +171,17 @@ class PandasTrackProvider:
         Args:
             filter_classes (Iterable[str]): classes to show
             num_min_frames (int): minimum number of frames of a track to be shown
-            start_time (str): start of time period of tracks to be shown
-            end_time (str): end of time period of tracks to be shown
             track_df (DataFrame): dataframe of tracks
 
         Returns:
             DataFrame: filtered by classes, time and number of images
         """
-        if start_time != "":
-            track_df = track_df[track_df[track.OCCURRENCE] >= start_time]
+        self._filter_builder.set_classification_column(track.CLASSIFICATION)
+        self._filter_builder.set_occurrence_column(track.OCCURRENCE)
+        filter_element = self._track_view_state.filter_element.get()
+        dataframe_filter = filter_element.build_filter(self._filter_builder)
 
-        if end_time != "":
-            track_df = track_df[track_df[track.OCCURRENCE] < end_time]
+        track_df = next(iter(dataframe_filter.apply([track_df])))
 
         # % Filter traffic classes
         track_df = track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
