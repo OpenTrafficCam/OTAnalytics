@@ -4,6 +4,7 @@ from typing import Any, Optional
 from customtkinter import CTkButton, CTkFrame
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.plugin_ui.customtkinter_gui.button import StatefulButton
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
 
@@ -24,18 +25,26 @@ class FrameSections(CTkFrame):
         self.button_add = CTkButton(
             master=self, text="Add", command=self._viewmodel.add_section
         )
-        self.button_edit_geometry = CTkButton(
+        self.button_edit_geometry = StatefulButton(
             master=self,
             text="Edit geometry",
             command=self._viewmodel.edit_section_geometry,
+            viewmodel_setter=self._viewmodel.set_button_edit_section_geometry,
+            state="disabled",
         )
-        self.button_edit_metadata = CTkButton(
+        self.button_edit_metadata = StatefulButton(
             master=self,
             text="Edit metadata",
             command=self._viewmodel.edit_section_metadata,
+            viewmodel_setter=self._viewmodel.set_button_edit_section_metadata,
+            state="disabled",
         )
-        self.button_remove = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_section
+        self.button_remove = StatefulButton(
+            master=self,
+            text="Remove",
+            command=self._viewmodel.remove_section,
+            viewmodel_setter=self._viewmodel.set_button_remove_section,
+            state="disabled",
         )
 
     def _place_widgets(self) -> None:

@@ -6,6 +6,7 @@ from typing import Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
+from OTAnalytics.adapter_ui.abstract_stateful_widget import AbstractStatefulWidget
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import DISTANCES, ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
@@ -83,6 +84,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._canvas: Optional[AbstractCanvas] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
+        self._button_edit_section_geometry: Optional[AbstractStatefulWidget]
+        self._button_edit_section_metadata: Optional[AbstractStatefulWidget]
+        self._button_remove_section: Optional[AbstractStatefulWidget]
         self._new_section: dict = {}
         self._selected_section_id: Optional[str] = None
         self.register_to_subjects()
@@ -149,6 +153,15 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def set_treeview_flows(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_flows = treeview
 
+    def set_button_edit_section_geometry(self, button: AbstractStatefulWidget) -> None:
+        self._button_edit_section_geometry = button
+
+    def set_button_edit_section_metadata(self, button: AbstractStatefulWidget) -> None:
+        self._button_edit_section_metadata = button
+
+    def set_button_remove_section(self, button: AbstractStatefulWidget) -> None:
+        self._button_remove_section = button
+
     def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
         current_id = section_id.id if section_id else None
         self._selected_section_id = current_id
@@ -157,6 +170,29 @@ class DummyViewModel(ViewModel, SectionListObserver):
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_sections_on_gui()
         self._treeview_sections.update_selected_items(self._selected_section_id)
+
+        if self._button_edit_section_geometry is None:
+            raise MissingInjectedInstanceError(
+                type(self._button_edit_section_geometry).__name__
+            )
+        if self._button_edit_section_metadata is None:
+            raise MissingInjectedInstanceError(
+                type(self._button_edit_section_metadata).__name__
+            )
+        if self._button_remove_section is None:
+            raise MissingInjectedInstanceError(
+                type(self._button_remove_section).__name__
+            )
+        if self._selected_section_id is not None:
+            print("activate")
+            self._button_edit_section_geometry.activate()
+            self._button_edit_section_metadata.activate()
+            self._button_remove_section.activate()
+        else:
+            print("deactivate")
+            self._button_edit_section_geometry.deactivate()
+            self._button_edit_section_metadata.deactivate()
+            self._button_remove_section.deactivate()
 
     def _update_selected_flow(self, flow_id: Optional[str]) -> None:
         if self._treeview_flows is None:

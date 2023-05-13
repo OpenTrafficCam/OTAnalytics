@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
+from OTAnalytics.adapter_ui.abstract_stateful_widget import AbstractStatefulWidget
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.domain.section import Section
 
@@ -34,6 +35,18 @@ class ViewModel(ABC):
     @abstractmethod
     def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         pass
+
+    @abstractmethod
+    def set_button_edit_section_geometry(self, button: AbstractStatefulWidget) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_button_edit_section_metadata(self, button: AbstractStatefulWidget) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_button_remove_section(self, button: AbstractStatefulWidget) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def set_selected_section_id(self, id: Optional[str]) -> None:
