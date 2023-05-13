@@ -1,4 +1,3 @@
-from tkinter import Listbox
 from tkinter.ttk import Treeview
 from typing import Any, Optional
 
@@ -79,16 +78,3 @@ class TreeviewSections(TreeviewTemplate, Treeview):
         self.delete(*self.get_children())
         item_ids = [section.id.id for section in self._viewmodel.get_all_sections()]
         self.add_items(item_ids=item_ids)
-
-
-class ListboxSections(Listbox):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-        # This call should come from outside later
-        sections = ["North", "West", "South", "East"]
-        self.show(sections=sections)
-
-    def show(self, sections: list[str]) -> None:
-        for i, section in enumerate(sections):
-            self.insert(i, section)
