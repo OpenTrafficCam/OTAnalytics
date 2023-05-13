@@ -545,3 +545,26 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def get_filter_tracks_by_date_setting(self) -> DateRange:
         filter_element = self._application.track_view_state.filter_element.get()
         return filter_element.date_range
+
+    def enable_filter_track_by_date(self) -> None:
+        self._application.enable_filter_track_by_date()
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.enable_filter_by_date_button()
+        current_date_range = (
+            self._application.track_view_state.filter_element.get().date_range
+        )
+        if current_date_range != DateRange(None, None):
+            self._frame_filter.set_active_color_on_filter_by_date_button()
+        else:
+            self._frame_filter.set_inactive_color_on_filter_by_date_button()
+
+    def disable_filter_track_by_date(self) -> None:
+        self._application.disable_filter_track_by_date()
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.disable_filter_by_date_button()

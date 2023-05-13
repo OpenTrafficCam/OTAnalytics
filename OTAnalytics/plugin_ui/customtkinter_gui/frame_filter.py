@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from tkinter import END
+from tkinter import END, IntVar
 from typing import Any, Optional
 
 from customtkinter import (
     CTkButton,
+    CTkCheckBox,
     CTkEntry,
     CTkFrame,
     CTkLabel,
@@ -24,6 +25,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ANCHOR_WEST,
+    COLOR_GRAY,
     COLOR_GREEN,
     COLOR_ORANGE,
     COLOR_RED,
@@ -35,6 +37,9 @@ MINUTE = "Minute"
 SECOND = "Second"
 ON_VALUE = 1
 OFF_VALUE = 0
+
+STATE_DISABLED = "disabled"
+STATE_NORMAL = "normal"
 
 
 class InvalidDatetimeFormatError(Exception):
@@ -53,7 +58,8 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
         self.label = CTkLabel(master=self, text="Visualization Filters")
         self.filter_by_date_button = FilterTracksByDateFilterButton(
             master=self,
-            text="Filter By Date",
+            name="Filter By Date",
+            button_width=60,
             viewmodel=self._viewmodel,
         )
 
@@ -72,30 +78,81 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
     def set_inactive_color_on_filter_by_date_button(self) -> None:
         self.filter_by_date_button.reset_color()
 
+    def enable_filter_by_date_button(self) -> None:
+        self.filter_by_date_button.enable_button()
 
-class FilterButton(ABC, CTkButton):
+    def disable_filter_by_date_button(self) -> None:
+        self.filter_by_date_button.disable_button()
+
+
+class FilterButton(ABC, CTkFrame):
     def __init__(
         self,
+        name: str,
+        button_width: int,
         viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
-        super().__init__(command=self._show_popup, **kwargs)
+        super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self._name = name
+        self._button_width = button_width
+        self._check_var = IntVar(value=1)
+
+        self._get_widgets()
+        self._place_widgets()
+
+    def _get_widgets(self) -> None:
+        self.checkbox = CTkCheckBox(
+            master=self,
+            text="",
+            variable=self._check_var,
+            command=self.on_checkbox_clicked,
+            onvalue=ON_VALUE,
+            offvalue=OFF_VALUE,
+            width=5,
+        )
+        self.button = CTkButton(
+            master=self,
+            text=self._name,
+            command=self._show_popup,
+            width=self._button_width,
+        )
+
+    def _place_widgets(self) -> None:
+        self.checkbox.grid(row=0, column=0, sticky=STICKY_WEST)
+        self.button.grid(row=0, column=1, sticky=STICKY_WEST)
 
     @abstractmethod
     def _show_popup(self) -> None:
         pass
 
+    @abstractmethod
+    def _enable_filter(self) -> None:
+        pass
+
+    @abstractmethod
+    def _disable_filter(self) -> None:
+        pass
+
+    def on_checkbox_clicked(self) -> None:
+        if self._check_var.get() == ON_VALUE:
+            self._enable_filter()
+        else:
+            self._disable_filter()
+
     def set_color(self, color: str) -> None:
-        self.configure(fg_color=color)
+        self.button.configure(fg_color=color)
 
     def reset_color(self) -> None:
-        self.configure(fg_color=ThemeManager.theme["CTkButton"]["fg_color"])
+        self.button.configure(fg_color=ThemeManager.theme["CTkButton"]["fg_color"])
 
 
 class FilterTracksByDateFilterButton(FilterButton):
-    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
-        super().__init__(viewmodel, **kwargs)
+    def __init__(
+        self, name: str, button_width: int, viewmodel: ViewModel, **kwargs: Any
+    ) -> None:
+        super().__init__(name, button_width, viewmodel, **kwargs)
 
     def _show_popup(self) -> None:
         current_date_range = self._viewmodel.get_filter_tracks_by_date_setting()
@@ -106,6 +163,18 @@ class FilterTracksByDateFilterButton(FilterButton):
             default_start_date=current_date_range.start_date,
             default_end_date=current_date_range.end_date,
         )
+
+    def _enable_filter(self) -> None:
+        self._viewmodel.enable_filter_track_by_date()
+
+    def _disable_filter(self) -> None:
+        self._viewmodel.disable_filter_track_by_date()
+
+    def enable_button(self) -> None:
+        self.button.configure(state=STATE_NORMAL)
+
+    def disable_button(self) -> None:
+        self.button.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
 class FilterTracksByDatePopup(CTkToplevel):

@@ -61,5 +61,6 @@ EDITED_SECTION_STYLE = {
 COLOR_GREEN = "green"
 COLOR_RED = "red"
 COLOR_ORANGE = "orange"
+COLOR_GRAY = "gray"
 STICKY_WEST = "W"
 ANCHOR_WEST = "w"

@@ -165,3 +165,11 @@ class ViewModel(ABC):
     @abstractmethod
     def get_filter_tracks_by_date_setting(self) -> DateRange:
         pass
+
+    @abstractmethod
+    def enable_filter_track_by_date(self) -> None:
+        pass
+
+    @abstractmethod
+    def disable_filter_track_by_date(self) -> None:
+        pass
