@@ -1,7 +1,13 @@
+from datetime import datetime
 from unittest.mock import Mock
 
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
+from OTAnalytics.domain.filter import (
+    Filter,
+    FilterBuilder,
+    FilterElement,
+    FilterElementSettingRestorer,
+)
 
 
 class TestFilterElement:
@@ -39,3 +45,47 @@ class TestFilterElement:
             end_date
         )
         assert expected_filter == result
+
+
+class TestFilterElementSettingRestorer:
+    def test_save_by_date_filter_setting(self) -> None:
+        filter_element = FilterElement(DateRange(None, None), ["car"])
+        restorer = FilterElementSettingRestorer()
+        restorer.save_by_date_filter_setting(filter_element)
+
+        assert restorer._by_classification_filter_setting is None
+        assert restorer._by_date_filter_setting == filter_element.date_range
+
+    def test_by_classification_filter_setting(self) -> None:
+        filter_element = FilterElement(DateRange(None, None), ["car"])
+        restorer = FilterElementSettingRestorer()
+        restorer.save_by_classification_filter_setting(filter_element)
+
+        assert restorer._by_classification_filter_setting == ["car"]
+        assert restorer._by_date_filter_setting is None
+
+    def test_restore_by_date_filter_setting(self) -> None:
+        date_range = DateRange(datetime(2000, 1, 1), datetime(2000, 1, 2))
+        filter_element = FilterElement(date_range, [])
+
+        restorer = FilterElementSettingRestorer()
+        restorer.save_by_date_filter_setting(filter_element)
+
+        restored_filter_element = restorer.restore_by_date_filter_setting(
+            FilterElement(DateRange(None, None), ["car"])
+        )
+        assert restored_filter_element.classifications == ["car"]
+        assert restored_filter_element.date_range == date_range
+
+    def test_restore_by_classification_filter_setting(self) -> None:
+        date_range = DateRange(datetime(2000, 1, 1), datetime(2000, 1, 2))
+        classifications = ["car"]
+        filter_element = FilterElement(date_range, classifications)
+        restorer = FilterElementSettingRestorer()
+        restorer.save_by_classification_filter_setting(filter_element)
+
+        restored_filter_element = restorer.restore_by_classification_filter_setting(
+            FilterElement(DateRange(None, None), [])
+        )
+        assert restored_filter_element.classifications == classifications
+        assert restored_filter_element.date_range == DateRange(None, None)

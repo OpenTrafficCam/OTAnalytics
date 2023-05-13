@@ -21,6 +21,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.domain.event import SceneEventBuilder
+from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
@@ -85,6 +86,9 @@ class ApplicationStarter:
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         tracks_metadata = self._create_tracks_metadata(track_repository)
+        filter_element_settings_restorer = (
+            self._create_filter_element_setting_restorer()
+        )
 
         application = OTAnalyticsApplication(
             datastore=datastore,
@@ -94,6 +98,7 @@ class ApplicationStarter:
             intersect=intersect,
             scene_event_detection=scene_event_detection,
             tracks_metadata=tracks_metadata,
+            filter_element_setting_restorer=filter_element_settings_restorer,
         )
         section_parser: SectionParser = application._datastore._section_parser
         dummy_viewmodel = DummyViewModel(application, section_parser)
@@ -228,3 +233,6 @@ class ApplicationStarter:
 
     def _create_dataframe_filter_builder(self) -> DataFrameFilterBuilder:
         return DataFrameFilterBuilder()
+
+    def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
+        return FilterElementSettingRestorer()

@@ -10,7 +10,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -36,6 +36,7 @@ class OTAnalyticsApplication:
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
         tracks_metadata: TracksMetadata,
+        filter_element_setting_restorer: FilterElementSettingRestorer,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -44,6 +45,7 @@ class OTAnalyticsApplication:
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
         self._tracks_metadata = tracks_metadata
+        self._filter_element_setting_restorer = filter_element_setting_restorer
 
     def connect_observers(self) -> None:
         """
@@ -228,4 +230,25 @@ class OTAnalyticsApplication:
 
         self.track_view_state.filter_element.set(
             FilterElement(date_range, current_filter_element.classifications)
+        )
+
+    def enable_filter_track_by_date(self) -> None:
+        """Enable filtering track by date and restoring the previous date range."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        restored_filter_element = (
+            self._filter_element_setting_restorer.restore_by_date_filter_setting(
+                current_filter_element
+            )
+        )
+        self.track_view_state.filter_element.set(restored_filter_element)
+
+    def disable_filter_track_by_date(self) -> None:
+        """Disable filtering track by date and saving the current date range."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        self._filter_element_setting_restorer.save_by_date_filter_setting(
+            current_filter_element
+        )
+
+        self.track_view_state.filter_element.set(
+            FilterElement(DateRange(None, None), current_filter_element.classifications)
         )

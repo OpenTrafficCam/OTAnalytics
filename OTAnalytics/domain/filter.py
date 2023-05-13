@@ -180,3 +180,37 @@ class FilterElement:
         filter_builder.build()
 
         return filter_builder.get_result()
+
+
+class FilterElementSettingRestorer:
+    def __init__(self) -> None:
+        self._by_date_filter_setting: Optional[DateRange] = None
+        self._by_classification_filter_setting: Optional[list[str]] = None
+
+    def save_by_date_filter_setting(self, filter_element: FilterElement) -> None:
+        self._by_date_filter_setting = filter_element.date_range
+
+    def save_by_classification_filter_setting(
+        self, filter_element: FilterElement
+    ) -> None:
+        self._by_classification_filter_setting = filter_element.classifications.copy()
+
+    def restore_by_date_filter_setting(
+        self, filter_element: FilterElement
+    ) -> FilterElement:
+        if self._by_date_filter_setting is None:
+            return filter_element
+
+        return FilterElement(
+            self._by_date_filter_setting, filter_element.classifications
+        )
+
+    def restore_by_classification_filter_setting(
+        self, filter_element: FilterElement
+    ) -> FilterElement:
+        if self._by_classification_filter_setting is None:
+            return filter_element
+
+        return FilterElement(
+            filter_element.date_range, self._by_classification_filter_setting
+        )
