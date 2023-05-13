@@ -49,6 +49,14 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def set_button_edit_flow_metadata(self, button: AbstractStatefulWidget) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_button_remove_flow(self, button: AbstractStatefulWidget) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def set_selected_section_id(self, id: Optional[str]) -> None:
         raise NotImplementedError
 

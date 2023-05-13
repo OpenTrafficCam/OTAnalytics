@@ -17,9 +17,7 @@ class StatefulButton(CTkButton, AbstractStatefulWidget):
         self._viewmodel_setter(self)
 
     def activate(self) -> None:
-        print(f"trying to enable {self}")
         self.configure(state="enabled")
 
     def deactivate(self) -> None:
-        print(f"trying to disable {self}")
         self.configure(state="disabled")

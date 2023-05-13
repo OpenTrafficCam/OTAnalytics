@@ -4,6 +4,7 @@ from typing import Any, Optional
 from customtkinter import CTkButton, CTkFrame
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.plugin_ui.customtkinter_gui.button import StatefulButton
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
 
@@ -24,13 +25,19 @@ class FrameFlows(CTkFrame):
         self.button_add = CTkButton(
             master=self, text="Add", command=self._viewmodel.add_flow
         )
-        self.button_edit = CTkButton(
+        self.button_edit = StatefulButton(
             master=self,
             text="Edit",
             command=self._viewmodel.edit_flow,
+            viewmodel_setter=self._viewmodel.set_button_edit_flow_metadata,
+            state="disabled",
         )
-        self.button_remove = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_flow
+        self.button_remove = StatefulButton(
+            master=self,
+            text="Remove",
+            command=self._viewmodel.remove_flow,
+            viewmodel_setter=self._viewmodel.set_button_remove_flow,
+            state="disabled",
         )
 
     def _place_widgets(self) -> None:

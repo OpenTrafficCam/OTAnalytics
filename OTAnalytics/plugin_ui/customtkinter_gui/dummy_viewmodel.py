@@ -87,6 +87,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._button_edit_section_geometry: Optional[AbstractStatefulWidget]
         self._button_edit_section_metadata: Optional[AbstractStatefulWidget]
         self._button_remove_section: Optional[AbstractStatefulWidget]
+        self._button_edit_flow_metadata: Optional[AbstractStatefulWidget]
+        self._button_remove_flow: Optional[AbstractStatefulWidget]
         self._new_section: dict = {}
         self._selected_section_id: Optional[str] = None
         self.register_to_subjects()
@@ -162,6 +164,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def set_button_remove_section(self, button: AbstractStatefulWidget) -> None:
         self._button_remove_section = button
 
+    def set_button_edit_flow_metadata(self, button: AbstractStatefulWidget) -> None:
+        self._button_edit_flow_metadata = button
+
+    def set_button_remove_flow(self, button: AbstractStatefulWidget) -> None:
+        self._button_remove_flow = button
+
     def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
         current_id = section_id.id if section_id else None
         self._selected_section_id = current_id
@@ -184,20 +192,27 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 type(self._button_remove_section).__name__
             )
         if self._selected_section_id is not None:
-            print("activate")
             self._button_edit_section_geometry.activate()
             self._button_edit_section_metadata.activate()
             self._button_remove_section.activate()
         else:
-            print("deactivate")
             self._button_edit_section_geometry.deactivate()
             self._button_edit_section_metadata.deactivate()
             self._button_remove_section.deactivate()
 
     def _update_selected_flow(self, flow_id: Optional[str]) -> None:
-        if self._treeview_flows is None:
-            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        self._treeview_flows.update_selected_items(flow_id)
+        if self._button_edit_flow_metadata is None:
+            raise MissingInjectedInstanceError(
+                type(self._button_edit_flow_metadata).__name__
+            )
+        if self._button_remove_flow is None:
+            raise MissingInjectedInstanceError(type(self._button_remove_flow).__name__)
+        if flow_id is not None:
+            self._button_edit_flow_metadata.activate()
+            self._button_remove_flow.activate()
+        else:
+            self._button_edit_flow_metadata.deactivate()
+            self._button_remove_flow.deactivate()
 
     def get_selected_flow(self) -> Optional[str]:
         return self._application.section_state.selected_flow.get()
