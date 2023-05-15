@@ -189,7 +189,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def load_sections(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
         sections_file = askopenfilename(
-            title="Load sections file", filetypes=[("otflow file", "*.otflow")]
+            title="Load sections file",
+            filetypes=[("otflow file", "*.otflow")],
+            defaultextension=".otflow",
         )
         if not sections_file:
             return
