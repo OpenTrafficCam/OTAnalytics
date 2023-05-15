@@ -15,7 +15,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
+from OTAnalytics.domain.track import PilImage, Track, TrackImage
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
@@ -122,10 +122,13 @@ class PandasTrackProvider:
         Returns:
             DataFrame: tracks as dataframe
         """
-        detections: list[Detection] = []
+        prepared: list[dict] = []
         for current_track in tracks:
-            detections.extend(current_track.detections)
-        prepared = [detection.to_dict() for detection in detections]
+            for detection in current_track.detections:
+                detection_dict = detection.to_dict()
+                detection_dict[track.CLASSIFICATION] = current_track.classification
+                prepared.append(detection_dict)
+
         converted = DataFrame(prepared)
         if (track.TRACK_ID in converted.columns) and (track.FRAME in converted.columns):
             return converted.sort_values([track.TRACK_ID, track.FRAME])
