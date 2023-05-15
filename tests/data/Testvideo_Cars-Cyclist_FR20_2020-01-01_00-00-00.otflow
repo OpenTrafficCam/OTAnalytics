@@ -1,1 +1,130 @@
-{"sections":[{"id":"S\u00fcd","type":"line","relative_offset_coordinates":{"section-enter":{"x":0.5,"y":0.5}},"coordinates":[{"x":43,"y":184},{"x":137,"y":200},{"x":352,"y":145},{"x":362,"y":89}],"plugin_data":{}},{"id":"West","type":"line","relative_offset_coordinates":{"section-enter":{"x":0.5,"y":0.5}},"coordinates":[{"x":388,"y":83},{"x":428,"y":139},{"x":577,"y":159},{"x":694,"y":125}],"plugin_data":{"distances":{"S\u00fcd":"022","Ost":"0","Nord":"0"}}},{"id":"Nord","type":"line","relative_offset_coordinates":{"section-enter":{"x":0.5,"y":0.5}},"coordinates":[{"x":788,"y":175},{"x":621,"y":213},{"x":287,"y":394},{"x":230,"y":578}],"plugin_data":{"distances":{"West":"0"}}},{"id":"Ost","type":"line","relative_offset_coordinates":{"section-enter":{"x":0.7,"y":0.2}},"coordinates":[{"x":15,"y":204},{"x":130,"y":222},{"x":270,"y":369},{"x":215,"y":573}],"plugin_data":{}}]}
+{
+    "sections": [
+        {
+            "id": "S\u00fcd",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 43,
+                    "y": 184
+                },
+                {
+                    "x": 137,
+                    "y": 200
+                },
+                {
+                    "x": 352,
+                    "y": 145
+                },
+                {
+                    "x": 362,
+                    "y": 89
+                }
+            ],
+            "plugin_data": {}
+        },
+        {
+            "id": "West",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 388,
+                    "y": 83
+                },
+                {
+                    "x": 428,
+                    "y": 139
+                },
+                {
+                    "x": 577,
+                    "y": 159
+                },
+                {
+                    "x": 694,
+                    "y": 125
+                }
+            ],
+            "plugin_data": {
+                "distances": {
+                    "S\u00fcd": "022",
+                    "Ost": "0",
+                    "Nord": "0"
+                }
+            }
+        },
+        {
+            "id": "Nord",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 788,
+                    "y": 175
+                },
+                {
+                    "x": 621,
+                    "y": 213
+                },
+                {
+                    "x": 287,
+                    "y": 394
+                },
+                {
+                    "x": 230,
+                    "y": 578
+                }
+            ],
+            "plugin_data": {
+                "distances": {
+                    "West": "0"
+                }
+            }
+        },
+        {
+            "id": "Ost",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.7,
+                    "y": 0.2
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 15,
+                    "y": 204
+                },
+                {
+                    "x": 130,
+                    "y": 222
+                },
+                {
+                    "x": 270,
+                    "y": 369
+                },
+                {
+                    "x": 215,
+                    "y": 573
+                }
+            ],
+            "plugin_data": {}
+        }
+    ]
+}
