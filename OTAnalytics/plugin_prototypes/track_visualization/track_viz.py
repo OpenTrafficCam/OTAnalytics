@@ -297,15 +297,6 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             [track.TRACK_ID, track.FRAME]
         )
 
-        color_palette = {
-            CLASS_CAR: "blue",
-            CLASS_MOTORCYCLE: "skyblue",
-            CLASS_PERSON: "salmon",
-            CLASS_TRUCK: "purple",
-            CLASS_BICYCLE: "lime",
-            CLASS_TRAIN: "gold",
-        }
-
         seaborn.scatterplot(
             x="x",
             y="y",
@@ -316,7 +307,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             legend=False,
             s=15,
             ax=axes,
-            palette=color_palette,
+            palette=COLOR_PALETTE,
         )
 
 
