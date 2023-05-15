@@ -1,5 +1,5 @@
 from tkinter.ttk import Treeview
-from typing import Any, Optional
+from typing import Any
 
 from customtkinter import CTkButton, CTkFrame
 
@@ -35,7 +35,7 @@ class FrameFlows(CTkFrame):
         self.button_remove = StatefulButton(
             master=self,
             text="Remove",
-            command=self._viewmodel.remove_flow,
+            command=self._viewmodel.remove_flows,
             viewmodel_setter=self._viewmodel.set_button_remove_flow,
             state="disabled",
         )
@@ -66,8 +66,8 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_flows(self)
 
-    def _notify_viewmodel_about_selected_item_id(self, flow_id: Optional[str]) -> None:
-        self._viewmodel.set_selected_flow_id(flow_id)
+    def _notify_viewmodel_about_selected_item_ids(self, flow_ids: list[str]) -> None:
+        self._viewmodel.set_selected_flow_ids(flow_ids)
 
     def update_items(self) -> None:
         self.delete(*self.get_children())

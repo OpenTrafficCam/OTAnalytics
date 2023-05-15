@@ -1,5 +1,5 @@
 from tkinter.ttk import Treeview
-from typing import Any, Optional
+from typing import Any
 
 from customtkinter import CTkButton, CTkFrame
 
@@ -42,7 +42,7 @@ class FrameSections(CTkFrame):
         self.button_remove = StatefulButton(
             master=self,
             text="Remove",
-            command=self._viewmodel.remove_section,
+            command=self._viewmodel.remove_sections,
             viewmodel_setter=self._viewmodel.set_button_remove_section,
             state="disabled",
         )
@@ -66,6 +66,7 @@ class TreeviewSections(TreeviewTemplate, Treeview):
         self.bind("<ButtonRelease-2>", self._on_deselect)
         self.bind("<<TreeviewSelect>>", self._on_select)
         self._define_columns()
+        self.configure(selectmode="extended")
         self._introduce_to_viewmodel()
         self.update_items()
 
@@ -78,10 +79,10 @@ class TreeviewSections(TreeviewTemplate, Treeview):
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)
 
-    def _notify_viewmodel_about_selected_item_id(
-        self, line_section_id: Optional[str]
+    def _notify_viewmodel_about_selected_item_ids(
+        self, line_section_ids: list[str]
     ) -> None:
-        self._viewmodel.set_selected_section_id(line_section_id)
+        self._viewmodel.set_selected_section_ids(line_section_ids)
 
     def update_items(self) -> None:
         self.delete(*self.get_children())

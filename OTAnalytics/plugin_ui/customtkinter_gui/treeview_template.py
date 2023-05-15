@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from tkinter.ttk import Treeview
-from typing import Any, Optional
+from typing import Any
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 
@@ -20,12 +20,12 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
     def _define_columns(self) -> None:
         raise NotImplementedError
 
-    def update_selected_items(self, item_id: Optional[str]) -> None:
-        if item_id == self.get_current_selection():
+    def update_selected_items(self, item_ids: list[str]) -> None:
+        if item_ids == self.get_current_selection():
             return
 
-        if item_id:
-            self.selection_set(item_id)
+        if item_ids:
+            self.selection_set(item_ids)
         else:
             self._deselect_all()
 
@@ -44,15 +44,8 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
             self.selection_remove(item)
 
     def _on_select(self, event: Any) -> None:
-        item_id = self.get_current_selection()
-        self._notify_viewmodel_about_selected_item_id(item_id)
+        item_ids = self.get_current_selection()
+        self._notify_viewmodel_about_selected_item_ids(item_ids)
 
-    def get_current_selection(self) -> Optional[str]:
-        selection = self.selection()
-        if len(selection) == 0:
-            item_id = None
-        elif len(selection) == 1:
-            item_id = selection[0]
-        else:
-            raise ValueError("Only one item in the Treeview shall be selected")
-        return item_id
+    def get_current_selection(self) -> list[str]:
+        return list(self.selection())
