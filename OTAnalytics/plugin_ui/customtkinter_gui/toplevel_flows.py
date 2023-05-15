@@ -86,6 +86,7 @@ class ToplevelFlows(CTkToplevel):
 
     def _set_close_on_return_key(self) -> None:
         self.entry_distance.bind("<Return>", self.close)
+        self.entry_distance.bind("<KP_Enter>", self.close)
 
     def close(self, event: Any = None) -> None:
         if not self._sections_are_valid():
