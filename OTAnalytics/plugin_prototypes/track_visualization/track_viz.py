@@ -281,20 +281,36 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot start and end points of
             axes (Axes): axes to plot on
         """
-        track_df_start_end = pandas.concat(
-            [
-                track_df.groupby(track.TRACK_ID).first().reset_index(),
-                # track_df.groupby("track-id").last().reset_index(),
-            ]
-        ).sort_values([track.TRACK_ID, track.FRAME])
+        track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
+        track_df_start["type"] = "start"
+
+        track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
+        track_df_end["type"] = "end"
+
+        track_df_start_end = pandas.concat([track_df_start, track_df_end]).sort_values(
+            [track.TRACK_ID, track.FRAME]
+        )
+
+        color_palette = {
+            CLASS_CAR: "blue",
+            CLASS_MOTORCYCLE: "skyblue",
+            CLASS_PERSON: "salmon",
+            CLASS_TRUCK: "purple",
+            CLASS_BICYCLE: "lime",
+            CLASS_TRAIN: "gold",
+        }
+
         seaborn.scatterplot(
             x="x",
             y="y",
             hue=track.CLASSIFICATION,
             data=track_df_start_end,
+            style="type",
+            markers=[">", "$x$"],
             legend=False,
-            s=3,
+            s=15,
             ax=axes,
+            palette=color_palette,
         )
 
 
