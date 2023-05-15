@@ -240,12 +240,10 @@ class DummyViewModel(ViewModel, SectionListObserver):
         CanvasElementDeleter(canvas=self._canvas).delete(
             tag_or_id=self._selected_section_id
         )
-        current_section = None
         if self._selected_section_id:
-            current_section = self._application.get_section_for(
+            if current_section := self._application.get_section_for(
                 SectionId(self._selected_section_id)
-            )
-            if current_section is not None:
+            ):
                 SectionGeometryEditor(
                     viewmodel=self,
                     canvas=self._canvas,
