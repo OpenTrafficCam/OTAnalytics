@@ -21,11 +21,62 @@ ENCODING = "UTF-8"
 DPI = 100
 
 CLASS_CAR = "car"
-CLASS_MOTORCYCLE = "motorcycle"
-CLASS_PERSON = "person"
+CLASS_CAR_TRAILER = "car_with_trailer"
+CLASS_MOTORCYCLIST = "motorcyclist"
+CLASS_PEDESTRIAN = "pedestrian"
 CLASS_TRUCK = "truck"
-CLASS_BICYCLE = "bicycle"
+CLASS_TRUCK_TRAILER = "truck_with_trailer"
+CLASS_TRUCK_SEMITRAILER = "truck_with_semitrailer"
+CLASS_BICYCLIST = "bicyclist"
+CLASS_BICYCLIST_TRAILER = "bicyclist_with_trailer"
+CLASS_CARGOBIKE = "cargobike_driver"
+CLASS_SCOOTER = "scooter_driver"
+CLASS_DELVAN = "delivery_van"
+CLASS_DELVAN_TRAILER = "delivery_van_with_trailer"
+CLASS_PRVAN = "private_van"
+CLASS_PRVAN_TRAILER = "private_van_with_trailer"
 CLASS_TRAIN = "train"
+CLASS_BUS = "bus"
+
+COLOR_PALETTE: dict[str, str] = {
+    CLASS_CAR: "blue",
+    CLASS_CAR_TRAILER: "skyblue",
+    CLASS_MOTORCYCLIST: "orange",
+    CLASS_PEDESTRIAN: "salmon",
+    CLASS_TRUCK: "red",
+    CLASS_TRUCK_TRAILER: "purple",
+    CLASS_TRUCK_SEMITRAILER: "pink",
+    CLASS_BICYCLIST: "lime",
+    CLASS_BICYCLIST_TRAILER: "lime",
+    CLASS_CARGOBIKE: "green",
+    CLASS_SCOOTER: "white",
+    CLASS_DELVAN: "yellow",
+    CLASS_DELVAN_TRAILER: "yellow",
+    CLASS_PRVAN: "black",
+    CLASS_PRVAN_TRAILER: "black",
+    CLASS_TRAIN: "brown",
+    CLASS_BUS: "beige",
+}
+
+CLASS_ORDER = [
+    CLASS_PEDESTRIAN,
+    CLASS_BICYCLIST,
+    CLASS_BICYCLIST_TRAILER,
+    CLASS_CARGOBIKE,
+    CLASS_SCOOTER,
+    CLASS_MOTORCYCLIST,
+    CLASS_CAR,
+    CLASS_CAR_TRAILER,
+    CLASS_PRVAN,
+    CLASS_PRVAN_TRAILER,
+    CLASS_DELVAN,
+    CLASS_DELVAN_TRAILER,
+    CLASS_TRUCK,
+    CLASS_TRUCK_TRAILER,
+    CLASS_TRUCK_SEMITRAILER,
+    CLASS_BUS,
+    CLASS_TRAIN,
+]
 
 
 class TrackPlotter(ABC):
@@ -95,11 +146,22 @@ class PandasTrackProvider:
         self,
         filter_classes: Iterable[str] = (
             CLASS_CAR,
-            CLASS_MOTORCYCLE,
-            CLASS_PERSON,
+            CLASS_CAR_TRAILER,
+            CLASS_MOTORCYCLIST,
+            CLASS_PEDESTRIAN,
             CLASS_TRUCK,
-            CLASS_BICYCLE,
+            CLASS_TRUCK_TRAILER,
+            CLASS_TRUCK_SEMITRAILER,
+            CLASS_BICYCLIST,
+            CLASS_BICYCLIST_TRAILER,
+            CLASS_CARGOBIKE,
+            CLASS_SCOOTER,
+            CLASS_DELVAN,
+            CLASS_DELVAN_TRAILER,
+            CLASS_PRVAN,
+            CLASS_PRVAN_TRAILER,
             CLASS_TRAIN,
+            CLASS_BUS,
         ),
         num_min_frames: int = 30,
         start_time: str = "",
@@ -227,22 +289,6 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
-        color_palette = {
-            CLASS_CAR: "blue",
-            CLASS_MOTORCYCLE: "skyblue",
-            CLASS_PERSON: "salmon",
-            CLASS_TRUCK: "purple",
-            CLASS_BICYCLE: "lime",
-            CLASS_TRAIN: "gold",
-        }
-        class_order = [
-            CLASS_CAR,
-            CLASS_TRUCK,
-            CLASS_MOTORCYCLE,
-            CLASS_PERSON,
-            CLASS_BICYCLE,
-            CLASS_TRAIN,
-        ]
         seaborn.lineplot(
             x="x",
             y="y",
@@ -254,8 +300,8 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             sort=False,
             alpha=alpha,
             ax=axes,
-            palette=color_palette,
-            hue_order=class_order,
+            palette=COLOR_PALETTE,
+            hue_order=CLASS_ORDER,
         )
 
 
