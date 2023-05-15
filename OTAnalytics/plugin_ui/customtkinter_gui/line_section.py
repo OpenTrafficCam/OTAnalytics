@@ -175,7 +175,7 @@ class SectionGeometryEditor(CanvasObserver):
         self._viewmodel = viewmodel
         self._canvas = canvas
         self._section = section
-        self._pre_edited_section_style = edited_section_style
+        self._edited_section_style = edited_section_style
         self._pre_edit_section_style = pre_edit_section_style
         self._hovered_knob_style = hovered_knob_style
         self._selected_knob_style = selected_knob_style
@@ -202,7 +202,7 @@ class SectionGeometryEditor(CanvasObserver):
         self.painter.draw(
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
-            section_style=self._pre_edited_section_style,
+            section_style=self._edited_section_style,
         )
 
     def _get_coordinates(self) -> None:
@@ -397,7 +397,7 @@ class SectionGeometryEditor(CanvasObserver):
         self.painter.draw(
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
-            section_style=self._pre_edited_section_style,
+            section_style=self._edited_section_style,
             highlighted_knob_index=highlighted_knob_index,
             highlighted_knob_style=highlighted_knob_style,
         )
