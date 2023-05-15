@@ -145,7 +145,7 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<Left>", self._on_left)
         self._canvas.bind("<Right>", self._on_right)
         self._canvas.bind("<Return>", self._on_return)
-        self._canvas.bind("<KP_Enter>", self.on_return)
+        self._canvas.bind("<KP_Enter>", self._on_return)
         self._canvas.bind("<Delete>", self._on_delete)
         self._canvas.bind("<BackSpace>", self._on_delete)
         self._canvas.bind("<Escape>", self._on_escape)
