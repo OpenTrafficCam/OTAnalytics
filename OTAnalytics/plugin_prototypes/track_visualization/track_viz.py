@@ -15,7 +15,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import Detection, PilImage, Track, TrackImage
+from OTAnalytics.domain.track import PilImage, Track, TrackImage
 
 ENCODING = "UTF-8"
 DPI = 100
@@ -26,6 +26,24 @@ CLASS_PERSON = "person"
 CLASS_TRUCK = "truck"
 CLASS_BICYCLE = "bicycle"
 CLASS_TRAIN = "train"
+
+COLOR_PALETTE: dict[str, str] = {
+    CLASS_CAR: "blue",
+    CLASS_MOTORCYCLE: "skyblue",
+    CLASS_PERSON: "salmon",
+    CLASS_TRUCK: "purple",
+    CLASS_BICYCLE: "lime",
+    CLASS_TRAIN: "gold",
+}
+
+CLASS_ORDER = [
+    CLASS_CAR,
+    CLASS_TRUCK,
+    CLASS_MOTORCYCLE,
+    CLASS_PERSON,
+    CLASS_BICYCLE,
+    CLASS_TRAIN,
+]
 
 
 class TrackPlotter(ABC):
@@ -123,10 +141,13 @@ class PandasTrackProvider:
         Returns:
             DataFrame: tracks as dataframe
         """
-        detections: list[Detection] = []
+        prepared: list[dict] = []
         for current_track in tracks:
-            detections.extend(current_track.detections)
-        prepared = [detection.to_dict() for detection in detections]
+            for detection in current_track.detections:
+                detection_dict = detection.to_dict()
+                detection_dict[track.CLASSIFICATION] = current_track.classification
+                prepared.append(detection_dict)
+
         converted = DataFrame(prepared)
         if (track.TRACK_ID in converted.columns) and (track.FRAME in converted.columns):
             return converted.sort_values([track.TRACK_ID, track.FRAME])
@@ -227,22 +248,6 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
-        color_palette = {
-            CLASS_CAR: "blue",
-            CLASS_MOTORCYCLE: "skyblue",
-            CLASS_PERSON: "salmon",
-            CLASS_TRUCK: "purple",
-            CLASS_BICYCLE: "lime",
-            CLASS_TRAIN: "gold",
-        }
-        class_order = [
-            CLASS_CAR,
-            CLASS_TRUCK,
-            CLASS_MOTORCYCLE,
-            CLASS_PERSON,
-            CLASS_BICYCLE,
-            CLASS_TRAIN,
-        ]
         seaborn.lineplot(
             x="x",
             y="y",
@@ -254,8 +259,8 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             sort=False,
             alpha=alpha,
             ax=axes,
-            palette=color_palette,
-            hue_order=class_order,
+            palette=COLOR_PALETTE,
+            hue_order=CLASS_ORDER,
         )
 
 
@@ -282,20 +287,27 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot start and end points of
             axes (Axes): axes to plot on
         """
-        track_df_start_end = pandas.concat(
-            [
-                track_df.groupby(track.TRACK_ID).first().reset_index(),
-                # track_df.groupby("track-id").last().reset_index(),
-            ]
-        ).sort_values([track.TRACK_ID, track.FRAME])
+        track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
+        track_df_start["type"] = "start"
+
+        track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
+        track_df_end["type"] = "end"
+
+        track_df_start_end = pandas.concat([track_df_start, track_df_end]).sort_values(
+            [track.TRACK_ID, track.FRAME]
+        )
+
         seaborn.scatterplot(
             x="x",
             y="y",
             hue=track.CLASSIFICATION,
             data=track_df_start_end,
+            style="type",
+            markers=[">", "$x$"],
             legend=False,
-            s=3,
+            s=15,
             ax=axes,
+            palette=COLOR_PALETTE,
         )
 
 
