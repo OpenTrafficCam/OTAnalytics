@@ -16,11 +16,10 @@ from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserv
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     DELETE_KEYS,
     ESCAPE_KEY,
-    KEY_UP,
     LEFT_BUTTON_UP,
     LEFT_KEY,
     MOTION,
-    PLUS_KEY,
+    PLUS_KEYS,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
     RIGHT_KEY,
@@ -234,7 +233,7 @@ class SectionGeometryEditor(CanvasObserver):
                 self._hover_knob(coordinate)
             elif event_type == LEFT_BUTTON_UP and self._hovered_knob_index is not None:
                 self._select_hovered_knob()
-            elif event_type == KEY_UP and key == PLUS_KEY:
+            elif event_type == PLUS_KEYS:
                 self._add_knob(coordinate=coordinate)
             elif event_type in {RETURN_KEY, RIGHT_BUTTON_UP}:
                 self._finish()

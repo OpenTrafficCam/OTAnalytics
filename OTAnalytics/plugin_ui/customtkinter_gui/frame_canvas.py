@@ -17,8 +17,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     DELETE_KEYS,
     ENTER_CANVAS,
     ESCAPE_KEY,
-    KEY_SYMBOLS,
-    KEY_UP,
     LEAVE_CANVAS,
     LEFT_BUTTON_DOWN,
     LEFT_BUTTON_UP,
@@ -26,6 +24,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     MOTION,
     MOTION_WHILE_LEFT_BUTTON_DOWN,
     PADX,
+    PLUS_KEYS,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
     RIGHT_KEY,
@@ -142,6 +141,8 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<ButtonRelease-2>", self._on_right_button_up)
         self._canvas.bind("<Motion>", self._on_mouse_motion)
         self._canvas.bind("<B1-Motion>>", self._on_motion_while_left_button_down)
+        self._canvas.bind("+", self._on_plus)
+        self._canvas.bind("<KP_Add>", self._on_plus)
         self._canvas.bind("<Left>", self._on_left)
         self._canvas.bind("<Right>", self._on_right)
         self._canvas.bind("<Return>", self._on_return)
@@ -149,7 +150,6 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<Delete>", self._on_delete)
         self._canvas.bind("<BackSpace>", self._on_delete)
         self._canvas.bind("<Escape>", self._on_escape)
-        self._canvas.bind("<KeyRelease>", self._on_other_key_up)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)
@@ -186,6 +186,9 @@ class CanvasEventHandler(EventHandler):
         self._canvas.focus_set()
         self._notify_observers(event, ENTER_CANVAS)
 
+    def _on_plus(self, event: Any) -> None:
+        self._notify_observers(event, PLUS_KEYS)
+
     def _on_left(self, event: Any) -> None:
         self._notify_observers(event, LEFT_KEY)
 
@@ -200,12 +203,6 @@ class CanvasEventHandler(EventHandler):
 
     def _on_escape(self, event: Any) -> None:
         self._notify_observers(event, ESCAPE_KEY)
-
-    def _on_other_key_up(self, event: Any) -> None:
-        if event.keysym in KEY_SYMBOLS:
-            return
-        key = event.char
-        self._notify_observers(event, event_type=KEY_UP, key=key)
 
     def _get_mouse_coordinates(self, event: Any) -> tuple[int, int]:
         """Returns coordinates of event on canvas taking into account the horizontal and
