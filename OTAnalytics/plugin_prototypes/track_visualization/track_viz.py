@@ -21,13 +21,29 @@ ENCODING = "UTF-8"
 DPI = 100
 
 CLASS_CAR = "car"
-CLASS_MOTORCYCLIST = "motorcyclist"
-CLASS_PEDESTRIAN = "pedestrian"
+CLASS_MOTORCYCLE = "motorcycle"
+CLASS_PERSON = "pedestrian"
 CLASS_TRUCK = "truck"
-CLASS_TRUCK_TRAILER = "truck_with_trailer"
-CLASS_TRUCK_SEMITRAILER = "truck_with_semitrailer"
-CLASS_BICYCLIST = "bicyclist"
-CLASS_DELVAN = "delivery_van"
+CLASS_BICYCLE = "bicycle"
+CLASS_TRAIN = "train"
+
+COLOR_PALETTE: dict[str, str] = {
+    CLASS_CAR: "blue",
+    CLASS_MOTORCYCLE: "skyblue",
+    CLASS_PERSON: "salmon",
+    CLASS_TRUCK: "purple",
+    CLASS_BICYCLE: "lime",
+    CLASS_TRAIN: "gold",
+}
+
+CLASS_ORDER = [
+    CLASS_CAR,
+    CLASS_TRUCK,
+    CLASS_MOTORCYCLE,
+    CLASS_PERSON,
+    CLASS_BICYCLE,
+    CLASS_TRAIN,
+]
 
 
 class TrackPlotter(ABC):
@@ -97,13 +113,11 @@ class PandasTrackProvider:
         self,
         filter_classes: Iterable[str] = (
             CLASS_CAR,
-            CLASS_MOTORCYCLIST,
-            CLASS_PEDESTRIAN,
             CLASS_TRUCK,
-            CLASS_TRUCK_TRAILER,
-            CLASS_TRUCK_SEMITRAILER,
-            CLASS_BICYCLIST,
-            CLASS_DELVAN,
+            CLASS_MOTORCYCLE,
+            CLASS_PERSON,
+            CLASS_BICYCLE,
+            CLASS_TRAIN,
         ),
         num_min_frames: int = 30,
         start_time: str = "",
@@ -231,22 +245,6 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
-        color_palette = {
-            CLASS_CAR: "blue",
-            CLASS_MOTORCYCLIST: "skyblue",
-            CLASS_PEDESTRIAN: "salmon",
-            CLASS_TRUCK: "purple",
-            CLASS_BICYCLIST: "lime",
-            CLASS_DELVAN: "gold",
-        }
-        class_order = [
-            CLASS_CAR,
-            CLASS_TRUCK,
-            CLASS_MOTORCYCLIST,
-            CLASS_PEDESTRIAN,
-            CLASS_BICYCLIST,
-            CLASS_DELVAN,
-        ]
         seaborn.lineplot(
             x="x",
             y="y",
@@ -258,8 +256,8 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             sort=False,
             alpha=alpha,
             ax=axes,
-            palette=color_palette,
-            hue_order=class_order,
+            palette=COLOR_PALETTE,
+            hue_order=CLASS_ORDER,
         )
 
 
