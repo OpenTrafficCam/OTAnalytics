@@ -1,7 +1,7 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 import ujson
@@ -42,11 +42,17 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     METADATA,
     SECTION_FORMAT_VERSION,
     VERSION,
+    VERSION_1_0,
+    VERSION_1_1,
+    DetectionFixer,
     InvalidSectionData,
     OtEventListParser,
     OtsectionParser,
     OttrkFormatFixer,
     OttrkParser,
+    Version,
+    Version_1_0_to_1_1,
+    Version_1_1_To_1_2,
     _parse,
     _parse_bz2,
     _write_bz2,
@@ -129,45 +135,80 @@ def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> N
     assert bzip2_content == content
 
 
-class TestOttrkFormatFixer:
-    def test_no_fixes_in_newest_version(
+class TestVersion_1_0_To_1_1:
+    def test_fix_x_y_coordinates(
         self, track_builder_setup_with_sample_data: TrackBuilder
     ) -> None:
-        track_builder_setup_with_sample_data.set_otdet_version("1.1")
+        track_builder_setup_with_sample_data.set_otdet_version(str(VERSION_1_0))
+        input_detection = track_builder_setup_with_sample_data.create_detection()
+        serialized_detection = track_builder_setup_with_sample_data.serialize_detection(
+            input_detection, False, False
+        )
+        expected_detection = serialized_detection.copy()
+        expected_detection[ottrk_dataformat.X] = -5
+        expected_detection[ottrk_dataformat.Y] = -5
+        fixer = Version_1_0_to_1_1()
+
+        fixed = fixer.fix(serialized_detection, VERSION_1_0)
+
+        assert fixed == expected_detection
+
+
+class TestVersion_1_1_To_1_2:
+    def test_fix_occurrence(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        track_builder_setup_with_sample_data.set_otdet_version(str(VERSION_1_1))
+        detection = track_builder_setup_with_sample_data.create_detection()
+        serialized_detection = track_builder_setup_with_sample_data.serialize_detection(
+            detection, False, False
+        )
+        expected_detection = serialized_detection.copy()
+        serialized_detection[
+            ottrk_dataformat.OCCURRENCE
+        ] = detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
+
+        fixer = Version_1_1_To_1_2()
+
+        fixed = fixer.fix(serialized_detection, VERSION_1_1)
+
+        assert fixed == expected_detection
+
+
+class TestOttrkFormatFixer:
+    def test_run_all_fixer(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        otdet_version = Version.from_str(
+            track_builder_setup_with_sample_data.otdet_version
+        )
         content = track_builder_setup_with_sample_data.build_ottrk()
-        fixer = OttrkFormatFixer()
+        detections = track_builder_setup_with_sample_data.build_serialized_detections()
+        some_fixer = Mock(spec=DetectionFixer)
+        other_fixer = Mock(spec=DetectionFixer)
+        some_fixer.fix.side_effect = lambda detection, _: detection
+        other_fixer.fix.side_effect = lambda detection, _: detection
+        fixes: list[DetectionFixer] = [some_fixer, other_fixer]
+        fixer = OttrkFormatFixer(fixes)
 
         fixed_content = fixer.fix(content)
 
         assert fixed_content == content
+        executed_calls = some_fixer.fix.call_args_list
+        expected_calls = [call(detection, otdet_version) for detection in detections]
 
-    def test_fix_x_y_coordinates(
+        assert executed_calls == expected_calls
+
+    def test_no_fixes_in_newest_version(
         self, track_builder_setup_with_sample_data: TrackBuilder
     ) -> None:
-        track_builder_setup_with_sample_data.set_otdet_version("1.0")
+        track_builder_setup_with_sample_data.set_otdet_version("1.2")
         content = track_builder_setup_with_sample_data.build_ottrk()
-        input_detections = self.__build_expected_detections(
-            track_builder_setup_with_sample_data
-        )
-        fixer = OttrkFormatFixer()
+        fixer = OttrkFormatFixer([])
 
         fixed_content = fixer.fix(content)
 
-        fixed_detections = fixed_content[ottrk_dataformat.DATA][
-            ottrk_dataformat.DETECTIONS
-        ]
-        assert fixed_detections == input_detections
-
-    def __build_expected_detections(
-        self, track_builder_setup_with_sample_data: TrackBuilder
-    ) -> list[dict]:
-        input_detections = (
-            track_builder_setup_with_sample_data.build_serialized_detections()
-        )
-        for detection in input_detections:
-            detection[ottrk_dataformat.X] = -5
-            detection[ottrk_dataformat.Y] = -5
-        return input_detections
+        assert fixed_content == content
 
 
 class TestOttrkParser:
