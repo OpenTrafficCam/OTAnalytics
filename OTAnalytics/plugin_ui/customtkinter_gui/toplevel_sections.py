@@ -76,6 +76,7 @@ class ToplevelSections(CTkToplevel):
 
     def _set_close_on_return_key(self) -> None:
         self.entry_name.bind("<Return>", self.close)
+        self.entry_name.bind("<KP_Enter>", self.close)
 
     def close(self, event: Any = None) -> None:
         if not self._name_is_valid():
