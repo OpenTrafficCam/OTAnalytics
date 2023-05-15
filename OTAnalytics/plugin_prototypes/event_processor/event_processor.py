@@ -105,4 +105,6 @@ class EventProcessor:
             - pd.TimedeltaIndex(events_df["occurrence"].dt.microsecond, "microsecond")
         )
 
-        return events_df.sort_values(["road_user_id", "occurrence"])
+        return events_df.sort_values(["road_user_id", "occurrence"]).reset_index(
+            drop=True
+        )
