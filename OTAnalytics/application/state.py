@@ -356,8 +356,12 @@ class TracksMetadata(TrackListObserver):
 
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
-        self._first_detection_occurrence: Optional[datetime] = None
-        self._last_detection_occurrence: Optional[datetime] = None
+        self._first_detection_occurrence: ObservableOptionalProperty[
+            datetime
+        ] = ObservableOptionalProperty[datetime]()
+        self._last_detection_occurrence: ObservableOptionalProperty[
+            datetime
+        ] = ObservableOptionalProperty[datetime]()
 
     @property
     def first_detection_occurrence(self) -> Optional[datetime]:
@@ -367,7 +371,7 @@ class TracksMetadata(TrackListObserver):
             Optional[datetime]: first detection occurrence. `None` if track repository
                 is empty.
         """
-        return self._first_detection_occurrence
+        return self._first_detection_occurrence.get()
 
     @property
     def last_detection_occurrence(self) -> Optional[datetime]:
@@ -377,7 +381,7 @@ class TracksMetadata(TrackListObserver):
             Optional[datetime]: last detection occurrence. `None` if track repository
                 is empty.
         """
-        return self._last_detection_occurrence
+        return self._last_detection_occurrence.get()
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """Update tracks metadata on track repository changes"""
@@ -388,8 +392,8 @@ class TracksMetadata(TrackListObserver):
         sorted_detections = sorted(
             self._get_all_track_detections(), key=lambda x: x.occurrence
         )
-        self._first_detection_occurrence = sorted_detections[0].occurrence
-        self._last_detection_occurrence = sorted_detections[-1].occurrence
+        self._first_detection_occurrence.set(sorted_detections[0].occurrence)
+        self._last_detection_occurrence.set(sorted_detections[-1].occurrence)
 
     def _get_all_track_detections(self) -> Iterable[Detection]:
         """Get all track detections in the track repository.
