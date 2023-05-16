@@ -167,7 +167,7 @@ class FilterElement:
         if self.classifications:
             filter_builder.add_has_classifications_predicate(self.classifications)
 
-        if self.date_range.start_date and self.date_range.end_date:
+        if self.date_range.start_date:
             filter_builder.add_starts_at_or_after_date_predicate(
                 self.date_range.start_date
             )

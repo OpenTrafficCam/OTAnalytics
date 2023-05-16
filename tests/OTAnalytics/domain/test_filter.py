@@ -20,8 +20,8 @@ class TestFilterElement:
         assert filter_element.classifications == []
 
     def test_build_filter(self) -> None:
-        start_date = Mock()
-        end_date = Mock()
+        start_date = datetime(2000, 1, 1)
+        end_date = None
         date_range = DateRange(start_date, end_date)
         classifications = ["car", "truck"]
 
@@ -41,9 +41,7 @@ class TestFilterElement:
         filter_builder.add_starts_at_or_after_date_predicate.assert_called_once_with(
             start_date
         )
-        filter_builder.add_ends_before_or_at_date_predicate.assert_called_once_with(
-            end_date
-        )
+        filter_builder.add_ends_before_or_at_date_predicate.assert_not_called()
         assert expected_filter == result
 
 
