@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.track import TrackImage
 
@@ -118,10 +118,10 @@ class VideoRepository:
     def __do_add(self, video: Video) -> None:
         self._videos[video.path] = video
 
-    def add_all(self, videos: list[Video]) -> None:
+    def add_all(self, videos: Iterable[Video]) -> None:
         for video in videos:
             self.__do_add(video)
-        self._observers.notify(videos)
+        self._observers.notify(list(videos))
 
     def get_all(self) -> list[Video]:
         return list(self._videos.values())

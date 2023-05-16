@@ -233,6 +233,11 @@ class Datastore:
         """
         self._section_repository.register_sections_observer(observer)
 
+    def load_configuration_file(self, file: Path) -> None:
+        config = self._config_parser.parse(file)
+        self._video_repository.add_all(config.videos)
+        self._section_repository.add_all(config.sections)
+
     def load_video_files(self, files: list[Path]) -> None:
         videos = [self._video_parser.parse(file) for file in files]
         self._video_repository.add_all(videos)

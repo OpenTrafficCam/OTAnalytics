@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 from unittest.mock import Mock, call
 
 import pytest
@@ -10,6 +10,7 @@ from OTAnalytics.application.datastore import (
     ConfigParser,
     Datastore,
     EventListParser,
+    OtConfig,
     SectionParser,
     TrackParser,
     TrackToVideoRepository,
@@ -111,6 +112,45 @@ def config_parser() -> Mock:
 
 
 class TestDatastore:
+    def test_load_config_file(
+        self,
+        track_parser: Mock,
+        section_repository: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        track_video_parser: Mock,
+        event_list_parser: Mock,
+        video_repository: Mock,
+        track_to_video_repository: Mock,
+        config_parser: Mock,
+    ) -> None:
+        store = Datastore(
+            track_repository=TrackRepository(),
+            track_parser=track_parser,
+            section_repository=section_repository,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            video_repository=video_repository,
+            video_parser=video_parser,
+            track_video_parser=track_video_parser,
+            track_to_video_repository=track_to_video_repository,
+            config_parser=config_parser,
+        )
+        videos: Sequence[Video] = []
+        sections: Sequence[Section] = []
+        config_parser.parse.return_value = OtConfig(
+            project_name="My Test Project",
+            videos=videos,
+            sections=sections,
+        )
+        some_file = Path("some.file.otconfig")
+
+        store.load_configuration_file(some_file)
+
+        config_parser.parse.assert_called_with(some_file)
+        video_repository.add_all.called_with(videos)
+        section_repository.add_all.called_with(sections)
+
     def test_load_track_file(
         self,
         track_parser: Mock,
