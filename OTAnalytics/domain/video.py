@@ -40,7 +40,7 @@ class Video:
 
     def check_path_exists(self) -> None:
         if not self.path.exists():
-            raise ValueError("must be an existing path")
+            raise ValueError(f"{self.path} must be an existing path")
 
     def get_frame(self, index: int) -> TrackImage:
         """Returns the frame of the video at `index`.
