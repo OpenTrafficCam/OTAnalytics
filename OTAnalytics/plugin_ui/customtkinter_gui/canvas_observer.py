@@ -19,6 +19,8 @@ class CanvasObserver(ABC):
         event_handler.detach_observer(self)
 
     @abstractmethod
-    def update(self, coordinates: tuple[int, int], event_type: str) -> None:
+    def update(
+        self, coordinates: tuple[int, int], event_type: str, key: str | None
+    ) -> None:
         """Receives and processes updates from canvas event handler"""
         raise NotImplementedError

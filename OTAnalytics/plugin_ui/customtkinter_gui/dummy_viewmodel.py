@@ -25,11 +25,14 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     CanvasElementDeleter,
     CanvasElementPainter,
     SectionBuilder,
+    SectionGeometryEditor,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
+    PRE_EDIT_SECTION_STYLE,
+    SELECTED_KNOB_STYLE,
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
@@ -240,18 +243,18 @@ class DummyViewModel(ViewModel, SectionListObserver):
         CanvasElementDeleter(canvas=self._canvas).delete(
             tag_or_id=self._selected_section_id
         )
-        current_section = None
         if self._selected_section_id:
-            current_section = self._application.get_section_for(
+            if current_section := self._application.get_section_for(
                 SectionId(self._selected_section_id)
-            )
-        SectionBuilder(
-            viewmodel=self,
-            canvas=self._canvas,
-            section=current_section,
-            style=EDITED_SECTION_STYLE,
-        )
-        self.refresh_sections_on_gui()
+            ):
+                SectionGeometryEditor(
+                    viewmodel=self,
+                    canvas=self._canvas,
+                    section=current_section,
+                    edited_section_style=EDITED_SECTION_STYLE,
+                    pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
+                    selected_knob_style=SELECTED_KNOB_STYLE,
+                )
 
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:
@@ -320,7 +323,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 tags=[LINE_SECTION],
                 id=section[ID],
                 coordinates=section[COORDINATES],
-                style=style,
+                section_style=style,
             )
 
     def _get_sections(self) -> Iterable[dict]:
