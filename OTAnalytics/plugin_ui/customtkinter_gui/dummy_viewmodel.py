@@ -16,6 +16,7 @@ from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
+    validate_date,
     validate_hour,
     validate_minute,
     validate_second,
@@ -497,11 +498,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         return self._application.change_track_offset_to_section_offset()
 
     def validate_date(self, date: str) -> bool:
-        try:
-            datetime.strptime(date, DATE_FORMAT)
-            return True
-        except ValueError:
-            return False
+        return validate_date(date, DATE_FORMAT)
 
     def validate_hour(self, hour: str) -> bool:
         try:

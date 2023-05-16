@@ -10,6 +10,15 @@ class DateRange:
 
 
 def validate_date(date: str, date_format: str) -> bool:
+    """Validates a date string against a date format.
+
+    Args:
+        date (str): the date string
+        date_format (str): the date formate
+
+    Returns:
+        bool: `True` if date string matches date format. Otherwise `False`.
+    """
     try:
         datetime.strptime(date, date_format)
         return True
