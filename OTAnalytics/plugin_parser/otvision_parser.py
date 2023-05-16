@@ -511,6 +511,10 @@ class OtsectionParser(SectionParser):
         return {section.SECTIONS: [section.to_dict() for section in sections]}
 
 
+class MissingPath(Exception):
+    pass
+
+
 class SimpleVideoParser(VideoParser):
     def __init__(self, video_reader: VideoReader) -> None:
         self._video_reader = video_reader
@@ -518,8 +522,22 @@ class SimpleVideoParser(VideoParser):
     def parse(self, file: Path) -> Video:
         return Video(self._video_reader, file)
 
-    def parse_list(self, content: list[dict]) -> Sequence[Video]:
-        return [Video(self._video_reader, Path(video[PATH])) for video in content]
+    def parse_list(
+        self,
+        content: list[dict],
+        base_folder: Path,
+    ) -> Sequence[Video]:
+        return [self.__create_video(video, base_folder) for video in content]
+
+    def __create_video(
+        self,
+        entry: dict,
+        base_folder: Path,
+    ) -> Video:
+        if PATH not in entry:
+            raise MissingPath(entry)
+        video_path = Path(base_folder, entry[PATH])
+        return Video(self._video_reader, video_path)
 
     def convert(
         self,
@@ -620,9 +638,10 @@ class OtConfigParser(ConfigParser):
         self._section_parser = section_parser
 
     def parse(self, file: Path) -> OtConfig:
+        base_folder = file.parent
         content = _parse(file)
         project_name = content[PROJECT][NAME]
-        videos = self._video_parser.parse_list(content[video.VIDEOS])
+        videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
         sections = self._section_parser.parse_list(content[section.SECTIONS])
         return OtConfig(project_name=project_name, videos=videos, sections=sections)
 

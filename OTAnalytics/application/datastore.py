@@ -72,7 +72,11 @@ class VideoParser(ABC):
         pass
 
     @abstractmethod
-    def parse_list(self, content: list[dict]) -> Sequence[Video]:
+    def parse_list(
+        self,
+        content: list[dict],
+        base_folder: Path,
+    ) -> Sequence[Video]:
         pass
 
     @abstractmethod
