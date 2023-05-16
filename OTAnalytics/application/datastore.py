@@ -144,8 +144,8 @@ class ConfigParser(ABC):
     def serialize(
         self,
         project_name: str,
-        video_files: list[Video],
-        sections: list[Section],
+        video_files: Iterable[Video],
+        sections: Iterable[Section],
         file: Path,
     ) -> None:
         pass
