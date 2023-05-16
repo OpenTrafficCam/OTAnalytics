@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Generic, Optional, TypeVar
 
-from OTAnalytics.application.datastore import Datastore, Video
+from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import SectionId, SectionListObserver
@@ -12,6 +12,7 @@ from OTAnalytics.domain.track import (
     TrackObserver,
     TrackSubject,
 )
+from OTAnalytics.domain.video import Video
 
 DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
