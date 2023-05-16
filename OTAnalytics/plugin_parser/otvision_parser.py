@@ -9,13 +9,14 @@ import ujson
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
 from OTAnalytics.application.datastore import (
+    ConfigParser,
     EventListParser,
     SectionParser,
     TrackParser,
     TrackVideoParser,
     VideoParser,
 )
-from OTAnalytics.domain import event, geometry, section
+from OTAnalytics.domain import event, geometry, section, video
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
@@ -35,6 +36,8 @@ METADATA: str = "metadata"
 VERSION: str = "version"
 SECTION_FORMAT_VERSION: str = "section_file_version"
 EVENT_FORMAT_VERSION: str = "event_file_version"
+
+PROJECT: str = "project"
 
 
 def _parse_bz2(path: Path) -> dict:
@@ -513,6 +516,9 @@ class SimpleVideoParser(VideoParser):
     def parse(self, file: Path) -> Video:
         return Video(self._video_reader, file)
 
+    def convert(self, videos: Iterable[Video]) -> dict[str, list[dict]]:
+        return {video.VIDEOS: [video.to_dict() for video in videos]}
+
 
 class OttrkVideoParser(TrackVideoParser):
     def __init__(self, video_parser: VideoParser) -> None:
@@ -591,3 +597,30 @@ class OtEventListParser(EventListParser):
             list[dict]: list containing raw information of sections
         """
         return [section.to_dict() for section in sections]
+
+
+class OtConfigParser(ConfigParser):
+    def __init__(
+        self,
+        video_parser: VideoParser,
+        section_parser: SectionParser,
+    ) -> None:
+        self._video_parser = video_parser
+        self._section_parser = section_parser
+
+    def serialize(
+        self,
+        project_name: str,
+        video_files: list[Video],
+        sections: list[Section],
+        file: Path,
+    ) -> None:
+        project_content = {"name": project_name}
+        video_content = self._video_parser.convert(video_files)
+        section_content = self._section_parser.convert(sections)
+        content = {
+            PROJECT: project_content,
+            video.VIDEOS: video_content,
+            section.SECTIONS: section_content,
+        }
+        _write_json(data=content, path=file)
