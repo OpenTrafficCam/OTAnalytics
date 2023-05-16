@@ -621,8 +621,12 @@ class OtConfigParser(ConfigParser):
         sections: Iterable[Section],
         file: Path,
     ) -> None:
+        parent_folder = file.parent
         project_content = {"name": project_name}
-        video_content = self._video_parser.convert(video_files, relative_to=file)
+        video_content = self._video_parser.convert(
+            video_files,
+            relative_to=parent_folder,
+        )
         section_content = self._section_parser.convert(sections)
         content = {
             PROJECT: project_content,
