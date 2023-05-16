@@ -2,7 +2,7 @@ import bz2
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Tuple
+from typing import Any, Iterable, Sequence, Tuple
 
 import ujson
 
@@ -11,6 +11,7 @@ from OTAnalytics import version
 from OTAnalytics.application.datastore import (
     ConfigParser,
     EventListParser,
+    OtConfig,
     SectionParser,
     TrackParser,
     TrackVideoParser,
@@ -28,7 +29,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
-from OTAnalytics.domain.video import Video, VideoReader
+from OTAnalytics.domain.video import PATH, Video, VideoReader
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
@@ -328,7 +329,7 @@ class OtsectionParser(SectionParser):
         SectionParser (SectionParser): extends SectionParser interface
     """
 
-    def parse(self, file: Path) -> list[Section]:
+    def parse(self, file: Path) -> Sequence[Section]:
         """Parse the content of the file into Section objects.
 
         Args:
@@ -338,10 +339,10 @@ class OtsectionParser(SectionParser):
             list[Section]: list of Section objects
         """
         content: dict = _parse(file)
-        sections: list[Section] = [
-            self.parse_section(entry) for entry in content.get(section.SECTIONS, [])
-        ]
-        return sections
+        return self.parse_list(content.get(section.SECTIONS, []))
+
+    def parse_list(self, content: list[dict]) -> Sequence[Section]:
+        return [self.parse_section(entry) for entry in content]
 
     def parse_section(self, entry: dict) -> Section:
         """Parse sections by type.
@@ -517,6 +518,9 @@ class SimpleVideoParser(VideoParser):
     def parse(self, file: Path) -> Video:
         return Video(self._video_reader, file)
 
+    def parse_list(self, content: list[dict]) -> Sequence[Video]:
+        return [Video(self._video_reader, video[PATH]) for video in content]
+
     def convert(
         self,
         videos: Iterable[Video],
@@ -614,6 +618,13 @@ class OtConfigParser(ConfigParser):
     ) -> None:
         self._video_parser = video_parser
         self._section_parser = section_parser
+
+    def parse(self, file: Path) -> OtConfig:
+        content = _parse(file)
+        project_name = content[PROJECT][NAME]
+        videos = self._video_parser.parse_list(content[video.VIDEOS])
+        sections = self._section_parser.parse_list(content[section.SECTIONS])
+        return OtConfig(project_name=project_name, videos=videos, sections=sections)
 
     def serialize(
         self,

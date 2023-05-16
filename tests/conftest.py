@@ -2,7 +2,7 @@ import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Generator, TypeVar
+from typing import Generator, Sequence, TypeVar
 
 import pytest
 
@@ -327,7 +327,7 @@ def tracks(ottrk_path: Path) -> list[Track]:
 
 
 @pytest.fixture(scope="module")
-def sections(otsection_file: Path) -> list[Section]:
+def sections(otsection_file: Path) -> Sequence[Section]:
     otsection_parser = OtsectionParser()
     return otsection_parser.parse(otsection_file)
 

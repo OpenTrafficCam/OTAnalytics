@@ -1,13 +1,14 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
+from typing import Sequence
 from unittest.mock import Mock, call
 
 import pytest
 import ujson
 
 from OTAnalytics import version
-from OTAnalytics.application.datastore import SectionParser, VideoParser
+from OTAnalytics.application.datastore import OtConfig, SectionParser, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.domain import geometry, section, video
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
@@ -574,3 +575,32 @@ class TestOtConfigParser:
             call(videos, relative_to=test_data_tmp_dir)
         ]
         assert section_parser.convert.call_args_list == [call(sections)]
+
+    def test_parse_config(self, test_data_tmp_dir: Path) -> None:
+        video_parser = Mock(spec=VideoParser)
+        section_parser = Mock(spec=SectionParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            section_parser=section_parser,
+        )
+        name = "My Test Project"
+        videos: Sequence[Video] = ()
+        sections: Sequence[Section] = ()
+        config_file = test_data_tmp_dir / "config.otconfig"
+        serialized_videos = {"serialized": "videos"}
+        serialized_sections = {"serialized": "sections"}
+        video_parser.convert.return_value = serialized_videos
+        section_parser.convert.return_value = serialized_sections
+        video_parser.parse_list.return_value = videos
+        section_parser.parse_list.return_value = sections
+
+        config_parser.serialize(
+            project_name=name,
+            video_files=videos,
+            sections=sections,
+            file=config_file,
+        )
+        config = config_parser.parse(file=config_file)
+
+        expected_config = OtConfig(project_name=name, videos=videos, sections=sections)
+        assert config == expected_config
