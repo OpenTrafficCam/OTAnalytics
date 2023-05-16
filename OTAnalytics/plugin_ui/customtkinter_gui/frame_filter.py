@@ -60,6 +60,8 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
             master=self,
             name="Filter By Date",
             button_width=60,
+            button_default_state=STATE_DISABLED,
+            button_default_color=COLOR_GRAY,
             viewmodel=self._viewmodel,
         )
 
@@ -90,6 +92,8 @@ class FilterButton(ABC, CTkFrame):
         self,
         name: str,
         button_width: int,
+        button_default_state: str,
+        button_default_color: str,
         viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
@@ -97,7 +101,9 @@ class FilterButton(ABC, CTkFrame):
         self._viewmodel = viewmodel
         self._name = name
         self._button_width = button_width
-        self._check_var = IntVar(value=1)
+        self._button_default_state = button_default_state
+        self._button_default_color = button_default_color
+        self._check_var = IntVar(value=0)
 
         self._get_widgets()
         self._place_widgets()
@@ -117,6 +123,8 @@ class FilterButton(ABC, CTkFrame):
             text=self._name,
             command=self._show_popup,
             width=self._button_width,
+            state=self._button_default_state,
+            fg_color=self._button_default_color,
         )
 
     def _place_widgets(self) -> None:
@@ -150,9 +158,22 @@ class FilterButton(ABC, CTkFrame):
 
 class FilterTracksByDateFilterButton(FilterButton):
     def __init__(
-        self, name: str, button_width: int, viewmodel: ViewModel, **kwargs: Any
+        self,
+        name: str,
+        button_width: int,
+        button_default_state: str,
+        button_default_color: str,
+        viewmodel: ViewModel,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(name, button_width, viewmodel, **kwargs)
+        super().__init__(
+            name,
+            button_width,
+            button_default_state,
+            button_default_color,
+            viewmodel,
+            **kwargs,
+        )
 
     def _show_popup(self) -> None:
         current_date_range = self._viewmodel.get_filter_tracks_by_date_setting()
