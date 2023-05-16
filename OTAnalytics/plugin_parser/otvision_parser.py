@@ -100,7 +100,7 @@ def _write_json(data: dict, path: Path) -> None:
         path (Path): Path to JSON.
     """
     with open(path, "wt", encoding=ENCODING) as file:
-        ujson.dump(data, file)
+        ujson.dump(data, file, indent=4)
 
 
 class IncorrectVersionFormat(Exception):
@@ -611,8 +611,8 @@ class OtConfigParser(ConfigParser):
     def serialize(
         self,
         project_name: str,
-        video_files: list[Video],
-        sections: list[Section],
+        video_files: Iterable[Video],
+        sections: Iterable[Section],
         file: Path,
     ) -> None:
         project_content = {"name": project_name}
