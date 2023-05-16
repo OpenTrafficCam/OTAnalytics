@@ -519,7 +519,7 @@ class SimpleVideoParser(VideoParser):
         return Video(self._video_reader, file)
 
     def parse_list(self, content: list[dict]) -> Sequence[Video]:
-        return [Video(self._video_reader, video[PATH]) for video in content]
+        return [Video(self._video_reader, Path(video[PATH])) for video in content]
 
     def convert(
         self,
