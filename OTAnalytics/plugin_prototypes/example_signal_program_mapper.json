@@ -1,0 +1,21 @@
+{
+  "signal_names_to_section_ids": {
+    "K2": "Haltelinie_S8-9",
+    "K3": "Haltelinie_S4-5-6",
+    "K4": "Haltelinie_S1-2-3"
+  },
+  "filter_intersection_name": [
+    "Merseburger Straße - Demmeringstraße"
+  ],
+  "filter_sig_name": [
+    "Haltelinie_S8-9",
+    "Haltelinie_S4-5-6",
+    "Haltelinie_S1-2-3"
+  ],
+  "signal_status_to_event_types": {
+    "Grün": "signal-green",
+    "Gelb": "signal-yellow",
+    "Rot": "signal-red",
+    "RotGelb": "signal-red-yellow"
+  }
+}
