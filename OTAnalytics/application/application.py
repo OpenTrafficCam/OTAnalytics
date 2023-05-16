@@ -229,7 +229,7 @@ class OTAnalyticsApplication:
         current_filter_element = self.track_view_state.filter_element.get()
 
         self.track_view_state.filter_element.set(
-            FilterElement(date_range, current_filter_element.classifications)
+            current_filter_element.derive_date(date_range)
         )
 
     def enable_filter_track_by_date(self) -> None:
