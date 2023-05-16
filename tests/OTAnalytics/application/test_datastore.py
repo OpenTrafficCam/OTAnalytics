@@ -13,10 +13,7 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     TrackToVideoRepository,
     TrackVideoParser,
-    Video,
     VideoParser,
-    VideoReader,
-    VideoRepository,
 )
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
@@ -27,6 +24,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.video import Video, VideoReader, VideoRepository
 
 
 class MockVideoReader(VideoReader):
