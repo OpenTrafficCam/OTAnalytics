@@ -141,7 +141,7 @@ class ConfigParser(ABC):
         self,
         project_name: str,
         video_files: list[Video],
-        sections: dict[str, list[dict]],
+        sections: list[Section],
         file: Path,
     ) -> None:
         pass
