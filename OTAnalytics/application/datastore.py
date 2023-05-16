@@ -171,6 +171,7 @@ class Datastore:
         video_repository: VideoRepository,
         video_parser: VideoParser,
         track_video_parser: TrackVideoParser,
+        config_parser: ConfigParser,
     ) -> None:
         self._track_parser = track_parser
         self._section_parser = section_parser
@@ -182,6 +183,7 @@ class Datastore:
         self._event_repository = EventRepository()
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
+        self._config_parser = config_parser
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._video_repository.register_videos_observer(observer)

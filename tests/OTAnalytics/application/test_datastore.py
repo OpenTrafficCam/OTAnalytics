@@ -7,6 +7,7 @@ from numpy import array, int32
 from PIL import Image
 
 from OTAnalytics.application.datastore import (
+    ConfigParser,
     Datastore,
     EventListParser,
     SectionParser,
@@ -104,6 +105,11 @@ def track_to_video_repository() -> Mock:
     return Mock(spec=TrackToVideoRepository)
 
 
+@pytest.fixture
+def config_parser() -> Mock:
+    return Mock(spec=ConfigParser)
+
+
 class TestDatastore:
     def test_load_track_file(
         self,
@@ -115,6 +121,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        config_parser: Mock,
     ) -> None:
         some_track = Mock()
         some_track_id = TrackId(1)
@@ -132,6 +139,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            config_parser=config_parser,
         )
         some_file = Path("some.file.ottrk")
 
@@ -152,6 +160,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        config_parser: Mock,
     ) -> None:
         track_repository = Mock(spec=TrackRepository)
         some_track = Mock()
@@ -177,6 +186,7 @@ class TestDatastore:
             video_repository=video_repository,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            config_parser=config_parser,
         )
         some_file = Path("some.file.ottrk")
         other_file = Path("other.file.ottrk")
@@ -204,6 +214,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        config_parser: Mock,
     ) -> None:
         track_parser.parse.return_value = []
         track_video_parser.parse.return_value = []
@@ -217,6 +228,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            config_parser=config_parser,
         )
         some_file = Mock()
         store.add_section(
@@ -243,6 +255,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        config_parser: Mock,
     ) -> None:
         track_parser.parse.return_value = []
         track_video_parser.parse.return_value = []
@@ -256,6 +269,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            config_parser=config_parser,
         )
         sections: list[Section] = [Mock(spec=Section)]
         section_repository.get_all.return_value = sections
@@ -277,6 +291,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        config_parser: Mock,
     ) -> None:
         track_parser.parse.return_value = []
         track_video_parser.parse.return_value = []
@@ -290,6 +305,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            config_parser=config_parser,
         )
         some_file = Mock()
         store.save_event_list_file(some_file)
@@ -306,6 +322,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        config_parser: Mock,
     ) -> None:
         store = Datastore(
             track_repository=TrackRepository(),
@@ -317,6 +334,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            config_parser=config_parser,
         )
         section_id = SectionId("my section")
         plugin_data = {"some": "new_value"}
@@ -340,6 +358,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        config_parser: Mock,
     ) -> None:
         store = Datastore(
             track_repository=TrackRepository(),
@@ -351,6 +370,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            config_parser=config_parser,
         )
         section_id = SectionId("my section")
         new_plugin_data = {"other": "new_value"}
