@@ -181,6 +181,34 @@ class FilterElement:
 
         return filter_builder.get_result()
 
+    def derive_date(self, date_range: DateRange) -> "FilterElement":
+        """Return copy of the current filter element and update its date range.
+
+        Args:
+            date_range (DateRange): the date range to be updated
+
+        Returns:
+            FilterElement: a copy of the current filter element with the date range
+                updated
+        """
+        return FilterElement(
+            date_range=date_range, classifications=self.classifications.copy()
+        )
+
+    def derive_classifications(self, classifications: list[str]) -> "FilterElement":
+        """Return copy of the current filter element and update its classifications.
+
+        Args:
+            classifications (list[str]): the classifications to be updated
+
+        Returns:
+            FilterElement: a copy of the current filter element with the classifications
+                updated.
+        """
+        return FilterElement(
+            date_range=self.date_range, classifications=classifications
+        )
+
 
 class FilterElementSettingRestorer:
     def __init__(self) -> None:

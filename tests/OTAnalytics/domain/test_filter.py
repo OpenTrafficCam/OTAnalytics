@@ -44,6 +44,24 @@ class TestFilterElement:
         filter_builder.add_ends_before_or_at_date_predicate.assert_not_called()
         assert expected_filter == result
 
+    def test_derive_methods(self) -> None:
+        date_range = Mock(spec=DateRange)
+        classifications = ["car"]
+        new_date_range = Mock(spec=DateRange)
+        new_classifications = ["car", "truck"]
+
+        filter_element = FilterElement(date_range, classifications)
+
+        updated_filter_element = filter_element.derive_date(new_date_range)
+        assert updated_filter_element.date_range == new_date_range
+        assert updated_filter_element.classifications == classifications
+
+        updated_filter_element = updated_filter_element.derive_classifications(
+            new_classifications
+        )
+        assert updated_filter_element.date_range == new_date_range
+        assert updated_filter_element.classifications == new_classifications
+
 
 class TestFilterElementSettingRestorer:
     def test_save_by_date_filter_setting(self) -> None:
