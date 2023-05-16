@@ -13,9 +13,7 @@ from OTAnalytics.application.datastore import (
     SectionParser,
     TrackParser,
     TrackVideoParser,
-    Video,
     VideoParser,
-    VideoReader,
 )
 from OTAnalytics.domain import event, geometry, section
 from OTAnalytics.domain.event import Event, EventType
@@ -29,6 +27,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
+from OTAnalytics.domain.video import Video, VideoReader
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
