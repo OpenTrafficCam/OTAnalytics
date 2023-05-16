@@ -9,7 +9,6 @@ from OTAnalytics.application.datastore import (
     SectionParser,
     TrackParser,
     TrackToVideoRepository,
-    VideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlotter
@@ -28,6 +27,7 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
 )
+from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
