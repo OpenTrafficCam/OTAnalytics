@@ -66,6 +66,10 @@ class VideoParser(ABC):
     def parse(self, file: Path) -> Video:
         pass
 
+    @abstractmethod
+    def convert(self, video: Iterable[Video]) -> dict[str, list[dict]]:
+        pass
+
 
 class TrackToVideoRepository:
     """

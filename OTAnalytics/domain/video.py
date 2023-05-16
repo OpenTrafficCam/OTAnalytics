@@ -6,6 +6,7 @@ from typing import Optional
 from OTAnalytics.domain.track import TrackImage
 
 VIDEOS: str = "videos"
+PATH: str = "path"
 
 
 class VideoReader(ABC):
@@ -49,6 +50,9 @@ class Video:
             TrackImage: the frame.
         """
         return self.video_reader.get_frame(self.path, index)
+
+    def to_dict(self) -> dict:
+        return {PATH: self.path}
 
 
 class VideoListObserver(ABC):
