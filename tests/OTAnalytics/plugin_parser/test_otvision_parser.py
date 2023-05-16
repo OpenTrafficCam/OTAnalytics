@@ -345,7 +345,7 @@ class TestOtsectionParser:
         sections = [some_section, other_section]
         parser = OtsectionParser()
 
-        content = parser._convert(sections)
+        content = parser.convert(sections)
 
         assert content == {
             section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]

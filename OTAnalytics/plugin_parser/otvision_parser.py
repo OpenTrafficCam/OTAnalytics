@@ -492,10 +492,10 @@ class OtsectionParser(SectionParser):
             sections (Iterable[Section]): sections to serialize
             file (Path): file to serialize sections to
         """
-        content = self._convert(sections)
+        content = self.convert(sections)
         _write_json(content, file)
 
-    def _convert(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
+    def convert(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
         """Convert sections into dictionary.
 
         Args:

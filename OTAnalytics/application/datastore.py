@@ -48,6 +48,10 @@ class SectionParser(ABC):
     def serialize(self, sections: Iterable[Section], file: Path) -> None:
         pass
 
+    @abstractmethod
+    def convert(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
+        pass
+
 
 class EventListParser(ABC):
     @abstractmethod
