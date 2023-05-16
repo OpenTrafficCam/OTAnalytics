@@ -3,7 +3,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from domain.track import TrackImage
+from OTAnalytics.domain.track import TrackImage
+
+VIDEOS: str = "videos"
 
 
 class VideoReader(ABC):
