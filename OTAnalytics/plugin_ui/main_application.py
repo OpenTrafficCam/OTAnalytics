@@ -33,6 +33,7 @@ from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
+    OtConfigParser,
     OtEventListParser,
     OtsectionParser,
     OttrkParser,
@@ -125,6 +126,10 @@ class ApplicationStarter:
         video_repository = VideoRepository()
         track_to_video_repository = TrackToVideoRepository()
         track_video_parser = OttrkVideoParser(video_parser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            section_parser=section_parser,
+        )
         return Datastore(
             track_repository,
             track_parser,
@@ -135,6 +140,7 @@ class ApplicationStarter:
             video_repository,
             video_parser,
             track_video_parser,
+            config_parser=config_parser,
         )
 
     def _create_track_repository(self) -> TrackRepository:
