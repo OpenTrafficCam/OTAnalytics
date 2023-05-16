@@ -6,6 +6,7 @@ from unittest.mock import Mock, call
 
 import pytest
 import ujson
+from pyparsing import Any
 
 from OTAnalytics import version
 from OTAnalytics.application.datastore import OtConfig, SectionParser, VideoParser
@@ -553,8 +554,8 @@ class TestOtConfigParser:
         videos: list[Video] = []
         sections: list[Section] = []
         output = test_data_tmp_dir / "config.otconfig"
-        serialized_videos = {"serialized": "videos"}
-        serialized_sections = {"serialized": "sections"}
+        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
+        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
         video_parser.convert.return_value = serialized_videos
         section_parser.convert.return_value = serialized_sections
 
@@ -566,11 +567,11 @@ class TestOtConfigParser:
         )
 
         serialized_content = _parse(output)
-        assert serialized_content == {
-            PROJECT: {NAME: name},
-            video.VIDEOS: serialized_videos,
-            section.SECTIONS: serialized_sections,
-        }
+        expected_content: dict[str, Any] = {PROJECT: {NAME: name}}
+        expected_content |= serialized_videos
+        expected_content |= serialized_sections
+
+        assert serialized_content == expected_content
         assert video_parser.convert.call_args_list == [
             call(videos, relative_to=test_data_tmp_dir)
         ]
@@ -587,8 +588,8 @@ class TestOtConfigParser:
         videos: Sequence[Video] = ()
         sections: Sequence[Section] = ()
         config_file = test_data_tmp_dir / "config.otconfig"
-        serialized_videos = {"serialized": "videos"}
-        serialized_sections = {"serialized": "sections"}
+        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
+        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
         video_parser.convert.return_value = serialized_videos
         section_parser.convert.return_value = serialized_sections
         video_parser.parse_list.return_value = videos

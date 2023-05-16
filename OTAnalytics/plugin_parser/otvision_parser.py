@@ -640,9 +640,7 @@ class OtConfigParser(ConfigParser):
             relative_to=parent_folder,
         )
         section_content = self._section_parser.convert(sections)
-        content = {
-            PROJECT: project_content,
-            video.VIDEOS: video_content,
-            section.SECTIONS: section_content,
-        }
+        content: dict[str, list[dict] | dict] = {PROJECT: project_content}
+        content |= video_content
+        content |= section_content
         _write_json(data=content, path=file)
