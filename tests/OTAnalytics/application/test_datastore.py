@@ -19,7 +19,12 @@ from OTAnalytics.application.datastore import (
     VideoRepository,
 )
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import LineSection, SectionId, SectionRepository
+from OTAnalytics.domain.section import (
+    LineSection,
+    Section,
+    SectionId,
+    SectionRepository,
+)
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
 
@@ -229,6 +234,40 @@ class TestDatastore:
         store.save_section_file(some_file)
 
         section_parser.serialize.assert_called()
+
+    def test_serialize_sections(
+        self,
+        track_parser: Mock,
+        section_repository: Mock,
+        section_parser: Mock,
+        video_parser: Mock,
+        track_video_parser: Mock,
+        event_list_parser: Mock,
+        video_repository: Mock,
+        track_to_video_repository: Mock,
+    ) -> None:
+        track_parser.parse.return_value = []
+        track_video_parser.parse.return_value = []
+        store = Datastore(
+            track_repository=TrackRepository(),
+            track_parser=track_parser,
+            section_repository=section_repository,
+            section_parser=section_parser,
+            event_list_parser=event_list_parser,
+            video_repository=video_repository,
+            video_parser=video_parser,
+            track_video_parser=track_video_parser,
+            track_to_video_repository=track_to_video_repository,
+        )
+        sections: list[Section] = [Mock(spec=Section)]
+        section_repository.get_all.return_value = sections
+        converted_content = {"converted": [{"section": "value"}]}
+        section_parser.convert.return_value = converted_content
+
+        actual_content = store.serialize_sections()
+
+        assert actual_content == converted_content
+        section_parser.convert.assert_called_with(sections)
 
     def test_save_event_list_file(
         self,

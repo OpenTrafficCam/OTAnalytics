@@ -374,6 +374,11 @@ class Datastore:
         else:
             raise NoSectionsToSave()
 
+    def serialize_sections(self) -> dict[str, list[dict]]:
+        if sections := self._section_repository.get_all():
+            return self._section_parser.convert(sections)
+        raise NoSectionsToSave()
+
     def get_all_sections(self) -> Iterable[Section]:
         return self._section_repository.get_all()
 
