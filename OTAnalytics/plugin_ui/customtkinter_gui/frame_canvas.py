@@ -13,7 +13,23 @@ from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import (
     CanvasObserver,
     EventHandler,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    DELETE_KEYS,
+    ENTER_CANVAS,
+    ESCAPE_KEY,
+    LEAVE_CANVAS,
+    LEFT_BUTTON_DOWN,
+    LEFT_BUTTON_UP,
+    LEFT_KEY,
+    MOTION,
+    MOTION_WHILE_LEFT_BUTTON_DOWN,
+    PADX,
+    PLUS_KEYS,
+    RETURN_KEY,
+    RIGHT_BUTTON_UP,
+    RIGHT_KEY,
+    STICKY,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 
 
@@ -121,13 +137,22 @@ class CanvasEventHandler(EventHandler):
         self._bind_events()
 
     def _bind_events(self) -> None:
-        self._canvas.bind("<ButtonRelease-1>", self.on_left_mousebutton_up)
-        self._canvas.bind("<ButtonRelease-2>", self.on_right_mousebutton_up)
-        self._canvas.bind("<Motion>", self.on_mouse_motion)
-        self._canvas.bind("<Enter>", lambda event: self._canvas.focus_set())
-        self._canvas.bind("<Return>", self.on_return)
-        self._canvas.bind("<KP_Enter>", self.on_return)
-        self._canvas.bind("<Escape>", self.on_escape)
+        self._canvas.bind("<Enter>", self._on_mouse_enters_canvas)
+        self._canvas.bind("<Leave>", self._on_mouse_leaves_canvas)
+        self._canvas.bind("<ButtonPress-1>", self._on_left_button_down)
+        self._canvas.bind("<ButtonRelease-1>", self._on_left_button_up)
+        self._canvas.bind("<ButtonRelease-2>", self._on_right_button_up)
+        self._canvas.bind("<Motion>", self._on_mouse_motion)
+        self._canvas.bind("<B1-Motion>>", self._on_motion_while_left_button_down)
+        self._canvas.bind("+", self._on_plus)
+        self._canvas.bind("<KP_Add>", self._on_plus)
+        self._canvas.bind("<Left>", self._on_left)
+        self._canvas.bind("<Right>", self._on_right)
+        self._canvas.bind("<Return>", self._on_return)
+        self._canvas.bind("<KP_Enter>", self._on_return)
+        self._canvas.bind("<Delete>", self._on_delete)
+        self._canvas.bind("<BackSpace>", self._on_delete)
+        self._canvas.bind("<Escape>", self._on_escape)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)
@@ -135,29 +160,52 @@ class CanvasEventHandler(EventHandler):
     def detach_observer(self, observer: CanvasObserver) -> None:
         self._observers.remove(observer)
 
-    def _notify_observers(self, coordinates: tuple[int, int], event_type: str) -> None:
+    def _notify_observers(
+        self, event: Any, event_type: str, key: str | None = None
+    ) -> None:
+        coordinates = self._get_mouse_coordinates(event)
         for observer in self._observers:
-            observer.update(coordinates, event_type)
+            observer.update(coordinates, event_type, key)
 
-    def on_left_mousebutton_up(self, event: Any) -> None:
-        coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "left_mousebutton_up")
+    def _on_left_button_down(self, event: Any) -> None:
+        self._notify_observers(event, LEFT_BUTTON_DOWN)
 
-    def on_right_mousebutton_up(self, event: Any) -> None:
-        coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "right_mousebutton_up")
+    def _on_left_button_up(self, event: Any) -> None:
+        self._notify_observers(event, LEFT_BUTTON_UP)
 
-    def on_mouse_motion(self, event: Any) -> None:
-        coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "mouse_motion")
+    def _on_right_button_up(self, event: Any) -> None:
+        self._notify_observers(event, RIGHT_BUTTON_UP)
 
-    def on_return(self, event: Any) -> None:
-        coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "return")
+    def _on_mouse_motion(self, event: Any) -> None:
+        self._notify_observers(event, MOTION)
 
-    def on_escape(self, event: Any) -> None:
-        coordinates = self._get_mouse_coordinates(event)
-        self._notify_observers(coordinates, "escape")
+    def _on_motion_while_left_button_down(self, event: Any) -> None:
+        self._notify_observers(event, MOTION_WHILE_LEFT_BUTTON_DOWN)
+
+    def _on_mouse_leaves_canvas(self, event: Any) -> None:
+        self._notify_observers(event, LEAVE_CANVAS)
+
+    def _on_mouse_enters_canvas(self, event: Any) -> None:
+        self._canvas.focus_set()
+        self._notify_observers(event, ENTER_CANVAS)
+
+    def _on_plus(self, event: Any) -> None:
+        self._notify_observers(event, PLUS_KEYS)
+
+    def _on_left(self, event: Any) -> None:
+        self._notify_observers(event, LEFT_KEY)
+
+    def _on_right(self, event: Any) -> None:
+        self._notify_observers(event, RIGHT_KEY)
+
+    def _on_return(self, event: Any) -> None:
+        self._notify_observers(event, RETURN_KEY)
+
+    def _on_delete(self, event: Any) -> None:
+        self._notify_observers(event, DELETE_KEYS)
+
+    def _on_escape(self, event: Any) -> None:
+        self._notify_observers(event, ESCAPE_KEY)
 
     def _get_mouse_coordinates(self, event: Any) -> tuple[int, int]:
         """Returns coordinates of event on canvas taking into account the horizontal and

@@ -78,7 +78,7 @@ class TreeviewSections(TreeviewTemplate, Treeview):
     def update_items(self) -> None:
         self.delete(*self.get_children())
         item_ids = [section.id.id for section in self._viewmodel.get_all_sections()]
-        self.add_items(item_ids=item_ids)
+        self.add_items(item_ids=sorted(item_ids))
 
 
 class ListboxSections(Listbox):
