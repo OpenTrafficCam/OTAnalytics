@@ -369,3 +369,10 @@ class SectionRepository:
         section.plugin_data.clear()
         section.plugin_data.update(plugin_data)
         self._section_content_observers.notify(section_id)
+
+    def clear(self) -> None:
+        """
+        Clear the repository and inform the observers about the empty repository.
+        """
+        self._sections.clear()
+        self._repository_content_observers.notify([])

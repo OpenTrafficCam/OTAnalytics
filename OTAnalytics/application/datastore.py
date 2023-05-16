@@ -129,6 +129,12 @@ class TrackToVideoRepository:
         """
         return self._videos.get(track_id)
 
+    def clear(self) -> None:
+        """
+        Clear the repository.
+        """
+        self._videos.clear()
+
 
 class TrackVideoParser(ABC):
     """
@@ -197,6 +203,7 @@ class Datastore:
         track_parser: TrackParser,
         section_repository: SectionRepository,
         section_parser: SectionParser,
+        event_repository: EventRepository,
         event_list_parser: EventListParser,
         track_to_video_repository: TrackToVideoRepository,
         video_repository: VideoRepository,
@@ -211,7 +218,7 @@ class Datastore:
         self._track_video_parser = track_video_parser
         self._track_repository = track_repository
         self._section_repository = section_repository
-        self._event_repository = EventRepository()
+        self._event_repository = event_repository
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
         self._config_parser = config_parser
@@ -238,9 +245,17 @@ class Datastore:
         self._section_repository.register_sections_observer(observer)
 
     def load_configuration_file(self, file: Path) -> None:
+        self.clear_repositories()
         config = self._config_parser.parse(file)
         self._video_repository.add_all(config.videos)
         self._section_repository.add_all(config.sections)
+
+    def clear_repositories(self) -> None:
+        self._event_repository.clear()
+        self._section_repository.clear()
+        self._track_to_video_repository.clear()
+        self._track_repository.clear()
+        self._video_repository.clear()
 
     def load_video_files(self, files: list[Path]) -> None:
         videos = [self._video_parser.parse(file) for file in files]

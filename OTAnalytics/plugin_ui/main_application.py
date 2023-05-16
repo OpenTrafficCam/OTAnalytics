@@ -21,7 +21,7 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
-from OTAnalytics.domain.event import SceneEventBuilder
+from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
@@ -121,6 +121,7 @@ class ApplicationStarter:
         track_parser = self._create_track_parser(track_repository)
         section_repository = self._create_section_repository()
         section_parser = self._create_section_parser()
+        event_repository = self._create_event_repository()
         event_list_parser = self._create_event_list_parser()
         video_parser = SimpleVideoParser(MoviepyVideoReader())
         video_repository = VideoRepository()
@@ -135,6 +136,7 @@ class ApplicationStarter:
             track_parser,
             section_repository,
             section_parser,
+            event_repository,
             event_list_parser,
             track_to_video_repository,
             video_repository,
@@ -156,6 +158,9 @@ class ApplicationStarter:
 
     def _create_section_parser(self) -> SectionParser:
         return OtsectionParser()
+
+    def _create_event_repository(self) -> EventRepository:
+        return EventRepository()
 
     def _create_event_list_parser(self) -> EventListParser:
         return OtEventListParser()

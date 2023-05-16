@@ -17,6 +17,7 @@ from OTAnalytics.application.datastore import (
     TrackVideoParser,
     VideoParser,
 )
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     LineSection,
@@ -67,6 +68,11 @@ class TestVideo:
 
 
 @pytest.fixture
+def track_repository() -> Mock:
+    return Mock(spec=TrackRepository)
+
+
+@pytest.fixture
 def track_parser() -> Mock:
     return Mock(spec=TrackParser)
 
@@ -92,6 +98,11 @@ def track_video_parser() -> Mock:
 
 
 @pytest.fixture
+def event_repository() -> Mock:
+    return Mock(spec=EventRepository)
+
+
+@pytest.fixture
 def event_list_parser() -> Mock:
     return Mock(spec=EventListParser)
 
@@ -114,21 +125,24 @@ def config_parser() -> Mock:
 class TestDatastore:
     def test_load_config_file(
         self,
+        track_repository: Mock,
         track_parser: Mock,
         section_repository: Mock,
         section_parser: Mock,
         video_parser: Mock,
         track_video_parser: Mock,
+        event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
         config_parser: Mock,
     ) -> None:
         store = Datastore(
-            track_repository=TrackRepository(),
+            track_repository=track_repository,
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
+            event_repository=event_repository,
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
@@ -147,6 +161,11 @@ class TestDatastore:
 
         store.load_configuration_file(some_file)
 
+        track_repository.clear.assert_called_once()
+        section_repository.clear.assert_called_once()
+        video_repository.clear.assert_called_once()
+        event_repository.clear.assert_called_once()
+        track_to_video_repository.clear.assert_called_once()
         config_parser.parse.assert_called_with(some_file)
         video_repository.add_all.called_with(videos)
         section_repository.add_all.called_with(sections)
@@ -158,6 +177,7 @@ class TestDatastore:
         section_parser: Mock,
         video_parser: Mock,
         track_video_parser: Mock,
+        event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
@@ -174,6 +194,7 @@ class TestDatastore:
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
+            event_repository=event_repository,
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
@@ -197,6 +218,7 @@ class TestDatastore:
         section_parser: Mock,
         video_parser: Mock,
         track_video_parser: Mock,
+        event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
@@ -221,6 +243,7 @@ class TestDatastore:
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
+            event_repository=event_repository,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
             video_repository=video_repository,
@@ -251,6 +274,7 @@ class TestDatastore:
         section_parser: Mock,
         video_parser: Mock,
         track_video_parser: Mock,
+        event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
@@ -263,6 +287,7 @@ class TestDatastore:
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
+            event_repository=event_repository,
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
@@ -292,6 +317,7 @@ class TestDatastore:
         section_parser: Mock,
         video_parser: Mock,
         track_video_parser: Mock,
+        event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
@@ -304,6 +330,7 @@ class TestDatastore:
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
+            event_repository=event_repository,
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
@@ -328,6 +355,7 @@ class TestDatastore:
         section_parser: Mock,
         video_parser: Mock,
         track_video_parser: Mock,
+        event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
@@ -340,6 +368,7 @@ class TestDatastore:
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
+            event_repository=event_repository,
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
@@ -359,6 +388,7 @@ class TestDatastore:
         section_parser: Mock,
         video_parser: Mock,
         track_video_parser: Mock,
+        event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
@@ -369,6 +399,7 @@ class TestDatastore:
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
+            event_repository=event_repository,
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
@@ -395,6 +426,7 @@ class TestDatastore:
         section_parser: Mock,
         video_parser: Mock,
         track_video_parser: Mock,
+        event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
@@ -405,6 +437,7 @@ class TestDatastore:
             track_parser=track_parser,
             section_repository=section_repository,
             section_parser=section_parser,
+            event_repository=event_repository,
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,

@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -314,3 +314,23 @@ class TestSectionRepository:
 
         assert stored_section == section
         assert section.plugin_data == new_plugin_data
+
+    def test_clear(self) -> None:
+        section_id_north = SectionId("north")
+        section_id_south = SectionId("south")
+        first_section = Mock()
+        first_section.id = section_id_north
+        second_section = Mock()
+        second_section.id = section_id_south
+        observer = Mock(spec=SectionListObserver)
+        repository = SectionRepository()
+        repository.register_sections_observer(observer)
+
+        repository.add_all([first_section, second_section])
+        repository.clear()
+
+        assert not list(repository.get_all())
+        assert observer.notify_sections.call_args_list == [
+            call([section_id_north, section_id_south]),
+            call([]),
+        ]

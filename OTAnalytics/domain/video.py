@@ -128,3 +128,9 @@ class VideoRepository:
 
     def get(self, file: Path) -> Optional[Video]:
         return self._videos.get(file)
+
+    def clear(self) -> None:
+        """
+        Clear the repository.
+        """
+        self._videos.clear()
