@@ -443,13 +443,12 @@ class DateRow(CTkFrame):
     def _validate_time_format(self, name: str, value: str, widget_name: str) -> bool:
         widget: CTkEntry = self.nametowidget(widget_name).master
 
-        if not self._has_valid_time_format(name, value):
+        if self._has_valid_time_format(name, value):
+            widget.configure(border_color=COLOR_GREEN)
+            self._clear_validation_info()
+        else:
             self._display_invalid_validation_info(self._build_error_message_for(name))
             widget.configure(border_color=COLOR_RED)
-            return True
-
-        widget.configure(border_color=COLOR_GREEN)
-        self._clear_validation_info()
         return True
 
     def _has_valid_time_format(self, name: str, value: str) -> bool:
