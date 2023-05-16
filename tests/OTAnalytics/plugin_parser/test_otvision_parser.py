@@ -1,14 +1,15 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 import ujson
 
 from OTAnalytics import version
+from OTAnalytics.application.datastore import SectionParser, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain import geometry, section
+from OTAnalytics.domain import geometry, section, video
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
     DirectionVector2D,
@@ -35,13 +36,17 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
+from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
     METADATA,
+    NAME,
+    PROJECT,
     SECTION_FORMAT_VERSION,
     VERSION,
     InvalidSectionData,
+    OtConfigParser,
     OtEventListParser,
     OtsectionParser,
     OttrkFormatFixer,
@@ -533,3 +538,39 @@ class TestOtEventListParser:
         event_list_file = test_data_tmp_dir / "eventlist.json"
         event_list_parser.serialize(events, [line_section], event_list_file)
         assert event_list_file.exists()
+
+
+class TestOtConfigParser:
+    def test_serialize_config(self, test_data_tmp_dir: Path) -> None:
+        video_parser = Mock(spec=VideoParser)
+        section_parser = Mock(spec=SectionParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            section_parser=section_parser,
+        )
+        name = "My Test Project"
+        videos: list[Video] = []
+        sections: list[Section] = []
+        output = test_data_tmp_dir / "config.otconfig"
+        serialized_videos = {"serialized": "videos"}
+        serialized_sections = {"serialized": "sections"}
+        video_parser.convert.return_value = serialized_videos
+        section_parser.convert.return_value = serialized_sections
+
+        config_parser.serialize(
+            project_name=name,
+            video_files=videos,
+            sections=sections,
+            file=output,
+        )
+
+        serialized_content = _parse(output)
+        assert serialized_content == {
+            PROJECT: {NAME: name},
+            video.VIDEOS: serialized_videos,
+            section.SECTIONS: serialized_sections,
+        }
+        assert video_parser.convert.call_args_list == [
+            call(videos, relative_to=test_data_tmp_dir)
+        ]
+        assert section_parser.convert.call_args_list == [call(sections)]

@@ -38,6 +38,7 @@ SECTION_FORMAT_VERSION: str = "section_file_version"
 EVENT_FORMAT_VERSION: str = "event_file_version"
 
 PROJECT: str = "project"
+NAME: str = "name"
 
 
 def _parse_bz2(path: Path) -> dict:
@@ -622,7 +623,7 @@ class OtConfigParser(ConfigParser):
         file: Path,
     ) -> None:
         parent_folder = file.parent
-        project_content = {"name": project_name}
+        project_content = {NAME: project_name}
         video_content = self._video_parser.convert(
             video_files,
             relative_to=parent_folder,
