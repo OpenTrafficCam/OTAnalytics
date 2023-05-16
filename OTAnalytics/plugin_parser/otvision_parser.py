@@ -516,8 +516,14 @@ class SimpleVideoParser(VideoParser):
     def parse(self, file: Path) -> Video:
         return Video(self._video_reader, file)
 
-    def convert(self, videos: Iterable[Video]) -> dict[str, list[dict]]:
-        return {video.VIDEOS: [video.to_dict() for video in videos]}
+    def convert(
+        self,
+        videos: Iterable[Video],
+        relative_to: Path = Path("."),
+    ) -> dict[str, list[dict]]:
+        return {
+            video.VIDEOS: [video.to_dict(relative_to=relative_to) for video in videos]
+        }
 
 
 class OttrkVideoParser(TrackVideoParser):
@@ -616,7 +622,7 @@ class OtConfigParser(ConfigParser):
         file: Path,
     ) -> None:
         project_content = {"name": project_name}
-        video_content = self._video_parser.convert(video_files)
+        video_content = self._video_parser.convert(video_files, relative_to=file)
         section_content = self._section_parser.convert(sections)
         content = {
             PROJECT: project_content,

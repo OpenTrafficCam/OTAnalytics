@@ -51,8 +51,11 @@ class Video:
         """
         return self.video_reader.get_frame(self.path, index)
 
-    def to_dict(self) -> dict:
-        return {PATH: str(self.path)}
+    def to_dict(
+        self,
+        relative_to: Path,
+    ) -> dict:
+        return {PATH: str(self.path.relative_to(relative_to))}
 
 
 class VideoListObserver(ABC):

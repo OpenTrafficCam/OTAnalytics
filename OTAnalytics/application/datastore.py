@@ -67,7 +67,11 @@ class VideoParser(ABC):
         pass
 
     @abstractmethod
-    def convert(self, video: Iterable[Video]) -> dict[str, list[dict]]:
+    def convert(
+        self,
+        video: Iterable[Video],
+        relative_to: Path = Path("."),
+    ) -> dict[str, list[dict]]:
         pass
 
 
