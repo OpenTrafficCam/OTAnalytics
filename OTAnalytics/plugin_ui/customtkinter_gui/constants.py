@@ -45,6 +45,7 @@ class TkEvents:
     MOUSE_MOTION_WHILE_LEFT_BUTTON_DOWN: ClassVar[str] = "<B1-Motion>"
     MOUSE_ENTERS_WIDGET: ClassVar[str] = "<Enter>"
     MOUSE_LEAVES_WIDGET: ClassVar[str] = "<Leave>"
+    TREEVIEW_SELECT: ClassVar[str] = "<<TreeviewSelect>>"
     PLUS_KEY: ClassVar[str] = "+"
     KEYPAD_PLUS_KEY: ClassVar[str] = "<KP_Add>"
     LEFT_ARROW_KEY: ClassVar[str] = "<Left>"

@@ -5,7 +5,12 @@ from typing import Any, Optional
 from customtkinter import CTkButton, CTkFrame
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    tk_events,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
 
 
@@ -55,8 +60,8 @@ class TreeviewSections(TreeviewTemplate, Treeview):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         self._viewmodel = viewmodel
         super().__init__(**kwargs)
-        self.bind("<ButtonRelease-2>", self._on_deselect)
-        self.bind("<<TreeviewSelect>>", self._on_select)
+        self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
+        self.bind(tk_events.TREEVIEW_SELECT, self._on_select)
         self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()

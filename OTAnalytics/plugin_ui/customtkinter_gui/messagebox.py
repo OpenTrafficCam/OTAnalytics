@@ -2,7 +2,12 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkLabel, CTkToplevel
 
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    tk_events,
+)
 
 
 class InfoBox(CTkToplevel):
@@ -37,7 +42,8 @@ class InfoBox(CTkToplevel):
         self.button_ok.focus_set()
 
     def _set_close_on_return_key(self) -> None:
-        self.button_ok.bind("<Return>", self.close)
+        self.button_ok.bind(tk_events.RETURN_KEY, self.close)
+        self.button_ok.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
 
     def _set_initial_position(self) -> None:
         x, y = self._initial_position
