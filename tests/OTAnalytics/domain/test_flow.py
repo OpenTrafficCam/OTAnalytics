@@ -1,21 +1,40 @@
 from unittest.mock import Mock
 
-from OTAnalytics.domain.flow import Flow, FlowRepository
+import pytest
+
+from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section
 
 
+@pytest.fixture
+def flow() -> Flow:
+    distance = 1.0
+    start = Mock(spec=Section)
+    end = Mock(spec=Section)
+    flow_id = FlowId("some flow")
+    return Flow(
+        id=flow_id,
+        start=start,
+        end=end,
+        distance=distance,
+    )
+
+
 class TestFlowRepository:
-    def add_flow(self) -> None:
-        distance = 1.0
-        start = Mock(spec=Section)
-        end = Mock(spec=Section)
-        flow = Flow(
-            name="some flow",
-            start=start,
-            end=end,
-            distance=distance,
-        )
+    def test_add_flow(self, flow: Flow) -> None:
         repository = FlowRepository()
         repository.add(flow)
 
         assert flow in repository.get_all()
+
+    def test_get(self, flow: Flow) -> None:
+        repository = FlowRepository()
+        repository.add(flow)
+
+        assert flow == repository.get(flow.id)
+
+    def test_get_missing_id(self, flow: Flow) -> None:
+        repository = FlowRepository()
+        repository.add(flow)
+
+        assert None is repository.get(FlowId("missing flow id"))
