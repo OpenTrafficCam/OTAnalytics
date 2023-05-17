@@ -16,6 +16,7 @@ from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.track import PilImage, Track, TrackImage
+from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
 DPI = 100
@@ -45,6 +46,17 @@ CLASS_ORDER = [
     CLASS_TRAIN,
 ]
 
+FILTER_CLASSES: Iterable[str] = (
+    CLASS_CAR,
+    CLASS_MOTORCYCLE,
+    CLASS_PERSON,
+    CLASS_TRUCK,
+    CLASS_BICYCLE,
+    CLASS_TRAIN,
+)
+
+NUM_MIN_FRAMES = 30
+
 
 class TrackPlotter(ABC):
     """
@@ -67,7 +79,7 @@ class TrackBackgroundPlotter(Plotter):
         self._datastore = datastore
 
     def plot(self) -> Optional[TrackImage]:
-        if track := next(iter(self._datastore.get_all_tracks())):
+        if track := next(iter(self._datastore.get_all_tracks()), None):
             return self._datastore.get_image_of_track(track.id)
         return None
 
@@ -98,38 +110,39 @@ class PlotterPrototype(Plotter):
         return self._track_view_state.view_width.get()
 
 
-class PandasTrackProvider:
+class PandasDataFrameProvider:
+    @abstractmethod
+    def get_data(self) -> DataFrame:
+        pass
+
+
+class PandasTrackProvider(PandasDataFrameProvider):
     """Provides tracks as pandas DataFrame."""
 
     def __init__(
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
+        self._filter_builder = filter_builder
 
-    def get_data(
-        self,
-        filter_classes: Iterable[str] = (
-            CLASS_CAR,
-            CLASS_MOTORCYCLE,
-            CLASS_PERSON,
-            CLASS_TRUCK,
-            CLASS_BICYCLE,
-            CLASS_TRAIN,
-        ),
-        num_min_frames: int = 30,
-        start_time: str = "",
-        end_time: str = "",
-    ) -> DataFrame:
+    def get_data(self) -> Optional[DataFrame]:
         offset = self._track_view_state.track_offset.get()
+
         tracks = self._datastore.get_all_tracks()
+        if not tracks:
+            return None
+
         data = self._convert_tracks(tracks)
+
+        if data.empty:
+            return data
+
         data = self._apply_offset(data, offset)
-        return self._filter_tracks(
-            filter_classes, num_min_frames, start_time, end_time, data
-        )
+        return self._filter_tracks(FILTER_CLASSES, NUM_MIN_FRAMES, data)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -185,8 +198,6 @@ class PandasTrackProvider:
         self,
         filter_classes: Iterable[str],
         num_min_frames: int,
-        start_time: str,
-        end_time: str,
         track_df: DataFrame,
     ) -> DataFrame:
         """
@@ -195,25 +206,22 @@ class PandasTrackProvider:
         Args:
             filter_classes (Iterable[str]): classes to show
             num_min_frames (int): minimum number of frames of a track to be shown
-            start_time (str): start of time period of tracks to be shown
-            end_time (str): end of time period of tracks to be shown
             track_df (DataFrame): dataframe of tracks
 
         Returns:
             DataFrame: filtered by classes, time and number of images
         """
-        if start_time != "":
-            track_df = track_df[track_df[track.OCCURRENCE] >= start_time]
-
-        if end_time != "":
-            track_df = track_df[track_df[track.OCCURRENCE] < end_time]
-
-        # % Filter traffic classes
-        track_df = track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
-
-        return track_df[
+        track_df[
             track_df[track.TRACK_ID].isin(self._min_frames(track_df, num_min_frames))
         ]
+        self._filter_builder.set_classification_column(track.CLASSIFICATION)
+        self._filter_builder.set_occurrence_column(track.OCCURRENCE)
+        filter_element = self._track_view_state.filter_element.get()
+        dataframe_filter = filter_element.build_filter(self._filter_builder)
+
+        track_df = next(iter(dataframe_filter.apply([track_df])))
+
+        return track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
 
 
 class MatplotlibPlotterImplementation(ABC):
@@ -237,9 +245,11 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        self._plot_tracks(data, self._alpha, axes)
+        if data is not None:
+            if not data.empty:
+                self._plot_dataframe(data, axes)
 
-    def _plot_tracks(self, track_df: DataFrame, alpha: float, axes: Axes) -> None:
+    def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """
         Plot given tracks on the given axes with the given transparency (alpha)
 
@@ -257,7 +267,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             linewidth=0.6,
             estimator=None,
             sort=False,
-            alpha=alpha,
+            alpha=self._alpha,
             ax=axes,
             palette=COLOR_PALETTE,
             hue_order=CLASS_ORDER,
@@ -277,9 +287,11 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        self.__plot_start_end_points(data, axes)
+        if data is not None:
+            if not data.empty:
+                self._plot_dataframe(data, axes)
 
-    def __plot_start_end_points(self, track_df: DataFrame, axes: Axes) -> None:
+    def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """
         Plot start and end points of given tracks on the axes.
 

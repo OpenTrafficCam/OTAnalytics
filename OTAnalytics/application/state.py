@@ -1,15 +1,19 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, Optional, TypeVar
+from datetime import datetime
+from typing import Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.domain.track import (
+    Detection,
     TrackId,
     TrackImage,
     TrackListObserver,
     TrackObserver,
+    TrackRepository,
     TrackSubject,
 )
 
@@ -204,7 +208,7 @@ class TrackViewState:
             RelativeOffsetCoordinate(0, 0)
         )
         self.filter_element = ObservableProperty[FilterElement](
-            FilterElement(None, None, [])
+            FilterElement(DateRange(None, None), [])
         )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
@@ -338,3 +342,68 @@ class SectionState(SectionListObserver):
             raise IndexError("No section to select")
         self.selected_section.set(sections[0])
         self.selected_flow.set(None)
+
+
+class TracksMetadata(TrackListObserver):
+    """Contains relevant information on the currently loaded tracks.
+
+    Listens to changes in the `TrackRepository` and updates the tracks metadata
+
+    Args:
+        TrackListObserver (TracListObserver): extends the TrackListObserver interface
+        track_repository (TrackRepository): the track repository
+    """
+
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+        self._first_detection_occurrence: ObservableOptionalProperty[
+            datetime
+        ] = ObservableOptionalProperty[datetime]()
+        self._last_detection_occurrence: ObservableOptionalProperty[
+            datetime
+        ] = ObservableOptionalProperty[datetime]()
+
+    @property
+    def first_detection_occurrence(self) -> Optional[datetime]:
+        """The track's first detection occurrence in the track repository.
+
+        Returns:
+            Optional[datetime]: first detection occurrence. `None` if track repository
+                is empty.
+        """
+        return self._first_detection_occurrence.get()
+
+    @property
+    def last_detection_occurrence(self) -> Optional[datetime]:
+        """The track's last detection occurrence in the track repository.
+
+        Returns:
+            Optional[datetime]: last detection occurrence. `None` if track repository
+                is empty.
+        """
+        return self._last_detection_occurrence.get()
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        """Update tracks metadata on track repository changes"""
+        self._update_detection_occurrences()
+
+    def _update_detection_occurrences(self) -> None:
+        """Update the first and last detection occurrences."""
+        sorted_detections = sorted(
+            self._get_all_track_detections(), key=lambda x: x.occurrence
+        )
+        self._first_detection_occurrence.set(sorted_detections[0].occurrence)
+        self._last_detection_occurrence.set(sorted_detections[-1].occurrence)
+
+    def _get_all_track_detections(self) -> Iterable[Detection]:
+        """Get all track detections in the track repository.
+
+        Returns:
+            Iterable[Detection]: the track detections.
+        """
+        detections: list[Detection] = []
+
+        for track in self._track_repository.get_all():
+            detections.extend(track.detections)
+
+        return detections
