@@ -211,6 +211,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
         Returns:
             DataFrame: filtered by classes, time and number of images
         """
+        track_df[
+            track_df[track.TRACK_ID].isin(self._min_frames(track_df, num_min_frames))
+        ]
         self._filter_builder.set_classification_column(track.CLASSIFICATION)
         self._filter_builder.set_occurrence_column(track.OCCURRENCE)
         filter_element = self._track_view_state.filter_element.get()
@@ -218,12 +221,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
         track_df = next(iter(dataframe_filter.apply([track_df])))
 
-        # % Filter traffic classes
-        track_df = track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
-
-        return track_df[
-            track_df[track.TRACK_ID].isin(self._min_frames(track_df, num_min_frames))
-        ]
+        return track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
 
 
 class MatplotlibPlotterImplementation(ABC):
