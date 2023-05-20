@@ -432,7 +432,11 @@ class ProfilePlotter:
         if fig is None:
             plt.savefig(output, format="PNG")
         else:
-            plot(fig, filename=output, auto_open=False)
+            config = {
+                "displaylogo": False,
+                "scrollZoom": True,
+            }
+            plot(fig, filename=output, auto_open=False, config=config)
 
     def prepare_data(self, file: str) -> pd.DataFrame:
         """Reads the data from the given profile csv file and creates a dataframe.
