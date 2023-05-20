@@ -1,12 +1,25 @@
 from pathlib import Path
 from typing import Iterable, Optional
 
-from OTAnalytics.application.analysis import RunIntersect
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.application.state import (
+    SectionState,
+    TracksMetadata,
+    TrackState,
+    TrackViewState,
+)
+from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
+from OTAnalytics.domain.section import (
+    Section,
+    SectionChangedObserver,
+    SectionId,
+    SectionListObserver,
+)
 from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.types import EventType
 
 
 class OTAnalyticsApplication:
@@ -21,22 +34,34 @@ class OTAnalyticsApplication:
         track_view_state: TrackViewState,
         section_state: SectionState,
         intersect: RunIntersect,
+        scene_event_detection: RunSceneEventDetection,
+        tracks_metadata: TracksMetadata,
+        filter_element_setting_restorer: FilterElementSettingRestorer,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self._intersect = intersect
+        self._scene_event_detection = scene_event_detection
+        self._tracks_metadata = tracks_metadata
+        self._filter_element_setting_restorer = filter_element_setting_restorer
 
     def connect_observers(self) -> None:
         """
         Connect the observers with the repositories to listen to domain object changes.
         """
         self._datastore.register_tracks_observer(self.track_state)
+        self._datastore.register_tracks_observer(self._tracks_metadata)
         self._datastore.register_sections_observer(self.section_state)
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
         self._datastore.register_sections_observer(observer)
+
+    def register_section_changed_observer(
+        self, observer: SectionChangedObserver
+    ) -> None:
+        self._datastore.register_section_changed_observer(observer)
 
     def get_all_sections(self) -> Iterable[Section]:
         return self._datastore.get_all_sections()
@@ -102,6 +127,18 @@ class OTAnalyticsApplication:
         """
         self._datastore.update_section(section)
 
+    def set_section_plugin_data(self, section_id: SectionId, plugin_data: dict) -> None:
+        """
+        Set the plugin data of the section. The data will be overridden.
+
+        Args:
+            section_id (SectionId): section id to override the plugin data at
+            plugin_data (dict): value of the new plugin data
+        """
+        self._datastore.set_section_plugin_data(
+            section_id=section_id, plugin_data=plugin_data
+        )
+
     def save_sections(self, file: Path) -> None:
         """
         Save the section repository into a file.
@@ -129,7 +166,13 @@ class OTAnalyticsApplication:
         Intersect all tracks with all sections and write the events into the event
         repository
         """
-        self._intersect.run()
+        tracks = self._datastore.get_all_tracks()
+        sections = self._datastore.get_all_sections()
+        events = self._intersect.run(tracks, sections)
+        self._datastore.add_events(events)
+
+        scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
+        self._datastore.add_events(scene_events)
 
     def save_events(self, file: Path) -> None:
         """
@@ -139,6 +182,22 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def change_track_offset_to_section_offset(
+        self, event_type: EventType = EventType.SECTION_ENTER
+    ) -> None:
+        """
+        Change the offset to visualize tracks to the offset of the currently selected
+        section.
+
+        Args:
+            event_type (EventType, optional): event type of the offset at the section.
+            Defaults to EventType.SECTION_ENTER.
+        """
+        if section_id := self.section_state.selected_section.get():
+            if section := self._datastore.get_section_for(section_id):
+                if offset := section.relative_offset_coordinates.get(event_type):
+                    self.track_view_state.track_offset.set(offset)
 
     def set_selected_section(self, id: Optional[str]) -> None:
         """Set the current selected section in the UI.
@@ -160,3 +219,36 @@ class OTAnalyticsApplication:
             Optional[RelativeOffsetCoordinate]: the current track offset.
         """
         return self.track_view_state.track_offset.get()
+
+    def update_date_range_tracks_filter(self, date_range: DateRange) -> None:
+        """Update the date range of the track filter.
+
+        Args:
+            date_range (DateRange): the date range
+        """
+        current_filter_element = self.track_view_state.filter_element.get()
+
+        self.track_view_state.filter_element.set(
+            current_filter_element.derive_date(date_range)
+        )
+
+    def enable_filter_track_by_date(self) -> None:
+        """Enable filtering track by date and restoring the previous date range."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        restored_filter_element = (
+            self._filter_element_setting_restorer.restore_by_date_filter_setting(
+                current_filter_element
+            )
+        )
+        self.track_view_state.filter_element.set(restored_filter_element)
+
+    def disable_filter_track_by_date(self) -> None:
+        """Disable filtering track by date and saving the current date range."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        self._filter_element_setting_restorer.save_by_date_filter_setting(
+            current_filter_element
+        )
+
+        self.track_view_state.filter_element.set(
+            FilterElement(DateRange(None, None), current_filter_element.classifications)
+        )

@@ -1,11 +1,9 @@
 from abc import abstractmethod
 
-from customtkinter import CTkFrame
-
 from OTAnalytics.domain.track import TrackImage
 
 
-class AbstractTracksCanvas(CTkFrame):
+class AbstractFrameCanvas:
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass

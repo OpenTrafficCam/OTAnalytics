@@ -3,12 +3,12 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel
 
-from OTAnalytics.adapter_ui.abstract_tracks_frame import AbstractTracksFrame
+from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 
 
-class TracksFrame(AbstractTracksFrame):
+class TracksFrame(AbstractFrameTracks):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -44,11 +44,15 @@ class TracksFrame(AbstractTracksFrame):
         )
         self.button_update_offset = CTkButton(
             master=self,
-            text="Update Plot",
+            text="Update plot",
             command=self._on_change_offset,
         )
-        current_track_offset = self._viewmodel.get_track_offset()
-        if current_track_offset:
+        self.button_change_to_section_offset = CTkButton(
+            master=self,
+            text="Update with section offset",
+            command=self._on_change_to_section_offset,
+        )
+        if current_track_offset := self._viewmodel.get_track_offset():
             self.update_offset(*current_track_offset)
 
     def _validate_offset(self, value: str) -> bool:
@@ -79,6 +83,12 @@ class TracksFrame(AbstractTracksFrame):
         self.button_update_offset.grid(
             row=5, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self.button_change_to_section_offset.grid(
+            row=6, column=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
 
     def _on_change_offset(self) -> None:
         self._viewmodel.set_track_offset(self._offset_x.get(), self._offset_y.get())
+
+    def _on_change_to_section_offset(self) -> None:
+        self._viewmodel.change_track_offset_to_section_offset()

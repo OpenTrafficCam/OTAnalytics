@@ -1,11 +1,12 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 import ujson
 
+from OTAnalytics import version
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
@@ -35,11 +36,23 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
+    EVENT_FORMAT_VERSION,
+    METADATA,
+    SECTION_FORMAT_VERSION,
+    VERSION,
+    VERSION_1_0,
+    VERSION_1_1,
+    DetectionFixer,
     InvalidSectionData,
     OtEventListParser,
     OtsectionParser,
+    OttrkFormatFixer,
     OttrkParser,
+    Version,
+    Version_1_0_to_1_1,
+    Version_1_1_To_1_2,
     _parse,
     _parse_bz2,
     _write_bz2,
@@ -122,6 +135,82 @@ def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> N
     assert bzip2_content == content
 
 
+class TestVersion_1_0_To_1_1:
+    def test_fix_x_y_coordinates(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        track_builder_setup_with_sample_data.set_otdet_version(str(VERSION_1_0))
+        input_detection = track_builder_setup_with_sample_data.create_detection()
+        serialized_detection = track_builder_setup_with_sample_data.serialize_detection(
+            input_detection, False, False
+        )
+        expected_detection = serialized_detection.copy()
+        expected_detection[ottrk_dataformat.X] = -5
+        expected_detection[ottrk_dataformat.Y] = -5
+        fixer = Version_1_0_to_1_1()
+
+        fixed = fixer.fix(serialized_detection, VERSION_1_0)
+
+        assert fixed == expected_detection
+
+
+class TestVersion_1_1_To_1_2:
+    def test_fix_occurrence(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        track_builder_setup_with_sample_data.set_otdet_version(str(VERSION_1_1))
+        detection = track_builder_setup_with_sample_data.create_detection()
+        serialized_detection = track_builder_setup_with_sample_data.serialize_detection(
+            detection, False, False
+        )
+        expected_detection = serialized_detection.copy()
+        serialized_detection[
+            ottrk_dataformat.OCCURRENCE
+        ] = detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
+
+        fixer = Version_1_1_To_1_2()
+
+        fixed = fixer.fix(serialized_detection, VERSION_1_1)
+
+        assert fixed == expected_detection
+
+
+class TestOttrkFormatFixer:
+    def test_run_all_fixer(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        otdet_version = Version.from_str(
+            track_builder_setup_with_sample_data.otdet_version
+        )
+        content = track_builder_setup_with_sample_data.build_ottrk()
+        detections = track_builder_setup_with_sample_data.build_serialized_detections()
+        some_fixer = Mock(spec=DetectionFixer)
+        other_fixer = Mock(spec=DetectionFixer)
+        some_fixer.fix.side_effect = lambda detection, _: detection
+        other_fixer.fix.side_effect = lambda detection, _: detection
+        fixes: list[DetectionFixer] = [some_fixer, other_fixer]
+        fixer = OttrkFormatFixer(fixes)
+
+        fixed_content = fixer.fix(content)
+
+        assert fixed_content == content
+        executed_calls = some_fixer.fix.call_args_list
+        expected_calls = [call(detection, otdet_version) for detection in detections]
+
+        assert executed_calls == expected_calls
+
+    def test_no_fixes_in_newest_version(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        track_builder_setup_with_sample_data.set_otdet_version("1.2")
+        content = track_builder_setup_with_sample_data.build_ottrk()
+        fixer = OttrkFormatFixer([])
+
+        fixed_content = fixer.fix(content)
+
+        assert fixed_content == content
+
+
 class TestOttrkParser:
     _track_repository = mocked_track_repository()
     ottrk_parser: OttrkParser = OttrkParser(
@@ -130,6 +219,7 @@ class TestOttrkParser:
     )
 
     def test_parse_whole_ottrk(self, ottrk_path: Path) -> None:
+        # TODO What is the expected result?
         self.ottrk_parser.parse(ottrk_path)
 
     def test_parse_ottrk_sample(
@@ -246,8 +336,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "key_2": "some_data"},
-            start=first_coordinate,
-            end=second_coordinate,
+            coordinates=[first_coordinate, second_coordinate],
         )
         area_section: Section = Area(
             id=SectionId("other"),
@@ -285,8 +374,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 1),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
         )
         other_section: Section = LineSection(
             id=SectionId("other"),
@@ -294,8 +382,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(1, 0),
-            end=Coordinate(0, 1),
+            coordinates=[Coordinate(1, 0), Coordinate(0, 1)],
         )
         sections = [some_section, other_section]
         parser = OtsectionParser()
@@ -315,8 +402,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=start,
-            end=end,
+            coordinates=[start, end],
         )
 
         section_data = {
@@ -330,14 +416,16 @@ class TestOtsectionParser:
                             geometry.Y: 0,
                         }
                     },
-                    section.START: {
-                        geometry.X: 0,
-                        geometry.Y: 0,
-                    },
-                    section.END: {
-                        geometry.X: 1,
-                        geometry.Y: 1,
-                    },
+                    section.COORDINATES: [
+                        {
+                            geometry.X: 0,
+                            geometry.Y: 0,
+                        },
+                        {
+                            geometry.X: 1,
+                            geometry.Y: 1,
+                        },
+                    ],
                 }
             ]
         }
@@ -358,8 +446,7 @@ class TestOtsectionParser:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "1": "some_data"},
-            start=start,
-            end=end,
+            coordinates=[start, end],
         )
 
         section_data = {
@@ -373,14 +460,10 @@ class TestOtsectionParser:
                             geometry.Y: 0,
                         }
                     },
-                    section.START: {
-                        geometry.X: 0,
-                        geometry.Y: 0,
-                    },
-                    section.END: {
-                        geometry.X: 1,
-                        geometry.Y: 1,
-                    },
+                    section.COORDINATES: [
+                        {geometry.X: 0, geometry.Y: 0},
+                        {geometry.X: 1, geometry.Y: 1},
+                    ],
                     section.PLUGIN_DATA: {"key_1": "some_data", "1": "some_data"},
                 }
             ]
@@ -433,8 +516,7 @@ class TestOtEventListParser:
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
             },
             plugin_data={"foo": "bar"},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 0),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
         )
         area_section = Area(
             id=SectionId("S"),
@@ -458,6 +540,11 @@ class TestOtEventListParser:
         content = event_list_parser._convert(events, sections)
 
         assert content == {
+            METADATA: {
+                VERSION: version.__version__,
+                SECTION_FORMAT_VERSION: dataformat_versions.otsection_version(),
+                EVENT_FORMAT_VERSION: dataformat_versions.otevent_version(),
+            },
             SECTIONS: [line_section.to_dict(), area_section.to_dict()],
             EVENT_LIST: [first_event.to_dict(), second_event.to_dict()],
         }

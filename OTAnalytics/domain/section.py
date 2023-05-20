@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional
+from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -10,8 +10,6 @@ SECTIONS: str = "sections"
 ID: str = "id"
 TYPE: str = "type"
 LINE: str = "line"
-START: str = "start"
-END: str = "end"
 AREA: str = "area"
 COORDINATES: str = "coordinates"
 RELATIVE_OFFSET_COORDINATES: str = "relative_offset_coordinates"
@@ -40,6 +38,39 @@ class SectionListObserver(ABC):
             sections (list[SectionId]): list of added sections
         """
         pass
+
+
+VALUE = TypeVar("VALUE")
+
+
+SectionChangedObserver = Callable[[SectionId], None]
+
+
+class SectionChangedSubject(Generic[VALUE]):
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[SectionChangedObserver] = set()
+
+    def register(self, observer: SectionChangedObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (SectionChangedObserver): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, value: SectionId) -> None:
+        """
+        Notifies observers about the changed value.
+
+        Args:
+            value (SectionId): changed value
+        """
+        [observer(value) for observer in self.observers]
 
 
 class SectionListSubject:
@@ -153,11 +184,16 @@ class LineSection(Section):
         end (Coordinate): the end coordinate
     """
 
-    start: Coordinate
-    end: Coordinate
+    coordinates: list[Coordinate]
 
     def _validate(self) -> None:
-        if self.start == self.end:
+        if len(self.coordinates) < 2:
+            raise ValueError(
+                "The number of coordinates to make up a line must be greater equal 2, "
+                f"but is {len(self.coordinates)}"
+            )
+
+        if self.coordinates[0] == self.coordinates[-1]:
             raise ValueError(
                 (
                     "Start and end point of coordinate must be different to be a line, "
@@ -166,7 +202,7 @@ class LineSection(Section):
             )
 
     def get_coordinates(self) -> list[Coordinate]:
-        return [self.start, self.end]
+        return self.coordinates.copy()
 
     def to_dict(self) -> dict:
         """
@@ -177,8 +213,7 @@ class LineSection(Section):
             ID: self.id.serialize(),
             TYPE: LINE,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
-            START: self.start.to_dict(),
-            END: self.end.to_dict(),
+            COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
             PLUGIN_DATA: self.plugin_data,
         }
 
@@ -236,15 +271,25 @@ class Area(Section):
         }
 
 
+class MissingSection(Exception):
+    pass
+
+
 class SectionRepository:
     """Repository used to store sections."""
 
     def __init__(self) -> None:
         self._sections: dict[SectionId, Section] = {}
-        self.observers: SectionListSubject = SectionListSubject()
+        self._repository_content_observers: SectionListSubject = SectionListSubject()
+        self._section_content_observers: SectionChangedSubject = SectionChangedSubject()
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
-        self.observers.register(observer)
+        self._repository_content_observers.register(observer)
+
+    def register_section_changed_observer(
+        self, observer: SectionChangedObserver
+    ) -> None:
+        self._section_content_observers.register(observer)
 
     def add(self, section: Section) -> None:
         """Add a section to the repository.
@@ -253,7 +298,7 @@ class SectionRepository:
             section (Section): the section to add
         """
         self._add(section)
-        self.observers.notify([section.id])
+        self._repository_content_observers.notify([section.id])
 
     def _add(self, section: Section) -> None:
         """Internal method to add sections without notifying observers.
@@ -271,7 +316,7 @@ class SectionRepository:
         """
         for section in sections:
             self._add(section)
-        self.observers.notify([section.id for section in sections])
+        self._repository_content_observers.notify([section.id for section in sections])
 
     def get_all(self) -> list[Section]:
         """Get all sections from the repository.
@@ -299,7 +344,7 @@ class SectionRepository:
             section (Section): the section to be removed
         """
         del self._sections[section]
-        self.observers.notify([section])
+        self._repository_content_observers.notify([section])
 
     def update(self, section: Section) -> None:
         """Update the section in the repository.
@@ -308,3 +353,19 @@ class SectionRepository:
             section (Section): updated section
         """
         self._sections[section.id] = section
+        self._section_content_observers.notify(section.id)
+
+    def set_section_plugin_data(self, section_id: SectionId, plugin_data: dict) -> None:
+        """
+        Set the plugin data of the section. The data will be overridden.
+
+        Args:
+            section_id (SectionId): section id to override the plugin data at
+            plugin_data (dict): value of the new plugin data
+        """
+        section = self.get(section_id)
+        if section is None:
+            raise MissingSection(f"Section for id: {section_id} could not be found.")
+        section.plugin_data.clear()
+        section.plugin_data.update(plugin_data)
+        self._section_content_observers.notify(section_id)

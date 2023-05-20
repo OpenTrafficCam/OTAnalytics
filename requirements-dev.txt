@@ -1,11 +1,12 @@
+-r requirements.txt
 black==23.3.0
 flake8==6.0.0
 interrogate==1.5.0
 isort==5.12.0
-mypy==1.2.0
+mypy==1.3.0
 networkx==3.1
 plotly==5.14.1
-pre-commit==3.2.2
-pytest==7.3.0
+pre-commit==3.3.1
+pytest==7.3.1
 pytest-cov==4.0.0
-yamllint==1.30.0
+yamllint==1.31.0

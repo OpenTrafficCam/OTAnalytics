@@ -7,15 +7,15 @@ from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate, X,
 from OTAnalytics.domain.section import (
     AREA,
     COORDINATES,
-    END,
     ID,
     LINE,
     PLUGIN_DATA,
     RELATIVE_OFFSET_COORDINATES,
-    START,
     TYPE,
     Area,
     LineSection,
+    Section,
+    SectionChangedObserver,
     SectionId,
     SectionListObserver,
     SectionListSubject,
@@ -44,8 +44,7 @@ class TestLineSection:
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
                 plugin_data={},
-                start=Coordinate(0, 0),
-                end=Coordinate(0, 0),
+                coordinates=[Coordinate(0, 0), Coordinate(0, 0)],
             )
 
     def test_valid_line_section(self) -> None:
@@ -55,22 +54,21 @@ class TestLineSection:
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=Coordinate(0, 0),
-            end=Coordinate(1, 0),
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
         )
 
     def test_to_dict(self) -> None:
         section_id = SectionId("some")
         start = Coordinate(0, 0)
         end = Coordinate(1, 1)
+        coordinates = [start, end]
         section = LineSection(
             id=section_id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
-            start=start,
-            end=end,
+            coordinates=coordinates,
         )
 
         section_dict = section.to_dict()
@@ -81,8 +79,7 @@ class TestLineSection:
             RELATIVE_OFFSET_COORDINATES: {
                 EventType.SECTION_ENTER.serialize(): {X: 0, Y: 0}
             },
-            START: start.to_dict(),
-            END: end.to_dict(),
+            COORDINATES: [coordinate.to_dict() for coordinate in coordinates],
             PLUGIN_DATA: {},
         }
 
@@ -91,19 +88,18 @@ class TestLineSection:
         id = "N"
         start = Coordinate(0, 0)
         end = Coordinate(10, 10)
+        coordinates = [start, end]
         line = LineSection(
             id=SectionId(id),
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data=plugin_data,
-            start=start,
-            end=end,
+            coordinates=coordinates,
         )
         assert line.id == SectionId(id)
         assert line.plugin_data == plugin_data
-        assert line.start == start
-        assert line.end == end
+        assert line.coordinates == coordinates
 
 
 class TestAreaSection:
@@ -253,3 +249,68 @@ class TestSectionRepository:
 
         assert first_section not in repository.get_all()
         assert second_section in repository.get_all()
+
+    def test_update(self) -> None:
+        section_id = Mock()
+        section_id.id = SectionId("first")
+        original_section = Mock(spec=Section)
+        original_section.id = section_id
+        updated_section = Mock(spec=Section)
+        updated_section.id = section_id
+        observer = Mock(spec=SectionChangedObserver)
+        repository = SectionRepository()
+        repository.register_section_changed_observer(observer)
+
+        repository.add(original_section)
+        repository.update(original_section)
+
+        observer.assert_called_once_with(section_id)
+
+    def test_update_section_plugin_data_not_existing(self) -> None:
+        section_id = SectionId("my section")
+        plugin_data = {"some": "new_value"}
+
+        section = LineSection(
+            section_id,
+            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+            {},
+            coordinates=[Coordinate(0, 0), Coordinate(10, 10)],
+        )
+
+        repository = SectionRepository()
+
+        repository.add(section)
+        repository.set_section_plugin_data(
+            section_id=section_id,
+            plugin_data=plugin_data,
+        )
+
+        stored_section = repository.get(section_id)
+
+        assert stored_section == section
+        assert section.plugin_data == plugin_data
+
+    def test_update_section_plugin_data_with_existing_data(self) -> None:
+        key = "my data for plugins"
+        section_id = SectionId("my section")
+        old_plugin_data = {"some": "value"}
+        new_plugin_data = {"other": "new_value"}
+
+        section = LineSection(
+            section_id,
+            {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+            {key: old_plugin_data},
+            coordinates=[Coordinate(0, 0), Coordinate(10, 10)],
+        )
+
+        repository = SectionRepository()
+        repository.add(section)
+        repository.set_section_plugin_data(
+            section_id=section_id,
+            plugin_data=new_plugin_data,
+        )
+
+        stored_section = repository.get(section_id)
+
+        assert stored_section == section
+        assert section.plugin_data == new_plugin_data

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 from PIL import Image
 
@@ -383,12 +383,22 @@ class TrackRepository:
         """
         self.tracks[track.id] = track
 
-    def add_all(self, tracks: Iterable[Track]) -> None:
+    def add_all(self, tracks: list[Track]) -> None:
         """
         Add multiple tracks to the repository and notify only once about it.
 
         Args:
             tracks (Iterable[Track]): tracks to be added
+        """
+        if tracks:
+            self.__add_all(tracks)
+
+    def __add_all(self, tracks: list[Track]) -> None:
+        """Internal method to add all tracks to the repository and notify only once
+        about it.
+
+        Args:
+            tracks (list[Track]): tracks to be added
         """
         for track in tracks:
             self.__add(track)

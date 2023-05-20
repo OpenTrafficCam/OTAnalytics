@@ -1,11 +1,14 @@
 import bz2
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Any, Iterable, Tuple
 
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics import version
 from OTAnalytics.application.datastore import (
     EventListParser,
     SectionParser,
@@ -26,8 +29,13 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
+from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
+METADATA: str = "metadata"
+VERSION: str = "version"
+SECTION_FORMAT_VERSION: str = "section_file_version"
+EVENT_FORMAT_VERSION: str = "event_file_version"
 
 
 def _parse_bz2(path: Path) -> dict:
@@ -93,6 +101,160 @@ def _write_json(data: dict, path: Path) -> None:
         ujson.dump(data, file)
 
 
+class IncorrectVersionFormat(Exception):
+    pass
+
+
+@dataclass(frozen=True, order=True)
+class Version:
+    major: int
+    minor: int
+
+    @staticmethod
+    def from_str(version_string: str) -> "Version":
+        splitted = version_string.split(".")
+        if len(splitted) < 2:
+            message = (
+                "Version must contain major and minor separated by '.' "
+                + f"but was {version_string}"
+            )
+            raise IncorrectVersionFormat(message)
+        minor = int(splitted[1])
+        major = int(splitted[0])
+        return Version(major=major, minor=minor)
+
+
+VERSION_1_0: Version = Version(1, 0)
+VERSION_1_1: Version = Version(1, 1)
+VERSION_1_2: Version = Version(1, 2)
+
+
+class DetectionFixer(ABC):
+    def __init__(
+        self,
+        from_otdet_version: Version,
+        to_otdet_version: Version,
+    ) -> None:
+        self._from_otdet_version: Version = from_otdet_version
+        self._to_otdet_version: Version = to_otdet_version
+
+    def from_version(self) -> Version:
+        return self._from_otdet_version
+
+    def to_version(self) -> Version:
+        return self._to_otdet_version
+
+    @abstractmethod
+    def fix(self, detection: dict, current_version: Version) -> dict:
+        pass
+
+
+class Version_1_0_to_1_1(DetectionFixer):
+    def __init__(self) -> None:
+        super().__init__(VERSION_1_0, VERSION_1_0)
+
+    def fix(
+        self,
+        detection: dict,
+        otdet_format_version: Version,
+    ) -> dict:
+        return self.__fix_bounding_box(detection, otdet_format_version)
+
+    def __fix_bounding_box(
+        self,
+        detection: dict,
+        otdet_format_version: Version,
+    ) -> dict:
+        """This method fixes different coordinate formats of otdet format version
+        <= 1.0.
+
+        Args:
+            content (dict): dictionary containing detection information
+
+        Returns:
+            dict: fixed dictionary
+        """
+        x_input = detection[ottrk_format.X]
+        y_input = detection[ottrk_format.Y]
+        w = detection[ottrk_format.W]
+        h = detection[ottrk_format.H]
+        if otdet_format_version <= self.to_version():
+            x = x_input - w / 2
+            y = y_input - h / 2
+            detection[ottrk_format.X] = x
+            detection[ottrk_format.Y] = y
+        return detection
+
+
+class Version_1_1_To_1_2(DetectionFixer):
+    def __init__(self) -> None:
+        super().__init__(VERSION_1_0, VERSION_1_2)
+
+    def fix(self, detection: dict, current_version: Version) -> dict:
+        return self.__fix_occurrence(detection, current_version)
+
+    def __fix_occurrence(self, detection: dict, otdet_format_version: Version) -> dict:
+        """This method converts the old datetime format of otdet format version
+        <= 1.1.
+
+        Args:
+            content (dict): dictionary containing detection information
+
+        Returns:
+            dict: fixed dictionary
+        """
+        if otdet_format_version <= Version(1, 1):
+            occurrence = datetime.strptime(
+                detection[ottrk_format.OCCURRENCE], ottrk_format.DATE_FORMAT
+            )
+            detection[ottrk_format.OCCURRENCE] = str(occurrence.timestamp())
+        return detection
+
+
+ALL_FIXES = [Version_1_0_to_1_1(), Version_1_1_To_1_2()]
+
+
+class OttrkFormatFixer:
+    def __init__(self, detection_fixes: list[DetectionFixer] = ALL_FIXES) -> None:
+        self._detection_fixes: list[DetectionFixer] = detection_fixes
+
+    def fix(self, content: dict) -> dict:
+        """Fix formate changes from older ottrk and otdet format versions to the
+        current version.
+
+        Args:
+            content (dict): ottrk file content
+
+        Returns:
+            dict: fixed ottrk file content
+        """
+        version = self.__parse_otdet_version(content)
+        return self.__fix_detections(content, version)
+
+    def __parse_otdet_version(self, content: dict) -> Version:
+        """Parse the otdet format version from the input.
+
+        Args:
+            content (dict): ottrk file content
+
+        Returns:
+            Version: otdet format version
+        """
+        version = content[ottrk_format.METADATA][ottrk_format.OTDET_VERSION]
+        return Version.from_str(version)
+
+    def __fix_detections(self, content: dict, current_otdet_version: Version) -> dict:
+        detections = content[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        fixed_detections: list[dict] = []
+        for detection in detections:
+            fixed_detection = detection
+            for fixer in self._detection_fixes:
+                fixed_detection = fixer.fix(detection, current_otdet_version)
+            fixed_detections.append(fixed_detection)
+        content[ottrk_format.DATA][ottrk_format.DETECTIONS] = fixed_detections
+        return content
+
+
 class OttrkParser(TrackParser):
     """Parse an ottrk file and convert its contents to our domain objects namely
     `Tracks`.
@@ -105,8 +267,11 @@ class OttrkParser(TrackParser):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
     ) -> None:
         super().__init__(track_classification_calculator, track_repository)
+        self._format_fixer = format_fixer
+        self._path_cache: dict[str, Path] = {}
 
     def parse(self, ottrk_file: Path) -> list[Track]:
         """Parse ottrk file and convert its content to domain level objects namely
@@ -119,7 +284,8 @@ class OttrkParser(TrackParser):
             list[Track]: the tracks.
         """
         ottrk_dict = _parse_bz2(ottrk_file)
-        dets_list: list[dict] = ottrk_dict[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        fixed_ottrk = self._format_fixer.fix(ottrk_dict)
+        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
         return self._parse_tracks(dets_list)
 
     def _parse_tracks(self, dets: list[dict]) -> list[Track]:
@@ -176,6 +342,7 @@ class OttrkParser(TrackParser):
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
+            path = self.__get_path(det_dict)
             det = Detection(
                 classification=det_dict[ottrk_format.CLASS],
                 confidence=det_dict[ottrk_format.CONFIDENCE],
@@ -184,10 +351,10 @@ class OttrkParser(TrackParser):
                 w=det_dict[ottrk_format.W],
                 h=det_dict[ottrk_format.H],
                 frame=det_dict[ottrk_format.FRAME],
-                occurrence=datetime.strptime(
-                    det_dict[ottrk_format.OCCURRENCE], ottrk_format.DATE_FORMAT
+                occurrence=datetime.fromtimestamp(
+                    float(det_dict[ottrk_format.OCCURRENCE])
                 ),
-                input_file_path=Path(det_dict[ottrk_format.INPUT_FILE_PATH]),
+                input_file_path=path,
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
                 track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
             )
@@ -196,6 +363,14 @@ class OttrkParser(TrackParser):
 
             tracks_dict[det.track_id].append(det)  # Group detections by track id
         return tracks_dict
+
+    def __get_path(self, det_dict: dict) -> Path:
+        path_as_string = det_dict[ottrk_format.INPUT_FILE_PATH]
+        if path_as_string in self._path_cache:
+            return self._path_cache[path_as_string]
+        path = Path(path_as_string)
+        self._path_cache[path_as_string] = path
+        return path
 
 
 class UnknownSectionType(Exception):
@@ -269,17 +444,14 @@ class OtsectionParser(SectionParser):
             attributes=[
                 section.ID,
                 section.RELATIVE_OFFSET_COORDINATES,
-                section.START,
-                section.END,
             ],
         )
         section_id = self._parse_section_id(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
-        start = self._parse_coordinate(data[section.START])
-        end = self._parse_coordinate(data[section.END])
+        coordinates = self._parse_coordinates(data)
         plugin_data = self._parse_plugin_data(data)
         return LineSection(
-            section_id, relative_offset_coordinates, plugin_data, start, end
+            section_id, relative_offset_coordinates, plugin_data, coordinates
         )
 
     def _parse_section_id(self, data: dict) -> SectionId:
@@ -436,7 +608,7 @@ class OtEventListParser(EventListParser):
 
     def _convert(
         self, events: Iterable[Event], sections: Iterable[Section]
-    ) -> dict[str, list[dict]]:
+    ) -> dict[str, Any]:
         """Convert events to dictionary.
 
         Args:
@@ -446,11 +618,20 @@ class OtEventListParser(EventListParser):
         Returns:
             dict[str, list[dict]]: dictionary containing raw information of events
         """
+        metadata = self._build_metadata()
         converted_sections = self._convert_sections(sections)
         converted_events = self._convert_events(events)
         return {
+            METADATA: metadata,
             section.SECTIONS: converted_sections,
             event.EVENT_LIST: converted_events,
+        }
+
+    def _build_metadata(self) -> dict:
+        return {
+            VERSION: version.__version__,
+            SECTION_FORMAT_VERSION: dataformat_versions.otsection_version(),
+            EVENT_FORMAT_VERSION: dataformat_versions.otevent_version(),
         }
 
     def _convert_events(self, events: Iterable[Event]) -> list[dict]:
