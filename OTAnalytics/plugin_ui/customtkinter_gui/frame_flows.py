@@ -64,5 +64,5 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
 
     def update_items(self) -> None:
         self.delete(*self.get_children())
-        item_ids = self._viewmodel.get_all_flows()
+        item_ids = [flow.id.id for flow in self._viewmodel.get_all_flows()]
         self.add_items(item_ids=sorted(item_ids))

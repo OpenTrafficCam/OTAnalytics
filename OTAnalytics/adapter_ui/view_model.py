@@ -5,6 +5,7 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 
 DISTANCES: str = "distances"
@@ -84,7 +85,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def get_all_flows(self) -> list[str]:
+    def get_all_flows(self) -> Iterable[Flow]:
         pass
 
     @abstractmethod

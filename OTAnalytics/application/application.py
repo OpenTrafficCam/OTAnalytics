@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -51,11 +52,26 @@ class OTAnalyticsApplication:
     ) -> None:
         self._datastore.register_section_changed_observer(observer)
 
+    def register_flows_observer(self, observer: FlowListObserver) -> None:
+        self._datastore.register_flows_observer(observer)
+
     def get_all_sections(self) -> Iterable[Section]:
         return self._datastore.get_all_sections()
 
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._datastore.get_section_for(section_id)
+
+    def get_all_flows(self) -> Iterable[Flow]:
+        return self._datastore.get_all_flows()
+
+    def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
+        return self._datastore.get_flow_for(flow_id)
+
+    def add_flow(self, flow: Flow) -> None:
+        self._datastore.add_flow(flow)
+
+    def remove_flow(self, flow_id: FlowId) -> None:
+        self._datastore.remove_flow(flow_id)
 
     def add_tracks_of_file(self, track_file: Path) -> None:
         """

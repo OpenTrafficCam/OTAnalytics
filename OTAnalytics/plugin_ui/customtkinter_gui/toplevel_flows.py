@@ -1,3 +1,4 @@
+import tkinter
 from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkOptionMenu, CTkToplevel
@@ -5,9 +6,10 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkOptionMenu, CTkTople
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
-DISTANCE = "Distance"
+FLOW_ID = "Id"
 START_SECTION = "Start section"
 END_SECTION = "End section"
+DISTANCE = "Distance"
 
 
 class ToplevelFlows(CTkToplevel):
@@ -22,25 +24,37 @@ class ToplevelFlows(CTkToplevel):
         super().__init__(**kwargs)
         self.title(title)
         self._section_ids = section_ids
+        self._current_id = tkinter.StringVar()
         self.input_values: dict = self.__create_input_values(input_values)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
+        self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
         self._set_initial_position()
         self._set_focus()
         self._set_close_on_return_key()
 
+    def __set_initial_values(self) -> None:
+        self._current_id.set(self.input_values.get(FLOW_ID, ""))
+
     def __create_input_values(self, input_values: Optional[dict]) -> dict:
         if input_values:
             return input_values
         return {
+            FLOW_ID: "",
             START_SECTION: "",
             END_SECTION: "",
             DISTANCE: 0,
         }
 
     def _get_widgets(self) -> None:
+        self.label_id = CTkLabel(master=self, text="Id")
+        self.entry_id = CTkEntry(
+            master=self,
+            width=180,
+            textvariable=self._current_id,
+        )
         self.label_section_start = CTkLabel(master=self, text="First section:")
         self.dropdown_section_start = CTkOptionMenu(
             master=self, width=180, values=self._section_ids
@@ -63,6 +77,8 @@ class ToplevelFlows(CTkToplevel):
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
 
     def _place_widgets(self) -> None:
+        self.label_id.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=tkinter.E)
+        self.entry_id.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=tkinter.W)
         self.label_section_start.grid(row=1, column=0, padx=PADX, pady=PADY, sticky="E")
         self.dropdown_section_start.grid(
             row=1, column=1, padx=PADX, pady=PADY, sticky="W"
@@ -91,6 +107,7 @@ class ToplevelFlows(CTkToplevel):
     def close(self, event: Any = None) -> None:
         if not self._sections_are_valid():
             return
+        self.input_values[FLOW_ID] = self._current_id.get()
         self.input_values[START_SECTION] = self.dropdown_section_start.get()
         self.input_values[END_SECTION] = self.dropdown_section_end.get()
         self.input_values[DISTANCE] = self.entry_distance.get()
@@ -109,6 +126,12 @@ class ToplevelFlows(CTkToplevel):
         section_end = self.dropdown_section_end.get()
         sections = [section_start, section_end]
         position = (self.winfo_x(), self.winfo_y())
+        if self._current_id.get() == "":
+            InfoBox(
+                message="Please choose a flow id!",
+                initial_position=position,
+            )
+            return False
         if "" in [section_start, section_end]:
             InfoBox(
                 message="Please choose both a start and an end section!",

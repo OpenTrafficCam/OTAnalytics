@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Tuple
 
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
@@ -218,6 +218,15 @@ class Datastore:
         """
         self._section_repository.register_sections_observer(observer)
 
+    def register_flows_observer(self, observer: FlowListObserver) -> None:
+        """
+        Listen to changes in the flow repository.
+
+        Args:
+            observer (FlowListObserver): listener to be notified about changes
+        """
+        self._flow_repository.register_flows_observer(observer)
+
     def load_track_file(self, file: Path) -> None:
         """
         Load and parse the given track file together with the corresponding video file.
@@ -290,6 +299,12 @@ class Datastore:
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
         return self._flow_repository.get(flow_id)
+
+    def add_flow(self, flow: Flow) -> None:
+        self._flow_repository.add(flow)
+
+    def remove_flow(self, flow_id: FlowId) -> None:
+        self._flow_repository.remove(flow_id)
 
     def save_event_list_file(self, file: Path) -> None:
         """

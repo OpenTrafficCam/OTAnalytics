@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
 from typing import Iterable, Optional
@@ -7,10 +6,11 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.view_model import DISTANCES, ViewModel
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
 from OTAnalytics.domain import geometry
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
@@ -38,6 +38,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
+    FLOW_ID,
     START_SECTION,
     ToplevelFlows,
 )
@@ -62,18 +63,7 @@ def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
 
 
-@dataclass(frozen=True)
-class FlowId:
-    from_section: str
-    to_section: str
-
-
-def parse_flow_id(id: str) -> FlowId:
-    parts = id.split(" -> ")
-    return FlowId(from_section=parts[0], to_section=parts[1])
-
-
-class DummyViewModel(ViewModel, SectionListObserver):
+class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def __init__(
         self,
         application: OTAnalyticsApplication,
@@ -93,6 +83,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def register_to_subjects(self) -> None:
         self._application.register_sections_observer(self)
         self._application.register_section_changed_observer(self._on_section_changed)
+        self._application.register_flows_observer(self)
 
         self._application.track_view_state.show_tracks.register(
             self._on_show_tracks_state_updated
@@ -131,10 +122,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-        if self._treeview_flows is None:
-            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self.refresh_sections_on_gui()
         self._treeview_sections.update_items()
+
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        if self._treeview_flows is None:
+            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self._treeview_flows.update_items()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
@@ -349,15 +342,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def get_all_sections(self) -> Iterable[Section]:
         return self._application.get_all_sections()
 
-    def get_all_flows(self) -> list[str]:
-        flows: list[str] = []
-        for section in self.get_all_sections():
-            distances = section.plugin_data.get(DISTANCES, {})
-            flows.extend(
-                flow_id(section.id.id, other_section)
-                for other_section in distances.keys()
-            )
-        return flows
+    def get_all_flows(self) -> Iterable[Flow]:
+        return self._application.get_all_flows()
 
     def add_flow(self) -> None:
         if flow_data := self._show_distances_window():
@@ -387,31 +373,33 @@ class DummyViewModel(ViewModel, SectionListObserver):
         ).get_data()
 
     def __update_flow_data(self, new_flow: dict, old_flow: dict = {}) -> None:
-        new_section_id = SectionId(new_flow[START_SECTION])
-        if section := self._application.get_section_for(section_id=new_section_id):
-            self.__clear_flow_data(flow=old_flow)
-            self._set_new_flow_data(section=section, flow=new_flow)
+        old_flow_id = FlowId(old_flow.get(FLOW_ID, ""))
+        new_flow_id = FlowId(new_flow[FLOW_ID])
+        new_from_section_id = SectionId(new_flow[START_SECTION])
+        new_to_section_id = SectionId(new_flow[END_SECTION])
+        from_section = self._application.get_section_for(new_from_section_id)
+        to_section = self._application.get_section_for(new_to_section_id)
+        distance = new_flow[DISTANCE]
+        if from_section is None:
+            raise MissingSection(f"Could not find section for id {new_from_section_id}")
+        if to_section is None:
+            raise MissingSection(f"Could not find section for id {new_to_section_id}")
+        if old_flow_id != new_flow_id:
+            self._application.remove_flow(old_flow_id)
+        if flow := self._application.get_flow_for(new_flow_id):
+            flow.start = from_section
+            flow.end = to_section
+            flow._distance = distance
+            self._application.add_flow(flow)
         else:
-            raise MissingSection(f"Could not find section for id {new_section_id}")
-
-    def _set_new_flow_data(self, section: Section, flow: dict) -> None:
-        plugin_data = section.plugin_data.copy()
-        distance_data = plugin_data.get(DISTANCES, {})
-        new_data = {flow[END_SECTION]: flow[DISTANCE]}
-        distance_data.update(new_data)
-        plugin_data[DISTANCES] = distance_data
-        self._application.set_section_plugin_data(section.id, plugin_data)
-
-    def __clear_flow_data(self, flow: dict = {}) -> None:
-        if flow:
-            section_id = SectionId(flow[START_SECTION])
-            if section := self._application.get_section_for(section_id=section_id):
-                end_section = flow[END_SECTION]
-                plugin_data = section.plugin_data.copy()
-                distance_data = plugin_data.get(DISTANCES, {})
-                del distance_data[end_section]
-                plugin_data[DISTANCES] = distance_data
-                self._application.set_section_plugin_data(section_id, plugin_data)
+            flow = Flow(
+                id=new_flow_id,
+                start=from_section,
+                end=to_section,
+                distance=distance,
+            )
+            self._application.add_flow(flow)
+        self.set_selected_flow_id(new_flow_id.id)
 
     def edit_flow(self) -> None:
         selected_flow = self.get_selected_flow()
@@ -421,19 +409,16 @@ class DummyViewModel(ViewModel, SectionListObserver):
             position = position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to edit", initial_position=position)
             return
-        flow = parse_flow_id(selected_flow)
-        if from_section := self._application.get_section_for(
-            SectionId(flow.from_section)
-        ):
-            self._edit_flow(flow, from_section)
+        flow_id = FlowId(selected_flow)
+        if flow := self._application.get_flow_for(flow_id):
+            self._edit_flow(flow)
 
-    def _edit_flow(self, flow: FlowId, from_section: Section) -> None:
-        distances = from_section.plugin_data.get(DISTANCES, {})
-        distance: str = distances.get(flow.to_section, {})
+    def _edit_flow(self, flow: Flow) -> None:
         input_data = {
-            START_SECTION: flow.from_section,
-            END_SECTION: flow.to_section,
-            DISTANCE: distance,
+            FLOW_ID: flow.id.id,
+            START_SECTION: flow.start.id.id,
+            END_SECTION: flow.end.id.id,
+            DISTANCE: flow.distance(),
         }
         old_flow_data = input_data.copy()
 
@@ -451,12 +436,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
             return
-        flow = parse_flow_id(selected_flow)
-        data = {
-            START_SECTION: flow.from_section,
-            END_SECTION: flow.to_section,
-        }
-        self.__clear_flow_data(data)
+        flow_id = FlowId(selected_flow)
+        self._application.remove_flow(flow_id)
 
     def start_analysis(self) -> None:
         self._application.start_analysis()
