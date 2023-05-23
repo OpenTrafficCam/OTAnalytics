@@ -368,7 +368,7 @@ class TestOtsectionParser:
         parsed_sections, parsed_flows = parser.parse(json_file)
 
         assert parsed_sections == sections
-        # assert parsed_flows == flows
+        assert parsed_flows == flows
 
     def test_validate(self) -> None:
         parser = OtsectionParser()

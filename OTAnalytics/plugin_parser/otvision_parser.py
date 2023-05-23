@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Tuple
+from typing import Any, Callable, Iterable, Optional, Tuple
 
 import ujson
 
@@ -19,9 +19,15 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.domain import event, flow, geometry, section
 from OTAnalytics.domain.event import Event, EventType
-from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
+from OTAnalytics.domain.section import (
+    Area,
+    LineSection,
+    MissingSection,
+    Section,
+    SectionId,
+)
 from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
     Detection,
@@ -410,7 +416,11 @@ class OtsectionParser(SectionParser):
         sections: list[Section] = [
             self.parse_section(entry) for entry in content.get(section.SECTIONS, [])
         ]
-        flows: list[Flow] = []
+        sections_lookup = {section.id: section for section in sections}
+        flows: list[Flow] = [
+            self.parse_flow(entry, sections_lookup.get)
+            for entry in content.get(flow.FLOWS, [])
+        ]
         return sections, flows
 
     def parse_section(self, entry: dict) -> Section:
@@ -557,6 +567,35 @@ class OtsectionParser(SectionParser):
             dict: the plugin data
         """
         return data.get(section.PLUGIN_DATA, {})
+
+    def parse_flow(
+        self, entry: dict, to_section: Callable[[SectionId], Optional[Section]]
+    ) -> Flow:
+        self._validate_data(
+            entry,
+            attributes=[
+                flow.FLOW_ID,
+                flow.START,
+                flow.END,
+                flow.DISTANCE,
+            ],
+        )
+        flow_id = FlowId(entry.get(flow.FLOW_ID, ""))
+        start = SectionId(entry.get(flow.START, ""))
+        start_section = to_section(start)
+        end = SectionId(entry.get(flow.END, ""))
+        end_section = to_section(end)
+        distance = float(entry.get(flow.DISTANCE, 0.0))
+        if start_section is None:
+            raise MissingSection(f"Parsing flow with missing start section: {start}")
+        if end_section is None:
+            raise MissingSection(f"Parsing flow with missing end section: {end}")
+        return Flow(
+            flow_id,
+            start=start_section,
+            end=end_section,
+            distance=distance,
+        )
 
     def serialize(
         self,

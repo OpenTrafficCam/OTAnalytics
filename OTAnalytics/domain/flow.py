@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.section import Section
 
@@ -19,28 +19,19 @@ class FlowId:
         return self.id
 
 
+@dataclass
 class Flow:
-    def __init__(
-        self,
-        id: FlowId,
-        start: Section,
-        end: Section,
-        distance: float,
-    ) -> None:
-        self.id: FlowId = id
-        self.start: Section = start
-        self.end: Section = end
-        self._distance: float = distance
-
-    def distance(self) -> float:
-        return self._distance
+    id: FlowId
+    start: Section
+    end: Section
+    distance: float
 
     def to_dict(self) -> dict:
         return {
             FLOW_ID: self.id.serialize(),
             START: self.start.id.serialize(),
             END: self.end.id.serialize(),
-            DISTANCE: self.distance(),
+            DISTANCE: self.distance,
         }
 
 
@@ -96,8 +87,16 @@ class FlowRepository:
         self._observers.register(observer)
 
     def add(self, flow: Flow) -> None:
-        self._flows[flow.id] = flow
+        self.__internal_add(flow)
         self._observers.notify([flow.id])
+
+    def __internal_add(self, flow: Flow) -> None:
+        self._flows[flow.id] = flow
+
+    def add_all(self, flows: Iterable[Flow]) -> None:
+        for flow in flows:
+            self.__internal_add(flow)
+        self._observers.notify([flow.id for flow in flows])
 
     def remove(self, flow_id: FlowId) -> None:
         if flow_id in self._flows:

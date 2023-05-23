@@ -277,6 +277,7 @@ class Datastore:
         """
         sections, flows = self._section_parser.parse(file)
         self._section_repository.add_all(sections)
+        self._flow_repository.add_all(flows)
 
     def save_flow_file(self, file: Path) -> None:
         """

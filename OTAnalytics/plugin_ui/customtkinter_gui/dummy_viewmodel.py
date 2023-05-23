@@ -389,7 +389,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         if flow := self._application.get_flow_for(new_flow_id):
             flow.start = from_section
             flow.end = to_section
-            flow._distance = distance
+            flow.distance = distance
             self._application.add_flow(flow)
         else:
             flow = Flow(
@@ -418,7 +418,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             FLOW_ID: flow.id.id,
             START_SECTION: flow.start.id.id,
             END_SECTION: flow.end.id.id,
-            DISTANCE: flow.distance(),
+            DISTANCE: flow.distance,
         }
         old_flow_data = input_data.copy()
 

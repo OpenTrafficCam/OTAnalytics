@@ -20,10 +20,30 @@ def flow() -> Flow:
     )
 
 
+@pytest.fixture
+def other_flow() -> Flow:
+    distance = 1.0
+    start = Mock(spec=Section)
+    end = Mock(spec=Section)
+    flow_id = FlowId("other flow")
+    return Flow(
+        id=flow_id,
+        start=start,
+        end=end,
+        distance=distance,
+    )
+
+
 class TestFlowRepository:
     def test_add_flow(self, flow: Flow) -> None:
         repository = FlowRepository()
         repository.add(flow)
+
+        assert flow in repository.get_all()
+
+    def test_add_all_flow(self, flow: Flow, other_flow: Flow) -> None:
+        repository = FlowRepository()
+        repository.add_all([flow, other_flow])
 
         assert flow in repository.get_all()
 
