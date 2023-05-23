@@ -26,6 +26,9 @@ class Flow:
     end: Section
     distance: float
 
+    def __eq__(self, __value: object) -> bool:
+        return self.id == __value.id if isinstance(__value, Flow) else False
+
     def to_dict(self) -> dict:
         return {
             FLOW_ID: self.id.serialize(),
