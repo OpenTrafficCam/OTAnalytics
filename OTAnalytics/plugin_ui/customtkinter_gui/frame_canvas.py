@@ -155,6 +155,7 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind("<Escape>", self._on_escape)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
+        self._canvas.focus_set()
         self._observers.append(observer)
 
     def detach_observer(self, observer: CanvasObserver) -> None:
