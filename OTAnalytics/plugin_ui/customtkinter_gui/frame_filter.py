@@ -215,6 +215,7 @@ class FilterTracksByDatePopup(CTkToplevel):
         self._get_widgets()
         self._place_widgets()
         self._bind_events()
+        self._set_focus()
 
         self._set_default_date_range(default_start_date, default_end_date)
 
@@ -283,6 +284,9 @@ class FilterTracksByDatePopup(CTkToplevel):
 
     def _bind_events(self) -> None:
         self.bind("<Escape>", self._close)
+
+    def _set_focus(self) -> None:
+        self.after(0, lambda: self.lift())
 
     def _close(self, _: Any = None) -> None:
         self.destroy()
