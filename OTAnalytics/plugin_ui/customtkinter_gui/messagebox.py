@@ -34,6 +34,7 @@ class InfoBox(CTkToplevel):
         self.button_ok.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _set_focus(self) -> None:
+        self.attributes("-topmost", 1)
         self.after(0, lambda: self.button_ok.focus_set())
 
     def _set_close_on_return_key(self) -> None:
