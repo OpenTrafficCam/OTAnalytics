@@ -1,14 +1,16 @@
+from collections import defaultdict
 from typing import Iterable
 
 from OTAnalytics.application.eventlist import SceneActionDetector, SectionActionDetector
 from OTAnalytics.domain.event import Event, SectionEventBuilder
+from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.intersect import (
     IntersectAreaByTrackPoints,
     IntersectBySmallTrackComponents,
     IntersectImplementation,
     IntersectParallelizationStrategy,
 )
-from OTAnalytics.domain.section import Area, LineSection, Section
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track
 
 
@@ -70,3 +72,45 @@ class RunSceneEventDetection:
 
     def run(self, tracks: Iterable[Track]) -> list[Event]:
         return self._scene_action_detector.detect(tracks)
+
+
+class RunTrafficCounting:
+    def run(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
+        flows_by_start_and_end: dict[
+            tuple[SectionId, SectionId], list[Flow]
+        ] = defaultdict(list)
+        for flow in flows:
+            flows_by_start_and_end[(flow.start.id, flow.end.id)].append(flow)
+
+        sections_by_road_user: dict[int, list[SectionId]] = defaultdict(list)
+        for event in events:
+            if event.section_id:
+                sections_by_road_user[event.road_user_id].append(event.section_id)
+
+        user_to_flow: dict[int, Flow] = {}
+        sections: list[SectionId]
+        for road_user, sections in sections_by_road_user.items():
+            candidate_events = self.__create_candidates(sections)
+            candidate_flows: list[Flow] = []
+            for candidate in candidate_events:
+                candidate_flows.extend(flows_by_start_and_end.get(candidate, []))
+            flow = max(candidate_flows, key=lambda current: current.distance)
+            user_to_flow[road_user] = flow
+
+        flow_to_user: dict[FlowId, list[int]] = defaultdict(list)
+        for user, flow in user_to_flow.items():
+            flow_to_user[flow.id].append(user)
+
+        counts = {flow: len(users) for flow, users in flow_to_user.items()}
+        for flow in flows:
+            if flow.id not in counts:
+                counts[flow.id] = 0
+        return counts
+
+    def __create_candidates(
+        self, sections: list[SectionId]
+    ) -> list[tuple[SectionId, SectionId]]:
+        candidates: list[tuple[SectionId, SectionId]] = []
+        for start in sections:
+            candidates.extend((start, end) for end in sections)
+        return candidates
