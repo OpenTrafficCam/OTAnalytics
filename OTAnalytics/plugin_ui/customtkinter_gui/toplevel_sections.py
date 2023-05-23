@@ -73,6 +73,7 @@ class ToplevelSections(CTkToplevel):
 
     def _set_focus(self) -> None:
         self.after(0, lambda: self.lift())
+        self.after(0, lambda: self.entry_name.focus_set())
 
     def _set_close_on_return_key(self) -> None:
         self.entry_name.bind("<Return>", self.close)
