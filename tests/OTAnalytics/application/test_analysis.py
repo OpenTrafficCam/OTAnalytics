@@ -104,13 +104,13 @@ class TestRunTrafficCounting:
         ]
         flows: list[Flow] = [south_to_north, south_to_west, north_to_south]
 
-        a_expected_result = {
+        expected_result = {
             south_to_north_id: 0,
             north_to_south_id: 2,
             south_to_west_id: 4,
         }
 
         analysis = RunTrafficCounting()
-        a_result = analysis.run(events, flows)
+        result = analysis.run(events, flows)
 
-        assert a_result == a_expected_result
+        assert result == expected_result
