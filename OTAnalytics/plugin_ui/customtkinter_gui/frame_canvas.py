@@ -187,7 +187,6 @@ class CanvasEventHandler(EventHandler):
         self._notify_observers(event, LEAVE_CANVAS)
 
     def _on_mouse_enters_canvas(self, event: Any) -> None:
-        self._canvas.focus_set()
         self._notify_observers(event, ENTER_CANVAS)
 
     def _on_plus(self, event: Any) -> None:
