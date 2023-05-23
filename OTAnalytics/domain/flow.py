@@ -4,6 +4,12 @@ from typing import Optional
 
 from OTAnalytics.domain.section import Section
 
+FLOWS: str = "flows"
+FLOW_ID: str = "id"
+START: str = "start"
+END: str = "end"
+DISTANCE: str = "distance"
+
 
 @dataclass(frozen=True)
 class FlowId:
@@ -28,6 +34,14 @@ class Flow:
 
     def distance(self) -> float:
         return self._distance
+
+    def to_dict(self) -> dict:
+        return {
+            FLOW_ID: self.id.serialize(),
+            START: self.start.id.serialize(),
+            END: self.end.id.serialize(),
+            DISTANCE: self.distance(),
+        }
 
 
 class FlowListObserver(ABC):

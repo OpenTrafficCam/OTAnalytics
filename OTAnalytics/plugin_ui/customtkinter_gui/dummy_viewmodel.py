@@ -201,7 +201,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             return
         print(f"Sections file to save: {sections_file}")
         try:
-            self._application.save_sections(Path(sections_file))
+            self._application.save_flows(Path(sections_file))
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
@@ -379,7 +379,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         new_to_section_id = SectionId(new_flow[END_SECTION])
         from_section = self._application.get_section_for(new_from_section_id)
         to_section = self._application.get_section_for(new_to_section_id)
-        distance = new_flow[DISTANCE]
+        distance = float(new_flow[DISTANCE])
         if from_section is None:
             raise MissingSection(f"Could not find section for id {new_from_section_id}")
         if to_section is None:

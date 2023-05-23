@@ -11,6 +11,7 @@ from OTAnalytics.application.datastore import (
     SectionParser,
     TrackParser,
 )
+from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
 
@@ -119,11 +120,13 @@ class OTAnalyticsCli:
         ottrk_files: set[Path] = self._get_ottrk_files(self.cli_args.track_files)
         sections_file: Path = self._get_sections_file(self.cli_args.sections_file)
 
-        sections = self._parse_sections(sections_file)
+        sections, flows = self._parse_sections(sections_file)
 
         self._run_analysis(ottrk_files, sections)
 
-    def _parse_sections(self, sections_file: Path) -> Iterable[Section]:
+    def _parse_sections(
+        self, sections_file: Path
+    ) -> tuple[Iterable[Section], Iterable[Flow]]:
         return self._section_parser.parse(sections_file)
 
     def _parse_tracks(self, track_file: Path) -> Iterable[Track]:

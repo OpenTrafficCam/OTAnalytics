@@ -143,14 +143,14 @@ class OTAnalyticsApplication:
             section_id=section_id, plugin_data=plugin_data
         )
 
-    def save_sections(self, file: Path) -> None:
+    def save_flows(self, file: Path) -> None:
         """
-        Save the section repository into a file.
+        Save the flows and sections from the repositories into a file.
 
         Args:
-            file (Path): file to save the sections to
+            file (Path): file to save the flows and sections to
         """
-        self._datastore.save_section_file(file)
+        self._datastore.save_flow_file(file)
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """

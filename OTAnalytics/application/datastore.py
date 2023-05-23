@@ -38,7 +38,7 @@ class TrackParser(ABC):
 
 class SectionParser(ABC):
     @abstractmethod
-    def parse(self, file: Path) -> list[Section]:
+    def parse(self, file: Path) -> tuple[list[Section], list[Flow]]:
         pass
 
     @abstractmethod
@@ -46,7 +46,12 @@ class SectionParser(ABC):
         pass
 
     @abstractmethod
-    def serialize(self, sections: Iterable[Section], file: Path) -> None:
+    def serialize(
+        self,
+        sections: Iterable[Section],
+        flows: Iterable[Flow],
+        file: Path,
+    ) -> None:
         pass
 
 
@@ -270,19 +275,21 @@ class Datastore:
         Args:
             file (Path): file to load sections from
         """
-        sections = self._section_parser.parse(file)
+        sections, flows = self._section_parser.parse(file)
         self._section_repository.add_all(sections)
 
-    def save_section_file(self, file: Path) -> None:
+    def save_flow_file(self, file: Path) -> None:
         """
-        Save sections from the repository in a section file.
+        Save the flows and sections from the repositories into a file.
 
         Args:
-            file (Path): file to save sections to
+            file (Path): file to save the flows and sections to
         """
         if sections := self._section_repository.get_all():
+            flows = self._flow_repository.get_all()
             self._section_parser.serialize(
-                sections,
+                sections=sections,
+                flows=flows,
                 file=file,
             )
         else:

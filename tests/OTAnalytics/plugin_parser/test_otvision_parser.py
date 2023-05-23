@@ -11,8 +11,9 @@ from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain import geometry, section
+from OTAnalytics.domain import flow, geometry, section
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import (
     DirectionVector2D,
     ImageCoordinate,
@@ -351,15 +352,23 @@ class TestOtsectionParser:
                 first_coordinate,
             ],
         )
+        some_flow = Flow(
+            FlowId("some to other"),
+            start=line_section,
+            end=area_section,
+            distance=1,
+        )
         json_file = test_data_tmp_dir / "section.json"
         json_file.touch()
         sections = [line_section, area_section]
+        flows = [some_flow]
         parser = OtsectionParser()
-        parser.serialize(sections, json_file)
+        parser.serialize(sections, flows, json_file)
 
-        content = parser.parse(json_file)
+        parsed_sections, parsed_flows = parser.parse(json_file)
 
-        assert content == sections
+        assert parsed_sections == sections
+        # assert parsed_flows == flows
 
     def test_validate(self) -> None:
         parser = OtsectionParser()
@@ -384,13 +393,21 @@ class TestOtsectionParser:
             plugin_data={},
             coordinates=[Coordinate(1, 0), Coordinate(0, 1)],
         )
+        some_flow = Flow(
+            FlowId("some to other"),
+            start=some_section,
+            end=other_section,
+            distance=1,
+        )
         sections = [some_section, other_section]
+        flows = [some_flow]
         parser = OtsectionParser()
 
-        content = parser._convert(sections)
+        content = parser._convert(sections, flows)
 
         assert content == {
-            section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]
+            section.SECTIONS: [some_section.to_dict(), other_section.to_dict()],
+            flow.FLOWS: [some_flow.to_dict()],
         }
 
     def test_parse_plugin_data_no_entry(self, test_data_tmp_dir: Path) -> None:
@@ -427,13 +444,14 @@ class TestOtsectionParser:
                         },
                     ],
                 }
-            ]
+            ],
+            flow.FLOWS: [],
         }
         save_path = test_data_tmp_dir / "sections.otflow"
         _write_json(section_data, save_path)
 
         parser = OtsectionParser()
-        sections = parser.parse(save_path)
+        sections, flows = parser.parse(save_path)
 
         assert sections == [expected]
 
@@ -466,13 +484,14 @@ class TestOtsectionParser:
                     ],
                     section.PLUGIN_DATA: {"key_1": "some_data", "1": "some_data"},
                 }
-            ]
+            ],
+            flow.FLOWS: [],
         }
         save_path = test_data_tmp_dir / "sections.otflow"
         _write_json(section_data, save_path)
 
         parser = OtsectionParser()
-        sections = parser.parse(save_path)
+        sections, flows = parser.parse(save_path)
 
         assert sections == [expected]
 

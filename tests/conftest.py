@@ -339,7 +339,7 @@ def tracks(ottrk_path: Path) -> list[Track]:
 @pytest.fixture(scope="module")
 def sections(otsection_file: Path) -> list[Section]:
     otsection_parser = OtsectionParser()
-    return otsection_parser.parse(otsection_file)
+    return otsection_parser.parse(otsection_file)[0]
 
 
 @pytest.fixture

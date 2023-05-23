@@ -210,7 +210,7 @@ class TestDatastore:
                 coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
             )
         )
-        store.save_section_file(some_file)
+        store.save_flow_file(some_file)
 
         section_parser.serialize.assert_called()
 
