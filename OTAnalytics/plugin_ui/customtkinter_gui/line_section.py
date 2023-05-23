@@ -236,11 +236,11 @@ class SectionGeometryEditor(CanvasObserver):
             elif event_type == PLUS_KEYS:
                 self._add_knob(coordinate=coordinate)
             elif event_type in {RETURN_KEY, RIGHT_BUTTON_UP}:
+                self.detach_from(self._canvas.event_handler)
                 self._finish()
-                self.detach_from(self._canvas.event_handler)
             elif event_type == ESCAPE_KEY:
-                self._abort()
                 self.detach_from(self._canvas.event_handler)
+                self._abort()
         elif event_type == LEFT_KEY:
             self._shift_selected_knob_backward()
         elif event_type == RIGHT_KEY:
@@ -535,11 +535,11 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         elif self.geometry_builder.number_of_coordinates() >= 2 and (
             event_type in {RIGHT_BUTTON_UP, RETURN_KEY}
         ):
+            self.detach_from(self._canvas.event_handler)
             self.geometry_builder.finish_building()
-            self.detach_from(self._canvas.event_handler)
         elif event_type == ESCAPE_KEY:
-            self.geometry_builder.abort()
             self.detach_from(self._canvas.event_handler)
+            self.geometry_builder.abort()
 
     def finish_building(
         self,
