@@ -189,3 +189,16 @@ class FilteredCounter(TrafficCounter):
     def count(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
         filtered_events = self._filter.filter(events)
         return self._counter.count(filtered_events, flows)
+
+
+class GroupedCounter:
+    def __init__(self, groups: dict[str, TrafficCounter]) -> None:
+        self._groups = groups
+
+    def count(
+        self, events: list[Event], flows: list[Flow]
+    ) -> dict[str, dict[FlowId, int]]:
+        return {
+            name: counter.count(events=events, flows=flows)
+            for name, counter in self._groups.items()
+        }

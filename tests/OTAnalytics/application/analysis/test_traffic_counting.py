@@ -6,6 +6,7 @@ import pytest
 from OTAnalytics.application.analysis.traffic_counting import (
     CounterFilter,
     FilteredCounter,
+    GroupedCounter,
     RunTrafficCounting,
     TrafficCounter,
 )
@@ -166,3 +167,29 @@ class TestFilteredCounter:
 
         counter_filter.filter.assert_called_with(events)
         counter.count.assert_called_with(filtered_events, flows)
+
+
+class TestGroupedCounter:
+    def test_count_per_group(self) -> None:
+        first_group = Mock(spec=TrafficCounter)
+        second_group = Mock(spec=TrafficCounter)
+        events = Mock()
+        flows = Mock()
+        first_counts = Mock()
+        second_counts = Mock()
+        first_group.count.return_value = first_counts
+        second_group.count.return_value = second_counts
+        first_group_name = "first"
+        second_group_name = "second"
+        grouped_counters: dict[str, TrafficCounter] = {
+            first_group_name: first_group,
+            second_group_name: second_group,
+        }
+        group_counter = GroupedCounter(groups=grouped_counters)
+
+        result = group_counter.count(events, flows)
+
+        assert result == {
+            first_group_name: first_counts,
+            second_group_name: second_counts,
+        }
