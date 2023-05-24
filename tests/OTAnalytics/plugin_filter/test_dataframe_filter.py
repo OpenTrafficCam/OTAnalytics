@@ -139,8 +139,8 @@ class TestDataFrameFilterBuilder:
         builder = DataFrameFilterBuilder()
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_starts_at_or_after_date_predicate(start_date)
-
-        dataframe_filter = builder.build()
+        builder.build()
+        dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) == DataFrameStartsAtOrAfterDate
         assert dataframe_filter._predicate._start_date == start_date
@@ -152,7 +152,9 @@ class TestDataFrameFilterBuilder:
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_ends_before_or_at_date_predicate(end_date)
 
-        dataframe_filter = builder.build()
+        builder.build()
+
+        dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) == DataFrameEndsBeforeOrAtDate
         assert dataframe_filter._predicate._end_date == end_date
@@ -164,7 +166,9 @@ class TestDataFrameFilterBuilder:
         builder.set_classification_column(CLASSIFICATION)
         builder.add_has_classifications_predicate(classifications)
 
-        dataframe_filter = builder.build()
+        builder.build()
+
+        dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) == DataFrameHasClassifications
         assert dataframe_filter._predicate._classifications == classifications
@@ -201,7 +205,9 @@ class TestDataFrameFilterBuilder:
         builder.set_classification_column(CLASSIFICATION)
         builder.add_has_classifications_predicate(classifications)
 
-        dataframe_filter = builder.build()
+        builder.build()
+
+        dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
         assert (
             type(dataframe_filter._predicate._first_predicate)
@@ -216,6 +222,27 @@ class TestDataFrameFilterBuilder:
 
     def test_create_noop_filter_if_no_predicate_added(self) -> None:
         builder = DataFrameFilterBuilder()
-        track_filter = builder.build()
+        builder.build()
+        track_filter = builder.get_result()
 
         assert type(track_filter) == NoOpDataFrameFilter
+
+    def test_reset(self) -> None:
+        classifications = ["car", "truck"]
+
+        builder = DataFrameFilterBuilder()
+        builder.set_classification_column(CLASSIFICATION)
+        builder.set_occurrence_column(OCCURRENCE)
+        builder.add_has_classifications_predicate(classifications)
+
+        builder.build()
+        assert builder._result is not None
+        assert builder._complex_predicate is not None
+        assert builder._classification_column == CLASSIFICATION
+        assert builder._occurrence_column == OCCURRENCE
+
+        builder.get_result()
+        assert builder._result is None
+        assert builder._complex_predicate is None
+        assert builder._classification_column is None
+        assert builder._occurrence_column is None
