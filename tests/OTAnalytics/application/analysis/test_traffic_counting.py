@@ -160,9 +160,9 @@ class TestFilteredCounter:
         flows = Mock()
         filtered_events = Mock()
         counter_filter.filter.return_value = filtered_events
-        by_class_counter = FilteredCounter(filter=counter_filter, counter=counter)
+        filtered_counter = FilteredCounter(filter=counter_filter, counter=counter)
 
-        by_class_counter.count(events, flows)
+        filtered_counter.count(events, flows)
 
         counter_filter.filter.assert_called_with(events)
         counter.count.assert_called_with(filtered_events, flows)
