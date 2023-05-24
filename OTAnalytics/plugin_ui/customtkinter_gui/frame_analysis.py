@@ -15,24 +15,24 @@ class FrameAnalysis(CTkFrame):
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        self.label = CTkLabel(master=self, text="Analysis")
-        self.button_load_tracks = CTkButton(
+        self._label_title = CTkLabel(master=self, text="Analysis")
+        self._button_create_events = CTkButton(
             master=self,
             text="Create events",
             command=self._create_events,
         )
-        self.button_save_eventlist = CTkButton(
+        self._button_save_eventlist = CTkButton(
             master=self,
             text="Save eventlist",
             command=self._save_eventlist,
         )
 
     def _place_widgets(self) -> None:
-        self.label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.button_load_tracks.grid(
+        self._label_title.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self._button_create_events.grid(
             row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_save_eventlist.grid(
+        self._button_save_eventlist.grid(
             row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
