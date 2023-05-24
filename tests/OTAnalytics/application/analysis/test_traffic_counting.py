@@ -3,7 +3,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.analysis.traffic_counting import RunTrafficCounting
+from OTAnalytics.application.analysis.traffic_counting import (
+    CounterFilter,
+    FilteredCounter,
+    RunTrafficCounting,
+    TrafficCounter,
+)
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -145,3 +150,19 @@ class TestRunTrafficCounting:
         result = analysis.count(events, flows)
 
         assert result == expected_result
+
+
+class TestFilteredCounter:
+    def test_count_by_class(self) -> None:
+        counter_filter = Mock(sepc=CounterFilter)
+        counter = Mock(spec=TrafficCounter)
+        events = Mock()
+        flows = Mock()
+        filtered_events = Mock()
+        counter_filter.filter.return_value = filtered_events
+        by_class_counter = FilteredCounter(filter=counter_filter, counter=counter)
+
+        by_class_counter.count(events, flows)
+
+        counter_filter.filter.assert_called_with(events)
+        counter.count.assert_called_with(filtered_events, flows)

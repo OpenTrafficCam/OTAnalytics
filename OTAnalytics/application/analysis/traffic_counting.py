@@ -173,3 +173,19 @@ class RunTrafficCounting(TrafficCounter):
             if flow.id not in counts:
                 counts[flow.id] = 0
         return counts
+
+
+class CounterFilter(ABC):
+    @abstractmethod
+    def filter(self, events: list[Event]) -> list[Event]:
+        pass
+
+
+class FilteredCounter(TrafficCounter):
+    def __init__(self, filter: CounterFilter, counter: TrafficCounter) -> None:
+        self._filter = filter
+        self._counter = counter
+
+    def count(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
+        filtered_events = self._filter.filter(events)
+        return self._counter.count(filtered_events, flows)
