@@ -20,6 +20,15 @@ def flow() -> Flow:
     )
 
 
+class TestFlow:
+    def test_invalid_distance(self) -> None:
+        flow_id = FlowId("some")
+        start = Mock(spec=Section)
+        end = Mock(spec=Section)
+        with pytest.raises(ValueError):
+            Flow(flow_id, start=start, end=end, distance=-1)
+
+
 class TestFlowRepository:
     def test_add_flow(self, flow: Flow) -> None:
         repository = FlowRepository()
