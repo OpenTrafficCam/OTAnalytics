@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Iterable
 
@@ -6,10 +7,16 @@ from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import SectionId
 
 
-class RunTrafficCounting:
+class TrafficCounter(ABC):
+    @abstractmethod
+    def count(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
+        pass
+
+
+class RunTrafficCounting(TrafficCounter):
     """Count road users per flow."""
 
-    def run(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
+    def count(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
         grouped_flows = self.__group_flows_by_sections(flows)
         grouped_sections = self._group_sections_by_road_user(events)
         assigned_users = self.__assign_user_to_flow(grouped_flows, grouped_sections)

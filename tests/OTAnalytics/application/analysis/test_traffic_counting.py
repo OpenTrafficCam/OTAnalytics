@@ -142,6 +142,6 @@ class TestRunTrafficCounting:
         self, events: list[Event], flows: list[Flow], expected_result: dict
     ) -> None:
         analysis = RunTrafficCounting()
-        result = analysis.run(events, flows)
+        result = analysis.count(events, flows)
 
         assert result == expected_result
