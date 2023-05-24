@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Iterable
 
 from OTAnalytics.domain.event import Event
@@ -7,22 +8,45 @@ from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import SectionId
 
 
+@dataclass(frozen=True)
+class Count(ABC):
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
+
+
+@dataclass(frozen=True)
+class SimpleCount(Count):
+    result: dict[FlowId, int]
+
+    def to_dict(self) -> dict:
+        return self.result
+
+
+@dataclass(frozen=True)
+class GroupedCount(Count):
+    result: dict[str, Count]
+
+    def to_dict(self) -> dict:
+        return {name: sub_result.to_dict() for name, sub_result in self.result.items()}
+
+
 class TrafficCounter(ABC):
     @abstractmethod
-    def count(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
+    def count(self, events: list[Event], flows: list[Flow]) -> Count:
         pass
 
 
 class RunTrafficCounting(TrafficCounter):
     """Count road users per flow."""
 
-    def count(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
+    def count(self, events: list[Event], flows: list[Flow]) -> Count:
         grouped_flows = self.__group_flows_by_sections(flows)
         grouped_sections = self._group_sections_by_road_user(events)
         assigned_users = self.__assign_user_to_flow(grouped_flows, grouped_sections)
         counts = self.__count_users_per_flow(assigned_users)
         self.__fill_empty_flows(flows, counts)
-        return counts
+        return SimpleCount(counts)
 
     def __group_flows_by_sections(
         self, flows: Iterable[Flow]
@@ -186,7 +210,7 @@ class FilteredCounter(TrafficCounter):
         self._filter = filter
         self._counter = counter
 
-    def count(self, events: list[Event], flows: list[Flow]) -> dict[FlowId, int]:
+    def count(self, events: list[Event], flows: list[Flow]) -> Count:
         filtered_events = self._filter.filter(events)
         return self._counter.count(filtered_events, flows)
 
@@ -195,10 +219,10 @@ class GroupedCounter:
     def __init__(self, groups: dict[str, TrafficCounter]) -> None:
         self._groups = groups
 
-    def count(
-        self, events: list[Event], flows: list[Flow]
-    ) -> dict[str, dict[FlowId, int]]:
-        return {
-            name: counter.count(events=events, flows=flows)
-            for name, counter in self._groups.items()
-        }
+    def count(self, events: list[Event], flows: list[Flow]) -> Count:
+        return GroupedCount(
+            {
+                name: counter.count(events=events, flows=flows)
+                for name, counter in self._groups.items()
+            }
+        )

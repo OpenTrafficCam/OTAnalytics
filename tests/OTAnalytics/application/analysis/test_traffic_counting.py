@@ -6,8 +6,10 @@ import pytest
 from OTAnalytics.application.analysis.traffic_counting import (
     CounterFilter,
     FilteredCounter,
+    GroupedCount,
     GroupedCounter,
     RunTrafficCounting,
+    SimpleCount,
     TrafficCounter,
 )
 from OTAnalytics.domain.event import Event
@@ -100,33 +102,39 @@ def create_test_cases() -> list[tuple]:
         create_event(fifth_track, south_section_id),
         create_event(sixth_track, south_section_id),
     ]
-    some_expected_result = {
-        south_to_north_id: 0,
-        north_to_south_id: 2,
-        south_to_west_id: 4,
-        south_to_east_id: 0,
-    }
+    some_expected_result = SimpleCount(
+        {
+            south_to_north_id: 0,
+            north_to_south_id: 2,
+            south_to_west_id: 4,
+            south_to_east_id: 0,
+        }
+    )
     single_track_multiple_sections_events = [
         create_event(first_track, south_section_id),
         create_event(first_track, north_section_id),
         create_event(first_track, west_section_id),
         create_event(first_track, east_section_id),
     ]
-    single_track_multiple_sections_result = {
-        south_to_north_id: 0,
-        north_to_south_id: 0,
-        south_to_west_id: 1,
-        south_to_east_id: 0,
-    }
+    single_track_multiple_sections_result = SimpleCount(
+        {
+            south_to_north_id: 0,
+            north_to_south_id: 0,
+            south_to_west_id: 1,
+            south_to_east_id: 0,
+        }
+    )
     single_track_single_sections_events = [
         create_event(first_track, south_section_id),
     ]
-    single_track_single_sections_result = {
-        south_to_north_id: 0,
-        north_to_south_id: 0,
-        south_to_west_id: 0,
-        south_to_east_id: 0,
-    }
+    single_track_single_sections_result = SimpleCount(
+        {
+            south_to_north_id: 0,
+            north_to_south_id: 0,
+            south_to_west_id: 0,
+            south_to_east_id: 0,
+        }
+    )
     return [
         (some_events, flows, some_expected_result),
         (
@@ -189,7 +197,9 @@ class TestGroupedCounter:
 
         result = group_counter.count(events, flows)
 
-        assert result == {
-            first_group_name: first_counts,
-            second_group_name: second_counts,
-        }
+        assert result == GroupedCount(
+            {
+                first_group_name: first_counts,
+                second_group_name: second_counts,
+            }
+        )
