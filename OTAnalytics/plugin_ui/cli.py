@@ -5,7 +5,10 @@ from typing import Iterable
 
 from tqdm import tqdm
 
-from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
+from OTAnalytics.application.analysis.analysis import (
+    RunIntersect,
+    RunSceneEventDetection,
+)
 from OTAnalytics.application.datastore import (
     EventListParser,
     SectionParser,

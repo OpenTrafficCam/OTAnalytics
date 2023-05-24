@@ -1,77 +1,9 @@
 from collections import defaultdict
 from typing import Iterable
 
-from OTAnalytics.application.eventlist import SceneActionDetector, SectionActionDetector
-from OTAnalytics.domain.event import Event, SectionEventBuilder
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
-from OTAnalytics.domain.intersect import (
-    IntersectAreaByTrackPoints,
-    IntersectBySmallTrackComponents,
-    IntersectImplementation,
-    IntersectParallelizationStrategy,
-)
-from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
-from OTAnalytics.domain.track import Track
-
-
-class RunIntersect:
-    """
-    This class defines the use case to intersect the given tracks with the given
-    sections
-    """
-
-    def __init__(
-        self,
-        intersect_implementation: IntersectImplementation,
-        intersect_parallelizer: IntersectParallelizationStrategy,
-    ) -> None:
-        self._intersect_implementation = intersect_implementation
-        self._intersect_parallelizer = intersect_parallelizer
-
-    def run(self, tracks: Iterable[Track], sections: Iterable[Section]) -> list[Event]:
-        return self._intersect_parallelizer.execute(
-            self._run_on_single_track, tracks, sections
-        )
-
-    def _run_on_single_track(
-        self, track: Track, sections: Iterable[Section]
-    ) -> list[Event]:
-        events: list[Event] = []
-        for _section in sections:
-            if isinstance(_section, LineSection):
-                line_section_intersector = IntersectBySmallTrackComponents(
-                    implementation=self._intersect_implementation,
-                    line_section=_section,
-                )
-                section_event_builder = SectionEventBuilder()
-                section_action_detector = SectionActionDetector(
-                    intersector=line_section_intersector,
-                    section_event_builder=section_event_builder,
-                )
-                _events = section_action_detector._detect(section=_section, track=track)
-                events.extend(_events)
-            if isinstance(_section, Area):
-                area_section_intersector = IntersectAreaByTrackPoints(
-                    implementation=self._intersect_implementation,
-                    area=_section,
-                )
-                section_event_builder = SectionEventBuilder()
-                section_action_detector = SectionActionDetector(
-                    intersector=area_section_intersector,
-                    section_event_builder=section_event_builder,
-                )
-                _events = section_action_detector._detect(section=_section, track=track)
-                events.extend(_events)
-
-        return events
-
-
-class RunSceneEventDetection:
-    def __init__(self, scene_action_detector: SceneActionDetector) -> None:
-        self._scene_action_detector = scene_action_detector
-
-    def run(self, tracks: Iterable[Track]) -> list[Event]:
-        return self._scene_action_detector.detect(tracks)
+from OTAnalytics.domain.section import SectionId
 
 
 class RunTrafficCounting:
@@ -90,10 +22,8 @@ class RunTrafficCounting:
     ) -> dict[tuple[SectionId, SectionId], list[Flow]]:
         """
         Group the flows by start and end section.
-
         Args:
             flows (Iterable[Flow]): flows to group
-
         Returns:
             dict[tuple[SectionId, SectionId], list[Flow]]: flows grouped by start and
             end section
@@ -110,10 +40,8 @@ class RunTrafficCounting:
     ) -> dict[int, list[SectionId]]:
         """
         Group the sections of the events by road user.
-
         Args:
             events (Iterable[Event]): events of a road user
-
         Returns:
             dict[int, list[SectionId]]: sections grouped by user
         """
@@ -130,12 +58,10 @@ class RunTrafficCounting:
     ) -> dict[int, FlowId]:
         """
         Assign each user to exactly one flow.
-
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
             end section
             sections_by_road_user (dict[int, list[SectionId]]): sections by road user
-
         Returns:
             dict[int, FlowId]: assignment of flow to road user
         """
@@ -153,11 +79,9 @@ class RunTrafficCounting:
     ) -> list[Flow]:
         """
         Create flow candidates to select one from in a later step.
-
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): _description_
             sections (list[SectionId]): _description_
-
         Returns:
             list[Flow]: _description_
         """
@@ -169,10 +93,8 @@ class RunTrafficCounting:
     ) -> list[tuple[SectionId, SectionId]]:
         """
         Create section pairs. This is effectively the cross product of the given list.
-
         Args:
             sections (list[SectionId]): sections to create the cross product from
-
         Returns:
             list[tuple[SectionId, SectionId]]: section pairs
         """
@@ -188,13 +110,11 @@ class RunTrafficCounting:
     ) -> list[Flow]:
         """
         Intersect the section pairs with the flows. Emit a candidate per match.
-
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows grouped by
             start and end section
             section_pairs (list[tuple[SectionId, SectionId]]): pairs of sections
             to match with flows
-
         Returns:
             list[Flow]: flows matching one pair of events
         """
@@ -207,10 +127,8 @@ class RunTrafficCounting:
         """
         Select the best matching flow for the user. Best match is defined as the flow
         with the largest distance.
-
         Args:
             candidate_flows (list[Flow]): candidate flows to select from
-
         Returns:
             Flow: best matching flow
         """
@@ -221,10 +139,8 @@ class RunTrafficCounting:
     ) -> dict[FlowId, int]:
         """
         Count users per flow.
-
         Args:
             user_to_flow (dict[int, FlowId]): assigment of users to flows
-
         Returns:
             dict[FlowId, int]: count per flow
         """
@@ -240,11 +156,9 @@ class RunTrafficCounting:
         """
         Assign all flows a counting of zero if they are not present in the counts
         dictionary.
-
         Args:
             flows (Iterable[Flow]): all flows to count for
             counts (dict[FlowId, int]): counted users per flow
-
         Returns:
             dict[FlowId, int]: counted users per flow, filled with zero for empty flows
         """

@@ -1,7 +1,10 @@
 from pathlib import Path
 from typing import Iterable, Optional
 
-from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
+from OTAnalytics.application.analysis.analysis import (
+    RunIntersect,
+    RunSceneEventDetection,
+)
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver

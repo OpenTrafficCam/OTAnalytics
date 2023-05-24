@@ -1,7 +1,10 @@
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
-from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
+from OTAnalytics.application.analysis.analysis import (
+    RunIntersect,
+    RunSceneEventDetection,
+)
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
     Datastore,
