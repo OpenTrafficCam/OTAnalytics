@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
+from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.section import Section
 
 DISTANCES: str = "distances"
@@ -33,6 +36,10 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
+        pass
+
+    @abstractmethod
+    def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
         pass
 
     @abstractmethod
@@ -121,4 +128,48 @@ class ViewModel(ABC):
 
     @abstractmethod
     def change_track_offset_to_section_offset(self) -> None:
+        pass
+
+    @abstractmethod
+    def validate_date(self, date: str) -> bool:
+        pass
+
+    @abstractmethod
+    def validate_hour(self, hour: str) -> bool:
+        pass
+
+    @abstractmethod
+    def validate_minute(self, minute: str) -> bool:
+        pass
+
+    @abstractmethod
+    def validate_second(self, second: str) -> bool:
+        pass
+
+    @abstractmethod
+    def apply_filter_tracks_by_date(self, date_range: DateRange) -> None:
+        pass
+
+    @abstractmethod
+    def reset_filter_tracks_by_date(self) -> None:
+        pass
+
+    @abstractmethod
+    def get_first_detection_occurrence(self) -> Optional[datetime]:
+        pass
+
+    @abstractmethod
+    def get_last_detection_occurrence(self) -> Optional[datetime]:
+        pass
+
+    @abstractmethod
+    def get_filter_tracks_by_date_setting(self) -> DateRange:
+        pass
+
+    @abstractmethod
+    def enable_filter_track_by_date(self) -> None:
+        pass
+
+    @abstractmethod
+    def disable_filter_track_by_date(self) -> None:
         pass

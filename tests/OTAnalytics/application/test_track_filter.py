@@ -105,8 +105,9 @@ class TestTrackFilterBuilder:
 
         builder = TrackFilterBuilder()
         builder.add_starts_at_or_after_date_predicate(start_date)
+        builder.build()
 
-        track_filter = builder.build()
+        track_filter = builder.get_result()
         assert hasattr(track_filter, "_predicate")
         assert type(track_filter._predicate) == TrackStartsAtOrAfterDate
         assert track_filter._predicate._start_date == start_date
@@ -116,8 +117,9 @@ class TestTrackFilterBuilder:
 
         builder = TrackFilterBuilder()
         builder.add_ends_before_or_at_date_predicate(end_date)
+        builder.build()
 
-        track_filter = builder.build()
+        track_filter = builder.get_result()
         assert hasattr(track_filter, "_predicate")
         assert type(track_filter._predicate) == TrackEndsBeforeOrAtDate
         assert track_filter._predicate._end_date == end_date
@@ -126,8 +128,9 @@ class TestTrackFilterBuilder:
         classifications = ["car", "truck"]
         builder = TrackFilterBuilder()
         builder.add_has_classifications_predicate(classifications)
+        builder.build()
 
-        track_filter = builder.build()
+        track_filter = builder.get_result()
         assert hasattr(track_filter, "_predicate")
         assert type(track_filter._predicate) == TrackHasClassifications
         assert track_filter._predicate._classifications == classifications
@@ -139,7 +142,8 @@ class TestTrackFilterBuilder:
         builder = TrackFilterBuilder()
         builder.add_has_classifications_predicate(classifications)
         builder.add_starts_at_or_after_date_predicate(start_date)
-        track_filter = builder.build()
+        builder.build()
+        track_filter = builder.get_result()
 
         result = track_filter.apply([track])
         assert result == [track]
@@ -153,7 +157,8 @@ class TestTrackFilterBuilder:
         builder.add_starts_at_or_after_date_predicate(
             start_date,
         )
-        track_filter = builder.build()
+        builder.build()
+        track_filter = builder.get_result()
 
         result = track_filter.apply([track])
         assert result == []
@@ -179,6 +184,19 @@ class TestTrackFilterBuilder:
 
     def test_create_noop_filter_if_no_predicate_added(self) -> None:
         builder = TrackFilterBuilder()
-        track_filter = builder.build()
+        builder.build()
+        track_filter = builder.get_result()
 
         assert type(track_filter) == NoOpTrackFilter
+
+    def test_reset(self) -> None:
+        builder = TrackFilterBuilder()
+        builder.add_has_classifications_predicate(["car"])
+
+        builder.build()
+        assert builder._result is not None
+        assert builder._complex_predicate is not None
+
+        builder.get_result()
+        assert builder._result is None
+        assert builder._complex_predicate is None

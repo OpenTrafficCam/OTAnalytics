@@ -128,18 +128,14 @@ class DataFrameHasClassifications(DataFramePredicate):
         return to_test[self._column_name].isin(self._classifications)
 
 
-class DataFrameFilterBuilder(FilterBuilder):
+class DataFrameFilterBuilder(FilterBuilder[DataFrame, Series]):
     """A builder used to build a `DataFrameFilter`."""
 
     def __init__(self) -> None:
+        super().__init__()
         self._complex_predicate: Optional[Predicate[DataFrame, Series]] = None
         self._classification_column: Optional[str] = None
         self._occurrence_column: Optional[str] = None
-
-    def build(self) -> Filter[DataFrame, Series]:
-        if self._complex_predicate is None:
-            return NoOpDataFrameFilter()
-        return DataFrameFilter(self._complex_predicate)
 
     def add_has_classifications_predicate(self, classifications: list[str]) -> None:
         if self._classification_column is None:
@@ -179,6 +175,18 @@ class DataFrameFilterBuilder(FilterBuilder):
 
     def set_occurrence_column(self, occurrence_column: str) -> None:
         self._occurrence_column = occurrence_column
+
+    def build(self) -> None:
+        if self._complex_predicate is None:
+            self._result = NoOpDataFrameFilter()
+        else:
+            self._result = DataFrameFilter(self._complex_predicate)
+
+    def _reset(self) -> None:
+        self._complex_predicate = None
+        self._occurrence_column = None
+        self._classification_column = None
+        self._result = None
 
     def _extend_complex_predicate(
         self, predicate: Predicate[DataFrame, Series]
