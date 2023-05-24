@@ -153,7 +153,7 @@ class TestRunTrafficCounting:
 
 
 class TestFilteredCounter:
-    def test_count_by_class(self) -> None:
+    def test_filter_before_count(self) -> None:
         counter_filter = Mock(sepc=CounterFilter)
         counter = Mock(spec=TrafficCounter)
         events = Mock()
