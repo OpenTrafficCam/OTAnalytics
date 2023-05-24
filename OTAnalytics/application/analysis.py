@@ -141,9 +141,9 @@ class RunTrafficCounting:
         """
         user_to_flow: dict[int, FlowId] = {}
         for road_user, sections in sections_by_road_user.items():
-            candidate_flows = self.__create_candidates(flows, sections)
-            flow = self.__select_flow(candidate_flows)
-            user_to_flow[road_user] = flow.id
+            if candidate_flows := self.__create_candidates(flows, sections):
+                flow = self.__select_flow(candidate_flows)
+                user_to_flow[road_user] = flow.id
         return user_to_flow
 
     def __create_candidates(
