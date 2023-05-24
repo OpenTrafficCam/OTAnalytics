@@ -3,7 +3,14 @@ from typing import Iterable, Optional
 
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.application.state import (
+    SectionState,
+    TracksMetadata,
+    TrackState,
+    TrackViewState,
+)
+from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
@@ -29,6 +36,8 @@ class OTAnalyticsApplication:
         section_state: SectionState,
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
+        tracks_metadata: TracksMetadata,
+        filter_element_setting_restorer: FilterElementSettingRestorer,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -36,12 +45,15 @@ class OTAnalyticsApplication:
         self.section_state: SectionState = section_state
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
+        self._tracks_metadata = tracks_metadata
+        self._filter_element_setting_restorer = filter_element_setting_restorer
 
     def connect_observers(self) -> None:
         """
         Connect the observers with the repositories to listen to domain object changes.
         """
         self._datastore.register_tracks_observer(self.track_state)
+        self._datastore.register_tracks_observer(self._tracks_metadata)
         self._datastore.register_sections_observer(self.section_state)
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
@@ -223,3 +235,36 @@ class OTAnalyticsApplication:
             Optional[RelativeOffsetCoordinate]: the current track offset.
         """
         return self.track_view_state.track_offset.get()
+
+    def update_date_range_tracks_filter(self, date_range: DateRange) -> None:
+        """Update the date range of the track filter.
+
+        Args:
+            date_range (DateRange): the date range
+        """
+        current_filter_element = self.track_view_state.filter_element.get()
+
+        self.track_view_state.filter_element.set(
+            current_filter_element.derive_date(date_range)
+        )
+
+    def enable_filter_track_by_date(self) -> None:
+        """Enable filtering track by date and restoring the previous date range."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        restored_filter_element = (
+            self._filter_element_setting_restorer.restore_by_date_filter_setting(
+                current_filter_element
+            )
+        )
+        self.track_view_state.filter_element.set(restored_filter_element)
+
+    def disable_filter_track_by_date(self) -> None:
+        """Disable filtering track by date and saving the current date range."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        self._filter_element_setting_restorer.save_by_date_filter_setting(
+            current_filter_element
+        )
+
+        self.track_view_state.filter_element.set(
+            FilterElement(DateRange(None, None), current_filter_element.classifications)
+        )
