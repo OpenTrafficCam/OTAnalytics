@@ -9,7 +9,7 @@ import pytest
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
-from OTAnalytics.application.analysis.analysis import (
+from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
 )

@@ -5,7 +5,7 @@ from typing import Iterable
 
 from tqdm import tqdm
 
-from OTAnalytics.application.analysis.analysis import (
+from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
 )
