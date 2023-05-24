@@ -453,8 +453,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         flow_id = FlowId(selected_flow)
         self._application.remove_flow(flow_id)
 
-    def start_analysis(self) -> None:
-        self._application.start_analysis()
+    def create_events(self) -> None:
+        self._application.create_events()
 
     def save_events(self, file: str) -> None:
         print(f"Eventlist file to save: {file}")

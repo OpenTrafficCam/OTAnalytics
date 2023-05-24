@@ -18,8 +18,8 @@ class FrameAnalysis(CTkFrame):
         self.label = CTkLabel(master=self, text="Analysis")
         self.button_load_tracks = CTkButton(
             master=self,
-            text="Start analysis",
-            command=self._start_analysis,
+            text="Create events",
+            command=self._create_events,
         )
         self.button_save_eventlist = CTkButton(
             master=self,
@@ -36,9 +36,9 @@ class FrameAnalysis(CTkFrame):
             row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
-    def _start_analysis(self) -> None:
+    def _create_events(self) -> None:
         print("Start analysis")
-        self._viewmodel.start_analysis()
+        self._viewmodel.create_events()
 
     def _save_eventlist(self) -> None:
         file = asksaveasfilename(

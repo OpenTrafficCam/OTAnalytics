@@ -180,7 +180,7 @@ class OTAnalyticsApplication:
         """
         return self._datastore.get_image_of_track(track_id)
 
-    def start_analysis(self) -> None:
+    def create_events(self) -> None:
         """
         Intersect all tracks with all sections and write the events into the event
         repository
