@@ -37,7 +37,7 @@ class TrafficCounter(ABC):
         pass
 
 
-class RunTrafficCounting(TrafficCounter):
+class SimpleCounter(TrafficCounter):
     """Count road users per flow."""
 
     def count(self, events: list[Event], flows: list[Flow]) -> Count:

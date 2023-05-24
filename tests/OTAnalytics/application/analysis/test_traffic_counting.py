@@ -8,8 +8,8 @@ from OTAnalytics.application.analysis.traffic_counting import (
     FilteredCounter,
     GroupedCount,
     GroupedCounter,
-    RunTrafficCounting,
     SimpleCount,
+    SimpleCounter,
     TrafficCounter,
 )
 from OTAnalytics.domain.event import Event
@@ -150,12 +150,12 @@ def create_test_cases() -> list[tuple]:
     ]
 
 
-class TestRunTrafficCounting:
+class TestSimpleCounter:
     @pytest.mark.parametrize("events, flows, expected_result", create_test_cases())
     def test_run(
         self, events: list[Event], flows: list[Flow], expected_result: dict
     ) -> None:
-        analysis = RunTrafficCounting()
+        analysis = SimpleCounter()
         result = analysis.count(events, flows)
 
         assert result == expected_result
