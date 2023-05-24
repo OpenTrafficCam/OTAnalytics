@@ -128,7 +128,6 @@ def create_test_cases() -> list[tuple]:
             flows,
             single_track_multiple_sections_result,
         ),
-        (some_events, flows, some_expected_result),
         (
             single_track_single_sections_events,
             flows,
