@@ -87,7 +87,8 @@ class ToplevelFlows(CTkToplevel):
         self.geometry(f"+{x+10}+{y+10}")
 
     def _set_focus(self) -> None:
-        self.entry_distance.focus_set()
+        self.after(0, lambda: self.lift())
+        self.after(0, lambda: self.entry_distance.focus_set())
 
     def _set_close_on_return_key(self) -> None:
         self.entry_distance.bind(tk_events.RETURN_KEY, self.close)

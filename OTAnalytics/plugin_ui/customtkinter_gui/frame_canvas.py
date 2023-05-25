@@ -159,9 +159,13 @@ class CanvasEventHandler(EventHandler):
         self._canvas.bind(tk_events.ESCAPE_KEY, self._on_escape)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
+        self._canvas.focus_set()
         self._observers.append(observer)
 
     def detach_observer(self, observer: CanvasObserver) -> None:
+        if self._canvas.focus_get() == self._canvas:
+            print("set focus to canvases masters master")
+            self._canvas.master.master.focus_set()
         self._observers.remove(observer)
 
     def _notify_observers(
@@ -190,7 +194,6 @@ class CanvasEventHandler(EventHandler):
         self._notify_observers(event, LEAVE_CANVAS)
 
     def _on_mouse_enters_canvas(self, event: Any) -> None:
-        self._canvas.focus_set()
         self._notify_observers(event, ENTER_CANVAS)
 
     def _on_plus(self, event: Any) -> None:
