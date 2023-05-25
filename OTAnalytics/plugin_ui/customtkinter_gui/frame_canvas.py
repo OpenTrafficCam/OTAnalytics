@@ -29,6 +29,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     RIGHT_BUTTON_UP,
     RIGHT_KEY,
     STICKY,
+    tk_events,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 
@@ -137,22 +138,25 @@ class CanvasEventHandler(EventHandler):
         self._bind_events()
 
     def _bind_events(self) -> None:
-        self._canvas.bind("<Enter>", self._on_mouse_enters_canvas)
-        self._canvas.bind("<Leave>", self._on_mouse_leaves_canvas)
-        self._canvas.bind("<ButtonPress-1>", self._on_left_button_down)
-        self._canvas.bind("<ButtonRelease-1>", self._on_left_button_up)
-        self._canvas.bind("<ButtonRelease-2>", self._on_right_button_up)
-        self._canvas.bind("<Motion>", self._on_mouse_motion)
-        self._canvas.bind("<B1-Motion>>", self._on_motion_while_left_button_down)
-        self._canvas.bind("+", self._on_plus)
-        self._canvas.bind("<KP_Add>", self._on_plus)
-        self._canvas.bind("<Left>", self._on_left)
-        self._canvas.bind("<Right>", self._on_right)
-        self._canvas.bind("<Return>", self._on_return)
-        self._canvas.bind("<KP_Enter>", self._on_return)
-        self._canvas.bind("<Delete>", self._on_delete)
-        self._canvas.bind("<BackSpace>", self._on_delete)
-        self._canvas.bind("<Escape>", self._on_escape)
+        self._canvas.bind(tk_events.MOUSE_ENTERS_WIDGET, self._on_mouse_enters_canvas)
+        self._canvas.bind(tk_events.MOUSE_LEAVES_WIDGET, self._on_mouse_leaves_canvas)
+        self._canvas.bind(tk_events.LEFT_BUTTON_DOWN, self._on_left_button_down)
+        self._canvas.bind(tk_events.LEFT_BUTTON_UP, self._on_left_button_up)
+        self._canvas.bind(tk_events.RIGHT_BUTTON_UP, self._on_right_button_up)
+        self._canvas.bind(tk_events.MOUSE_MOTION, self._on_mouse_motion)
+        self._canvas.bind(
+            tk_events.MOUSE_MOTION_WHILE_LEFT_BUTTON_DOWN,
+            self._on_motion_while_left_button_down,
+        )
+        self._canvas.bind(tk_events.PLUS_KEY, self._on_plus)
+        self._canvas.bind(tk_events.KEYPAD_PLUS_KEY, self._on_plus)
+        self._canvas.bind(tk_events.LEFT_ARROW_KEY, self._on_left)
+        self._canvas.bind(tk_events.RIGHT_ARROW_KEY, self._on_right)
+        self._canvas.bind(tk_events.RETURN_KEY, self._on_return)
+        self._canvas.bind(tk_events.KEYPAD_RETURN_KEY, self._on_return)
+        self._canvas.bind(tk_events.DELETE_KEY, self._on_delete)
+        self._canvas.bind(tk_events.BACKSPACE_KEY, self._on_delete)
+        self._canvas.bind(tk_events.ESCAPE_KEY, self._on_escape)
 
     def attach_observer(self, observer: CanvasObserver) -> None:
         self._observers.append(observer)

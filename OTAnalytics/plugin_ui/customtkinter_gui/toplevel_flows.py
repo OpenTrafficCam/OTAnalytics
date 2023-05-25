@@ -2,7 +2,12 @@ from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkOptionMenu, CTkToplevel
 
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    tk_events,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
 DISTANCE = "Distance"
@@ -85,8 +90,8 @@ class ToplevelFlows(CTkToplevel):
         self.entry_distance.focus_set()
 
     def _set_close_on_return_key(self) -> None:
-        self.entry_distance.bind("<Return>", self.close)
-        self.entry_distance.bind("<KP_Enter>", self.close)
+        self.entry_distance.bind(tk_events.RETURN_KEY, self.close)
+        self.entry_distance.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
 
     def close(self, event: Any = None) -> None:
         if not self._sections_are_valid():

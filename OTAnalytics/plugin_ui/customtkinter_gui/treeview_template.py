@@ -3,13 +3,14 @@ from tkinter.ttk import Treeview
 from typing import Any, Optional
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
 
 
 class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(show="tree", selectmode="browse", **kwargs)
-        self.bind("<ButtonRelease-2>", self._on_deselect)
-        self.bind("<<TreeviewSelect>>", self._on_select)
+        self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
+        self.bind(tk_events.TREEVIEW_SELECT, self._on_select)
         self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
