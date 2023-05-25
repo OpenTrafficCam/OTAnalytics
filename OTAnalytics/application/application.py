@@ -221,11 +221,7 @@ class OTAnalyticsApplication:
         Args:
             id (SectionId): the id of the currently selected section
         """
-        if id:
-            section_id = SectionId(id)
-        else:
-            section_id = None
-
+        section_id = SectionId(id) if id else None
         self.section_state.selected_section.set(section_id)
 
     def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
