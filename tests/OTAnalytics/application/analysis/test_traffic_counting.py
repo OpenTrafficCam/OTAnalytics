@@ -23,12 +23,13 @@ from OTAnalytics.domain.types import EventType
 def create_event(
     track_id: TrackId,
     section: SectionId,
+    second: int,
 ) -> Event:
     return Event(
         road_user_id=track_id.id,
         road_user_type="car",
         hostname="my_hostname",
-        occurrence=datetime(2020, 1, 1, 0, 0, 0),
+        occurrence=datetime(2020, 1, 1, 0, 0, second=second),
         frame_number=1,
         section_id=section,
         event_coordinate=ImageCoordinate(0, 0),
@@ -88,19 +89,19 @@ def create_test_cases() -> list[tuple]:
     flows: list[Flow] = [south_to_north, south_to_west, south_to_east, north_to_south]
 
     some_events: list[Event] = [
-        create_event(first_track, south_section_id),
-        create_event(second_track, south_section_id),
-        create_event(third_track, south_section_id),
-        create_event(forth_track, south_section_id),
-        create_event(fifth_track, north_section_id),
-        create_event(sixth_track, north_section_id),
-        create_event(first_track, north_section_id),
-        create_event(first_track, west_section_id),
-        create_event(second_track, west_section_id),
-        create_event(third_track, west_section_id),
-        create_event(forth_track, west_section_id),
-        create_event(fifth_track, south_section_id),
-        create_event(sixth_track, south_section_id),
+        create_event(first_track, south_section_id, 0),
+        create_event(second_track, south_section_id, 1),
+        create_event(third_track, south_section_id, 2),
+        create_event(forth_track, south_section_id, 3),
+        create_event(fifth_track, north_section_id, 4),
+        create_event(sixth_track, north_section_id, 5),
+        create_event(first_track, north_section_id, 6),
+        create_event(first_track, west_section_id, 7),
+        create_event(second_track, west_section_id, 8),
+        create_event(third_track, west_section_id, 9),
+        create_event(forth_track, west_section_id, 10),
+        create_event(fifth_track, south_section_id, 11),
+        create_event(sixth_track, south_section_id, 12),
     ]
     some_expected_result = SimpleCount(
         {
@@ -111,21 +112,21 @@ def create_test_cases() -> list[tuple]:
         }
     )
     single_track_multiple_sections_events = [
-        create_event(first_track, south_section_id),
-        create_event(first_track, north_section_id),
-        create_event(first_track, west_section_id),
-        create_event(first_track, east_section_id),
+        create_event(first_track, south_section_id, 0),
+        create_event(first_track, north_section_id, 1),
+        create_event(first_track, west_section_id, 2),
+        create_event(first_track, east_section_id, 3),
     ]
     single_track_multiple_sections_result = SimpleCount(
         {
             south_to_north_id: 0,
             north_to_south_id: 0,
-            south_to_west_id: 1,
-            south_to_east_id: 0,
+            south_to_west_id: 0,
+            south_to_east_id: 1,
         }
     )
     single_track_single_sections_events = [
-        create_event(first_track, south_section_id),
+        create_event(first_track, south_section_id, 0),
     ]
     single_track_single_sections_result = SimpleCount(
         {

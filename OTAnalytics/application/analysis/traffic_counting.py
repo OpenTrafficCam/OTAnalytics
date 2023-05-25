@@ -1,11 +1,30 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Iterable
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import SectionId
+
+
+@dataclass(frozen=True)
+class EventPair:
+    start: Event
+    end: Event
+
+
+@dataclass(frozen=True)
+class FlowCandidate:
+    flow: Flow
+    candidate: EventPair
+
+    def distance(self) -> float:
+        return self.flow.distance
+
+    def duration(self) -> timedelta:
+        return self.candidate.end.occurrence - self.candidate.start.occurrence
 
 
 @dataclass(frozen=True)
@@ -42,7 +61,7 @@ class SimpleCounter(TrafficCounter):
 
     def count(self, events: list[Event], flows: list[Flow]) -> Count:
         grouped_flows = self.__group_flows_by_sections(flows)
-        grouped_sections = self._group_sections_by_road_user(events)
+        grouped_sections = self._group_events_by_road_user(events)
         assigned_users = self.__assign_user_to_flow(grouped_flows, grouped_sections)
         counts = self.__count_users_per_flow(assigned_users)
         self.__fill_empty_flows(flows, counts)
@@ -66,9 +85,9 @@ class SimpleCounter(TrafficCounter):
             flows_by_start_and_end[(flow.start.id, flow.end.id)].append(flow)
         return flows_by_start_and_end
 
-    def _group_sections_by_road_user(
+    def _group_events_by_road_user(
         self, events: Iterable[Event]
-    ) -> dict[int, list[SectionId]]:
+    ) -> dict[int, list[Event]]:
         """
         Group the sections of the events by road user.
         Args:
@@ -76,16 +95,16 @@ class SimpleCounter(TrafficCounter):
         Returns:
             dict[int, list[SectionId]]: sections grouped by user
         """
-        sections_by_road_user: dict[int, list[SectionId]] = defaultdict(list)
+        events_by_road_user: dict[int, list[Event]] = defaultdict(list)
         for event in events:
             if event.section_id:
-                sections_by_road_user[event.road_user_id].append(event.section_id)
-        return sections_by_road_user
+                events_by_road_user[event.road_user_id].append(event)
+        return events_by_road_user
 
     def __assign_user_to_flow(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        sections_by_road_user: dict[int, list[SectionId]],
+        events_by_road_user: dict[int, list[Event]],
     ) -> dict[int, FlowId]:
         """
         Assign each user to exactly one flow.
@@ -97,8 +116,8 @@ class SimpleCounter(TrafficCounter):
             dict[int, FlowId]: assignment of flow to road user
         """
         user_to_flow: dict[int, FlowId] = {}
-        for road_user, sections in sections_by_road_user.items():
-            if candidate_flows := self.__create_candidates(flows, sections):
+        for road_user, events in events_by_road_user.items():
+            if candidate_flows := self.__create_candidates(flows, events):
                 flow = self.__select_flow(candidate_flows)
                 user_to_flow[road_user] = flow.id
         return user_to_flow
@@ -106,8 +125,8 @@ class SimpleCounter(TrafficCounter):
     def __create_candidates(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        sections: list[SectionId],
-    ) -> list[Flow]:
+        events: list[Event],
+    ) -> list[FlowCandidate]:
         """
         Create flow candidates to select one from in a later step.
         Args:
@@ -116,12 +135,10 @@ class SimpleCounter(TrafficCounter):
         Returns:
             list[Flow]: _description_
         """
-        section_pairs = self.__create_section_pairs(sections)
-        return self.__create_candidate_flows(flows, section_pairs)
+        event_pairs = self.__create_event_pairs(events)
+        return self.__create_candidate_flows(flows, event_pairs)
 
-    def __create_section_pairs(
-        self, sections: list[SectionId]
-    ) -> list[tuple[SectionId, SectionId]]:
+    def __create_event_pairs(self, events: list[Event]) -> list[EventPair]:
         """
         Create section pairs. This is effectively the cross product of the given list.
         Args:
@@ -129,16 +146,18 @@ class SimpleCounter(TrafficCounter):
         Returns:
             list[tuple[SectionId, SectionId]]: section pairs
         """
-        candidates: list[tuple[SectionId, SectionId]] = []
-        for start in sections:
-            candidates.extend((start, end) for end in sections)
+        candidates: list[EventPair] = []
+        for start in events:
+            candidates.extend(
+                EventPair(start=start, end=end) for end in events if end != start
+            )
         return candidates
 
     def __create_candidate_flows(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        section_pairs: list[tuple[SectionId, SectionId]],
-    ) -> list[Flow]:
+        event_pairs: list[EventPair],
+    ) -> list[FlowCandidate]:
         """
         Intersect the section pairs with the flows. Emit a candidate per match.
         Args:
@@ -149,12 +168,20 @@ class SimpleCounter(TrafficCounter):
         Returns:
             list[Flow]: flows matching one pair of events
         """
-        candidate_flows: list[Flow] = []
-        for candidate in section_pairs:
-            candidate_flows.extend(flows.get(candidate, []))
+        candidate_flows: list[FlowCandidate] = []
+        for candidate in event_pairs:
+            if start_section := candidate.start.section_id:
+                if end_section := candidate.end.section_id:
+                    candidate_id: tuple[SectionId, SectionId] = (
+                        start_section,
+                        end_section,
+                    )
+                    for flow in flows.get(candidate_id, []):
+                        candidate_flow = FlowCandidate(flow=flow, candidate=candidate)
+                        candidate_flows.append(candidate_flow)
         return candidate_flows
 
-    def __select_flow(self, candidate_flows: list[Flow]) -> Flow:
+    def __select_flow(self, candidate_flows: list[FlowCandidate]) -> Flow:
         """
         Select the best matching flow for the user. Best match is defined as the flow
         with the largest distance.
@@ -163,7 +190,7 @@ class SimpleCounter(TrafficCounter):
         Returns:
             Flow: best matching flow
         """
-        return max(candidate_flows, key=lambda current: current.distance)
+        return max(candidate_flows, key=lambda current: current.duration()).flow
 
     def __count_users_per_flow(
         self, user_to_flow: dict[int, FlowId]
