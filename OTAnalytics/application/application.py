@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    FlowState,
     SectionState,
     TracksMetadata,
     TrackState,
@@ -34,6 +35,7 @@ class OTAnalyticsApplication:
         track_state: TrackState,
         track_view_state: TrackViewState,
         section_state: SectionState,
+        flow_state: FlowState,
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
         tracks_metadata: TracksMetadata,
@@ -43,6 +45,7 @@ class OTAnalyticsApplication:
         self.track_state: TrackState = track_state
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
+        self.flow_state: FlowState = flow_state
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
         self._tracks_metadata = tracks_metadata
@@ -223,6 +226,15 @@ class OTAnalyticsApplication:
         """
         section_id = SectionId(id) if id else None
         self.section_state.selected_section.set(section_id)
+
+    def set_selected_flow(self, id: Optional[str]) -> None:
+        """Set the current selected flow in the UI.
+
+        Args:
+            id (Optional[str]): the id of the currently selected flow
+        """
+        flow_id = FlowId(id) if id else None
+        self.flow_state.selected_flow.set(flow_id)
 
     def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
         """Get the current track offset.
