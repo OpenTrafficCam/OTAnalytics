@@ -205,7 +205,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def save_sections(self) -> None:
         sections_file = asksaveasfilename(
-            title="Save sections file as", filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")]
+            title="Save sections file as",
+            filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
+            defaultextension=f".{OTFLOW}",
         )
         if not sections_file:
             return
