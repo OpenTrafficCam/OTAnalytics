@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Tuple
 
 from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
@@ -185,6 +186,7 @@ class Datastore:
         track_parser: TrackParser,
         section_repository: SectionRepository,
         section_parser: SectionParser,
+        flow_repository: FlowRepository,
         event_list_parser: EventListParser,
         video_parser: VideoParser,
     ) -> None:
@@ -194,6 +196,7 @@ class Datastore:
         self._video_parser = video_parser
         self._track_repository = track_repository
         self._section_repository = section_repository
+        self._flow_repository = flow_repository
         self._event_repository = EventRepository()
         self._video_repository = VideoRepository()
 
@@ -281,6 +284,12 @@ class Datastore:
 
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._section_repository.get(section_id)
+
+    def get_all_flows(self) -> Iterable[Flow]:
+        return self._flow_repository.get_all()
+
+    def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
+        return self._flow_repository.get(flow_id)
 
     def save_event_list_file(self, file: Path) -> None:
         """
