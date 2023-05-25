@@ -219,7 +219,7 @@ class OTAnalyticsApplication:
         """Set the current selected section in the UI.
 
         Args:
-            id (SectionId): the id of the currently selected section
+            id (Optional[str]): the id of the currently selected section
         """
         section_id = SectionId(id) if id else None
         self.section_state.selected_section.set(section_id)
