@@ -5,7 +5,12 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
 from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
 from OTAnalytics.domain.section import ID, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    tk_events,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
@@ -72,11 +77,12 @@ class ToplevelSections(CTkToplevel):
         self.geometry(f"+{x+10}+{y+10}")
 
     def _set_focus(self) -> None:
-        self.entry_name.focus_set()
+        self.after(0, lambda: self.lift())
+        self.after(0, lambda: self.entry_name.focus_set())
 
     def _set_close_on_return_key(self) -> None:
-        self.entry_name.bind("<Return>", self.close)
-        self.entry_name.bind("<KP_Enter>", self.close)
+        self.entry_name.bind(tk_events.RETURN_KEY, self.close)
+        self.entry_name.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
 
     def close(self, event: Any = None) -> None:
         if not self._name_is_valid():

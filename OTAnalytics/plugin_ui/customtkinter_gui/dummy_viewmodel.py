@@ -56,6 +56,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSe
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
+OTFLOW = "otflow"
 
 
 class MissingInjectedInstanceError(Exception):
@@ -206,7 +207,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def load_sections(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
         sections_file = askopenfilename(
-            title="Load sections file", filetypes=[("otflow file", "*.otflow")]
+            title="Load sections file",
+            filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
+            defaultextension=f".{OTFLOW}",
         )
         if not sections_file:
             return
@@ -216,7 +219,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def save_sections(self) -> None:
         sections_file = asksaveasfilename(
-            title="Save sections file as", filetypes=[("sections file", "*.otflow")]
+            title="Save sections file as",
+            filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
+            defaultextension=f".{OTFLOW}",
         )
         if not sections_file:
             return
