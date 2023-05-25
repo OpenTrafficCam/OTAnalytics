@@ -21,7 +21,12 @@ from OTAnalytics.adapter_ui.default_values import (
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    tk_events,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ANCHOR_WEST,
@@ -283,7 +288,7 @@ class FilterTracksByDatePopup(CTkToplevel):
         self.reset_button.grid(row=0, column=1, padx=(PADX, 0), sticky=STICKY_WEST)
 
     def _bind_events(self) -> None:
-        self.bind("<Escape>", self._close)
+        self.bind(tk_events.ESCAPE_KEY, self._close)
 
     def _set_focus(self) -> None:
         self.after(0, lambda: self.lift())
