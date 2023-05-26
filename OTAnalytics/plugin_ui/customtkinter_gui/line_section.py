@@ -81,6 +81,22 @@ class CanvasElementPainter:
         """
         tkinter_tags = (id,) + tuple(tags) if tags is not None else (id,)
 
+        self.draw_geometries(
+            coordinates,
+            section_style,
+            highlighted_knob_index,
+            highlighted_knob_style,
+            tkinter_tags,
+        )
+
+    def draw_geometries(
+        self,
+        coordinates: list[tuple[int, int]],
+        section_style: dict,
+        highlighted_knob_index: int | None,
+        highlighted_knob_style: dict | None,
+        tkinter_tags: tuple[str, ...],
+    ) -> None:
         start: tuple[int, int] | None = None
         for index, coordinate in enumerate(coordinates):
             if start is not None:
