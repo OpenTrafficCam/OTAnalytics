@@ -180,7 +180,6 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.set_selected_flow(id)
         if id is not None:
             self._application.set_selected_section(None)
-        self.refresh_sections_on_gui()
 
         print(f"New flow selected in treeview: id={id}")
 
