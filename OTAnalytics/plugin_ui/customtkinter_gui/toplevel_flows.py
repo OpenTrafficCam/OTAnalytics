@@ -33,6 +33,7 @@ class ToplevelFlows(CTkToplevel):
         self.input_values: dict = self.__create_input_values(input_values)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
+        self._last_autofilled_name = ""
         self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
@@ -56,12 +57,18 @@ class ToplevelFlows(CTkToplevel):
     def _get_widgets(self) -> None:
         self.label_section_start = CTkLabel(master=self, text="First section:")
         self.dropdown_section_start = CTkOptionMenu(
-            master=self, width=180, values=self._section_ids
+            master=self,
+            width=180,
+            values=self._section_ids,
+            command=self._autofill_name,
         )
         self.dropdown_section_start.set(self.input_values[START_SECTION])
         self.label_section_end = CTkLabel(master=self, text="Second section:")
         self.dropdown_section_end = CTkOptionMenu(
-            master=self, width=180, values=self._section_ids
+            master=self,
+            width=180,
+            values=self._section_ids,
+            command=self._autofill_name,
         )
         self.dropdown_section_end.set(self.input_values[END_SECTION])
         self.label_name = CTkLabel(master=self, text="Name:")
@@ -109,6 +116,17 @@ class ToplevelFlows(CTkToplevel):
     def _set_close_on_return_key(self) -> None:
         self.entry_distance.bind(tk_events.RETURN_KEY, self.close)
         self.entry_distance.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
+
+    def _autofill_name(self, event: Any) -> None:
+        if self._last_autofilled_name == self.entry_name.get():
+            self.entry_name.delete(0, tkinter.END)
+            auto_name = (
+                self.dropdown_section_start.get()
+                + " --> "
+                + self.dropdown_section_end.get()
+            )
+            self.entry_name.insert(0, auto_name)
+            self._last_autofilled_name = auto_name
 
     def close(self, event: Any = None) -> None:
         if not self._sections_are_valid():
