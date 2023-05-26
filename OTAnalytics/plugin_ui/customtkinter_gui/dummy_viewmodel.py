@@ -32,6 +32,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
+    ArrowPainter,
     CanvasElementDeleter,
     CanvasElementPainter,
     SectionBuilder,
@@ -333,6 +334,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         painter = CanvasElementPainter(canvas=self._canvas)
+        start_section_id = None
+        end_section_id = None
         if self._selected_section_id is not None:
             sections_to_highlight = [self._selected_section_id]
         elif self._selected_flow_id is not None:
@@ -343,6 +346,11 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 start_section_id = selected_flow.start.id.id
                 end_section_id = selected_flow.end.id.id
                 sections_to_highlight = [start_section_id, end_section_id]
+                ArrowPainter(self._canvas).draw(
+                    start_section=selected_flow.start,
+                    end_section=selected_flow.end,
+                    tags=[LINE_SECTION],
+                )
             else:
                 sections_to_highlight = []
         else:
