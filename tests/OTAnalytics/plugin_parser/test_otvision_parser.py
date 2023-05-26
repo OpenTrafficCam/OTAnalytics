@@ -48,7 +48,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     DetectionFixer,
     InvalidSectionData,
     OtEventListParser,
-    OtsectionParser,
+    OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
     Version,
@@ -362,7 +362,7 @@ class TestOtsectionParser:
         json_file.touch()
         sections = [line_section, area_section]
         flows = [some_flow]
-        parser = OtsectionParser()
+        parser = OtFlowParser()
         parser.serialize(sections, flows, json_file)
 
         parsed_sections, parsed_flows = parser.parse(json_file)
@@ -371,7 +371,7 @@ class TestOtsectionParser:
         assert parsed_flows == flows
 
     def test_validate(self) -> None:
-        parser = OtsectionParser()
+        parser = OtFlowParser()
         pytest.raises(
             InvalidSectionData, parser.parse_section, {section.TYPE: section.LINE}
         )
@@ -401,7 +401,7 @@ class TestOtsectionParser:
         )
         sections = [some_section, other_section]
         flows = [some_flow]
-        parser = OtsectionParser()
+        parser = OtFlowParser()
 
         content = parser._convert(sections, flows)
 
@@ -450,7 +450,7 @@ class TestOtsectionParser:
         save_path = test_data_tmp_dir / "sections.otflow"
         _write_json(section_data, save_path)
 
-        parser = OtsectionParser()
+        parser = OtFlowParser()
         sections, flows = parser.parse(save_path)
 
         assert sections == [expected]
@@ -490,7 +490,7 @@ class TestOtsectionParser:
         save_path = test_data_tmp_dir / "sections.otflow"
         _write_json(section_data, save_path)
 
-        parser = OtsectionParser()
+        parser = OtFlowParser()
         sections, flows = parser.parse(save_path)
 
         assert sections == [expected]

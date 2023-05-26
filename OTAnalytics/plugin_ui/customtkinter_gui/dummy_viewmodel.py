@@ -11,7 +11,7 @@ from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewI
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
+from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -78,10 +78,10 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def __init__(
         self,
         application: OTAnalyticsApplication,
-        section_parser: SectionParser,
+        flow_parser: FlowParser,
     ) -> None:
         self._application = application
-        self._section_parser: SectionParser = section_parser
+        self._flow_parser: FlowParser = flow_parser
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
@@ -299,7 +299,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         print(f"Updated line_section Metadata: {updated_section_data}")
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
-        section = self._section_parser.parse_section(data)
+        section = self._flow_parser.parse_section(data)
         self._application.remove_section(id)
         self._application.add_section(section)
 

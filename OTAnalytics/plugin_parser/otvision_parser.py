@@ -11,7 +11,7 @@ import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
 from OTAnalytics.application.datastore import (
     EventListParser,
-    SectionParser,
+    FlowParser,
     TrackParser,
     Video,
     VideoParser,
@@ -394,23 +394,24 @@ class InvalidSectionData(Exception):
     """
 
 
-class OtsectionParser(SectionParser):
+class OtFlowParser(FlowParser):
     """
-    Parse a section file and convert its content to domain objects namely
-    LineSection, Area and Coordinate.
+    Parse a flow file and convert its content to domain objects namely
+    Flow, LineSection, Area and Coordinate.
 
     Args:
-        SectionParser (SectionParser): extends SectionParser interface
+        FlowParser (FlowParser): extends FlowParser interface
     """
 
     def parse(self, file: Path) -> tuple[list[Section], list[Flow]]:
-        """Parse the content of the file into Section objects.
+        """Parse the content of the file into Flow and Section objects.
 
         Args:
-            file (Path): path to section file
+            file (Path): path to flow file
 
         Returns:
             list[Section]: list of Section objects
+            list[Flow]: list of Flow objects
         """
         content: dict = _parse(file)
         sections: list[Section] = [
@@ -571,6 +572,20 @@ class OtsectionParser(SectionParser):
     def parse_flow(
         self, entry: dict, to_section: Callable[[SectionId], Optional[Section]]
     ) -> Flow:
+        """
+        Parse flows and assign already parsed sections to the flows.
+
+        Args:
+            entry (dict): element to be parsed
+            to_section (Callable[[SectionId], Optional[Section]]): callable to get a
+            section for a section id
+
+        Raises:
+            MissingSection: if there is no section for the parsed section id
+
+        Returns:
+            Flow: parsed flow element
+        """
         self._validate_data(
             entry,
             attributes=[
@@ -603,11 +618,12 @@ class OtsectionParser(SectionParser):
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
-        """Serialize sections into file.
+        """Serialize sections and flows into file.
 
         Args:
             sections (Iterable[Section]): sections to serialize
-            file (Path): file to serialize sections to
+            flows (Iterable[Flow]): flows to serialize
+            file (Path): file to serialize flows and sections to
         """
         content = self._convert(sections, flows)
         _write_json(content, file)
@@ -617,13 +633,15 @@ class OtsectionParser(SectionParser):
         sections: Iterable[Section],
         flows: Iterable[Flow],
     ) -> dict[str, list[dict]]:
-        """Convert sections into dictionary.
+        """Convert sections and flows into dictionary.
 
         Args:
             sections (Iterable[Section]): sections to convert
+            flows (Iterable[Flow]): flows to convert
 
         Returns:
             dict[str, list[dict]]: dictionary containing raw information of sections
+            and flows
         """
         return {
             section.SECTIONS: [section.to_dict() for section in sections],

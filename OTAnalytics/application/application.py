@@ -114,7 +114,7 @@ class OTAnalyticsApplication:
         Args:
             sections_file (Path): file in sections format
         """
-        self._datastore.load_section_file(file=sections_file)
+        self._datastore.load_flow_file(file=sections_file)
 
     def add_section(self, section: Section) -> None:
         """

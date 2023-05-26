@@ -36,7 +36,7 @@ class TrackParser(ABC):
         pass
 
 
-class SectionParser(ABC):
+class FlowParser(ABC):
     @abstractmethod
     def parse(self, file: Path) -> tuple[list[Section], list[Flow]]:
         pass
@@ -190,13 +190,13 @@ class Datastore:
         track_repository: TrackRepository,
         track_parser: TrackParser,
         section_repository: SectionRepository,
-        section_parser: SectionParser,
+        flow_parser: FlowParser,
         flow_repository: FlowRepository,
         event_list_parser: EventListParser,
         video_parser: VideoParser,
     ) -> None:
         self._track_parser = track_parser
-        self._section_parser = section_parser
+        self._flow_parser = flow_parser
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
         self._track_repository = track_repository
@@ -268,14 +268,14 @@ class Datastore:
         """Delete all tracks in repository."""
         self._track_repository.delete_all()
 
-    def load_section_file(self, file: Path) -> None:
+    def load_flow_file(self, file: Path) -> None:
         """
-        Load sections from the given files and store them in the section repository.
+        Load sections and flows from the given files and store them in the repositories.
 
         Args:
-            file (Path): file to load sections from
+            file (Path): file to load sections and flows from
         """
-        sections, flows = self._section_parser.parse(file)
+        sections, flows = self._flow_parser.parse(file)
         self._section_repository.add_all(sections)
         self._flow_repository.add_all(flows)
 
@@ -288,7 +288,7 @@ class Datastore:
         """
         if sections := self._section_repository.get_all():
             flows = self._flow_repository.get_all()
-            self._section_parser.serialize(
+            self._flow_parser.serialize(
                 sections=sections,
                 flows=flows,
                 file=file,

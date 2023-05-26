@@ -17,7 +17,7 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat
-from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser, OttrkParser
+from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser, OttrkParser
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -338,8 +338,8 @@ def tracks(ottrk_path: Path) -> list[Track]:
 
 @pytest.fixture(scope="module")
 def sections(otsection_file: Path) -> list[Section]:
-    otsection_parser = OtsectionParser()
-    return otsection_parser.parse(otsection_file)[0]
+    flow_parser = OtFlowParser()
+    return flow_parser.parse(otsection_file)[0]
 
 
 @pytest.fixture
