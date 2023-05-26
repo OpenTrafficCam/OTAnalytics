@@ -30,6 +30,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB_CORE,
     KNOB_PERIMETER,
     LINE,
+    SECTION_TEXT,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
@@ -61,6 +62,8 @@ class CanvasElementPainter:
         section_style: dict,
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,
+        text: str | None = None,
+        text_style: dict | None = None,
         tags: list[str] | None = None,
     ) -> None:
         """Draws a line section on a canvas.
@@ -76,6 +79,8 @@ class CanvasElementPainter:
             highlighted_knob_style (dict | None, optional): Dict of style options for a
                 knob coordinate that should be highlighted with a unique style.
                 Defaults to None.
+            text (str | None, optional): Text to display above the section.
+                Defaults to None.
             tags (list[str] | None, optional): Tags to specify groups of line_sections.
                 Defaults to None.
         """
@@ -88,6 +93,10 @@ class CanvasElementPainter:
             highlighted_knob_style,
             tkinter_tags,
         )
+
+        if text is not None:
+            text_position = coordinates[0]
+            self._draw_text(text, text_position, tkinter_tags)
 
     def _draw_geometries(
         self,
@@ -160,6 +169,15 @@ class CanvasElementPainter:
             width=width,
             tags=tags,
         )
+
+    def _draw_text(
+        self,
+        text: str,
+        text_position: tuple[float, float],
+        tkinter_tags: tuple[str, ...],
+    ) -> None:
+        x, y = text_position
+        self._canvas.create_text(x, y, text=text, tags=tkinter_tags + (SECTION_TEXT,))
 
 
 class CanvasElementDeleter:

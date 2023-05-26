@@ -50,6 +50,9 @@ KNOB_CORE: str = "knob-core"
 KNOB_PERIMETER: str = "knob-perimeter"
 """A circle around a knob to indicate if it is hovered or selected"""
 
+SECTION_TEXT: str = "section-text"
+"""A text displayed above the section"""
+
 DEFAULT_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#47936B", LINE_WIDTH: 3},
     KNOB: {
