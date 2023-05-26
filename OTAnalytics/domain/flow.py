@@ -73,10 +73,10 @@ class FlowListObserver(ABC):
     @abstractmethod
     def notify_flows(self, flows: list[FlowId]) -> None:
         """
-        Notifies that the given flows have been added.
+        Notifies that the given flows have been added or removed.
 
         Args:
-            flows (list[FlowId]): list of added flows
+            flows (list[FlowId]): list of added or removed flows
         """
         pass
 
