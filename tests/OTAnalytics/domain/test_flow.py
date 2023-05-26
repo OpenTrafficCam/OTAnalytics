@@ -50,7 +50,7 @@ class TestFlowRepository:
 
         assert flow in repository.get_all()
 
-    def test_add_all_flow(self, flow: Flow, other_flow: Flow) -> None:
+    def test_add_all_flows(self, flow: Flow, other_flow: Flow) -> None:
         repository = FlowRepository()
         repository.add_all([flow, other_flow])
 
