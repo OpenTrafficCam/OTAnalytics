@@ -333,8 +333,22 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         painter = CanvasElementPainter(canvas=self._canvas)
+        if self._selected_section_id is not None:
+            sections_to_highlight = [self._selected_section_id]
+        elif self._selected_flow_id is not None:
+            selected_flow = self._application.get_flow_for(
+                FlowId(self._selected_flow_id)
+            )
+            if selected_flow is not None:
+                start_section_id = selected_flow.start.id.id
+                end_section_id = selected_flow.end.id.id
+                sections_to_highlight = [start_section_id, end_section_id]
+            else:
+                sections_to_highlight = []
+        else:
+            sections_to_highlight = []
         for section in self._get_sections():
-            if section[ID] == self._selected_section_id:
+            if section[ID] in sections_to_highlight:
                 style = SELECTED_SECTION_STYLE
             else:
                 style = DEFAULT_SECTION_STYLE
