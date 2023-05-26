@@ -33,7 +33,7 @@ class ToplevelFlows(CTkToplevel):
         self.input_values: dict = self.__create_input_values(input_values)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
-        self._last_autofilled_name = ""
+        self._last_autofilled_name: str = ""
         self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
