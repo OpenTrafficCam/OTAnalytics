@@ -177,6 +177,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._treeview_flows.update_selected_items(self._selected_flow_id)
 
     def set_selected_flow_id(self, id: Optional[str]) -> None:
+        self._selected_flow_id = id
         self._application.set_selected_flow(id)
         if id is not None:
             self._application.set_selected_section(None)
