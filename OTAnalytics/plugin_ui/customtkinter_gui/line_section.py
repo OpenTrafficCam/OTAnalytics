@@ -131,7 +131,7 @@ class ArrowPainter:
         )
 
 
-class CanvasElementPainter:
+class SectionPainter:
     def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
@@ -304,7 +304,7 @@ class SectionGeometryEditor(CanvasObserver):
         self._get_name()
         self._get_matadata()
 
-        self.painter = CanvasElementPainter(canvas=canvas)
+        self.painter = SectionPainter(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self.painter.draw(
@@ -562,7 +562,7 @@ class SectionGeometryBuilder:
         self._observer = observer
         self._style = style
 
-        self.painter = CanvasElementPainter(canvas=canvas)
+        self.painter = SectionPainter(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self._temporary_id: str = TEMPORARY_SECTION_ID

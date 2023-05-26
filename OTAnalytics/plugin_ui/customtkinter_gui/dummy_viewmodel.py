@@ -34,9 +34,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
     CanvasElementDeleter,
-    CanvasElementPainter,
     SectionBuilder,
     SectionGeometryEditor,
+    SectionPainter,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
@@ -333,7 +333,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def _draw_all_sections_on_canvas(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
-        painter = CanvasElementPainter(canvas=self._canvas)
+        painter = SectionPainter(canvas=self._canvas)
         start_section_id = None
         end_section_id = None
         if self._selected_section_id is not None:
