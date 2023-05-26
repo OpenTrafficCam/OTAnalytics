@@ -126,8 +126,8 @@ class ArrowPainter:
             end_x,
             end_y,
             arrow=tkinter.LAST,
-            arrowshape=(16, 20, 6),
             tags=tags,
+            **arrow_style,
         )
 
 

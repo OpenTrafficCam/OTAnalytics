@@ -40,6 +40,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
+    ARROW_STYLE,
     DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
     PRE_EDIT_SECTION_STYLE,
@@ -350,6 +351,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                     start_section=selected_flow.start,
                     end_section=selected_flow.end,
                     tags=[LINE_SECTION],
+                    arrow_style=ARROW_STYLE,
                 )
             else:
                 sections_to_highlight = []
