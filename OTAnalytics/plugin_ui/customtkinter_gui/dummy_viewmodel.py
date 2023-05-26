@@ -139,6 +139,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        self.refresh_sections_on_gui()
         self._treeview_flows.update_items()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
@@ -174,6 +175,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        self.refresh_sections_on_gui()
         self._treeview_flows.update_selected_items(self._selected_flow_id)
 
     def set_selected_flow_id(self, id: Optional[str]) -> None:
@@ -423,6 +425,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             )
         self._application.add_flow(flow)
         self.set_selected_flow_id(new_flow_id.id)
+        self.refresh_sections_on_gui()
 
     def edit_flow(self) -> None:
         if self._selected_flow_id is None:
@@ -460,6 +463,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             return
         flow_id = FlowId(self._selected_flow_id)
         self._application.remove_flow(flow_id)
+        self.refresh_sections_on_gui()
 
     def start_analysis(self) -> None:
         self._application.start_analysis()
