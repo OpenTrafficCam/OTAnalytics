@@ -97,7 +97,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.register_sections_observer(self)
         self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_flows_observer(self)
-
+        self._application.register_flow_changed_observer(self._on_flow_changed)
         self._application.track_view_state.show_tracks.register(
             self._on_show_tracks_state_updated
         )
@@ -112,6 +112,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def _on_section_changed(self, section_id: SectionId) -> None:
         self.notify_sections([section_id])
+
+    def _on_flow_changed(self, flow_id: FlowId) -> None:
+        self.notify_flows([flow_id])
 
     def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
         if self._frame_canvas is None:
