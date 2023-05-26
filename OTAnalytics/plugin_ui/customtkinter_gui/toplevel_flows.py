@@ -29,7 +29,7 @@ class ToplevelFlows(CTkToplevel):
         super().__init__(**kwargs)
         self.title(title)
         self._section_ids = section_ids
-        self._current_id = tkinter.StringVar()
+        self._current_name = tkinter.StringVar()
         self.input_values: dict = self.__create_input_values(input_values)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
@@ -41,7 +41,7 @@ class ToplevelFlows(CTkToplevel):
         self._set_close_on_return_key()
 
     def __set_initial_values(self) -> None:
-        self._current_id.set(self.input_values.get(FLOW_ID, ""))
+        self._current_name.set(self.input_values.get(FLOW_ID, ""))
 
     def __create_input_values(self, input_values: Optional[dict]) -> dict:
         if input_values:
@@ -54,12 +54,6 @@ class ToplevelFlows(CTkToplevel):
         }
 
     def _get_widgets(self) -> None:
-        self.label_id = CTkLabel(master=self, text="Id")
-        self.entry_id = CTkEntry(
-            master=self,
-            width=180,
-            textvariable=self._current_id,
-        )
         self.label_section_start = CTkLabel(master=self, text="First section:")
         self.dropdown_section_start = CTkOptionMenu(
             master=self, width=180, values=self._section_ids
@@ -70,6 +64,12 @@ class ToplevelFlows(CTkToplevel):
             master=self, width=180, values=self._section_ids
         )
         self.dropdown_section_end.set(self.input_values[END_SECTION])
+        self.label_name = CTkLabel(master=self, text="Name:")
+        self.entry_name = CTkEntry(
+            master=self,
+            width=180,
+            textvariable=self._current_name,
+        )
         self.label_distance = CTkLabel(master=self, text="Distance [m]:")
         self.entry_distance = CTkEntry(
             master=self,
@@ -82,16 +82,16 @@ class ToplevelFlows(CTkToplevel):
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
 
     def _place_widgets(self) -> None:
-        self.label_id.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=tkinter.E)
-        self.entry_id.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=tkinter.W)
-        self.label_section_start.grid(row=1, column=0, padx=PADX, pady=PADY, sticky="E")
+        self.label_section_start.grid(row=0, column=0, padx=PADX, pady=PADY, sticky="E")
         self.dropdown_section_start.grid(
+            row=0, column=1, padx=PADX, pady=PADY, sticky="W"
+        )
+        self.label_section_end.grid(row=1, column=0, padx=PADX, pady=PADY, sticky="E")
+        self.dropdown_section_end.grid(
             row=1, column=1, padx=PADX, pady=PADY, sticky="W"
         )
-        self.label_section_end.grid(row=2, column=0, padx=PADX, pady=PADY, sticky="E")
-        self.dropdown_section_end.grid(
-            row=2, column=1, padx=PADX, pady=PADY, sticky="W"
-        )
+        self.label_name.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.E)
+        self.entry_name.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.W)
         self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky="E")
         self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky="W")
         self.button_ok.grid(
@@ -104,7 +104,7 @@ class ToplevelFlows(CTkToplevel):
 
     def _set_focus(self) -> None:
         self.after(0, lambda: self.lift())
-        self.after(0, lambda: self.entry_distance.focus_set())
+        self.after(0, lambda: self.entry_name.focus_set())
 
     def _set_close_on_return_key(self) -> None:
         self.entry_distance.bind(tk_events.RETURN_KEY, self.close)
@@ -113,7 +113,7 @@ class ToplevelFlows(CTkToplevel):
     def close(self, event: Any = None) -> None:
         if not self._sections_are_valid():
             return
-        self.input_values[FLOW_ID] = self._current_id.get()
+        self.input_values[FLOW_ID] = self._current_name.get()
         self.input_values[START_SECTION] = self.dropdown_section_start.get()
         self.input_values[END_SECTION] = self.dropdown_section_end.get()
         self.input_values[DISTANCE] = self.entry_distance.get()
@@ -132,12 +132,6 @@ class ToplevelFlows(CTkToplevel):
         section_end = self.dropdown_section_end.get()
         sections = [section_start, section_end]
         position = (self.winfo_x(), self.winfo_y())
-        if self._current_id.get() == "":
-            InfoBox(
-                message="Please choose a flow id!",
-                initial_position=position,
-            )
-            return False
         if "" in [section_start, section_end]:
             InfoBox(
                 message="Please choose both a start and an end section!",
@@ -158,6 +152,12 @@ class ToplevelFlows(CTkToplevel):
                         initial_position=position,
                     )
                     return False
+        if self._current_name.get() == "":
+            InfoBox(
+                message="Please choose a flow name!",
+                initial_position=position,
+            )
+            return False
         return True
 
     def get_data(self) -> dict:
