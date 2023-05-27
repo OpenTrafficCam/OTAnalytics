@@ -549,7 +549,7 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _abort(self) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
-        self._viewmodel.refresh_sections_on_gui()
+        self._viewmodel.refresh_items_on_canvas()
 
 
 class SectionGeometryBuilder:

@@ -88,7 +88,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def refresh_sections_on_gui(self) -> None:
+    def refresh_items_on_canvas(self) -> None:
         pass
 
     @abstractmethod
