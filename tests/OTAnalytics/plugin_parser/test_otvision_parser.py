@@ -331,16 +331,18 @@ class TestOtsectionParser:
         first_coordinate = Coordinate(0, 0)
         second_coordinate = Coordinate(1, 1)
         third_coordinate = Coordinate(1, 0)
+        line_section_id = SectionId("some")
         line_section: Section = LineSection(
-            id=SectionId("some"),
+            id=line_section_id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "key_2": "some_data"},
             coordinates=[first_coordinate, second_coordinate],
         )
+        area_section_id = SectionId("other")
         area_section: Section = Area(
-            id=SectionId("other"),
+            id=area_section_id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -354,8 +356,8 @@ class TestOtsectionParser:
         )
         some_flow = Flow(
             FlowId("some to other"),
-            start=line_section,
-            end=area_section,
+            start=line_section_id,
+            end=area_section_id,
             distance=1,
         )
         json_file = test_data_tmp_dir / "section.json"
@@ -377,16 +379,18 @@ class TestOtsectionParser:
         )
 
     def test_convert_section(self) -> None:
+        some_section_id = SectionId("some")
         some_section: Section = LineSection(
-            id=SectionId("some"),
+            id=some_section_id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
             coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
         )
+        other_section_id = SectionId("other")
         other_section: Section = LineSection(
-            id=SectionId("other"),
+            id=other_section_id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -395,8 +399,8 @@ class TestOtsectionParser:
         )
         some_flow = Flow(
             FlowId("some to other"),
-            start=some_section,
-            end=other_section,
+            start=some_section_id,
+            end=other_section_id,
             distance=1,
         )
         sections = [some_section, other_section]

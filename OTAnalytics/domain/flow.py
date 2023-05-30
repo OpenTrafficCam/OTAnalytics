@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import SectionId
 
 FLOWS: str = "flows"
 FLOW_ID: str = "id"
@@ -36,15 +36,15 @@ class Flow:
     """
 
     id: FlowId
-    start: Section
-    end: Section
+    start: SectionId
+    end: SectionId
     distance: float
 
     def __init__(
         self,
         id: FlowId,
-        start: Section,
-        end: Section,
+        start: SectionId,
+        end: SectionId,
         distance: float,
     ) -> None:
         if distance < 0:
@@ -52,15 +52,15 @@ class Flow:
                 f"Distance must be equal or greater then 0, but is {distance}"
             )
         self.id: FlowId = id
-        self.start: Section = start
-        self.end: Section = end
+        self.start: SectionId = start
+        self.end: SectionId = end
         self.distance: float = distance
 
     def to_dict(self) -> dict:
         return {
             FLOW_ID: self.id.serialize(),
-            START: self.start.id.serialize(),
-            END: self.end.id.serialize(),
+            START: self.start.serialize(),
+            END: self.end.serialize(),
             DISTANCE: self.distance,
         }
 

@@ -396,25 +396,23 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         new_flow_id = FlowId(new_flow[FLOW_ID])
         new_from_section_id = SectionId(new_flow[START_SECTION])
         new_to_section_id = SectionId(new_flow[END_SECTION])
-        from_section = self._application.get_section_for(new_from_section_id)
-        to_section = self._application.get_section_for(new_to_section_id)
         distance = float(new_flow[DISTANCE])
-        if from_section is None:
+        if new_from_section_id is None:
             raise MissingSection(f"Could not find section for id {new_from_section_id}")
-        if to_section is None:
+        if new_to_section_id is None:
             raise MissingSection(f"Could not find section for id {new_to_section_id}")
         if old_flow_id != new_flow_id:
             self._application.remove_flow(old_flow_id)
         if flow := self._application.get_flow_for(new_flow_id):
-            flow.start = from_section
-            flow.end = to_section
+            flow.start = new_from_section_id
+            flow.end = new_to_section_id
             flow.distance = distance
             self._application.add_flow(flow)
         else:
             flow = Flow(
                 id=new_flow_id,
-                start=from_section,
-                end=to_section,
+                start=new_from_section_id,
+                end=new_to_section_id,
                 distance=distance,
             )
             self._application.add_flow(flow)
@@ -435,8 +433,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def _edit_flow(self, flow: Flow) -> None:
         input_data = {
             FLOW_ID: flow.id.id,
-            START_SECTION: flow.start.id.id,
-            END_SECTION: flow.end.id.id,
+            START_SECTION: flow.start.id,
+            END_SECTION: flow.end.id,
             DISTANCE: flow.distance,
         }
         old_flow_data = input_data.copy()
