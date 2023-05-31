@@ -166,7 +166,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._treeview_flows = treeview
 
     def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
-        current_id = section_id.id if section_id else None
+        current_id = section_id.serialize() if section_id else None
         self._selected_section_id = current_id
 
         if self._treeview_sections is None:
@@ -346,7 +346,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 "Please remove the following flows before removing the section.\n"
             )
             for flow_id in self._application.flows_using_section(section_id):
-                message += flow_id.id + "\n"
+                message += flow_id.serialize() + "\n"
             position = self._treeview_sections.get_position()
             InfoBox(
                 message=message,
@@ -420,7 +420,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 distance=distance,
             )
             self._application.add_flow(flow)
-            self.set_selected_flow_id(flow_id.id)
+            self.set_selected_flow_id(flow_id.serialize())
             print(f"Added new flow: {flow_data}")
 
     def _show_distances_window(
@@ -448,7 +448,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         ).get_data()
 
     def __to_id_resource(self, section: Section) -> IdResource:
-        return IdResource(id=section.id.id, name=section.name)
+        return IdResource(id=section.id.serialize(), name=section.name)
 
     def __update_flow_data(self, flow_data: dict) -> None:
         flow_id = FlowId(flow_data.get(FLOW_ID, ""))
@@ -462,7 +462,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             flow.end = new_to_section_id
             flow.distance = distance
             self._application.update_flow(flow)
-        self.set_selected_flow_id(flow_id.id)
+        self.set_selected_flow_id(flow_id.serialize())
 
     def edit_flow(self) -> None:
         selected_flow = self.get_selected_flow()
@@ -478,7 +478,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def _edit_flow(self, flow: Flow) -> None:
         input_data = {
-            FLOW_ID: flow.id.id,
+            FLOW_ID: flow.id.serialize(),
             FLOW_NAME: flow.name,
             START_SECTION: flow.start.id,
             END_SECTION: flow.end.id,
