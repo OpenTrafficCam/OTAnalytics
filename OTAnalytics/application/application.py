@@ -116,6 +116,30 @@ class OTAnalyticsApplication:
         """
         self._datastore.load_flow_file(file=sections_file)
 
+    def is_flow_using_section(self, section: SectionId) -> bool:
+        """
+        Checks if the section id is used by flows.
+
+        Args:
+            section (SectionId): section to check
+
+        Returns:
+            bool: true if the section is used by at least one flow
+        """
+        return self._datastore.is_flow_using_section(section)
+
+    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+        """
+        Returns a list of flows using the section as start or end.
+
+        Args:
+            section (SectionId): section to search flows for
+
+        Returns:
+            list[FlowId]: flows using the section
+        """
+        return self._datastore.flows_using_section(section)
+
     def get_section_id(self) -> SectionId:
         """
         Get an id for a new section

@@ -326,8 +326,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
         section = self._flow_parser.parse_section(data)
-        self._application.remove_section(id)
-        self._application.add_section(section)
+        self._application.update_section(section)
 
     def remove_section(self) -> None:
         if self._treeview_sections is None:
@@ -338,7 +337,21 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 message="Please select a section to remove", initial_position=position
             )
             return
-        self._application.remove_section(SectionId(self._selected_section_id))
+        section_id = SectionId(self._selected_section_id)
+        if self._application.is_flow_using_section(section_id):
+            message = (
+                "The section you want to remove is being used in flows.\n"
+                "Please remove the following flows before removing the section.\n"
+            )
+            for flow_id in self._application.flows_using_section(section_id):
+                message += flow_id.id + "\n"
+            position = self._treeview_sections.get_position()
+            InfoBox(
+                message=message,
+                initial_position=position,
+            )
+            return
+        self._application.remove_section(section_id)
         self.refresh_sections_on_gui()
 
     def refresh_sections_on_gui(self) -> None:

@@ -128,6 +128,41 @@ class FlowRepository:
     def __internal_add(self, flow: Flow) -> None:
         self._flows[flow.id] = flow
 
+    def is_flow_using_section(self, section: SectionId) -> bool:
+        """
+        Checks if the section id is used by flows.
+
+        Args:
+            section (SectionId): section to check
+
+        Returns:
+            bool: true if the section is used by at least one flow
+        """
+        for flow in self._flows.values():
+            if flow.start == section:
+                return True
+            if flow.end == section:
+                return True
+        return False
+
+    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+        """
+        Returns a list of flows using the section as start or end.
+
+        Args:
+            section (SectionId): section to search flows for
+
+        Returns:
+            list[FlowId]: flows using the section
+        """
+        return list(
+            {
+                flow.id
+                for flow in self._flows.values()
+                if (flow.start == section) or (flow.end == section)
+            }
+        )
+
     def add_all(self, flows: Iterable[Flow]) -> None:
         for flow in flows:
             self.__internal_add(flow)
