@@ -20,7 +20,7 @@ from OTAnalytics.domain.date import (
     validate_minute,
     validate_second,
 )
-from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
@@ -52,10 +52,12 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
     FLOW_ID,
+    FLOW_NAME,
     START_SECTION,
     ToplevelFlows,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
@@ -405,7 +407,20 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def add_flow(self) -> None:
         if flow_data := self._show_distances_window():
-            self.__update_flow_data(flow_data)
+            flow_id = self._application.get_flow_id()
+            name = flow_data[FLOW_NAME]
+            new_from_section_id = SectionId(flow_data[START_SECTION])
+            new_to_section_id = SectionId(flow_data[END_SECTION])
+            distance = float(flow_data[DISTANCE])
+            flow = Flow(
+                id=flow_id,
+                name=name,
+                start=new_from_section_id,
+                end=new_to_section_id,
+                distance=distance,
+            )
+            self._application.add_flow(flow)
+            self.set_selected_flow_id(flow_id.id)
             print(f"Added new flow: {flow_data}")
 
     def _show_distances_window(
@@ -416,7 +431,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
-        section_ids = [section.id.id for section in self.get_all_sections()]
+        section_ids = [
+            self.__to_id_resource(section) for section in self.get_all_sections()
+        ]
         if len(section_ids) < 2:
             InfoBox(
                 message="To add a flow, at least two sections are needed",
@@ -430,27 +447,21 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             input_values=input_values,
         ).get_data()
 
-    def __update_flow_data(self, new_flow: dict, old_flow: dict = {}) -> None:
-        flow_id = FlowId(old_flow.get(FLOW_ID, ""))
-        name = new_flow[FLOW_NAME]
-        new_from_section_id = SectionId(new_flow[START_SECTION])
-        new_to_section_id = SectionId(new_flow[END_SECTION])
-        distance = float(new_flow[DISTANCE])
+    def __to_id_resource(self, section: Section) -> IdResource:
+        return IdResource(id=section.id.id, name=section.name)
+
+    def __update_flow_data(self, flow_data: dict) -> None:
+        flow_id = FlowId(flow_data.get(FLOW_ID, ""))
+        name = flow_data[FLOW_NAME]
+        new_from_section_id = SectionId(flow_data[START_SECTION])
+        new_to_section_id = SectionId(flow_data[END_SECTION])
+        distance = float(flow_data[DISTANCE])
         if flow := self._application.get_flow_for(flow_id):
             flow.name = name
             flow.start = new_from_section_id
             flow.end = new_to_section_id
             flow.distance = distance
-            self._application.add_flow(flow)
-        else:
-            flow = Flow(
-                id=flow_id,
-                name=name,
-                start=new_from_section_id,
-                end=new_to_section_id,
-                distance=distance,
-            )
-            self._application.add_flow(flow)
+            self._application.update_flow(flow)
         self.set_selected_flow_id(flow_id.id)
 
     def edit_flow(self) -> None:
@@ -468,17 +479,17 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def _edit_flow(self, flow: Flow) -> None:
         input_data = {
             FLOW_ID: flow.id.id,
+            FLOW_NAME: flow.name,
             START_SECTION: flow.start.id,
             END_SECTION: flow.end.id,
             DISTANCE: flow.distance,
         }
-        old_flow_data = input_data.copy()
 
         if flow_data := self._show_distances_window(
             input_values=input_data,
             title="Edit flow",
         ):
-            self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
+            self.__update_flow_data(flow_data=flow_data)
 
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
