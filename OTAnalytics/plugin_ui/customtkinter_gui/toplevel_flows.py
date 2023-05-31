@@ -1,4 +1,4 @@
-import tkinter
+from tkinter import E, StringVar, W
 from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkOptionMenu, CTkToplevel
@@ -33,7 +33,7 @@ class ToplevelFlows(CTkToplevel):
         self._section_ids = section_ids
         self._section_name_to_id = self._create_section_name_to_id(section_ids)
         self._section_id_to_name = self._create_section_id_to_name(section_ids)
-        self._current_name = tkinter.StringVar()
+        self._current_name = StringVar()
         self.input_values: dict = self.__create_input_values(input_values)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
@@ -107,18 +107,16 @@ class ToplevelFlows(CTkToplevel):
         return self._get_section_name_for_id(_id)
 
     def _place_widgets(self) -> None:
-        self.label_id.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=tkinter.E)
-        self.entry_id.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=tkinter.W)
-        self.label_section_start.grid(row=1, column=0, padx=PADX, pady=PADY, sticky="E")
+        self.label_id.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=E)
+        self.entry_id.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=W)
+        self.label_section_start.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=E)
         self.dropdown_section_start.grid(
-            row=1, column=1, padx=PADX, pady=PADY, sticky="W"
+            row=1, column=1, padx=PADX, pady=PADY, sticky=W
         )
-        self.label_section_end.grid(row=2, column=0, padx=PADX, pady=PADY, sticky="E")
-        self.dropdown_section_end.grid(
-            row=2, column=1, padx=PADX, pady=PADY, sticky="W"
-        )
-        self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky="E")
-        self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky="W")
+        self.label_section_end.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=E)
+        self.dropdown_section_end.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=W)
+        self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
+        self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
         self.button_ok.grid(
             row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
