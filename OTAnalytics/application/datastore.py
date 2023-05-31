@@ -327,6 +327,12 @@ class Datastore:
             file=file,
         )
 
+    def get_section_id(self) -> SectionId:
+        """
+        Get an id for a new section
+        """
+        return self._section_repository.get_id()
+
     def add_section(self, section: Section) -> None:
         """
         Add a single section to the repository.

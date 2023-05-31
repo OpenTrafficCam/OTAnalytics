@@ -9,6 +9,7 @@ from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
     LINE,
+    NAME,
     PLUGIN_DATA,
     RELATIVE_OFFSET_COORDINATES,
     TYPE,
@@ -40,6 +41,7 @@ class TestLineSection:
         with pytest.raises(ValueError):
             LineSection(
                 id=SectionId("N"),
+                name="N",
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
@@ -50,6 +52,7 @@ class TestLineSection:
     def test_valid_line_section(self) -> None:
         LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -64,6 +67,7 @@ class TestLineSection:
         coordinates = [start, end]
         section = LineSection(
             id=section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -76,6 +80,7 @@ class TestLineSection:
         assert section_dict == {
             TYPE: LINE,
             ID: section_id.id,
+            NAME: section.name,
             RELATIVE_OFFSET_COORDINATES: {
                 EventType.SECTION_ENTER.serialize(): {X: 0, Y: 0}
             },
@@ -91,6 +96,7 @@ class TestLineSection:
         coordinates = [start, end]
         line = LineSection(
             id=SectionId(id),
+            name=id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -108,6 +114,7 @@ class TestAreaSection:
         with pytest.raises(ValueError):
             Area(
                 id=SectionId("N"),
+                name="N",
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
@@ -124,6 +131,7 @@ class TestAreaSection:
         with pytest.raises(ValueError):
             Area(
                 id=SectionId("N"),
+                name="N",
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
@@ -140,6 +148,7 @@ class TestAreaSection:
         ]
         area = Area(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -158,6 +167,7 @@ class TestAreaSection:
         forth = Coordinate(0, 0)
         section = Area(
             id=section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -170,6 +180,7 @@ class TestAreaSection:
         assert section_dict == {
             TYPE: AREA,
             ID: section_id.id,
+            NAME: section.name,
             RELATIVE_OFFSET_COORDINATES: {
                 EventType.SECTION_ENTER.serialize(): {X: 0, Y: 0}
             },
@@ -193,6 +204,7 @@ class TestAreaSection:
         ]
         line = Area(
             id=SectionId(id),
+            name=id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -205,6 +217,13 @@ class TestAreaSection:
 
 
 class TestSectionRepository:
+    def test_get_id(self) -> None:
+        repository = SectionRepository()
+
+        first_id = repository.get_id()
+
+        assert first_id == SectionId("1")
+
     def test_add(self) -> None:
         section_id = SectionId("north")
         section = Mock()
@@ -269,10 +288,12 @@ class TestSectionRepository:
 
     def test_update_section_plugin_data_not_existing(self) -> None:
         section_id = SectionId("my section")
+        name = "my section"
         plugin_data = {"some": "new_value"}
 
         section = LineSection(
             section_id,
+            name,
             {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
             {},
             coordinates=[Coordinate(0, 0), Coordinate(10, 10)],
@@ -299,6 +320,7 @@ class TestSectionRepository:
 
         section = LineSection(
             section_id,
+            "my section",
             {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
             {key: old_plugin_data},
             coordinates=[Coordinate(0, 0), Coordinate(10, 10)],

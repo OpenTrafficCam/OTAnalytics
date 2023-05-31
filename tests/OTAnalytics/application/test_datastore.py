@@ -203,6 +203,7 @@ class TestDatastore:
         store.add_section(
             LineSection(
                 id=SectionId("section"),
+                name="section",
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },

@@ -6,6 +6,7 @@ from OTAnalytics.domain.section import SectionId
 
 FLOWS: str = "flows"
 FLOW_ID: str = "id"
+FLOW_NAME: str = "name"
 START: str = "start"
 END: str = "end"
 DISTANCE: str = "distance"
@@ -36,6 +37,7 @@ class Flow:
     """
 
     id: FlowId
+    name: str
     start: SectionId
     end: SectionId
     distance: float
@@ -43,6 +45,7 @@ class Flow:
     def __init__(
         self,
         id: FlowId,
+        name: str,
         start: SectionId,
         end: SectionId,
         distance: float,
@@ -52,6 +55,7 @@ class Flow:
                 f"Distance must be equal or greater then 0, but is {distance}"
             )
         self.id: FlowId = id
+        self.name = name
         self.start: SectionId = start
         self.end: SectionId = end
         self.distance: float = distance
@@ -59,6 +63,7 @@ class Flow:
     def to_dict(self) -> dict:
         return {
             FLOW_ID: self.id.serialize(),
+            FLOW_NAME: self.name,
             START: self.start.serialize(),
             END: self.end.serialize(),
             DISTANCE: self.distance,

@@ -116,6 +116,12 @@ class OTAnalyticsApplication:
         """
         self._datastore.load_flow_file(file=sections_file)
 
+    def get_section_id(self) -> SectionId:
+        """
+        Get an id for a new section
+        """
+        return self._datastore.get_section_id()
+
     def add_section(self, section: Section) -> None:
         """
         Add a new section

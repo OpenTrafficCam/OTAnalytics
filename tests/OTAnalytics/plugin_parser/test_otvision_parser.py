@@ -334,6 +334,7 @@ class TestOtsectionParser:
         line_section_id = SectionId("some")
         line_section: Section = LineSection(
             id=line_section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -343,6 +344,7 @@ class TestOtsectionParser:
         area_section_id = SectionId("other")
         area_section: Section = Area(
             id=area_section_id,
+            name="other",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -355,7 +357,8 @@ class TestOtsectionParser:
             ],
         )
         some_flow = Flow(
-            FlowId("some to other"),
+            FlowId("1"),
+            name="some to other",
             start=line_section_id,
             end=area_section_id,
             distance=1,
@@ -382,6 +385,7 @@ class TestOtsectionParser:
         some_section_id = SectionId("some")
         some_section: Section = LineSection(
             id=some_section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -391,6 +395,7 @@ class TestOtsectionParser:
         other_section_id = SectionId("other")
         other_section: Section = LineSection(
             id=other_section_id,
+            name="other",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -398,7 +403,8 @@ class TestOtsectionParser:
             coordinates=[Coordinate(1, 0), Coordinate(0, 1)],
         )
         some_flow = Flow(
-            FlowId("some to other"),
+            FlowId("1"),
+            name="some to other",
             start=some_section_id,
             end=other_section_id,
             distance=1,
@@ -419,6 +425,7 @@ class TestOtsectionParser:
         end = Coordinate(1, 1)
         expected: Section = LineSection(
             id=SectionId("some"),
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -430,6 +437,7 @@ class TestOtsectionParser:
             section.SECTIONS: [
                 {
                     section.ID: "some",
+                    section.NAME: "some",
                     section.TYPE: "line",
                     section.RELATIVE_OFFSET_COORDINATES: {
                         EventType.SECTION_ENTER.serialize(): {
@@ -455,7 +463,7 @@ class TestOtsectionParser:
         _write_json(section_data, save_path)
 
         parser = OtFlowParser()
-        sections, flows = parser.parse(save_path)
+        sections, _ = parser.parse(save_path)
 
         assert sections == [expected]
 
@@ -464,6 +472,7 @@ class TestOtsectionParser:
         end = Coordinate(1, 1)
         expected: Section = LineSection(
             id=SectionId("some"),
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -475,6 +484,7 @@ class TestOtsectionParser:
             section.SECTIONS: [
                 {
                     section.ID: "some",
+                    section.NAME: "some",
                     section.TYPE: "line",
                     section.RELATIVE_OFFSET_COORDINATES: {
                         EventType.SECTION_ENTER.serialize(): {
@@ -495,7 +505,7 @@ class TestOtsectionParser:
         _write_json(section_data, save_path)
 
         parser = OtFlowParser()
-        sections, flows = parser.parse(save_path)
+        sections, _ = parser.parse(save_path)
 
         assert sections == [expected]
 
@@ -534,6 +544,7 @@ class TestOtEventListParser:
         )
         line_section = LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
@@ -543,6 +554,7 @@ class TestOtEventListParser:
         )
         area_section = Area(
             id=SectionId("S"),
+            name="S",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),

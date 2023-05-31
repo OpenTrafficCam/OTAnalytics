@@ -8,12 +8,14 @@ from OTAnalytics.domain.section import Section
 
 @pytest.fixture
 def flow() -> Flow:
-    distance = 1.0
+    flow_id = FlowId("1")
+    name = "some flow"
     start = Mock(spec=Section)
     end = Mock(spec=Section)
-    flow_id = FlowId("some flow")
+    distance = 1.0
     return Flow(
         id=flow_id,
+        name=name,
         start=start,
         end=end,
         distance=distance,
@@ -22,21 +24,24 @@ def flow() -> Flow:
 
 class TestFlow:
     def test_invalid_distance(self) -> None:
-        flow_id = FlowId("some")
+        flow_id = FlowId("1")
+        name = "some"
         start = Mock(spec=Section)
         end = Mock(spec=Section)
         with pytest.raises(ValueError):
-            Flow(flow_id, start=start, end=end, distance=-1)
+            Flow(flow_id, name, start=start, end=end, distance=-1)
 
 
 @pytest.fixture
 def other_flow() -> Flow:
-    distance = 1.0
+    flow_id = FlowId("2")
+    name = "other flow"
     start = Mock(spec=Section)
     end = Mock(spec=Section)
-    flow_id = FlowId("other flow")
+    distance = 1.0
     return Flow(
         id=flow_id,
+        name=name,
         start=start,
         end=end,
         distance=distance,

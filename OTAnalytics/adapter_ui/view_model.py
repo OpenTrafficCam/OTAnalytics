@@ -14,6 +14,10 @@ from OTAnalytics.domain.section import Section
 DISTANCES: str = "distances"
 
 
+class MissingCoordinate(Exception):
+    pass
+
+
 class ViewModel(ABC):
     @abstractmethod
     def register_to_subjects(self) -> None:
@@ -72,7 +76,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def set_new_section(self, section: Section) -> None:
+    def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
         raise NotImplementedError
 
     @abstractmethod

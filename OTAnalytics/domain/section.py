@@ -8,6 +8,7 @@ from OTAnalytics.domain.types import EventType
 
 SECTIONS: str = "sections"
 ID: str = "id"
+NAME: str = "name"
 TYPE: str = "type"
 LINE: str = "line"
 AREA: str = "area"
@@ -115,6 +116,7 @@ class Section(DataclassValidation):
     """
 
     id: SectionId
+    name: str
     relative_offset_coordinates: dict[EventType, RelativeOffsetCoordinate]
     plugin_data: dict[str, Any]
 
@@ -211,6 +213,7 @@ class LineSection(Section):
         """
         return {
             ID: self.id.serialize(),
+            NAME: self.name,
             TYPE: LINE,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
@@ -265,6 +268,7 @@ class Area(Section):
         return {
             TYPE: AREA,
             ID: self.id.serialize(),
+            NAME: self.name,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
             PLUGIN_DATA: self.plugin_data,
@@ -290,6 +294,9 @@ class SectionRepository:
         self, observer: SectionChangedObserver
     ) -> None:
         self._section_content_observers.register(observer)
+
+    def get_id(self) -> SectionId:
+        return SectionId("1")
 
     def add(self, section: Section) -> None:
         """Add a section to the repository.

@@ -9,7 +9,7 @@ from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT
-from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.adapter_ui.view_model import MissingCoordinate, ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.domain import geometry
@@ -20,16 +20,19 @@ from OTAnalytics.domain.date import (
     validate_minute,
     validate_second,
 )
-from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
+from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
-    MissingSection,
+    NAME,
+    RELATIVE_OFFSET_COORDINATES,
+    LineSection,
     Section,
     SectionId,
     SectionListObserver,
 )
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     CanvasElementDeleter,
@@ -239,10 +242,33 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
 
-    def set_new_section(self, section: Section) -> None:
-        self._application.add_section(section)
-        print(f"New line_section created: {section}")
-        self._update_selected_section(section.id)
+    def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
+        if not coordinates:
+            raise MissingCoordinate("First coordinate is missing")
+        elif len(coordinates) == 1:
+            raise MissingCoordinate("Second coordinate is missing")
+        if not data:
+            raise ValueError("Metadata of line_section are not defined")
+        relative_offset_coordinates_enter = data[RELATIVE_OFFSET_COORDINATES][
+            EventType.SECTION_ENTER.serialize()
+        ]
+        line_section = LineSection(
+            id=self._application.get_section_id(),
+            name=data[NAME],
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
+                    **relative_offset_coordinates_enter
+                )
+            },
+            plugin_data={},
+            coordinates=[self._to_coordinate(coordinate) for coordinate in coordinates],
+        )
+        self._application.add_section(line_section)
+        print(f"New line_section created: {line_section.id}")
+        self._update_selected_section(line_section.id)
+
+    def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
+        return geometry.Coordinate(coordinate[0], coordinate[1])
 
     def edit_section_geometry(self) -> None:
         if self._selected_section_id is None:
@@ -392,31 +418,27 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         ).get_data()
 
     def __update_flow_data(self, new_flow: dict, old_flow: dict = {}) -> None:
-        old_flow_id = FlowId(old_flow.get(FLOW_ID, ""))
-        new_flow_id = FlowId(new_flow[FLOW_ID])
+        flow_id = FlowId(old_flow.get(FLOW_ID, ""))
+        name = new_flow[FLOW_NAME]
         new_from_section_id = SectionId(new_flow[START_SECTION])
         new_to_section_id = SectionId(new_flow[END_SECTION])
         distance = float(new_flow[DISTANCE])
-        if new_from_section_id is None:
-            raise MissingSection(f"Could not find section for id {new_from_section_id}")
-        if new_to_section_id is None:
-            raise MissingSection(f"Could not find section for id {new_to_section_id}")
-        if old_flow_id != new_flow_id:
-            self._application.remove_flow(old_flow_id)
-        if flow := self._application.get_flow_for(new_flow_id):
+        if flow := self._application.get_flow_for(flow_id):
+            flow.name = name
             flow.start = new_from_section_id
             flow.end = new_to_section_id
             flow.distance = distance
             self._application.add_flow(flow)
         else:
             flow = Flow(
-                id=new_flow_id,
+                id=flow_id,
+                name=name,
                 start=new_from_section_id,
                 end=new_to_section_id,
                 distance=distance,
             )
             self._application.add_flow(flow)
-        self.set_selected_flow_id(new_flow_id.id)
+        self.set_selected_flow_id(flow_id.id)
 
     def edit_flow(self) -> None:
         selected_flow = self.get_selected_flow()

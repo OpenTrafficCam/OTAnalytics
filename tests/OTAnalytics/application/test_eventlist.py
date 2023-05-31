@@ -120,6 +120,7 @@ def track() -> Track:
 def line_section() -> LineSection:
     return LineSection(
         id=SectionId("N"),
+        name="N",
         relative_offset_coordinates={
             EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
         },

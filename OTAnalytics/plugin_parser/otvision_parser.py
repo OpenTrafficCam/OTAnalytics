@@ -452,15 +452,20 @@ class OtFlowParser(FlowParser):
             ],
         )
         section_id = self._parse_section_id(data)
+        name = self._parse_name(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
         coordinates = self._parse_coordinates(data)
         plugin_data = self._parse_plugin_data(data)
         return LineSection(
-            section_id, relative_offset_coordinates, plugin_data, coordinates
+            section_id, name, relative_offset_coordinates, plugin_data, coordinates
         )
 
     def _parse_section_id(self, data: dict) -> SectionId:
         return SectionId(data[section.ID])
+
+    def _parse_name(self, data: dict) -> str:
+        _id = data[section.ID]
+        return data.get(section.NAME, _id)
 
     def _validate_data(self, data: dict, attributes: list[str]) -> None:
         """Validate attributes of dictionary.
@@ -487,10 +492,13 @@ class OtFlowParser(FlowParser):
         """
         self._validate_data(data, attributes=[section.ID, section.COORDINATES])
         section_id = self._parse_section_id(data)
+        name = self._parse_name(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
         coordinates = self._parse_coordinates(data)
         plugin_data = self._parse_plugin_data(data)
-        return Area(section_id, relative_offset_coordinates, plugin_data, coordinates)
+        return Area(
+            section_id, name, relative_offset_coordinates, plugin_data, coordinates
+        )
 
     def _parse_coordinates(self, data: dict) -> list[Coordinate]:
         """Parse data to coordinates.
@@ -586,11 +594,13 @@ class OtFlowParser(FlowParser):
             ],
         )
         flow_id = FlowId(entry.get(flow.FLOW_ID, ""))
+        name = entry.get(flow.FLOW_NAME, flow_id.id)
         start = SectionId(entry.get(flow.START, ""))
         end = SectionId(entry.get(flow.END, ""))
         distance = float(entry.get(flow.DISTANCE, 0.0))
         return Flow(
             flow_id,
+            name=name,
             start=start,
             end=end,
             distance=distance,
