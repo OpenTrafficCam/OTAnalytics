@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import Section, SectionId
 
 
 @pytest.fixture
@@ -30,6 +30,15 @@ class TestFlow:
         end = Mock(spec=Section)
         with pytest.raises(ValueError):
             Flow(flow_id, name, start=start, end=end, distance=-1)
+
+    def test_uses_section(self) -> None:
+        start = SectionId("1")
+        end = SectionId("2")
+        flow = Flow(FlowId("1"), name="some", start=start, end=end, distance=1.0)
+
+        assert flow.is_using(start)
+        assert flow.is_using(end)
+        assert flow.is_using(SectionId("3")) is False
 
 
 @pytest.fixture

@@ -69,6 +69,9 @@ class Flow:
             DISTANCE: self.distance,
         }
 
+    def is_using(self, section: SectionId) -> bool:
+        return (self.start == section) or (self.end == section)
+
 
 class FlowListObserver(ABC):
     """
@@ -138,12 +141,7 @@ class FlowRepository:
         Returns:
             bool: true if the section is used by at least one flow
         """
-        for flow in self._flows.values():
-            if flow.start == section:
-                return True
-            if flow.end == section:
-                return True
-        return False
+        return any(flow.is_using(section) for flow in self._flows.values())
 
     def flows_using_section(self, section: SectionId) -> list[FlowId]:
         """
@@ -156,11 +154,7 @@ class FlowRepository:
             list[FlowId]: flows using the section
         """
         return list(
-            {
-                flow.id
-                for flow in self._flows.values()
-                if (flow.start == section) or (flow.end == section)
-            }
+            {flow.id for flow in self._flows.values() if flow.is_using(section)}
         )
 
     def add_all(self, flows: Iterable[Flow]) -> None:
