@@ -134,14 +134,14 @@
     "flows": [
         {
             "id": "Nord --> S\u00fcd",
-            "start": "2",
+            "start": "3",
             "end": "1",
             "distance": 25.0
         },
         {
             "id": "S\u00fcd --> Nord",
             "start": "1",
-            "end": "2",
+            "end": "3",
             "distance": 0.0
         }
     ]
