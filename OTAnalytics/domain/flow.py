@@ -119,10 +119,19 @@ class FlowListSubject:
 class FlowRepository:
     def __init__(self) -> None:
         self._flows: dict[FlowId, Flow] = {}
+        self._current_id = 0
         self._observers: FlowListSubject = FlowListSubject()
 
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         self._observers.register(observer)
+
+    def get_id(self) -> FlowId:
+        """
+        Get an id for a new flow
+        """
+        self._current_id += 1
+        candidate = FlowId(str(self._current_id))
+        return self.get_id() if candidate in self._flows.keys() else candidate
 
     def add(self, flow: Flow) -> None:
         self.__internal_add(flow)
@@ -166,6 +175,9 @@ class FlowRepository:
         if flow_id in self._flows:
             del self._flows[flow_id]
             self._observers.notify([flow_id])
+
+    def update(self, flow: Flow) -> None:
+        self._flows[flow.id] = flow
 
     def get(self, flow_id: FlowId) -> Optional[Flow]:
         return self._flows.get(flow_id)

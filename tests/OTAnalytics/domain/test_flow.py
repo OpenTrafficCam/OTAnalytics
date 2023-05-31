@@ -58,6 +58,20 @@ def other_flow() -> Flow:
 
 
 class TestFlowRepository:
+    def test_get_id(self) -> None:
+        flow = Mock(spec=Flow)
+        flow.id = FlowId("3")
+        repository = FlowRepository()
+        repository.add(flow)
+
+        first_id = repository.get_id()
+        second_id = repository.get_id()
+        third_id = repository.get_id()
+
+        assert first_id == FlowId("1")
+        assert second_id == FlowId("2")
+        assert third_id == FlowId("4")
+
     def test_add_flow(self, flow: Flow) -> None:
         repository = FlowRepository()
         repository.add(flow)

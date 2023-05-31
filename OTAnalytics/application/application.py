@@ -79,11 +79,20 @@ class OTAnalyticsApplication:
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
         return self._datastore.get_flow_for(flow_id)
 
+    def get_flow_id(self) -> FlowId:
+        """
+        Get an id for a new flow
+        """
+        return self._datastore.get_flow_id()
+
     def add_flow(self, flow: Flow) -> None:
         self._datastore.add_flow(flow)
 
     def remove_flow(self, flow_id: FlowId) -> None:
         self._datastore.remove_flow(flow_id)
+
+    def update_flow(self, flow: Flow) -> None:
+        self._datastore.update_flow(flow)
 
     def add_tracks_of_file(self, track_file: Path) -> None:
         """

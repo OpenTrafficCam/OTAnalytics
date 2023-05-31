@@ -308,11 +308,20 @@ class Datastore:
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
         return self._flow_repository.get(flow_id)
 
+    def get_flow_id(self) -> FlowId:
+        """
+        Get an id for a new flow
+        """
+        return self._flow_repository.get_id()
+
     def add_flow(self, flow: Flow) -> None:
         self._flow_repository.add(flow)
 
     def remove_flow(self, flow_id: FlowId) -> None:
         self._flow_repository.remove(flow_id)
+
+    def update_flow(self, flow: Flow) -> None:
+        self._flow_repository.update(flow)
 
     def save_event_list_file(self, file: Path) -> None:
         """
