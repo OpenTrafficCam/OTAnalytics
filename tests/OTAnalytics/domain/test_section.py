@@ -262,8 +262,9 @@ class TestSectionRepository:
         repository.register_section_changed_observer(observer)
 
         repository.add(original_section)
-        repository.update(original_section)
+        repository.update(updated_section)
 
+        assert repository.get(section_id) is updated_section
         observer.assert_called_once_with(section_id)
 
     def test_update_section_plugin_data_not_existing(self) -> None:
