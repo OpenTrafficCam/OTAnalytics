@@ -218,11 +218,18 @@ class TestAreaSection:
 
 class TestSectionRepository:
     def test_get_id(self) -> None:
+        section = Mock(spec=Section)
+        section.id = SectionId("3")
         repository = SectionRepository()
+        repository.add(section)
 
         first_id = repository.get_id()
+        second_id = repository.get_id()
+        third_id = repository.get_id()
 
         assert first_id == SectionId("1")
+        assert second_id == SectionId("2")
+        assert third_id == SectionId("4")
 
     def test_add(self) -> None:
         section_id = SectionId("north")

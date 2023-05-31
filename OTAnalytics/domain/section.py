@@ -284,6 +284,7 @@ class SectionRepository:
 
     def __init__(self) -> None:
         self._sections: dict[SectionId, Section] = {}
+        self._current_id = 0
         self._repository_content_observers: SectionListSubject = SectionListSubject()
         self._section_content_observers: SectionChangedSubject = SectionChangedSubject()
 
@@ -296,7 +297,9 @@ class SectionRepository:
         self._section_content_observers.register(observer)
 
     def get_id(self) -> SectionId:
-        return SectionId("1")
+        self._current_id += 1
+        candidate = SectionId(str(self._current_id))
+        return self.get_id() if candidate in self._sections.keys() else candidate
 
     def add(self, section: Section) -> None:
         """Add a section to the repository.
