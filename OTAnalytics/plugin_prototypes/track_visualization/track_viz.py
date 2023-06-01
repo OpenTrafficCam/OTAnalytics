@@ -320,8 +320,6 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             ax=axes,
             palette=COLOR_PALETTE,
             hue_order=CLASS_ORDER,
-            palette=COLOR_PALETTE,
-            hue_order=CLASS_ORDER,
         )
 
 
