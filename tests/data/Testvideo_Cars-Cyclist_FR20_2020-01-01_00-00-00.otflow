@@ -1,7 +1,8 @@
 {
     "sections": [
         {
-            "id": "S\u00fcd",
+            "id": "1",
+            "name": "S\u00fcd",
             "type": "line",
             "relative_offset_coordinates": {
                 "section-enter": {
@@ -30,7 +31,8 @@
             "plugin_data": {}
         },
         {
-            "id": "West",
+            "id": "2",
+            "name": "West",
             "type": "line",
             "relative_offset_coordinates": {
                 "section-enter": {
@@ -65,7 +67,8 @@
             }
         },
         {
-            "id": "Nord",
+            "id": "3",
+            "name": "Nord",
             "type": "line",
             "relative_offset_coordinates": {
                 "section-enter": {
@@ -98,7 +101,8 @@
             }
         },
         {
-            "id": "Ost",
+            "id": "4",
+            "name": "Ost",
             "type": "line",
             "relative_offset_coordinates": {
                 "section-enter": {
@@ -125,6 +129,20 @@
                 }
             ],
             "plugin_data": {}
+        }
+    ],
+    "flows": [
+        {
+            "id": "Nord --> S\u00fcd",
+            "start": "3",
+            "end": "1",
+            "distance": 25.0
+        },
+        {
+            "id": "S\u00fcd --> Nord",
+            "start": "1",
+            "end": "3",
+            "distance": 0.0
         }
     ]
 }

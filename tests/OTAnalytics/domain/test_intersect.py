@@ -128,6 +128,7 @@ class TestIntersector:
         offset = RelativeOffsetCoordinate(0.5, 0.5)
         section = LineSection(
             SectionId("N"),
+            "N",
             {EventType.SECTION_ENTER: offset},
             {},
             coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
@@ -155,6 +156,7 @@ class TestIntersectBySplittingTrackLine:
 
         line_section = LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -199,6 +201,7 @@ class TestIntersectBySplittingTrackLine:
 
         line_section = LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(1, 1)
             },
@@ -247,6 +250,7 @@ class TestIntersectBySmallTrackComponents:
 
         line_section = LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -293,6 +297,7 @@ class TestIntersectBySmallTrackComponents:
 
         line_section = LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(1, 1)
             },
@@ -353,6 +358,7 @@ class TestIntersectAreaByTrackPoints:
     def area(self) -> Area:
         return Area(
             id=SectionId("N"),
+            name="N",
             coordinates=[
                 Coordinate(1, 1),
                 Coordinate(1, 2),
@@ -784,6 +790,7 @@ class TestIntersectAreaByTrackPoints:
         mock_coordinate = Mock()
         area = Area(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(1, 1),
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(1, 1),
