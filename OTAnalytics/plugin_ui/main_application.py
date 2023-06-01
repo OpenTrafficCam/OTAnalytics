@@ -6,7 +6,7 @@ from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
-    SectionParser,
+    FlowParser,
     TrackParser,
     TrackToVideoRepository,
 )
@@ -18,16 +18,20 @@ from OTAnalytics.application.state import (
     SelectedVideoUpdate,
     TrackImageUpdater,
     TrackPropertiesUpdater,
+    TracksMetadata,
     TrackState,
     TrackViewState,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
+from OTAnalytics.domain.filter import FilterElementSettingRestorer
+from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
 )
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
@@ -35,7 +39,7 @@ from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtConfigParser,
     OtEventListParser,
-    OtsectionParser,
+    OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
     SimpleVideoParser,
@@ -79,12 +83,18 @@ class ApplicationStarter:
         )
         from OTAnalytics.plugin_ui.customtkinter_gui.gui import OTAnalyticsGui
 
-        datastore = self._create_datastore()
+        track_repository = self._create_track_repository()
+        datastore = self._create_datastore(track_repository)
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state(datastore)
         section_state = self._create_section_state()
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
+        tracks_metadata = self._create_tracks_metadata(track_repository)
+        filter_element_settings_restorer = (
+            self._create_filter_element_setting_restorer()
+        )
+
         application = OTAnalyticsApplication(
             datastore=datastore,
             track_state=track_state,
@@ -92,35 +102,40 @@ class ApplicationStarter:
             section_state=section_state,
             intersect=intersect,
             scene_event_detection=scene_event_detection,
+            tracks_metadata=tracks_metadata,
+            filter_element_setting_restorer=filter_element_settings_restorer,
         )
-        section_parser: SectionParser = application._datastore._section_parser
-        dummy_viewmodel = DummyViewModel(application, section_parser)
+        flow_parser: FlowParser = application._datastore._flow_parser
+        dummy_viewmodel = DummyViewModel(application, flow_parser)
         application.connect_observers()
         OTAnalyticsGui(dummy_viewmodel).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_parser = self._create_track_parser(self._create_track_repository())
-        section_parser = self._create_section_parser()
+        flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
             event_list_parser=event_list_parser,
             intersect=intersect,
             scene_event_detection=scene_event_detection,
         ).start()
 
-    def _create_datastore(self) -> Datastore:
+    def _create_datastore(self, track_repository: TrackRepository) -> Datastore:
         """
         Build all required objects and inject them where necessary
+
+        Args:
+            track_repository (TrackRepository): the track repository to inject
         """
-        track_repository = self._create_track_repository()
         track_parser = self._create_track_parser(track_repository)
         section_repository = self._create_section_repository()
-        section_parser = self._create_section_parser()
+        flow_parser = self._create_flow_parser()
+        flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
         event_list_parser = self._create_event_list_parser()
         video_parser = SimpleVideoParser(MoviepyVideoReader())
@@ -129,13 +144,14 @@ class ApplicationStarter:
         track_video_parser = OttrkVideoParser(video_parser)
         config_parser = OtConfigParser(
             video_parser=video_parser,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
         )
         return Datastore(
             track_repository,
             track_parser,
             section_repository,
-            section_parser,
+            flow_parser,
+            flow_repository,
             event_repository,
             event_list_parser,
             track_to_video_repository,
@@ -156,8 +172,11 @@ class ApplicationStarter:
     def _create_section_repository(self) -> SectionRepository:
         return SectionRepository()
 
-    def _create_section_parser(self) -> SectionParser:
-        return OtsectionParser()
+    def _create_flow_parser(self) -> FlowParser:
+        return OtFlowParser()
+
+    def _create_flow_repository(self) -> FlowRepository:
+        return FlowRepository()
 
     def _create_event_repository(self) -> EventRepository:
         return EventRepository()
@@ -171,9 +190,9 @@ class ApplicationStarter:
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
         background_image_plotter = TrackBackgroundPlotter(state, datastore)
+        dataframe_filter_builder = self._create_dataframe_filter_builder()
         pandas_data_provider = PandasTrackProvider(
-            datastore,
-            state,
+            datastore, state, dataframe_filter_builder
         )
         track_geometry_plotter = self._create_track_geometry_plotter(
             state,
@@ -234,3 +253,14 @@ class ApplicationStarter:
 
     def _create_scene_event_detection(self) -> RunSceneEventDetection:
         return RunSceneEventDetection(SceneActionDetector(SceneEventBuilder()))
+
+    def _create_tracks_metadata(
+        self, track_repository: TrackRepository
+    ) -> TracksMetadata:
+        return TracksMetadata(track_repository)
+
+    def _create_dataframe_filter_builder(self) -> DataFrameFilterBuilder:
+        return DataFrameFilterBuilder()
+
+    def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
+        return FilterElementSettingRestorer()

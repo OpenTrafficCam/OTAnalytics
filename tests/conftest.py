@@ -17,7 +17,7 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat
-from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser, OttrkParser
+from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser, OttrkParser
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -25,7 +25,7 @@ YieldFixture = Generator[T, None, None]
 
 @dataclass
 class TrackBuilder:
-    otdet_version = "1.1"
+    otdet_version = "1.2"
     track_id: int = 1
     track_class: str = "car"
     detection_class: str = "car"
@@ -58,28 +58,29 @@ class TrackBuilder:
         self.otdet_version = otdet_version
 
     def append_detection(self) -> None:
-        self._detections.append(
-            Detection(
-                classification=self.detection_class,
-                confidence=self.confidence,
-                x=self.x,
-                y=self.y,
-                w=self.w,
-                h=self.h,
-                frame=self.frame,
-                occurrence=datetime(
-                    self.occurrence_year,
-                    self.occurrence_month,
-                    self.occurrence_day,
-                    self.occurrence_hour,
-                    self.occurrence_minute,
-                    self.occurrence_second,
-                    self.occurrence_microsecond,
-                ),
-                input_file_path=Path(self.input_file_path),
-                interpolated_detection=self.interpolated_detection,
-                track_id=TrackId(self.track_id),
-            )
+        self._detections.append(self.create_detection())
+
+    def create_detection(self) -> Detection:
+        return Detection(
+            classification=self.detection_class,
+            confidence=self.confidence,
+            x=self.x,
+            y=self.y,
+            w=self.w,
+            h=self.h,
+            frame=self.frame,
+            occurrence=datetime(
+                self.occurrence_year,
+                self.occurrence_month,
+                self.occurrence_day,
+                self.occurrence_hour,
+                self.occurrence_minute,
+                self.occurrence_second,
+                self.occurrence_microsecond,
+            ),
+            input_file_path=Path(self.input_file_path),
+            interpolated_detection=self.interpolated_detection,
+            track_id=TrackId(self.track_id),
         )
 
     def add_track_id(self, id: int) -> None:
@@ -132,7 +133,9 @@ class TrackBuilder:
                 "height": 600.0,
                 "recorded_fps": 20.0,
                 "number_of_frames": 60.0,
-                "recorded_start_date": "2020-01-01 00:00:00.000000",
+                "recorded_start_date": self.__to_timestamp(
+                    "2020-01-01 00:00:00.000000"
+                ),
                 "length": "0:00:03",
             },
             "detection": {
@@ -161,8 +164,12 @@ class TrackBuilder:
             "ottrk_version": "1.0",
             "tracking": {
                 "otvision_version": "1.0",
-                "first_tracked_video_start": "2020-01-01 00:00:00.000000",
-                "last_tracked_video_end": "2020-01-01 00:00:02.950000",
+                "first_tracked_video_start": self.__to_timestamp(
+                    "2020-01-01 00:00:00.000000"
+                ),
+                "last_tracked_video_end": self.__to_timestamp(
+                    "2020-01-01 00:00:02.950000"
+                ),
                 "tracker": {
                     "name": "IOU",
                     "sigma_l": 0.27,
@@ -173,6 +180,11 @@ class TrackBuilder:
                 },
             },
         }
+
+    def __to_timestamp(self, date_as_string: str) -> str:
+        return str(
+            datetime.strptime(date_as_string, ottrk_dataformat.DATE_FORMAT).timestamp()
+        )
 
     def serialize_detection(
         self, detection: Detection, is_first: bool, is_finished: bool
@@ -185,9 +197,7 @@ class TrackBuilder:
             ottrk_dataformat.W: detection.w,
             ottrk_dataformat.H: detection.h,
             ottrk_dataformat.FRAME: detection.frame,
-            ottrk_dataformat.OCCURRENCE: detection.occurrence.strftime(
-                ottrk_dataformat.DATE_FORMAT
-            ),
+            ottrk_dataformat.OCCURRENCE: str(detection.occurrence.timestamp()),
             ottrk_dataformat.INPUT_FILE_PATH: str(detection.input_file_path),
             ottrk_dataformat.INTERPOLATED_DETECTION: detection.interpolated_detection,
             ottrk_dataformat.FIRST: is_first,
@@ -328,8 +338,8 @@ def tracks(ottrk_path: Path) -> list[Track]:
 
 @pytest.fixture(scope="module")
 def sections(otsection_file: Path) -> Sequence[Section]:
-    otsection_parser = OtsectionParser()
-    return otsection_parser.parse(otsection_file)
+    flow_parser = OtFlowParser()
+    return flow_parser.parse(otsection_file)[0]
 
 
 @pytest.fixture

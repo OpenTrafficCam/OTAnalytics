@@ -10,11 +10,7 @@ from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
-from OTAnalytics.application.datastore import (
-    EventListParser,
-    SectionParser,
-    TrackParser,
-)
+from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.domain.event import SceneEventBuilder
 from OTAnalytics.domain.track import (
@@ -27,7 +23,7 @@ from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
-    OtsectionParser,
+    OtFlowParser,
     OttrkParser,
 )
 from OTAnalytics.plugin_ui.cli import (
@@ -103,7 +99,7 @@ class TestCliArgumentParser:
 
 class TestOTAnalyticsCli:
     TRACK_PARSER: str = "track_parser"
-    SECTION_PARSER: str = "section_parser"
+    FLOW_PARSER: str = "flow_parser"
     EVENT_LIST_PARSER: str = "event_list_parser"
     INTERSECT: str = "intersect"
     SCENE_EVENT_DETECTION: str = "scene_event_detection"
@@ -112,7 +108,7 @@ class TestOTAnalyticsCli:
     def mock_cli_dependencies(self) -> dict[str, Any]:
         return {
             self.TRACK_PARSER: Mock(spec=TrackParser),
-            self.SECTION_PARSER: Mock(spec=SectionParser),
+            self.FLOW_PARSER: Mock(spec=FlowParser),
             self.EVENT_LIST_PARSER: Mock(spec=EventListParser),
             self.INTERSECT: Mock(spec=RunIntersect),
             self.SCENE_EVENT_DETECTION: Mock(spec=RunSceneEventDetection),
@@ -124,7 +120,7 @@ class TestOTAnalyticsCli:
             self.TRACK_PARSER: OttrkParser(
                 CalculateTrackClassificationByMaxConfidence(), TrackRepository()
             ),
-            self.SECTION_PARSER: OtsectionParser(),
+            self.FLOW_PARSER: OtFlowParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.INTERSECT: RunIntersect(
                 ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
@@ -142,7 +138,7 @@ class TestOTAnalyticsCli:
         cli = OTAnalyticsCli(cli_args, **mock_cli_dependencies)
         assert cli.cli_args == cli_args
         assert cli._track_parser == mock_cli_dependencies[self.TRACK_PARSER]
-        assert cli._section_parser == mock_cli_dependencies[self.SECTION_PARSER]
+        assert cli._flow_parser == mock_cli_dependencies[self.FLOW_PARSER]
         assert cli._event_list_parser == mock_cli_dependencies[self.EVENT_LIST_PARSER]
         assert cli._intersect == mock_cli_dependencies[self.INTERSECT]
 

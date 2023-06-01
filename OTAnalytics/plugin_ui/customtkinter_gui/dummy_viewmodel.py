@@ -1,48 +1,68 @@
-from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
 from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
+from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.view_model import DISTANCES, ViewModel
+from OTAnalytics.adapter_ui.default_values import DATE_FORMAT
+from OTAnalytics.adapter_ui.view_model import MissingCoordinate, ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.datastore import NoSectionsToSave, SectionParser
+from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.domain import geometry
+from OTAnalytics.domain.date import (
+    DateRange,
+    validate_date,
+    validate_hour,
+    validate_minute,
+    validate_second,
+)
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
-    MissingSection,
+    NAME,
+    RELATIVE_OFFSET_COORDINATES,
+    LineSection,
     Section,
     SectionId,
     SectionListObserver,
 )
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     CanvasElementDeleter,
     CanvasElementPainter,
     SectionBuilder,
+    SectionGeometryEditor,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
+    PRE_EDIT_SECTION_STYLE,
+    SELECTED_KNOB_STYLE,
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
+    FLOW_ID,
+    FLOW_NAME,
     START_SECTION,
     ToplevelFlows,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
+OTFLOW = "otflow"
 
 
 class MissingInjectedInstanceError(Exception):
@@ -59,27 +79,17 @@ def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
 
 
-@dataclass(frozen=True)
-class FlowId:
-    from_section: str
-    to_section: str
-
-
-def parse_flow_id(id: str) -> FlowId:
-    parts = id.split(" -> ")
-    return FlowId(from_section=parts[0], to_section=parts[1])
-
-
-class DummyViewModel(ViewModel, SectionListObserver):
+class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def __init__(
         self,
         application: OTAnalyticsApplication,
-        section_parser: SectionParser,
+        flow_parser: FlowParser,
     ) -> None:
         self._application = application
-        self._section_parser: SectionParser = section_parser
+        self._flow_parser: FlowParser = flow_parser
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
+        self._frame_filter: Optional[AbstractFrameFilter] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
@@ -90,6 +100,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def register_to_subjects(self) -> None:
         self._application.register_sections_observer(self)
         self._application.register_section_changed_observer(self._on_section_changed)
+        self._application.register_flows_observer(self)
 
         self._application.track_view_state.show_tracks.register(
             self._on_show_tracks_state_updated
@@ -128,10 +139,12 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-        if self._treeview_flows is None:
-            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self.refresh_sections_on_gui()
         self._treeview_sections.update_items()
+
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        if self._treeview_flows is None:
+            raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self._treeview_flows.update_items()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
@@ -143,6 +156,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         self._frame_canvas = tracks_canvas
 
+    def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
+        self._frame_filter = filter_frame
+
     def set_treeview_sections(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_sections = treeview
 
@@ -150,7 +166,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
         self._treeview_flows = treeview
 
     def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
-        current_id = section_id.id if section_id else None
+        current_id = section_id.serialize() if section_id else None
         self._selected_section_id = current_id
 
         if self._treeview_sections is None:
@@ -189,7 +205,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def load_sections(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
         sections_file = askopenfilename(
-            title="Load sections file", filetypes=[("otflow file", "*.otflow")]
+            title="Load sections file",
+            filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
+            defaultextension=f".{OTFLOW}",
         )
         if not sections_file:
             return
@@ -199,13 +217,15 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def save_sections(self) -> None:
         sections_file = asksaveasfilename(
-            title="Save sections file as", filetypes=[("sections file", "*.otflow")]
+            title="Save sections file as",
+            filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
+            defaultextension=f".{OTFLOW}",
         )
         if not sections_file:
             return
         print(f"Sections file to save: {sections_file}")
         try:
-            self._application.save_sections(Path(sections_file))
+            self._application.save_flows(Path(sections_file))
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
@@ -240,10 +260,33 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def _show_offset(self) -> bool:
         return True
 
-    def set_new_section(self, section: Section) -> None:
-        self._application.add_section(section)
-        print(f"New line_section created: {section}")
-        self._update_selected_section(section.id)
+    def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
+        if not coordinates:
+            raise MissingCoordinate("First coordinate is missing")
+        elif len(coordinates) == 1:
+            raise MissingCoordinate("Second coordinate is missing")
+        if not data:
+            raise ValueError("Metadata of line_section are not defined")
+        relative_offset_coordinates_enter = data[RELATIVE_OFFSET_COORDINATES][
+            EventType.SECTION_ENTER.serialize()
+        ]
+        line_section = LineSection(
+            id=self._application.get_section_id(),
+            name=data[NAME],
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
+                    **relative_offset_coordinates_enter
+                )
+            },
+            plugin_data={},
+            coordinates=[self._to_coordinate(coordinate) for coordinate in coordinates],
+        )
+        self._application.add_section(line_section)
+        print(f"New line_section created: {line_section.id}")
+        self._update_selected_section(line_section.id)
+
+    def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
+        return geometry.Coordinate(coordinate[0], coordinate[1])
 
     def edit_section_geometry(self) -> None:
         if self._selected_section_id is None:
@@ -253,18 +296,18 @@ class DummyViewModel(ViewModel, SectionListObserver):
         CanvasElementDeleter(canvas=self._canvas).delete(
             tag_or_id=self._selected_section_id
         )
-        current_section = None
         if self._selected_section_id:
-            current_section = self._application.get_section_for(
+            if current_section := self._application.get_section_for(
                 SectionId(self._selected_section_id)
-            )
-        SectionBuilder(
-            viewmodel=self,
-            canvas=self._canvas,
-            section=current_section,
-            style=EDITED_SECTION_STYLE,
-        )
-        self.refresh_sections_on_gui()
+            ):
+                SectionGeometryEditor(
+                    viewmodel=self,
+                    canvas=self._canvas,
+                    section=current_section,
+                    edited_section_style=EDITED_SECTION_STYLE,
+                    pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
+                    selected_knob_style=SELECTED_KNOB_STYLE,
+                )
 
     def edit_section_metadata(self) -> None:
         if self._selected_section_id is None:
@@ -300,9 +343,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
         print(f"Updated line_section Metadata: {updated_section_data}")
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
-        section = self._section_parser.parse_section(data)
-        self._application.remove_section(id)
-        self._application.add_section(section)
+        section = self._flow_parser.parse_section(data)
+        self._application.update_section(section)
 
     def remove_section(self) -> None:
         if self._treeview_sections is None:
@@ -313,7 +355,21 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 message="Please select a section to remove", initial_position=position
             )
             return
-        self._application.remove_section(SectionId(self._selected_section_id))
+        section_id = SectionId(self._selected_section_id)
+        if self._application.is_flow_using_section(section_id):
+            message = (
+                "The section you want to remove is being used in flows.\n"
+                "Please remove the following flows before removing the section.\n"
+            )
+            for flow_id in self._application.flows_using_section(section_id):
+                message += flow_id.serialize() + "\n"
+            position = self._treeview_sections.get_position()
+            InfoBox(
+                message=message,
+                initial_position=position,
+            )
+            return
+        self._application.remove_section(section_id)
         self.refresh_sections_on_gui()
 
     def refresh_sections_on_gui(self) -> None:
@@ -333,7 +389,7 @@ class DummyViewModel(ViewModel, SectionListObserver):
                 tags=[LINE_SECTION],
                 id=section[ID],
                 coordinates=section[COORDINATES],
-                style=style,
+                section_style=style,
             )
 
     def _get_sections(self) -> Iterable[dict]:
@@ -362,19 +418,25 @@ class DummyViewModel(ViewModel, SectionListObserver):
     def get_all_sections(self) -> Iterable[Section]:
         return self._application.get_all_sections()
 
-    def get_all_flows(self) -> list[str]:
-        flows: list[str] = []
-        for section in self.get_all_sections():
-            distances = section.plugin_data.get(DISTANCES, {})
-            flows.extend(
-                flow_id(section.id.id, other_section)
-                for other_section in distances.keys()
-            )
-        return flows
+    def get_all_flows(self) -> Iterable[Flow]:
+        return self._application.get_all_flows()
 
     def add_flow(self) -> None:
         if flow_data := self._show_distances_window():
-            self.__update_flow_data(flow_data)
+            flow_id = self._application.get_flow_id()
+            name = flow_data[FLOW_NAME]
+            new_from_section_id = SectionId(flow_data[START_SECTION])
+            new_to_section_id = SectionId(flow_data[END_SECTION])
+            distance = float(flow_data[DISTANCE])
+            flow = Flow(
+                id=flow_id,
+                name=name,
+                start=new_from_section_id,
+                end=new_to_section_id,
+                distance=distance,
+            )
+            self._application.add_flow(flow)
+            self.set_selected_flow_id(flow_id.serialize())
             print(f"Added new flow: {flow_data}")
 
     def _show_distances_window(
@@ -385,7 +447,9 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
-        section_ids = [section.id.id for section in self.get_all_sections()]
+        section_ids = [
+            self.__to_id_resource(section) for section in self.get_all_sections()
+        ]
         if len(section_ids) < 2:
             InfoBox(
                 message="To add a flow, at least two sections are needed",
@@ -399,32 +463,22 @@ class DummyViewModel(ViewModel, SectionListObserver):
             input_values=input_values,
         ).get_data()
 
-    def __update_flow_data(self, new_flow: dict, old_flow: dict = {}) -> None:
-        new_section_id = SectionId(new_flow[START_SECTION])
-        if section := self._application.get_section_for(section_id=new_section_id):
-            self.__clear_flow_data(flow=old_flow)
-            self._set_new_flow_data(section=section, flow=new_flow)
-        else:
-            raise MissingSection(f"Could not find section for id {new_section_id}")
+    def __to_id_resource(self, section: Section) -> IdResource:
+        return IdResource(id=section.id.serialize(), name=section.name)
 
-    def _set_new_flow_data(self, section: Section, flow: dict) -> None:
-        plugin_data = section.plugin_data.copy()
-        distance_data = plugin_data.get(DISTANCES, {})
-        new_data = {flow[END_SECTION]: flow[DISTANCE]}
-        distance_data.update(new_data)
-        plugin_data[DISTANCES] = distance_data
-        self._application.set_section_plugin_data(section.id, plugin_data)
-
-    def __clear_flow_data(self, flow: dict = {}) -> None:
-        if flow:
-            section_id = SectionId(flow[START_SECTION])
-            if section := self._application.get_section_for(section_id=section_id):
-                end_section = flow[END_SECTION]
-                plugin_data = section.plugin_data.copy()
-                distance_data = plugin_data.get(DISTANCES, {})
-                del distance_data[end_section]
-                plugin_data[DISTANCES] = distance_data
-                self._application.set_section_plugin_data(section_id, plugin_data)
+    def __update_flow_data(self, flow_data: dict) -> None:
+        flow_id = FlowId(flow_data.get(FLOW_ID, ""))
+        name = flow_data[FLOW_NAME]
+        new_from_section_id = SectionId(flow_data[START_SECTION])
+        new_to_section_id = SectionId(flow_data[END_SECTION])
+        distance = float(flow_data[DISTANCE])
+        if flow := self._application.get_flow_for(flow_id):
+            flow.name = name
+            flow.start = new_from_section_id
+            flow.end = new_to_section_id
+            flow.distance = distance
+            self._application.update_flow(flow)
+        self.set_selected_flow_id(flow_id.serialize())
 
     def edit_flow(self) -> None:
         selected_flow = self.get_selected_flow()
@@ -434,27 +488,24 @@ class DummyViewModel(ViewModel, SectionListObserver):
             position = position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to edit", initial_position=position)
             return
-        flow = parse_flow_id(selected_flow)
-        if from_section := self._application.get_section_for(
-            SectionId(flow.from_section)
-        ):
-            self._edit_flow(flow, from_section)
+        flow_id = FlowId(selected_flow)
+        if flow := self._application.get_flow_for(flow_id):
+            self._edit_flow(flow)
 
-    def _edit_flow(self, flow: FlowId, from_section: Section) -> None:
-        distances = from_section.plugin_data.get(DISTANCES, {})
-        distance: str = distances.get(flow.to_section, {})
+    def _edit_flow(self, flow: Flow) -> None:
         input_data = {
-            START_SECTION: flow.from_section,
-            END_SECTION: flow.to_section,
-            DISTANCE: distance,
+            FLOW_ID: flow.id.serialize(),
+            FLOW_NAME: flow.name,
+            START_SECTION: flow.start.id,
+            END_SECTION: flow.end.id,
+            DISTANCE: flow.distance,
         }
-        old_flow_data = input_data.copy()
 
         if flow_data := self._show_distances_window(
             input_values=input_data,
             title="Edit flow",
         ):
-            self.__update_flow_data(new_flow=flow_data, old_flow=old_flow_data)
+            self.__update_flow_data(flow_data=flow_data)
 
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
@@ -464,12 +515,8 @@ class DummyViewModel(ViewModel, SectionListObserver):
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
             return
-        flow = parse_flow_id(selected_flow)
-        data = {
-            START_SECTION: flow.from_section,
-            END_SECTION: flow.to_section,
-        }
-        self.__clear_flow_data(data)
+        flow_id = FlowId(selected_flow)
+        self._application.remove_flow(flow_id)
 
     def start_analysis(self) -> None:
         self._application.start_analysis()
@@ -498,3 +545,72 @@ class DummyViewModel(ViewModel, SectionListObserver):
 
     def change_track_offset_to_section_offset(self) -> None:
         return self._application.change_track_offset_to_section_offset()
+
+    def validate_date(self, date: str) -> bool:
+        return validate_date(date, DATE_FORMAT)
+
+    def validate_hour(self, hour: str) -> bool:
+        try:
+            return validate_hour(int(hour))
+        except ValueError:
+            return False
+
+    def validate_minute(self, minute: str) -> bool:
+        try:
+            return validate_minute(int(minute))
+        except ValueError:
+            return False
+
+    def validate_second(self, second: str) -> bool:
+        try:
+            return validate_second(int(second))
+        except ValueError:
+            return False
+
+    def apply_filter_tracks_by_date(self, date_range: DateRange) -> None:
+        self._application.update_date_range_tracks_filter(date_range)
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.set_active_color_on_filter_by_date_button()
+
+    def reset_filter_tracks_by_date(self) -> None:
+        self._application.update_date_range_tracks_filter(DateRange(None, None))
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.set_inactive_color_on_filter_by_date_button()
+
+    def get_first_detection_occurrence(self) -> Optional[datetime]:
+        return self._application._tracks_metadata.first_detection_occurrence
+
+    def get_last_detection_occurrence(self) -> Optional[datetime]:
+        return self._application._tracks_metadata.last_detection_occurrence
+
+    def get_filter_tracks_by_date_setting(self) -> DateRange:
+        filter_element = self._application.track_view_state.filter_element.get()
+        return filter_element.date_range
+
+    def enable_filter_track_by_date(self) -> None:
+        self._application.enable_filter_track_by_date()
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.enable_filter_by_date_button()
+        current_date_range = (
+            self._application.track_view_state.filter_element.get().date_range
+        )
+        if current_date_range != DateRange(None, None):
+            self._frame_filter.set_active_color_on_filter_by_date_button()
+        else:
+            self._frame_filter.set_inactive_color_on_filter_by_date_button()
+
+    def disable_filter_track_by_date(self) -> None:
+        self._application.disable_filter_track_by_date()
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.disable_filter_by_date_button()

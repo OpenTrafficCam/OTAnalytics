@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
 from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
@@ -36,13 +37,17 @@ class TrackParser(ABC):
         pass
 
 
-class SectionParser(ABC):
+class FlowParser(ABC):
     @abstractmethod
-    def parse(self, file: Path) -> Sequence[Section]:
+    def parse(self, file: Path) -> tuple[Sequence[Section], Sequence[Flow]]:
         pass
 
     @abstractmethod
-    def parse_list(self, content: list[dict]) -> Sequence[Section]:
+    def parse_content(
+        self,
+        section_content: list[dict],
+        flow_content: list[dict],
+    ) -> tuple[Sequence[Section], Sequence[Flow]]:
         pass
 
     @abstractmethod
@@ -50,11 +55,20 @@ class SectionParser(ABC):
         pass
 
     @abstractmethod
-    def serialize(self, sections: Iterable[Section], file: Path) -> None:
+    def serialize(
+        self,
+        sections: Iterable[Section],
+        flows: Iterable[Flow],
+        file: Path,
+    ) -> None:
         pass
 
     @abstractmethod
-    def convert(self, sections: Iterable[Section]) -> dict[str, list[dict]]:
+    def convert(
+        self,
+        sections: Iterable[Section],
+        flows: Iterable[Flow],
+    ) -> dict[str, list[dict]]:
         pass
 
 
@@ -163,6 +177,7 @@ class OtConfig:
     project_name: str
     videos: Sequence[Video]
     sections: Sequence[Section]
+    flows: Sequence[Flow]
 
 
 class ConfigParser(ABC):
@@ -183,6 +198,7 @@ class ConfigParser(ABC):
         project_name: str,
         video_files: Iterable[Video],
         sections: Iterable[Section],
+        flows: Iterable[Flow],
         file: Path,
     ) -> None:
         pass
@@ -202,7 +218,8 @@ class Datastore:
         track_repository: TrackRepository,
         track_parser: TrackParser,
         section_repository: SectionRepository,
-        section_parser: SectionParser,
+        flow_parser: FlowParser,
+        flow_repository: FlowRepository,
         event_repository: EventRepository,
         event_list_parser: EventListParser,
         track_to_video_repository: TrackToVideoRepository,
@@ -212,12 +229,13 @@ class Datastore:
         config_parser: ConfigParser,
     ) -> None:
         self._track_parser = track_parser
-        self._section_parser = section_parser
+        self._flow_parser = flow_parser
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
         self._track_video_parser = track_video_parser
         self._track_repository = track_repository
         self._section_repository = section_repository
+        self._flow_repository = flow_repository
         self._event_repository = event_repository
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
@@ -249,10 +267,12 @@ class Datastore:
         config = self._config_parser.parse(file)
         self._video_repository.add_all(config.videos)
         self._section_repository.add_all(config.sections)
+        self._flow_repository.add_all(config.flows)
 
     def clear_repositories(self) -> None:
         self._event_repository.clear()
         self._section_repository.clear()
+        self._flow_repository.clear()
         self._track_to_video_repository.clear()
         self._track_repository.clear()
         self._video_repository.clear()
@@ -260,6 +280,15 @@ class Datastore:
     def load_video_files(self, files: list[Path]) -> None:
         videos = [self._video_parser.parse(file) for file in files]
         self._video_repository.add_all(videos)
+
+    def register_flows_observer(self, observer: FlowListObserver) -> None:
+        """
+        Listen to changes in the flow repository.
+
+        Args:
+            observer (FlowListObserver): listener to be notified about changes
+        """
+        self._flow_repository.register_flows_observer(observer)
 
     def load_track_file(self, file: Path) -> None:
         """
@@ -297,41 +326,60 @@ class Datastore:
         """Delete all tracks in repository."""
         self._track_repository.delete_all()
 
-    def load_section_file(self, file: Path) -> None:
+    def load_flow_file(self, file: Path) -> None:
         """
-        Load sections from the given files and store them in the section repository.
+        Load sections and flows from the given files and store them in the repositories.
 
         Args:
-            file (Path): file to load sections from
+            file (Path): file to load sections and flows from
         """
-        sections = self._section_parser.parse(file)
+        sections, flows = self._flow_parser.parse(file)
         self._section_repository.add_all(sections)
+        self._flow_repository.add_all(flows)
 
-    def save_section_file(self, file: Path) -> None:
+    def save_flow_file(self, file: Path) -> None:
         """
-        Save sections from the repository in a section file.
+        Save the flows and sections from the repositories into a file.
 
         Args:
-            file (Path): file to save sections to
+            file (Path): file to save the flows and sections to
         """
         if sections := self._section_repository.get_all():
-            self._section_parser.serialize(
-                sections,
+            flows = self._flow_repository.get_all()
+            self._flow_parser.serialize(
+                sections=sections,
+                flows=flows,
                 file=file,
             )
         else:
             raise NoSectionsToSave()
-
-    def serialize_sections(self) -> dict[str, list[dict]]:
-        if sections := self._section_repository.get_all():
-            return self._section_parser.convert(sections)
-        raise NoSectionsToSave()
 
     def get_all_sections(self) -> Iterable[Section]:
         return self._section_repository.get_all()
 
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._section_repository.get(section_id)
+
+    def get_all_flows(self) -> Iterable[Flow]:
+        return self._flow_repository.get_all()
+
+    def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
+        return self._flow_repository.get(flow_id)
+
+    def get_flow_id(self) -> FlowId:
+        """
+        Get an id for a new flow
+        """
+        return self._flow_repository.get_id()
+
+    def add_flow(self, flow: Flow) -> None:
+        self._flow_repository.add(flow)
+
+    def remove_flow(self, flow_id: FlowId) -> None:
+        self._flow_repository.remove(flow_id)
+
+    def update_flow(self, flow: Flow) -> None:
+        self._flow_repository.update(flow)
 
     def save_event_list_file(self, file: Path) -> None:
         """
@@ -345,6 +393,36 @@ class Datastore:
             self._section_repository.get_all(),
             file=file,
         )
+
+    def is_flow_using_section(self, section: SectionId) -> bool:
+        """
+        Checks if the section id is used by flows.
+
+        Args:
+            section (SectionId): section to check
+
+        Returns:
+            bool: true if the section is used by at least one flow
+        """
+        return self._flow_repository.is_flow_using_section(section)
+
+    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+        """
+        Returns a list of flows using the section as start or end.
+
+        Args:
+            section (SectionId): section to search flows for
+
+        Returns:
+            list[FlowId]: flows using the section
+        """
+        return self._flow_repository.flows_using_section(section)
+
+    def get_section_id(self) -> SectionId:
+        """
+        Get an id for a new section
+        """
+        return self._section_repository.get_id()
 
     def add_section(self, section: Section) -> None:
         """

@@ -3,9 +3,14 @@ from typing import Any
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
 
 from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
-from OTAnalytics.domain.section import ID, RELATIVE_OFFSET_COORDINATES
+from OTAnalytics.domain.section import ID, NAME, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    tk_events,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
@@ -25,6 +30,7 @@ class ToplevelSections(CTkToplevel):
         self.input_values: dict = (
             {
                 ID: "",
+                NAME: "",
                 RELATIVE_OFFSET_COORDINATES: {
                     EventType.SECTION_ENTER.serialize(): {
                         "x": RELATIVE_SECTION_OFFSET.x,
@@ -47,7 +53,7 @@ class ToplevelSections(CTkToplevel):
     def _get_widgets(self) -> None:
         self.label_name = CTkLabel(master=self, text="Name:")
         self.entry_name = CTkEntry(master=self, width=180)
-        self.entry_name.insert(0, self.input_values[ID])
+        self.entry_name.insert(0, self.input_values[NAME])
 
         self.frame_bbox_offset = FrameBboxOffset(
             master=self,
@@ -75,15 +81,17 @@ class ToplevelSections(CTkToplevel):
         self.geometry(f"+{x+10}+{y+10}")
 
     def _set_focus(self) -> None:
-        self.entry_name.focus_set()
+        self.after(0, lambda: self.lift())
+        self.after(0, lambda: self.entry_name.focus_set())
 
     def _set_close_on_return_key(self) -> None:
-        self.entry_name.bind("<Return>", self.close)
+        self.entry_name.bind(tk_events.RETURN_KEY, self.close)
+        self.entry_name.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
 
     def close(self, event: Any = None) -> None:
         if not self._name_is_valid():
             return
-        self.input_values[ID] = self.entry_name.get()
+        self.input_values[NAME] = self.entry_name.get()
         self.input_values[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
         ] = self.frame_bbox_offset.get_relative_offset_coordintes()
