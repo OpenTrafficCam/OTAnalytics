@@ -672,7 +672,7 @@ class TestOtConfigParser:
             video_parser=video_parser,
             flow_parser=flow_parser,
         )
-        name = "My Test Project"
+        name = "Test Project"
         videos: Sequence[Video] = ()
         sections: Sequence[Section] = ()
         flows: Sequence[Flow] = ()
