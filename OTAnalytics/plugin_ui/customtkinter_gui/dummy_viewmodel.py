@@ -224,6 +224,22 @@ class DummyViewModel(ViewModel, SectionListObserver):
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
 
+    def get_section_metadata(
+        self,
+        title: str,
+        initial_position: tuple[int, int],
+        input_values: dict | None = None,
+    ) -> dict:
+        return ToplevelSections(
+            title=title,
+            initial_position=initial_position,
+            input_values=input_values,
+            show_offset=self._show_offset(),
+        ).get_metadata()
+
+    def _show_offset(self) -> bool:
+        return True
+
     def set_new_section(self, section: Section) -> None:
         self._application.add_section(section)
         print(f"New line_section created: {section}")
@@ -271,11 +287,11 @@ class DummyViewModel(ViewModel, SectionListObserver):
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         position = get_widget_position(widget=self._canvas)
-        updated_section_data = ToplevelSections(
+        updated_section_data = self.get_section_metadata(
             title="Edit section",
             initial_position=position,
             input_values=current_data,
-        ).get_metadata()
+        )
         self._set_section_data(
             id=selected_section.id,
             data=updated_section_data,
