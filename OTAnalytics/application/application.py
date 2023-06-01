@@ -3,7 +3,15 @@ from typing import Iterable, Optional
 
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import SectionState, TrackState, TrackViewState
+from OTAnalytics.application.state import (
+    SectionState,
+    TracksMetadata,
+    TrackState,
+    TrackViewState,
+)
+from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -28,6 +36,8 @@ class OTAnalyticsApplication:
         section_state: SectionState,
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
+        tracks_metadata: TracksMetadata,
+        filter_element_setting_restorer: FilterElementSettingRestorer,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -35,12 +45,15 @@ class OTAnalyticsApplication:
         self.section_state: SectionState = section_state
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
+        self._tracks_metadata = tracks_metadata
+        self._filter_element_setting_restorer = filter_element_setting_restorer
 
     def connect_observers(self) -> None:
         """
         Connect the observers with the repositories to listen to domain object changes.
         """
         self._datastore.register_tracks_observer(self.track_state)
+        self._datastore.register_tracks_observer(self._tracks_metadata)
         self._datastore.register_sections_observer(self.section_state)
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
@@ -51,11 +64,35 @@ class OTAnalyticsApplication:
     ) -> None:
         self._datastore.register_section_changed_observer(observer)
 
+    def register_flows_observer(self, observer: FlowListObserver) -> None:
+        self._datastore.register_flows_observer(observer)
+
     def get_all_sections(self) -> Iterable[Section]:
         return self._datastore.get_all_sections()
 
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._datastore.get_section_for(section_id)
+
+    def get_all_flows(self) -> Iterable[Flow]:
+        return self._datastore.get_all_flows()
+
+    def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
+        return self._datastore.get_flow_for(flow_id)
+
+    def get_flow_id(self) -> FlowId:
+        """
+        Get an id for a new flow
+        """
+        return self._datastore.get_flow_id()
+
+    def add_flow(self, flow: Flow) -> None:
+        self._datastore.add_flow(flow)
+
+    def remove_flow(self, flow_id: FlowId) -> None:
+        self._datastore.remove_flow(flow_id)
+
+    def update_flow(self, flow: Flow) -> None:
+        self._datastore.update_flow(flow)
 
     def add_tracks_of_file(self, track_file: Path) -> None:
         """
@@ -86,7 +123,37 @@ class OTAnalyticsApplication:
         Args:
             sections_file (Path): file in sections format
         """
-        self._datastore.load_section_file(file=sections_file)
+        self._datastore.load_flow_file(file=sections_file)
+
+    def is_flow_using_section(self, section: SectionId) -> bool:
+        """
+        Checks if the section id is used by flows.
+
+        Args:
+            section (SectionId): section to check
+
+        Returns:
+            bool: true if the section is used by at least one flow
+        """
+        return self._datastore.is_flow_using_section(section)
+
+    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+        """
+        Returns a list of flows using the section as start or end.
+
+        Args:
+            section (SectionId): section to search flows for
+
+        Returns:
+            list[FlowId]: flows using the section
+        """
+        return self._datastore.flows_using_section(section)
+
+    def get_section_id(self) -> SectionId:
+        """
+        Get an id for a new section
+        """
+        return self._datastore.get_section_id()
 
     def add_section(self, section: Section) -> None:
         """
@@ -127,14 +194,14 @@ class OTAnalyticsApplication:
             section_id=section_id, plugin_data=plugin_data
         )
 
-    def save_sections(self, file: Path) -> None:
+    def save_flows(self, file: Path) -> None:
         """
-        Save the section repository into a file.
+        Save the flows and sections from the repositories into a file.
 
         Args:
-            file (Path): file to save the sections to
+            file (Path): file to save the flows and sections to
         """
-        self._datastore.save_section_file(file)
+        self._datastore.save_flow_file(file)
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
@@ -207,3 +274,36 @@ class OTAnalyticsApplication:
             Optional[RelativeOffsetCoordinate]: the current track offset.
         """
         return self.track_view_state.track_offset.get()
+
+    def update_date_range_tracks_filter(self, date_range: DateRange) -> None:
+        """Update the date range of the track filter.
+
+        Args:
+            date_range (DateRange): the date range
+        """
+        current_filter_element = self.track_view_state.filter_element.get()
+
+        self.track_view_state.filter_element.set(
+            current_filter_element.derive_date(date_range)
+        )
+
+    def enable_filter_track_by_date(self) -> None:
+        """Enable filtering track by date and restoring the previous date range."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        restored_filter_element = (
+            self._filter_element_setting_restorer.restore_by_date_filter_setting(
+                current_filter_element
+            )
+        )
+        self.track_view_state.filter_element.set(restored_filter_element)
+
+    def disable_filter_track_by_date(self) -> None:
+        """Disable filtering track by date and saving the current date range."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        self._filter_element_setting_restorer.save_by_date_filter_setting(
+            current_filter_element
+        )
+
+        self.track_view_state.filter_element.set(
+            FilterElement(DateRange(None, None), current_filter_element.classifications)
+        )

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Callable, Optional
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 
 import pytest
 
@@ -12,12 +12,20 @@ from OTAnalytics.application.state import (
     SectionState,
     TrackImageUpdater,
     TrackObserver,
+    TracksMetadata,
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import Track, TrackId, TrackImage
+from OTAnalytics.domain.track import (
+    Detection,
+    Track,
+    TrackId,
+    TrackImage,
+    TrackRepository,
+)
 
 
 class TestTrackState:
@@ -53,9 +61,9 @@ class TestTrackState:
 
 class TestObservableProperty:
     def test_notify_observer(self) -> None:
-        first_filter_element = FilterElement(None, None, [])
+        first_filter_element = FilterElement(DateRange(None, None), [])
         changed_filter_element = FilterElement(
-            datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
+            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), ["car", "truck"]
         )
         observer = Mock(spec=Callable[[FilterElement], None])
         state = ObservableProperty[FilterElement](first_filter_element)
@@ -70,7 +78,7 @@ class TestObservableProperty:
 
     def test_update_filter_element_on_on_notify_filter_element(self) -> None:
         filter_element = FilterElement(
-            datetime(2000, 1, 1), datetime(2000, 1, 3), ["car", "truck"]
+            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), ["car", "truck"]
         )
         state = TrackViewState()
 
@@ -145,3 +153,63 @@ class TestTrackImageUpdater:
         assert track_view_state.background_image.get() == background_image
 
         plotter.plot.assert_called_once()
+
+
+class TestTracksMetadata:
+    @pytest.fixture
+    def first_detection(self) -> Mock:
+        first_detection = Mock(spec=Detection).return_value
+        first_detection.occurrence = datetime(2000, 1, 1, 7, 0, 0, 0)
+        return first_detection
+
+    @pytest.fixture
+    def second_detection(self) -> Mock:
+        second_detection = Mock(spec=Detection).return_value
+        second_detection.occurrence = datetime(2000, 2, 1, 0, 0, 0, 0)
+        return second_detection
+
+    @pytest.fixture
+    def third_detection(self) -> Mock:
+        third_detection = Mock(spec=Detection).return_value
+        third_detection.occurrence = datetime(2000, 2, 5, 0, 0, 0, 0)
+        return third_detection
+
+    @patch("OTAnalytics.application.state.TracksMetadata._get_all_track_detections")
+    def test_update_detection_occurrences(
+        self,
+        mock_get_all_track_detections: Mock,
+        first_detection: Mock,
+        second_detection: Mock,
+        third_detection: Mock,
+    ) -> None:
+        mock_track_repository = Mock(spec=TrackRepository)
+
+        mock_get_all_track_detections.return_value = [
+            first_detection,
+            third_detection,
+            second_detection,
+        ]
+        tracks_metadata = TracksMetadata(mock_track_repository)
+
+        assert tracks_metadata.first_detection_occurrence is None
+        assert tracks_metadata.last_detection_occurrence is None
+
+        tracks_metadata.notify_tracks([])
+        assert tracks_metadata.first_detection_occurrence == first_detection.occurrence
+        assert tracks_metadata.last_detection_occurrence == third_detection.occurrence
+
+        mock_get_all_track_detections.assert_called_once()
+
+    def test_get_all_track_detections(
+        self, first_detection: Mock, second_detection: Mock
+    ) -> None:
+        track = Mock(spec=Track).return_value
+        track.detections = [first_detection, second_detection]
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_all.return_value = [track]
+
+        tracks_metadata = TracksMetadata(track_repository)
+        detections = tracks_metadata._get_all_track_detections()
+
+        assert detections == [first_detection, second_detection]
+        track_repository.get_all.assert_called_once()

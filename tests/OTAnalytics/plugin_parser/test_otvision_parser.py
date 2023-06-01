@@ -11,8 +11,9 @@ from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain import geometry, section
+from OTAnalytics.domain import flow, geometry, section
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import (
     DirectionVector2D,
     ImageCoordinate,
@@ -47,7 +48,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     DetectionFixer,
     InvalidSectionData,
     OtEventListParser,
-    OtsectionParser,
+    OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
     Version,
@@ -330,16 +331,20 @@ class TestOtsectionParser:
         first_coordinate = Coordinate(0, 0)
         second_coordinate = Coordinate(1, 1)
         third_coordinate = Coordinate(1, 0)
+        line_section_id = SectionId("some")
         line_section: Section = LineSection(
-            id=SectionId("some"),
+            id=line_section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "key_2": "some_data"},
             coordinates=[first_coordinate, second_coordinate],
         )
+        area_section_id = SectionId("other")
         area_section: Section = Area(
-            id=SectionId("other"),
+            id=area_section_id,
+            name="other",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -351,46 +356,78 @@ class TestOtsectionParser:
                 first_coordinate,
             ],
         )
+        flow_id = FlowId("1")
+        flow_name = "some to other"
+        flow_distance = 1
+        some_flow = Flow(
+            flow_id,
+            name=flow_name,
+            start=line_section_id,
+            end=area_section_id,
+            distance=flow_distance,
+        )
         json_file = test_data_tmp_dir / "section.json"
         json_file.touch()
         sections = [line_section, area_section]
-        parser = OtsectionParser()
-        parser.serialize(sections, json_file)
+        flows = [some_flow]
+        parser = OtFlowParser()
+        parser.serialize(sections, flows, json_file)
 
-        content = parser.parse(json_file)
+        parsed_sections, parsed_flows = parser.parse(json_file)
 
-        assert content == sections
+        parsed_flow = parsed_flows[0]
+
+        assert parsed_sections == sections
+        assert len(parsed_flows) == 1
+        assert parsed_flow.id == flow_id
+        assert parsed_flow.name == flow_name
+        assert parsed_flow.start == line_section_id
+        assert parsed_flow.end == area_section_id
+        assert parsed_flow.distance == flow_distance
 
     def test_validate(self) -> None:
-        parser = OtsectionParser()
+        parser = OtFlowParser()
         pytest.raises(
             InvalidSectionData, parser.parse_section, {section.TYPE: section.LINE}
         )
 
     def test_convert_section(self) -> None:
+        some_section_id = SectionId("some")
         some_section: Section = LineSection(
-            id=SectionId("some"),
+            id=some_section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
             coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
         )
+        other_section_id = SectionId("other")
         other_section: Section = LineSection(
-            id=SectionId("other"),
+            id=other_section_id,
+            name="other",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
             coordinates=[Coordinate(1, 0), Coordinate(0, 1)],
         )
+        some_flow = Flow(
+            FlowId("1"),
+            name="some to other",
+            start=some_section_id,
+            end=other_section_id,
+            distance=1,
+        )
         sections = [some_section, other_section]
-        parser = OtsectionParser()
+        flows = [some_flow]
+        parser = OtFlowParser()
 
-        content = parser._convert(sections)
+        content = parser._convert(sections, flows)
 
         assert content == {
-            section.SECTIONS: [some_section.to_dict(), other_section.to_dict()]
+            section.SECTIONS: [some_section.to_dict(), other_section.to_dict()],
+            flow.FLOWS: [some_flow.to_dict()],
         }
 
     def test_parse_plugin_data_no_entry(self, test_data_tmp_dir: Path) -> None:
@@ -398,6 +435,7 @@ class TestOtsectionParser:
         end = Coordinate(1, 1)
         expected: Section = LineSection(
             id=SectionId("some"),
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -409,6 +447,7 @@ class TestOtsectionParser:
             section.SECTIONS: [
                 {
                     section.ID: "some",
+                    section.NAME: "some",
                     section.TYPE: "line",
                     section.RELATIVE_OFFSET_COORDINATES: {
                         EventType.SECTION_ENTER.serialize(): {
@@ -427,13 +466,14 @@ class TestOtsectionParser:
                         },
                     ],
                 }
-            ]
+            ],
+            flow.FLOWS: [],
         }
         save_path = test_data_tmp_dir / "sections.otflow"
         _write_json(section_data, save_path)
 
-        parser = OtsectionParser()
-        sections = parser.parse(save_path)
+        parser = OtFlowParser()
+        sections, _ = parser.parse(save_path)
 
         assert sections == [expected]
 
@@ -442,6 +482,7 @@ class TestOtsectionParser:
         end = Coordinate(1, 1)
         expected: Section = LineSection(
             id=SectionId("some"),
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -453,6 +494,7 @@ class TestOtsectionParser:
             section.SECTIONS: [
                 {
                     section.ID: "some",
+                    section.NAME: "some",
                     section.TYPE: "line",
                     section.RELATIVE_OFFSET_COORDINATES: {
                         EventType.SECTION_ENTER.serialize(): {
@@ -466,13 +508,14 @@ class TestOtsectionParser:
                     ],
                     section.PLUGIN_DATA: {"key_1": "some_data", "1": "some_data"},
                 }
-            ]
+            ],
+            flow.FLOWS: [],
         }
         save_path = test_data_tmp_dir / "sections.otflow"
         _write_json(section_data, save_path)
 
-        parser = OtsectionParser()
-        sections = parser.parse(save_path)
+        parser = OtFlowParser()
+        sections, _ = parser.parse(save_path)
 
         assert sections == [expected]
 
@@ -511,6 +554,7 @@ class TestOtEventListParser:
         )
         line_section = LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
@@ -520,6 +564,7 @@ class TestOtEventListParser:
         )
         area_section = Area(
             id=SectionId("S"),
+            name="S",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
