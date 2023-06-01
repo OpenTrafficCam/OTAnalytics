@@ -20,7 +20,6 @@ class FlowId:
         return self.id
 
 
-@dataclass(init=False)
 class Flow:
     """
     A `Flow` describes a segment of road that is defined by a start and end section as

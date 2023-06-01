@@ -356,12 +356,15 @@ class TestOtsectionParser:
                 first_coordinate,
             ],
         )
+        flow_id = FlowId("1")
+        flow_name = "some to other"
+        flow_distance = 1
         some_flow = Flow(
-            FlowId("1"),
-            name="some to other",
+            flow_id,
+            name=flow_name,
             start=line_section_id,
             end=area_section_id,
-            distance=1,
+            distance=flow_distance,
         )
         json_file = test_data_tmp_dir / "section.json"
         json_file.touch()
@@ -372,8 +375,15 @@ class TestOtsectionParser:
 
         parsed_sections, parsed_flows = parser.parse(json_file)
 
+        parsed_flow = parsed_flows[0]
+
         assert parsed_sections == sections
-        assert parsed_flows == flows
+        assert len(parsed_flows) == 1
+        assert parsed_flow.id == flow_id
+        assert parsed_flow.name == flow_name
+        assert parsed_flow.start == line_section_id
+        assert parsed_flow.end == area_section_id
+        assert parsed_flow.distance == flow_distance
 
     def test_validate(self) -> None:
         parser = OtFlowParser()
