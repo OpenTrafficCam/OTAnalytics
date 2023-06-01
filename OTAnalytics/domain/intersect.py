@@ -297,6 +297,7 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
 
     The smallest component of a track is to generate a Line with the coordinates of
     two neighboring detections in the track.
+    Only if the neighboring detections have different coordinates.
 
     Args:
         implementation (IntersectorImplementation): the intersection implementation
@@ -332,22 +333,26 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
             next_detection_coordinate = self._select_coordinate_in_detection(
                 next_detection, offset
             )
-            detection_as_geometry = Line(
-                [current_detection_coordinate, next_detection_coordinate]
-            )
-            intersects = self.implementation.line_intersects_line(
-                line_section_as_geometry, detection_as_geometry
-            )
-            if intersects:
-                event_builder.add_direction_vector(
-                    self._calculate_direction_vector(
-                        current_detection_coordinate, next_detection_coordinate
+            if (
+                current_detection_coordinate.x != next_detection_coordinate.x
+                or current_detection_coordinate.y != next_detection_coordinate.y
+            ):
+                detection_as_geometry = Line(
+                    [current_detection_coordinate, next_detection_coordinate]
+                )
+                intersects = self.implementation.line_intersects_line(
+                    line_section_as_geometry, detection_as_geometry
+                )
+                if intersects:
+                    event_builder.add_direction_vector(
+                        self._calculate_direction_vector(
+                            current_detection_coordinate, next_detection_coordinate
+                        )
                     )
-                )
-                event_builder.add_event_coordinate(
-                    next_detection_coordinate.x, next_detection_coordinate.y
-                )
-                events.append(event_builder.create_event(next_detection))
+                    event_builder.add_event_coordinate(
+                        next_detection_coordinate.x, next_detection_coordinate.y
+                    )
+                    events.append(event_builder.create_event(next_detection))
         return events
 
     def _track_line_intersects_section(
