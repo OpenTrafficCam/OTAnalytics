@@ -217,6 +217,7 @@ class ApplicationStarter:
         image_updater = TrackImageUpdater(datastore, state, plotter)
         selected_video_updater = SelectedVideoUpdate(datastore, state)
         datastore.register_tracks_observer(selected_video_updater)
+        datastore.register_video_observer(selected_video_updater)
         datastore.register_tracks_observer(image_updater)
         return state
 

@@ -16,7 +16,7 @@ from OTAnalytics.domain.track import (
     TrackRepository,
     TrackSubject,
 )
-from OTAnalytics.domain.video import Video
+from OTAnalytics.domain.video import Video, VideoListObserver
 
 DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
@@ -247,7 +247,7 @@ class Plotter(ABC):
         pass
 
 
-class SelectedVideoUpdate(TrackListObserver):
+class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
     def __init__(self, datastore: Datastore, track_view_state: TrackViewState) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
@@ -257,6 +257,10 @@ class SelectedVideoUpdate(TrackListObserver):
         if tracks:
             video = self._datastore.get_video_for(all_tracks[0].id)
             self._track_view_state.selected_video.set(video)
+
+    def notify_videos(self, videos: list[Video]) -> None:
+        if videos:
+            self._track_view_state.selected_video.set(videos[0])
 
 
 class TrackImageUpdater(TrackListObserver):
