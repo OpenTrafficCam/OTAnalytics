@@ -17,6 +17,7 @@ from OTAnalytics.application.datastore import (
     TrackVideoParser,
     VideoParser,
 )
+from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -158,11 +159,12 @@ class TestDatastore:
             track_to_video_repository=track_to_video_repository,
             config_parser=config_parser,
         )
+        project: Project = Mock(spec=Project)
         videos: Sequence[Video] = []
         sections: Sequence[Section] = []
         flows: Sequence[Flow] = []
         config_parser.parse.return_value = OtConfig(
-            project_name="My Test Project",
+            project=project,
             videos=videos,
             sections=sections,
             flows=flows,
@@ -171,6 +173,7 @@ class TestDatastore:
 
         store.load_configuration_file(some_file)
 
+        assert store.project == project
         track_repository.clear.assert_called_once()
         section_repository.clear.assert_called_once()
         video_repository.clear.assert_called_once()
@@ -179,6 +182,7 @@ class TestDatastore:
         config_parser.parse.assert_called_with(some_file)
         video_repository.add_all.called_with(videos)
         section_repository.add_all.called_with(sections)
+        flow_repository.add_all.called_with(flows)
 
     def test_load_track_file(
         self,

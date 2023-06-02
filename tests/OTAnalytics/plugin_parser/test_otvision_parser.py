@@ -10,6 +10,7 @@ import ujson
 from OTAnalytics import version
 from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
+from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, geometry, section, video
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.flow import Flow, FlowId
@@ -43,7 +44,6 @@ from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
     METADATA,
-    NAME,
     PROJECT,
     SECTION_FORMAT_VERSION,
     VERSION,
@@ -635,7 +635,7 @@ class TestOtConfigParser:
             video_parser=video_parser,
             flow_parser=flow_parser,
         )
-        name = "My Test Project"
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
         videos: list[Video] = []
         sections: list[Section] = []
         flows: list[Flow] = []
@@ -646,7 +646,7 @@ class TestOtConfigParser:
         flow_parser.convert.return_value = serialized_sections
 
         config_parser.serialize(
-            project_name=name,
+            project=project,
             video_files=videos,
             sections=sections,
             flows=flows,
@@ -654,7 +654,7 @@ class TestOtConfigParser:
         )
 
         serialized_content = _parse(output)
-        expected_content: dict[str, Any] = {PROJECT: {NAME: name}}
+        expected_content: dict[str, Any] = {PROJECT: project.to_dict()}
         expected_content |= serialized_videos
         expected_content |= serialized_sections
 
@@ -671,7 +671,7 @@ class TestOtConfigParser:
             video_parser=video_parser,
             flow_parser=flow_parser,
         )
-        name = "Test Project"
+        project = Project(name="Test Project", start_date=datetime(2020, 1, 1))
         videos: Sequence[Video] = ()
         sections: Sequence[Section] = ()
         flows: Sequence[Flow] = ()
@@ -687,7 +687,7 @@ class TestOtConfigParser:
         flow_parser.parse_content.return_value = sections, flows
 
         config_parser.serialize(
-            project_name=name,
+            project=project,
             video_files=videos,
             sections=sections,
             flows=flows,
@@ -696,7 +696,7 @@ class TestOtConfigParser:
         config = config_parser.parse(file=config_file)
 
         expected_config = OtConfig(
-            project_name=name,
+            project=project,
             videos=videos,
             sections=sections,
             flows=flows,

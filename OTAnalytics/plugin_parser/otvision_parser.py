@@ -9,6 +9,7 @@ import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
+from OTAnalytics.application import project
 from OTAnalytics.application.datastore import (
     ConfigParser,
     EventListParser,
@@ -18,6 +19,7 @@ from OTAnalytics.application.datastore import (
     TrackVideoParser,
     VideoParser,
 )
+from OTAnalytics.application.project import Project
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
@@ -41,7 +43,6 @@ SECTION_FORMAT_VERSION: str = "section_file_version"
 EVENT_FORMAT_VERSION: str = "event_file_version"
 
 PROJECT: str = "project"
-NAME: str = "name"
 
 
 def _parse_bz2(path: Path) -> dict:
@@ -105,6 +106,21 @@ def _write_json(data: dict, path: Path) -> None:
     """
     with open(path, "wt", encoding=ENCODING) as file:
         ujson.dump(data, file, indent=4)
+
+
+def _validate_data(data: dict, attributes: list[str]) -> None:
+    """Validate attributes of dictionary.
+
+    Args:
+        data (dict): dictionary to validate
+        attributes (list[str]): attributes that must exist
+
+    Raises:
+        InvalidSectionData: if an attribute is missing
+    """
+    for attribute in attributes:
+        if attribute not in data.keys():
+            raise InvalidSectionData(f"{attribute} attribute is missing")
 
 
 class IncorrectVersionFormat(Exception):
@@ -454,7 +470,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Section: line section
         """
-        self._validate_data(
+        _validate_data(
             data,
             attributes=[
                 section.ID,
@@ -477,20 +493,6 @@ class OtFlowParser(FlowParser):
         _id = data[section.ID]
         return data.get(section.NAME, _id)
 
-    def _validate_data(self, data: dict, attributes: list[str]) -> None:
-        """Validate attributes of dictionary.
-
-        Args:
-            data (dict): dictionary to validate
-            attributes (list[str]): attributes that must exist
-
-        Raises:
-            InvalidSectionData: if an attribute is missing
-        """
-        for attribute in attributes:
-            if attribute not in data.keys():
-                raise InvalidSectionData(f"{attribute} attribute is missing")
-
     def _parse_area_section(self, data: dict) -> Section:
         """Parse data to area section.
 
@@ -500,7 +502,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Section: area section
         """
-        self._validate_data(data, attributes=[section.ID, section.COORDINATES])
+        _validate_data(data, attributes=[section.ID, section.COORDINATES])
         section_id = self._parse_section_id(data)
         name = self._parse_name(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
@@ -530,7 +532,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Coordinate: coordinate
         """
-        self._validate_data(data, attributes=[geometry.X, geometry.Y])
+        _validate_data(data, attributes=[geometry.X, geometry.Y])
         return Coordinate(
             x=data.get(geometry.X, 0),
             y=data.get(geometry.Y, 0),
@@ -561,7 +563,7 @@ class OtFlowParser(FlowParser):
         Returns:
             RelativeOffsetCoordinate: the relative offset coordinate
         """
-        self._validate_data(data, attributes=[geometry.X, geometry.Y])
+        _validate_data(data, attributes=[geometry.X, geometry.Y])
         return RelativeOffsetCoordinate(
             x=data.get(geometry.X, 0),
             y=data.get(geometry.Y, 0),
@@ -594,7 +596,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Flow: parsed flow element
         """
-        self._validate_data(
+        _validate_data(
             entry,
             attributes=[
                 flow.FLOW_ID,
@@ -782,28 +784,34 @@ class OtConfigParser(ConfigParser):
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
         content = _parse(file)
-        project_name = content[PROJECT][NAME]
+        project = self._parse_project(content[PROJECT])
         videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
         sections, flows = self._flow_parser.parse_content(
             content[section.SECTIONS], content[flow.FLOWS]
         )
         return OtConfig(
-            project_name=project_name,
+            project=project,
             videos=videos,
             sections=sections,
             flows=flows,
         )
 
+    def _parse_project(self, data: dict) -> Project:
+        _validate_data(data, [project.NAME, project.START_DATE])
+        name = data[project.NAME]
+        start_date = datetime.fromtimestamp(data[project.START_DATE])
+        return Project(name=name, start_date=start_date)
+
     def serialize(
         self,
-        project_name: str,
+        project: Project,
         video_files: Iterable[Video],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
         parent_folder = file.parent
-        project_content = {NAME: project_name}
+        project_content = project.to_dict()
         video_content = self._video_parser.convert(
             video_files,
             relative_to=parent_folder,

@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
+from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.section import (
@@ -174,7 +176,7 @@ class TrackVideoParser(ABC):
 
 @dataclass(frozen=True)
 class OtConfig:
-    project_name: str
+    project: Project
     videos: Sequence[Video]
     sections: Sequence[Section]
     flows: Sequence[Flow]
@@ -195,7 +197,7 @@ class ConfigParser(ABC):
     @abstractmethod
     def serialize(
         self,
-        project_name: str,
+        project: Project,
         video_files: Iterable[Video],
         sections: Iterable[Section],
         flows: Iterable[Flow],
@@ -240,6 +242,7 @@ class Datastore:
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
         self._config_parser = config_parser
+        self.project = Project(name="", start_date=datetime.now())
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._video_repository.register_videos_observer(observer)
@@ -265,6 +268,7 @@ class Datastore:
     def load_configuration_file(self, file: Path) -> None:
         self.clear_repositories()
         config = self._config_parser.parse(file)
+        self.project = config.project
         self._video_repository.add_all(config.videos)
         self._section_repository.add_all(config.sections)
         self._flow_repository.add_all(config.flows)
