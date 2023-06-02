@@ -1,12 +1,11 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 from unittest.mock import Mock, call
 
 import pytest
 import ujson
-from pyparsing import Any
 
 from OTAnalytics import version
 from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
