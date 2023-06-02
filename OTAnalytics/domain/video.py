@@ -79,7 +79,7 @@ class VideoListSubject:
     """
 
     def __init__(self) -> None:
-        self.observers: set[VideoListObserver] = set()
+        self.observers: list[VideoListObserver] = []
 
     def register(self, observer: VideoListObserver) -> None:
         """
@@ -87,7 +87,7 @@ class VideoListSubject:
         Args:
             observer (VideoListObserver): listener to add
         """
-        self.observers.add(observer)
+        self.observers.append(observer)
 
     def notify(self, videos: list[Video]) -> None:
         """
