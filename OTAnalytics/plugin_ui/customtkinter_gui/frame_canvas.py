@@ -30,7 +30,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STICKY,
     tk_events,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 
 
 @dataclass
@@ -62,11 +61,9 @@ class FrameCanvas(AbstractFrameCanvas, CTkFrame):
         self.canvas_background = CanvasBackground(
             master=self, viewmodel=self._viewmodel
         )
-        self.frame_filter = FrameFilter(master=self, viewmodel=self._viewmodel)
 
     def _place_widgets(self) -> None:
         PADY = 10
-        self.frame_filter.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.canvas_background.grid(
             row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )

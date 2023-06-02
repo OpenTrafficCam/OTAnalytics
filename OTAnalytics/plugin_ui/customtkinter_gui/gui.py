@@ -7,6 +7,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
     FrameConfiguration,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
@@ -31,7 +32,7 @@ class OTAnalyticsGui:
 
         self._app.title("OTAnalytics")
         self._app.grid_rowconfigure(1, weight=1)
-        self._app.grid_columnconfigure(0, weight=1)
+        self._app.grid_columnconfigure(1, weight=1)
 
         self._get_widgets()
         self._place_widgets()
@@ -42,6 +43,7 @@ class OTAnalyticsGui:
             master=self._app,
             viewmodel=self._view_model,
         )
+        self.frame_filter = FrameFilter(master=self._app, viewmodel=self._view_model)
         self.frame_canvas = FrameCanvas(
             master=self._app,
             viewmodel=self._view_model,
@@ -62,11 +64,18 @@ class OTAnalyticsGui:
         self.frame_track_plotting.grid(
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self.frame_filter.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.frame_canvas.grid(
-            row=1, column=0, rowspan=3, padx=PADX, pady=PADY, sticky=STICKY
+            row=1,
+            column=0,
+            rowspan=3,
+            columnspan=2,
+            padx=PADX,
+            pady=PADY,
+            sticky=STICKY,
         )
-        self.frame_tracks.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self.frame_tracks.grid(row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY)
         self.tabview_configuration.grid(
-            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.frame_analysis.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self.frame_analysis.grid(row=2, column=2, padx=PADX, pady=PADY, sticky=STICKY)
