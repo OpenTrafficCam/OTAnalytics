@@ -9,7 +9,7 @@ from PIL import Image
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
-    SectionParser,
+    FlowParser,
     TrackParser,
     Video,
     VideoParser,
@@ -75,8 +75,8 @@ def section_repository() -> Mock:
 
 
 @pytest.fixture
-def section_parser() -> Mock:
-    return Mock(spec=SectionParser)
+def flow_parser() -> Mock:
+    return Mock(spec=FlowParser)
 
 
 @pytest.fixture
@@ -100,7 +100,7 @@ class TestDatastore:
         track_repository: Mock,
         track_parser: Mock,
         section_repository: Mock,
-        section_parser: Mock,
+        flow_parser: Mock,
         flow_repository: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -115,7 +115,7 @@ class TestDatastore:
             track_repository=track_repository,
             track_parser=track_parser,
             section_repository=section_repository,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
             flow_repository=flow_repository,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -135,7 +135,7 @@ class TestDatastore:
         track_repository: Mock,
         track_parser: Mock,
         section_repository: Mock,
-        section_parser: Mock,
+        flow_parser: Mock,
         flow_repository: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -157,7 +157,7 @@ class TestDatastore:
             track_repository=track_repository,
             track_parser=track_parser,
             section_repository=section_repository,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
             flow_repository=flow_repository,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -182,7 +182,7 @@ class TestDatastore:
         track_repository: Mock,
         track_parser: Mock,
         section_repository: Mock,
-        section_parser: Mock,
+        flow_parser: Mock,
         flow_repository: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -193,7 +193,7 @@ class TestDatastore:
             track_repository=track_repository,
             track_parser=track_parser,
             section_repository=section_repository,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
             flow_repository=flow_repository,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -203,6 +203,7 @@ class TestDatastore:
         store.add_section(
             LineSection(
                 id=SectionId("section"),
+                name="section",
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
@@ -210,16 +211,16 @@ class TestDatastore:
                 coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
             )
         )
-        store.save_section_file(some_file)
+        store.save_flow_file(some_file)
 
-        section_parser.serialize.assert_called()
+        flow_parser.serialize.assert_called()
 
     def test_save_event_list_file(
         self,
         track_repository: Mock,
         track_parser: Mock,
         section_repository: Mock,
-        section_parser: Mock,
+        flow_parser: Mock,
         flow_repository: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -230,7 +231,7 @@ class TestDatastore:
             track_repository=track_repository,
             track_parser=track_parser,
             section_repository=section_repository,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
             flow_repository=flow_repository,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -246,7 +247,7 @@ class TestDatastore:
         track_repository: Mock,
         track_parser: Mock,
         section_repository: Mock,
-        section_parser: Mock,
+        flow_parser: Mock,
         flow_repository: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -255,7 +256,7 @@ class TestDatastore:
             track_repository=track_repository,
             track_parser=track_parser,
             section_repository=section_repository,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
             flow_repository=flow_repository,
             event_list_parser=event_list_parser,
             video_parser=video_parser,
@@ -277,7 +278,7 @@ class TestDatastore:
         track_repository: Mock,
         track_parser: Mock,
         section_repository: Mock,
-        section_parser: Mock,
+        flow_parser: Mock,
         flow_repository: Mock,
         video_parser: Mock,
         event_list_parser: Mock,
@@ -286,7 +287,7 @@ class TestDatastore:
             track_repository=TrackRepository(),
             track_parser=track_parser,
             section_repository=section_repository,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
             flow_repository=flow_repository,
             event_list_parser=event_list_parser,
             video_parser=video_parser,

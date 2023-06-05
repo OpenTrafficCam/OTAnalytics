@@ -6,7 +6,7 @@ from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
-    SectionParser,
+    FlowParser,
     TrackParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
@@ -35,7 +35,7 @@ from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
-    OtsectionParser,
+    OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
 )
@@ -101,21 +101,21 @@ class ApplicationStarter:
             tracks_metadata=tracks_metadata,
             filter_element_setting_restorer=filter_element_settings_restorer,
         )
-        section_parser: SectionParser = application._datastore._section_parser
-        dummy_viewmodel = DummyViewModel(application, section_parser)
+        flow_parser: FlowParser = application._datastore._flow_parser
+        dummy_viewmodel = DummyViewModel(application, flow_parser)
         application.connect_observers()
         OTAnalyticsGui(dummy_viewmodel).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_parser = self._create_track_parser(self._create_track_repository())
-        section_parser = self._create_section_parser()
+        flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
-            section_parser=section_parser,
+            flow_parser=flow_parser,
             event_list_parser=event_list_parser,
             intersect=intersect,
             scene_event_detection=scene_event_detection,
@@ -130,7 +130,7 @@ class ApplicationStarter:
         """
         track_parser = self._create_track_parser(track_repository)
         section_repository = self._create_section_repository()
-        section_parser = self._create_section_parser()
+        flow_parser = self._create_flow_parser()
         flow_repository = self._create_flow_repository()
         event_list_parser = self._create_event_list_parser()
         video_parser = OttrkVideoParser(MoviepyVideoReader())
@@ -138,7 +138,7 @@ class ApplicationStarter:
             track_repository,
             track_parser,
             section_repository,
-            section_parser,
+            flow_parser,
             flow_repository,
             event_list_parser,
             video_parser,
@@ -155,8 +155,8 @@ class ApplicationStarter:
     def _create_section_repository(self) -> SectionRepository:
         return SectionRepository()
 
-    def _create_section_parser(self) -> SectionParser:
-        return OtsectionParser()
+    def _create_flow_parser(self) -> FlowParser:
+        return OtFlowParser()
 
     def _create_flow_repository(self) -> FlowRepository:
         return FlowRepository()
