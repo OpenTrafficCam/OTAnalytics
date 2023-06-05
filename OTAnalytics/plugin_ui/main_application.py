@@ -8,19 +8,21 @@ from OTAnalytics.application.datastore import (
     EventListParser,
     FlowParser,
     TrackParser,
+    TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.plotting import LayeredPlotter
+from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlotter
 from OTAnalytics.application.state import (
     Plotter,
     SectionState,
+    SelectedVideoUpdate,
     TrackImageUpdater,
     TrackPropertiesUpdater,
     TracksMetadata,
     TrackState,
     TrackViewState,
 )
-from OTAnalytics.domain.event import SceneEventBuilder
+from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.section import SectionRepository
@@ -28,23 +30,25 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
 )
+from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
+    OtConfigParser,
     OtEventListParser,
     OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
+    SimpleVideoParser,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     MatplotlibTrackPlotter,
     PandasTrackProvider,
     PlotterPrototype,
     SectionGeometryPlotter,
-    TrackBackgroundPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
@@ -132,16 +136,29 @@ class ApplicationStarter:
         section_repository = self._create_section_repository()
         flow_parser = self._create_flow_parser()
         flow_repository = self._create_flow_repository()
+        event_repository = self._create_event_repository()
         event_list_parser = self._create_event_list_parser()
-        video_parser = OttrkVideoParser(MoviepyVideoReader())
+        video_parser = SimpleVideoParser(MoviepyVideoReader())
+        video_repository = VideoRepository()
+        track_to_video_repository = TrackToVideoRepository()
+        track_video_parser = OttrkVideoParser(video_parser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        )
         return Datastore(
             track_repository,
             track_parser,
             section_repository,
             flow_parser,
             flow_repository,
+            event_repository,
             event_list_parser,
+            track_to_video_repository,
+            video_repository,
             video_parser,
+            track_video_parser,
+            config_parser=config_parser,
         )
 
     def _create_track_repository(self) -> TrackRepository:
@@ -161,6 +178,9 @@ class ApplicationStarter:
     def _create_flow_repository(self) -> FlowRepository:
         return FlowRepository()
 
+    def _create_event_repository(self) -> EventRepository:
+        return EventRepository()
+
     def _create_event_list_parser(self) -> EventListParser:
         return OtEventListParser()
 
@@ -169,7 +189,7 @@ class ApplicationStarter:
 
     def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
         state = TrackViewState()
-        background_image_plotter = TrackBackgroundPlotter(datastore)
+        background_image_plotter = TrackBackgroundPlotter(state, datastore)
         dataframe_filter_builder = self._create_dataframe_filter_builder()
         pandas_data_provider = PandasTrackProvider(
             datastore, state, dataframe_filter_builder
@@ -193,8 +213,11 @@ class ApplicationStarter:
         ]
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, state)
+        state.selected_video.register(properties_updater.notify_video)
         image_updater = TrackImageUpdater(datastore, state, plotter)
-        datastore.register_tracks_observer(properties_updater)
+        selected_video_updater = SelectedVideoUpdate(datastore, state)
+        datastore.register_tracks_observer(selected_video_updater)
+        datastore.register_video_observer(selected_video_updater)
         datastore.register_tracks_observer(image_updater)
         return state
 

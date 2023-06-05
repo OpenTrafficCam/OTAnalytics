@@ -73,6 +73,9 @@ class OTAnalyticsApplication:
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._datastore.get_section_for(section_id)
 
+    def add_videos(self, files: list[Path]) -> None:
+        self._datastore.load_video_files(files)
+
     def get_all_flows(self) -> Iterable[Flow]:
         return self._datastore.get_all_flows()
 

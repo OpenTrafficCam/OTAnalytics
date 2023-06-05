@@ -3,21 +3,24 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Tuple
+from typing import Any, Iterable, Sequence, Tuple
 
 import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
+from OTAnalytics.application import project
 from OTAnalytics.application.datastore import (
+    ConfigParser,
     EventListParser,
     FlowParser,
+    OtConfig,
     TrackParser,
-    Video,
+    TrackVideoParser,
     VideoParser,
-    VideoReader,
 )
-from OTAnalytics.domain import event, flow, geometry, section
+from OTAnalytics.application.project import Project
+from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -30,6 +33,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
+from OTAnalytics.domain.video import PATH, Video, VideoReader
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
@@ -37,6 +41,8 @@ METADATA: str = "metadata"
 VERSION: str = "version"
 SECTION_FORMAT_VERSION: str = "section_file_version"
 EVENT_FORMAT_VERSION: str = "event_file_version"
+
+PROJECT: str = "project"
 
 
 def _parse_bz2(path: Path) -> dict:
@@ -99,7 +105,22 @@ def _write_json(data: dict, path: Path) -> None:
         path (Path): Path to JSON.
     """
     with open(path, "wt", encoding=ENCODING) as file:
-        ujson.dump(data, file)
+        ujson.dump(data, file, indent=4)
+
+
+def _validate_data(data: dict, attributes: list[str]) -> None:
+    """Validate attributes of dictionary.
+
+    Args:
+        data (dict): dictionary to validate
+        attributes (list[str]): attributes that must exist
+
+    Raises:
+        InvalidSectionData: if an attribute is missing
+    """
+    for attribute in attributes:
+        if attribute not in data.keys():
+            raise InvalidSectionData(f"{attribute} attribute is missing")
 
 
 class IncorrectVersionFormat(Exception):
@@ -397,7 +418,7 @@ class OtFlowParser(FlowParser):
         FlowParser (FlowParser): extends FlowParser interface
     """
 
-    def parse(self, file: Path) -> tuple[list[Section], list[Flow]]:
+    def parse(self, file: Path) -> tuple[Sequence[Section], Sequence[Flow]]:
         """Parse the content of the file into Flow and Section objects.
 
         Args:
@@ -408,12 +429,17 @@ class OtFlowParser(FlowParser):
             list[Flow]: list of Flow objects
         """
         content: dict = _parse(file)
-        sections: list[Section] = [
-            self.parse_section(entry) for entry in content.get(section.SECTIONS, [])
-        ]
-        flows: list[Flow] = [
-            self.parse_flow(entry) for entry in content.get(flow.FLOWS, [])
-        ]
+        section_content = content.get(section.SECTIONS, [])
+        flow_content = content.get(flow.FLOWS, [])
+        return self.parse_content(section_content, flow_content)
+
+    def parse_content(
+        self,
+        section_content: list[dict],
+        flow_content: list[dict],
+    ) -> tuple[Sequence[Section], Sequence[Flow]]:
+        sections = [self.parse_section(entry) for entry in section_content]
+        flows = [self.parse_flow(entry) for entry in flow_content]
         return sections, flows
 
     def parse_section(self, entry: dict) -> Section:
@@ -444,7 +470,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Section: line section
         """
-        self._validate_data(
+        _validate_data(
             data,
             attributes=[
                 section.ID,
@@ -467,20 +493,6 @@ class OtFlowParser(FlowParser):
         _id = data[section.ID]
         return data.get(section.NAME, _id)
 
-    def _validate_data(self, data: dict, attributes: list[str]) -> None:
-        """Validate attributes of dictionary.
-
-        Args:
-            data (dict): dictionary to validate
-            attributes (list[str]): attributes that must exist
-
-        Raises:
-            InvalidSectionData: if an attribute is missing
-        """
-        for attribute in attributes:
-            if attribute not in data.keys():
-                raise InvalidSectionData(f"{attribute} attribute is missing")
-
     def _parse_area_section(self, data: dict) -> Section:
         """Parse data to area section.
 
@@ -490,7 +502,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Section: area section
         """
-        self._validate_data(data, attributes=[section.ID, section.COORDINATES])
+        _validate_data(data, attributes=[section.ID, section.COORDINATES])
         section_id = self._parse_section_id(data)
         name = self._parse_name(data)
         relative_offset_coordinates = self._parse_relative_offset_coordinates(data)
@@ -520,7 +532,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Coordinate: coordinate
         """
-        self._validate_data(data, attributes=[geometry.X, geometry.Y])
+        _validate_data(data, attributes=[geometry.X, geometry.Y])
         return Coordinate(
             x=data.get(geometry.X, 0),
             y=data.get(geometry.Y, 0),
@@ -551,7 +563,7 @@ class OtFlowParser(FlowParser):
         Returns:
             RelativeOffsetCoordinate: the relative offset coordinate
         """
-        self._validate_data(data, attributes=[geometry.X, geometry.Y])
+        _validate_data(data, attributes=[geometry.X, geometry.Y])
         return RelativeOffsetCoordinate(
             x=data.get(geometry.X, 0),
             y=data.get(geometry.Y, 0),
@@ -584,7 +596,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Flow: parsed flow element
         """
-        self._validate_data(
+        _validate_data(
             entry,
             attributes=[
                 flow.FLOW_ID,
@@ -619,10 +631,10 @@ class OtFlowParser(FlowParser):
             flows (Iterable[Flow]): flows to serialize
             file (Path): file to serialize flows and sections to
         """
-        content = self._convert(sections, flows)
+        content = self.convert(sections, flows)
         _write_json(content, file)
 
-    def _convert(
+    def convert(
         self,
         sections: Iterable[Section],
         flows: Iterable[Flow],
@@ -643,9 +655,47 @@ class OtFlowParser(FlowParser):
         }
 
 
-class OttrkVideoParser(VideoParser):
+class MissingPath(Exception):
+    pass
+
+
+class SimpleVideoParser(VideoParser):
     def __init__(self, video_reader: VideoReader) -> None:
         self._video_reader = video_reader
+
+    def parse(self, file: Path) -> Video:
+        return Video(self._video_reader, file)
+
+    def parse_list(
+        self,
+        content: list[dict],
+        base_folder: Path,
+    ) -> Sequence[Video]:
+        return [self.__create_video(video, base_folder) for video in content]
+
+    def __create_video(
+        self,
+        entry: dict,
+        base_folder: Path,
+    ) -> Video:
+        if PATH not in entry:
+            raise MissingPath(entry)
+        video_path = Path(base_folder, entry[PATH])
+        return Video(self._video_reader, video_path)
+
+    def convert(
+        self,
+        videos: Iterable[Video],
+        relative_to: Path = Path("."),
+    ) -> dict[str, list[dict]]:
+        return {
+            video.VIDEOS: [video.to_dict(relative_to=relative_to) for video in videos]
+        }
+
+
+class OttrkVideoParser(TrackVideoParser):
+    def __init__(self, video_parser: VideoParser) -> None:
+        self._video_parser = video_parser
 
     def parse(
         self, file: Path, track_ids: list[TrackId]
@@ -653,7 +703,7 @@ class OttrkVideoParser(VideoParser):
         content = _parse_bz2(file)
         metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
         video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
-        video_file_path = Video(self._video_reader, file.parent / video_file)
+        video_file_path = self._video_parser.parse(file.parent / video_file)
         return track_ids, [video_file_path] * len(track_ids)
 
 
@@ -720,3 +770,54 @@ class OtEventListParser(EventListParser):
             list[dict]: list containing raw information of sections
         """
         return [section.to_dict() for section in sections]
+
+
+class OtConfigParser(ConfigParser):
+    def __init__(
+        self,
+        video_parser: VideoParser,
+        flow_parser: FlowParser,
+    ) -> None:
+        self._video_parser = video_parser
+        self._flow_parser = flow_parser
+
+    def parse(self, file: Path) -> OtConfig:
+        base_folder = file.parent
+        content = _parse(file)
+        project = self._parse_project(content[PROJECT])
+        videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
+        sections, flows = self._flow_parser.parse_content(
+            content[section.SECTIONS], content[flow.FLOWS]
+        )
+        return OtConfig(
+            project=project,
+            videos=videos,
+            sections=sections,
+            flows=flows,
+        )
+
+    def _parse_project(self, data: dict) -> Project:
+        _validate_data(data, [project.NAME, project.START_DATE])
+        name = data[project.NAME]
+        start_date = datetime.fromtimestamp(data[project.START_DATE])
+        return Project(name=name, start_date=start_date)
+
+    def serialize(
+        self,
+        project: Project,
+        video_files: Iterable[Video],
+        sections: Iterable[Section],
+        flows: Iterable[Flow],
+        file: Path,
+    ) -> None:
+        parent_folder = file.parent
+        project_content = project.to_dict()
+        video_content = self._video_parser.convert(
+            video_files,
+            relative_to=parent_folder,
+        )
+        section_content = self._flow_parser.convert(sections, flows)
+        content: dict[str, list[dict] | dict] = {PROJECT: project_content}
+        content |= video_content
+        content |= section_content
+        _write_json(data=content, path=file)

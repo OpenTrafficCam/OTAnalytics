@@ -324,7 +324,7 @@ class EventRepository:
     """The repository to store events."""
 
     def __init__(self) -> None:
-        self.events: list[Event] = []
+        self._events: list[Event] = []
 
     def add(self, event: Event) -> None:
         """Add an event to the repository.
@@ -332,7 +332,7 @@ class EventRepository:
         Args:
             event (Event): the event to add
         """
-        self.events.append(event)
+        self._events.append(event)
 
     def add_all(self, events: Iterable[Event]) -> None:
         """Add multiple events at once to the repository.
@@ -340,7 +340,7 @@ class EventRepository:
         Args:
             events (Iterable[Event]): the events
         """
-        self.events.extend(events)
+        self._events.extend(events)
 
     def get_all(self) -> Iterable[Event]:
         """Get all events stored in the repository.
@@ -348,4 +348,10 @@ class EventRepository:
         Returns:
             Iterable[Event]: the events
         """
-        return self.events
+        return self._events
+
+    def clear(self) -> None:
+        """
+        Clear the repository.
+        """
+        self._events.clear()
