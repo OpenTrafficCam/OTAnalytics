@@ -2,7 +2,7 @@ import tkinter
 from abc import ABC, abstractmethod
 from datetime import datetime
 from tkinter import END, IntVar
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from customtkinter import (
     CTkButton,
@@ -534,6 +534,9 @@ class DateRow(CTkFrame):
 
     def _get_entry_widget_by_name(self, name: str) -> CTkEntry:
         return self.nametowidget(name).master
+
+    def trace_add(self, callback: Callable[[str, str, str], object]) -> None:
+        self._hour_var.trace_add("write", callback=callback)
 
 
 class ColonLabel(CTkLabel):
