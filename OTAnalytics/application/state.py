@@ -378,9 +378,10 @@ class FlowState(FlowListObserver):
         Raises:
             IndexError: if the list of flows is empty
         """
-        if not flows:
-            raise IndexError("No flow to select")
-        self.selected_flow.set(flows[0])
+        if flows:
+            self.selected_flow.set(flows[0])
+        else:
+            self.selected_flow.set(None)
 
 
 class TracksMetadata(TrackListObserver):
