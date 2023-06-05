@@ -1,9 +1,16 @@
 from abc import abstractmethod
+from dataclasses import dataclass
 from tkinter.ttk import Treeview
 from typing import Any, Optional
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
+
+
+@dataclass(frozen=True, order=True)
+class IdResource:
+    id: str
+    name: str
 
 
 class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
@@ -33,9 +40,9 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
     def get_position(self) -> tuple[int, int]:
         return self.winfo_rootx(), self.winfo_rooty()
 
-    def add_items(self, item_ids: list[str]) -> None:
+    def add_items(self, item_ids: list[IdResource]) -> None:
         for id in item_ids:
-            self.insert(parent="", index="end", iid=id, text="", values=[id])
+            self.insert(parent="", index="end", iid=id.id, text="", values=[id.name])
 
     def _on_deselect(self, event: Any) -> None:
         self._deselect_all()

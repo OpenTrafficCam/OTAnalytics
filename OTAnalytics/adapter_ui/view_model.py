@@ -8,9 +8,14 @@ from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 
 DISTANCES: str = "distances"
+
+
+class MissingCoordinate(Exception):
+    pass
 
 
 class ViewModel(ABC):
@@ -71,7 +76,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def set_new_section(self, section: Section) -> None:
+    def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -91,7 +96,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def get_all_flows(self) -> list[str]:
+    def get_all_flows(self) -> Iterable[Flow]:
         pass
 
     @abstractmethod
