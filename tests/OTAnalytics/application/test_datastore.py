@@ -176,6 +176,7 @@ class TestDatastore:
         assert store.project == project
         track_repository.clear.assert_called_once()
         section_repository.clear.assert_called_once()
+        flow_repository.clear.assert_called_once()
         video_repository.clear.assert_called_once()
         event_repository.clear.assert_called_once()
         track_to_video_repository.clear.assert_called_once()
