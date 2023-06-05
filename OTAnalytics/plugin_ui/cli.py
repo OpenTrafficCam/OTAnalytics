@@ -6,11 +6,7 @@ from typing import Iterable
 from tqdm import tqdm
 
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
-from OTAnalytics.application.datastore import (
-    EventListParser,
-    SectionParser,
-    TrackParser,
-)
+from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
@@ -100,7 +96,7 @@ class OTAnalyticsCli:
         self,
         cli_args: CliArguments,
         track_parser: TrackParser,
-        section_parser: SectionParser,
+        flow_parser: FlowParser,
         event_list_parser: EventListParser,
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
@@ -109,7 +105,7 @@ class OTAnalyticsCli:
         self.cli_args = cli_args
 
         self._track_parser = track_parser
-        self._section_parser = section_parser
+        self._flow_parser = flow_parser
         self._event_list_parser = event_list_parser
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
@@ -120,14 +116,12 @@ class OTAnalyticsCli:
         ottrk_files: set[Path] = self._get_ottrk_files(self.cli_args.track_files)
         sections_file: Path = self._get_sections_file(self.cli_args.sections_file)
 
-        sections, flows = self._parse_sections(sections_file)
+        sections, flows = self._parse_flows(sections_file)
 
         self._run_analysis(ottrk_files, sections)
 
-    def _parse_sections(
-        self, sections_file: Path
-    ) -> tuple[Iterable[Section], Iterable[Flow]]:
-        return self._section_parser.parse(sections_file)
+    def _parse_flows(self, flow_file: Path) -> tuple[Iterable[Section], Iterable[Flow]]:
+        return self._flow_parser.parse(flow_file)
 
     def _parse_tracks(self, track_file: Path) -> Iterable[Track]:
         return self._track_parser.parse(track_file)

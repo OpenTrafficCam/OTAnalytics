@@ -353,7 +353,7 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
 
 class TrackRepository:
     def __init__(self) -> None:
-        self.tracks: dict[TrackId, Track] = {}
+        self._tracks: dict[TrackId, Track] = {}
         self.observers = TrackListSubject()
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
@@ -381,7 +381,7 @@ class TrackRepository:
         Args:
             track (Track): the track to be added
         """
-        self.tracks[track.id] = track
+        self._tracks[track.id] = track
 
     def add_all(self, tracks: list[Track]) -> None:
         """
@@ -406,7 +406,7 @@ class TrackRepository:
 
     def delete_all(self) -> None:
         """Delete all tracks."""
-        self.tracks = {}
+        self._tracks = {}
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
@@ -418,7 +418,7 @@ class TrackRepository:
         Returns:
             Optional[Track]: track if it exists
         """
-        return self.tracks.get(id)
+        return self._tracks.get(id)
 
     def get_all(self) -> list[Track]:
         """
@@ -427,4 +427,11 @@ class TrackRepository:
         Returns:
             list[Track]: all tracks within the repository
         """
-        return list(self.tracks.values())
+        return list(self._tracks.values())
+
+    def clear(self) -> None:
+        """
+        Clear the repository and inform the observers about the empty repository.
+        """
+        self._tracks.clear()
+        self.observers.notify([])

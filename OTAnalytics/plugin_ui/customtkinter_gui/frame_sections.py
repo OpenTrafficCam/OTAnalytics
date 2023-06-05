@@ -5,8 +5,12 @@ from typing import Any, Optional
 from customtkinter import CTkButton, CTkFrame
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
+    IdResource,
+    TreeviewTemplate,
+)
 
 
 class FrameSections(CTkFrame):
@@ -17,6 +21,8 @@ class FrameSections(CTkFrame):
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         self._get_widgets()
         self._place_widgets()
 
@@ -61,7 +67,7 @@ class TreeviewSections(TreeviewTemplate, Treeview):
 
     def _define_columns(self) -> None:
         self["columns"] = "Section"
-        self.column(column="#0", width=0)
+        self.column(column="#0", width=0, stretch=False)
         self.column(column="Section", anchor="center", width=150, minwidth=40)
         self["displaycolumns"] = "Section"
 
@@ -75,8 +81,14 @@ class TreeviewSections(TreeviewTemplate, Treeview):
 
     def update_items(self) -> None:
         self.delete(*self.get_children())
-        item_ids = [section.id.id for section in self._viewmodel.get_all_sections()]
+        item_ids = [
+            self.__to_id_resource(section)
+            for section in self._viewmodel.get_all_sections()
+        ]
         self.add_items(item_ids=sorted(item_ids))
+
+    def __to_id_resource(self, section: Section) -> IdResource:
+        return IdResource(id=section.id.id, name=section.name)
 
 
 class ListboxSections(Listbox):

@@ -79,17 +79,29 @@ class OTAnalyticsApplication:
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._datastore.get_section_for(section_id)
 
+    def add_videos(self, files: list[Path]) -> None:
+        self._datastore.load_video_files(files)
+
     def get_all_flows(self) -> Iterable[Flow]:
         return self._datastore.get_all_flows()
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
         return self._datastore.get_flow_for(flow_id)
 
+    def get_flow_id(self) -> FlowId:
+        """
+        Get an id for a new flow
+        """
+        return self._datastore.get_flow_id()
+
     def add_flow(self, flow: Flow) -> None:
         self._datastore.add_flow(flow)
 
     def remove_flow(self, flow_id: FlowId) -> None:
         self._datastore.remove_flow(flow_id)
+
+    def update_flow(self, flow: Flow) -> None:
+        self._datastore.update_flow(flow)
 
     def add_tracks_of_file(self, track_file: Path) -> None:
         """
@@ -120,7 +132,37 @@ class OTAnalyticsApplication:
         Args:
             sections_file (Path): file in sections format
         """
-        self._datastore.load_section_file(file=sections_file)
+        self._datastore.load_flow_file(file=sections_file)
+
+    def is_flow_using_section(self, section: SectionId) -> bool:
+        """
+        Checks if the section id is used by flows.
+
+        Args:
+            section (SectionId): section to check
+
+        Returns:
+            bool: true if the section is used by at least one flow
+        """
+        return self._datastore.is_flow_using_section(section)
+
+    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+        """
+        Returns a list of flows using the section as start or end.
+
+        Args:
+            section (SectionId): section to search flows for
+
+        Returns:
+            list[FlowId]: flows using the section
+        """
+        return self._datastore.flows_using_section(section)
+
+    def get_section_id(self) -> SectionId:
+        """
+        Get an id for a new section
+        """
+        return self._datastore.get_section_id()
 
     def add_section(self, section: Section) -> None:
         """

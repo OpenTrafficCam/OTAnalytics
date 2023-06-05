@@ -17,6 +17,7 @@ from OTAnalytics.domain.track import (
     TrackRepository,
     TrackSubject,
 )
+from OTAnalytics.domain.video import Video, VideoListObserver
 
 DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
@@ -40,12 +41,12 @@ class TrackState(TrackListObserver):
         """
         self.observers.register(observer)
 
-    def select(self, track_id: TrackId) -> None:
+    def select(self, track_id: TrackId | None) -> None:
         """
         Select the given track.
 
         Args:
-            track_id (TrackId): track to be selected
+            track_id (TrackId | None): track to be selected
         """
         if self.selected_track != track_id:
             self.selected_track = track_id
@@ -63,13 +64,9 @@ class TrackState(TrackListObserver):
 
         Args:
             tracks (list[TrackId]): newly added tracks
-
-        Raises:
-            IndexError: if the list of tracks is empty
         """
-        if not tracks:
-            raise IndexError("No tracks to select")
-        self.select(tracks[0])
+        track_to_select = tracks[0] if tracks else None
+        self.select(track_to_select)
 
 
 VALUE = TypeVar("VALUE")
@@ -213,9 +210,12 @@ class TrackViewState:
         )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
+        self.selected_video: ObservableOptionalProperty[
+            Video
+        ] = ObservableOptionalProperty[Video]()
 
 
-class TrackPropertiesUpdater(TrackListObserver):
+class TrackPropertiesUpdater:
     """
     This class listens to track changes and updates the width and height of the view
     state.
@@ -229,11 +229,11 @@ class TrackPropertiesUpdater(TrackListObserver):
         self._datastore = datastore
         self._track_view_state = track_view_state
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
-        if track := next(iter(self._datastore.get_all_tracks())):
-            if new_image := self._datastore.get_image_of_track(track.id):
-                self._track_view_state.view_width.set(new_image.width())
-                self._track_view_state.view_height.set(new_image.height())
+    def notify_video(self, video: Optional[Video]) -> None:
+        if video:
+            image = video.get_frame(0)
+            self._track_view_state.view_width.set(image.width())
+            self._track_view_state.view_height.set(image.height())
 
 
 class Plotter(ABC):
@@ -242,6 +242,22 @@ class Plotter(ABC):
     @abstractmethod
     def plot(self) -> Optional[TrackImage]:
         pass
+
+
+class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
+    def __init__(self, datastore: Datastore, track_view_state: TrackViewState) -> None:
+        self._datastore = datastore
+        self._track_view_state = track_view_state
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        all_tracks = self._datastore.get_all_tracks()
+        if tracks:
+            video = self._datastore.get_video_for(all_tracks[0].id)
+            self._track_view_state.selected_video.set(video)
+
+    def notify_videos(self, videos: list[Video]) -> None:
+        if videos:
+            self._track_view_state.selected_video.set(videos[0])
 
 
 class TrackImageUpdater(TrackListObserver):
@@ -259,9 +275,19 @@ class TrackImageUpdater(TrackListObserver):
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._plotter = plotter
+        self._track_view_state.selected_video.register(self.notify_video)
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
+
+    def notify_video(self, video: Optional[Video]) -> None:
+        """
+        Will notify this object about changes in the video repository.
+
+        Args:
+            video (list[Video]): list of changed video ids
+        """
+        self._update_image()
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """
@@ -269,12 +295,7 @@ class TrackImageUpdater(TrackListObserver):
 
         Args:
             tracks (list[TrackId]): list of changed track ids
-
-        Raises:
-            IndexError: if the list is empty
         """
-        if not tracks:
-            raise IndexError("No tracks changed")
         self._update_image()
 
     def _notify_show_tracks(self, show_tracks: Optional[bool]) -> None:
@@ -334,13 +355,9 @@ class SectionState(SectionListObserver):
 
         Args:
             sections (list[SectionId]): newly added sections
-
-        Raises:
-            IndexError: if the list of sections is empty
         """
-        if not sections:
-            raise IndexError("No section to select")
-        self.selected_section.set(sections[0])
+        section_to_select = sections[0] if sections else None
+        self.selected_section.set(section_to_select)
 
 
 class FlowState(FlowListObserver):
@@ -414,8 +431,9 @@ class TracksMetadata(TrackListObserver):
         sorted_detections = sorted(
             self._get_all_track_detections(), key=lambda x: x.occurrence
         )
-        self._first_detection_occurrence.set(sorted_detections[0].occurrence)
-        self._last_detection_occurrence.set(sorted_detections[-1].occurrence)
+        if sorted_detections:
+            self._first_detection_occurrence.set(sorted_detections[0].occurrence)
+            self._last_detection_occurrence.set(sorted_detections[-1].occurrence)
 
     def _get_all_track_detections(self) -> Iterable[Detection]:
         """Get all track detections in the track repository.

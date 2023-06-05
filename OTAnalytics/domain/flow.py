@@ -2,10 +2,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, Generic, Iterable, Optional, TypeVar
 
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import SectionId
 
 FLOWS: str = "flows"
 FLOW_ID: str = "id"
+FLOW_NAME: str = "name"
 START: str = "start"
 END: str = "end"
 DISTANCE: str = "distance"
@@ -19,7 +20,6 @@ class FlowId:
         return self.id
 
 
-@dataclass(init=False)
 class Flow:
     """
     A `Flow` describes a segment of road that is defined by a start and end section as
@@ -36,15 +36,17 @@ class Flow:
     """
 
     id: FlowId
-    start: Section
-    end: Section
+    name: str
+    start: SectionId
+    end: SectionId
     distance: float
 
     def __init__(
         self,
         id: FlowId,
-        start: Section,
-        end: Section,
+        name: str,
+        start: SectionId,
+        end: SectionId,
         distance: float,
     ) -> None:
         if distance < 0:
@@ -52,17 +54,22 @@ class Flow:
                 f"Distance must be equal or greater then 0, but is {distance}"
             )
         self.id: FlowId = id
-        self.start: Section = start
-        self.end: Section = end
+        self.name = name
+        self.start: SectionId = start
+        self.end: SectionId = end
         self.distance: float = distance
 
     def to_dict(self) -> dict:
         return {
             FLOW_ID: self.id.serialize(),
-            START: self.start.id.serialize(),
-            END: self.end.id.serialize(),
+            FLOW_NAME: self.name,
+            START: self.start.serialize(),
+            END: self.end.serialize(),
             DISTANCE: self.distance,
         }
+
+    def is_using(self, section: SectionId) -> bool:
+        return (self.start == section) or (self.end == section)
 
 
 class FlowListObserver(ABC):
@@ -73,10 +80,10 @@ class FlowListObserver(ABC):
     @abstractmethod
     def notify_flows(self, flows: list[FlowId]) -> None:
         """
-        Notifies that the given flows have been added.
+        Notifies that the given flows have been added or removed.
 
         Args:
-            flows (list[FlowId]): list of added flows
+            flows (list[FlowId]): list of added or removed flows
         """
         pass
 
@@ -143,6 +150,7 @@ class FlowListSubject:
 class FlowRepository:
     def __init__(self) -> None:
         self._flows: dict[FlowId, Flow] = {}
+        self._current_id = 0
         self._repository_content_observers: FlowListSubject = FlowListSubject()
         self._flow_content_observers: FlowChangedSubject = FlowChangedSubject()
 
@@ -152,12 +160,50 @@ class FlowRepository:
     def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
         self._flow_content_observers.register(observer)
 
+    def get_id(self) -> FlowId:
+        """
+        Get an id for a new flow
+        """
+        self._current_id += 1
+        candidate = FlowId(str(self._current_id))
+        return self.get_id() if candidate in self._flows.keys() else candidate
+
+    def clear(self) -> None:
+        self._flows.clear()
+        self._repository_content_observers.notify([])
+
     def add(self, flow: Flow) -> None:
         self.__internal_add(flow)
         self._repository_content_observers.notify([flow.id])
 
     def __internal_add(self, flow: Flow) -> None:
         self._flows[flow.id] = flow
+
+    def is_flow_using_section(self, section: SectionId) -> bool:
+        """
+        Checks if the section id is used by flows.
+
+        Args:
+            section (SectionId): section to check
+
+        Returns:
+            bool: true if the section is used by at least one flow
+        """
+        return any(flow.is_using(section) for flow in self._flows.values())
+
+    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+        """
+        Returns a list of flows using the section as start or end.
+
+        Args:
+            section (SectionId): section to search flows for
+
+        Returns:
+            list[FlowId]: flows using the section
+        """
+        return list(
+            {flow.id for flow in self._flows.values() if flow.is_using(section)}
+        )
 
     def add_all(self, flows: Iterable[Flow]) -> None:
         for flow in flows:
@@ -168,6 +214,9 @@ class FlowRepository:
         if flow_id in self._flows:
             del self._flows[flow_id]
         self._repository_content_observers.notify([flow_id])
+
+    def update(self, flow: Flow) -> None:
+        self._flows[flow.id] = flow
 
     def get(self, flow_id: FlowId) -> Optional[Flow]:
         return self._flows.get(flow_id)

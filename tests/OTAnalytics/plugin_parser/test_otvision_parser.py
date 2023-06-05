@@ -1,17 +1,17 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Sequence
 from unittest.mock import Mock, call
 
 import pytest
 import ujson
 
 from OTAnalytics import version
-from OTAnalytics.adapter_intersect.intersect import (
-    ShapelyIntersectImplementationAdapter,
-)
+from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain import flow, geometry, section
+from OTAnalytics.application.project import Project
+from OTAnalytics.domain import flow, geometry, section, video
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import (
@@ -19,7 +19,10 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
+from OTAnalytics.domain.intersect import (
+    IntersectBySplittingTrackLine,
+    IntersectImplementation,
+)
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -36,19 +39,21 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
     METADATA,
+    PROJECT,
     SECTION_FORMAT_VERSION,
     VERSION,
     VERSION_1_0,
     VERSION_1_1,
     DetectionFixer,
     InvalidSectionData,
+    OtConfigParser,
     OtEventListParser,
-    OtsectionParser,
+    OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
     Version,
@@ -331,16 +336,20 @@ class TestOtsectionParser:
         first_coordinate = Coordinate(0, 0)
         second_coordinate = Coordinate(1, 1)
         third_coordinate = Coordinate(1, 0)
+        line_section_id = SectionId("some")
         line_section: Section = LineSection(
-            id=SectionId("some"),
+            id=line_section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={"key_1": "some_data", "key_2": "some_data"},
             coordinates=[first_coordinate, second_coordinate],
         )
+        area_section_id = SectionId("other")
         area_section: Section = Area(
-            id=SectionId("other"),
+            id=area_section_id,
+            name="other",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -352,41 +361,56 @@ class TestOtsectionParser:
                 first_coordinate,
             ],
         )
+        flow_id = FlowId("1")
+        flow_name = "some to other"
+        flow_distance = 1
         some_flow = Flow(
-            FlowId("some to other"),
-            start=line_section,
-            end=area_section,
-            distance=1,
+            flow_id,
+            name=flow_name,
+            start=line_section_id,
+            end=area_section_id,
+            distance=flow_distance,
         )
         json_file = test_data_tmp_dir / "section.json"
         json_file.touch()
         sections = [line_section, area_section]
         flows = [some_flow]
-        parser = OtsectionParser()
+        parser = OtFlowParser()
         parser.serialize(sections, flows, json_file)
 
         parsed_sections, parsed_flows = parser.parse(json_file)
 
+        parsed_flow = parsed_flows[0]
+
         assert parsed_sections == sections
-        assert parsed_flows == flows
+        assert len(parsed_flows) == 1
+        assert parsed_flow.id == flow_id
+        assert parsed_flow.name == flow_name
+        assert parsed_flow.start == line_section_id
+        assert parsed_flow.end == area_section_id
+        assert parsed_flow.distance == flow_distance
 
     def test_validate(self) -> None:
-        parser = OtsectionParser()
+        parser = OtFlowParser()
         pytest.raises(
             InvalidSectionData, parser.parse_section, {section.TYPE: section.LINE}
         )
 
     def test_convert_section(self) -> None:
+        some_section_id = SectionId("some")
         some_section: Section = LineSection(
-            id=SectionId("some"),
+            id=some_section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
             coordinates=[Coordinate(0, 0), Coordinate(1, 1)],
         )
+        other_section_id = SectionId("other")
         other_section: Section = LineSection(
-            id=SectionId("other"),
+            id=other_section_id,
+            name="other",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -394,16 +418,17 @@ class TestOtsectionParser:
             coordinates=[Coordinate(1, 0), Coordinate(0, 1)],
         )
         some_flow = Flow(
-            FlowId("some to other"),
-            start=some_section,
-            end=other_section,
+            FlowId("1"),
+            name="some to other",
+            start=some_section_id,
+            end=other_section_id,
             distance=1,
         )
         sections = [some_section, other_section]
         flows = [some_flow]
-        parser = OtsectionParser()
+        parser = OtFlowParser()
 
-        content = parser._convert(sections, flows)
+        content = parser.convert(sections, flows)
 
         assert content == {
             section.SECTIONS: [some_section.to_dict(), other_section.to_dict()],
@@ -415,6 +440,7 @@ class TestOtsectionParser:
         end = Coordinate(1, 1)
         expected: Section = LineSection(
             id=SectionId("some"),
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -426,6 +452,7 @@ class TestOtsectionParser:
             section.SECTIONS: [
                 {
                     section.ID: "some",
+                    section.NAME: "some",
                     section.TYPE: "line",
                     section.RELATIVE_OFFSET_COORDINATES: {
                         EventType.SECTION_ENTER.serialize(): {
@@ -450,8 +477,8 @@ class TestOtsectionParser:
         save_path = test_data_tmp_dir / "sections.otflow"
         _write_json(section_data, save_path)
 
-        parser = OtsectionParser()
-        sections, flows = parser.parse(save_path)
+        parser = OtFlowParser()
+        sections, _ = parser.parse(save_path)
 
         assert sections == [expected]
 
@@ -460,6 +487,7 @@ class TestOtsectionParser:
         end = Coordinate(1, 1)
         expected: Section = LineSection(
             id=SectionId("some"),
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -471,6 +499,7 @@ class TestOtsectionParser:
             section.SECTIONS: [
                 {
                     section.ID: "some",
+                    section.NAME: "some",
                     section.TYPE: "line",
                     section.RELATIVE_OFFSET_COORDINATES: {
                         EventType.SECTION_ENTER.serialize(): {
@@ -490,8 +519,8 @@ class TestOtsectionParser:
         save_path = test_data_tmp_dir / "sections.otflow"
         _write_json(section_data, save_path)
 
-        parser = OtsectionParser()
-        sections, flows = parser.parse(save_path)
+        parser = OtFlowParser()
+        sections, _ = parser.parse(save_path)
 
         assert sections == [expected]
 
@@ -530,6 +559,7 @@ class TestOtEventListParser:
         )
         line_section = LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
@@ -539,6 +569,7 @@ class TestOtEventListParser:
         )
         area_section = Area(
             id=SectionId("S"),
+            name="S",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5),
                 EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0.5, 0.5),
@@ -572,10 +603,9 @@ class TestOtEventListParser:
         self, tracks: list[Track], sections: list[Section], test_data_tmp_dir: Path
     ) -> None:
         # Setup
-        shapely_intersection_adapter = ShapelyIntersectImplementationAdapter(
-            ShapelyIntersector()
-        )
         line_section = sections[0]
+        shapely_intersection_adapter = Mock(spec=IntersectImplementation)
+        shapely_intersection_adapter.split_line_with_line.return_value = []
 
         if isinstance(line_section, LineSection):
             line_section_intersector = IntersectBySplittingTrackLine(
@@ -595,3 +625,80 @@ class TestOtEventListParser:
         event_list_file = test_data_tmp_dir / "eventlist.json"
         event_list_parser.serialize(events, [line_section], event_list_file)
         assert event_list_file.exists()
+
+
+class TestOtConfigParser:
+    def test_serialize_config(self, test_data_tmp_dir: Path) -> None:
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        )
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        videos: list[Video] = []
+        sections: list[Section] = []
+        flows: list[Flow] = []
+        output = test_data_tmp_dir / "config.otconfig"
+        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
+        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_sections
+
+        config_parser.serialize(
+            project=project,
+            video_files=videos,
+            sections=sections,
+            flows=flows,
+            file=output,
+        )
+
+        serialized_content = _parse(output)
+        expected_content: dict[str, Any] = {PROJECT: project.to_dict()}
+        expected_content |= serialized_videos
+        expected_content |= serialized_sections
+
+        assert serialized_content == expected_content
+        assert video_parser.convert.call_args_list == [
+            call(videos, relative_to=test_data_tmp_dir)
+        ]
+        assert flow_parser.convert.call_args_list == [call(sections, flows)]
+
+    def test_parse_config(self, test_data_tmp_dir: Path) -> None:
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        )
+        project = Project(name="Test Project", start_date=datetime(2020, 1, 1))
+        videos: Sequence[Video] = ()
+        sections: Sequence[Section] = ()
+        flows: Sequence[Flow] = ()
+        config_file = test_data_tmp_dir / "config.otconfig"
+        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
+        serialized_flows = {
+            section.SECTIONS: {"serialized": "sections"},
+            flow.FLOWS: {"serialized": "flows"},
+        }
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_flows
+        video_parser.parse_list.return_value = videos
+        flow_parser.parse_content.return_value = sections, flows
+
+        config_parser.serialize(
+            project=project,
+            video_files=videos,
+            sections=sections,
+            flows=flows,
+            file=config_file,
+        )
+        config = config_parser.parse(file=config_file)
+
+        expected_config = OtConfig(
+            project=project,
+            videos=videos,
+            sections=sections,
+            flows=flows,
+        )
+        assert config == expected_config

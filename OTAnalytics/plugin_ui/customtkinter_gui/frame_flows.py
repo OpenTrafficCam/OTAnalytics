@@ -4,8 +4,12 @@ from typing import Any, Optional
 from customtkinter import CTkButton, CTkFrame
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.domain.flow import Flow
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
+    IdResource,
+    TreeviewTemplate,
+)
 
 
 class FrameFlows(CTkFrame):
@@ -16,6 +20,8 @@ class FrameFlows(CTkFrame):
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         self._get_widgets()
         self._place_widgets()
 
@@ -50,7 +56,7 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
 
     def _define_columns(self) -> None:
         self["columns"] = "Flow"
-        self.column(column="#0", width=0)
+        self.column(column="#0", width=0, stretch=False)
         self.column(column="Flow", anchor="center", width=150, minwidth=40)
         self["displaycolumns"] = "Flow"
 
@@ -62,5 +68,10 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
 
     def update_items(self) -> None:
         self.delete(*self.get_children())
-        item_ids = [flow.id.id for flow in self._viewmodel.get_all_flows()]
+        item_ids = [
+            self.__to_id_resource(flow) for flow in self._viewmodel.get_all_flows()
+        ]
         self.add_items(item_ids=sorted(item_ids))
+
+    def __to_id_resource(self, flow: Flow) -> IdResource:
+        return IdResource(id=flow.id.id, name=flow.name)
