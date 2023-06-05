@@ -285,9 +285,6 @@ class TrackImageUpdater(TrackListObserver):
 
         Args:
             video (list[Video]): list of changed video ids
-
-        Raises:
-            IndexError: if the list is empty
         """
         self._update_image()
 
@@ -358,9 +355,6 @@ class SectionState(SectionListObserver):
 
         Args:
             sections (list[SectionId]): newly added sections
-
-        Raises:
-            IndexError: if the list of sections is empty
         """
         section_to_select = sections[0] if sections else None
         self.selected_section.set(section_to_select)
