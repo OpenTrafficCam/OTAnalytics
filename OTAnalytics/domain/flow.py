@@ -132,6 +132,10 @@ class FlowRepository:
         candidate = FlowId(str(self._current_id))
         return self.get_id() if candidate in self._flows.keys() else candidate
 
+    def clear(self) -> None:
+        self._flows.clear()
+        self._observers.notify([])
+
     def add(self, flow: Flow) -> None:
         self.__internal_add(flow)
         self._observers.notify([flow.id])

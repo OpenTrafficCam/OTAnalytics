@@ -55,8 +55,13 @@ class TestTrackState:
         assert state.selected_track == first_track
 
     def test_update_selected_track_on_notify_tracks_with_empty_list(self) -> None:
-        with pytest.raises(IndexError):
-            TrackState().notify_tracks([])
+        first_track = TrackId(1)
+        state = TrackState()
+
+        state.notify_tracks([first_track])
+        state.notify_tracks([])
+
+        assert state.selected_track is None
 
 
 class TestObservableProperty:
@@ -130,8 +135,13 @@ class TestOptionalObservableProperty:
         assert state.selected_section.get() == first
 
     def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
-        with pytest.raises(IndexError):
-            SectionState().notify_sections([])
+        first = SectionId("north")
+        state = SectionState()
+
+        state.notify_sections([first])
+        state.notify_sections([])
+
+        assert state.selected_section.get() is None
 
 
 class TestTrackImageUpdater:

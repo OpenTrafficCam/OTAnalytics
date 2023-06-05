@@ -24,7 +24,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB_PERIMETER,
     LINE,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
 PRE_EDIT_SECTION_ID: str = "pre_edit_section"
@@ -534,9 +533,9 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
 
     def _get_metadata(self) -> None:
         toplevel_position = get_widget_position(widget=self._canvas)
-        self._metadata = ToplevelSections(
+        self._metadata = self._viewmodel.get_section_metadata(
             title="Add section", initial_position=toplevel_position
-        ).get_metadata()
+        )
 
     def _create_section(self) -> None:
         self._viewmodel.set_new_section(self._metadata, self._coordinates)

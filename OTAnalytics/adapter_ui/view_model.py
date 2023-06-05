@@ -76,6 +76,12 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def get_section_metadata(
+        self, title: str, initial_position: tuple[int, int]
+    ) -> dict:
+        pass
+
+    @abstractmethod
     def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
         raise NotImplementedError
 
