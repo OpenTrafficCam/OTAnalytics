@@ -93,7 +93,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._flow_parser: FlowParser = flow_parser
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
-        # self._frame_sections: Optional[AbstractFrameSections] = None
+        self._frame_sections: Optional[AbstractFrameSections] = None
         self._frame_flows: Optional[AbstractFrameFlows] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._canvas: Optional[AbstractCanvas] = None
