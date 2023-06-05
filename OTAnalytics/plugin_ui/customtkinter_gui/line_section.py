@@ -139,7 +139,6 @@ class SectionPainter:
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,
         text: str | None = None,
-        text_style: dict | None = None,
         tags: list[str] | None = None,
     ) -> None:
         """Draws a line section on a canvas.
