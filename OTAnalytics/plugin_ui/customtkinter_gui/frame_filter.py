@@ -345,11 +345,18 @@ class FilterTracksByDatePopup(CTkToplevel):
 
 
 class DateRow(CTkFrame):
-    def __init__(self, viewmodel: ViewModel, name: str, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        viewmodel: ViewModel,
+        name: str,
+        place_validation_below: bool = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self._is_initialized = False
         self._name = name
         self._viewmodel = viewmodel
+        self._place_validation_below = place_validation_below
         self._date_var = tkinter.StringVar()
         self._hour_var = tkinter.StringVar()
         self._minute_var = tkinter.StringVar()
@@ -461,9 +468,14 @@ class DateRow(CTkFrame):
         self.minute_entry.grid(row=0, column=4, padx=PADX, pady=PADY, stick=STICKY)
         ColonLabel(master=self).grid(row=0, column=5)
         self.second_entry.grid(row=0, column=6, padx=PADX, pady=PADY, stick=STICKY)
-        self.validation_info_label.grid(
-            row=0, column=7, padx=PADX, pady=PADY, sticky=STICKY
-        )
+        if self._place_validation_below:
+            self.validation_info_label.grid(
+                row=1, column=0, columnspan=7, padx=PADX, pady=PADY, sticky=STICKY
+            )
+        else:
+            self.validation_info_label.grid(
+                row=0, column=7, padx=PADX, pady=PADY, sticky=STICKY
+            )
 
     def _display_text_on_entry_widget(self, widget: CTkEntry, text: str) -> None:
         widget.delete(0, END)
