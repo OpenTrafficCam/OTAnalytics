@@ -6,6 +6,8 @@ from typing import Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
+from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT
@@ -91,6 +93,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._flow_parser: FlowParser = flow_parser
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
+        # self._frame_sections: Optional[AbstractFrameSections] = None
+        self._frame_flows: Optional[AbstractFrameFlows] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
@@ -116,6 +120,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             self._on_background_updated
         )
         self._application.track_view_state.track_offset.register(self._update_offset)
+        self._application.action_state.action_running.register(
+            self._notify_action_running_state
+        )
 
     def _on_section_changed(self, section_id: SectionId) -> None:
         self.notify_sections([section_id])
@@ -152,8 +159,28 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self.refresh_items_on_canvas()
         self._treeview_flows.update_items()
 
+    def _notify_action_running_state(self, running: bool) -> None:
+        if not self._frame_flows:
+            raise MissingInjectedInstanceError(type(self._frame_flows).__name__)
+        if not self._frame_sections:
+            raise MissingInjectedInstanceError(type(self._frame_sections).__name__)
+        self._frame_flows.set_enabled(not running)
+        self._frame_sections.set_enabled(not running)
+
+    def _start_action(self) -> None:
+        self._application.action_state.action_running.set(True)
+
+    def _finish_action(self) -> None:
+        self._application.action_state.action_running.set(False)
+
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
+
+    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+        self._frame_sections = frame
+
+    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+        self._frame_flows = frame
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
@@ -254,6 +281,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self.set_selected_section_id(None)
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
+        self._start_action()
         SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
 
     def get_section_metadata(
@@ -296,6 +324,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.add_section(line_section)
         print(f"New line_section created: {line_section.id}")
         self._update_selected_section(line_section.id)
+        self._finish_action()
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
         return geometry.Coordinate(coordinate[0], coordinate[1])
@@ -305,6 +334,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             return
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
+        self._start_action()
         CanvasElementDeleter(canvas=self._canvas).delete(
             tag_or_id=self._selected_section_id
         )
@@ -353,6 +383,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         )
         self.refresh_items_on_canvas()
         print(f"Updated line_section Metadata: {updated_section_data}")
+        self._finish_action()
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
         section = self._flow_parser.parse_section(data)
@@ -367,6 +398,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 message="Please select a section to remove", initial_position=position
             )
             return
+        self._start_action()
         section_id = SectionId(self._selected_section_id)
         if self._application.is_flow_using_section(section_id):
             message = (
@@ -383,6 +415,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             return
         self._application.remove_section(section_id)
         self.refresh_items_on_canvas()
+        self._finish_action()
 
     def refresh_items_on_canvas(self) -> None:
         self._remove_items_from_canvas()
@@ -476,6 +509,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         return self._application.get_all_flows()
 
     def add_flow(self) -> None:
+        self._start_action()
         if flow_data := self._show_distances_window():
             flow_id = self._application.get_flow_id()
             name = flow_data[FLOW_NAME]
@@ -492,6 +526,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             self._application.add_flow(flow)
             self.set_selected_flow_id(flow_id.serialize())
             print(f"Added new flow: {flow_data}")
+        self._finish_action()
 
     def _show_distances_window(
         self,
@@ -536,6 +571,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self.refresh_items_on_canvas()
 
     def edit_flow(self) -> None:
+        self._start_action()
         if flow := self._get_selected_flow():
             self._edit_flow(flow)
         else:
@@ -543,7 +579,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to edit", initial_position=position)
-            return
+        self._finish_action()
 
     def _edit_flow(self, flow: Flow) -> None:
         input_data = {
@@ -563,12 +599,14 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def remove_flow(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+        self._start_action()
         if flow_id := self._application.flow_state.selected_flow.get():
             self._application.remove_flow(flow_id)
             self.refresh_items_on_canvas()
         else:
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
+        self._finish_action()
 
     def start_analysis(self) -> None:
         self._application.start_analysis()
