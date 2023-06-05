@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from customtkinter import NW, CTkFrame
-from PIL import ImageTk
+from PIL import Image, ImageTk
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
@@ -87,6 +87,12 @@ class CanvasBackground(AbstractCanvas):
 
         self._current_image: ImageTk.PhotoImage
         self._current_id: Any = None
+        self.add_preview_image()
+
+    def add_preview_image(self) -> None:
+        preview_image = Image.open(r"OTAnalytics/assets/OpenTrafficCam_800.png")
+        self._current_image = ImageTk.PhotoImage(preview_image)
+        self._draw()
 
     def add_image(self, image: DisplayableImage, layer: str) -> None:
         if self._current_id:
