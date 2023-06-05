@@ -470,3 +470,12 @@ class TracksMetadata(TrackListObserver):
             detections.extend(track.detections)
 
         return detections
+
+
+class ActionState:
+    """
+    This state represents the current state of running actions.
+    """
+
+    def __init__(self) -> None:
+        self.action_running = ObservableProperty[bool](False)
