@@ -1,3 +1,4 @@
+import tkinter
 from abc import ABC, abstractmethod
 from datetime import datetime
 from tkinter import END, IntVar
@@ -346,36 +347,42 @@ class FilterTracksByDatePopup(CTkToplevel):
 class DateRow(CTkFrame):
     def __init__(self, viewmodel: ViewModel, name: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self._is_initialized = False
         self._name = name
         self._viewmodel = viewmodel
+        self._date_var = tkinter.StringVar()
+        self._hour_var = tkinter.StringVar()
+        self._minute_var = tkinter.StringVar()
+        self._second_var = tkinter.StringVar()
 
         self._get_widgets()
         self._place_widgets()
         self._reset_all_border_colors()
         self._clear_validation_info()
+        self._is_initialized = True
 
     @property
     def date(self) -> str:
-        return self.date_entry.get()
+        return self._date_var.get()
 
     @property
     def hour(self) -> str:
-        return self.hour_entry.get()
+        return self._hour_var.get()
 
     @property
     def minute(self) -> str:
-        return self.minute_entry.get()
+        return self._minute_var.get()
 
     @property
     def second(self) -> str:
-        return self.second_entry.get()
+        return self._second_var.get()
 
     def set_datetime(self, date_time: Optional[datetime]) -> None:
         if date_time:
-            self._display_text_on_entry_widget(self.date_entry, f"{date_time.date()}")
-            self._display_text_on_entry_widget(self.hour_entry, f"{date_time.hour}")
-            self._display_text_on_entry_widget(self.minute_entry, f"{date_time.minute}")
-            self._display_text_on_entry_widget(self.second_entry, f"{date_time.second}")
+            self._date_var.set(f"{date_time.date()}")
+            self._hour_var.set(f"{date_time.hour}")
+            self._minute_var.set(f"{date_time.minute}")
+            self._second_var.set(f"{date_time.second}")
 
     def get_datetime(self) -> Optional[datetime]:
         try:
@@ -402,6 +409,7 @@ class DateRow(CTkFrame):
             master=self,
             placeholder_text=DATE_FORMAT_PLACEHOLDER,
             width=95,
+            textvariable=self._date_var,
             validate="key",
             validatecommand=(self.register(self._validate_date_format), "%P", "%W"),
         )
@@ -409,6 +417,7 @@ class DateRow(CTkFrame):
             master=self,
             placeholder_text="HH",
             width=35,
+            textvariable=self._hour_var,
             validate="key",
             validatecommand=(
                 self.register(self._validate_time_format),
@@ -421,6 +430,7 @@ class DateRow(CTkFrame):
             master=self,
             placeholder_text="MM",
             width=35,
+            textvariable=self._minute_var,
             validate="key",
             validatecommand=(
                 self.register(self._validate_time_format),
@@ -433,6 +443,7 @@ class DateRow(CTkFrame):
             master=self,
             placeholder_text="SS",
             width=35,
+            textvariable=self._second_var,
             validate="key",
             validatecommand=(
                 self.register(self._validate_time_format),
@@ -471,6 +482,8 @@ class DateRow(CTkFrame):
         return True
 
     def _validate_time_format(self, name: str, value: str, widget_name: str) -> bool:
+        if not self._is_initialized:
+            return False
         widget: CTkEntry = self.nametowidget(widget_name).master
 
         if self._has_valid_time_format(name, value):
