@@ -5,6 +5,7 @@ from typing import Callable, Generic, Iterable, Optional, TypeVar
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.domain.flow import FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.domain.track import (
@@ -347,7 +348,6 @@ class SectionState(SectionListObserver):
 
     def __init__(self) -> None:
         self.selected_section = ObservableOptionalProperty[SectionId]()
-        self.selected_flow = ObservableOptionalProperty[str]()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         """
@@ -358,7 +358,30 @@ class SectionState(SectionListObserver):
         """
         section_to_select = sections[0] if sections else None
         self.selected_section.set(section_to_select)
-        self.selected_flow.set(None)
+
+
+class FlowState(FlowListObserver):
+    """
+    This state represents the currently selected flow.
+    """
+
+    def __init__(self) -> None:
+        self.selected_flow = ObservableOptionalProperty[FlowId]()
+
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        """
+        Notify the state about changes in the flow list.
+
+        Args:
+            flows (list[FlowId]): newly added flows
+
+        Raises:
+            IndexError: if the list of flows is empty
+        """
+        if flows:
+            self.selected_flow.set(flows[0])
+        else:
+            self.selected_flow.set(None)
 
 
 class TracksMetadata(TrackListObserver):

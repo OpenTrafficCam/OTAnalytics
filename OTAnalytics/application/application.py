@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    FlowState,
     SectionState,
     TracksMetadata,
     TrackState,
@@ -11,7 +12,7 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
-from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
+from OTAnalytics.domain.flow import Flow, FlowChangedObserver, FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -34,6 +35,7 @@ class OTAnalyticsApplication:
         track_state: TrackState,
         track_view_state: TrackViewState,
         section_state: SectionState,
+        flow_state: FlowState,
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
         tracks_metadata: TracksMetadata,
@@ -43,6 +45,7 @@ class OTAnalyticsApplication:
         self.track_state: TrackState = track_state
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
+        self.flow_state: FlowState = flow_state
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
         self._tracks_metadata = tracks_metadata
@@ -66,6 +69,9 @@ class OTAnalyticsApplication:
 
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         self._datastore.register_flows_observer(observer)
+
+    def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
+        self._datastore.register_flow_changed_observer(observer)
 
     def get_all_sections(self) -> Iterable[Section]:
         return self._datastore.get_all_sections()
@@ -261,14 +267,19 @@ class OTAnalyticsApplication:
         """Set the current selected section in the UI.
 
         Args:
-            id (SectionId): the id of the currently selected section
+            id (Optional[str]): the id of the currently selected section
         """
-        if id:
-            section_id = SectionId(id)
-        else:
-            section_id = None
-
+        section_id = SectionId(id) if id else None
         self.section_state.selected_section.set(section_id)
+
+    def set_selected_flow(self, id: Optional[str]) -> None:
+        """Set the current selected flow in the UI.
+
+        Args:
+            id (Optional[str]): the id of the currently selected flow
+        """
+        flow_id = FlowId(id) if id else None
+        self.flow_state.selected_flow.set(flow_id)
 
     def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
         """Get the current track offset.

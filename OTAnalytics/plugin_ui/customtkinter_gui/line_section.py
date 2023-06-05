@@ -1,7 +1,12 @@
+import tkinter
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_flow import (
+    InnerSegmentsCenterCalculator,
+    SectionRefPointCalculator,
+)
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import NAME, RELATIVE_OFFSET_COORDINATES, Section
@@ -23,6 +28,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB_CORE,
     KNOB_PERIMETER,
     LINE,
+    SECTION_TEXT,
 )
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
@@ -42,7 +48,32 @@ class SectionGeometryBuilderObserver(ABC):
         raise NotImplementedError
 
 
-class CanvasElementPainter:
+class ArrowPainter:
+    def __init__(self, canvas: AbstractCanvas) -> None:
+        self._canvas = canvas
+
+    def draw(
+        self,
+        start_section: Section,
+        end_section: Section,
+        arrow_style: dict | None = None,
+        refpt_calculator: SectionRefPointCalculator = InnerSegmentsCenterCalculator(),
+        tags: list[str] | None = None,
+    ) -> None:
+        start_x, start_y = refpt_calculator.get_reference_point(start_section)
+        end_x, end_y = refpt_calculator.get_reference_point(end_section)
+        self._canvas.create_line(
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            arrow=tkinter.LAST,
+            tags=tags,
+            **arrow_style,
+        )
+
+
+class SectionPainter:
     def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
@@ -53,6 +84,7 @@ class CanvasElementPainter:
         section_style: dict,
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,
+        text: str | None = None,
         tags: list[str] | None = None,
     ) -> None:
         """Draws a line section on a canvas.
@@ -68,11 +100,33 @@ class CanvasElementPainter:
             highlighted_knob_style (dict | None, optional): Dict of style options for a
                 knob coordinate that should be highlighted with a unique style.
                 Defaults to None.
+            text (str | None, optional): Text to display above the section.
+                Defaults to None.
             tags (list[str] | None, optional): Tags to specify groups of line_sections.
                 Defaults to None.
         """
         tkinter_tags = (id,) + tuple(tags) if tags is not None else (id,)
 
+        self._draw_geometries(
+            coordinates,
+            section_style,
+            highlighted_knob_index,
+            highlighted_knob_style,
+            tkinter_tags,
+        )
+
+        if text is not None:
+            text_position = coordinates[0]
+            self._draw_text(text, text_position, tkinter_tags)
+
+    def _draw_geometries(
+        self,
+        coordinates: list[tuple[int, int]],
+        section_style: dict,
+        highlighted_knob_index: int | None,
+        highlighted_knob_style: dict | None,
+        tkinter_tags: tuple[str, ...],
+    ) -> None:
         start: tuple[int, int] | None = None
         for index, coordinate in enumerate(coordinates):
             if start is not None:
@@ -137,6 +191,15 @@ class CanvasElementPainter:
             tags=tags,
         )
 
+    def _draw_text(
+        self,
+        text: str,
+        text_position: tuple[float, float],
+        tkinter_tags: tuple[str, ...],
+    ) -> None:
+        x, y = text_position
+        self._canvas.create_text(x, y, text=text, tags=tkinter_tags + (SECTION_TEXT,))
+
 
 class CanvasElementDeleter:
     def __init__(self, canvas: AbstractCanvas) -> None:
@@ -182,7 +245,7 @@ class SectionGeometryEditor(CanvasObserver):
         self._get_name()
         self._get_matadata()
 
-        self.painter = CanvasElementPainter(canvas=canvas)
+        self.painter = SectionPainter(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self.painter.draw(
@@ -406,7 +469,7 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _abort(self) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
-        self._viewmodel.refresh_sections_on_gui()
+        self._viewmodel.refresh_items_on_canvas()
 
 
 class SectionGeometryBuilder:
@@ -419,7 +482,7 @@ class SectionGeometryBuilder:
         self._observer = observer
         self._style = style
 
-        self.painter = CanvasElementPainter(canvas=canvas)
+        self.painter = SectionPainter(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self._temporary_id: str = TEMPORARY_SECTION_ID

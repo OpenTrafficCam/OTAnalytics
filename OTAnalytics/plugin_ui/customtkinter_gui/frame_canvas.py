@@ -106,7 +106,7 @@ class CanvasBackground(AbstractCanvas):
             width=self._current_image.width(), height=self._current_image.height()
         )
         self.config(highlightthickness=0)
-        self._viewmodel.refresh_sections_on_gui()
+        self._viewmodel.refresh_items_on_canvas()
         # self.master.master.update_idletasks()
 
     def introduce_to_viewmodel(self) -> None:

@@ -6,7 +6,13 @@ from typing import Iterable, Optional, Sequence, Tuple
 
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver, FlowRepository
+from OTAnalytics.domain.flow import (
+    Flow,
+    FlowChangedObserver,
+    FlowId,
+    FlowListObserver,
+    FlowRepository,
+)
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
@@ -464,6 +470,15 @@ class Datastore:
             observer (SectionChangedObserver): observer to notify about changes
         """
         self._section_repository.register_section_changed_observer(observer)
+
+    def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
+        """
+        Listen to changes of sections in the repository.
+
+        Args:
+            observer (FlowChangedObserver): observer to notify about changes
+        """
+        self._flow_repository.register_flow_changed_observer(observer)
 
     def update_section(self, section: Section) -> None:
         """

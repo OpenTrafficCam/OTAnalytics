@@ -1,3 +1,4 @@
+import tkinter
 from tkinter import E, StringVar, W
 from typing import Any, Optional
 
@@ -37,6 +38,7 @@ class ToplevelFlows(CTkToplevel):
         self.input_values: dict = self.__create_input_values(input_values)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
+        self._last_autofilled_name: str = ""
         self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
@@ -65,22 +67,28 @@ class ToplevelFlows(CTkToplevel):
         }
 
     def _get_widgets(self) -> None:
-        self.label_id = CTkLabel(master=self, text="Name")
-        self.entry_id = CTkEntry(
-            master=self,
-            width=180,
-            textvariable=self._current_name,
-        )
         self.label_section_start = CTkLabel(master=self, text="First section:")
         self.dropdown_section_start = CTkOptionMenu(
-            master=self, width=180, values=self._section_names()
+            master=self,
+            width=180,
+            values=self._section_names(),
+            command=self._autofill_name,
         )
         self.dropdown_section_start.set(self._get_start_section_name())
         self.label_section_end = CTkLabel(master=self, text="Second section:")
         self.dropdown_section_end = CTkOptionMenu(
-            master=self, width=180, values=self._section_names()
+            master=self,
+            width=180,
+            values=self._section_names(),
+            command=self._autofill_name,
         )
         self.dropdown_section_end.set(self._get_end_section_name())
+        self.label_name = CTkLabel(master=self, text="Name:")
+        self.entry_name = CTkEntry(
+            master=self,
+            width=180,
+            textvariable=self._current_name,
+        )
         self.label_distance = CTkLabel(master=self, text="Distance [m]:")
         self.entry_distance = CTkEntry(
             master=self,
@@ -107,14 +115,14 @@ class ToplevelFlows(CTkToplevel):
         return self._get_section_name_for_id(_id)
 
     def _place_widgets(self) -> None:
-        self.label_id.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=E)
-        self.entry_id.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=W)
-        self.label_section_start.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=E)
+        self.label_section_start.grid(row=0, column=0, padx=PADX, pady=PADY, sticky="E")
         self.dropdown_section_start.grid(
-            row=1, column=1, padx=PADX, pady=PADY, sticky=W
+            row=0, column=1, padx=PADX, pady=PADY, sticky="W"
         )
-        self.label_section_end.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=E)
-        self.dropdown_section_end.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=W)
+        self.label_section_end.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=E)
+        self.dropdown_section_end.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=W)
+        self.label_name.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.E)
+        self.entry_name.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.W)
         self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
         self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
         self.button_ok.grid(
@@ -127,11 +135,22 @@ class ToplevelFlows(CTkToplevel):
 
     def _set_focus(self) -> None:
         self.after(0, lambda: self.lift())
-        self.after(0, lambda: self.entry_distance.focus_set())
+        self.after(0, lambda: self.entry_name.focus_set())
 
     def _set_close_on_return_key(self) -> None:
         self.entry_distance.bind(tk_events.RETURN_KEY, self.close)
         self.entry_distance.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
+
+    def _autofill_name(self, event: Any) -> None:
+        if self._last_autofilled_name == self.entry_name.get():
+            self.entry_name.delete(0, tkinter.END)
+            auto_name = (
+                self.dropdown_section_start.get()
+                + " --> "
+                + self.dropdown_section_end.get()
+            )
+            self.entry_name.insert(0, auto_name)
+            self._last_autofilled_name = auto_name
 
     def close(self, event: Any = None) -> None:
         if not self._sections_are_valid():
@@ -166,12 +185,6 @@ class ToplevelFlows(CTkToplevel):
         section_end = self._get_end_section_id()
         sections = [section_start, section_end]
         position = (self.winfo_x(), self.winfo_y())
-        if self._current_name.get() == "":
-            InfoBox(
-                message="Please choose a flow name!",
-                initial_position=position,
-            )
-            return False
         if "" in [section_start, section_end]:
             InfoBox(
                 message="Please choose both a start and an end section!",
@@ -192,6 +205,12 @@ class ToplevelFlows(CTkToplevel):
                         initial_position=position,
                     )
                     return False
+        if self._current_name.get() == "":
+            InfoBox(
+                message="Please choose a flow name!",
+                initial_position=position,
+            )
+            return False
         return True
 
     def get_data(self) -> dict:

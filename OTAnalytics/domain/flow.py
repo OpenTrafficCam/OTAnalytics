@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.domain.section import SectionId
 
@@ -88,6 +88,38 @@ class FlowListObserver(ABC):
         pass
 
 
+VALUE = TypeVar("VALUE")
+
+FlowChangedObserver = Callable[[FlowId], None]
+
+
+class FlowChangedSubject(Generic[VALUE]):
+    """
+    Helper class to handle and notify observers
+    """
+
+    def __init__(self) -> None:
+        self.observers: set[FlowChangedObserver] = set()
+
+    def register(self, observer: FlowChangedObserver) -> None:
+        """
+        Listen to events.
+
+        Args:
+            observer (FlowChangedObserver): listener to add
+        """
+        self.observers.add(observer)
+
+    def notify(self, value: FlowId) -> None:
+        """
+        Notifies observers about the changed value.
+
+        Args:
+            value (FlowId): changed value
+        """
+        [observer(value) for observer in self.observers]
+
+
 class FlowListSubject:
     """
     Helper class to handle and notify observers
@@ -119,10 +151,14 @@ class FlowRepository:
     def __init__(self) -> None:
         self._flows: dict[FlowId, Flow] = {}
         self._current_id = 0
-        self._observers: FlowListSubject = FlowListSubject()
+        self._repository_content_observers: FlowListSubject = FlowListSubject()
+        self._flow_content_observers: FlowChangedSubject = FlowChangedSubject()
 
     def register_flows_observer(self, observer: FlowListObserver) -> None:
-        self._observers.register(observer)
+        self._repository_content_observers.register(observer)
+
+    def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
+        self._flow_content_observers.register(observer)
 
     def get_id(self) -> FlowId:
         """
@@ -134,11 +170,11 @@ class FlowRepository:
 
     def clear(self) -> None:
         self._flows.clear()
-        self._observers.notify([])
+        self._repository_content_observers.notify([])
 
     def add(self, flow: Flow) -> None:
         self.__internal_add(flow)
-        self._observers.notify([flow.id])
+        self._repository_content_observers.notify([flow.id])
 
     def __internal_add(self, flow: Flow) -> None:
         self._flows[flow.id] = flow
@@ -172,12 +208,12 @@ class FlowRepository:
     def add_all(self, flows: Iterable[Flow]) -> None:
         for flow in flows:
             self.__internal_add(flow)
-        self._observers.notify([flow.id for flow in flows])
+        self._repository_content_observers.notify([flow.id for flow in flows])
 
     def remove(self, flow_id: FlowId) -> None:
         if flow_id in self._flows:
             del self._flows[flow_id]
-            self._observers.notify([flow_id])
+        self._repository_content_observers.notify([flow_id])
 
     def update(self, flow: Flow) -> None:
         self._flows[flow.id] = flow

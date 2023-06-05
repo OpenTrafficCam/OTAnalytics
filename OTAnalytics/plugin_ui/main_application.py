@@ -13,6 +13,7 @@ from OTAnalytics.application.datastore import (
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlotter
 from OTAnalytics.application.state import (
+    FlowState,
     Plotter,
     SectionState,
     SelectedVideoUpdate,
@@ -88,6 +89,7 @@ class ApplicationStarter:
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state(datastore)
         section_state = self._create_section_state()
+        flow_state = self._create_flow_state()
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         tracks_metadata = self._create_tracks_metadata(track_repository)
@@ -100,6 +102,7 @@ class ApplicationStarter:
             track_state=track_state,
             track_view_state=track_view_state,
             section_state=section_state,
+            flow_state=flow_state,
             intersect=intersect,
             scene_event_detection=scene_event_detection,
             tracks_metadata=tracks_metadata,
@@ -243,6 +246,9 @@ class ApplicationStarter:
 
     def _create_section_state(self) -> SectionState:
         return SectionState()
+
+    def _create_flow_state(self) -> FlowState:
+        return FlowState()
 
     def _create_intersect(self) -> RunIntersect:
         return RunIntersect(
