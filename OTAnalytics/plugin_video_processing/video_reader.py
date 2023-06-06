@@ -3,8 +3,8 @@ from pathlib import Path
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from PIL import Image
 
-from OTAnalytics.application.datastore import VideoReader
 from OTAnalytics.domain.track import PilImage, TrackImage
+from OTAnalytics.domain.video import VideoReader
 
 
 class FrameDoesNotExistError(Exception):

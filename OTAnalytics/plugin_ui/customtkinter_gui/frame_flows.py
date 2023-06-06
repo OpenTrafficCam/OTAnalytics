@@ -20,6 +20,8 @@ class FrameFlows(CTkFrame):
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         self._get_widgets()
         self._place_widgets()
 
@@ -54,7 +56,7 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
 
     def _define_columns(self) -> None:
         self["columns"] = "Flow"
-        self.column(column="#0", width=0)
+        self.column(column="#0", width=0, stretch=False)
         self.column(column="Flow", anchor="center", width=150, minwidth=40)
         self["displaycolumns"] = "Flow"
 

@@ -305,3 +305,13 @@ class TestEventRepository:
 
         assert first_event in repository.get_all()
         assert second_event in repository.get_all()
+
+    def test_clear(self) -> None:
+        first_event = Mock()
+        second_event = Mock()
+        repository = EventRepository()
+
+        repository.add_all([first_event, second_event])
+        repository.clear()
+
+        assert not list(repository.get_all())
