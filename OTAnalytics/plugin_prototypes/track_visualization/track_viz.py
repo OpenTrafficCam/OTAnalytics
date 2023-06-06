@@ -23,9 +23,9 @@ DPI = 100
 
 CLASS_CAR = "car"
 CLASS_MOTORCYCLE = "motorcycle"
-CLASS_PERSON = "person"
+CLASS_PERSON = "pedestrian"
 CLASS_TRUCK = "truck"
-CLASS_BICYCLE = "bicycle"
+CLASS_BICYCLE = "bicyclist"
 CLASS_TRAIN = "train"
 
 COLOR_PALETTE: dict[str, str] = {
