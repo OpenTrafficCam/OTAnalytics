@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from os import path
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -55,7 +56,10 @@ class Video:
         self,
         relative_to: Path,
     ) -> dict:
-        return {PATH: str(self.path.relative_to(relative_to))}
+        return {PATH: self.__build_relative_path(relative_to)}
+
+    def __build_relative_path(self, relative_to: Path) -> str:
+        return path.relpath(self.path, relative_to)
 
 
 class VideoListObserver(ABC):
