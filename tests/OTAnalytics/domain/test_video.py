@@ -17,7 +17,7 @@ class TestVideo:
     ) -> None:
         video_path = test_data_tmp_dir / Path("some/video/path/to/file")
         config_path = test_data_tmp_dir / Path("some/config/path/to/file")
-        expected_video_path = "../../../../video/path/to/file"
+        expected_video_path = str(Path("../../../../video/path/to/file"))
         video_path.parent.mkdir(parents=True)
         config_path.parent.mkdir(parents=True)
         video_path.touch()
