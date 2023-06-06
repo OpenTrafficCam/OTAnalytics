@@ -14,16 +14,16 @@ class TestFilterElement:
     def test_init(self) -> None:
         date_range = Mock(spec=DateRange)
 
-        filter_element = FilterElement(date_range, [])
+        filter_element = FilterElement(date_range, set())
 
         assert filter_element.date_range == date_range
-        assert filter_element.classifications == []
+        assert filter_element.classifications == set()
 
     def test_build_filter(self) -> None:
         start_date = datetime(2000, 1, 1)
         end_date = None
         date_range = DateRange(start_date, end_date)
-        classifications = ["car", "truck"]
+        classifications = {"car", "truck"}
 
         expected_filter = Mock(spec=Filter)
 
@@ -46,9 +46,9 @@ class TestFilterElement:
 
     def test_derive_methods(self) -> None:
         date_range = Mock(spec=DateRange)
-        classifications = ["car"]
+        classifications = {"car"}
         new_date_range = Mock(spec=DateRange)
-        new_classifications = ["car", "truck"]
+        new_classifications = {"car", "truck"}
 
         filter_element = FilterElement(date_range, classifications)
 
@@ -65,7 +65,7 @@ class TestFilterElement:
 
 class TestFilterElementSettingRestorer:
     def test_save_by_date_filter_setting(self) -> None:
-        filter_element = FilterElement(DateRange(None, None), ["car"])
+        filter_element = FilterElement(DateRange(None, None), {"car"})
         restorer = FilterElementSettingRestorer()
         restorer.save_by_date_filter_setting(filter_element)
 
@@ -73,35 +73,35 @@ class TestFilterElementSettingRestorer:
         assert restorer._by_date_filter_setting == filter_element.date_range
 
     def test_by_classification_filter_setting(self) -> None:
-        filter_element = FilterElement(DateRange(None, None), ["car"])
+        filter_element = FilterElement(DateRange(None, None), {"car"})
         restorer = FilterElementSettingRestorer()
         restorer.save_by_classification_filter_setting(filter_element)
 
-        assert restorer._by_classification_filter_setting == ["car"]
+        assert restorer._by_classification_filter_setting == {"car"}
         assert restorer._by_date_filter_setting is None
 
     def test_restore_by_date_filter_setting(self) -> None:
         date_range = DateRange(datetime(2000, 1, 1), datetime(2000, 1, 2))
-        filter_element = FilterElement(date_range, [])
+        filter_element = FilterElement(date_range, set())
 
         restorer = FilterElementSettingRestorer()
         restorer.save_by_date_filter_setting(filter_element)
 
         restored_filter_element = restorer.restore_by_date_filter_setting(
-            FilterElement(DateRange(None, None), ["car"])
+            FilterElement(DateRange(None, None), {"car"})
         )
-        assert restored_filter_element.classifications == ["car"]
+        assert restored_filter_element.classifications == {"car"}
         assert restored_filter_element.date_range == date_range
 
     def test_restore_by_classification_filter_setting(self) -> None:
         date_range = DateRange(datetime(2000, 1, 1), datetime(2000, 1, 2))
-        classifications = ["car"]
+        classifications = {"car"}
         filter_element = FilterElement(date_range, classifications)
         restorer = FilterElementSettingRestorer()
         restorer.save_by_classification_filter_setting(filter_element)
 
         restored_filter_element = restorer.restore_by_classification_filter_setting(
-            FilterElement(DateRange(None, None), [])
+            FilterElement(DateRange(None, None), set())
         )
         assert restored_filter_element.classifications == classifications
         assert restored_filter_element.date_range == DateRange(None, None)

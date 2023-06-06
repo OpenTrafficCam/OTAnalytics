@@ -129,11 +129,11 @@ class FilterBuilder(ABC, Generic[T, S]):
         pass
 
     @abstractmethod
-    def add_has_classifications_predicate(self, classifications: list[str]) -> None:
+    def add_has_classifications_predicate(self, classifications: set[str]) -> None:
         """Add has classifications predicate.
 
         Args:
-            classifications (list[str]): the classifications
+            classifications (set[str]): the classifications
         """
         pass
 
@@ -150,7 +150,7 @@ class FilterElement:
     def __init__(
         self,
         date_range: DateRange,
-        classifications: list[str],
+        classifications: set[str],
     ) -> None:
         self.date_range = date_range
         self.classifications = classifications
@@ -195,11 +195,11 @@ class FilterElement:
             date_range=date_range, classifications=self.classifications.copy()
         )
 
-    def derive_classifications(self, classifications: list[str]) -> "FilterElement":
+    def derive_classifications(self, classifications: set[str]) -> "FilterElement":
         """Return copy of the current filter element and update its classifications.
 
         Args:
-            classifications (list[str]): the classifications to be updated
+            classifications (set[str]): the classifications to be updated
 
         Returns:
             FilterElement: a copy of the current filter element with the classifications
@@ -213,7 +213,7 @@ class FilterElement:
 class FilterElementSettingRestorer:
     def __init__(self) -> None:
         self._by_date_filter_setting: Optional[DateRange] = None
-        self._by_classification_filter_setting: Optional[list[str]] = None
+        self._by_classification_filter_setting: Optional[set[str]] = None
 
     def save_by_date_filter_setting(self, filter_element: FilterElement) -> None:
         self._by_date_filter_setting = filter_element.date_range

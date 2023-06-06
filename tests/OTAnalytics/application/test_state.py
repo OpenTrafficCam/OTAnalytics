@@ -66,9 +66,9 @@ class TestTrackState:
 
 class TestObservableProperty:
     def test_notify_observer(self) -> None:
-        first_filter_element = FilterElement(DateRange(None, None), [])
+        first_filter_element = FilterElement(DateRange(None, None), set())
         changed_filter_element = FilterElement(
-            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), ["car", "truck"]
+            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), {"car", "truck"}
         )
         observer = Mock(spec=Callable[[FilterElement], None])
         state = ObservableProperty[FilterElement](first_filter_element)
@@ -83,7 +83,7 @@ class TestObservableProperty:
 
     def test_update_filter_element_on_on_notify_filter_element(self) -> None:
         filter_element = FilterElement(
-            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), ["car", "truck"]
+            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), {"car", "truck"}
         )
         state = TrackViewState()
 

@@ -206,7 +206,7 @@ class TrackViewState:
             RelativeOffsetCoordinate(0, 0)
         )
         self.filter_element = ObservableProperty[FilterElement](
-            FilterElement(DateRange(None, None), [])
+            FilterElement(DateRange(None, None), set())
         )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
