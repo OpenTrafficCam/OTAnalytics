@@ -217,7 +217,7 @@ class TestTracksMetadata:
         assert tracks_metadata.first_detection_occurrence is None
         assert tracks_metadata.last_detection_occurrence is None
 
-        tracks_metadata.notify_tracks([])
+        tracks_metadata._update_detection_occurrences()
         assert tracks_metadata.first_detection_occurrence == first_detection.occurrence
         assert tracks_metadata.last_detection_occurrence == third_detection.occurrence
 
