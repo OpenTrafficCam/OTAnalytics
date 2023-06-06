@@ -170,19 +170,32 @@ class TestTracksMetadata:
     def first_detection(self) -> Mock:
         first_detection = Mock(spec=Detection).return_value
         first_detection.occurrence = datetime(2000, 1, 1, 7, 0, 0, 0)
+        first_detection.classification = "car"
         return first_detection
 
     @pytest.fixture
     def second_detection(self) -> Mock:
         second_detection = Mock(spec=Detection).return_value
         second_detection.occurrence = datetime(2000, 2, 1, 0, 0, 0, 0)
+        second_detection.classification = "truck"
         return second_detection
 
     @pytest.fixture
     def third_detection(self) -> Mock:
         third_detection = Mock(spec=Detection).return_value
         third_detection.occurrence = datetime(2000, 2, 5, 0, 0, 0, 0)
+        third_detection.classification = "car"
         return third_detection
+
+    @pytest.fixture
+    def track(
+        self, first_detection: Mock, second_detection: Mock, third_detection: Mock
+    ) -> Mock:
+        track = Mock(spec=Track).return_value
+        track.id = TrackId(1)
+        track.classification = "car"
+        track.detections = [first_detection, second_detection, third_detection]
+        return track
 
     @patch("OTAnalytics.application.state.TracksMetadata._get_all_track_detections")
     def test_update_detection_occurrences(
@@ -223,3 +236,31 @@ class TestTracksMetadata:
 
         assert detections == [first_detection, second_detection]
         track_repository.get_all.assert_called_once()
+
+    def test_update_classifications(self, track: Mock) -> None:
+        mock_track_repository = Mock(spec=TrackRepository)
+        mock_track_repository.get_for.return_value = track
+
+        tracks_metadata = TracksMetadata(mock_track_repository)
+
+        assert tracks_metadata.classifications == set()
+
+        tracks_metadata._update_classifications([track.id])
+
+        assert tracks_metadata.classifications == {"car", "truck"}
+        mock_track_repository.get_for.assert_any_call(track.id)
+        mock_track_repository.get_for.call_count == 1
+
+        track.detections[0].classification = "bicycle"
+        tracks_metadata._update_classifications([track.id])
+
+        assert tracks_metadata.classifications == {"car", "truck", "bicycle"}
+        mock_track_repository.get_for.assert_any_call(track.id)
+        mock_track_repository.get_for.call_count == 2
+
+        track.detections[0].classification = "car"
+        tracks_metadata._update_classifications([track.id])
+
+        assert tracks_metadata.classifications == {"car", "truck", "bicycle"}
+        mock_track_repository.get_for.assert_any_call(track.id)
+        mock_track_repository.get_for.call_count == 3
