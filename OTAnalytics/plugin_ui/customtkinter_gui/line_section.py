@@ -457,15 +457,15 @@ class SectionGeometryEditor(CanvasObserver):
         )
 
     def _finish(self) -> None:
-        self._create_section()
+        self._update_section()
         self.deleter.delete(tag_or_id=self._pre_edit_id)
         self.deleter.delete(tag_or_id=self._temporary_id)
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
         return Coordinate(coordinate[0], coordinate[1])
 
-    def _create_section(self) -> None:
-        self._viewmodel.set_new_section(self._metadata, self._coordinates)
+    def _update_section(self) -> None:
+        self._viewmodel.update_section_coordinates(self._metadata, self._coordinates)
 
     def _abort(self) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
