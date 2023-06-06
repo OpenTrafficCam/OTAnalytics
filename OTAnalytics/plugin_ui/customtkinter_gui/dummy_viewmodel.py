@@ -27,6 +27,7 @@ from OTAnalytics.domain.section import (
     NAME,
     RELATIVE_OFFSET_COORDINATES,
     LineSection,
+    MissingSection,
     Section,
     SectionId,
     SectionListObserver,
@@ -273,12 +274,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         return True
 
     def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
-        if not coordinates:
-            raise MissingCoordinate("First coordinate is missing")
-        elif len(coordinates) == 1:
-            raise MissingCoordinate("Second coordinate is missing")
-        if not data:
-            raise ValueError("Metadata of line_section are not defined")
+        self.__validate_section_information(data, coordinates)
         relative_offset_coordinates_enter = data[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
         ]
@@ -296,6 +292,32 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.add_section(line_section)
         print(f"New line_section created: {line_section.id}")
         self._update_selected_section(line_section.id)
+
+    def __validate_section_information(
+        self, data: dict, coordinates: list[tuple[int, int]]
+    ) -> None:
+        if not coordinates:
+            raise MissingCoordinate("First coordinate is missing")
+        elif len(coordinates) == 1:
+            raise MissingCoordinate("Second coordinate is missing")
+        if not data:
+            raise ValueError("Metadata of line_section are not defined")
+
+    def update_section_coordinates(
+        self, data: dict, coordinates: list[tuple[int, int]]
+    ) -> None:
+        self.__validate_section_information(data, coordinates)
+        section_id = SectionId(data[ID])
+        if not (section := self._application.get_section_for(section_id)):
+            raise MissingSection(
+                f"Could not update section '{section_id.serialize()}' after editing"
+            )
+        section.update_coordinates(
+            [self._to_coordinate(coordinate) for coordinate in coordinates]
+        )
+        self._application.update_section(section)
+        print(f"Update section: {section.id}")
+        self._update_selected_section(section.id)
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
         return geometry.Coordinate(coordinate[0], coordinate[1])

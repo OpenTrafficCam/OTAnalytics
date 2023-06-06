@@ -82,6 +82,12 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def update_section_coordinates(
+        self, data: dict, coordinates: list[tuple[int, int]]
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
         raise NotImplementedError
 
