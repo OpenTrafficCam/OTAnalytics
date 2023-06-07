@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    ActionState,
     FlowState,
     SectionState,
     TracksMetadata,
@@ -39,6 +40,7 @@ class OTAnalyticsApplication:
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
         tracks_metadata: TracksMetadata,
+        action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
     ) -> None:
         self._datastore: Datastore = datastore
@@ -49,6 +51,7 @@ class OTAnalyticsApplication:
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
         self._tracks_metadata = tracks_metadata
+        self.action_state = action_state
         self._filter_element_setting_restorer = filter_element_setting_restorer
 
     def connect_observers(self) -> None:

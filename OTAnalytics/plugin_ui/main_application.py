@@ -13,6 +13,7 @@ from OTAnalytics.application.datastore import (
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlotter
 from OTAnalytics.application.state import (
+    ActionState,
     FlowState,
     Plotter,
     SectionState,
@@ -93,6 +94,7 @@ class ApplicationStarter:
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         tracks_metadata = self._create_tracks_metadata(track_repository)
+        action_state = self._create_action_state()
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
@@ -106,6 +108,7 @@ class ApplicationStarter:
             intersect=intersect,
             scene_event_detection=scene_event_detection,
             tracks_metadata=tracks_metadata,
+            action_state=action_state,
             filter_element_setting_restorer=filter_element_settings_restorer,
         )
         flow_parser: FlowParser = application._datastore._flow_parser
@@ -265,6 +268,9 @@ class ApplicationStarter:
         self, track_repository: TrackRepository
     ) -> TracksMetadata:
         return TracksMetadata(track_repository)
+
+    def _create_action_state(self) -> ActionState:
+        return ActionState()
 
     def _create_dataframe_filter_builder(self) -> DataFrameFilterBuilder:
         return DataFrameFilterBuilder()

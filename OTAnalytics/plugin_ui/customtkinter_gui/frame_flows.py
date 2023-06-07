@@ -1,8 +1,9 @@
 from tkinter.ttk import Treeview
 from typing import Any, Optional
 
-from customtkinter import CTkButton, CTkFrame
+from customtkinter import CTkButton
 
+from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
@@ -11,8 +12,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     TreeviewTemplate,
 )
 
+STATE_DISABLED = "disabled"
+STATE_NORMAL = "normal"
 
-class FrameFlows(CTkFrame):
+
+class FrameFlows(AbstractFrameFlows):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -24,6 +28,10 @@ class FrameFlows(CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self._get_widgets()
         self._place_widgets()
+        self.introduce_to_viewmodel()
+
+    def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_flows_frame(self)
 
     def _get_widgets(self) -> None:
         self.treeview = TreeviewFlows(viewmodel=self._viewmodel, master=self)
@@ -38,12 +46,16 @@ class FrameFlows(CTkFrame):
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_flow
         )
+        self._action_buttons = [self.button_add, self.button_edit, self.button_remove]
 
     def _place_widgets(self) -> None:
         self.treeview.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_add.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_edit.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_remove.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+
+    def action_buttons(self) -> list[CTkButton]:
+        return self._action_buttons
 
 
 class TreeviewFlows(TreeviewTemplate, Treeview):
