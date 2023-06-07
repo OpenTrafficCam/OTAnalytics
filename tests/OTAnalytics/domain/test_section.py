@@ -60,6 +60,41 @@ class TestLineSection:
             coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
         )
 
+    def test_update_coordinates(self) -> None:
+        section = LineSection(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
+        )
+
+        new_coordinates = [Coordinate(1, 1), Coordinate(2, 2)]
+        section.update_coordinates(new_coordinates)
+
+        assert section.get_coordinates() == new_coordinates
+
+    @pytest.mark.parametrize(
+        "new_coordinates", [[Coordinate(1, 1)], [Coordinate(1, 1), Coordinate(1, 1)]]
+    )
+    def test_update_with_bad_coordinates(
+        self, new_coordinates: list[Coordinate]
+    ) -> None:
+        section = LineSection(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
+        )
+
+        with pytest.raises(ValueError):
+            section.update_coordinates(new_coordinates)
+
     def test_to_dict(self) -> None:
         section_id = SectionId("some")
         start = Coordinate(0, 0)
@@ -158,6 +193,62 @@ class TestAreaSection:
 
         assert area.id == SectionId("N")
         assert area.coordinates == coordinates
+
+    def test_update_coordinates(self) -> None:
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        area = Area(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=coordinates,
+        )
+
+        new_coordinates = [
+            Coordinate(1, 1),
+            Coordinate(2, 2),
+            Coordinate(3, 3),
+            Coordinate(1, 1),
+        ]
+        area.update_coordinates(new_coordinates)
+
+        assert area.get_coordinates() == new_coordinates
+
+    @pytest.mark.parametrize(
+        "new_coordinates",
+        [
+            [Coordinate(1, 1), Coordinate(2, 2), Coordinate(3, 3), Coordinate(4, 4)],
+            [Coordinate(1, 1), Coordinate(2, 2), Coordinate(1, 1)],
+        ],
+    )
+    def test_update_with_bad_coordinates(
+        self, new_coordinates: list[Coordinate]
+    ) -> None:
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        area = Area(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=coordinates,
+        )
+
+        with pytest.raises(ValueError):
+            area.update_coordinates(new_coordinates)
 
     def test_to_dict(self) -> None:
         section_id = SectionId("some")
