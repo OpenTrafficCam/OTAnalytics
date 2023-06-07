@@ -83,7 +83,7 @@ class ViewModel(ABC):
 
     @abstractmethod
     def update_section_coordinates(
-        self, data: dict, coordinates: list[tuple[int, int]]
+        self, meta_data: dict, coordinates: list[tuple[int, int]]
     ) -> None:
         raise NotImplementedError
 
