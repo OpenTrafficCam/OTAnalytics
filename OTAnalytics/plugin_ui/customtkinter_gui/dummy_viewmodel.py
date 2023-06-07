@@ -294,20 +294,20 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._update_selected_section(line_section.id)
 
     def __validate_section_information(
-        self, data: dict, coordinates: list[tuple[int, int]]
+        self, meta_data: dict, coordinates: list[tuple[int, int]]
     ) -> None:
         if not coordinates:
             raise MissingCoordinate("First coordinate is missing")
         elif len(coordinates) == 1:
             raise MissingCoordinate("Second coordinate is missing")
-        if not data:
+        if not meta_data:
             raise ValueError("Metadata of line_section are not defined")
 
     def update_section_coordinates(
-        self, data: dict, coordinates: list[tuple[int, int]]
+        self, meta_data: dict, coordinates: list[tuple[int, int]]
     ) -> None:
-        self.__validate_section_information(data, coordinates)
-        section_id = SectionId(data[ID])
+        self.__validate_section_information(meta_data, coordinates)
+        section_id = SectionId(meta_data[ID])
         if not (section := self._application.get_section_for(section_id)):
             raise MissingSection(
                 f"Could not update section '{section_id.serialize()}' after editing"
