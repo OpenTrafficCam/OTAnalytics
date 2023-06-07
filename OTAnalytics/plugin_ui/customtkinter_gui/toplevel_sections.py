@@ -21,6 +21,7 @@ class ToplevelSections(CTkToplevel):
         title: str,
         initial_position: tuple[int, int],
         input_values: dict | None = None,
+        show_offset: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -40,6 +41,7 @@ class ToplevelSections(CTkToplevel):
             if input_values is None
             else input_values
         )
+        self._show_offset = show_offset
         self.protocol("WM_DELETE_WINDOW", self.destroy)
         self._initial_position = initial_position
         self._get_widgets()
@@ -66,9 +68,10 @@ class ToplevelSections(CTkToplevel):
     def _place_widgets(self) -> None:
         self.label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky="E")
         self.entry_name.grid(row=0, column=1, padx=PADX, pady=PADY, sticky="W")
-        self.frame_bbox_offset.grid(
-            row=1, column=0, columnspan=2, padx=PADX, sticky=STICKY
-        )
+        if self._show_offset:
+            self.frame_bbox_offset.grid(
+                row=1, column=0, columnspan=2, padx=PADX, sticky=STICKY
+            )
         self.button_ok.grid(
             row=3, column=0, columnspan=3, padx=PADX, pady=PADY, sticky=STICKY
         )

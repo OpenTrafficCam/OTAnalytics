@@ -1,17 +1,17 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Sequence
 from unittest.mock import Mock, call
 
 import pytest
 import ujson
 
 from OTAnalytics import version
-from OTAnalytics.adapter_intersect.intersect import (
-    ShapelyIntersectImplementationAdapter,
-)
+from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain import flow, geometry, section
+from OTAnalytics.application.project import Project
+from OTAnalytics.domain import flow, geometry, section, video
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import (
@@ -19,7 +19,10 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
+from OTAnalytics.domain.intersect import (
+    IntersectBySplittingTrackLine,
+    IntersectImplementation,
+)
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -36,17 +39,19 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
     METADATA,
+    PROJECT,
     SECTION_FORMAT_VERSION,
     VERSION,
     VERSION_1_0,
     VERSION_1_1,
     DetectionFixer,
     InvalidSectionData,
+    OtConfigParser,
     OtEventListParser,
     OtFlowParser,
     OttrkFormatFixer,
@@ -423,7 +428,7 @@ class TestOtsectionParser:
         flows = [some_flow]
         parser = OtFlowParser()
 
-        content = parser._convert(sections, flows)
+        content = parser.convert(sections, flows)
 
         assert content == {
             section.SECTIONS: [some_section.to_dict(), other_section.to_dict()],
@@ -598,10 +603,9 @@ class TestOtEventListParser:
         self, tracks: list[Track], sections: list[Section], test_data_tmp_dir: Path
     ) -> None:
         # Setup
-        shapely_intersection_adapter = ShapelyIntersectImplementationAdapter(
-            ShapelyIntersector()
-        )
         line_section = sections[0]
+        shapely_intersection_adapter = Mock(spec=IntersectImplementation)
+        shapely_intersection_adapter.split_line_with_line.return_value = []
 
         if isinstance(line_section, LineSection):
             line_section_intersector = IntersectBySplittingTrackLine(
@@ -621,3 +625,80 @@ class TestOtEventListParser:
         event_list_file = test_data_tmp_dir / "eventlist.json"
         event_list_parser.serialize(events, [line_section], event_list_file)
         assert event_list_file.exists()
+
+
+class TestOtConfigParser:
+    def test_serialize_config(self, test_data_tmp_dir: Path) -> None:
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        )
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        videos: list[Video] = []
+        sections: list[Section] = []
+        flows: list[Flow] = []
+        output = test_data_tmp_dir / "config.otconfig"
+        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
+        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_sections
+
+        config_parser.serialize(
+            project=project,
+            video_files=videos,
+            sections=sections,
+            flows=flows,
+            file=output,
+        )
+
+        serialized_content = _parse(output)
+        expected_content: dict[str, Any] = {PROJECT: project.to_dict()}
+        expected_content |= serialized_videos
+        expected_content |= serialized_sections
+
+        assert serialized_content == expected_content
+        assert video_parser.convert.call_args_list == [
+            call(videos, relative_to=test_data_tmp_dir)
+        ]
+        assert flow_parser.convert.call_args_list == [call(sections, flows)]
+
+    def test_parse_config(self, test_data_tmp_dir: Path) -> None:
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        )
+        project = Project(name="Test Project", start_date=datetime(2020, 1, 1))
+        videos: Sequence[Video] = ()
+        sections: Sequence[Section] = ()
+        flows: Sequence[Flow] = ()
+        config_file = test_data_tmp_dir / "config.otconfig"
+        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
+        serialized_flows = {
+            section.SECTIONS: {"serialized": "sections"},
+            flow.FLOWS: {"serialized": "flows"},
+        }
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_flows
+        video_parser.parse_list.return_value = videos
+        flow_parser.parse_content.return_value = sections, flows
+
+        config_parser.serialize(
+            project=project,
+            video_files=videos,
+            sections=sections,
+            flows=flows,
+            file=config_file,
+        )
+        config = config_parser.parse(file=config_file)
+
+        expected_config = OtConfig(
+            project=project,
+            videos=videos,
+            sections=sections,
+            flows=flows,
+        )
+        assert config == expected_config

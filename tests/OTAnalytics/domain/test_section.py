@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -59,6 +59,41 @@ class TestLineSection:
             plugin_data={},
             coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
         )
+
+    def test_update_coordinates(self) -> None:
+        section = LineSection(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
+        )
+
+        new_coordinates = [Coordinate(1, 1), Coordinate(2, 2)]
+        section.update_coordinates(new_coordinates)
+
+        assert section.get_coordinates() == new_coordinates
+
+    @pytest.mark.parametrize(
+        "new_coordinates", [[Coordinate(1, 1)], [Coordinate(1, 1), Coordinate(1, 1)]]
+    )
+    def test_update_with_bad_coordinates(
+        self, new_coordinates: list[Coordinate]
+    ) -> None:
+        section = LineSection(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
+        )
+
+        with pytest.raises(ValueError):
+            section.update_coordinates(new_coordinates)
 
     def test_to_dict(self) -> None:
         section_id = SectionId("some")
@@ -158,6 +193,62 @@ class TestAreaSection:
 
         assert area.id == SectionId("N")
         assert area.coordinates == coordinates
+
+    def test_update_coordinates(self) -> None:
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        area = Area(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=coordinates,
+        )
+
+        new_coordinates = [
+            Coordinate(1, 1),
+            Coordinate(2, 2),
+            Coordinate(3, 3),
+            Coordinate(1, 1),
+        ]
+        area.update_coordinates(new_coordinates)
+
+        assert area.get_coordinates() == new_coordinates
+
+    @pytest.mark.parametrize(
+        "new_coordinates",
+        [
+            [Coordinate(1, 1), Coordinate(2, 2), Coordinate(3, 3), Coordinate(4, 4)],
+            [Coordinate(1, 1), Coordinate(2, 2), Coordinate(1, 1)],
+        ],
+    )
+    def test_update_with_bad_coordinates(
+        self, new_coordinates: list[Coordinate]
+    ) -> None:
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        area = Area(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=coordinates,
+        )
+
+        with pytest.raises(ValueError):
+            area.update_coordinates(new_coordinates)
 
     def test_to_dict(self) -> None:
         section_id = SectionId("some")
@@ -344,3 +435,23 @@ class TestSectionRepository:
 
         assert stored_section == section
         assert section.plugin_data == new_plugin_data
+
+    def test_clear(self) -> None:
+        section_id_north = SectionId("north")
+        section_id_south = SectionId("south")
+        first_section = Mock()
+        first_section.id = section_id_north
+        second_section = Mock()
+        second_section.id = section_id_south
+        observer = Mock(spec=SectionListObserver)
+        repository = SectionRepository()
+        repository.register_sections_observer(observer)
+
+        repository.add_all([first_section, second_section])
+        repository.clear()
+
+        assert not list(repository.get_all())
+        assert observer.notify_sections.call_args_list == [
+            call([section_id_north, section_id_south]),
+            call([]),
+        ]

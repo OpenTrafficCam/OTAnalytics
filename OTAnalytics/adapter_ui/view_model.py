@@ -5,6 +5,8 @@ from typing import Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
+from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.domain.date import DateRange
@@ -36,8 +38,16 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+        pass
+
+    @abstractmethod
     def set_treeview_flows(self, treeview: AbstractTreeviewInterface) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+        pass
 
     @abstractmethod
     def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
@@ -76,6 +86,18 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def get_section_metadata(
+        self, title: str, initial_position: tuple[int, int]
+    ) -> dict:
+        pass
+
+    @abstractmethod
+    def update_section_coordinates(
+        self, meta_data: dict, coordinates: list[tuple[int, int]]
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
         raise NotImplementedError
 
@@ -92,7 +114,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def refresh_sections_on_gui(self) -> None:
+    def refresh_items_on_canvas(self) -> None:
         pass
 
     @abstractmethod
