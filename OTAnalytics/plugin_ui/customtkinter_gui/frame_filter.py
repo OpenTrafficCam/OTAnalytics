@@ -407,7 +407,7 @@ class DateRow(CTkFrame):
 
     def _get_widgets(self) -> None:
         self.validation_info_label = CTkLabel(
-            master=self, text="", width=400, anchor=ANCHOR_WEST
+            master=self, text="", width=200, anchor=ANCHOR_WEST
         )
         self.name_label = CTkLabel(
             master=self, text=self._name, anchor=ANCHOR_WEST, width=40
@@ -461,18 +461,29 @@ class DateRow(CTkFrame):
         )
 
     def _place_widgets(self) -> None:
-        self.name_label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST)
-        self.date_entry.grid(row=0, column=1, padx=PADX, pady=PADY, stick=STICKY)
-        self.hour_entry.grid(row=0, column=2, padx=PADX, pady=PADY, stick=STICKY)
-        ColonLabel(master=self).grid(row=0, column=3)
-        self.minute_entry.grid(row=0, column=4, padx=PADX, pady=PADY, stick=STICKY)
-        ColonLabel(master=self).grid(row=0, column=5)
-        self.second_entry.grid(row=0, column=6, padx=PADX, pady=PADY, stick=STICKY)
         if self._place_validation_below:
+            self.name_label.grid(
+                row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST
+            )
+            self.date_entry.grid(row=1, column=0, padx=PADX, pady=PADY, stick=STICKY)
+            self.hour_entry.grid(row=1, column=1, padx=PADX, pady=PADY, stick=STICKY)
+            ColonLabel(master=self).grid(row=1, column=2)
+            self.minute_entry.grid(row=1, column=3, padx=PADX, pady=PADY, stick=STICKY)
+            ColonLabel(master=self).grid(row=1, column=4)
+            self.second_entry.grid(row=1, column=5, padx=PADX, pady=PADY, stick=STICKY)
             self.validation_info_label.grid(
-                row=1, column=0, columnspan=7, padx=PADX, pady=PADY, sticky=STICKY
+                row=2, column=0, columnspan=6, padx=PADX, pady=PADY, sticky=STICKY
             )
         else:
+            self.name_label.grid(
+                row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST
+            )
+            self.date_entry.grid(row=0, column=1, padx=PADX, pady=PADY, stick=STICKY)
+            self.hour_entry.grid(row=0, column=2, padx=PADX, pady=PADY, stick=STICKY)
+            ColonLabel(master=self).grid(row=0, column=3)
+            self.minute_entry.grid(row=0, column=4, padx=PADX, pady=PADY, stick=STICKY)
+            ColonLabel(master=self).grid(row=0, column=5)
+            self.second_entry.grid(row=0, column=6, padx=PADX, pady=PADY, stick=STICKY)
             self.validation_info_label.grid(
                 row=0, column=7, padx=PADX, pady=PADY, sticky=STICKY
             )
