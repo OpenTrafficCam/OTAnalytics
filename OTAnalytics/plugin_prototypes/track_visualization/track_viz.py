@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from datetime import date
+from time import perf_counter
 from typing import Iterable, Optional
 
 import numpy
@@ -15,7 +17,14 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import PilImage, Track, TrackImage
+from OTAnalytics.domain.track import (
+    Detection,
+    PilImage,
+    Track,
+    TrackId,
+    TrackImage,
+    TrackListObserver,
+)
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
@@ -130,19 +139,37 @@ class PandasTrackProvider(PandasDataFrameProvider):
         self._filter_builder = filter_builder
 
     def get_data(self) -> Optional[DataFrame]:
+        start_total = perf_counter()
+
         offset = self._track_view_state.track_offset.get()
 
         tracks = self._datastore.get_all_tracks()
         if not tracks:
             return None
 
+        start_convert = perf_counter()
         data = self._convert_tracks(tracks)
+        data = self._apply_offset(data, offset)
+        end_convert = perf_counter()
 
         if data.empty:
             return data
 
-        data = self._apply_offset(data, offset)
-        return self._filter_tracks(FILTER_CLASSES, NUM_MIN_FRAMES, data)
+        start_filter = perf_counter()
+        filtered = self._filter_tracks(FILTER_CLASSES, NUM_MIN_FRAMES, data)  #
+        end_filter = perf_counter()
+
+        print("len data: ", len(filtered))
+        print(
+            "time:",
+            "filter=",
+            (end_filter - start_filter),
+            "convert=",
+            (end_convert - start_convert),
+            "total=",
+            (end_filter - start_total),
+        )
+        return filtered
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -224,6 +251,158 @@ class PandasTrackProvider(PandasDataFrameProvider):
         return track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
 
 
+class FilterFirstTrackProvider(PandasDataFrameProvider):
+    """Provides tracks as pandas DataFrame
+    but applies filter on track objects
+    to avid costly track to dataframe conversion."""
+
+    def __init__(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+        stepwise_filter: bool = True,
+    ) -> None:
+        self._datastore = datastore
+        self._track_view_state = track_view_state
+        self.stepwise_filter = stepwise_filter
+
+    def get_data(self) -> Optional[DataFrame]:
+        start_total = perf_counter()
+
+        offset = self._track_view_state.track_offset.get()
+
+        tracks = self._datastore.get_all_tracks()
+        if not tracks:
+            print("no tracks")
+            return None
+
+        start_filter = perf_counter()
+        detections = self._filter_detections(FILTER_CLASSES, NUM_MIN_FRAMES, tracks)
+        end_filter = perf_counter()
+
+        start_convert = perf_counter()
+        data = self._convert_detections(detections)
+
+        if data.empty:
+            print("empty df")
+            return data
+
+        data = self._apply_offset(data, offset)
+        end_convert = perf_counter()
+
+        print("len data: ", len(data))
+        print(
+            "time:",
+            "filter=",
+            (end_filter - start_filter),
+            "convert=",
+            (end_convert - start_convert),
+            "total=",
+            (end_convert - start_total),
+        )
+        return data
+
+    def _convert_detections(
+        self, detections: Iterable[tuple[Detection, str]]
+    ) -> DataFrame:
+        """
+        Convert detections into a dataframe.
+
+        Args:
+            detections (Iterable[Detection]): detections to convert
+
+        Returns:
+            DataFrame: detections as dataframe
+        """
+        prepared: list[dict] = []
+        for detection, track_cls in detections:
+            detection_dict = detection.to_dict()
+            detection_dict[track.CLASSIFICATION] = track_cls
+            prepared.append(detection_dict)
+
+        converted = DataFrame(prepared)
+        if (track.TRACK_ID in converted.columns) and (track.FRAME in converted.columns):
+            return converted.sort_values([track.TRACK_ID, track.FRAME])
+        return converted
+
+    def _filter_detections(
+        self,
+        filter_classes: Iterable[str],
+        num_min_frames: int,
+        tracks: Iterable[Track],
+    ) -> list[tuple[Detection, str]]:
+        filter_element = self._track_view_state.filter_element.get()
+
+        date_range = filter_element.date_range
+        start_date = date_range.start_date if date_range.start_date else date.min
+        end_date = date_range.end_date if date_range.end_date else date.max
+
+        if self.stepwise_filter:
+            min_frame_tracks = [
+                t for t in tracks if len(t.detections) >= num_min_frames
+            ]
+            filtered = [
+                (d, t.classification) for t in min_frame_tracks for d in t.detections
+            ]
+
+            if filter_element.classifications:
+                filtered = [
+                    (d, c) for d, c in filtered if c in filter_element.classifications
+                ]
+
+            if date_range.start_date:
+                filtered = [(d, c) for d, c in filtered if start_date <= d.occurrence]
+
+            if date_range.end_date:
+                filtered = [(d, c) for d, c in filtered if d.occurrence <= end_date]
+
+            filtered = [(d, c) for d, c in filtered if c in filter_classes]
+
+        else:
+            filtered = [
+                (d, t.classification)
+                for t in tracks
+                if len(t.detections) >= num_min_frames
+                and (
+                    (not filter_element.classifications)
+                    or t.classification in filter_element.classifications
+                )
+                and t.classification in filter_classes
+                for d in t.detections
+                if start_date <= d.occurrence and d.occurrence <= end_date
+            ]
+        return filtered
+
+    def _apply_offset(
+        self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
+    ) -> DataFrame:
+        if new_offset := offset:
+            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
+            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
+        return tracks
+
+
+class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
+    def __init__(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
+    ) -> None:
+        super().__init__(datastore, track_view_state, filter_builder)
+        datastore.register_tracks_observer(self)
+        self.cache_df: Optional[DataFrame] = None
+
+    def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
+        if self.cache_df is None:
+            self.cache_df = super()._convert_tracks(tracks)
+
+        return self.cache_df
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self.cache_df = None
+
+
 class MatplotlibPlotterImplementation(ABC):
     """Abstraction to plot on a matplotlib axes"""
 
@@ -237,7 +416,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -279,7 +458,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -386,13 +565,18 @@ class MatplotlibTrackPlotter(TrackPlotter):
         Returns:
             TrackImage: image containing tracks and sections
         """
+        start_plot = perf_counter()
         image_width = width / DPI
         image_height = height / DPI
         figure = self._create_figure(width=image_width, height=image_height)
         axes = self._create_axes(image_width, image_height, figure)
         self._plotter.plot(axes)
         self._style_axes(width, height, axes)
-        return self.convert_to_track_image(figure, axes)
+        converted = self.convert_to_track_image(figure, axes)
+        end_plot = perf_counter()
+        print("plot time=", (end_plot - start_plot))
+
+        return converted
 
     def _create_axes(self, width: float, height: float, figure: Figure) -> Axes:
         """
