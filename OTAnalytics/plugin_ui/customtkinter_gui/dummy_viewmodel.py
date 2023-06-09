@@ -765,7 +765,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         current_classes = (
             self._application.track_view_state.filter_element.get().classifications
         )
-        if current_classes != set():
+        if current_classes is not None:
             self._frame_filter.set_active_color_on_filter_by_class_button()
         else:
             self._frame_filter.set_inactive_color_on_filter_by_class_button()
