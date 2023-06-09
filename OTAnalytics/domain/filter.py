@@ -141,16 +141,20 @@ class FilterBuilder(ABC, Generic[T, S]):
 class FilterElement:
     """Contains all filter information.
 
+    The filter element's attributes being set to `None` indicates that no filter has
+    been applied. Thus the respective filter settings will not be added when building
+    the filter predicate.
+
     Args:
         start_date (Optional[datetime]): the start date to filter (inclusive)
         end_date (Optional[datetime]): the end date to filter (exclusive)
-        classifications (list[str]): the classifications to filter
+        classifications (Optional[set[str]]): the classifications to filter.
     """
 
     def __init__(
         self,
         date_range: DateRange,
-        classifications: set[str],
+        classifications: Optional[set[str]],
     ) -> None:
         self.date_range = date_range
         self.classifications = classifications
@@ -164,7 +168,7 @@ class FilterElement:
         Returns:
             Filter: the filter
         """
-        if self.classifications:
+        if self.classifications is not None:
             filter_builder.add_has_classifications_predicate(self.classifications)
 
         if self.date_range.start_date:
@@ -191,11 +195,18 @@ class FilterElement:
             FilterElement: a copy of the current filter element with the date range
                 updated
         """
-        return FilterElement(
-            date_range=date_range, classifications=self.classifications.copy()
-        )
+        if self.classifications is None:
+            return FilterElement(
+                date_range=date_range, classifications=self.classifications
+            )
+        else:
+            return FilterElement(
+                date_range=date_range, classifications=self.classifications.copy()
+            )
 
-    def derive_classifications(self, classifications: set[str]) -> "FilterElement":
+    def derive_classifications(
+        self, classifications: Optional[set[str]]
+    ) -> "FilterElement":
         """Return copy of the current filter element and update its classifications.
 
         Args:
@@ -213,15 +224,16 @@ class FilterElement:
 class FilterElementSettingRestorer:
     def __init__(self) -> None:
         self._by_date_filter_setting: Optional[DateRange] = None
-        self._by_classification_filter_setting: Optional[set[str]] = None
+        self._by_class_filter_setting: Optional[set[str]] = None
 
     def save_by_date_filter_setting(self, filter_element: FilterElement) -> None:
         self._by_date_filter_setting = filter_element.date_range
 
-    def save_by_classification_filter_setting(
-        self, filter_element: FilterElement
-    ) -> None:
-        self._by_classification_filter_setting = filter_element.classifications.copy()
+    def save_by_class_filter_setting(self, filter_element: FilterElement) -> None:
+        if filter_element.classifications is not None:
+            self._by_class_filter_setting = filter_element.classifications.copy()
+        else:
+            self._by_class_filter_setting = filter_element.classifications
 
     def restore_by_date_filter_setting(
         self, filter_element: FilterElement
@@ -233,12 +245,10 @@ class FilterElementSettingRestorer:
             self._by_date_filter_setting, filter_element.classifications
         )
 
-    def restore_by_classification_filter_setting(
+    def restore_by_class_filter_setting(
         self, filter_element: FilterElement
     ) -> FilterElement:
-        if self._by_classification_filter_setting is None:
+        if self._by_class_filter_setting is None:
             return filter_element
 
-        return FilterElement(
-            filter_element.date_range, self._by_classification_filter_setting
-        )
+        return FilterElement(filter_element.date_range, self._by_class_filter_setting)

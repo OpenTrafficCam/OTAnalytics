@@ -69,15 +69,15 @@ class TestFilterElementSettingRestorer:
         restorer = FilterElementSettingRestorer()
         restorer.save_by_date_filter_setting(filter_element)
 
-        assert restorer._by_classification_filter_setting is None
+        assert restorer._by_class_filter_setting is None
         assert restorer._by_date_filter_setting == filter_element.date_range
 
     def test_by_classification_filter_setting(self) -> None:
         filter_element = FilterElement(DateRange(None, None), {"car"})
         restorer = FilterElementSettingRestorer()
-        restorer.save_by_classification_filter_setting(filter_element)
+        restorer.save_by_class_filter_setting(filter_element)
 
-        assert restorer._by_classification_filter_setting == {"car"}
+        assert restorer._by_class_filter_setting == {"car"}
         assert restorer._by_date_filter_setting is None
 
     def test_restore_by_date_filter_setting(self) -> None:
@@ -98,9 +98,9 @@ class TestFilterElementSettingRestorer:
         classifications = {"car"}
         filter_element = FilterElement(date_range, classifications)
         restorer = FilterElementSettingRestorer()
-        restorer.save_by_classification_filter_setting(filter_element)
+        restorer.save_by_class_filter_setting(filter_element)
 
-        restored_filter_element = restorer.restore_by_classification_filter_setting(
+        restored_filter_element = restorer.restore_by_class_filter_setting(
             FilterElement(DateRange(None, None), set())
         )
         assert restored_filter_element.classifications == classifications
