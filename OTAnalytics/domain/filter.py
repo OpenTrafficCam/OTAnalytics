@@ -210,7 +210,7 @@ class FilterElement:
         """Return copy of the current filter element and update its classifications.
 
         Args:
-            classifications (set[str]): the classifications to be updated
+            classifications (Optional[set[str]]): the classifications to be updated
 
         Returns:
             FilterElement: a copy of the current filter element with the classifications
