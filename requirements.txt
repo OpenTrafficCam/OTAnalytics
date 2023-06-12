@@ -7,4 +7,4 @@ pillow==9.5.0
 seaborn==0.12.2
 shapely==2.0.1
 tqdm==4.65.0
-ujson==5.7.0
+ujson==5.8.0
