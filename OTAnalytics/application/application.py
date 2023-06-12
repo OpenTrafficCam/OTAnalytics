@@ -20,9 +20,43 @@ from OTAnalytics.domain.section import (
     SectionChangedObserver,
     SectionId,
     SectionListObserver,
+    SectionRepository,
 )
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
+
+
+class SectionAlreadyExists(Exception):
+    pass
+
+
+class CancelAddSection(Exception):
+    pass
+
+
+class AddSection:
+    """
+    Add a single section to the repository.
+    """
+
+    def __init__(self, section_repository: SectionRepository) -> None:
+        self._section_repository = section_repository
+
+    def add(self, section: Section) -> None:
+        if not self.is_section_name_valid(section.name):
+            raise SectionAlreadyExists(
+                f"A section with the name {section.name} already exists. "
+                "Choose another name."
+            )
+        self._section_repository.add(section)
+
+    def is_section_name_valid(self, section_name: str) -> bool:
+        if not section_name:
+            return False
+        return all(
+            stored_section.name != section_name
+            for stored_section in self._section_repository.get_all()
+        )
 
 
 class OTAnalyticsApplication:
@@ -53,6 +87,7 @@ class OTAnalyticsApplication:
         self._tracks_metadata = tracks_metadata
         self.action_state = action_state
         self._filter_element_setting_restorer = filter_element_setting_restorer
+        self._add_section = AddSection(self._datastore._section_repository)
 
     def connect_observers(self) -> None:
         """
@@ -167,6 +202,18 @@ class OTAnalyticsApplication:
         """
         return self._datastore.get_section_id()
 
+    def is_section_name_valid(self, section_name: str) -> bool:
+        """
+        Check whether a section with the given name already exists.
+
+        Args:
+            section_name (str): name to check
+
+        Returns:
+            bool: True if a section with the name already exists, False otherwise.
+        """
+        return self._add_section.is_section_name_valid(section_name)
+
     def add_section(self, section: Section) -> None:
         """
         Add a new section
@@ -174,7 +221,7 @@ class OTAnalyticsApplication:
         Args:
             section (Section): section to add
         """
-        self._datastore.add_section(section)
+        self._add_section.add(section)
 
     def remove_section(self, section: SectionId) -> None:
         """
