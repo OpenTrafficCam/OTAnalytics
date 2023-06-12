@@ -399,6 +399,18 @@ class OTAnalyticsApplication:
             current_filter_element.derive_date(date_range)
         )
 
+    def update_class_tracks_filter(self, classifications: Optional[set[str]]) -> None:
+        """Update the classifications of the track filter.
+
+        Args:
+            classifications (set[str]): the classifications
+        """
+        current_filter_element = self.track_view_state.filter_element.get()
+
+        self.track_view_state.filter_element.set(
+            current_filter_element.derive_classifications(classifications)
+        )
+
     def enable_filter_track_by_date(self) -> None:
         """Enable filtering track by date and restoring the previous date range."""
         current_filter_element = self.track_view_state.filter_element.get()
@@ -418,4 +430,28 @@ class OTAnalyticsApplication:
 
         self.track_view_state.filter_element.set(
             FilterElement(DateRange(None, None), current_filter_element.classifications)
+        )
+
+    def enable_filter_track_by_class(self) -> None:
+        """Enable filtering track by classification and restoring the previous
+        classification filter setting.
+        """
+        current_filter_element = self.track_view_state.filter_element.get()
+        restored_filter_element = (
+            self._filter_element_setting_restorer.restore_by_class_filter_setting(
+                current_filter_element
+            )
+        )
+        self.track_view_state.filter_element.set(restored_filter_element)
+
+    def disable_filter_track_by_class(self) -> None:
+        """Disable filtering track by classification and saving the current
+        classification filter setting."""
+        current_filter_element = self.track_view_state.filter_element.get()
+        self._filter_element_setting_restorer.save_by_class_filter_setting(
+            current_filter_element
+        )
+
+        self.track_view_state.filter_element.set(
+            FilterElement(current_filter_element.date_range, None)
         )
