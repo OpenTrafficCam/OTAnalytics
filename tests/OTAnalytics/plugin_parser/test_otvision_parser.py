@@ -49,6 +49,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     VERSION,
     VERSION_1_0,
     VERSION_1_1,
+    CachedVideo,
+    CachedVideoParser,
     DetectionFixer,
     InvalidSectionData,
     OtConfigParser,
@@ -625,6 +627,33 @@ class TestOtEventListParser:
         event_list_file = test_data_tmp_dir / "eventlist.json"
         event_list_parser.serialize(events, [line_section], event_list_file)
         assert event_list_file.exists()
+
+
+class TestCachedVideo:
+    def test_cache_frames(self, test_data_tmp_dir: Path) -> None:
+        video_file = test_data_tmp_dir / "video.mp4"
+        video_file.touch()
+        video = Mock(spec=Video)
+
+        cached_video = CachedVideo(video)
+
+        cached_video.get_frame(0)
+        cached_video.get_frame(0)
+
+        video.get_frame.assert_called_once_with(0)
+
+
+class TestCachedVideoParser:
+    def test_parse_to_cached_video(self, test_data_tmp_dir: Path) -> None:
+        video_file = test_data_tmp_dir / "video.mp4"
+        video_file.touch()
+        video_parser = Mock(spec=VideoParser)
+
+        cached_parser = CachedVideoParser(video_parser)
+
+        parsed_video = cached_parser.parse(video_file)
+
+        assert isinstance(parsed_video, CachedVideo)
 
 
 class TestOtConfigParser:

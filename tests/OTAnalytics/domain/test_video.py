@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.video import PATH, Video, VideoReader
+from OTAnalytics.domain.video import PATH, SimpleVideo, VideoReader
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ class TestVideo:
         config_path.parent.mkdir(parents=True)
         video_path.touch()
         config_path.touch()
-        video = Video(path=video_path, video_reader=video_reader)
+        video = SimpleVideo(path=video_path, video_reader=video_reader)
 
         result = video.to_dict(config_path)
 
