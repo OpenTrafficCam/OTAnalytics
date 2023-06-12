@@ -73,7 +73,7 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
             viewmodel=self._viewmodel,
         )
         self.date_range_switcher = DateRangeSwitcher(
-            master=self, viewmodel=self._viewmodel
+            master=self, viewmodel=self._viewmodel, enabled=False
         )
         self.filter_by_classification_button = FilterTracksbyClassificationButton(
             master=self,
@@ -113,9 +113,11 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
 
     def enable_filter_by_date_button(self) -> None:
         self.filter_by_date_button.enable_button()
+        self.date_range_switcher.enable()
 
     def disable_filter_by_date_button(self) -> None:
         self.filter_by_date_button.disable_button()
+        self.date_range_switcher.disable()
 
     def enable_filter_by_class_button(self) -> None:
         self.filter_by_classification_button.enable_button()
@@ -742,7 +744,7 @@ class FilterTracksByClassPopup(CTkToplevel):
 
 
 class DateRangeSwitcher(CTkFrame):
-    def __init__(self, viewmodel: ViewModel, **kwargs: Any):
+    def __init__(self, viewmodel: ViewModel, enabled: bool, **kwargs: Any):
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
         self._current_date_range = tkinter.StringVar()
@@ -750,6 +752,11 @@ class DateRangeSwitcher(CTkFrame):
 
         self._get_widgets()
         self._place_widgets()
+
+        if enabled:
+            self.enable()
+        else:
+            self.disable()
 
     def _get_widgets(self) -> None:
         self.label_date_range = CTkLabel(
@@ -787,6 +794,18 @@ class DateRangeSwitcher(CTkFrame):
     def _switch_to_next_date_range(self) -> None:
         self._viewmodel.switch_to_next_date_range()
         pass
+
+    def enable(self) -> None:
+        self.button_prev_range.configure(
+            state=STATE_NORMAL, fg_color=ThemeManager.theme["CTkButton"]["fg_color"]
+        )
+        self.button_next_range.configure(
+            state=STATE_NORMAL, fg_color=ThemeManager.theme["CTkButton"]["fg_color"]
+        )
+
+    def disable(self) -> None:
+        self.button_prev_range.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
+        self.button_next_range.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
 class ColonLabel(CTkLabel):
