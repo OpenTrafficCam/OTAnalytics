@@ -609,6 +609,36 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 initial_position=position,
             )
             return {}
+        return self.__create_flow_data(input_values, title, position, section_ids)
+
+    def __create_flow_data(
+        self,
+        input_values: dict,
+        title: str,
+        position: tuple[int, int],
+        section_ids: list[IdResource],
+    ) -> dict:
+        flow_data = self.__get_flow_data(input_values, title, position, section_ids)
+        while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
+            InfoBox(
+                message="To add a flow, a unique name is necessary",
+                initial_position=position,
+            )
+            flow_data = self.__get_flow_data(input_values, title, position, section_ids)
+        return flow_data
+
+    def __is_flow_name_valid(self, flow_data: dict) -> bool:
+        return flow_data[FLOW_NAME] and self._application.is_flow_name_valid(
+            flow_data[FLOW_NAME]
+        )
+
+    def __get_flow_data(
+        self,
+        input_values: dict,
+        title: str,
+        position: tuple[int, int],
+        section_ids: list[IdResource],
+    ) -> dict:
         return ToplevelFlows(
             title=title,
             initial_position=position,

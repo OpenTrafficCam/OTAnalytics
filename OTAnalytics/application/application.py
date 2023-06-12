@@ -13,7 +13,13 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
-from OTAnalytics.domain.flow import Flow, FlowChangedObserver, FlowId, FlowListObserver
+from OTAnalytics.domain.flow import (
+    Flow,
+    FlowChangedObserver,
+    FlowId,
+    FlowListObserver,
+    FlowRepository,
+)
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -31,6 +37,10 @@ class SectionAlreadyExists(Exception):
 
 
 class CancelAddSection(Exception):
+    pass
+
+
+class FlowAlreadyExists(Exception):
     pass
 
 
@@ -56,6 +66,31 @@ class AddSection:
         return all(
             stored_section.name != section_name
             for stored_section in self._section_repository.get_all()
+        )
+
+
+class AddFlow:
+    """
+    Add a single flow to the repository.
+    """
+
+    def __init__(self, flow_repository: FlowRepository) -> None:
+        self._flow_repository = flow_repository
+
+    def add(self, flow: Flow) -> None:
+        if not self.is_flow_name_valid(flow.name):
+            raise FlowAlreadyExists(
+                f"A flow with the name {flow.name} already exists. "
+                "Choose another name."
+            )
+        self._flow_repository.add(flow)
+
+    def is_flow_name_valid(self, flow_name: str) -> bool:
+        if not flow_name:
+            return False
+        return all(
+            stored_flow.name != flow_name
+            for stored_flow in self._flow_repository.get_all()
         )
 
 
@@ -88,6 +123,7 @@ class OTAnalyticsApplication:
         self.action_state = action_state
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
+        self._add_flow = AddFlow(self._datastore._flow_repository)
 
     def connect_observers(self) -> None:
         """
@@ -132,8 +168,20 @@ class OTAnalyticsApplication:
         """
         return self._datastore.get_flow_id()
 
+    def is_flow_name_valid(self, flow_name: str) -> bool:
+        """
+        Check whether a flow with the given name already exists.
+
+        Args:
+            flow_name (str): name to check
+
+        Returns:
+            bool: True if a flow with the name already exists, False otherwise.
+        """
+        return self._add_flow.is_flow_name_valid(flow_name)
+
     def add_flow(self, flow: Flow) -> None:
-        self._datastore.add_flow(flow)
+        self._add_flow.add(flow)
 
     def remove_flow(self, flow_id: FlowId) -> None:
         self._datastore.remove_flow(flow_id)
