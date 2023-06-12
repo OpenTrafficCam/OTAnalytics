@@ -93,6 +93,8 @@ class OTAnalyticsApplication:
             self._datastore.remove_video(video)
             if videos := self._datastore.get_all_videos():
                 self.track_view_state.selected_video.set(videos[0])
+            else:
+                self.track_view_state.selected_video.set(None)
 
     def get_all_flows(self) -> Iterable[Flow]:
         return self._datastore.get_all_flows()
