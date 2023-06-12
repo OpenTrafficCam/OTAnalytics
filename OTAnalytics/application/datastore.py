@@ -516,6 +516,9 @@ class Datastore:
     def get_video_for(self, track_id: TrackId) -> Optional[Video]:
         return self._track_to_video_repository.get_video_for(track_id)
 
+    def get_all_videos(self) -> list[Video]:
+        return self._video_repository.get_all()
+
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
         Retrieve an image for the given track.
