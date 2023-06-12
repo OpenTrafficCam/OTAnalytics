@@ -4,6 +4,7 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
 
 from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.application import CancelAddSection
 from OTAnalytics.domain.section import ID, NAME, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
@@ -45,7 +46,8 @@ class ToplevelSections(CTkToplevel):
             else input_values
         )
         self._show_offset = show_offset
-        self.protocol("WM_DELETE_WINDOW", self.destroy)
+        self.protocol("WM_DELETE_WINDOW", self.cancel)
+        self._canceled = False
         self._initial_position = initial_position
         self._get_widgets()
         self._place_widgets()
@@ -101,6 +103,10 @@ class ToplevelSections(CTkToplevel):
         self.destroy()
         self.update()
 
+    def cancel(self) -> None:
+        self._canceled = True
+        self.destroy()
+
     def _name_is_valid(self) -> bool:
         if not self._viewmodel.is_section_name_valid(self.entry_name.get()):
             position = (self.winfo_x(), self.winfo_y())
@@ -113,4 +119,6 @@ class ToplevelSections(CTkToplevel):
 
     def get_metadata(self) -> dict:
         self.wait_window()
+        if self._canceled:
+            raise CancelAddSection()
         return self.input_values
