@@ -178,7 +178,15 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def apply_filter_tracks_by_class(self, classes: list[str]) -> None:
+        pass
+
+    @abstractmethod
     def reset_filter_tracks_by_date(self) -> None:
+        pass
+
+    @abstractmethod
+    def reset_filter_tracks_by_class(self) -> None:
         pass
 
     @abstractmethod
@@ -194,9 +202,25 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def get_classes(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def get_class_filter_selection(self) -> Optional[list[str]]:
+        pass
+
+    @abstractmethod
     def enable_filter_track_by_date(self) -> None:
         pass
 
     @abstractmethod
     def disable_filter_track_by_date(self) -> None:
+        pass
+
+    @abstractmethod
+    def enable_filter_track_by_class(self) -> None:
+        pass
+
+    @abstractmethod
+    def disable_filter_track_by_class(self) -> None:
         pass
