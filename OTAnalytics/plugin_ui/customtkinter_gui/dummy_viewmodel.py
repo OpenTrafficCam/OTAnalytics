@@ -347,6 +347,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.update_section(section)
         print(f"Update section: {section.id}")
         self._update_selected_section(section.id)
+        self._finish_action()
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
         return geometry.Coordinate(coordinate[0], coordinate[1])
