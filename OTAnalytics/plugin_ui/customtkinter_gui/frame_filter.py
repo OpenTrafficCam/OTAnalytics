@@ -21,6 +21,7 @@ from OTAnalytics.adapter_ui.default_values import (
     DATE_FORMAT_PLACEHOLDER,
     DATETIME_FORMAT,
 )
+from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
@@ -71,6 +72,9 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
             button_default_color=COLOR_GRAY,
             viewmodel=self._viewmodel,
         )
+        self.date_range_switcher = DateRangeSwitcher(
+            master=self, viewmodel=self._viewmodel
+        )
         self.filter_by_classification_button = FilterTracksbyClassificationButton(
             master=self,
             name="Filter by Classification",
@@ -83,10 +87,13 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
     def _place_widgets(self) -> None:
         self.label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST)
         self.filter_by_date_button.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, padx=(PADX, 0), pady=PADY, sticky=STICKY
+        )
+        self.date_range_switcher.grid(
+            row=1, column=1, padx=(0, PADX), pady=PADY, sticky=STICKY
         )
         self.filter_by_classification_button.grid(
-            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _introduce_to_viewmodel(self) -> None:
@@ -115,6 +122,9 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
 
     def disable_filter_by_class_button(self) -> None:
         self.filter_by_classification_button.disable_button()
+
+    def update_date_range(self, date_range: DateRangeDto) -> None:
+        self.date_range_switcher.update_date_range(date_range)
 
 
 class FilterButton(ABC, CTkFrame):
@@ -729,6 +739,54 @@ class FilterTracksByClassPopup(CTkToplevel):
     def _on_reset_button_clicked(self) -> None:
         self._viewmodel.reset_filter_tracks_by_class()
         self._close()
+
+
+class DateRangeSwitcher(CTkFrame):
+    def __init__(self, viewmodel: ViewModel, **kwargs: Any):
+        super().__init__(**kwargs)
+        self._viewmodel = viewmodel
+        self._current_date_range = tkinter.StringVar()
+        self._current_date_range.set("")
+
+        self._get_widgets()
+        self._place_widgets()
+
+    def _get_widgets(self) -> None:
+        self.label_date_range = CTkLabel(
+            master=self, textvariable=self._current_date_range
+        )
+        self.button_prev_range = self._create_switch_button(
+            text="<", callback=self._switch_to_previous_date_range
+        )
+        self.button_next_range = self._create_switch_button(
+            text=">", callback=self._switch_to_next_date_range
+        )
+
+    def _create_switch_button(
+        self, text: str, callback: Callable[[], None]
+    ) -> CTkButton:
+        return CTkButton(master=self, text=text, command=callback, width=40)
+
+    def _place_widgets(self) -> None:
+        self.button_prev_range.grid(row=0, column=0, sticky=STICKY)
+        self.label_date_range.grid(row=0, column=1, sticky=STICKY)
+        self.button_next_range.grid(row=0, column=2, sticky=STICKY)
+
+    def update_date_range(self, date_range: DateRangeDto) -> None:
+        start_date = date_range["start_date"]
+        end_date = date_range["end_date"]
+
+        if start_date == "" and end_date == "":
+            self._current_date_range.set("")
+        else:
+            self._current_date_range.set(f"{start_date} - {end_date}")
+
+    def _switch_to_previous_date_range(self) -> None:
+        self._viewmodel.switch_to_prev_date_range()
+
+    def _switch_to_next_date_range(self) -> None:
+        self._viewmodel.switch_to_next_date_range()
+        pass
 
 
 class ColonLabel(CTkLabel):
