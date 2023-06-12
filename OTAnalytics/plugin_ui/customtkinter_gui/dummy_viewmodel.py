@@ -687,6 +687,13 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
         self._frame_filter.set_active_color_on_filter_by_date_button()
 
+    def apply_filter_tracks_by_class(self, classes: list[str]) -> None:
+        self._application.update_class_tracks_filter(set(classes))
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.set_active_color_on_filter_by_class_button()
+
     def reset_filter_tracks_by_date(self) -> None:
         self._application.update_date_range_tracks_filter(DateRange(None, None))
 
@@ -695,11 +702,32 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
         self._frame_filter.set_inactive_color_on_filter_by_date_button()
 
+    def reset_filter_tracks_by_class(self) -> None:
+        self._application.update_class_tracks_filter(None)
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.set_inactive_color_on_filter_by_class_button()
+
     def get_first_detection_occurrence(self) -> Optional[datetime]:
         return self._application._tracks_metadata.first_detection_occurrence
 
     def get_last_detection_occurrence(self) -> Optional[datetime]:
         return self._application._tracks_metadata.last_detection_occurrence
+
+    def get_classes(self) -> list[str]:
+        return sorted(
+            list(self._application._tracks_metadata.classifications), key=str.lower
+        )
+
+    def get_class_filter_selection(self) -> Optional[list[str]]:
+        current_selection = (
+            self._application.track_view_state.filter_element.get().classifications
+        )
+        if current_selection is not None:
+            return list(current_selection)
+        return current_selection
 
     def get_filter_tracks_by_date_setting(self) -> DateRange:
         filter_element = self._application.track_view_state.filter_element.get()
@@ -727,3 +755,26 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
 
         self._frame_filter.disable_filter_by_date_button()
+
+    def enable_filter_track_by_class(self) -> None:
+        self._application.enable_filter_track_by_class()
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.enable_filter_by_class_button()
+        current_classes = (
+            self._application.track_view_state.filter_element.get().classifications
+        )
+        if current_classes is not None:
+            self._frame_filter.set_active_color_on_filter_by_class_button()
+        else:
+            self._frame_filter.set_inactive_color_on_filter_by_class_button()
+
+    def disable_filter_track_by_class(self) -> None:
+        self._application.disable_filter_track_by_class()
+
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        self._frame_filter.disable_filter_by_class_button()

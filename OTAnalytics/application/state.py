@@ -206,7 +206,7 @@ class TrackViewState:
             RelativeOffsetCoordinate(0, 0)
         )
         self.filter_element = ObservableProperty[FilterElement](
-            FilterElement(DateRange(None, None), [])
+            FilterElement(DateRange(None, None), None)
         )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
@@ -402,6 +402,9 @@ class TracksMetadata(TrackListObserver):
         self._last_detection_occurrence: ObservableOptionalProperty[
             datetime
         ] = ObservableOptionalProperty[datetime]()
+        self._classifications: ObservableProperty[set[str]] = ObservableProperty[set](
+            set()
+        )
 
     @property
     def first_detection_occurrence(self) -> Optional[datetime]:
@@ -423,9 +426,19 @@ class TracksMetadata(TrackListObserver):
         """
         return self._last_detection_occurrence.get()
 
+    @property
+    def classifications(self) -> set[str]:
+        """The current classifications in the track repository.
+
+        Returns:
+            set[str]: the classifications.
+        """
+        return self._classifications.get()
+
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """Update tracks metadata on track repository changes"""
         self._update_detection_occurrences()
+        self._update_classifications(tracks)
 
     def _update_detection_occurrences(self) -> None:
         """Update the first and last detection occurrences."""
@@ -435,6 +448,18 @@ class TracksMetadata(TrackListObserver):
         if sorted_detections:
             self._first_detection_occurrence.set(sorted_detections[0].occurrence)
             self._last_detection_occurrence.set(sorted_detections[-1].occurrence)
+
+    def _update_classifications(self, new_tracks: list[TrackId]) -> None:
+        """Update current classifications."""
+        updated_classifications = self._classifications.get().copy()
+        if (updated_classifications := self._classifications.get()) is None:
+            updated_classifications = set()
+
+        for track_id in new_tracks:
+            if track := self._track_repository.get_for(track_id):
+                for detections in track.detections:
+                    updated_classifications.add(detections.classification)
+        self._classifications.set(updated_classifications)
 
     def _get_all_track_detections(self) -> Iterable[Detection]:
         """Get all track detections in the track repository.

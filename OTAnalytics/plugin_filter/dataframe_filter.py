@@ -119,7 +119,7 @@ class DataFrameHasClassifications(DataFramePredicate):
     def __init__(
         self,
         column_name: str,
-        classifications: list[str],
+        classifications: set[str],
     ) -> None:
         self._column_name = column_name
         self._classifications = classifications
@@ -137,7 +137,7 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, Series]):
         self._classification_column: Optional[str] = None
         self._occurrence_column: Optional[str] = None
 
-    def add_has_classifications_predicate(self, classifications: list[str]) -> None:
+    def add_has_classifications_predicate(self, classifications: set[str]) -> None:
         if self._classification_column is None:
             raise FilterBuildError(
                 f"Unable to build '{DataFrameHasClassifications.__name__}' predicate. "
