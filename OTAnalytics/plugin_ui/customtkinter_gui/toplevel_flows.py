@@ -63,7 +63,7 @@ class ToplevelFlows(CTkToplevel):
             FLOW_NAME: "",
             START_SECTION: "",
             END_SECTION: "",
-            DISTANCE: 0,
+            DISTANCE: None,
         }
 
     def _get_widgets(self) -> None:
@@ -96,7 +96,8 @@ class ToplevelFlows(CTkToplevel):
             validate="key",
             validatecommand=(self.register(self._is_float_above_zero), "%P"),
         )
-        self.entry_distance.insert(0, self.input_values[DISTANCE])
+        if current_distance := self.input_values[DISTANCE]:
+            self.entry_distance.insert(index=0, string=current_distance)
 
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
 
@@ -174,6 +175,8 @@ class ToplevelFlows(CTkToplevel):
         return self._get_section_id_for_name(name)
 
     def _is_float_above_zero(self, entry_value: Any) -> bool:
+        if not entry_value:
+            return True
         try:
             float_value = float(entry_value)
         except Exception:
