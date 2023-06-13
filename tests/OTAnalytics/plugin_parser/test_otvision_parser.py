@@ -648,6 +648,29 @@ class TestCachedVideo:
         assert first_returned_frame == image
         assert second_returned_frame is first_returned_frame
 
+    def test_get_path(self) -> None:
+        original_path = Path(".")
+        other = Mock(spec=Video)
+        other.get_path.return_value = original_path
+        cached_video = CachedVideo(other)
+
+        path = cached_video.get_path()
+
+        other.get_path.assert_called_once()
+        assert path is original_path
+
+    def test_to_dict(self) -> None:
+        base_path = Path(".")
+        original_dict: dict = {}
+        other = Mock(spec=Video)
+        other.to_dict.return_value = original_dict
+        cached_video = CachedVideo(other)
+
+        cached_dict = cached_video.to_dict(base_path)
+
+        other.to_dict.assert_called_once()
+        assert cached_dict is original_dict
+
 
 class TestCachedVideoParser:
     def test_parse_to_cached_video(self, test_data_tmp_dir: Path) -> None:
