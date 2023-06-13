@@ -106,6 +106,7 @@ class ToplevelSections(CTkToplevel):
     def cancel(self) -> None:
         self._canceled = True
         self.destroy()
+        self.update()
 
     def _name_is_valid(self) -> bool:
         if not self._viewmodel.is_section_name_valid(self.entry_name.get()):

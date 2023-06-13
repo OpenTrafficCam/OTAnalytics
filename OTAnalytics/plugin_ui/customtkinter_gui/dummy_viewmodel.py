@@ -17,7 +17,11 @@ from OTAnalytics.adapter_ui.view_model import (
     MissingCoordinate,
     ViewModel,
 )
-from OTAnalytics.application.application import CancelAddSection, OTAnalyticsApplication
+from OTAnalytics.application.application import (
+    CancelAddFlow,
+    CancelAddSection,
+    OTAnalyticsApplication,
+)
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
@@ -568,29 +572,34 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def add_flow(self) -> None:
         self._start_action()
-        if flow_data := self._show_distances_window():
-            flow_id = self._application.get_flow_id()
-            name = flow_data[FLOW_NAME]
-            new_from_section_id = SectionId(flow_data[START_SECTION])
-            new_to_section_id = SectionId(flow_data[END_SECTION])
-            distance = float(flow_data[DISTANCE])
-            flow = Flow(
-                id=flow_id,
-                name=name,
-                start=new_from_section_id,
-                end=new_to_section_id,
-                distance=distance,
-            )
-            self._application.add_flow(flow)
-            self.set_selected_flow_id(flow_id.serialize())
-            print(f"Added new flow: {flow_data}")
+        with contextlib.suppress(CancelAddFlow):
+            flow = self.__create_flow()
+            print(f"Added new flow: {flow.id}")
+            self.set_selected_flow_id(flow.id.serialize())
         self._finish_action()
+
+    def __create_flow(self) -> Flow:
+        flow_data = self._show_distances_window()
+        flow_id = self._application.get_flow_id()
+        name = flow_data[FLOW_NAME]
+        new_from_section_id = SectionId(flow_data[START_SECTION])
+        new_to_section_id = SectionId(flow_data[END_SECTION])
+        distance = float(flow_data[DISTANCE])
+        flow = Flow(
+            id=flow_id,
+            name=name,
+            start=new_from_section_id,
+            end=new_to_section_id,
+            distance=distance,
+        )
+        self._application.add_flow(flow)
+        return flow
 
     def _show_distances_window(
         self,
         input_values: dict = {},
         title: str = "Add flow",
-    ) -> dict | None:
+    ) -> dict:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
@@ -602,7 +611,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 message="To add a flow, at least two sections are needed",
                 initial_position=position,
             )
-            return {}
+            raise CancelAddFlow()
         return self.__create_flow_data(input_values, title, position, section_ids)
 
     def __create_flow_data(

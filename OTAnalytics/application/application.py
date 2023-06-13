@@ -40,6 +40,10 @@ class CancelAddSection(Exception):
     pass
 
 
+class CancelAddFlow(Exception):
+    pass
+
+
 class FlowAlreadyExists(Exception):
     pass
 
