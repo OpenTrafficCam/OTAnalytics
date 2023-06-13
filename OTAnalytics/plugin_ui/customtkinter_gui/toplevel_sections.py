@@ -111,7 +111,7 @@ class ToplevelSections(CTkToplevel):
         if not self._viewmodel.is_section_name_valid(self.entry_name.get()):
             position = (self.winfo_x(), self.winfo_y())
             InfoBox(
-                message="Please choose a name for the section!",
+                message="To add a section, a unique name is necessary!",
                 initial_position=position,
             )
             return False
