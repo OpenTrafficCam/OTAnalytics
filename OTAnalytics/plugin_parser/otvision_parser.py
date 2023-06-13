@@ -718,11 +718,18 @@ class CachedVideoParser(VideoParser):
         self._other = other
 
     def parse(self, file: Path) -> Video:
-        return CachedVideo(self._other.parse(file))
+        other_video = self._other.parse(file)
+        return self.__create_cached_video(other_video)
+
+    def __create_cached_video(self, other_video: Video) -> Video:
+        cached_video = CachedVideo(other_video)
+        cached_video.get_frame(0)
+        return cached_video
 
     def parse_list(self, content: list[dict], base_folder: Path) -> Sequence[Video]:
         return [
-            CachedVideo(video) for video in self._other.parse_list(content, base_folder)
+            self.__create_cached_video(video)
+            for video in self._other.parse_list(content, base_folder)
         ]
 
     def convert(
