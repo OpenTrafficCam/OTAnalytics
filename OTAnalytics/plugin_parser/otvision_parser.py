@@ -721,7 +721,9 @@ class CachedVideoParser(VideoParser):
         return CachedVideo(self._other.parse(file))
 
     def parse_list(self, content: list[dict], base_folder: Path) -> Sequence[Video]:
-        return self._other.parse_list(content, base_folder)
+        return [
+            CachedVideo(video) for video in self._other.parse_list(content, base_folder)
+        ]
 
     def convert(
         self,

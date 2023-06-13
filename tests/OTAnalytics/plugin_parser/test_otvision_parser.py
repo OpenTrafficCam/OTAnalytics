@@ -37,6 +37,7 @@ from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
     TrackId,
+    TrackImage,
     TrackRepository,
 )
 from OTAnalytics.domain.video import Video
@@ -633,27 +634,56 @@ class TestCachedVideo:
     def test_cache_frames(self, test_data_tmp_dir: Path) -> None:
         video_file = test_data_tmp_dir / "video.mp4"
         video_file.touch()
+        image = Mock(spec=TrackImage)
         video = Mock(spec=Video)
+        video.get_frame.return_value = image
 
         cached_video = CachedVideo(video)
 
-        cached_video.get_frame(0)
-        cached_video.get_frame(0)
+        first_returned_frame = cached_video.get_frame(0)
+        second_returned_frame = cached_video.get_frame(0)
 
         video.get_frame.assert_called_once_with(0)
+
+        assert first_returned_frame == image
+        assert second_returned_frame is first_returned_frame
 
 
 class TestCachedVideoParser:
     def test_parse_to_cached_video(self, test_data_tmp_dir: Path) -> None:
         video_file = test_data_tmp_dir / "video.mp4"
         video_file.touch()
+        video = Mock(spec=Video)
         video_parser = Mock(spec=VideoParser)
+        video_parser.parse.return_value = video
 
         cached_parser = CachedVideoParser(video_parser)
 
         parsed_video = cached_parser.parse(video_file)
 
         assert isinstance(parsed_video, CachedVideo)
+        assert parsed_video.other == video
+
+    def test_parse_list_to_cached_videos(self, test_data_tmp_dir: Path) -> None:
+        content: list[dict] = [{}]
+        base_folder = test_data_tmp_dir
+        video1 = Mock(spec=Video)
+        video2 = Mock(spec=Video)
+        video_parser = Mock(spec=VideoParser)
+        video_parser.parse_list.return_value = [video1, video2]
+
+        cached_parser = CachedVideoParser(video_parser)
+
+        parsed_videos = cached_parser.parse_list(content, base_folder)
+
+        assert all(
+            isinstance(parsed_video, CachedVideo) for parsed_video in parsed_videos
+        )
+        assert len(parsed_videos) == 2
+        if isinstance(parsed_videos[0], CachedVideo):
+            assert parsed_videos[0].other == video1
+        if isinstance(parsed_videos[1], CachedVideo):
+            assert parsed_videos[1].other == video2
 
 
 class TestOtConfigParser:
