@@ -575,7 +575,11 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             initial_position=position,
             section_ids=section_ids,
             input_values=input_values,
+            show_distanec=self._show_distance(),
         ).get_data()
+
+    def _show_distance(self) -> bool:
+        return True
 
     def __to_id_resource(self, section: Section) -> IdResource:
         return IdResource(id=section.id.serialize(), name=section.name)
