@@ -734,10 +734,10 @@ class CachedVideoParser(VideoParser):
 
     def convert(
         self,
-        video: Iterable[Video],
+        videos: Iterable[Video],
         relative_to: Path = Path("."),
     ) -> dict[str, list[dict]]:
-        return self._other.convert(video=video, relative_to=relative_to)
+        return self._other.convert(videos=videos, relative_to=relative_to)
 
 
 class OttrkVideoParser(TrackVideoParser):
