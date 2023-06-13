@@ -166,7 +166,7 @@ class ToplevelFlows(CTkToplevel):
         self.input_values[FLOW_NAME] = self._current_name.get()
         self.input_values[START_SECTION] = self._get_start_section_id()
         self.input_values[END_SECTION] = self._get_end_section_id()
-        self.input_values[DISTANCE] = self.entry_distance.get()
+        self.input_values[DISTANCE] = self.__parse_distance(self.entry_distance.get())
         self.destroy()
         self.update()
 
@@ -182,13 +182,14 @@ class ToplevelFlows(CTkToplevel):
         return self._get_section_id_for_name(name)
 
     def _is_float_above_zero(self, entry_value: Any) -> bool:
-        if not entry_value:
-            return True
         try:
-            float_value = float(entry_value)
+            float_value = self.__parse_distance(entry_value)
         except Exception:
             return False
-        return float_value >= 0
+        return float_value >= 0 if float_value else True
+
+    def __parse_distance(self, entry_value: Any) -> Optional[float]:
+        return float(entry_value) if entry_value else None
 
     def _sections_are_valid(self) -> bool:
         section_start = self._get_start_section_id()
