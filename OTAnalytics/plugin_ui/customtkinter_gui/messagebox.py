@@ -16,6 +16,7 @@ class InfoBox(CTkToplevel):
         message: str,
         initial_position: tuple[int, int],
         title: str = "Information",
+        show_cancel: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -24,6 +25,7 @@ class InfoBox(CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.canceled = False
         self._initial_position = initial_position
+        self._show_cancel = show_cancel
         self._get_widgets()
         self._place_widgets()
         self._set_initial_position()
@@ -37,11 +39,17 @@ class InfoBox(CTkToplevel):
         self.button_cancel = CTkButton(master=self, text="Cancel", command=self.cancel)
 
     def _place_widgets(self) -> None:
-        self.label_name.grid(
-            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self.button_ok.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.button_cancel.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        if self._show_cancel:
+            self.label_name.grid(
+                row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            )
+            self.button_ok.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+            self.button_cancel.grid(
+                row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            )
+        else:
+            self.label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+            self.button_ok.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _set_focus(self) -> None:
         self.attributes("-topmost", 1)
