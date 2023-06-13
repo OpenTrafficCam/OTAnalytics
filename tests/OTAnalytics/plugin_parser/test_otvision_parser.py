@@ -685,6 +685,19 @@ class TestCachedVideoParser:
         if isinstance(parsed_videos[1], CachedVideo):
             assert parsed_videos[1].other == video2
 
+    def test_convert_delegates_to_other(self, test_data_tmp_dir: Path) -> None:
+        video1 = Mock(spec=Video)
+        video2 = Mock(spec=Video)
+        expected_result: dict = {}
+        video_parser = Mock(spec=VideoParser)
+        video_parser.convert.return_value = expected_result
+
+        cached_parser = CachedVideoParser(video_parser)
+
+        result = cached_parser.convert([video1, video2], test_data_tmp_dir)
+
+        assert expected_result is result
+
 
 class TestOtConfigParser:
     def test_serialize_config(self, test_data_tmp_dir: Path) -> None:
