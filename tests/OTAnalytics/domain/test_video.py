@@ -5,7 +5,7 @@ import pytest
 
 from OTAnalytics.domain.video import (
     PATH,
-    Video,
+    SimpleVideo,
     VideoListObserver,
     VideoReader,
     VideoRepository,
@@ -28,7 +28,7 @@ class TestVideo:
         config_path.parent.mkdir(parents=True)
         video_path.touch()
         config_path.touch()
-        video = Video(path=video_path, video_reader=video_reader)
+        video = SimpleVideo(path=video_path, video_reader=video_reader)
 
         result = video.to_dict(config_path)
 
@@ -40,7 +40,7 @@ class TestVideoRepository:
         observer = Mock(spec=VideoListObserver)
         path = test_data_tmp_dir / "dummy.mp4"
         path.touch()
-        video = Video(video_reader, path)
+        video = SimpleVideo(video_reader, path)
         repository = VideoRepository()
         repository.register_videos_observer(observer)
 
