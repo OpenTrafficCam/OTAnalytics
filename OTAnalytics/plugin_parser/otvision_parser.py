@@ -1,6 +1,6 @@
 import bz2
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Tuple
@@ -31,9 +31,10 @@ from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
     TrackId,
+    TrackImage,
     TrackRepository,
 )
-from OTAnalytics.domain.video import PATH, Video, VideoReader
+from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
@@ -669,7 +670,7 @@ class SimpleVideoParser(VideoParser):
         self._video_reader = video_reader
 
     def parse(self, file: Path) -> Video:
-        return Video(self._video_reader, file)
+        return SimpleVideo(self._video_reader, file)
 
     def parse_list(
         self,
@@ -686,7 +687,7 @@ class SimpleVideoParser(VideoParser):
         if PATH not in entry:
             raise MissingPath(entry)
         video_path = Path(base_folder, entry[PATH])
-        return Video(self._video_reader, video_path)
+        return self.parse(video_path)
 
     def convert(
         self,
@@ -696,6 +697,52 @@ class SimpleVideoParser(VideoParser):
         return {
             video.VIDEOS: [video.to_dict(relative_to=relative_to) for video in videos]
         }
+
+
+@dataclass
+class CachedVideo(Video):
+    other: Video
+    cache: dict[int, TrackImage] = field(default_factory=dict)
+
+    def get_path(self) -> Path:
+        return self.other.get_path()
+
+    def get_frame(self, index: int) -> TrackImage:
+        if index in self.cache:
+            return self.cache[index]
+        new_frame = self.other.get_frame(index)
+        self.cache[index] = new_frame
+        return new_frame
+
+    def to_dict(self, relative_to: Path) -> dict:
+        return self.other.to_dict(relative_to)
+
+
+class CachedVideoParser(VideoParser):
+    def __init__(self, other: VideoParser) -> None:
+        self._other = other
+
+    def parse(self, file: Path) -> Video:
+        other_video = self._other.parse(file)
+        return self.__create_cached_video(other_video)
+
+    def __create_cached_video(self, other_video: Video) -> Video:
+        cached_video = CachedVideo(other_video)
+        cached_video.get_frame(0)
+        return cached_video
+
+    def parse_list(self, content: list[dict], base_folder: Path) -> Sequence[Video]:
+        return [
+            self.__create_cached_video(video)
+            for video in self._other.parse_list(content, base_folder)
+        ]
+
+    def convert(
+        self,
+        video: Iterable[Video],
+        relative_to: Path = Path("."),
+    ) -> dict[str, list[dict]]:
+        return self._other.convert(video=video, relative_to=relative_to)
 
 
 class OttrkVideoParser(TrackVideoParser):

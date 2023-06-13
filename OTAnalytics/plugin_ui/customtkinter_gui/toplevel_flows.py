@@ -27,7 +27,7 @@ class ToplevelFlows(CTkToplevel):
         initial_position: tuple[int, int],
         section_ids: list[IdResource],
         input_values: dict | None = {},
-        show_distanec: bool = True,
+        show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -37,7 +37,7 @@ class ToplevelFlows(CTkToplevel):
         self._section_id_to_name = self._create_section_id_to_name(section_ids)
         self._current_name = StringVar()
         self.input_values: dict = self.__create_input_values(input_values)
-        self._show_distance = show_distanec
+        self._show_distance = show_distance
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
         self._last_autofilled_name: str = ""
