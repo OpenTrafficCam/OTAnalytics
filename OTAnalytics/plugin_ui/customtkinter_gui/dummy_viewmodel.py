@@ -326,9 +326,10 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def __create_section(
         self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
     ) -> Section:
-        metadata, relative_offset_coordinates_enter = self.__create_section_metadata(
-            get_metadata
-        )
+        metadata = self.__get_metadata(get_metadata)
+        relative_offset_coordinates_enter = metadata[RELATIVE_OFFSET_COORDINATES][
+            EventType.SECTION_ENTER.serialize()
+        ]
         line_section = LineSection(
             id=self._application.get_section_id(),
             name=metadata[NAME],
@@ -342,15 +343,6 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         )
         self._application.add_section(line_section)
         return line_section
-
-    def __create_section_metadata(
-        self, get_metadata: MetadataProvider
-    ) -> tuple[dict, dict]:
-        metadata = self.__get_metadata(get_metadata)
-        relative_offset_coordinates_enter = metadata[RELATIVE_OFFSET_COORDINATES][
-            EventType.SECTION_ENTER.serialize()
-        ]
-        return metadata, relative_offset_coordinates_enter
 
     def __get_metadata(self, get_metadata: MetadataProvider) -> dict:
         metadata = get_metadata()
