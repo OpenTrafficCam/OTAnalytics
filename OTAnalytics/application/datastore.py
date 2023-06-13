@@ -291,6 +291,15 @@ class Datastore:
         videos = [self._video_parser.parse(file) for file in files]
         self._video_repository.add_all(videos)
 
+    def remove_video(self, video: Video) -> None:
+        """
+        Remove a video from the repository.
+
+        Args:
+            video (Video): video to remove
+        """
+        self._video_repository.remove(video)
+
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         """
         Listen to changes in the flow repository.
@@ -506,6 +515,9 @@ class Datastore:
 
     def get_video_for(self, track_id: TrackId) -> Optional[Video]:
         return self._track_to_video_repository.get_video_for(track_id)
+
+    def get_all_videos(self) -> list[Video]:
+        return self._video_repository.get_all()
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
