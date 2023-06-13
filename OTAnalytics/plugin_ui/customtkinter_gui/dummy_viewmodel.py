@@ -149,6 +149,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
         if image:
             self._frame_canvas.update_background(image)
+        else:
+            self._frame_canvas.clear_image()
 
     def update_show_tracks_state(self, value: bool) -> None:
         self._application.track_view_state.show_tracks.set(value)

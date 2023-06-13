@@ -156,6 +156,17 @@ class OTAnalyticsApplication:
     def add_videos(self, files: list[Path]) -> None:
         self._datastore.load_video_files(files)
 
+    def remove_video(self) -> None:
+        """
+        Remove the currently selected video from the repository.
+        """
+        if video := self.track_view_state.selected_video.get():
+            self._datastore.remove_video(video)
+            if videos := self._datastore.get_all_videos():
+                self.track_view_state.selected_video.set(videos[0])
+            else:
+                self.track_view_state.selected_video.set(None)
+
     def get_all_flows(self) -> Iterable[Flow]:
         return self._datastore.get_all_flows()
 

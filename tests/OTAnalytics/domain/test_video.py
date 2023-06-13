@@ -1,9 +1,15 @@
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.domain.video import PATH, Video, VideoReader
+from OTAnalytics.domain.video import (
+    PATH,
+    Video,
+    VideoListObserver,
+    VideoReader,
+    VideoRepository,
+)
 
 
 @pytest.fixture
@@ -27,3 +33,22 @@ class TestVideo:
         result = video.to_dict(config_path)
 
         assert result[PATH] == expected_video_path
+
+
+class TestVideoRepository:
+    def test_remove(self, video_reader: VideoReader, test_data_tmp_dir: Path) -> None:
+        observer = Mock(spec=VideoListObserver)
+        path = test_data_tmp_dir / "dummy.mp4"
+        path.touch()
+        video = Video(video_reader, path)
+        repository = VideoRepository()
+        repository.register_videos_observer(observer)
+
+        repository.add(video)
+
+        assert repository.get(video.path) == video
+
+        repository.remove(video)
+
+        assert repository.get(video.path) is None
+        assert observer.notify_videos.call_args_list == [call([video]), call([])]
