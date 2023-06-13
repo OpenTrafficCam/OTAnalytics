@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Sequence, Tuple
+from typing import Any, Iterable, Optional, Sequence, Tuple
 
 import ujson
 
@@ -609,7 +609,7 @@ class OtFlowParser(FlowParser):
         name = entry.get(flow.FLOW_NAME, flow_id.id)
         start = SectionId(entry.get(flow.START, ""))
         end = SectionId(entry.get(flow.END, ""))
-        distance = float(entry.get(flow.DISTANCE, 0.0))
+        distance = self.__parse_distance(entry)
         return Flow(
             flow_id,
             name=name,
@@ -617,6 +617,11 @@ class OtFlowParser(FlowParser):
             end=end,
             distance=distance,
         )
+
+    def __parse_distance(self, entry: dict) -> Optional[float]:
+        if distance_entry := entry.get(flow.DISTANCE, 0.0):
+            return float(distance_entry)
+        return None
 
     def serialize(
         self,

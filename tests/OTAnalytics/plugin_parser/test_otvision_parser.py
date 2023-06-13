@@ -331,8 +331,8 @@ class TestOttrkParser:
         assert d1.track_id == d2.track_id
 
 
-class TestOtsectionParser:
-    def test_parse_section(self, test_data_tmp_dir: Path) -> None:
+class TestOtFlowParser:
+    def test_parse_sections_and_flows(self, test_data_tmp_dir: Path) -> None:
         first_coordinate = Coordinate(0, 0)
         second_coordinate = Coordinate(1, 1)
         third_coordinate = Coordinate(1, 0)
@@ -361,34 +361,51 @@ class TestOtsectionParser:
                 first_coordinate,
             ],
         )
-        flow_id = FlowId("1")
-        flow_name = "some to other"
-        flow_distance = 1
+        some_flow_id = FlowId("1")
+        some_flow_name = "some to other"
+        some_flow_distance = 1
         some_flow = Flow(
-            flow_id,
-            name=flow_name,
+            some_flow_id,
+            name=some_flow_name,
             start=line_section_id,
             end=area_section_id,
-            distance=flow_distance,
+            distance=some_flow_distance,
         )
-        json_file = test_data_tmp_dir / "section.json"
+        other_flow_id = FlowId("2")
+        other_flow_name = "other to some"
+        other_flow_distance = None
+        other_flow = Flow(
+            other_flow_id,
+            name=other_flow_name,
+            start=area_section_id,
+            end=line_section_id,
+            distance=other_flow_distance,
+        )
+        json_file = test_data_tmp_dir / "section.otflow"
         json_file.touch()
         sections = [line_section, area_section]
-        flows = [some_flow]
+        flows = [some_flow, other_flow]
         parser = OtFlowParser()
         parser.serialize(sections, flows, json_file)
 
         parsed_sections, parsed_flows = parser.parse(json_file)
 
-        parsed_flow = parsed_flows[0]
-
         assert parsed_sections == sections
-        assert len(parsed_flows) == 1
-        assert parsed_flow.id == flow_id
-        assert parsed_flow.name == flow_name
-        assert parsed_flow.start == line_section_id
-        assert parsed_flow.end == area_section_id
-        assert parsed_flow.distance == flow_distance
+        assert len(parsed_flows) == 2
+
+        some_parsed_flow = parsed_flows[0]
+        assert some_parsed_flow.id == some_flow_id
+        assert some_parsed_flow.name == some_flow_name
+        assert some_parsed_flow.start == line_section_id
+        assert some_parsed_flow.end == area_section_id
+        assert some_parsed_flow.distance == some_flow_distance
+
+        other_parsed_flow = parsed_flows[1]
+        assert other_parsed_flow.id == other_flow_id
+        assert other_parsed_flow.name == other_flow_name
+        assert other_parsed_flow.start == area_section_id
+        assert other_parsed_flow.end == line_section_id
+        assert other_parsed_flow.distance == other_flow_distance
 
     def test_validate(self) -> None:
         parser = OtFlowParser()

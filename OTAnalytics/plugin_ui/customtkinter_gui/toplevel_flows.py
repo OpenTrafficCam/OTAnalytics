@@ -27,6 +27,7 @@ class ToplevelFlows(CTkToplevel):
         initial_position: tuple[int, int],
         section_ids: list[IdResource],
         input_values: dict | None = {},
+        show_distanec: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -36,6 +37,7 @@ class ToplevelFlows(CTkToplevel):
         self._section_id_to_name = self._create_section_id_to_name(section_ids)
         self._current_name = StringVar()
         self.input_values: dict = self.__create_input_values(input_values)
+        self._show_distance = show_distanec
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._initial_position = initial_position
         self._last_autofilled_name: str = ""
@@ -124,11 +126,16 @@ class ToplevelFlows(CTkToplevel):
         self.dropdown_section_end.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=W)
         self.label_name.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.E)
         self.entry_name.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.W)
-        self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
-        self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
-        self.button_ok.grid(
-            row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
+        if self._show_distance:
+            self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
+            self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
+            self.button_ok.grid(
+                row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            )
+        else:
+            self.button_ok.grid(
+                row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            )
 
     def _set_initial_position(self) -> None:
         x, y = self._initial_position
