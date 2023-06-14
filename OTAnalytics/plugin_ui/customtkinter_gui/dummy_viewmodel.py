@@ -11,7 +11,7 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.default_values import DATE_FORMAT
+from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
     MissingCoordinate,
@@ -31,6 +31,7 @@ from OTAnalytics.domain.date import (
     validate_minute,
     validate_second,
 )
+from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import (
     COORDINATES,
@@ -131,6 +132,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             self._on_background_updated
         )
         self._application.track_view_state.track_offset.register(self._update_offset)
+        self._application.track_view_state.filter_element.register(
+            self._update_date_range
+        )
         self._application.action_state.action_running.register(
             self._notify_action_running_state
         )
@@ -159,6 +163,24 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def update_show_tracks_state(self, value: bool) -> None:
         self._application.track_view_state.show_tracks.set(value)
+
+    def _update_date_range(self, filter_element: FilterElement) -> None:
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+
+        date_range = filter_element.date_range
+        start_date = (
+            date_range.start_date.strftime(DATETIME_FORMAT)
+            if date_range.start_date
+            else ""
+        )
+
+        end_date = (
+            date_range.end_date.strftime(DATETIME_FORMAT) if date_range.end_date else ""
+        )
+        self._frame_filter.update_date_range(
+            {"start_date": start_date, "end_date": end_date}
+        )
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
@@ -830,6 +852,12 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
 
         self._frame_filter.disable_filter_by_date_button()
+
+    def switch_to_prev_date_range(self) -> None:
+        self._application.switch_to_prev_date_range()
+
+    def switch_to_next_date_range(self) -> None:
+        self._application.switch_to_next_date_range()
 
     def enable_filter_track_by_class(self) -> None:
         self._application.enable_filter_track_by_class()

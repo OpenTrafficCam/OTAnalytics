@@ -233,3 +233,11 @@ class ViewModel(ABC):
     @abstractmethod
     def disable_filter_track_by_class(self) -> None:
         pass
+
+    @abstractmethod
+    def switch_to_prev_date_range(self) -> None:
+        pass
+
+    @abstractmethod
+    def switch_to_next_date_range(self) -> None:
+        pass

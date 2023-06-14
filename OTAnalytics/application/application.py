@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -470,3 +471,44 @@ class OTAnalyticsApplication:
         self.track_view_state.filter_element.set(
             FilterElement(current_filter_element.date_range, None)
         )
+
+    def switch_to_next_date_range(self) -> None:
+        """Switch to next date range in the filter setting."""
+        start_date, end_date = self._get_current_date_range()
+        duration = end_date - start_date
+
+        new_date_range = DateRange(start_date + duration, end_date + duration)
+        self.update_date_range_tracks_filter(new_date_range)
+
+    def switch_to_prev_date_range(self) -> None:
+        """Switch to previous date range in the filter setting."""
+        start_date, end_date = self._get_current_date_range()
+        duration = end_date - start_date
+
+        new_date_range = DateRange(start_date - duration, end_date - duration)
+        self.update_date_range_tracks_filter(new_date_range)
+
+    def _get_current_date_range(self) -> tuple[datetime, datetime]:
+        current_date_range = self.track_view_state.filter_element.get().date_range
+
+        if not (start_date := current_date_range.start_date):
+            if not (
+                first_occurrence := self._tracks_metadata.first_detection_occurrence
+            ):
+                raise MissingTracksError("Unable to switch track. No tracks loaded.")
+
+            start_date = first_occurrence
+
+        if not (end_date := current_date_range.end_date):
+            if not (last_occurrence := self._tracks_metadata.last_detection_occurrence):
+                raise MissingTracksError(
+                    "Unable to switch date range. No tracks loaded."
+                )
+
+            end_date = last_occurrence
+
+        return start_date, end_date
+
+
+class MissingTracksError(Exception):
+    pass
