@@ -23,6 +23,16 @@ def flow() -> Flow:
 
 
 class TestFlow:
+    def test_unset_distance(self) -> None:
+        flow_id = FlowId("1")
+        name = "some"
+        start = Mock(spec=Section)
+        end = Mock(spec=Section)
+
+        flow = Flow(flow_id, name, start=start, end=end)
+
+        assert not flow.distance
+
     def test_invalid_distance(self) -> None:
         flow_id = FlowId("1")
         name = "some"
