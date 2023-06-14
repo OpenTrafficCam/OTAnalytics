@@ -74,8 +74,8 @@ class FrameCanvas(AbstractFrameCanvas, CTkFrame):
     def add_image(self, image: DisplayableImage, layer: str) -> None:
         self.canvas_background.add_image(image, layer)
 
-    def remove_layer(self, layer: str) -> None:
-        self.canvas_background.remove_layer(layer)
+    def clear_image(self) -> None:
+        self.canvas_background.clear_image()
 
 
 class CanvasBackground(AbstractCanvas):
@@ -107,10 +107,14 @@ class CanvasBackground(AbstractCanvas):
         )
         self.config(highlightthickness=0)
         self._viewmodel.refresh_items_on_canvas()
-        # self.master.master.update_idletasks()
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_canvas(self)
+
+    def clear_image(self) -> None:
+        if self._current_id:
+            self.delete(self._current_id)
+            self._viewmodel.refresh_items_on_canvas()
 
 
 class CanvasEventHandler(EventHandler):

@@ -1,3 +1,4 @@
+import contextlib
 from datetime import datetime
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
@@ -11,8 +12,16 @@ from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT
-from OTAnalytics.adapter_ui.view_model import MissingCoordinate, ViewModel
-from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.adapter_ui.view_model import (
+    MetadataProvider,
+    MissingCoordinate,
+    ViewModel,
+)
+from OTAnalytics.application.application import (
+    CancelAddFlow,
+    CancelAddSection,
+    OTAnalyticsApplication,
+)
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
@@ -144,6 +153,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
         if image:
             self._frame_canvas.update_background(image)
+        else:
+            self._frame_canvas.clear_image()
 
     def update_show_tracks_state(self, value: bool) -> None:
         self._application.track_view_state.show_tracks.set(value)
@@ -293,6 +304,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     ) -> dict:
         return ToplevelSections(
             title=title,
+            viewmodel=self,
             initial_position=initial_position,
             input_values=input_values,
             show_offset=self._show_offset(),
@@ -301,14 +313,32 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def _show_offset(self) -> bool:
         return True
 
-    def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
-        self.__validate_section_information(data, coordinates)
-        relative_offset_coordinates_enter = data[RELATIVE_OFFSET_COORDINATES][
+    def is_section_name_valid(self, section_name: str) -> bool:
+        return self._application.is_section_name_valid(section_name)
+
+    def add_new_section(
+        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+    ) -> None:
+        if not coordinates:
+            raise MissingCoordinate("First coordinate is missing")
+        elif len(coordinates) == 1:
+            raise MissingCoordinate("Second coordinate is missing")
+        with contextlib.suppress(CancelAddSection):
+            line_section = self.__create_section(coordinates, get_metadata)
+            print(f"New line_section created: {line_section.id}")
+            self._update_selected_section(line_section.id)
+        self._finish_action()
+
+    def __create_section(
+        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+    ) -> Section:
+        metadata = self.__get_metadata(get_metadata)
+        relative_offset_coordinates_enter = metadata[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
         ]
         line_section = LineSection(
             id=self._application.get_section_id(),
-            name=data[NAME],
+            name=metadata[NAME],
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
                     **relative_offset_coordinates_enter
@@ -318,9 +348,18 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             coordinates=[self._to_coordinate(coordinate) for coordinate in coordinates],
         )
         self._application.add_section(line_section)
-        print(f"New line_section created: {line_section.id}")
-        self._update_selected_section(line_section.id)
-        self._finish_action()
+        return line_section
+
+    def __get_metadata(self, get_metadata: MetadataProvider) -> dict:
+        metadata = get_metadata()
+        while (
+            (not metadata)
+            or (NAME not in metadata)
+            or (not self.is_section_name_valid(metadata[NAME]))
+            or (RELATIVE_OFFSET_COORDINATES not in metadata)
+        ):
+            metadata = get_metadata()
+        return metadata
 
     def __validate_section_information(
         self, meta_data: dict, coordinates: list[tuple[int, int]]
@@ -533,29 +572,34 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def add_flow(self) -> None:
         self._start_action()
-        if flow_data := self._show_distances_window():
-            flow_id = self._application.get_flow_id()
-            name = flow_data[FLOW_NAME]
-            new_from_section_id = SectionId(flow_data[START_SECTION])
-            new_to_section_id = SectionId(flow_data[END_SECTION])
-            distance = float(flow_data[DISTANCE])
-            flow = Flow(
-                id=flow_id,
-                name=name,
-                start=new_from_section_id,
-                end=new_to_section_id,
-                distance=distance,
-            )
-            self._application.add_flow(flow)
-            self.set_selected_flow_id(flow_id.serialize())
-            print(f"Added new flow: {flow_data}")
+        with contextlib.suppress(CancelAddFlow):
+            flow = self.__create_flow()
+            print(f"Added new flow: {flow.id}")
+            self.set_selected_flow_id(flow.id.serialize())
         self._finish_action()
+
+    def __create_flow(self) -> Flow:
+        flow_data = self._show_distances_window()
+        flow_id = self._application.get_flow_id()
+        name = flow_data[FLOW_NAME]
+        new_from_section_id = SectionId(flow_data[START_SECTION])
+        new_to_section_id = SectionId(flow_data[END_SECTION])
+        distance = flow_data.get(DISTANCE, None)
+        flow = Flow(
+            id=flow_id,
+            name=name,
+            start=new_from_section_id,
+            end=new_to_section_id,
+            distance=distance,
+        )
+        self._application.add_flow(flow)
+        return flow
 
     def _show_distances_window(
         self,
         input_values: dict = {},
         title: str = "Add flow",
-    ) -> dict | None:
+    ) -> dict:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
@@ -567,13 +611,47 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 message="To add a flow, at least two sections are needed",
                 initial_position=position,
             )
-            return {}
+            raise CancelAddFlow()
+        return self.__create_flow_data(input_values, title, position, section_ids)
+
+    def __create_flow_data(
+        self,
+        input_values: dict,
+        title: str,
+        position: tuple[int, int],
+        section_ids: list[IdResource],
+    ) -> dict:
+        flow_data = self.__get_flow_data(input_values, title, position, section_ids)
+        while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
+            InfoBox(
+                message="To add a flow, a unique name is necessary",
+                initial_position=position,
+            )
+            flow_data = self.__get_flow_data(input_values, title, position, section_ids)
+        return flow_data
+
+    def __is_flow_name_valid(self, flow_data: dict) -> bool:
+        return flow_data[FLOW_NAME] and self._application.is_flow_name_valid(
+            flow_data[FLOW_NAME]
+        )
+
+    def __get_flow_data(
+        self,
+        input_values: dict,
+        title: str,
+        position: tuple[int, int],
+        section_ids: list[IdResource],
+    ) -> dict:
         return ToplevelFlows(
             title=title,
             initial_position=position,
             section_ids=section_ids,
             input_values=input_values,
+            show_distance=self._show_distance(),
         ).get_data()
+
+    def _show_distance(self) -> bool:
+        return True
 
     def __to_id_resource(self, section: Section) -> IdResource:
         return IdResource(id=section.id.serialize(), name=section.name)
@@ -583,7 +661,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         name = flow_data[FLOW_NAME]
         new_from_section_id = SectionId(flow_data[START_SECTION])
         new_to_section_id = SectionId(flow_data[END_SECTION])
-        distance = float(flow_data[DISTANCE])
+        distance = flow_data.get(DISTANCE, None)
         if flow := self._application.get_flow_for(flow_id):
             flow.name = name
             flow.start = new_from_section_id
