@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkOptionMenu, CTkToplevel
 
+from OTAnalytics.application.application import CancelAddFlow
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,
     PADY,
@@ -38,7 +39,8 @@ class ToplevelFlows(CTkToplevel):
         self._current_name = StringVar()
         self.input_values: dict = self.__create_input_values(input_values)
         self._show_distance = show_distance
-        self.protocol("WM_DELETE_WINDOW", self.close)
+        self.protocol("WM_DELETE_WINDOW", self.cancel)
+        self._canceled = False
         self._initial_position = initial_position
         self._last_autofilled_name: str = ""
         self.__set_initial_values()
@@ -170,6 +172,11 @@ class ToplevelFlows(CTkToplevel):
         self.destroy()
         self.update()
 
+    def cancel(self, event: Any = None) -> None:
+        self._canceled = True
+        self.destroy()
+        self.update()
+
     def _get_end_section_id(self) -> str:
         name = self.dropdown_section_end.get()
         return self._get_section_id_for_name(name)
@@ -226,4 +233,6 @@ class ToplevelFlows(CTkToplevel):
 
     def get_data(self) -> dict:
         self.wait_window()
+        if self._canceled:
+            raise CancelAddFlow()
         return self.input_values
