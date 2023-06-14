@@ -584,7 +584,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         name = flow_data[FLOW_NAME]
         new_from_section_id = SectionId(flow_data[START_SECTION])
         new_to_section_id = SectionId(flow_data[END_SECTION])
-        distance = float(flow_data[DISTANCE])
+        distance = flow_data.get(DISTANCE, None)
         flow = Flow(
             id=flow_id,
             name=name,
@@ -647,7 +647,11 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             initial_position=position,
             section_ids=section_ids,
             input_values=input_values,
+            show_distance=self._show_distance(),
         ).get_data()
+
+    def _show_distance(self) -> bool:
+        return True
 
     def __to_id_resource(self, section: Section) -> IdResource:
         return IdResource(id=section.id.serialize(), name=section.name)
@@ -657,7 +661,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         name = flow_data[FLOW_NAME]
         new_from_section_id = SectionId(flow_data[START_SECTION])
         new_to_section_id = SectionId(flow_data[END_SECTION])
-        distance = float(flow_data[DISTANCE])
+        distance = flow_data.get(DISTANCE, None)
         if flow := self._application.get_flow_for(flow_id):
             flow.name = name
             flow.start = new_from_section_id

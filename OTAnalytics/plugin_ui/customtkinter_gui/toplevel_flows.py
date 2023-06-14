@@ -28,6 +28,7 @@ class ToplevelFlows(CTkToplevel):
         initial_position: tuple[int, int],
         section_ids: list[IdResource],
         input_values: dict | None = {},
+        show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -37,6 +38,7 @@ class ToplevelFlows(CTkToplevel):
         self._section_id_to_name = self._create_section_id_to_name(section_ids)
         self._current_name = StringVar()
         self.input_values: dict = self.__create_input_values(input_values)
+        self._show_distance = show_distance
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self._canceled = False
         self._initial_position = initial_position
@@ -65,7 +67,7 @@ class ToplevelFlows(CTkToplevel):
             FLOW_NAME: "",
             START_SECTION: "",
             END_SECTION: "",
-            DISTANCE: 0,
+            DISTANCE: None,
         }
 
     def _get_widgets(self) -> None:
@@ -98,7 +100,8 @@ class ToplevelFlows(CTkToplevel):
             validate="key",
             validatecommand=(self.register(self._is_float_above_zero), "%P"),
         )
-        self.entry_distance.insert(0, self.input_values[DISTANCE])
+        if current_distance := self.input_values[DISTANCE]:
+            self.entry_distance.insert(index=0, string=current_distance)
 
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
 
@@ -125,11 +128,16 @@ class ToplevelFlows(CTkToplevel):
         self.dropdown_section_end.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=W)
         self.label_name.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.E)
         self.entry_name.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.W)
-        self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
-        self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
-        self.button_ok.grid(
-            row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
+        if self._show_distance:
+            self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
+            self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
+            self.button_ok.grid(
+                row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            )
+        else:
+            self.button_ok.grid(
+                row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            )
 
     def _set_initial_position(self) -> None:
         x, y = self._initial_position
@@ -160,7 +168,7 @@ class ToplevelFlows(CTkToplevel):
         self.input_values[FLOW_NAME] = self._current_name.get()
         self.input_values[START_SECTION] = self._get_start_section_id()
         self.input_values[END_SECTION] = self._get_end_section_id()
-        self.input_values[DISTANCE] = self.entry_distance.get()
+        self.input_values[DISTANCE] = self.__parse_distance(self.entry_distance.get())
         self.destroy()
         self.update()
 
@@ -182,10 +190,13 @@ class ToplevelFlows(CTkToplevel):
 
     def _is_float_above_zero(self, entry_value: Any) -> bool:
         try:
-            float_value = float(entry_value)
+            float_value = self.__parse_distance(entry_value)
         except Exception:
             return False
-        return float_value >= 0
+        return float_value >= 0 if float_value else True
+
+    def __parse_distance(self, entry_value: Any) -> Optional[float]:
+        return float(entry_value) if entry_value else None
 
     def _sections_are_valid(self) -> bool:
         section_start = self._get_start_section_id()
