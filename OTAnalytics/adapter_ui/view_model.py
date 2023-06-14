@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
@@ -14,6 +14,9 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 
 DISTANCES: str = "distances"
+
+
+MetadataProvider = Callable[[], dict]
 
 
 class MissingCoordinate(Exception):
@@ -98,7 +101,13 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
+    def is_section_name_valid(self, section_name: str) -> bool:
+        pass
+
+    @abstractmethod
+    def add_new_section(
+        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
