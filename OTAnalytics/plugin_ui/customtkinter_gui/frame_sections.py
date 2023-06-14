@@ -37,13 +37,13 @@ class FrameSections(AbstractFrameSections):
         self.treeview = TreeviewSections(
             viewmodel=self._viewmodel, master=self._frame_tree
         )
-        self.button_add = CTkButton(
-            master=self, text="Add", command=self._viewmodel.add_section
-        )
         self._treeview_scrollbar = CTkScrollbar(
             master=self._frame_tree, command=self.treeview.yview
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
+        self.button_add = CTkButton(
+            master=self, text="Add", command=self._viewmodel.add_section
+        )
         self.button_edit_geometry = CTkButton(
             master=self,
             text="Edit geometry",
