@@ -1,7 +1,8 @@
+import tkinter
 from tkinter.ttk import Treeview
 from typing import Any, Optional
 
-from customtkinter import CTkButton
+from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
 from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -34,7 +35,14 @@ class FrameFlows(AbstractFrameFlows):
         self._viewmodel.set_flows_frame(self)
 
     def _get_widgets(self) -> None:
-        self.treeview = TreeviewFlows(viewmodel=self._viewmodel, master=self)
+        self._frame_tree = CTkFrame(master=self)
+        self.treeview = TreeviewFlows(
+            viewmodel=self._viewmodel, master=self._frame_tree
+        )
+        self._treeview_scrollbar = CTkScrollbar(
+            master=self._frame_tree, command=self.treeview.yview
+        )
+        self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
         self.button_add = CTkButton(
             master=self, text="Add", command=self._viewmodel.add_flow
         )
@@ -49,7 +57,11 @@ class FrameFlows(AbstractFrameFlows):
         self._action_buttons = [self.button_add, self.button_edit, self.button_remove]
 
     def _place_widgets(self) -> None:
-        self.treeview.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
+        self._treeview_scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
+        self._frame_tree.grid(
+            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self.button_add.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_edit.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_remove.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY)
