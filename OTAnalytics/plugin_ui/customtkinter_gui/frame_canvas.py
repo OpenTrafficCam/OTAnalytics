@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from customtkinter import NW, CTkFrame
@@ -90,9 +91,10 @@ class CanvasBackground(AbstractCanvas):
         self.add_preview_image()
 
     def add_preview_image(self) -> None:
-        preview_image = Image.open(r"OTAnalytics/assets/OpenTrafficCam_800.png")
-        self._current_image = ImageTk.PhotoImage(preview_image)
-        self._draw()
+        if Path(r"OTAnalytics/assets/OpenTrafficCam_800.png").exists():
+            preview_image = Image.open(r"OTAnalytics/assets/OpenTrafficCam_800.png")
+            self._current_image = ImageTk.PhotoImage(preview_image)
+            self._draw()
 
     def add_image(self, image: DisplayableImage, layer: str) -> None:
         if self._current_id:
