@@ -64,6 +64,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
+TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -357,11 +358,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             return
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
-        self._start_action()
-        self._canvas.gettags("line")
-        CanvasElementDeleter(canvas=self._canvas).delete(
-            tag_or_id=self._selected_section_id
-        )
+        CanvasElementDeleter(canvas=self._canvas).delete(tag_or_id=TAG_SELECTED_SECTION)
         if self._selected_section_id:
             if current_section := self._application.get_section_for(
                 SectionId(self._selected_section_id)
@@ -477,13 +474,14 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         section_painter = SectionPainter(canvas=self._canvas)
         for section in self._get_sections():
-            style = (
-                SELECTED_SECTION_STYLE
-                if section[ID] in sections_to_highlight
-                else DEFAULT_SECTION_STYLE
-            )
+            tags = [LINE_SECTION]
+            if section[ID] in sections_to_highlight:
+                style = SELECTED_SECTION_STYLE
+                tags.append(TAG_SELECTED_SECTION)
+            else:
+                style = DEFAULT_SECTION_STYLE
             section_painter.draw(
-                tags=[LINE_SECTION],
+                tags=tags,
                 id=section[ID],
                 coordinates=section[COORDINATES],
                 section_style=style,
