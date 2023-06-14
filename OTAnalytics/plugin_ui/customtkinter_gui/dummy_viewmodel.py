@@ -310,6 +310,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             )
             return
 
+    def cancel_action(self) -> None:
+        self._finish_action()
+
     def add_section(self) -> None:
         self.set_selected_section_id(None)
         if self._canvas is None:
