@@ -9,7 +9,7 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import (
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate
-from OTAnalytics.domain.section import NAME, RELATIVE_OFFSET_COORDINATES, Section
+from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     DELETE_KEYS,
@@ -585,20 +585,15 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             end (tuple[int, int]): Tuple of the sections end coordinates
         """
         self._coordinates = coordinates
-        if (
-            NAME not in self._metadata
-            or RELATIVE_OFFSET_COORDINATES not in self._metadata
-        ):
-            self._get_metadata()
-        if not self._metadata[NAME]:
-            return
         self._create_section()
 
-    def _get_metadata(self) -> None:
+    def _get_metadata(self) -> dict:
         toplevel_position = get_widget_position(widget=self._canvas)
-        self._metadata = self._viewmodel.get_section_metadata(
+        return self._viewmodel.get_section_metadata(
             title="Add section", initial_position=toplevel_position
         )
 
     def _create_section(self) -> None:
-        self._viewmodel.set_new_section(self._metadata, self._coordinates)
+        self._viewmodel.add_new_section(
+            self._coordinates, get_metadata=self._get_metadata
+        )
