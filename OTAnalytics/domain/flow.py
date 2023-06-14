@@ -27,19 +27,14 @@ class Flow:
 
     Args:
         id (FlowId): unique id of the flow
+        name (str): unique name of the flow
         start (Section): section to start the flow at
         end (Section): section to end the flow at
-        distance (float): distance between start and end
+        distance (Optional[float]): distance between start and end
 
     Raises:
         ValueError: if distance is negative
     """
-
-    id: FlowId
-    name: str
-    start: SectionId
-    end: SectionId
-    distance: float
 
     def __init__(
         self,
@@ -47,9 +42,9 @@ class Flow:
         name: str,
         start: SectionId,
         end: SectionId,
-        distance: float,
+        distance: Optional[float] = None,
     ) -> None:
-        if distance < 0:
+        if distance and distance < 0:
             raise ValueError(
                 f"Distance must be equal or greater then 0, but is {distance}"
             )
@@ -57,7 +52,7 @@ class Flow:
         self.name = name
         self.start: SectionId = start
         self.end: SectionId = end
-        self.distance: float = distance
+        self.distance: Optional[float] = distance
 
     def to_dict(self) -> dict:
         return {
