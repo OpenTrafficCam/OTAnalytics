@@ -347,7 +347,9 @@ class SectionState(SectionListObserver):
     """
 
     def __init__(self) -> None:
-        self.selected_section = ObservableOptionalProperty[SectionId]()
+        self.selected_sections: ObservableProperty[
+            list[SectionId]
+        ] = ObservableProperty[list]([])
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         """
@@ -356,8 +358,10 @@ class SectionState(SectionListObserver):
         Args:
             sections (list[SectionId]): newly added sections
         """
-        section_to_select = sections[0] if sections else None
-        self.selected_section.set(section_to_select)
+        if sections:
+            self.selected_sections.set([sections[0]])
+        else:
+            self.selected_sections.set([])
 
 
 class FlowState(FlowListObserver):
@@ -366,7 +370,9 @@ class FlowState(FlowListObserver):
     """
 
     def __init__(self) -> None:
-        self.selected_flow = ObservableOptionalProperty[FlowId]()
+        self.selected_flows: ObservableProperty[list[FlowId]] = ObservableProperty[
+            list
+        ]([])
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         """
@@ -379,9 +385,9 @@ class FlowState(FlowListObserver):
             IndexError: if the list of flows is empty
         """
         if flows:
-            self.selected_flow.set(flows[0])
+            self.selected_flows.set([flows[0]])
         else:
-            self.selected_flow.set(None)
+            self.selected_flows.set([])
 
 
 class TracksMetadata(TrackListObserver):
