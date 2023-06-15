@@ -14,6 +14,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
 
@@ -25,7 +26,9 @@ class ModifiedCTk(CTk):
         super().__init__(**kwargs)
 
     def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
-        InfoBox(message=str(val), title="Error", initial_position=(0, 0))
+        InfoBox(
+            message=str(val), title="Error", initial_position=get_widget_position(self)
+        )
 
 
 class OTAnalyticsGui:
