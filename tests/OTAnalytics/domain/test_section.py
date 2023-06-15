@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -9,6 +9,7 @@ from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
     LINE,
+    NAME,
     PLUGIN_DATA,
     RELATIVE_OFFSET_COORDINATES,
     TYPE,
@@ -40,6 +41,7 @@ class TestLineSection:
         with pytest.raises(ValueError):
             LineSection(
                 id=SectionId("N"),
+                name="N",
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
@@ -50,12 +52,48 @@ class TestLineSection:
     def test_valid_line_section(self) -> None:
         LineSection(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
             plugin_data={},
             coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
         )
+
+    def test_update_coordinates(self) -> None:
+        section = LineSection(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
+        )
+
+        new_coordinates = [Coordinate(1, 1), Coordinate(2, 2)]
+        section.update_coordinates(new_coordinates)
+
+        assert section.get_coordinates() == new_coordinates
+
+    @pytest.mark.parametrize(
+        "new_coordinates", [[Coordinate(1, 1)], [Coordinate(1, 1), Coordinate(1, 1)]]
+    )
+    def test_update_with_bad_coordinates(
+        self, new_coordinates: list[Coordinate]
+    ) -> None:
+        section = LineSection(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=[Coordinate(0, 0), Coordinate(1, 0)],
+        )
+
+        with pytest.raises(ValueError):
+            section.update_coordinates(new_coordinates)
 
     def test_to_dict(self) -> None:
         section_id = SectionId("some")
@@ -64,6 +102,7 @@ class TestLineSection:
         coordinates = [start, end]
         section = LineSection(
             id=section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -76,6 +115,7 @@ class TestLineSection:
         assert section_dict == {
             TYPE: LINE,
             ID: section_id.id,
+            NAME: section.name,
             RELATIVE_OFFSET_COORDINATES: {
                 EventType.SECTION_ENTER.serialize(): {X: 0, Y: 0}
             },
@@ -91,6 +131,7 @@ class TestLineSection:
         coordinates = [start, end]
         line = LineSection(
             id=SectionId(id),
+            name=id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -108,6 +149,7 @@ class TestAreaSection:
         with pytest.raises(ValueError):
             Area(
                 id=SectionId("N"),
+                name="N",
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
@@ -124,6 +166,7 @@ class TestAreaSection:
         with pytest.raises(ValueError):
             Area(
                 id=SectionId("N"),
+                name="N",
                 relative_offset_coordinates={
                     EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
                 },
@@ -140,6 +183,7 @@ class TestAreaSection:
         ]
         area = Area(
             id=SectionId("N"),
+            name="N",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -150,6 +194,62 @@ class TestAreaSection:
         assert area.id == SectionId("N")
         assert area.coordinates == coordinates
 
+    def test_update_coordinates(self) -> None:
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        area = Area(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=coordinates,
+        )
+
+        new_coordinates = [
+            Coordinate(1, 1),
+            Coordinate(2, 2),
+            Coordinate(3, 3),
+            Coordinate(1, 1),
+        ]
+        area.update_coordinates(new_coordinates)
+
+        assert area.get_coordinates() == new_coordinates
+
+    @pytest.mark.parametrize(
+        "new_coordinates",
+        [
+            [Coordinate(1, 1), Coordinate(2, 2), Coordinate(3, 3), Coordinate(4, 4)],
+            [Coordinate(1, 1), Coordinate(2, 2), Coordinate(1, 1)],
+        ],
+    )
+    def test_update_with_bad_coordinates(
+        self, new_coordinates: list[Coordinate]
+    ) -> None:
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        area = Area(
+            id=SectionId("N"),
+            name="N",
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data={},
+            coordinates=coordinates,
+        )
+
+        with pytest.raises(ValueError):
+            area.update_coordinates(new_coordinates)
+
     def test_to_dict(self) -> None:
         section_id = SectionId("some")
         first = Coordinate(0, 0)
@@ -158,6 +258,7 @@ class TestAreaSection:
         forth = Coordinate(0, 0)
         section = Area(
             id=section_id,
+            name="some",
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -170,6 +271,7 @@ class TestAreaSection:
         assert section_dict == {
             TYPE: AREA,
             ID: section_id.id,
+            NAME: section.name,
             RELATIVE_OFFSET_COORDINATES: {
                 EventType.SECTION_ENTER.serialize(): {X: 0, Y: 0}
             },
@@ -193,6 +295,7 @@ class TestAreaSection:
         ]
         line = Area(
             id=SectionId(id),
+            name=id,
             relative_offset_coordinates={
                 EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
             },
@@ -205,6 +308,20 @@ class TestAreaSection:
 
 
 class TestSectionRepository:
+    def test_get_id(self) -> None:
+        section = Mock(spec=Section)
+        section.id = SectionId("3")
+        repository = SectionRepository()
+        repository.add(section)
+
+        first_id = repository.get_id()
+        second_id = repository.get_id()
+        third_id = repository.get_id()
+
+        assert first_id == SectionId("1")
+        assert second_id == SectionId("2")
+        assert third_id == SectionId("4")
+
     def test_add(self) -> None:
         section_id = SectionId("north")
         section = Mock()
@@ -262,16 +379,19 @@ class TestSectionRepository:
         repository.register_section_changed_observer(observer)
 
         repository.add(original_section)
-        repository.update(original_section)
+        repository.update(updated_section)
 
+        assert repository.get(section_id) is updated_section
         observer.assert_called_once_with(section_id)
 
     def test_update_section_plugin_data_not_existing(self) -> None:
         section_id = SectionId("my section")
+        name = "my section"
         plugin_data = {"some": "new_value"}
 
         section = LineSection(
             section_id,
+            name,
             {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
             {},
             coordinates=[Coordinate(0, 0), Coordinate(10, 10)],
@@ -298,6 +418,7 @@ class TestSectionRepository:
 
         section = LineSection(
             section_id,
+            "my section",
             {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
             {key: old_plugin_data},
             coordinates=[Coordinate(0, 0), Coordinate(10, 10)],
@@ -314,3 +435,23 @@ class TestSectionRepository:
 
         assert stored_section == section
         assert section.plugin_data == new_plugin_data
+
+    def test_clear(self) -> None:
+        section_id_north = SectionId("north")
+        section_id_south = SectionId("south")
+        first_section = Mock()
+        first_section.id = section_id_north
+        second_section = Mock()
+        second_section.id = section_id_south
+        observer = Mock(spec=SectionListObserver)
+        repository = SectionRepository()
+        repository.register_sections_observer(observer)
+
+        repository.add_all([first_section, second_section])
+        repository.clear()
+
+        assert not list(repository.get_all())
+        assert observer.notify_sections.call_args_list == [
+            call([section_id_north, section_id_south]),
+            call([]),
+        ]

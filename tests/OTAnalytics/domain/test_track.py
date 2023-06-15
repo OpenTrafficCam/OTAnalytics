@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -258,3 +258,23 @@ class TestTrackRepository:
         returned = repository.get_for(first_track.id)
 
         assert returned == first_track
+
+    def test_clear(self) -> None:
+        first_id = TrackId(1)
+        second_id = TrackId(2)
+        first_track = Mock()
+        first_track.id = first_id
+        second_track = Mock()
+        second_track.id = second_id
+        observer = Mock(spec=TrackListObserver)
+        repository = TrackRepository()
+        repository.register_tracks_observer(observer)
+
+        repository.add_all([first_track, second_track])
+        repository.clear()
+
+        assert not list(repository.get_all())
+        assert observer.notify_tracks.call_args_list == [
+            call([first_id, second_id]),
+            call([]),
+        ]

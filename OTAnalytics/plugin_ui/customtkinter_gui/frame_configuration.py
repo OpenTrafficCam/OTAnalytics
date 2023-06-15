@@ -1,9 +1,10 @@
+import tkinter
 from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel, CTkTabview
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_flows import FrameFlows
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import FrameSections
 
@@ -16,6 +17,8 @@ class FrameConfiguration(CTkFrame):
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure((0, 1), weight=1)
         self._get_widgets()
         self._place_widgets()
 
@@ -33,13 +36,15 @@ class FrameConfiguration(CTkFrame):
 
     def _place_widgets(self) -> None:
         self.label.grid(
-            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=tkinter.NSEW
         )
         self.tabview.grid(
-            row=1, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=tkinter.NSEW
         )
-        self.button_add.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.button_save.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_add.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.NSEW)
+        self.button_save.grid(
+            row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.NSEW
+        )
 
 
 class TabviewConfiguration(CTkTabview):
@@ -66,6 +71,6 @@ class TabviewConfiguration(CTkTabview):
         )
 
     def _place_widgets(self) -> None:
-        self.frame_sections.pack()
-        self.frame_flows.pack()
+        self.frame_sections.pack(fill=tkinter.BOTH, expand=True)
+        self.frame_flows.pack(fill=tkinter.BOTH, expand=True)
         self.set(self.SECTIONS)

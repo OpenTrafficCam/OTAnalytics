@@ -72,7 +72,7 @@ class TrackHasClassifications(TrackPredicate):
 
     def __init__(
         self,
-        classification: list[str],
+        classification: set[str],
     ) -> None:
         self._classifications = classification
 
@@ -118,7 +118,7 @@ class TrackFilterBuilder(FilterBuilder[Track, bool]):
         super().__init__()
         self._complex_predicate: Optional[Predicate[Track, bool]] = None
 
-    def add_has_classifications_predicate(self, classifications: list[str]) -> None:
+    def add_has_classifications_predicate(self, classifications: set[str]) -> None:
         predicate = TrackHasClassifications(classifications)
         self._conjunct(predicate)
 
