@@ -10,12 +10,18 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, tk_eve
 class ToplevelTemplate(CTkToplevel, ABC):
     def __init__(
         self,
+        initial_position: tuple[int, int],
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self._get_frame_ok_cancel()
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self.bind(tk_events.ESCAPE_KEY, self._on_cancel)
+        self._set_initial_position(initial_position)
+
+    def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
+        x, y = initial_position
+        self.geometry(f"+{x+10}+{y+10}")
 
     def _get_frame_ok_cancel(self) -> None:
         self.frame_ok_cancel = CTkFrame(master=self)
