@@ -15,9 +15,9 @@ class IdResource:
 
 class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
     def __init__(self, **kwargs: Any) -> None:
-        super().__init__(show="tree", selectmode="none", **kwargs)
+        super().__init__(show="tree", selectmode="extended", **kwargs)
         self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
-        self.bind(tk_events.LEFT_BUTTON_UP, self._on_select)
+        self.bind(tk_events.TREEVIEW_SELECT, self._on_select)
         self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
@@ -52,8 +52,6 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
         self._notify_viewmodel_about_selected_item_ids([])
 
     def _on_select(self, event: Any) -> None:
-        current_selection: str = self.focus()
-        self.selection_toggle(current_selection)
         item_ids = self.get_current_selection()
         self._notify_viewmodel_about_selected_item_ids(item_ids)
 
