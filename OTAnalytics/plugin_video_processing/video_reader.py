@@ -7,6 +7,10 @@ from OTAnalytics.domain.track import PilImage, TrackImage
 from OTAnalytics.domain.video import VideoReader
 
 
+class InvalidVideoError(Exception):
+    pass
+
+
 class FrameDoesNotExistError(Exception):
     pass
 
@@ -25,7 +29,10 @@ class MoviepyVideoReader(VideoReader):
         Returns:
             ndarray: the image as an multi-dimensional array.
         """
-        clip = VideoFileClip(str(video_path.absolute()))
+        try:
+            clip = VideoFileClip(str(video_path.absolute()))
+        except IOError as e:
+            raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
         found = None
         for frame_no, np_frame in enumerate(clip.iter_frames()):
             if frame_no == index:
