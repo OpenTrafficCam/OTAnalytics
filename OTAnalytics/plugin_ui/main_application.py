@@ -39,6 +39,7 @@ from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
+    CachedVideoParser,
     OtConfigParser,
     OtEventListParser,
     OtFlowParser,
@@ -145,7 +146,7 @@ class ApplicationStarter:
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
         event_list_parser = self._create_event_list_parser()
-        video_parser = SimpleVideoParser(MoviepyVideoReader())
+        video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
         video_repository = VideoRepository()
         track_to_video_repository = TrackToVideoRepository()
         track_video_parser = OttrkVideoParser(video_parser)

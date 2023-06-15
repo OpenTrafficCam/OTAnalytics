@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -13,16 +14,89 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
-from OTAnalytics.domain.flow import Flow, FlowChangedObserver, FlowId, FlowListObserver
+from OTAnalytics.domain.flow import (
+    Flow,
+    FlowChangedObserver,
+    FlowId,
+    FlowListObserver,
+    FlowRepository,
+)
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
     SectionId,
     SectionListObserver,
+    SectionRepository,
 )
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
+
+
+class SectionAlreadyExists(Exception):
+    pass
+
+
+class CancelAddSection(Exception):
+    pass
+
+
+class CancelAddFlow(Exception):
+    pass
+
+
+class FlowAlreadyExists(Exception):
+    pass
+
+
+class AddSection:
+    """
+    Add a single section to the repository.
+    """
+
+    def __init__(self, section_repository: SectionRepository) -> None:
+        self._section_repository = section_repository
+
+    def add(self, section: Section) -> None:
+        if not self.is_section_name_valid(section.name):
+            raise SectionAlreadyExists(
+                f"A section with the name {section.name} already exists. "
+                "Choose another name."
+            )
+        self._section_repository.add(section)
+
+    def is_section_name_valid(self, section_name: str) -> bool:
+        if not section_name:
+            return False
+        return all(
+            stored_section.name != section_name
+            for stored_section in self._section_repository.get_all()
+        )
+
+
+class AddFlow:
+    """
+    Add a single flow to the repository.
+    """
+
+    def __init__(self, flow_repository: FlowRepository) -> None:
+        self._flow_repository = flow_repository
+
+    def add(self, flow: Flow) -> None:
+        if not self.is_flow_name_valid(flow.name):
+            raise FlowAlreadyExists(
+                f"A flow with the name {flow.name} already exists. "
+                "Choose another name."
+            )
+        self._flow_repository.add(flow)
+
+    def is_flow_name_valid(self, flow_name: str) -> bool:
+        if not flow_name:
+            return False
+        return all(
+            stored_flow.name != flow_name
+            for stored_flow in self._flow_repository.get_all()
+        )
 
 
 class OTAnalyticsApplication:
@@ -53,6 +127,8 @@ class OTAnalyticsApplication:
         self._tracks_metadata = tracks_metadata
         self.action_state = action_state
         self._filter_element_setting_restorer = filter_element_setting_restorer
+        self._add_section = AddSection(self._datastore._section_repository)
+        self._add_flow = AddFlow(self._datastore._flow_repository)
 
     def connect_observers(self) -> None:
         """
@@ -85,6 +161,17 @@ class OTAnalyticsApplication:
     def add_videos(self, files: list[Path]) -> None:
         self._datastore.load_video_files(files)
 
+    def remove_video(self) -> None:
+        """
+        Remove the currently selected video from the repository.
+        """
+        if video := self.track_view_state.selected_video.get():
+            self._datastore.remove_video(video)
+            if videos := self._datastore.get_all_videos():
+                self.track_view_state.selected_video.set(videos[0])
+            else:
+                self.track_view_state.selected_video.set(None)
+
     def get_all_flows(self) -> Iterable[Flow]:
         return self._datastore.get_all_flows()
 
@@ -97,8 +184,20 @@ class OTAnalyticsApplication:
         """
         return self._datastore.get_flow_id()
 
+    def is_flow_name_valid(self, flow_name: str) -> bool:
+        """
+        Check whether a flow with the given name already exists.
+
+        Args:
+            flow_name (str): name to check
+
+        Returns:
+            bool: True if a flow with the name already exists, False otherwise.
+        """
+        return self._add_flow.is_flow_name_valid(flow_name)
+
     def add_flow(self, flow: Flow) -> None:
-        self._datastore.add_flow(flow)
+        self._add_flow.add(flow)
 
     def remove_flow(self, flow_id: FlowId) -> None:
         self._datastore.remove_flow(flow_id)
@@ -167,6 +266,18 @@ class OTAnalyticsApplication:
         """
         return self._datastore.get_section_id()
 
+    def is_section_name_valid(self, section_name: str) -> bool:
+        """
+        Check whether a section with the given name already exists.
+
+        Args:
+            section_name (str): name to check
+
+        Returns:
+            bool: True if a section with the name already exists, False otherwise.
+        """
+        return self._add_section.is_section_name_valid(section_name)
+
     def add_section(self, section: Section) -> None:
         """
         Add a new section
@@ -174,7 +285,7 @@ class OTAnalyticsApplication:
         Args:
             section (Section): section to add
         """
-        self._datastore.add_section(section)
+        self._add_section.add(section)
 
     def remove_section(self, section: SectionId) -> None:
         """
@@ -360,3 +471,44 @@ class OTAnalyticsApplication:
         self.track_view_state.filter_element.set(
             FilterElement(current_filter_element.date_range, None)
         )
+
+    def switch_to_next_date_range(self) -> None:
+        """Switch to next date range in the filter setting."""
+        start_date, end_date = self._get_current_date_range()
+        duration = end_date - start_date
+
+        new_date_range = DateRange(start_date + duration, end_date + duration)
+        self.update_date_range_tracks_filter(new_date_range)
+
+    def switch_to_prev_date_range(self) -> None:
+        """Switch to previous date range in the filter setting."""
+        start_date, end_date = self._get_current_date_range()
+        duration = end_date - start_date
+
+        new_date_range = DateRange(start_date - duration, end_date - duration)
+        self.update_date_range_tracks_filter(new_date_range)
+
+    def _get_current_date_range(self) -> tuple[datetime, datetime]:
+        current_date_range = self.track_view_state.filter_element.get().date_range
+
+        if not (start_date := current_date_range.start_date):
+            if not (
+                first_occurrence := self._tracks_metadata.first_detection_occurrence
+            ):
+                raise MissingTracksError("Unable to switch track. No tracks loaded.")
+
+            start_date = first_occurrence
+
+        if not (end_date := current_date_range.end_date):
+            if not (last_occurrence := self._tracks_metadata.last_detection_occurrence):
+                raise MissingTracksError(
+                    "Unable to switch date range. No tracks loaded."
+                )
+
+            end_date = last_occurrence
+
+        return start_date, end_date
+
+
+class MissingTracksError(Exception):
+    pass

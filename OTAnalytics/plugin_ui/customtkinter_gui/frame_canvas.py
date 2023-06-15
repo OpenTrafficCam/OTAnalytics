@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from customtkinter import NW, CTkFrame
@@ -74,8 +75,8 @@ class FrameCanvas(AbstractFrameCanvas, CTkFrame):
     def add_image(self, image: DisplayableImage, layer: str) -> None:
         self.canvas_background.add_image(image, layer)
 
-    def remove_layer(self, layer: str) -> None:
-        self.canvas_background.remove_layer(layer)
+    def clear_image(self) -> None:
+        self.canvas_background.clear_image()
 
 
 class CanvasBackground(AbstractCanvas):
@@ -90,9 +91,10 @@ class CanvasBackground(AbstractCanvas):
         self.add_preview_image()
 
     def add_preview_image(self) -> None:
-        preview_image = Image.open(r"OTAnalytics/assets/OpenTrafficCam_800.png")
-        self._current_image = ImageTk.PhotoImage(preview_image)
-        self._draw()
+        if Path(r"OTAnalytics/assets/OpenTrafficCam_800.png").exists():
+            preview_image = Image.open(r"OTAnalytics/assets/OpenTrafficCam_800.png")
+            self._current_image = ImageTk.PhotoImage(preview_image)
+            self._draw()
 
     def add_image(self, image: DisplayableImage, layer: str) -> None:
         if self._current_id:
@@ -107,10 +109,14 @@ class CanvasBackground(AbstractCanvas):
         )
         self.config(highlightthickness=0)
         self._viewmodel.refresh_items_on_canvas()
-        # self.master.master.update_idletasks()
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_canvas(self)
+
+    def clear_image(self) -> None:
+        if self._current_id:
+            self.delete(self._current_id)
+            self._viewmodel.refresh_items_on_canvas()
 
 
 class CanvasEventHandler(EventHandler):

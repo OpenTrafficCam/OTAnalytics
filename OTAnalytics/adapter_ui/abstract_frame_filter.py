@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from OTAnalytics.adapter_ui.dto import DateRangeDto
+
 
 class AbstractFrameFilter(ABC):
     @abstractmethod
@@ -36,4 +38,8 @@ class AbstractFrameFilter(ABC):
 
     @abstractmethod
     def disable_filter_by_class_button(self) -> None:
+        pass
+
+    @abstractmethod
+    def update_date_range(self, date_range: DateRangeDto) -> None:
         pass

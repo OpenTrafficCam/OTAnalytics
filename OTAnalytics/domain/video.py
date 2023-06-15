@@ -23,8 +23,25 @@ class VideoReader(ABC):
         pass
 
 
-@dataclass(frozen=True)
-class Video:
+class Video(ABC):
+    @abstractmethod
+    def get_path(self) -> Path:
+        pass
+
+    @abstractmethod
+    def get_frame(self, index: int) -> TrackImage:
+        pass
+
+    @abstractmethod
+    def to_dict(
+        self,
+        relative_to: Path,
+    ) -> dict:
+        pass
+
+
+@dataclass
+class SimpleVideo(Video):
     """Represents a video file.
     Args:
         video_reader (VideoReader): A video reader used to get frames.
@@ -42,6 +59,9 @@ class Video:
     def check_path_exists(self) -> None:
         if not self.path.exists():
             raise ValueError(f"{self.path} must be an existing path")
+
+    def get_path(self) -> Path:
+        return self.path
 
     def get_frame(self, index: int) -> TrackImage:
         """Returns the frame of the video at `index`.
@@ -120,7 +140,7 @@ class VideoRepository:
         self._observers.notify([video])
 
     def __do_add(self, video: Video) -> None:
-        self._videos[video.path] = video
+        self._videos[video.get_path()] = video
 
     def add_all(self, videos: Iterable[Video]) -> None:
         for video in videos:
@@ -132,6 +152,10 @@ class VideoRepository:
 
     def get(self, file: Path) -> Optional[Video]:
         return self._videos.get(file)
+
+    def remove(self, video: Video) -> None:
+        del self._videos[video.get_path()]
+        self._observers.notify([])
 
     def clear(self) -> None:
         """

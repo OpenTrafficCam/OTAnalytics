@@ -1,31 +1,30 @@
 from typing import Any
 
-from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel
+from customtkinter import CTkEntry, CTkLabel
 
 from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
+from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.application import CancelAddSection
 from OTAnalytics.domain.section import ID, NAME, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
-    PADX,
-    PADY,
-    STICKY,
-    tk_events,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import ToplevelTemplate
 
 
-class ToplevelSections(CTkToplevel):
+class ToplevelSections(ToplevelTemplate):
     def __init__(
         self,
         title: str,
-        initial_position: tuple[int, int],
+        viewmodel: ViewModel,
         input_values: dict | None = None,
         show_offset: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self.title(title)
+        self._viewmodel = viewmodel
         # TODO: Get default values elsewhere!
         self.input_values: dict = (
             {
@@ -42,13 +41,9 @@ class ToplevelSections(CTkToplevel):
             else input_values
         )
         self._show_offset = show_offset
-        self.protocol("WM_DELETE_WINDOW", self.destroy)
-        self._initial_position = initial_position
+        self._canceled = False
         self._get_widgets()
         self._place_widgets()
-        self._set_initial_position()
-        self._set_focus()
-        self._set_close_on_return_key()
 
     def _get_widgets(self) -> None:
         self.label_name = CTkLabel(master=self, text="Name:")
@@ -63,8 +58,6 @@ class ToplevelSections(CTkToplevel):
             ],
         )
 
-        self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
-
     def _place_widgets(self) -> None:
         self.label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky="E")
         self.entry_name.grid(row=0, column=1, padx=PADX, pady=PADY, sticky="W")
@@ -72,23 +65,15 @@ class ToplevelSections(CTkToplevel):
             self.frame_bbox_offset.grid(
                 row=1, column=0, columnspan=2, padx=PADX, sticky=STICKY
             )
-        self.button_ok.grid(
+        self.frame_ok_cancel.grid(
             row=3, column=0, columnspan=3, padx=PADX, pady=PADY, sticky=STICKY
         )
-
-    def _set_initial_position(self) -> None:
-        x, y = self._initial_position
-        self.geometry(f"+{x+10}+{y+10}")
 
     def _set_focus(self) -> None:
         self.after(0, lambda: self.lift())
         self.after(0, lambda: self.entry_name.focus_set())
 
-    def _set_close_on_return_key(self) -> None:
-        self.entry_name.bind(tk_events.RETURN_KEY, self.close)
-        self.entry_name.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
-
-    def close(self, event: Any = None) -> None:
+    def _on_ok(self, event: Any = None) -> None:
         if not self._name_is_valid():
             return
         self.input_values[NAME] = self.entry_name.get()
@@ -98,11 +83,16 @@ class ToplevelSections(CTkToplevel):
         self.destroy()
         self.update()
 
+    def _on_cancel(self, event: Any = None) -> None:
+        self._canceled = True
+        self.destroy()
+        self.update()
+
     def _name_is_valid(self) -> bool:
-        if self.entry_name.get().strip() == "":
+        if not self._viewmodel.is_section_name_valid(self.entry_name.get()):
             position = (self.winfo_x(), self.winfo_y())
             InfoBox(
-                message="Please choose a name for the section!",
+                message="To add a section, a unique name is necessary!",
                 initial_position=position,
             )
             return False
@@ -110,4 +100,6 @@ class ToplevelSections(CTkToplevel):
 
     def get_metadata(self) -> dict:
         self.wait_window()
+        if self._canceled:
+            raise CancelAddSection()
         return self.input_values
