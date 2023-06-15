@@ -18,10 +18,10 @@ class ToplevelTemplate(CTkToplevel, ABC):
     def _get_frame_ok_cancel(self) -> None:
         self.frame_ok_cancel = CTkFrame(master=self)
         self.button_ok = CTkButton(
-            master=self.frame_ok_cancel, text="Ok", command=self.close
+            master=self.frame_ok_cancel, text="Ok", command=self._on_ok
         )
         self.button_cancel = CTkButton(
-            master=self.frame_ok_cancel, text="Cancel", command=self.cancel
+            master=self.frame_ok_cancel, text="Cancel", command=self._on_cancel
         )
         if ON_MAC:
             ok_column = 1
@@ -33,9 +33,9 @@ class ToplevelTemplate(CTkToplevel, ABC):
         self.button_cancel.grid(row=0, column=cancel_column, padx=PADX, pady=PADY)
 
     @abstractmethod
-    def close(self) -> None:
+    def _on_ok(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def cancel(self) -> None:
+    def _on_cancel(self) -> None:
         raise NotImplementedError
