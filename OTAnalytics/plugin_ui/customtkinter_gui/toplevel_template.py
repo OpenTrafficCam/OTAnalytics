@@ -4,7 +4,7 @@ from typing import Any
 from customtkinter import CTkButton, CTkFrame, CTkToplevel
 
 from OTAnalytics.application.config import ON_MAC
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, tk_events
 
 
 class ToplevelTemplate(CTkToplevel, ABC):
@@ -15,6 +15,7 @@ class ToplevelTemplate(CTkToplevel, ABC):
         super().__init__(**kwargs)
         self._get_frame_ok_cancel()
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.bind(tk_events.ESCAPE_KEY, self._on_cancel)
 
     def _get_frame_ok_cancel(self) -> None:
         self.frame_ok_cancel = CTkFrame(master=self)
