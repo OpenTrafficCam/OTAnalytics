@@ -572,6 +572,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         elif event_type == ESCAPE_KEY:
             self.detach_from(self._canvas.event_handler)
             self.geometry_builder.abort()
+            self._viewmodel.cancel_action()
 
     def finish_building(
         self,
