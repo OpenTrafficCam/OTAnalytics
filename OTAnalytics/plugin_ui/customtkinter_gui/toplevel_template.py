@@ -15,8 +15,7 @@ class ToplevelTemplate(CTkToplevel, ABC):
     ) -> None:
         super().__init__(**kwargs)
         self._get_frame_ok_cancel()
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind(tk_events.ESCAPE_KEY, self._on_cancel)
+        self._set_ok_cancel_bindings()
         self._set_initial_position(initial_position)
 
     def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
@@ -39,6 +38,12 @@ class ToplevelTemplate(CTkToplevel, ABC):
             cancel_column = 1
         self.button_ok.grid(row=0, column=ok_column, padx=PADX, pady=PADY)
         self.button_cancel.grid(row=0, column=cancel_column, padx=PADX, pady=PADY)
+
+    def _set_ok_cancel_bindings(self) -> None:
+        self.bind(tk_events.RETURN_KEY, self._on_ok)
+        self.bind(tk_events.KEYPAD_RETURN_KEY, self._on_ok)
+        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.bind(tk_events.ESCAPE_KEY, self._on_cancel)
 
     @abstractmethod
     def _on_ok(self) -> None:
