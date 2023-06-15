@@ -114,7 +114,6 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._new_section: dict = {}
-        self._selected_flow_ids: list[str] = []
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
@@ -282,7 +281,6 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             self._frame_flows.disable_remove_button()
 
     def set_selected_flow_ids(self, ids: list[str]) -> None:
-        self._selected_flow_ids = ids
         self._application.set_selected_flows(ids)
 
         print(f"New flows selected in treeview: id={ids}")
