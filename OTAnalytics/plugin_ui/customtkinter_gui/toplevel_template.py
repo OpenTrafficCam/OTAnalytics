@@ -17,6 +17,7 @@ class ToplevelTemplate(CTkToplevel, ABC):
         self._get_frame_ok_cancel()
         self._set_ok_cancel_bindings()
         self._set_initial_position(initial_position)
+        self._set_focus()
 
     def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
         x, y = initial_position
@@ -51,4 +52,8 @@ class ToplevelTemplate(CTkToplevel, ABC):
 
     @abstractmethod
     def _on_cancel(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _set_focus(self) -> None:
         raise NotImplementedError
