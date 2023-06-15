@@ -14,6 +14,7 @@ class ToplevelTemplate(CTkToplevel, ABC):
     ) -> None:
         super().__init__(**kwargs)
         self._get_frame_ok_cancel()
+        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
 
     def _get_frame_ok_cancel(self) -> None:
         self.frame_ok_cancel = CTkFrame(master=self)
