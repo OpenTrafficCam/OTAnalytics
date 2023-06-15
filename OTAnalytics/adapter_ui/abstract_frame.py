@@ -15,3 +15,9 @@ class AbstractFrame(ABC):
     @abstractmethod
     def action_buttons(self) -> list[CTkButton]:
         pass
+
+    def _disable_button(self, button: CTkButton) -> None:
+        button.configure(state=STATE_DISABLED)
+
+    def _enable_button(self, button: CTkButton) -> None:
+        button.configure(state=STATE_NORMAL)

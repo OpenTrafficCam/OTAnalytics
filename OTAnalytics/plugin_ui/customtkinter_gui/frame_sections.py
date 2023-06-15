@@ -1,7 +1,7 @@
 import tkinter
 from tkinter import Listbox
 from tkinter.ttk import Treeview
-from typing import Any, Optional
+from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
@@ -55,7 +55,7 @@ class FrameSections(AbstractFrameSections):
             command=self._viewmodel.edit_section_metadata,
         )
         self.button_remove = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_section
+            master=self, text="Remove", command=self._viewmodel.remove_sections
         )
         self._action_buttons = [
             self.button_add,
@@ -82,6 +82,27 @@ class FrameSections(AbstractFrameSections):
     def action_buttons(self) -> list[CTkButton]:
         return self._action_buttons
 
+    def set_selection(self, section_ids: list[str]) -> None:
+        raise NotImplementedError
+
+    def enable_edit_geometry_button(self) -> None:
+        self._enable_button(self.button_edit_geometry)
+
+    def disable_edit_geometry_button(self) -> None:
+        self._disable_button(self.button_edit_geometry)
+
+    def enable_edit_metadata_button(self) -> None:
+        self._enable_button(self.button_edit_metadata)
+
+    def disable_edit_metadata_button(self) -> None:
+        self._disable_button(self.button_edit_metadata)
+
+    def enable_remove_button(self) -> None:
+        self._enable_button(self.button_remove)
+
+    def disable_remove_button(self) -> None:
+        self._disable_button(self.button_remove)
+
 
 class TreeviewSections(TreeviewTemplate, Treeview):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
@@ -100,10 +121,8 @@ class TreeviewSections(TreeviewTemplate, Treeview):
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)
 
-    def _notify_viewmodel_about_selected_item_id(
-        self, line_section_id: Optional[str]
-    ) -> None:
-        self._viewmodel.set_selected_section_id(line_section_id)
+    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
+        self._viewmodel.set_selected_section_ids(ids)
 
     def update_items(self) -> None:
         self.delete(*self.get_children())

@@ -22,6 +22,9 @@ RIGHT_KEY = "right"
 PLUS_KEYS = "+"
 MINUS_KEYS = "-"
 
+STATE_DISABLED = "disabled"
+STATE_NORMAL = "normal"
+
 
 @dataclass
 class TkEvents:
