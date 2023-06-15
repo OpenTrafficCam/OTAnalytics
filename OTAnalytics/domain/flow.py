@@ -208,7 +208,7 @@ class FlowRepository:
     def remove(self, flow_id: FlowId) -> None:
         if flow_id in self._flows:
             del self._flows[flow_id]
-        self._repository_content_observers.notify([flow_id])
+        self._repository_content_observers.notify([])
 
     def update(self, flow: Flow) -> None:
         self._flows[flow.id] = flow
