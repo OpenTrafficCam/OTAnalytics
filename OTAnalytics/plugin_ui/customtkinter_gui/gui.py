@@ -1,3 +1,5 @@
+from typing import Any
+
 from customtkinter import CTk, set_appearance_mode, set_default_color_theme
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -12,13 +14,25 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+
+
+class ModifiedCTk(CTk):
+    def __init__(
+        self,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+
+    def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
+        InfoBox(message=str(val), title="Error", initial_position=(0, 0))
 
 
 class OTAnalyticsGui:
     def __init__(
         self,
         view_model: ViewModel,
-        app: CTk = CTk(),
+        app: CTk = ModifiedCTk(),
     ) -> None:
         self._view_model = view_model
         self._app: CTk = app
