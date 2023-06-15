@@ -2,16 +2,12 @@ import tkinter
 from tkinter import E, StringVar, W
 from typing import Any, Optional
 
-from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkOptionMenu, CTkToplevel
+from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
 from OTAnalytics.application.application import CancelAddFlow
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
-    PADX,
-    PADY,
-    STICKY,
-    tk_events,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import ToplevelTemplate
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
 FLOW_ID = "Id"
@@ -21,11 +17,10 @@ END_SECTION = "End section"
 DISTANCE = "Distance"
 
 
-class ToplevelFlows(CTkToplevel):
+class ToplevelFlows(ToplevelTemplate):
     def __init__(
         self,
         title: str,
-        initial_position: tuple[int, int],
         section_ids: list[IdResource],
         input_values: dict | None = {},
         show_distance: bool = True,
@@ -39,16 +34,11 @@ class ToplevelFlows(CTkToplevel):
         self._current_name = StringVar()
         self.input_values: dict = self.__create_input_values(input_values)
         self._show_distance = show_distance
-        self.protocol("WM_DELETE_WINDOW", self.cancel)
         self._canceled = False
-        self._initial_position = initial_position
         self._last_autofilled_name: str = ""
         self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
-        self._set_initial_position()
-        self._set_focus()
-        self._set_close_on_return_key()
 
     def _create_section_name_to_id(self, sections: list[IdResource]) -> dict[str, str]:
         return {resource.name: resource.id for resource in sections}
@@ -103,8 +93,6 @@ class ToplevelFlows(CTkToplevel):
         if current_distance := self.input_values[DISTANCE]:
             self.entry_distance.insert(index=0, string=current_distance)
 
-        self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
-
     def _section_names(self) -> list[str]:
         return [resource.name for resource in self._section_ids]
 
@@ -131,25 +119,17 @@ class ToplevelFlows(CTkToplevel):
         if self._show_distance:
             self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
             self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
-            self.button_ok.grid(
+            self.frame_ok_cancel.grid(
                 row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
             )
         else:
-            self.button_ok.grid(
+            self.frame_ok_cancel.grid(
                 row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
             )
 
-    def _set_initial_position(self) -> None:
-        x, y = self._initial_position
-        self.geometry(f"+{x+10}+{y+10}")
-
     def _set_focus(self) -> None:
         self.after(0, lambda: self.lift())
-        self.after(0, lambda: self.entry_name.focus_set())
-
-    def _set_close_on_return_key(self) -> None:
-        self.entry_distance.bind(tk_events.RETURN_KEY, self.close)
-        self.entry_distance.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
+        self.after(0, lambda: self.entry_distance.focus_set())
 
     def _autofill_name(self, event: Any) -> None:
         if self._last_autofilled_name == self.entry_name.get():
@@ -162,7 +142,7 @@ class ToplevelFlows(CTkToplevel):
             self.entry_name.insert(0, auto_name)
             self._last_autofilled_name = auto_name
 
-    def close(self, event: Any = None) -> None:
+    def _on_ok(self, event: Any = None) -> None:
         if not self._sections_are_valid():
             return
         self.input_values[FLOW_NAME] = self._current_name.get()
@@ -172,7 +152,7 @@ class ToplevelFlows(CTkToplevel):
         self.destroy()
         self.update()
 
-    def cancel(self, event: Any = None) -> None:
+    def _on_cancel(self, event: Any = None) -> None:
         self._canceled = True
         self.destroy()
         self.update()
