@@ -8,6 +8,8 @@ from OTAnalytics.application.analysis.traffic_counting import (
     FilteredCounter,
     GroupedCount,
     GroupedCounter,
+    RoadUserAssignement,
+    RoadUserAssigner,
     SimpleCount,
     SimpleCounter,
     TrafficCounter,
@@ -39,7 +41,7 @@ def create_event(
     )
 
 
-def create_test_cases() -> list[tuple]:
+def create_assignement_test_cases() -> list[tuple]:
     first_track = TrackId(1)
     second_track = TrackId(2)
     third_track = TrackId(3)
@@ -61,6 +63,7 @@ def create_test_cases() -> list[tuple]:
     south_to_north_id = FlowId("south to north")
     south_to_north = Flow(
         south_to_north_id,
+        name=south_to_north_id.id,
         start=south_section,
         end=north_section,
         distance=10,
@@ -68,6 +71,7 @@ def create_test_cases() -> list[tuple]:
     south_to_west_id = FlowId("south to west")
     south_to_west = Flow(
         south_to_west_id,
+        name=south_to_west_id.id,
         start=south_section,
         end=west_section,
         distance=11,
@@ -75,6 +79,7 @@ def create_test_cases() -> list[tuple]:
     south_to_east_id = FlowId("south to east")
     south_to_east = Flow(
         south_to_east_id,
+        name=south_to_east_id.id,
         start=south_section,
         end=east_section,
         distance=9,
@@ -82,6 +87,7 @@ def create_test_cases() -> list[tuple]:
     north_to_south_id = FlowId("north to south")
     north_to_south = Flow(
         north_to_south_id,
+        name=north_to_south_id.id,
         start=north_section,
         end=south_section,
         distance=10,
@@ -103,39 +109,27 @@ def create_test_cases() -> list[tuple]:
         create_event(fifth_track, south_section_id, 11),
         create_event(sixth_track, south_section_id, 12),
     ]
-    some_expected_result = SimpleCount(
-        {
-            south_to_north_id: 0,
-            north_to_south_id: 2,
-            south_to_west_id: 4,
-            south_to_east_id: 0,
-        }
-    )
+    some_expected_result: list[RoadUserAssignement] = [
+        RoadUserAssignement(first_track.id, south_to_west_id),
+        RoadUserAssignement(second_track.id, south_to_west_id),
+        RoadUserAssignement(third_track.id, south_to_west_id),
+        RoadUserAssignement(forth_track.id, south_to_west_id),
+        RoadUserAssignement(fifth_track.id, north_to_south_id),
+        RoadUserAssignement(sixth_track.id, north_to_south_id),
+    ]
     single_track_multiple_sections_events = [
         create_event(first_track, south_section_id, 0),
         create_event(first_track, north_section_id, 1),
         create_event(first_track, west_section_id, 2),
         create_event(first_track, east_section_id, 3),
     ]
-    single_track_multiple_sections_result = SimpleCount(
-        {
-            south_to_north_id: 0,
-            north_to_south_id: 0,
-            south_to_west_id: 0,
-            south_to_east_id: 1,
-        }
-    )
+    single_track_multiple_sections_result: list[RoadUserAssignement] = [
+        RoadUserAssignement(first_track.id, south_to_east_id)
+    ]
     single_track_single_sections_events = [
         create_event(first_track, south_section_id, 0),
     ]
-    single_track_single_sections_result = SimpleCount(
-        {
-            south_to_north_id: 0,
-            north_to_south_id: 0,
-            south_to_west_id: 0,
-            south_to_east_id: 0,
-        }
-    )
+    single_track_single_sections_result: list[RoadUserAssignement] = []
     return [
         (some_events, flows, some_expected_result),
         (
@@ -151,13 +145,133 @@ def create_test_cases() -> list[tuple]:
     ]
 
 
-class TestSimpleCounter:
-    @pytest.mark.parametrize("events, flows, expected_result", create_test_cases())
+class TestRoadUserAssigner:
+    @pytest.mark.parametrize(
+        "events, flows, expected_result", create_assignement_test_cases()
+    )
     def test_run(
         self, events: list[Event], flows: list[Flow], expected_result: dict
     ) -> None:
+        analysis = RoadUserAssigner()
+        result = analysis.assign(events, flows)
+
+        assert result == expected_result
+
+
+def create_counting_test_cases() -> list[tuple]:
+    first_track = TrackId(1)
+    second_track = TrackId(2)
+    third_track = TrackId(3)
+    forth_track = TrackId(4)
+    fifth_track = TrackId(5)
+    sixth_track = TrackId(6)
+    south_section_id = SectionId("south")
+    north_section_id = SectionId("north")
+    west_section_id = SectionId("west")
+    east_section_id = SectionId("east")
+    south_section = Mock(spec=Section)
+    north_section = Mock(spec=Section)
+    west_section = Mock(spec=Section)
+    east_section = Mock(spec=Section)
+    south_section.id = south_section_id
+    north_section.id = north_section_id
+    west_section.id = west_section_id
+    east_section.id = east_section_id
+    south_to_north_id = FlowId("south to north")
+    south_to_north = Flow(
+        south_to_north_id,
+        name=south_to_north_id.id,
+        start=south_section,
+        end=north_section,
+        distance=10,
+    )
+    south_to_west_id = FlowId("south to west")
+    south_to_west = Flow(
+        south_to_west_id,
+        name=south_to_west_id.id,
+        start=south_section,
+        end=west_section,
+        distance=11,
+    )
+    south_to_east_id = FlowId("south to east")
+    south_to_east = Flow(
+        south_to_east_id,
+        name=south_to_east_id.id,
+        start=south_section,
+        end=east_section,
+        distance=9,
+    )
+    north_to_south_id = FlowId("north to south")
+    north_to_south = Flow(
+        north_to_south_id,
+        name=north_to_south_id.id,
+        start=north_section,
+        end=south_section,
+        distance=10,
+    )
+    flows: list[Flow] = [south_to_north, south_to_west, south_to_east, north_to_south]
+
+    some_assignements: list[RoadUserAssignement] = [
+        RoadUserAssignement(first_track.id, south_to_west_id),
+        RoadUserAssignement(second_track.id, south_to_west_id),
+        RoadUserAssignement(third_track.id, south_to_west_id),
+        RoadUserAssignement(forth_track.id, south_to_west_id),
+        RoadUserAssignement(fifth_track.id, north_to_south_id),
+        RoadUserAssignement(sixth_track.id, north_to_south_id),
+    ]
+    some_expected_result = SimpleCount(
+        {
+            south_to_north_id: 0,
+            north_to_south_id: 2,
+            south_to_west_id: 4,
+            south_to_east_id: 0,
+        }
+    )
+    single_assignement = [RoadUserAssignement(first_track.id, south_to_east_id)]
+    single_assignement_result = SimpleCount(
+        {
+            south_to_north_id: 0,
+            north_to_south_id: 0,
+            south_to_west_id: 0,
+            south_to_east_id: 1,
+        }
+    )
+    no_assignement: list[RoadUserAssignement] = []
+    no_assignement_result = SimpleCount(
+        {
+            south_to_north_id: 0,
+            north_to_south_id: 0,
+            south_to_west_id: 0,
+            south_to_east_id: 0,
+        }
+    )
+    return [
+        (some_assignements, flows, some_expected_result),
+        (
+            single_assignement,
+            flows,
+            single_assignement_result,
+        ),
+        (
+            no_assignement,
+            flows,
+            no_assignement_result,
+        ),
+    ]
+
+
+class TestSimpleCounter:
+    @pytest.mark.parametrize(
+        "assignements, flows, expected_result", create_counting_test_cases()
+    )
+    def test_run(
+        self,
+        assignements: list[RoadUserAssignement],
+        flows: list[Flow],
+        expected_result: dict,
+    ) -> None:
         analysis = SimpleCounter()
-        result = analysis.count(events, flows)
+        result = analysis.count(assignements, flows)
 
         assert result == expected_result
 
@@ -166,15 +280,15 @@ class TestFilteredCounter:
     def test_filter_before_count(self) -> None:
         counter_filter = Mock(sepc=CounterFilter)
         counter = Mock(spec=TrafficCounter)
-        events = Mock()
+        assignements = Mock()
         flows = Mock()
         filtered_events = Mock()
         counter_filter.filter.return_value = filtered_events
         filtered_counter = FilteredCounter(filter=counter_filter, counter=counter)
 
-        filtered_counter.count(events, flows)
+        filtered_counter.count(assignements, flows)
 
-        counter_filter.filter.assert_called_with(events)
+        counter_filter.filter.assert_called_with(assignements)
         counter.count.assert_called_with(filtered_events, flows)
 
 
@@ -182,7 +296,7 @@ class TestGroupedCounter:
     def test_count_per_group(self) -> None:
         first_group = Mock(spec=TrafficCounter)
         second_group = Mock(spec=TrafficCounter)
-        events = Mock()
+        assignements = Mock()
         flows = Mock()
         first_counts = Mock()
         second_counts = Mock()
@@ -196,7 +310,7 @@ class TestGroupedCounter:
         }
         group_counter = GroupedCounter(groups=grouped_counters)
 
-        result = group_counter.count(events, flows)
+        result = group_counter.count(assignements, flows)
 
         assert result == GroupedCount(
             {

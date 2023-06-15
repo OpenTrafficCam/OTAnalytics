@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Iterable
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
@@ -20,7 +20,7 @@ class FlowCandidate:
     flow: Flow
     candidate: EventPair
 
-    def distance(self) -> float:
+    def distance(self) -> Optional[float]:
         return self.flow.distance
 
     def duration(self) -> timedelta:
@@ -50,22 +50,27 @@ class GroupedCount(Count):
         return {name: sub_result.to_dict() for name, sub_result in self.result.items()}
 
 
+@dataclass(frozen=True)
+class RoadUserAssignement:
+    road_user: int
+    assignment: FlowId
+
+
 class TrafficCounter(ABC):
     @abstractmethod
-    def count(self, events: list[Event], flows: list[Flow]) -> Count:
+    def count(
+        self, assigned_flows: list[RoadUserAssignement], flows: list[Flow]
+    ) -> Count:
         pass
 
 
-class SimpleCounter(TrafficCounter):
-    """Count road users per flow."""
-
-    def count(self, events: list[Event], flows: list[Flow]) -> Count:
+class RoadUserAssigner:
+    def assign(
+        self, events: list[Event], flows: list[Flow]
+    ) -> list[RoadUserAssignement]:
         grouped_flows = self.__group_flows_by_sections(flows)
-        grouped_sections = self._group_events_by_road_user(events)
-        assigned_users = self.__assign_user_to_flow(grouped_flows, grouped_sections)
-        counts = self.__count_users_per_flow(assigned_users)
-        self.__fill_empty_flows(flows, counts)
-        return SimpleCount(counts)
+        grouped_sections = self.__group_events_by_road_user(events)
+        return self.__assign_user_to_flow(grouped_flows, grouped_sections)
 
     def __group_flows_by_sections(
         self, flows: Iterable[Flow]
@@ -82,10 +87,10 @@ class SimpleCounter(TrafficCounter):
             tuple[SectionId, SectionId], list[Flow]
         ] = defaultdict(list)
         for flow in flows:
-            flows_by_start_and_end[(flow.start.id, flow.end.id)].append(flow)
+            flows_by_start_and_end[(flow.start, flow.end)].append(flow)
         return flows_by_start_and_end
 
-    def _group_events_by_road_user(
+    def __group_events_by_road_user(
         self, events: Iterable[Event]
     ) -> dict[int, list[Event]]:
         """
@@ -105,7 +110,7 @@ class SimpleCounter(TrafficCounter):
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
         events_by_road_user: dict[int, list[Event]],
-    ) -> dict[int, FlowId]:
+    ) -> list[RoadUserAssignement]:
         """
         Assign each user to exactly one flow.
         Args:
@@ -115,12 +120,14 @@ class SimpleCounter(TrafficCounter):
         Returns:
             dict[int, FlowId]: assignment of flow to road user
         """
-        user_to_flow: dict[int, FlowId] = {}
+        assignments: list[RoadUserAssignement] = []
         for road_user, events in events_by_road_user.items():
             if candidate_flows := self.__create_candidates(flows, events):
                 flow = self.__select_flow(candidate_flows)
-                user_to_flow[road_user] = flow.id
-        return user_to_flow
+                assignments.append(
+                    RoadUserAssignement(road_user=road_user, assignment=flow.id)
+                )
+        return assignments
 
     def __create_candidates(
         self,
@@ -192,8 +199,19 @@ class SimpleCounter(TrafficCounter):
         """
         return max(candidate_flows, key=lambda current: current.duration()).flow
 
+
+class SimpleCounter(TrafficCounter):
+    """Count road users per flow."""
+
+    def count(
+        self, assigned_flows: list[RoadUserAssignement], flows: list[Flow]
+    ) -> Count:
+        counts = self.__count_users_per_flow(assigned_flows)
+        self.__fill_empty_flows(flows, counts)
+        return SimpleCount(counts)
+
     def __count_users_per_flow(
-        self, user_to_flow: dict[int, FlowId]
+        self, assignements: list[RoadUserAssignement]
     ) -> dict[FlowId, int]:
         """
         Count users per flow.
@@ -203,8 +221,8 @@ class SimpleCounter(TrafficCounter):
             dict[FlowId, int]: count per flow
         """
         flow_to_user: dict[FlowId, list[int]] = defaultdict(list)
-        for user, flow in user_to_flow.items():
-            flow_to_user[flow].append(user)
+        for assignement in assignements:
+            flow_to_user[assignement.assignment].append(assignement.road_user)
 
         return {flow: len(users) for flow, users in flow_to_user.items()}
 
@@ -228,7 +246,9 @@ class SimpleCounter(TrafficCounter):
 
 class CounterFilter(ABC):
     @abstractmethod
-    def filter(self, events: list[Event]) -> list[Event]:
+    def filter(
+        self, assignements: list[RoadUserAssignement]
+    ) -> list[RoadUserAssignement]:
         pass
 
 
@@ -237,19 +257,23 @@ class FilteredCounter(TrafficCounter):
         self._filter = filter
         self._counter = counter
 
-    def count(self, events: list[Event], flows: list[Flow]) -> Count:
-        filtered_events = self._filter.filter(events)
-        return self._counter.count(filtered_events, flows)
+    def count(
+        self, assignements: list[RoadUserAssignement], flows: list[Flow]
+    ) -> Count:
+        filtered_assignements = self._filter.filter(assignements)
+        return self._counter.count(filtered_assignements, flows)
 
 
 class GroupedCounter:
     def __init__(self, groups: dict[str, TrafficCounter]) -> None:
         self._groups = groups
 
-    def count(self, events: list[Event], flows: list[Flow]) -> Count:
+    def count(
+        self, assignements: list[RoadUserAssignement], flows: list[Flow]
+    ) -> Count:
         return GroupedCount(
             {
-                name: counter.count(events=events, flows=flows)
+                name: counter.count(assignements, flows)
                 for name, counter in self._groups.items()
             }
         )
