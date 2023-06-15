@@ -343,7 +343,7 @@ class TrackImageUpdater(TrackListObserver):
 
 class SectionState(SectionListObserver):
     """
-    This state represents the currently selected section.
+    This state represents the currently selected sections.
     """
 
     def __init__(self) -> None:
@@ -366,7 +366,7 @@ class SectionState(SectionListObserver):
 
 class FlowState(FlowListObserver):
     """
-    This state represents the currently selected flow.
+    This state represents the currently selected flows.
     """
 
     def __init__(self) -> None:
