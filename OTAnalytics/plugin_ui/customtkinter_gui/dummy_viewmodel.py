@@ -243,8 +243,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
         new_section_ids = self.get_selected_section_ids()
 
-        self.refresh_items_on_canvas()
         self._treeview_sections.update_selected_items(new_section_ids)
+        self.refresh_items_on_canvas()
 
         if len(new_section_ids) == 1:
             self._frame_sections.enable_edit_geometry_button()
@@ -267,10 +267,10 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
         new_selected_flow_ids = self.get_selected_flow_ids()
 
+        self._treeview_flows.update_selected_items(new_selected_flow_ids)
         self.refresh_items_on_canvas()
 
-        self._treeview_flows.update_selected_items(new_selected_flow_ids)
-        if len(flow_ids) == 1:
+        if len(new_selected_flow_ids) == 1:
             self._frame_flows.enable_edit_button()
         else:
             self._frame_flows.disable_edit_button()
@@ -281,14 +281,16 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             self._frame_flows.disable_remove_button()
 
     def set_selected_flow_ids(self, ids: list[str]) -> None:
+        if ids:
+            self._application.set_selected_section([])
         self._application.set_selected_flows(ids)
 
         print(f"New flows selected in treeview: id={ids}")
 
     def set_selected_section_ids(self, ids: list[str]) -> None:
-        self._application.set_selected_section(ids)
         if ids:
             self._application.set_selected_flows([])
+        self._application.set_selected_section(ids)
 
         print(f"New line sections selected in treeview: id={ids}")
 
