@@ -17,7 +17,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
-from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.types import EventType
 
@@ -52,44 +52,36 @@ def create_assignement_test_cases() -> list[tuple]:
     north_section_id = SectionId("north")
     west_section_id = SectionId("west")
     east_section_id = SectionId("east")
-    south_section = Mock(spec=Section)
-    north_section = Mock(spec=Section)
-    west_section = Mock(spec=Section)
-    east_section = Mock(spec=Section)
-    south_section.id = south_section_id
-    north_section.id = north_section_id
-    west_section.id = west_section_id
-    east_section.id = east_section_id
     south_to_north_id = FlowId("south to north")
     south_to_north = Flow(
         south_to_north_id,
         name=south_to_north_id.id,
-        start=south_section,
-        end=north_section,
+        start=south_section_id,
+        end=north_section_id,
         distance=10,
     )
     south_to_west_id = FlowId("south to west")
     south_to_west = Flow(
         south_to_west_id,
         name=south_to_west_id.id,
-        start=south_section,
-        end=west_section,
+        start=south_section_id,
+        end=west_section_id,
         distance=11,
     )
     south_to_east_id = FlowId("south to east")
     south_to_east = Flow(
         south_to_east_id,
         name=south_to_east_id.id,
-        start=south_section,
-        end=east_section,
+        start=south_section_id,
+        end=east_section_id,
         distance=9,
     )
     north_to_south_id = FlowId("north to south")
     north_to_south = Flow(
         north_to_south_id,
         name=north_to_south_id.id,
-        start=north_section,
-        end=south_section,
+        start=north_section_id,
+        end=south_section_id,
         distance=10,
     )
     flows: list[Flow] = [south_to_north, south_to_west, south_to_east, north_to_south]
@@ -169,44 +161,36 @@ def create_counting_test_cases() -> list[tuple]:
     north_section_id = SectionId("north")
     west_section_id = SectionId("west")
     east_section_id = SectionId("east")
-    south_section = Mock(spec=Section)
-    north_section = Mock(spec=Section)
-    west_section = Mock(spec=Section)
-    east_section = Mock(spec=Section)
-    south_section.id = south_section_id
-    north_section.id = north_section_id
-    west_section.id = west_section_id
-    east_section.id = east_section_id
     south_to_north_id = FlowId("south to north")
     south_to_north = Flow(
         south_to_north_id,
         name=south_to_north_id.id,
-        start=south_section,
-        end=north_section,
+        start=south_section_id,
+        end=north_section_id,
         distance=10,
     )
     south_to_west_id = FlowId("south to west")
     south_to_west = Flow(
         south_to_west_id,
         name=south_to_west_id.id,
-        start=south_section,
-        end=west_section,
+        start=south_section_id,
+        end=west_section_id,
         distance=11,
     )
     south_to_east_id = FlowId("south to east")
     south_to_east = Flow(
         south_to_east_id,
         name=south_to_east_id.id,
-        start=south_section,
-        end=east_section,
+        start=south_section_id,
+        end=east_section_id,
         distance=9,
     )
     north_to_south_id = FlowId("north to south")
     north_to_south = Flow(
         north_to_south_id,
         name=north_to_south_id.id,
-        start=north_section,
-        end=south_section,
+        start=north_section_id,
+        end=south_section_id,
         distance=10,
     )
     flows: list[Flow] = [south_to_north, south_to_west, south_to_east, north_to_south]
