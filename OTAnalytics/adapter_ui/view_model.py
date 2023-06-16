@@ -81,6 +81,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def cancel_action(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def add_section(self) -> None:
         raise NotImplementedError
 
