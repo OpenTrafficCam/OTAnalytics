@@ -281,6 +281,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             self._frame_flows.disable_remove_button()
 
     def set_selected_flow_ids(self, ids: list[str]) -> None:
+        if self._application.action_state.action_running.get():
+            return
+
         if ids:
             self._application.set_selected_section([])
         self._application.set_selected_flows(ids)
@@ -288,6 +291,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         print(f"New flows selected in treeview: id={ids}")
 
     def set_selected_section_ids(self, ids: list[str]) -> None:
+        if self._application.action_state.action_running.get():
+            return
+
         if ids:
             self._application.set_selected_flows([])
         self._application.set_selected_section(ids)
@@ -464,6 +470,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
+        self._start_action()
         CanvasElementDeleter(canvas=self._canvas).delete(tag_or_id=TAG_SELECTED_SECTION)
         if selected_section_ids:
             if current_section := self._application.get_section_for(
@@ -547,6 +554,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                     message=message,
                     initial_position=position,
                 )
+                self._finish_action()
                 return
 
         for section_id in section_ids:
