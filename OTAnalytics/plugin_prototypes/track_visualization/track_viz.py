@@ -15,7 +15,13 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import PilImage, Track, TrackImage
+from OTAnalytics.domain.track import (
+    PilImage,
+    Track,
+    TrackId,
+    TrackImage,
+    TrackListObserver,
+)
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
@@ -222,6 +228,44 @@ class PandasTrackProvider(PandasDataFrameProvider):
         track_df = next(iter(dataframe_filter.apply([track_df])))
 
         return track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
+
+
+class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
+    """Provides and caches tracks as pandas DataFrame."""
+
+    def __init__(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
+    ) -> None:
+        super().__init__(datastore, track_view_state, filter_builder)
+        datastore.register_tracks_observer(self)
+        self._cache_df: Optional[DataFrame] = None
+
+    def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
+        """Converts the given tracks to dataframe.
+        Returns the cached dataframe if conversion was already computed earlier.
+
+        Args:
+            tracks (Iterable[Track]): the tracks to be converted to dataframe.
+
+        Returns:
+            DataFrame: a dataframe containing the detections of the given tracks.
+        """
+        if self._cache_df is None:
+            self._cache_df = super()._convert_tracks(tracks)
+
+        return self._cache_df
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        """Take notice of some change in the track repository.
+        Resets the cached dataframe, so it will be recomputed.
+
+        Args:
+            tracks (list[TrackId]): the ids of changed tracks
+        """
+        self._cache_df = None
 
 
 class MatplotlibPlotterImplementation(ABC):

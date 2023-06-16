@@ -1,3 +1,5 @@
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 from unittest.mock import Mock, patch
 
@@ -8,8 +10,9 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.filter import FilterBuilder
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import Track, TrackId, TrackImage
+from OTAnalytics.domain.track import Detection, Track, TrackId, TrackImage
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CachedPandasTrackProvider,
     MatplotlibPlotterImplementation,
     MatplotlibTrackPlotter,
     PandasTrackProvider,
@@ -64,6 +67,40 @@ class TestPandasTrackProvider:
 
         datastore.get_all_tracks.assert_called_once()
         assert result is None
+
+
+class TestCachedPandasTrackProvider:
+    #    @patch(
+    #        "OTAnalytics.plugin_prototypes.track_visualization.track_viz.PandasTrackProvider._convert_tracks"
+    #    )
+    def test_get_data_reset_cache(
+        self,
+    ) -> None:
+        id = TrackId(1)
+        detections = [
+            Detection("car", 0.99, 0, 1, 2, 7, 1, datetime.min, Path(""), False, id),
+            Detection("car", 0.99, 0, 2, 2, 7, 2, datetime.min, Path(""), False, id),
+            Detection("car", 0.99, 0, 3, 2, 7, 3, datetime.min, Path(""), False, id),
+            Detection("car", 0.99, 0, 4, 2, 7, 4, datetime.min, Path(""), False, id),
+            Detection("car", 0.99, 0, 5, 2, 7, 5, datetime.min, Path(""), False, id),
+        ]
+        tracks = [Track(id, "car", detections)]
+
+        datastore = Mock(spec=Datastore)
+        track_view_state = Mock(spec=TrackViewState).return_value
+        track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
+        filter_builder = Mock(FilterBuilder)
+        provider = CachedPandasTrackProvider(
+            datastore, track_view_state, filter_builder
+        )
+
+        assert provider._cache_df is None
+        result = provider._convert_tracks(tracks)
+        assert result is not None
+        assert result is provider._cache_df
+
+        provider.notify_tracks([])
+        assert provider._cache_df is None
 
 
 class TestBackgroundPlotter:

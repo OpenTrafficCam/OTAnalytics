@@ -171,3 +171,6 @@ Thumbs.db
 
 # Vim
 .vim
+
+#profiling
+profiles/
