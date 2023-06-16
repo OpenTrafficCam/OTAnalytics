@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
+from OTAnalytics.application.our_custom_group_exception import OurCustomGroupException
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import (
@@ -288,7 +289,15 @@ class Datastore:
         self._video_repository.clear()
 
     def load_video_files(self, files: list[Path]) -> None:
-        videos = [self._video_parser.parse(file) for file in files]
+        exception_messages = []
+        videos = []
+        for file in files:
+            try:
+                videos.append(self._video_parser.parse(file))
+            except Exception as e:
+                exception_messages.append(str(e) + "\n")
+        if exception_messages:
+            raise OurCustomGroupException("\n".join(exception_messages))
         self._video_repository.add_all(videos)
 
     def remove_video(self, video: Video) -> None:
@@ -329,8 +338,14 @@ class Datastore:
         Args:
             file (Path): file in ottrk format
         """
+        exception_messages = []
         for file in files:
-            self.load_track_file(file)
+            try:
+                self.load_track_file(file)
+            except Exception as e:
+                exception_messages.append(str(e) + "\n")
+        if exception_messages:
+            raise OurCustomGroupException("\n".join(exception_messages))
 
     def get_all_tracks(self) -> list[Track]:
         """
