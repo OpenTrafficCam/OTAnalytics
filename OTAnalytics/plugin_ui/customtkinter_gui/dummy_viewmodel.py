@@ -757,17 +757,22 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def edit_flow(self) -> None:
         self._start_action()
-        if flows := self._get_selected_flows():
-            if len(flows := self._get_selected_flows()) != 1:
-                raise MultipleFlowsSelected(
-                    "Multiple flows selected. Unable to edit flow!"
+        with contextlib.suppress(CancelAddFlow):
+            if flows := self._get_selected_flows():
+                if len(flows := self._get_selected_flows()) != 1:
+                    raise MultipleFlowsSelected(
+                        "Multiple flows selected. Unable to edit flow!"
+                    )
+                    self._edit_flow(flows[0])
+            else:
+                if self._treeview_flows is None:
+                    raise MissingInjectedInstanceError(
+                        type(self._treeview_flows).__name__
+                    )
+                position = self._treeview_flows.get_position()
+                InfoBox(
+                    message="Please select a flow to edit", initial_position=position
                 )
-            self._edit_flow(flows[0])
-        else:
-            if self._treeview_flows is None:
-                raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-            position = self._treeview_flows.get_position()
-            InfoBox(message="Please select a flow to edit", initial_position=position)
         self._finish_action()
 
     def _edit_flow(self, flow: Flow) -> None:
