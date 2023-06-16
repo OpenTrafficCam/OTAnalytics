@@ -1,17 +1,17 @@
 import bz2
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Sequence
 from unittest.mock import Mock, call
 
 import pytest
 import ujson
 
 from OTAnalytics import version
-from OTAnalytics.adapter_intersect.intersect import (
-    ShapelyIntersectImplementationAdapter,
-)
+from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
-from OTAnalytics.domain import flow, geometry, section
+from OTAnalytics.application.project import Project
+from OTAnalytics.domain import flow, geometry, section, video
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import (
@@ -19,7 +19,10 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import IntersectBySplittingTrackLine
+from OTAnalytics.domain.intersect import (
+    IntersectBySplittingTrackLine,
+    IntersectImplementation,
+)
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -34,19 +37,24 @@ from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
     TrackId,
+    TrackImage,
     TrackRepository,
 )
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
     METADATA,
+    PROJECT,
     SECTION_FORMAT_VERSION,
     VERSION,
     VERSION_1_0,
     VERSION_1_1,
+    CachedVideo,
+    CachedVideoParser,
     DetectionFixer,
     InvalidSectionData,
+    OtConfigParser,
     OtEventListParser,
     OtFlowParser,
     OttrkFormatFixer,
@@ -326,8 +334,8 @@ class TestOttrkParser:
         assert d1.track_id == d2.track_id
 
 
-class TestOtsectionParser:
-    def test_parse_section(self, test_data_tmp_dir: Path) -> None:
+class TestOtFlowParser:
+    def test_parse_sections_and_flows(self, test_data_tmp_dir: Path) -> None:
         first_coordinate = Coordinate(0, 0)
         second_coordinate = Coordinate(1, 1)
         third_coordinate = Coordinate(1, 0)
@@ -356,34 +364,51 @@ class TestOtsectionParser:
                 first_coordinate,
             ],
         )
-        flow_id = FlowId("1")
-        flow_name = "some to other"
-        flow_distance = 1
+        some_flow_id = FlowId("1")
+        some_flow_name = "some to other"
+        some_flow_distance = 1
         some_flow = Flow(
-            flow_id,
-            name=flow_name,
+            some_flow_id,
+            name=some_flow_name,
             start=line_section_id,
             end=area_section_id,
-            distance=flow_distance,
+            distance=some_flow_distance,
         )
-        json_file = test_data_tmp_dir / "section.json"
+        other_flow_id = FlowId("2")
+        other_flow_name = "other to some"
+        other_flow_distance = None
+        other_flow = Flow(
+            other_flow_id,
+            name=other_flow_name,
+            start=area_section_id,
+            end=line_section_id,
+            distance=other_flow_distance,
+        )
+        json_file = test_data_tmp_dir / "section.otflow"
         json_file.touch()
         sections = [line_section, area_section]
-        flows = [some_flow]
+        flows = [some_flow, other_flow]
         parser = OtFlowParser()
         parser.serialize(sections, flows, json_file)
 
         parsed_sections, parsed_flows = parser.parse(json_file)
 
-        parsed_flow = parsed_flows[0]
-
         assert parsed_sections == sections
-        assert len(parsed_flows) == 1
-        assert parsed_flow.id == flow_id
-        assert parsed_flow.name == flow_name
-        assert parsed_flow.start == line_section_id
-        assert parsed_flow.end == area_section_id
-        assert parsed_flow.distance == flow_distance
+        assert len(parsed_flows) == 2
+
+        some_parsed_flow = parsed_flows[0]
+        assert some_parsed_flow.id == some_flow_id
+        assert some_parsed_flow.name == some_flow_name
+        assert some_parsed_flow.start == line_section_id
+        assert some_parsed_flow.end == area_section_id
+        assert some_parsed_flow.distance == some_flow_distance
+
+        other_parsed_flow = parsed_flows[1]
+        assert other_parsed_flow.id == other_flow_id
+        assert other_parsed_flow.name == other_flow_name
+        assert other_parsed_flow.start == area_section_id
+        assert other_parsed_flow.end == line_section_id
+        assert other_parsed_flow.distance == other_flow_distance
 
     def test_validate(self) -> None:
         parser = OtFlowParser()
@@ -423,7 +448,7 @@ class TestOtsectionParser:
         flows = [some_flow]
         parser = OtFlowParser()
 
-        content = parser._convert(sections, flows)
+        content = parser.convert(sections, flows)
 
         assert content == {
             section.SECTIONS: [some_section.to_dict(), other_section.to_dict()],
@@ -598,10 +623,9 @@ class TestOtEventListParser:
         self, tracks: list[Track], sections: list[Section], test_data_tmp_dir: Path
     ) -> None:
         # Setup
-        shapely_intersection_adapter = ShapelyIntersectImplementationAdapter(
-            ShapelyIntersector()
-        )
         line_section = sections[0]
+        shapely_intersection_adapter = Mock(spec=IntersectImplementation)
+        shapely_intersection_adapter.split_line_with_line.return_value = []
 
         if isinstance(line_section, LineSection):
             line_section_intersector = IntersectBySplittingTrackLine(
@@ -621,3 +645,175 @@ class TestOtEventListParser:
         event_list_file = test_data_tmp_dir / "eventlist.json"
         event_list_parser.serialize(events, [line_section], event_list_file)
         assert event_list_file.exists()
+
+
+class TestCachedVideo:
+    def test_cache_frames(self, test_data_tmp_dir: Path) -> None:
+        video_file = test_data_tmp_dir / "video.mp4"
+        video_file.touch()
+        image = Mock(spec=TrackImage)
+        video = Mock(spec=Video)
+        video.get_frame.return_value = image
+
+        cached_video = CachedVideo(video)
+
+        first_returned_frame = cached_video.get_frame(0)
+        second_returned_frame = cached_video.get_frame(0)
+
+        video.get_frame.assert_called_once_with(0)
+
+        assert first_returned_frame == image
+        assert second_returned_frame is first_returned_frame
+
+    def test_get_path(self) -> None:
+        original_path = Path(".")
+        other = Mock(spec=Video)
+        other.get_path.return_value = original_path
+        cached_video = CachedVideo(other)
+
+        path = cached_video.get_path()
+
+        other.get_path.assert_called_once()
+        assert path is original_path
+
+    def test_to_dict(self) -> None:
+        base_path = Path(".")
+        original_dict: dict = {}
+        other = Mock(spec=Video)
+        other.to_dict.return_value = original_dict
+        cached_video = CachedVideo(other)
+
+        cached_dict = cached_video.to_dict(base_path)
+
+        other.to_dict.assert_called_once()
+        assert cached_dict is original_dict
+
+
+class TestCachedVideoParser:
+    def test_parse_to_cached_video(self, test_data_tmp_dir: Path) -> None:
+        video_file = test_data_tmp_dir / "video.mp4"
+        video_file.touch()
+        video = Mock(spec=Video)
+        video_parser = Mock(spec=VideoParser)
+        video_parser.parse.return_value = video
+
+        cached_parser = CachedVideoParser(video_parser)
+
+        parsed_video = cached_parser.parse(video_file)
+
+        assert isinstance(parsed_video, CachedVideo)
+        assert parsed_video.other == video
+        video.get_frame.assert_called_once()
+
+    def test_parse_list_to_cached_videos(self, test_data_tmp_dir: Path) -> None:
+        content: list[dict] = [{}]
+        base_folder = test_data_tmp_dir
+        video1 = Mock(spec=Video)
+        video2 = Mock(spec=Video)
+        video_parser = Mock(spec=VideoParser)
+        video_parser.parse_list.return_value = [video1, video2]
+
+        cached_parser = CachedVideoParser(video_parser)
+
+        parsed_videos = cached_parser.parse_list(content, base_folder)
+
+        assert all(
+            isinstance(parsed_video, CachedVideo) for parsed_video in parsed_videos
+        )
+        assert len(parsed_videos) == 2
+        if isinstance(parsed_videos[0], CachedVideo):
+            assert parsed_videos[0].other == video1
+        if isinstance(parsed_videos[1], CachedVideo):
+            assert parsed_videos[1].other == video2
+        video1.get_frame.assert_called_once()
+        video2.get_frame.assert_called_once()
+
+    def test_convert_delegates_to_other(self, test_data_tmp_dir: Path) -> None:
+        video1 = Mock(spec=Video)
+        video2 = Mock(spec=Video)
+        expected_result: dict = {}
+        video_parser = Mock(spec=VideoParser)
+        video_parser.convert.return_value = expected_result
+
+        cached_parser = CachedVideoParser(video_parser)
+
+        result = cached_parser.convert([video1, video2], test_data_tmp_dir)
+
+        assert expected_result is result
+
+
+class TestOtConfigParser:
+    def test_serialize_config(self, test_data_tmp_dir: Path) -> None:
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        )
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        videos: list[Video] = []
+        sections: list[Section] = []
+        flows: list[Flow] = []
+        output = test_data_tmp_dir / "config.otconfig"
+        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
+        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_sections
+
+        config_parser.serialize(
+            project=project,
+            video_files=videos,
+            sections=sections,
+            flows=flows,
+            file=output,
+        )
+
+        serialized_content = _parse(output)
+        expected_content: dict[str, Any] = {PROJECT: project.to_dict()}
+        expected_content |= serialized_videos
+        expected_content |= serialized_sections
+
+        assert serialized_content == expected_content
+        assert video_parser.convert.call_args_list == [
+            call(videos, relative_to=test_data_tmp_dir)
+        ]
+        assert flow_parser.convert.call_args_list == [call(sections, flows)]
+
+    def test_parse_config(self, test_data_tmp_dir: Path) -> None:
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        )
+        project = Project(name="Test Project", start_date=datetime(2020, 1, 1))
+        videos: Sequence[Video] = ()
+        sections: Sequence[Section] = ()
+        flows: Sequence[Flow] = ()
+        config_file = test_data_tmp_dir / "config.otconfig"
+        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
+        serialized_flows = {
+            section.SECTIONS: {"serialized": "sections"},
+            flow.FLOWS: {"serialized": "flows"},
+        }
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_flows
+        video_parser.parse_list.return_value = videos
+        flow_parser.parse_content.return_value = sections, flows
+
+        config_parser.serialize(
+            project=project,
+            video_files=videos,
+            sections=sections,
+            flows=flows,
+            file=config_file,
+        )
+        config = config_parser.parse(file=config_file)
+
+        expected_config = OtConfig(
+            project=project,
+            videos=videos,
+            sections=sections,
+            flows=flows,
+        )
+        assert config == expected_config

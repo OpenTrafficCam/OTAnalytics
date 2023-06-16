@@ -1,6 +1,7 @@
 # OTAnalytics
 data/
 !tests/data
+tests/scripts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -170,3 +171,6 @@ Thumbs.db
 
 # Vim
 .vim
+
+#profiling
+profiles/

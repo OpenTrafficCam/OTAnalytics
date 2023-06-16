@@ -37,6 +37,10 @@ The default value is an empty string."""
 RADIUS: str = "radius"
 """Radius of a circle on the tkinter canvas"""
 
+ARROWSHAPE: str = "arrowshape"
+"""A tuple of three values representing the shape of the arrow.
+The values are (length, width at base, width at tip)."""
+
 LINE: str = "line"
 """A line representing a segment of a MultiLineSection"""
 
@@ -49,6 +53,9 @@ KNOB_CORE: str = "knob-core"
 
 KNOB_PERIMETER: str = "knob-perimeter"
 """A circle around a knob to indicate if it is hovered or selected"""
+
+SECTION_TEXT: str = "section-text"
+"""A text displayed above the section"""
 
 DEFAULT_SECTION_STYLE = {
     LINE: {FILL_COLOR: "#47936B", LINE_WIDTH: 3},
@@ -86,6 +93,13 @@ HOVERED_KNOB_STYLE = {
 SELECTED_KNOB_STYLE = {
     KNOB_CORE: {FILL_COLOR: "#8CFFC2", LINE_WIDTH: 0, RADIUS: 6},
     KNOB_PERIMETER: {LINE_COLOR: "#8CFFC2", LINE_WIDTH: 2, RADIUS: 10},
+}
+
+ARROW_STYLE = {
+    FILL_COLOR: "#8CFFC2",
+    LINE_WIDTH: 4,
+    LINE_DASH: (5, 5),
+    ARROWSHAPE: (20, 25, 8),
 }
 
 COLOR_GREEN = "green"

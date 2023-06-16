@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
+from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.domain.date import DateRange
@@ -12,6 +14,9 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 
 DISTANCES: str = "distances"
+
+
+MetadataProvider = Callable[[], dict]
 
 
 class MissingCoordinate(Exception):
@@ -36,8 +41,16 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+        pass
+
+    @abstractmethod
     def set_treeview_flows(self, treeview: AbstractTreeviewInterface) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+        pass
 
     @abstractmethod
     def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
@@ -68,6 +81,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def cancel_action(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def add_section(self) -> None:
         raise NotImplementedError
 
@@ -76,7 +93,25 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def set_new_section(self, data: dict, coordinates: list[tuple[int, int]]) -> None:
+    def get_section_metadata(
+        self, title: str, initial_position: tuple[int, int]
+    ) -> dict:
+        pass
+
+    @abstractmethod
+    def update_section_coordinates(
+        self, meta_data: dict, coordinates: list[tuple[int, int]]
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_section_name_valid(self, section_name: str) -> bool:
+        pass
+
+    @abstractmethod
+    def add_new_section(
+        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -92,7 +127,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def refresh_sections_on_gui(self) -> None:
+    def refresh_items_on_canvas(self) -> None:
         pass
 
     @abstractmethod
@@ -156,7 +191,15 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def apply_filter_tracks_by_class(self, classes: list[str]) -> None:
+        pass
+
+    @abstractmethod
     def reset_filter_tracks_by_date(self) -> None:
+        pass
+
+    @abstractmethod
+    def reset_filter_tracks_by_class(self) -> None:
         pass
 
     @abstractmethod
@@ -172,9 +215,33 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def get_classes(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def get_class_filter_selection(self) -> Optional[list[str]]:
+        pass
+
+    @abstractmethod
     def enable_filter_track_by_date(self) -> None:
         pass
 
     @abstractmethod
     def disable_filter_track_by_date(self) -> None:
+        pass
+
+    @abstractmethod
+    def enable_filter_track_by_class(self) -> None:
+        pass
+
+    @abstractmethod
+    def disable_filter_track_by_class(self) -> None:
+        pass
+
+    @abstractmethod
+    def switch_to_prev_date_range(self) -> None:
+        pass
+
+    @abstractmethod
+    def switch_to_next_date_range(self) -> None:
         pass

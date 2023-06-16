@@ -131,6 +131,16 @@ class Section(DataclassValidation):
         pass
 
     @abstractmethod
+    def update_coordinates(self, coordinates: list[Coordinate]) -> None:
+        """
+        Updates the coordinates of this section.
+
+        Args:
+            coordinates (list[Coordinate]): new coordinates of the section
+        """
+        pass
+
+    @abstractmethod
     def to_dict(self) -> dict:
         """
         Convert section into dict to interact with other parts of the system,
@@ -189,13 +199,16 @@ class LineSection(Section):
     coordinates: list[Coordinate]
 
     def _validate(self) -> None:
-        if len(self.coordinates) < 2:
+        self.__validate_coordinates(self.coordinates)
+
+    def __validate_coordinates(self, coordinates: list[Coordinate]) -> None:
+        if len(coordinates) < 2:
             raise ValueError(
                 "The number of coordinates to make up a line must be greater equal 2, "
                 f"but is {len(self.coordinates)}"
             )
 
-        if self.coordinates[0] == self.coordinates[-1]:
+        if coordinates[0] == coordinates[-1]:
             raise ValueError(
                 (
                     "Start and end point of coordinate must be different to be a line, "
@@ -205,6 +218,11 @@ class LineSection(Section):
 
     def get_coordinates(self) -> list[Coordinate]:
         return self.coordinates.copy()
+
+    def update_coordinates(self, coordinates: list[Coordinate]) -> None:
+        self.__validate_coordinates(coordinates)
+        self.coordinates.clear()
+        self.coordinates.extend(coordinates)
 
     def to_dict(self) -> dict:
         """
@@ -246,7 +264,10 @@ class Area(Section):
     coordinates: list[Coordinate]
 
     def _validate(self) -> None:
-        if len(self.coordinates) < 4:
+        self.__validate_coordinates(self.coordinates)
+
+    def __validate_coordinates(self, coordinates: list[Coordinate]) -> None:
+        if len(coordinates) < 4:
             raise ValueError(
                 (
                     "Number of coordinates to define a valid area must be "
@@ -254,11 +275,16 @@ class Area(Section):
                 )
             )
 
-        if self.coordinates[0] != self.coordinates[-1]:
+        if coordinates[0] != coordinates[-1]:
             raise ValueError("Coordinates do not define a closed area")
 
     def get_coordinates(self) -> list[Coordinate]:
         return self.coordinates.copy()
+
+    def update_coordinates(self, coordinates: list[Coordinate]) -> None:
+        self.__validate_coordinates(coordinates)
+        self.coordinates.clear()
+        self.coordinates.extend(coordinates)
 
     def to_dict(self) -> dict:
         """
@@ -379,3 +405,10 @@ class SectionRepository:
         section.plugin_data.clear()
         section.plugin_data.update(plugin_data)
         self._section_content_observers.notify(section_id)
+
+    def clear(self) -> None:
+        """
+        Clear the repository and inform the observers about the empty repository.
+        """
+        self._sections.clear()
+        self._repository_content_observers.notify([])

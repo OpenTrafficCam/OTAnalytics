@@ -35,17 +35,17 @@ class TestTrackPredicates:
             (TrackStartsAtOrAfterDate(datetime(2000, 1, 5)), False),
             (TrackEndsBeforeOrAtDate(datetime(2000, 1, 3)), True),
             (TrackEndsBeforeOrAtDate(datetime(2000, 1, 1)), False),
-            (TrackHasClassifications(["car", "truck"]), True),
-            (TrackHasClassifications(["bicycle", "truck"]), False),
+            (TrackHasClassifications({"car", "truck"}), True),
+            (TrackHasClassifications({"bicycle", "truck"}), False),
             (
                 TrackStartsAtOrAfterDate(datetime(2000, 1, 1)).conjunct_with(
-                    TrackHasClassifications(["truck", "car"])
+                    TrackHasClassifications({"truck", "car"})
                 ),
                 True,
             ),
             (
                 TrackStartsAtOrAfterDate(datetime(2000, 1, 1)).conjunct_with(
-                    TrackHasClassifications(["truck", "bicycle"])
+                    TrackHasClassifications({"truck", "bicycle"})
                 ),
                 False,
             ),
@@ -125,7 +125,7 @@ class TestTrackFilterBuilder:
         assert track_filter._predicate._end_date == end_date
 
     def test_add_has_classifications_predicate(self) -> None:
-        classifications = ["car", "truck"]
+        classifications = {"car", "truck"}
         builder = TrackFilterBuilder()
         builder.add_has_classifications_predicate(classifications)
         builder.build()
@@ -137,7 +137,7 @@ class TestTrackFilterBuilder:
 
     def test_add_multiple_predicates_fulfills(self, track: Track) -> None:
         start_date = datetime(2000, 1, 1)
-        classifications = ["car", "truck"]
+        classifications = {"car", "truck"}
 
         builder = TrackFilterBuilder()
         builder.add_has_classifications_predicate(classifications)
@@ -150,7 +150,7 @@ class TestTrackFilterBuilder:
 
     def test_add_multiple_predicates_not_fulfilled(self, track: Track) -> None:
         start_date = datetime(2000, 1, 1)
-        classifications = ["bicycle", "truck"]
+        classifications = {"bicycle", "truck"}
 
         builder = TrackFilterBuilder()
         builder.add_has_classifications_predicate(classifications)
@@ -191,7 +191,7 @@ class TestTrackFilterBuilder:
 
     def test_reset(self) -> None:
         builder = TrackFilterBuilder()
-        builder.add_has_classifications_predicate(["car"])
+        builder.add_has_classifications_predicate({"car"})
 
         builder.build()
         assert builder._result is not None
