@@ -19,6 +19,5 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.linting.mypyCategorySeverity.error": "Warning",
-    "python.linting.mypyEnabled": true,
-    "jupyter.notebookFileRoot": "${workspaceFolder}"
+    "python.linting.mypyEnabled": true
 }
