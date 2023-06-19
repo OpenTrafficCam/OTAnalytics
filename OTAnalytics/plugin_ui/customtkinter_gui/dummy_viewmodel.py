@@ -762,6 +762,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                 if len(flows) != 1:
                     raise MultipleFlowsSelected(
                         "Multiple flows selected. Unable to edit flow!"
+                        "Please select only one flow."
                     )
                 self._edit_flow(flows[0])
             else:
