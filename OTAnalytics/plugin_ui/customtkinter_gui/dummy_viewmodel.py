@@ -763,7 +763,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                     raise MultipleFlowsSelected(
                         "Multiple flows selected. Unable to edit flow!"
                     )
-                    self._edit_flow(flows[0])
+                self._edit_flow(flows[0])
             else:
                 if self._treeview_flows is None:
                     raise MissingInjectedInstanceError(
