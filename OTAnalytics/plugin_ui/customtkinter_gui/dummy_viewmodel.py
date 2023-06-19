@@ -759,7 +759,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._start_action()
         with contextlib.suppress(CancelAddFlow):
             if flows := self._get_selected_flows():
-                if len(flows := self._get_selected_flows()) != 1:
+                if len(flows) != 1:
                     raise MultipleFlowsSelected(
                         "Multiple flows selected. Unable to edit flow!"
                     )
