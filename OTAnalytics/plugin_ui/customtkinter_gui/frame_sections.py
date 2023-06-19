@@ -82,9 +82,6 @@ class FrameSections(AbstractFrameSections):
     def action_buttons(self) -> list[CTkButton]:
         return self._action_buttons
 
-    def set_selection(self, section_ids: list[str]) -> None:
-        raise NotImplementedError
-
     def enable_edit_geometry_button(self) -> None:
         self._enable_button(self.button_edit_geometry)
 

@@ -63,10 +63,6 @@ class AbstractFrameFlows(AbstractFrame, CTkFrame):
         pass
 
     @abstractmethod
-    def set_selection(self, flow_ids: list[str]) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     def enable_remove_button(self) -> None:
         raise NotImplementedError
 

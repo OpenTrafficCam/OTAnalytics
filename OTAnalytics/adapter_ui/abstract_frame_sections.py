@@ -11,10 +11,6 @@ class AbstractFrameSections(AbstractFrame, CTkFrame):
         raise NotImplementedError
 
     @abstractmethod
-    def set_selection(self, section_ids: list[str]) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     def enable_edit_geometry_button(self) -> None:
         raise NotImplementedError
 

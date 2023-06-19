@@ -66,9 +66,6 @@ class FrameFlows(AbstractFrameFlows):
     def action_buttons(self) -> list[CTkButton]:
         return self._action_buttons
 
-    def set_selection(self, flow_ids: list[str]) -> None:
-        pass
-
     def enable_remove_button(self) -> None:
         self._enable_button(self.button_remove)
 
