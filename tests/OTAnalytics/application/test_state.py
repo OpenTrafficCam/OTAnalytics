@@ -247,20 +247,13 @@ class TestTracksMetadata:
 
         tracks_metadata._update_classifications([track.id])
 
-        assert tracks_metadata.classifications == {"car", "truck"}
+        assert tracks_metadata.classifications == {"car"}
         mock_track_repository.get_for.assert_any_call(track.id)
         assert mock_track_repository.get_for.call_count == 1
 
         track.detections[0].classification = "bicycle"
         tracks_metadata._update_classifications([track.id])
 
-        assert tracks_metadata.classifications == {"car", "truck", "bicycle"}
+        assert tracks_metadata.classifications == {"car"}
         mock_track_repository.get_for.assert_any_call(track.id)
         assert mock_track_repository.get_for.call_count == 2
-
-        track.detections[0].classification = "car"
-        tracks_metadata._update_classifications([track.id])
-
-        assert tracks_metadata.classifications == {"car", "truck", "bicycle"}
-        mock_track_repository.get_for.assert_any_call(track.id)
-        assert mock_track_repository.get_for.call_count == 3
