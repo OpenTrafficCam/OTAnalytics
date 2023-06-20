@@ -24,7 +24,6 @@ class ToplevelProgress(CTkToplevel):
         self._initial_progress = initial_progress
         self._get_widgets()
         self._place_widgets()
-        self._set_initial_position(initial_position)
         self._set_focus()
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self.overrideredirect(True)  # TODO: Test on Windows
