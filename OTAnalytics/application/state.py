@@ -463,8 +463,7 @@ class TracksMetadata(TrackListObserver):
 
         for track_id in new_tracks:
             if track := self._track_repository.get_for(track_id):
-                for detections in track.detections:
-                    updated_classifications.add(detections.classification)
+                updated_classifications.add(track.classification)
         self._classifications.set(updated_classifications)
 
     def _get_all_track_detections(self) -> Iterable[Detection]:
