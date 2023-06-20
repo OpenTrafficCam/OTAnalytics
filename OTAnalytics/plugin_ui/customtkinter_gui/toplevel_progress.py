@@ -29,10 +29,13 @@ class ToplevelProgress(CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self.overrideredirect(True)  # TODO: Test on Windows
         self.update()
+        self._set_initial_position(initial_position)
 
     def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
         x, y = initial_position
-        self.geometry(f"+{x+10}+{y+10}")
+        x0 = x - (self.winfo_width() // 2)
+        y0 = y - (self.winfo_height() // 2)
+        self.geometry(f"+{x0}+{y0}")
 
     def _set_focus(self) -> None:
         self.after(0, lambda: self.lift())
