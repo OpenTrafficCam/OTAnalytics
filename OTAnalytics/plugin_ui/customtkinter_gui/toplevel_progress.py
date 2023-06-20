@@ -52,7 +52,7 @@ class ToplevelProgress(CTkToplevel):
         elif percent == 1:
             self.destroy()
             self.mainloop()
-
-        self._label_message.configure(text=message)
-        self._progressbar.set(value=percent)
-        self.update()
+        else:
+            self._label_message.configure(text=message)
+            self._progressbar.set(value=percent)
+            self.update()
