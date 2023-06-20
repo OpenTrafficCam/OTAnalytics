@@ -132,7 +132,7 @@ class TestOptionalObservableProperty:
 
         state.notify_sections([first, second])
 
-        assert state.selected_section.get() == first
+        assert state.selected_sections.get() == [first]
 
     def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
         first = SectionId("north")
@@ -141,7 +141,7 @@ class TestOptionalObservableProperty:
         state.notify_sections([first])
         state.notify_sections([])
 
-        assert state.selected_section.get() is None
+        assert state.selected_sections.get() == []
 
 
 class TestTrackImageUpdater:
