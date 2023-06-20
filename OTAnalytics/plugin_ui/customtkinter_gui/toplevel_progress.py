@@ -16,7 +16,6 @@ class ToplevelProgress(CTkToplevel):
         initial_position: tuple[int, int],
         initial_message: str,
         initial_progress: float = 0.0,
-        indeterminate_progress_mode: float = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
