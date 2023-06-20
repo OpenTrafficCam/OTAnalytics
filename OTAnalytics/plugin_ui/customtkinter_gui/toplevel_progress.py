@@ -27,6 +27,7 @@ class ToplevelProgress(CTkToplevel):
         self._set_initial_position(initial_position)
         self._set_focus()
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.overrideredirect(True)  # TODO: Test on Windows
         self.update()
 
     def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
