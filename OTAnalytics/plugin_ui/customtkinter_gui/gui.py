@@ -32,10 +32,12 @@ class ModifiedCTk(AbstractWindow, CTk):
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_window(self)
 
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
+
     def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
-        InfoBox(
-            message=str(val), title="Error", initial_position=get_widget_position(self)
-        )
+        InfoBox(message=str(val), title="Error", initial_position=self.get_position())
 
 
 class OTAnalyticsGui:
