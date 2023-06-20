@@ -21,7 +21,9 @@ class ToplevelTemplate(CTkToplevel, ABC):
 
     def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
         x, y = initial_position
-        self.geometry(f"+{x+10}+{y+10}")
+        x0 = x - (self.winfo_width() // 2)
+        y0 = y - (self.winfo_height() // 2)
+        self.geometry(f"+{x0+10}+{y0+10}")
 
     def _get_frame_ok_cancel(self) -> None:
         self.frame_ok_cancel = CTkFrame(master=self)
