@@ -380,7 +380,7 @@ class SectionRepository:
             section (Section): the section to be removed
         """
         del self._sections[section]
-        self._repository_content_observers.notify([section])
+        self._repository_content_observers.notify([])
 
     def update(self, section: Section) -> None:
         """Update the section in the repository.

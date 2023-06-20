@@ -49,6 +49,14 @@ class FlowAlreadyExists(Exception):
     pass
 
 
+class MultipleSectionsSelected(Exception):
+    pass
+
+
+class MultipleFlowsSelected(Exception):
+    pass
+
+
 class AddSection:
     """
     Add a single section to the repository.
@@ -372,28 +380,28 @@ class OTAnalyticsApplication:
             event_type (EventType, optional): event type of the offset at the section.
             Defaults to EventType.SECTION_ENTER.
         """
-        if section_id := self.section_state.selected_section.get():
-            if section := self._datastore.get_section_for(section_id):
+        if len(section_id := self.section_state.selected_sections.get()) == 1:
+            if section := self._datastore.get_section_for(section_id[0]):
                 if offset := section.relative_offset_coordinates.get(event_type):
                     self.track_view_state.track_offset.set(offset)
 
-    def set_selected_section(self, id: Optional[str]) -> None:
+    def set_selected_section(self, ids: list[str]) -> None:
         """Set the current selected section in the UI.
 
         Args:
             id (Optional[str]): the id of the currently selected section
         """
-        section_id = SectionId(id) if id else None
-        self.section_state.selected_section.set(section_id)
+        section_ids = [SectionId(id) for id in ids]
+        self.section_state.selected_sections.set(section_ids)
 
-    def set_selected_flow(self, id: Optional[str]) -> None:
+    def set_selected_flows(self, ids: list[str]) -> None:
         """Set the current selected flow in the UI.
 
         Args:
             id (Optional[str]): the id of the currently selected flow
         """
-        flow_id = FlowId(id) if id else None
-        self.flow_state.selected_flow.set(flow_id)
+        flow_ids = [FlowId(id) for id in ids]
+        self.flow_state.selected_flows.set(flow_ids)
 
     def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
         """Get the current track offset.
