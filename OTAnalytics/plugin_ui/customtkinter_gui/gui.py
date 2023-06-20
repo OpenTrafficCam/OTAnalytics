@@ -2,6 +2,7 @@ from typing import Any
 
 from customtkinter import CTk, set_appearance_mode, set_default_color_theme
 
+from OTAnalytics.adapter_ui.abstract_window import AbstractWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
@@ -18,12 +19,18 @@ from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
 
-class ModifiedCTk(CTk):
+class ModifiedCTk(AbstractWindow, CTk):
     def __init__(
         self,
+        viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self._viewmodel: ViewModel = viewmodel
+        self.introduce_to_viewmodel()
+
+    def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_window(self)
 
     def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
         InfoBox(
@@ -35,10 +42,9 @@ class OTAnalyticsGui:
     def __init__(
         self,
         view_model: ViewModel,
-        app: CTk = ModifiedCTk(),
     ) -> None:
         self._view_model = view_model
-        self._app: CTk = app
+        self._app: ModifiedCTk = ModifiedCTk(viewmodel=view_model)
 
     def start(self) -> None:
         self._show_gui()

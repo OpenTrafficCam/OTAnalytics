@@ -11,6 +11,7 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.abstract_window import AbstractWindow
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
@@ -70,6 +71,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     START_SECTION,
     ToplevelFlows,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import ToplevelProgress
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
@@ -102,6 +104,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
+        self._window: Optional[AbstractWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_sections: Optional[AbstractFrameSections] = None
@@ -206,6 +209,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
+
+    def set_window(self, window: AbstractWindow) -> None:
+        self._window = window
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
@@ -889,3 +895,20 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
 
         self._frame_filter.disable_filter_by_class_button()
+
+    def _temporary_showcase_toplevel_progress(self) -> None:
+        # TODO: @randyseng delete this method after instantiating in other places
+        from time import sleep
+
+        if self._window is not None:
+            position = self._window.get_position()
+            goal = 100
+            progressbar = ToplevelProgress(
+                initial_message=f"0 of {goal} videos loaded",
+                initial_position=position,
+            )
+            for i in range(goal):
+                sleep(0.02)
+                progressbar.proceed_to(
+                    (i + 1) / goal, message=f"{i} of {goal} videos loaded"
+                )

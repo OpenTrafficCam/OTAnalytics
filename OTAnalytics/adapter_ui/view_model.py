@@ -9,6 +9,7 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.abstract_window import AbstractWindow
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -26,6 +27,10 @@ class MissingCoordinate(Exception):
 class ViewModel(ABC):
     @abstractmethod
     def register_to_subjects(self) -> None:
+        pass
+
+    @abstractmethod
+    def set_window(self, window: AbstractWindow) -> None:
         pass
 
     @abstractmethod
