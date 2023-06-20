@@ -12,10 +12,10 @@ class InvalidRelativeProgressError(Exception):
 class ToplevelProgress(CTkToplevel):
     def __init__(
         self,
-        title: str,
         initial_position: tuple[int, int],
         initial_message: str,
         initial_progress: float = 0.0,
+        title: str = "",
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
