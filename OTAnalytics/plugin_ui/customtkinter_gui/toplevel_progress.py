@@ -13,7 +13,7 @@ class ToplevelProgress(CTkToplevel):
     def __init__(
         self,
         title: str,
-        initial_position: tuple[int, int],  # TODO: initial position @ center of master
+        initial_position: tuple[int, int],
         initial_message: str,
         initial_progress: float = 0.0,
         indeterminate_progress_mode: float = False,
