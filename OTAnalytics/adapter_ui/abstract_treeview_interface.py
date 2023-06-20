@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from typing import Optional
 
 
 class AbstractTreeviewInterface:
@@ -10,9 +9,7 @@ class AbstractTreeviewInterface:
         raise NotImplementedError
 
     @abstractmethod
-    def _notify_viewmodel_about_selected_item_id(
-        self, line_section_id: Optional[str]
-    ) -> None:
+    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -20,7 +17,7 @@ class AbstractTreeviewInterface:
         raise NotImplementedError
 
     @abstractmethod
-    def update_selected_items(self, item_id: Optional[str]) -> None:
+    def update_selected_items(self, item_ids: list[str]) -> None:
         raise NotImplementedError
 
     @abstractmethod

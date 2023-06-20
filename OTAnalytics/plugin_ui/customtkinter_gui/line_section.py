@@ -295,6 +295,7 @@ class SectionGeometryEditor(CanvasObserver):
             elif event_type == ESCAPE_KEY:
                 self.detach_from(self._canvas.event_handler)
                 self._abort()
+                self._viewmodel.cancel_action()
         elif event_type == LEFT_KEY:
             self._shift_selected_knob_backward()
         elif event_type == RIGHT_KEY:
@@ -308,6 +309,7 @@ class SectionGeometryEditor(CanvasObserver):
             self._delete_selected_knob()
         elif event_type == ESCAPE_KEY:
             self._deselect_knob()
+            self._viewmodel.cancel_action()
 
     def _hover_knob(self, coordinate: tuple[int, int]) -> None:
         closest_knob_index = self._get_closest_knob_index(coordinate=coordinate)

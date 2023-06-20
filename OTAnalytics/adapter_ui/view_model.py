@@ -66,11 +66,11 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def set_selected_section_id(self, id: Optional[str]) -> None:
+    def set_selected_section_ids(self, ids: list[str]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def set_selected_flow_id(self, id: Optional[str]) -> None:
+    def set_selected_flow_ids(self, ids: list[str]) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -128,7 +128,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def remove_section(self) -> None:
+    def remove_sections(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -148,7 +148,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def remove_flow(self) -> None:
+    def remove_flows(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

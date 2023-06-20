@@ -1,6 +1,6 @@
 import tkinter
 from tkinter.ttk import Treeview
-from typing import Any, Optional
+from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
@@ -12,9 +12,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     IdResource,
     TreeviewTemplate,
 )
-
-STATE_DISABLED = "disabled"
-STATE_NORMAL = "normal"
 
 
 class FrameFlows(AbstractFrameFlows):
@@ -52,7 +49,7 @@ class FrameFlows(AbstractFrameFlows):
             command=self._viewmodel.edit_flow,
         )
         self.button_remove = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_flow
+            master=self, text="Remove", command=self._viewmodel.remove_flows
         )
         self._action_buttons = [self.button_add, self.button_edit, self.button_remove]
 
@@ -68,6 +65,18 @@ class FrameFlows(AbstractFrameFlows):
 
     def action_buttons(self) -> list[CTkButton]:
         return self._action_buttons
+
+    def enable_remove_button(self) -> None:
+        self._enable_button(self.button_remove)
+
+    def disable_remove_button(self) -> None:
+        self._disable_button(self.button_remove)
+
+    def enable_edit_button(self) -> None:
+        self._enable_button(self.button_edit)
+
+    def disable_edit_button(self) -> None:
+        self._disable_button(self.button_edit)
 
 
 class TreeviewFlows(TreeviewTemplate, Treeview):
@@ -87,8 +96,8 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_flows(self)
 
-    def _notify_viewmodel_about_selected_item_id(self, flow_id: Optional[str]) -> None:
-        self._viewmodel.set_selected_flow_id(flow_id)
+    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
+        self._viewmodel.set_selected_flow_ids(ids)
 
     def update_items(self) -> None:
         self.delete(*self.get_children())
