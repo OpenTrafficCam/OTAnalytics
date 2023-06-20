@@ -12,6 +12,7 @@ from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewI
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.video import Video
 
 DISTANCES: str = "distances"
 
@@ -58,6 +59,26 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
+        pass
+
+    @abstractmethod
+    def add_video(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove_video(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_treeview_videos(self, treeview: AbstractTreeviewInterface) -> None:
+        pass
+
+    @abstractmethod
+    def set_selected_video(self, video: Optional[str]) -> None:
+        pass
+
+    @abstractmethod
+    def get_all_videos(self) -> list[Video]:
         pass
 
     @abstractmethod

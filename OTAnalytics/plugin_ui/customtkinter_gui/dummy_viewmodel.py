@@ -46,6 +46,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -74,6 +75,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
+SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
 TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
@@ -95,7 +97,9 @@ def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
 
 
-class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
+class DummyViewModel(
+    ViewModel, SectionListObserver, FlowListObserver, VideoListObserver
+):
     def __init__(
         self,
         application: OTAnalyticsApplication,
@@ -121,6 +125,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_flows_observer(self)
         self._application.register_flow_changed_observer(self._on_flow_changed)
+        self._application.track_view_state.selected_video.register(
+            self._update_selected_video
+        )
         self._application.track_view_state.show_tracks.register(
             self._on_show_tracks_state_updated
         )
@@ -202,11 +209,57 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._frame_flows.set_enabled(not running)
         self._frame_sections.set_enabled(not running)
 
+    def register_observers(self) -> None:
+        self._application._datastore.register_video_observer(self)
+        self._application.track_view_state.selected_video.register(
+            self._update_selected_video
+        )
+
     def _start_action(self) -> None:
         self._application.action_state.action_running.set(True)
 
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
+
+    def notify_videos(self, videos: list[Video]) -> None:
+        if self._treeview_videos is None:
+            raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
+        self._treeview_videos.update_items()
+
+    def _update_selected_video(self, video: Optional[Video]) -> None:
+        current_path = str(video.get_path()) if video else None
+        self._selected_video = current_path
+        if self._treeview_videos is None:
+            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
+        self._treeview_videos.update_selected_items(current_path)
+
+    def add_video(self) -> None:
+        track_files = askopenfilenames(
+            title="Load video files",
+            filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
+        )
+        if not track_files:
+            return
+        print(f"Video files to load: {track_files}")
+        paths = [Path(file) for file in track_files]
+        self._application.add_videos(files=paths)
+
+    def remove_video(self) -> None:
+        self._application.remove_video()
+
+    def set_treeview_videos(self, treeview: AbstractTreeviewInterface) -> None:
+        self._treeview_videos = treeview
+
+    def set_selected_video(self, video_path: Optional[str]) -> None:
+        self._selected_video = video_path
+        if video_path:
+            video = self._application._datastore.get_video_at(Path(video_path))
+            self._application.track_view_state.selected_video.set(video)
+        else:
+            self._application.track_view_state.selected_video.set(None)
+
+    def get_all_videos(self) -> list[Video]:
+        return self._application.get_all_videos()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame

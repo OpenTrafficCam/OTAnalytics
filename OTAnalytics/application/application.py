@@ -31,6 +31,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.video import Video
 
 
 class SectionAlreadyExists(Exception):
@@ -171,6 +172,9 @@ class OTAnalyticsApplication:
                 self.track_view_state.selected_video.set(videos[0])
             else:
                 self.track_view_state.selected_video.set(None)
+
+    def get_all_videos(self) -> list[Video]:
+        return self._datastore._video_repository.get_all()
 
     def get_all_flows(self) -> Iterable[Flow]:
         return self._datastore.get_all_flows()
