@@ -26,6 +26,7 @@ class ToplevelProgress(CTkToplevel):
         self._place_widgets()
         self._set_initial_position(initial_position)
         self._set_focus()
+        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self.update()
 
     def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
@@ -55,3 +56,6 @@ class ToplevelProgress(CTkToplevel):
             self._label_message.configure(text=message)
             self._progressbar.set(value=percent)
             self.update()
+
+    def _on_cancel(self) -> None:
+        pass
