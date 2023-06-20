@@ -46,7 +46,6 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
     CanvasElementDeleter,
@@ -459,7 +458,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         current_data = selected_section.to_dict()
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
-        position = get_widget_position(widget=self._canvas)
+        position = self._canvas.get_position()
         updated_section_data = self.get_section_metadata(
             title="Edit section",
             initial_position=position,
