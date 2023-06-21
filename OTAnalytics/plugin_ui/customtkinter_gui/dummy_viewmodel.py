@@ -8,6 +8,7 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -23,6 +24,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
+from OTAnalytics.application.project import Project
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -260,6 +262,19 @@ class DummyViewModel(
 
     def get_all_videos(self) -> list[Video]:
         return self._application.get_all_videos()
+
+    def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
+        self._frame_project = project_frame
+        self._show_current_project()
+
+    def _show_current_project(self) -> None:
+        if self._frame_project is None:
+            raise MissingInjectedInstanceError(type(self._frame_project).__name__)
+        project = self._application._datastore.project
+        self._frame_project.update(name=project.name, start_date=project.start_date)
+
+    def update_project(self, name: str, start_date: datetime) -> None:
+        self._application._datastore.project = Project(name=name, start_date=start_date)
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame

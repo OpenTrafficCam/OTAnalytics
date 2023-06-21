@@ -6,6 +6,7 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -59,6 +60,14 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
+        pass
+
+    @abstractmethod
+    def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
+        pass
+
+    @abstractmethod
+    def update_project(self, name: str, start_date: datetime) -> None:
         pass
 
     @abstractmethod

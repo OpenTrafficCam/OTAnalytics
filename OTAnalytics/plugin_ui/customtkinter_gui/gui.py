@@ -11,6 +11,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
     FrameConfiguration,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import FrameProject
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
@@ -105,6 +106,7 @@ class OTAnalyticsGui:
         self.frame_analysis = FrameAnalysis(
             master=self._app, viewmodel=self._view_model
         )
+        self.frame_project = FrameProject(master=self._app, viewmodel=self._view_model)
 
     def _place_widgets(self) -> None:
         PADY = 10
@@ -121,10 +123,11 @@ class OTAnalyticsGui:
             pady=PADY,
             sticky=STICKY,
         )
+        self.frame_project.grid(row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY)
         self.tabview_input_files.grid(
-            row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self.tabview_configuration.grid(
             row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.frame_analysis.grid(row=2, column=2, padx=PADX, pady=PADY, sticky=STICKY)
+        self.tabview_configuration.grid(
+            row=2, column=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.frame_analysis.grid(row=3, column=2, padx=PADX, pady=PADY, sticky=STICKY)
