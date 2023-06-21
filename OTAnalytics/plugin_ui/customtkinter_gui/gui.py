@@ -1,10 +1,17 @@
 import tkinter
 from typing import Any
 
-from customtkinter import CTk, CTkTabview, set_appearance_mode, set_default_color_theme
+from customtkinter import (
+    CTk,
+    CTkFrame,
+    CTkScrollableFrame,
+    CTkTabview,
+    set_appearance_mode,
+    set_default_color_theme,
+)
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
@@ -63,13 +70,69 @@ class TabviewInputFiles(CTkTabview):
         self.set(self.TRACKS)
 
 
+class FrameContent(CTkFrame):
+    def __init__(self, master: Any, viewmodel: ViewModel, **kwargs: Any) -> None:
+        super().__init__(master, **kwargs)
+        self._viewmodel = viewmodel
+        self.ctkscrollableframe = CTkScrollableFrame(
+            master=self, orientation="horizontal"
+        )
+        self.ctkscrollableframe.pack(fill=tkinter.BOTH, expand=True)
+
+        self._frame_track_plotting = FrameTrackPlotting(
+            master=self.ctkscrollableframe,
+            viewmodel=self._viewmodel,
+        )
+        self._frame_filter = FrameFilter(
+            master=self.ctkscrollableframe, viewmodel=self._viewmodel
+        )
+        self._frame_canvas = FrameCanvas(
+            master=self.ctkscrollableframe,
+            viewmodel=self._viewmodel,
+        )
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure((0, 1), weight=1)
+        self._frame_track_plotting.grid(row=0, column=0, pady=PADY, sticky=STICKY)
+        self._frame_filter.grid(row=0, column=1, pady=PADY, sticky=STICKY)
+        self._frame_canvas.grid(row=1, column=0, columnspan=2, pady=PADY, sticky=STICKY)
+
+
+class FrameNavigation(CTkFrame):
+    def __init__(self, master: Any, viewmodel: ViewModel, **kwargs: Any) -> None:
+        super().__init__(master, **kwargs)
+        self._viewmodel = viewmodel
+        self._get_widgets()
+        self._place_widgets()
+
+    def _get_widgets(self) -> None:
+        self._frame_project = FrameProject(
+            master=self,
+            viewmodel=self._viewmodel,
+        )
+        self._tabview_input_files = TabviewInputFiles(
+            master=self, viewmodel=self._viewmodel
+        )
+        self._tabview_configuration = FrameConfiguration(
+            master=self, viewmodel=self._viewmodel
+        )
+        self._frame_analysis = FrameAnalysis(master=self, viewmodel=self._viewmodel)
+
+    def _place_widgets(self) -> None:
+        self.grid_rowconfigure((1, 2), weight=1)
+        self.grid_columnconfigure(0, weight=0)
+        self._frame_project.grid(row=0, column=0, pady=PADY, sticky=STICKY)
+        self._tabview_input_files.grid(row=1, column=0, pady=PADY, sticky=STICKY)
+        self._tabview_configuration.grid(row=2, column=0, pady=PADY, sticky=STICKY)
+        self._frame_analysis.grid(row=3, column=0, pady=PADY, sticky=STICKY)
+
+
 class OTAnalyticsGui:
     def __init__(
         self,
         view_model: ViewModel,
         app: CTk = ModifiedCTk(),
     ) -> None:
-        self._view_model = view_model
+        self._viewmodel = view_model
         self._app: CTk = app
 
     def start(self) -> None:
@@ -80,54 +143,20 @@ class OTAnalyticsGui:
         set_default_color_theme("green")
 
         self._app.title("OTAnalytics")
-        self._app.grid_rowconfigure(1, weight=1)
-        self._app.grid_columnconfigure(1, weight=1)
+        self._app.minsize(width=1024, height=768)
 
         self._get_widgets()
         self._place_widgets()
+        self._app.after(0, lambda: self._app.state("zoomed"))
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
-        self.frame_track_plotting = FrameTrackPlotting(
-            master=self._app,
-            viewmodel=self._view_model,
-        )
-        self.frame_filter = FrameFilter(master=self._app, viewmodel=self._view_model)
-        self.frame_canvas = FrameCanvas(
-            master=self._app,
-            viewmodel=self._view_model,
-        )
-        self.tabview_input_files = TabviewInputFiles(
-            master=self._app, viewmodel=self._view_model
-        )
-        self.tabview_configuration = FrameConfiguration(
-            master=self._app, viewmodel=self._view_model
-        )
-        self.frame_analysis = FrameAnalysis(
-            master=self._app, viewmodel=self._view_model
-        )
-        self.frame_project = FrameProject(master=self._app, viewmodel=self._view_model)
+        self._app.grid_columnconfigure(0, minsize=350, weight=0)
+        self._app.grid_columnconfigure(1, weight=1)
+        self._app.grid_rowconfigure(0, weight=1)
+        self._navigation = FrameNavigation(master=self._app, viewmodel=self._viewmodel)
+        self._content = FrameContent(master=self._app, viewmodel=self._viewmodel)
 
     def _place_widgets(self) -> None:
-        PADY = 10
-        self.frame_track_plotting.grid(
-            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self.frame_filter.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-        self.frame_canvas.grid(
-            row=1,
-            column=0,
-            rowspan=3,
-            columnspan=2,
-            padx=PADX,
-            pady=PADY,
-            sticky=STICKY,
-        )
-        self.frame_project.grid(row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY)
-        self.tabview_input_files.grid(
-            row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self.tabview_configuration.grid(
-            row=2, column=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self.frame_analysis.grid(row=3, column=2, padx=PADX, pady=PADY, sticky=STICKY)
+        self._navigation.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self._content.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
