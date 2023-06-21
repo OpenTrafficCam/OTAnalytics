@@ -209,6 +209,18 @@ class OTAnalyticsApplication:
     def update_flow(self, flow: Flow) -> None:
         self._datastore.update_flow(flow)
 
+    def save_configuration(self, file: Path) -> None:
+        self._datastore._config_parser.serialize(
+            project=self._datastore.project,
+            video_files=self.get_all_videos(),
+            sections=self.get_all_sections(),
+            flows=self.get_all_flows(),
+            file=file,
+        )
+
+    def load_configuration(self, file: Path) -> None:
+        self._datastore.load_configuration_file(file)
+
     def add_tracks_of_file(self, track_file: Path) -> None:
         """
         Load a single track file.

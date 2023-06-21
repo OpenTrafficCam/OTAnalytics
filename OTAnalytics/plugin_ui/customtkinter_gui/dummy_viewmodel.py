@@ -276,6 +276,55 @@ class DummyViewModel(
     def update_project(self, name: str, start_date: datetime) -> None:
         self._application._datastore.project = Project(name=name, start_date=start_date)
 
+    def save_configuration(self) -> None:
+        file = asksaveasfilename(
+            title="Save config file as", filetypes=[("config file", "*.otconfig")]
+        )
+        if not file:
+            return
+        print(f"Config file to save: {file}")
+        try:
+            self._application.save_configuration(
+                Path(file),
+            )
+        except NoSectionsToSave as cause:
+            if self._treeview_sections is None:
+                raise MissingInjectedInstanceError(
+                    type(self._treeview_sections).__name__
+                ) from cause
+            position = self._treeview_sections.get_position()
+            InfoBox(
+                message="No sections to save, please add new sections first",
+                initial_position=position,
+            )
+            return
+
+    def load_configuration(self) -> None:
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
+        position = self._treeview_sections.get_position()
+        proceed = InfoBox(
+            message=(
+                "This will load a stored configuration from file. \n"
+                "All configured sections, flows and videos will be removed before "
+                "loading."
+            ),
+            initial_position=position,
+            show_cancel=True,
+        )
+        if proceed.canceled:
+            return
+        configuration_file = askopenfilename(
+            title="Load config file",
+            filetypes=[("otconfig file", "*.otconfig")],
+            defaultextension=".otconfig",
+        )
+        if not configuration_file:
+            return
+        print(f"Config file to load: {configuration_file}")
+        self._application.load_configuration(file=Path(configuration_file))
+        self._show_current_project()
+
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
 

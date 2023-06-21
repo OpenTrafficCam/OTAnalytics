@@ -71,6 +71,14 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def save_configuration(self) -> None:
+        pass
+
+    @abstractmethod
+    def load_configuration(self) -> None:
+        pass
+
+    @abstractmethod
     def add_video(self) -> None:
         raise NotImplementedError
 
