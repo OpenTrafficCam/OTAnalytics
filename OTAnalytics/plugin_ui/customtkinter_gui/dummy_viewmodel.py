@@ -46,6 +46,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -95,7 +96,9 @@ def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
 
 
-class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
+class DummyViewModel(
+    ViewModel, VideoListObserver, SectionListObserver, FlowListObserver
+):
     def __init__(
         self,
         application: OTAnalyticsApplication,
@@ -117,6 +120,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
+        self._application.register_video_observer(self)
         self._application.register_sections_observer(self)
         self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_flows_observer(self)
@@ -138,6 +142,15 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.action_state.action_running.register(
             self._notify_action_running_state
         )
+
+    def notify_videos(self, videos: list[Video]) -> None:
+        if self._frame_sections is None:
+            raise MissingInjectedInstanceError(AbstractFrameSections.__name__)
+        if self._frame_flows is None:
+            raise MissingInjectedInstanceError(AbstractFrameFlows.__name__)
+        enabled = len(self._application.get_all_videos()) > 0
+        self._frame_sections.set_enabled(enabled)
+        self._frame_flows.set_enabled(enabled)
 
     def _on_section_changed(self, section_id: SectionId) -> None:
         self.notify_sections([section_id])
@@ -213,9 +226,11 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def set_sections_frame(self, frame: AbstractFrameSections) -> None:
         self._frame_sections = frame
+        self._frame_sections.set_enabled(False)
 
     def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
         self._frame_flows = frame
+        self._frame_flows.set_enabled(False)
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
