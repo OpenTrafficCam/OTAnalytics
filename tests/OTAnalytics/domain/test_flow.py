@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
+from OTAnalytics.domain.flow import Flow, FlowChangedObserver, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 
 
@@ -87,6 +87,16 @@ class TestFlowRepository:
         repository.add(flow)
 
         assert flow in repository.get_all()
+
+    def test_update_flow(self, flow: Flow) -> None:
+        observer = Mock(spec=FlowChangedObserver)
+        repository = FlowRepository()
+        repository.register_flow_changed_observer(observer)
+        repository.add(flow)
+        repository.update(flow)
+
+        assert flow in repository.get_all()
+        observer.assert_called_with(flow.id)
 
     def test_add_all_flows(self, flow: Flow, other_flow: Flow) -> None:
         repository = FlowRepository()

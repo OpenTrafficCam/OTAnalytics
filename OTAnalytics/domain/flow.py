@@ -210,6 +210,7 @@ class FlowRepository:
 
     def update(self, flow: Flow) -> None:
         self._flows[flow.id] = flow
+        self._flow_content_observers.notify(flow.id)
 
     def get(self, flow_id: FlowId) -> Optional[Flow]:
         return self._flows.get(flow_id)
