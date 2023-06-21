@@ -1,5 +1,5 @@
 import tkinter
-from typing import Any, Optional
+from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel, CTkScrollbar
 
@@ -39,7 +39,7 @@ class FrameVideos(CTkFrame):
             master=self, text="Add", command=self._viewmodel.add_video
         )
         self.button_remove_videos = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_video
+            master=self, text="Remove", command=self._viewmodel.remove_videos
         )
 
     def _place_widgets(self) -> None:
@@ -66,8 +66,6 @@ class TreeviewVideos(TreeviewTemplate):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         self._viewmodel = viewmodel
         super().__init__(**kwargs)
-        self.bind("<ButtonRelease-2>", self._on_deselect)
-        self.bind("<<TreeviewSelect>>", self._on_select)
         self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
@@ -81,10 +79,8 @@ class TreeviewVideos(TreeviewTemplate):
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_videos(self)
 
-    def _notify_viewmodel_about_selected_item_id(
-        self, line_video: Optional[str]
-    ) -> None:
-        self._viewmodel.set_selected_video(line_video)
+    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
+        self._viewmodel.set_selected_videos(ids)
 
     def update_items(self) -> None:
         self.delete(*self.get_children())

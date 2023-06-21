@@ -21,6 +21,8 @@ from OTAnalytics.adapter_ui.view_model import (
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,
+    MultipleFlowsSelected,
+    MultipleSectionsSelected,
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
@@ -118,8 +120,6 @@ class DummyViewModel(
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._new_section: dict = {}
-        self._selected_section_id: Optional[str] = None
-        self._selected_flow_id: Optional[str] = None
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
@@ -127,16 +127,18 @@ class DummyViewModel(
         self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_flows_observer(self)
         self._application.register_flow_changed_observer(self._on_flow_changed)
-        self._application.track_view_state.selected_video.register(
-            self._update_selected_video
+        self._application.track_view_state.selected_videos.register(
+            self._update_selected_videos
         )
         self._application.track_view_state.show_tracks.register(
             self._on_show_tracks_state_updated
         )
-        self._application.section_state.selected_section.register(
-            self._update_selected_section
+        self._application.section_state.selected_sections.register(
+            self._update_selected_sections
         )
-        self._application.flow_state.selected_flow.register(self._update_selected_flow)
+        self._application.flow_state.selected_flows.register(
+            self._update_selected_flows
+        )
         self._application.track_view_state.background_image.register(
             self._on_background_updated
         )
@@ -213,8 +215,8 @@ class DummyViewModel(
 
     def register_observers(self) -> None:
         self._application._datastore.register_video_observer(self)
-        self._application.track_view_state.selected_video.register(
-            self._update_selected_video
+        self._application.track_view_state.selected_videos.register(
+            self._update_selected_videos
         )
 
     def _start_action(self) -> None:
@@ -228,12 +230,12 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
         self._treeview_videos.update_items()
 
-    def _update_selected_video(self, video: Optional[Video]) -> None:
-        current_path = str(video.get_path()) if video else None
-        self._selected_video = current_path
+    def _update_selected_videos(self, videos: list[Video]) -> None:
+        current_paths = [str(video.get_path()) for video in videos]
+        self._selected_videos = current_paths
         if self._treeview_videos is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-        self._treeview_videos.update_selected_items(current_path)
+        self._treeview_videos.update_selected_items(current_paths)
 
     def add_video(self) -> None:
         track_files = askopenfilenames(
@@ -246,19 +248,19 @@ class DummyViewModel(
         paths = [Path(file) for file in track_files]
         self._application.add_videos(files=paths)
 
-    def remove_video(self) -> None:
-        self._application.remove_video()
+    def remove_videos(self) -> None:
+        self._application.remove_videos()
 
     def set_treeview_videos(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_videos = treeview
 
-    def set_selected_video(self, video_path: Optional[str]) -> None:
-        self._selected_video = video_path
-        if video_path:
-            video = self._application._datastore.get_video_at(Path(video_path))
-            self._application.track_view_state.selected_video.set(video)
-        else:
-            self._application.track_view_state.selected_video.set(None)
+    def set_selected_videos(self, video_paths: list[str]) -> None:
+        self._selected_videos = video_paths
+        selected_videos: list[Video] = []
+        for path in video_paths:
+            if video := self._application._datastore.get_video_at(Path(path)):
+                selected_videos.append(video)
+        self._application.track_view_state.selected_videos.set(selected_videos)
 
     def get_all_videos(self) -> list[Video]:
         return self._application.get_all_videos()
@@ -349,41 +351,82 @@ class DummyViewModel(
     def set_treeview_flows(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_flows = treeview
 
-    def _update_selected_section(self, section_id: Optional[SectionId]) -> None:
-        current_id = section_id.serialize() if section_id else None
-        self._selected_section_id = current_id
-
+    def _update_selected_sections(self, section_ids: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
+
+        if self._frame_sections is None:
+            raise MissingInjectedInstanceError(type(self._frame_sections).__name__)
+
+        new_section_ids = self.get_selected_section_ids()
+
+        self._treeview_sections.update_selected_items(new_section_ids)
         self.refresh_items_on_canvas()
-        self._treeview_sections.update_selected_items(self._selected_section_id)
 
-    def _update_selected_flow(self, flow_id: Optional[FlowId]) -> None:
-        current_id = flow_id.id if flow_id else None
-        self._selected_flow_id = current_id
+        if len(new_section_ids) == 1:
+            self._frame_sections.enable_edit_geometry_button()
+            self._frame_sections.enable_edit_metadata_button()
+        else:
+            self._frame_sections.disable_edit_geometry_button()
+            self._frame_sections.disable_edit_metadata_button()
 
+        if new_section_ids:
+            self._frame_sections.enable_remove_button()
+        else:
+            self._frame_sections.disable_remove_button()
+
+    def _update_selected_flows(self, flow_ids: list[FlowId]) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+
+        if self._frame_flows is None:
+            raise MissingInjectedInstanceError(type(self._frame_flows).__name__)
+
+        new_selected_flow_ids = self.get_selected_flow_ids()
+
+        self._treeview_flows.update_selected_items(new_selected_flow_ids)
         self.refresh_items_on_canvas()
-        self._treeview_flows.update_selected_items(self._selected_flow_id)
 
-    def set_selected_flow_id(self, id: Optional[str]) -> None:
+        if len(new_selected_flow_ids) == 1:
+            self._frame_flows.enable_edit_button()
+        else:
+            self._frame_flows.disable_edit_button()
+
+        if new_selected_flow_ids:
+            self._frame_flows.enable_remove_button()
+        else:
+            self._frame_flows.disable_remove_button()
+
+    def set_selected_flow_ids(self, ids: list[str]) -> None:
         if self._application.action_state.action_running.get():
             return
-        self._application.set_selected_flow(id)
-        if id is not None:
-            self._application.set_selected_section(None)
 
-        print(f"New flow selected in treeview: id={id}")
+        if ids:
+            self._application.set_selected_section([])
+        self._application.set_selected_flows(ids)
 
-    def set_selected_section_id(self, id: Optional[str]) -> None:
+        print(f"New flows selected in treeview: id={ids}")
+
+    def set_selected_section_ids(self, ids: list[str]) -> None:
         if self._application.action_state.action_running.get():
             return
-        self._application.set_selected_section(id)
-        if id is not None:
-            self._application.set_selected_flow(None)
 
-        print(f"New line section selected in treeview: id={id}")
+        if ids:
+            self._application.set_selected_flows([])
+        self._application.set_selected_section(ids)
+
+        print(f"New line sections selected in treeview: id={ids}")
+
+    def get_selected_flow_ids(self) -> list[str]:
+        return [
+            flow_id.id for flow_id in self._application.flow_state.selected_flows.get()
+        ]
+
+    def get_selected_section_ids(self) -> list[str]:
+        return [
+            section_id.id
+            for section_id in self._application.section_state.selected_sections.get()
+        ]
 
     def load_tracks(self) -> None:
         track_files = askopenfilenames(
@@ -435,7 +478,7 @@ class DummyViewModel(
         self._finish_action()
 
     def add_section(self) -> None:
-        self.set_selected_section_id(None)
+        self.set_selected_section_ids([])
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         self._start_action()
@@ -471,7 +514,7 @@ class DummyViewModel(
         with contextlib.suppress(CancelAddSection):
             line_section = self.__create_section(coordinates, get_metadata)
             print(f"New line_section created: {line_section.id}")
-            self._update_selected_section(line_section.id)
+            self._update_selected_sections([line_section.id])
         self._finish_action()
 
     def __create_section(
@@ -530,22 +573,25 @@ class DummyViewModel(
         )
         self._application.update_section(section)
         print(f"Update section: {section.id}")
-        self._update_selected_section(section.id)
+        self._update_selected_sections([section.id])
         self._finish_action()
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
         return geometry.Coordinate(coordinate[0], coordinate[1])
 
     def edit_section_geometry(self) -> None:
-        if self._selected_section_id is None:
-            return
+        if len(selected_section_ids := self.get_selected_section_ids()) != 1:
+            raise MultipleSectionsSelected(
+                "Multiple sections are selected. Unable to edit section geometry!"
+            )
+
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         self._start_action()
         CanvasElementDeleter(canvas=self._canvas).delete(tag_or_id=TAG_SELECTED_SECTION)
-        if self._selected_section_id:
+        if selected_section_ids:
             if current_section := self._application.get_section_for(
-                SectionId(self._selected_section_id)
+                SectionId(selected_section_ids[0])
             ):
                 SectionGeometryEditor(
                     viewmodel=self,
@@ -557,20 +603,24 @@ class DummyViewModel(
                 )
 
     def edit_section_metadata(self) -> None:
-        if self._selected_section_id is None:
-            if self._treeview_sections is None:
-                raise MissingInjectedInstanceError(
-                    type(self._treeview_sections).__name__
-                )
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
+
+        if not (selected_section_ids := self.get_selected_section_ids()):
             position = self._treeview_sections.get_position()
             InfoBox(
                 message="Please select a section to edit", initial_position=position
             )
             return
-        if self._selected_section_id:
-            section_id = SectionId(self._selected_section_id)
-            if selected_section := self._application.get_section_for(section_id):
-                self._update_metadata(selected_section)
+
+        if len(selected_section_ids) != 1:
+            raise MultipleSectionsSelected(
+                "Multiple sections are selected. Unable to edit section metadata!"
+            )
+
+        section_id = SectionId(selected_section_ids[0])
+        if selected_section := self._application.get_section_for(section_id):
+            self._update_metadata(selected_section)
 
     def _update_metadata(self, selected_section: Section) -> None:
         current_data = selected_section.to_dict()
@@ -594,32 +644,38 @@ class DummyViewModel(
         section = self._flow_parser.parse_section(data)
         self._application.update_section(section)
 
-    def remove_section(self) -> None:
+    def remove_sections(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-        if not self._selected_section_id:
+
+        if not (selected_section_ids := self.get_selected_section_ids()):
             position = self._treeview_sections.get_position()
             InfoBox(
-                message="Please select a section to remove", initial_position=position
-            )
-            return
-        self._start_action()
-        section_id = SectionId(self._selected_section_id)
-        if self._application.is_flow_using_section(section_id):
-            message = (
-                "The section you want to remove is being used in flows.\n"
-                "Please remove the following flows before removing the section.\n"
-            )
-            for flow_id in self._application.flows_using_section(section_id):
-                message += flow_id.serialize() + "\n"
-            position = self._treeview_sections.get_position()
-            InfoBox(
-                message=message,
+                message="Please select one or more sections to remove",
                 initial_position=position,
             )
-            self._finish_action()
             return
-        self._application.remove_section(section_id)
+
+        self._start_action()
+        section_ids = [SectionId(id) for id in selected_section_ids]
+        for section_id in section_ids:
+            if self._application.is_flow_using_section(section_id):
+                message = (
+                    "The section you want to remove is being used in flows.\n"
+                    "Please remove the following flows before removing the section.\n"
+                )
+                for flow_id in self._application.flows_using_section(section_id):
+                    message += flow_id.serialize() + "\n"
+                position = self._treeview_sections.get_position()
+                InfoBox(
+                    message=message,
+                    initial_position=position,
+                )
+                self._finish_action()
+                return
+
+        for section_id in section_ids:
+            self._application.remove_section(section_id)
         self.refresh_items_on_canvas()
         self._finish_action()
 
@@ -637,22 +693,20 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         sections_to_highlight = self._get_sections_to_highlight()
         self._draw_sections(sections_to_highlight)
-        if self._application.flow_state.selected_flow.get():
-            self._draw_arrow_for_selected_flow()
+        if self._application.flow_state.selected_flows.get():
+            self._draw_arrow_for_selected_flows()
 
     def _get_sections_to_highlight(self) -> list[str]:
-        sections_to_highlight: list[str] = []
-        if self._selected_section_id is not None:
-            sections_to_highlight = [self._selected_section_id]
-        elif selected_flow := self._get_selected_flow():
-            if selected_flow is None:
-                return []
-            start_section_id, end_section_id = (
-                selected_flow.start.id,
-                selected_flow.end.id,
-            )
-            sections_to_highlight = [start_section_id, end_section_id]
-        return sections_to_highlight
+        if selected_section_ids := self.get_selected_section_ids():
+            return selected_section_ids
+
+        if selected_flows := self._get_selected_flows():
+            sections_to_highlight = []
+            for flow in selected_flows:
+                sections_to_highlight.append(flow.start.id)
+                sections_to_highlight.append(flow.end.id)
+            return sections_to_highlight
+        return []
 
     def _draw_sections(self, sections_to_highlight: list[str]) -> None:
         if self._canvas is None:
@@ -672,13 +726,12 @@ class DummyViewModel(
                 section_style=style,
             )
 
-    def _draw_arrow_for_selected_flow(self) -> None:
+    def _draw_arrow_for_selected_flows(self) -> None:
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
-        selected_flow = self._get_selected_flow()
-        if selected_flow is not None:
-            if start_section := self._application.get_section_for(selected_flow.start):
-                if end_section := self._application.get_section_for(selected_flow.end):
+        for flow in self._get_selected_flows():
+            if start_section := self._application.get_section_for(flow.start):
+                if end_section := self._application.get_section_for(flow.end):
                     ArrowPainter(self._canvas).draw(
                         start_section=start_section,
                         end_section=end_section,
@@ -686,10 +739,13 @@ class DummyViewModel(
                         arrow_style=ARROW_STYLE,
                     )
 
-    def _get_selected_flow(self) -> Optional[Flow]:
-        if flow_id := self._application.flow_state.selected_flow.get():
-            return self._application.get_flow_for(flow_id)
-        return None
+    def _get_selected_flows(self) -> list[Flow]:
+        flows: list[Flow] = []
+        for flow_id in self._application.flow_state.selected_flows.get():
+            flow = self._application.get_flow_for(flow_id)
+            if flow:
+                flows.append(flow)
+        return flows
 
     def _get_sections(self) -> Iterable[dict]:
         return map(
@@ -720,7 +776,7 @@ class DummyViewModel(
         with contextlib.suppress(CancelAddFlow):
             flow = self.__create_flow()
             print(f"Added new flow: {flow.id}")
-            self.set_selected_flow_id(flow.id.serialize())
+            self.set_selected_flow_ids([flow.id.serialize()])
         self._finish_action()
 
     def __create_flow(self) -> Flow:
@@ -813,14 +869,19 @@ class DummyViewModel(
             flow.end = new_to_section_id
             flow.distance = distance
             self._application.update_flow(flow)
-        self.set_selected_flow_id(flow_id.serialize())
+        self.set_selected_flow_ids([flow_id.serialize()])
         self.refresh_items_on_canvas()
 
     def edit_flow(self) -> None:
         self._start_action()
         with contextlib.suppress(CancelAddFlow):
-            if flow := self._get_selected_flow():
-                self._edit_flow(flow)
+            if flows := self._get_selected_flows():
+                if len(flows) != 1:
+                    raise MultipleFlowsSelected(
+                        "Multiple flows selected. Unable to edit flow!"
+                        "Please select only one flow."
+                    )
+                self._edit_flow(flows[0])
             else:
                 if self._treeview_flows is None:
                     raise MissingInjectedInstanceError(
@@ -847,13 +908,14 @@ class DummyViewModel(
         ):
             self.__update_flow_data(flow_data=flow_data)
 
-    def remove_flow(self) -> None:
+    def remove_flows(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self._start_action()
-        if flow_id := self._application.flow_state.selected_flow.get():
-            self._application.remove_flow(flow_id)
-            self.refresh_items_on_canvas()
+        if flow_ids := self._application.flow_state.selected_flows.get():
+            for flow_id in flow_ids:
+                self._application.remove_flow(flow_id)
+                self.refresh_items_on_canvas()
         else:
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
