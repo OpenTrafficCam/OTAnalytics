@@ -115,3 +115,18 @@ class TestFlowRepository:
         repository.add(flow)
 
         assert None is repository.get(FlowId("missing flow id"))
+
+    def test_flows_using_section(self, flow: Flow, other_flow: Flow) -> None:
+        repository = FlowRepository()
+        repository.add(flow)
+        repository.add(other_flow)
+
+        using_flow_start_section = repository.flows_using_section(flow.start)
+        using_flow_end_section = repository.flows_using_section(flow.end)
+        using_other_start_section = repository.flows_using_section(other_flow.start)
+        using_other_end_section = repository.flows_using_section(other_flow.end)
+
+        assert using_flow_start_section == [flow]
+        assert using_flow_end_section == [flow]
+        assert using_other_start_section == [other_flow]
+        assert using_other_end_section == [other_flow]

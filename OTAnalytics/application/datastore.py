@@ -300,14 +300,14 @@ class Datastore:
             raise OurCustomGroupException("\n".join(exception_messages))
         self._video_repository.add_all(videos)
 
-    def remove_video(self, video: Video) -> None:
+    def remove_videos(self, videos: list[Video]) -> None:
         """
-        Remove a video from the repository.
+        Remove videos from the repository.
 
         Args:
-            video (Video): video to remove
+            videos (Video): videos to remove
         """
-        self._video_repository.remove(video)
+        self._video_repository.remove(videos)
 
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         """
@@ -328,6 +328,7 @@ class Datastore:
         tracks = self._track_parser.parse(file)
         track_ids = [track.id for track in tracks]
         track_ids, videos = self._track_video_parser.parse(file, track_ids)
+        self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 
@@ -440,7 +441,7 @@ class Datastore:
         """
         return self._flow_repository.is_flow_using_section(section)
 
-    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+    def flows_using_section(self, section: SectionId) -> list[Flow]:
         """
         Returns a list of flows using the section as start or end.
 

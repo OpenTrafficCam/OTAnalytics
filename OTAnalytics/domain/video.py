@@ -153,8 +153,9 @@ class VideoRepository:
     def get(self, file: Path) -> Optional[Video]:
         return self._videos.get(file)
 
-    def remove(self, video: Video) -> None:
-        del self._videos[video.get_path()]
+    def remove(self, videos: list[Video]) -> None:
+        for video in videos:
+            del self._videos[video.get_path()]
         self._observers.notify([])
 
     def clear(self) -> None:

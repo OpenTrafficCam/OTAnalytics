@@ -90,7 +90,36 @@ class ApplicationStarter:
         track_repository = self._create_track_repository()
         datastore = self._create_datastore(track_repository)
         track_state = self._create_track_state()
-        track_view_state = self._create_track_view_state(datastore)
+        track_view_state = self._create_track_view_state()
+
+        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
+        dataframe_filter_builder = self._create_dataframe_filter_builder()
+        pandas_data_provider = CachedPandasTrackProvider(
+            datastore, track_view_state, dataframe_filter_builder
+        )
+        track_geometry_plotter = self._create_track_geometry_plotter(
+            track_view_state,
+            pandas_data_provider,
+        )
+        track_start_end_point_plotter = self._create_track_start_end_point_plotter(
+            track_view_state,
+            pandas_data_provider,
+        )
+        section_plotter = PlotterPrototype(
+            track_view_state, MatplotlibTrackPlotter(SectionGeometryPlotter(datastore))
+        )
+        layers = [
+            background_image_plotter,
+            track_geometry_plotter,
+            track_start_end_point_plotter,
+            section_plotter,
+        ]
+        plotter = LayeredPlotter(layers=layers)
+        properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
+        track_view_state.selected_videos.register(properties_updater.notify_videos)
+        image_updater = TrackImageUpdater(datastore, track_view_state, plotter)
+        selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
+
         section_state = self._create_section_state()
         flow_state = self._create_flow_state()
         intersect = self._create_intersect()
@@ -115,7 +144,11 @@ class ApplicationStarter:
         )
         flow_parser: FlowParser = application._datastore._flow_parser
         dummy_viewmodel = DummyViewModel(application, flow_parser)
+        dummy_viewmodel.register_observers()
         application.connect_observers()
+        datastore.register_tracks_observer(selected_video_updater)
+        datastore.register_tracks_observer(image_updater)
+        datastore.register_video_observer(selected_video_updater)
         OTAnalyticsGui(dummy_viewmodel).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
@@ -195,39 +228,8 @@ class ApplicationStarter:
     def _create_track_state(self) -> TrackState:
         return TrackState()
 
-    def _create_track_view_state(self, datastore: Datastore) -> TrackViewState:
-        state = TrackViewState()
-        background_image_plotter = TrackBackgroundPlotter(state, datastore)
-        dataframe_filter_builder = self._create_dataframe_filter_builder()
-        pandas_data_provider = CachedPandasTrackProvider(
-            datastore, state, dataframe_filter_builder
-        )
-        track_geometry_plotter = self._create_track_geometry_plotter(
-            state,
-            pandas_data_provider,
-        )
-        track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            state,
-            pandas_data_provider,
-        )
-        section_plotter = PlotterPrototype(
-            state, MatplotlibTrackPlotter(SectionGeometryPlotter(datastore))
-        )
-        layers = [
-            background_image_plotter,
-            track_geometry_plotter,
-            track_start_end_point_plotter,
-            section_plotter,
-        ]
-        plotter = LayeredPlotter(layers=layers)
-        properties_updater = TrackPropertiesUpdater(datastore, state)
-        state.selected_video.register(properties_updater.notify_video)
-        image_updater = TrackImageUpdater(datastore, state, plotter)
-        selected_video_updater = SelectedVideoUpdate(datastore, state)
-        datastore.register_tracks_observer(selected_video_updater)
-        datastore.register_video_observer(selected_video_updater)
-        datastore.register_tracks_observer(image_updater)
-        return state
+    def _create_track_view_state(self) -> TrackViewState:
+        return TrackViewState()
 
     def _create_track_geometry_plotter(
         self,
