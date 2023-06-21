@@ -302,10 +302,10 @@ class Datastore:
 
     def remove_videos(self, videos: list[Video]) -> None:
         """
-        Remove a video from the repository.
+        Remove videos from the repository.
 
         Args:
-            video (Video): video to remove
+            videos (Video): videos to remove
         """
         self._video_repository.remove(videos)
 

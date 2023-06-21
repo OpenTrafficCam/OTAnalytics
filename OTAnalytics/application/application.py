@@ -172,7 +172,7 @@ class OTAnalyticsApplication:
 
     def remove_videos(self) -> None:
         """
-        Remove the currently selected video from the repository.
+        Remove the currently selected videos from the repository.
         """
         if videos := self.track_view_state.selected_videos.get():
             self._datastore.remove_videos(videos)
