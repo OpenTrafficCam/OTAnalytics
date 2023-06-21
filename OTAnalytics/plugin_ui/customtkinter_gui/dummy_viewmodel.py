@@ -957,3 +957,6 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
 
         self._frame_filter.disable_filter_by_class_button()
+
+    def export_counts(self) -> None:
+        pass
