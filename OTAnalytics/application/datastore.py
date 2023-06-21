@@ -440,7 +440,7 @@ class Datastore:
         """
         return self._flow_repository.is_flow_using_section(section)
 
-    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+    def flows_using_section(self, section: SectionId) -> list[Flow]:
         """
         Returns a list of flows using the section as start or end.
 

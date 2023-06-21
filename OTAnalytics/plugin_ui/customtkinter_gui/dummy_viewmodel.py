@@ -547,8 +547,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                     "The section you want to remove is being used in flows.\n"
                     "Please remove the following flows before removing the section.\n"
                 )
-                for flow_id in self._application.flows_using_section(section_id):
-                    message += flow_id.serialize() + "\n"
+                for flow in self._application.flows_using_section(section_id):
+                    message += flow.name + "\n"
                 position = self._treeview_sections.get_position()
                 InfoBox(
                     message=message,
