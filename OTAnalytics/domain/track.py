@@ -7,6 +7,7 @@ from typing import Iterable, Optional
 from PIL import Image
 
 from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.observer import Registrable
 
 CLASSIFICATION: str = "classification"
 CONFIDENCE: str = "confidence"
@@ -91,13 +92,13 @@ class TrackSubject:
         [observer.notify_track(track_id) for observer in self.observers]
 
 
-class TrackListSubject:
+class TrackListSubject(Registrable[TrackListObserver]):
     """
     Helper class to handle and notify observers
     """
 
     def __init__(self) -> None:
-        self.observers: set[TrackListObserver] = set()
+        super().__init__()
 
     def register(self, observer: TrackListObserver) -> None:
         """
@@ -106,7 +107,7 @@ class TrackListSubject:
         Args:
             observer (TrackListObserver): listener to add
         """
-        self.observers.add(observer)
+        super().register(observer)
 
     def notify(self, tracks: list[TrackId]) -> None:
         """
@@ -115,7 +116,7 @@ class TrackListSubject:
         Args:
             tracks (list[TrackId]): list of added tracks
         """
-        [observer.notify_tracks(tracks) for observer in self.observers]
+        [observer.notify_tracks(tracks) for observer in self._observers]
 
 
 class TrackError(Exception):
