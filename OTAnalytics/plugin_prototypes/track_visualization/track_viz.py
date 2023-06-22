@@ -138,7 +138,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
     def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
         if not tracks:
-            return None
+            return DataFrame()
 
         data = self._convert_tracks(tracks)
 
@@ -230,6 +230,8 @@ class PandasTracksOffsetProvider(PandasDataFrameProvider):
     def get_data(self) -> DataFrame:
         offset = self._track_view_state.track_offset.get()
         data = self._other.get_data()
+        if data.empty:
+            return data
         return self._apply_offset(data.copy(), offset)
 
     def _apply_offset(
@@ -252,7 +254,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
     ) -> None:
         super().__init__(datastore, track_view_state, filter_builder)
         datastore.register_tracks_observer(self)
-        self._cache_df: Optional[DataFrame] = None
+        self._cache_df: DataFrame = DataFrame()
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """Converts the given tracks to dataframe.
@@ -264,7 +266,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         Returns:
             DataFrame: a dataframe containing the detections of the given tracks.
         """
-        if self._cache_df is None:
+        if self._cache_df.empty:
             self._cache_df = super()._convert_tracks(tracks)
 
         return self._cache_df
@@ -276,7 +278,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         Args:
             tracks (list[TrackId]): the ids of changed tracks
         """
-        self._cache_df = None
+        self._cache_df = DataFrame()
 
 
 class MatplotlibPlotterImplementation(ABC):
