@@ -19,6 +19,7 @@ from OTAnalytics.domain.track import (
     PilImage,
     Track,
     TrackId,
+    TrackIdProvider,
     TrackImage,
     TrackListObserver,
 )
@@ -120,6 +121,23 @@ class PandasDataFrameProvider:
     @abstractmethod
     def get_data(self) -> DataFrame:
         pass
+
+
+class FilterById(PandasDataFrameProvider):
+    """Filter tracks by id before providing tracks as pandas DataFrame."""
+
+    def __init__(
+        self, other: PandasDataFrameProvider, id_filter: TrackIdProvider
+    ) -> None:
+        self._other = other
+        self._filter = id_filter
+
+    def get_data(self) -> DataFrame:
+        data = self._other.get_data()
+        if data.empty:
+            return data
+        ids: set[int] = {track_id.id for track_id in self._filter.get_ids()}
+        return data.loc[data[track.TRACK_ID].isin(ids)]
 
 
 class PandasTrackProvider(PandasDataFrameProvider):

@@ -124,7 +124,6 @@ class DummyViewModel(
 
     def register_to_subjects(self) -> None:
         self._application.register_sections_observer(self)
-        self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_flows_observer(self)
         self._application.register_flow_changed_observer(self._on_flow_changed)
         self._application.track_view_state.selected_videos.register(
@@ -198,6 +197,7 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
+        self._application.intersect_tracks_with_sections()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
@@ -218,6 +218,10 @@ class DummyViewModel(
         self._application.track_view_state.selected_videos.register(
             self._update_selected_videos
         )
+        self._application.section_state.selected_sections.register(
+            self._update_selected_sections
+        )
+        self._application.register_section_changed_observer(self._on_section_changed)
 
     def _start_action(self) -> None:
         self._application.action_state.action_running.set(True)

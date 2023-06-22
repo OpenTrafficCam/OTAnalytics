@@ -210,6 +210,12 @@ class OTAnalyticsApplication:
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
         self._add_flow = AddFlow(self._datastore._flow_repository)
+        self._intersect_tracks_with_sections = IntersectTracksWithSections(
+            self._intersect, self._datastore
+        )
+        self._clear_event_repository = ClearEventRepository(
+            self._datastore._event_repository
+        )
 
     def connect_observers(self) -> None:
         """
@@ -218,6 +224,12 @@ class OTAnalyticsApplication:
         self._datastore.register_tracks_observer(self.track_state)
         self._datastore.register_tracks_observer(self._tracks_metadata)
         self._datastore.register_sections_observer(self.section_state)
+
+    def connect_clear_event_repository_observer(self) -> None:
+        self._datastore.register_sections_observer(self._clear_event_repository)
+        self._datastore.register_section_changed_observer(
+            self._clear_event_repository.on_section_changed
+        )
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
         self._datastore.register_sections_observer(observer)
@@ -447,6 +459,9 @@ class OTAnalyticsApplication:
 
         scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
         self._datastore.add_events(scene_events)
+
+    def intersect_tracks_with_sections(self) -> None:
+        self._intersect_tracks_with_sections.run()
 
     def save_events(self, file: Path) -> None:
         """
