@@ -292,7 +292,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -300,9 +300,8 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if data is not None:
-            if not data.empty:
-                self._plot_dataframe(data, axes)
+        if not data.empty:
+            self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """
@@ -334,7 +333,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -342,9 +341,8 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if data is not None:
-            if not data.empty:
-                self._plot_dataframe(data, axes)
+        if not data.empty:
+            self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """
