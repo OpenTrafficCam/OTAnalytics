@@ -968,9 +968,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         # TODO: @briemla replace with actual wiring
         default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
         export_formats: dict = {
-            "Format 1": ".csv",
-            "Format 2": ".xlsx",
-            "Format 3": ".xlsx",
+            "Format 1": "csv",
+            "Format 2": "xlsx",
+            "Format 3": "xlsx",
         }
         try:
             input_values: dict = ToplevelExportCounts(
