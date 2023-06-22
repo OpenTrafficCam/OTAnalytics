@@ -1,4 +1,5 @@
 import tkinter
+import traceback
 from typing import Any
 
 from customtkinter import (
@@ -51,6 +52,7 @@ class ModifiedCTk(CTk):
         InfoBox(
             message=str(val), title="Error", initial_position=get_widget_position(self)
         )
+        traceback.print_exception(val)
 
 
 class TabviewInputFiles(CTkTabview):

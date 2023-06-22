@@ -289,15 +289,15 @@ class Datastore:
         self._video_repository.clear()
 
     def load_video_files(self, files: list[Path]) -> None:
-        exception_messages = []
+        raised_exceptions: list[Exception] = []
         videos = []
         for file in files:
             try:
                 videos.append(self._video_parser.parse(file))
-            except Exception as e:
-                exception_messages.append(str(e) + "\n")
-        if exception_messages:
-            raise OurCustomGroupException("\n".join(exception_messages))
+            except Exception as cause:
+                raised_exceptions.append(cause)
+        if raised_exceptions:
+            raise OurCustomGroupException(raised_exceptions)
         self._video_repository.add_all(videos)
 
     def remove_videos(self, videos: list[Video]) -> None:
@@ -339,14 +339,14 @@ class Datastore:
         Args:
             file (Path): file in ottrk format
         """
-        exception_messages = []
+        raised_exceptions: list[Exception] = []
         for file in files:
             try:
                 self.load_track_file(file)
-            except Exception as e:
-                exception_messages.append(str(e) + "\n")
-        if exception_messages:
-            raise OurCustomGroupException("\n".join(exception_messages))
+            except Exception as cause:
+                raised_exceptions.append(cause)
+        if raised_exceptions:
+            raise OurCustomGroupException(raised_exceptions)
 
     def get_all_tracks(self) -> list[Track]:
         """
