@@ -15,3 +15,7 @@ class AbstractFrameCanvas:
     @abstractmethod
     def update_background(self, image: TrackImage) -> None:
         pass
+
+    @abstractmethod
+    def clear_image(self) -> None:
+        pass

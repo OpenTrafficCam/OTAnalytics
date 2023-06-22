@@ -22,6 +22,9 @@ RIGHT_KEY = "right"
 PLUS_KEYS = "+"
 MINUS_KEYS = "-"
 
+STATE_DISABLED = "disabled"
+STATE_NORMAL = "normal"
+
 
 @dataclass
 class TkEvents:
@@ -57,6 +60,9 @@ class TkEvents:
     DELETE_KEY: ClassVar[str] = "<Delete>"
     BACKSPACE_KEY: ClassVar[str] = "<BackSpace>"
     ESCAPE_KEY: ClassVar[str] = "<Escape>"
+    MULTI_SELECT_SINGLE: ClassVar[str] = (
+        "<Command-ButtonRelease-1>" if ON_MAC else "<Control-ButtonRelease-1>"
+    )
 
 
 tk_events = TkEvents()

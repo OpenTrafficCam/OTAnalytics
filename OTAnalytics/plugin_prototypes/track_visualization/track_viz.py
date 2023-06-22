@@ -15,7 +15,13 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import PilImage, Track, TrackImage
+from OTAnalytics.domain.track import (
+    PilImage,
+    Track,
+    TrackId,
+    TrackImage,
+    TrackListObserver,
+)
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
@@ -129,9 +135,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         self._track_view_state = track_view_state
         self._filter_builder = filter_builder
 
-    def get_data(self) -> Optional[DataFrame]:
-        offset = self._track_view_state.track_offset.get()
-
+    def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
         if not tracks:
             return None
@@ -141,7 +145,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if data.empty:
             return data
 
-        data = self._apply_offset(data, offset)
         return self._filter_tracks(FILTER_CLASSES, NUM_MIN_FRAMES, data)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
@@ -165,14 +168,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if (track.TRACK_ID in converted.columns) and (track.FRAME in converted.columns):
             return converted.sort_values([track.TRACK_ID, track.FRAME])
         return converted
-
-    def _apply_offset(
-        self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
-    ) -> DataFrame:
-        if new_offset := offset:
-            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
-            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
-        return tracks
 
     # % Filter length (number of frames)
     def _min_frames(self, data: DataFrame, min_frames: int = 10) -> list:
@@ -224,6 +219,66 @@ class PandasTrackProvider(PandasDataFrameProvider):
         return track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
 
 
+class PandasTracksOffsetProvider(PandasDataFrameProvider):
+    def __init__(
+        self, other: PandasDataFrameProvider, track_view_state: TrackViewState
+    ) -> None:
+        super().__init__()
+        self._other = other
+        self._track_view_state = track_view_state
+
+    def get_data(self) -> DataFrame:
+        offset = self._track_view_state.track_offset.get()
+        data = self._other.get_data()
+        return self._apply_offset(data.copy(), offset)
+
+    def _apply_offset(
+        self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
+    ) -> DataFrame:
+        if new_offset := offset:
+            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
+            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
+        return tracks
+
+
+class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
+    """Provides and caches tracks as pandas DataFrame."""
+
+    def __init__(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
+    ) -> None:
+        super().__init__(datastore, track_view_state, filter_builder)
+        datastore.register_tracks_observer(self)
+        self._cache_df: Optional[DataFrame] = None
+
+    def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
+        """Converts the given tracks to dataframe.
+        Returns the cached dataframe if conversion was already computed earlier.
+
+        Args:
+            tracks (Iterable[Track]): the tracks to be converted to dataframe.
+
+        Returns:
+            DataFrame: a dataframe containing the detections of the given tracks.
+        """
+        if self._cache_df is None:
+            self._cache_df = super()._convert_tracks(tracks)
+
+        return self._cache_df
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        """Take notice of some change in the track repository.
+        Resets the cached dataframe, so it will be recomputed.
+
+        Args:
+            tracks (list[TrackId]): the ids of changed tracks
+        """
+        self._cache_df = None
+
+
 class MatplotlibPlotterImplementation(ABC):
     """Abstraction to plot on a matplotlib axes"""
 
@@ -237,7 +292,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -245,9 +300,8 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if data is not None:
-            if not data.empty:
-                self._plot_dataframe(data, axes)
+        if not data.empty:
+            self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """
@@ -279,7 +333,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -287,9 +341,8 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if data is not None:
-            if not data.empty:
-                self._plot_dataframe(data, axes)
+        if not data.empty:
+            self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """

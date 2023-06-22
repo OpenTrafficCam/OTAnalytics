@@ -1,17 +1,15 @@
+import tkinter
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import (
-    ID,
-    RELATIVE_OFFSET_COORDINATES,
-    LineSection,
-    Section,
-    SectionId,
+from OTAnalytics.adapter_ui.abstract_frame_flows import (
+    InnerSegmentsCenterCalculator,
+    SectionRefPointCalculator,
 )
-from OTAnalytics.domain.types import EventType
+from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     DELETE_KEYS,
@@ -30,8 +28,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB_CORE,
     KNOB_PERIMETER,
     LINE,
+    SECTION_TEXT,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 TEMPORARY_SECTION_ID: str = "temporary_section"
 PRE_EDIT_SECTION_ID: str = "pre_edit_section"
@@ -50,7 +48,32 @@ class SectionGeometryBuilderObserver(ABC):
         raise NotImplementedError
 
 
-class CanvasElementPainter:
+class ArrowPainter:
+    def __init__(self, canvas: AbstractCanvas) -> None:
+        self._canvas = canvas
+
+    def draw(
+        self,
+        start_section: Section,
+        end_section: Section,
+        arrow_style: dict | None = None,
+        refpt_calculator: SectionRefPointCalculator = InnerSegmentsCenterCalculator(),
+        tags: list[str] | None = None,
+    ) -> None:
+        start_x, start_y = refpt_calculator.get_reference_point(start_section)
+        end_x, end_y = refpt_calculator.get_reference_point(end_section)
+        self._canvas.create_line(
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            arrow=tkinter.LAST,
+            tags=tags,
+            **arrow_style,
+        )
+
+
+class SectionPainter:
     def __init__(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
@@ -61,6 +84,7 @@ class CanvasElementPainter:
         section_style: dict,
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,
+        text: str | None = None,
         tags: list[str] | None = None,
     ) -> None:
         """Draws a line section on a canvas.
@@ -76,11 +100,33 @@ class CanvasElementPainter:
             highlighted_knob_style (dict | None, optional): Dict of style options for a
                 knob coordinate that should be highlighted with a unique style.
                 Defaults to None.
+            text (str | None, optional): Text to display above the section.
+                Defaults to None.
             tags (list[str] | None, optional): Tags to specify groups of line_sections.
                 Defaults to None.
         """
         tkinter_tags = (id,) + tuple(tags) if tags is not None else (id,)
 
+        self._draw_geometries(
+            coordinates,
+            section_style,
+            highlighted_knob_index,
+            highlighted_knob_style,
+            tkinter_tags,
+        )
+
+        if text is not None:
+            text_position = coordinates[0]
+            self._draw_text(text, text_position, tkinter_tags)
+
+    def _draw_geometries(
+        self,
+        coordinates: list[tuple[int, int]],
+        section_style: dict,
+        highlighted_knob_index: int | None,
+        highlighted_knob_style: dict | None,
+        tkinter_tags: tuple[str, ...],
+    ) -> None:
         start: tuple[int, int] | None = None
         for index, coordinate in enumerate(coordinates):
             if start is not None:
@@ -145,6 +191,15 @@ class CanvasElementPainter:
             tags=tags,
         )
 
+    def _draw_text(
+        self,
+        text: str,
+        text_position: tuple[float, float],
+        tkinter_tags: tuple[str, ...],
+    ) -> None:
+        x, y = text_position
+        self._canvas.create_text(x, y, text=text, tags=tkinter_tags + (SECTION_TEXT,))
+
 
 class CanvasElementDeleter:
     def __init__(self, canvas: AbstractCanvas) -> None:
@@ -190,7 +245,7 @@ class SectionGeometryEditor(CanvasObserver):
         self._get_name()
         self._get_matadata()
 
-        self.painter = CanvasElementPainter(canvas=canvas)
+        self.painter = SectionPainter(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self.painter.draw(
@@ -241,6 +296,7 @@ class SectionGeometryEditor(CanvasObserver):
             elif event_type == ESCAPE_KEY:
                 self.detach_from(self._canvas.event_handler)
                 self._abort()
+                self._viewmodel.cancel_action()
         elif event_type == LEFT_KEY:
             self._shift_selected_knob_backward()
         elif event_type == RIGHT_KEY:
@@ -254,6 +310,7 @@ class SectionGeometryEditor(CanvasObserver):
             self._delete_selected_knob()
         elif event_type == ESCAPE_KEY:
             self._deselect_knob()
+            self._viewmodel.cancel_action()
 
     def _hover_knob(self, coordinate: tuple[int, int]) -> None:
         closest_knob_index = self._get_closest_knob_index(coordinate=coordinate)
@@ -402,40 +459,19 @@ class SectionGeometryEditor(CanvasObserver):
         )
 
     def _finish(self) -> None:
-        self._create_section()
+        self._update_section()
         self.deleter.delete(tag_or_id=self._pre_edit_id)
         self.deleter.delete(tag_or_id=self._temporary_id)
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
         return Coordinate(coordinate[0], coordinate[1])
 
-    def _create_section(self) -> None:
-        if len(self._coordinates) == 0:
-            raise MissingCoordinate("First coordinate is missing")
-        elif len(self._coordinates) == 1:
-            raise MissingCoordinate("Second coordinate is missing")
-        if self._metadata == {}:
-            raise ValueError("Metadata of line_section are not defined")
-        relative_offset_coordinates_enter = self._metadata[RELATIVE_OFFSET_COORDINATES][
-            EventType.SECTION_ENTER.serialize()
-        ]
-        line_section = LineSection(
-            id=SectionId(self._name),
-            relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(
-                    **relative_offset_coordinates_enter
-                )
-            },
-            plugin_data={},
-            coordinates=[
-                self._to_coordinate(coordinate) for coordinate in self._coordinates
-            ],
-        )
-        self._viewmodel.set_new_section(line_section)
+    def _update_section(self) -> None:
+        self._viewmodel.update_section_coordinates(self._metadata, self._coordinates)
 
     def _abort(self) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
-        self._viewmodel.refresh_sections_on_gui()
+        self._viewmodel.refresh_items_on_canvas()
 
 
 class SectionGeometryBuilder:
@@ -448,7 +484,7 @@ class SectionGeometryBuilder:
         self._observer = observer
         self._style = style
 
-        self.painter = CanvasElementPainter(canvas=canvas)
+        self.painter = SectionPainter(canvas=canvas)
         self.deleter = CanvasElementDeleter(canvas=canvas)
 
         self._temporary_id: str = TEMPORARY_SECTION_ID
@@ -482,10 +518,6 @@ class SectionGeometryBuilder:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
 
 
-class MissingCoordinate(Exception):
-    pass
-
-
 class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
     def __init__(
         self,
@@ -503,6 +535,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             canvas=self._canvas,
             style=self._style,
         )
+        self._id: Optional[str] = None
         self._name: Optional[str] = None
         self._coordinates: list[tuple[int, int]] = []
         self._metadata: dict = {}
@@ -514,7 +547,8 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
                 (int(coordinate.x), int(coordinate.y))
                 for coordinate in template.get_coordinates()
             ]
-            self._name = template.id.id
+            self._id = template.id.id
+            self._name = template.name
             self._metadata = template.to_dict()
 
     def update(
@@ -540,6 +574,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         elif event_type == ESCAPE_KEY:
             self.detach_from(self._canvas.event_handler)
             self.geometry_builder.abort()
+            self._viewmodel.cancel_action()
 
     def finish_building(
         self,
@@ -553,48 +588,15 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             end (tuple[int, int]): Tuple of the sections end coordinates
         """
         self._coordinates = coordinates
-        if (
-            ID not in self._metadata
-            or RELATIVE_OFFSET_COORDINATES not in self._metadata
-        ):
-            self._get_metadata()
-        if not self._metadata[ID]:
-            return
         self._create_section()
 
-    def _get_metadata(self) -> None:
+    def _get_metadata(self) -> dict:
         toplevel_position = get_widget_position(widget=self._canvas)
-        self._metadata = ToplevelSections(
+        return self._viewmodel.get_section_metadata(
             title="Add section", initial_position=toplevel_position
-        ).get_metadata()
+        )
 
     def _create_section(self) -> None:
-        if self.number_of_coordinates() == 0:
-            raise MissingCoordinate("First coordinate is missing")
-        elif self.number_of_coordinates() == 1:
-            raise MissingCoordinate("Second coordinate is missing")
-        if self._metadata == {}:
-            raise ValueError("Metadata of line_section are not defined")
-        name = self._metadata[ID]
-        relative_offset_coordinates_enter = self._metadata[RELATIVE_OFFSET_COORDINATES][
-            EventType.SECTION_ENTER.serialize()
-        ]
-        line_section = LineSection(
-            id=SectionId(name),
-            relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(
-                    **relative_offset_coordinates_enter
-                )
-            },
-            plugin_data={},
-            coordinates=[
-                self._to_coordinate(coordinate) for coordinate in self._coordinates
-            ],
+        self._viewmodel.add_new_section(
+            self._coordinates, get_metadata=self._get_metadata
         )
-        self._viewmodel.set_new_section(line_section)
-
-    def _to_coordinate(self, coordinate: tuple[int, int]) -> Coordinate:
-        return Coordinate(coordinate[0], coordinate[1])
-
-    def number_of_coordinates(self) -> int:
-        return len(self._coordinates)
