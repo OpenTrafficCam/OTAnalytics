@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Any, Sequence
-from unittest.mock import Mock, call
+from unittest.mock import MagicMock, Mock, call
 
 import pytest
 from numpy import array, int32
@@ -206,6 +206,14 @@ class TestDatastore:
         some_video = SimpleVideo(video_reader=Mock(), path=Path(""))
         track_parser.parse.return_value = [some_track]
         track_video_parser.parse.return_value = [some_track_id], [some_video]
+
+        order = MagicMock()
+        order.track_parser = track_parser
+        order.track_video_parser = track_video_parser
+        order.video_repository = video_repository
+        order.track_repository = track_repository
+        order.track_to_video_repository = track_to_video_repository
+
         store = Datastore(
             track_repository=track_repository,
             track_parser=track_parser,
@@ -224,11 +232,13 @@ class TestDatastore:
 
         store.load_track_file(some_file)
 
-        track_parser.parse.assert_called_with(some_file)
-        track_video_parser.parse.assert_called_with(some_file, [some_track_id])
-        track_repository.add_all.assert_called_with([some_track])
-
-        track_to_video_repository.add.called_with(some_track_id, some_video)
+        assert order.mock_calls == [
+            call.track_parser.parse(some_file),
+            call.track_video_parser.parse(some_file, [some_track_id]),
+            call.video_repository.add_all([some_video]),
+            call.track_to_video_repository.add_all([some_track_id], [some_video]),
+            call.track_repository.add_all([some_track]),
+        ]
 
     def test_load_track_files(
         self,
