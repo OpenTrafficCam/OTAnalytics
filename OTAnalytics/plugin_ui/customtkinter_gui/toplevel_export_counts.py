@@ -1,3 +1,5 @@
+import contextlib
+from tkinter.filedialog import asksaveasfilename
 from typing import Any
 
 from customtkinter import CTkEntry, CTkFrame, CTkLabel, CTkOptionMenu
@@ -8,9 +10,15 @@ from OTAnalytics.plugin_ui.customtkinter_gui.utility_widgets import FrameOkCance
 
 INTERVAL = "interval"
 EXPORT_FORMAT = "export_format"
+EXPORT_FILE = "export_file"
+INITIAL_FILE_STEM = "counts"
 
 
 class CancelExportCounts(Exception):
+    pass
+
+
+class FileSelectionCancelledError(Exception):
     pass
 
 
@@ -105,10 +113,25 @@ class ToplevelExportCounts(ToplevelTemplate):
         self.attributes("-topmost", 1)
         self._frame_configure_export.set_focus()
 
+    def _choose_file(self) -> None:
+        export_format = self._input_values[EXPORT_FORMAT]  #
+        export_extension = f"*.{self._export_formats[export_format]}"
+        export_file = asksaveasfilename(
+            title="Save counts as",
+            filetypes=[(export_format, export_extension)],
+            defaultextension=export_extension,
+            initialfile=INITIAL_FILE_STEM,
+        )
+        self._input_values[EXPORT_FILE] = export_file
+        if export_file == "":
+            raise FileSelectionCancelledError
+
     def _on_ok(self, event: Any = None) -> None:
         self._frame_configure_export.get_input_values()
-        self.destroy()
-        self.update()
+        with contextlib.suppress(FileSelectionCancelledError):
+            self._choose_file()
+            self.destroy()
+            self.update()
 
     def _on_cancel(self, event: Any = None) -> None:
         self._canceled = True
