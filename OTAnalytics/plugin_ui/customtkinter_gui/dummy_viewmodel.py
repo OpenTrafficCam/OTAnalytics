@@ -966,13 +966,18 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def export_counts(self) -> None:
         # TODO: @briemla replace with actual wiring
-        input_values = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
+        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
+        export_formats: dict = {
+            "Format 1": ".csv",
+            "Format 2": ".xlsx",
+            "Format 3": ".xlsx",
+        }
         try:
-            input_values = ToplevelExportCounts(
+            input_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
-                input_values=input_values,
-                export_formats=["Format 1", "Format 2", "Format 3"],
+                input_values=default_values,
+                export_formats=export_formats,
             ).get_data()
             print(input_values)
         except CancelExportCounts:

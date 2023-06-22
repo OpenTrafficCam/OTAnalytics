@@ -17,7 +17,7 @@ class CancelExportCounts(Exception):
 class FrameConfigureExportCounts(CTkFrame):
     def __init__(
         self,
-        export_formats: list[str],
+        export_formats: dict[str, str],
         input_values: dict,
         **kwargs: Any,
     ) -> None:
@@ -37,7 +37,9 @@ class FrameConfigureExportCounts(CTkFrame):
         self.entry_interval.insert(0, str(self._input_values["interval"]))
         self.label_interval_unit = CTkLabel(master=self, text="min")
         self.label_format = CTkLabel(master=self, text="Format")
-        self.optionmenu_format = CTkOptionMenu(master=self, values=self._export_formats)
+        self.optionmenu_format = CTkOptionMenu(
+            master=self, values=list(self._export_formats.keys())
+        )
         self.optionmenu_format.set(self._input_values[EXPORT_FORMAT])
 
     def _place_widgets(self) -> None:
@@ -73,7 +75,7 @@ class FrameConfigureExportCounts(CTkFrame):
 class ToplevelExportCounts(ToplevelTemplate):
     def __init__(
         self,
-        export_formats: list[str],
+        export_formats: dict[str, str],
         input_values: dict,
         **kwargs: Any,
     ) -> None:
