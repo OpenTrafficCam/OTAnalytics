@@ -129,6 +129,30 @@ class ClearEventRepository(SectionListObserver):
         self.clear()
 
 
+class IntersectTracksWithSections:
+    """Intersect tracks with sections and add all intersection events in the repository.
+
+    Args:
+        intersect (RunIntersect): intersector to intersect tracks with sections
+        datastore (Datastore): the datastore containing tracks, sections and events
+    """
+
+    def __init__(
+        self,
+        intersect: RunIntersect,
+        datastore: Datastore,
+    ) -> None:
+        self._intersect = intersect
+        self._datastore = datastore
+
+    def run(self) -> None:
+        """Runs the intersection of tracks with sections in the repository."""
+        tracks = self._datastore.get_all_tracks()
+        sections = self._datastore.get_all_sections()
+        events = self._intersect.run(tracks, sections)
+        self._datastore.add_events(events)
+
+
 class OTAnalyticsApplication:
     """
     Entrypoint for calls from the UI.

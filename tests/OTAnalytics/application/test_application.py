@@ -2,16 +2,20 @@ from unittest.mock import Mock, call
 
 import pytest
 
+from OTAnalytics.application.analysis import RunIntersect
 from OTAnalytics.application.application import (
     AddFlow,
     AddSection,
     ClearEventRepository,
     FlowAlreadyExists,
+    IntersectTracksWithSections,
     SectionAlreadyExists,
 )
-from OTAnalytics.domain.event import EventRepository
+from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+from OTAnalytics.domain.track import Track
 
 
 class TestAddSection:
@@ -80,3 +84,26 @@ class TestClearEventRepository:
         clear_event_repository = ClearEventRepository(repository)
         clear_event_repository.clear()
         repository.clear.assert_called_once()
+
+
+class TestIntersectTracksWithSections:
+    def test_run(self) -> None:
+        track = Mock(spec=Track)
+        section = Mock(spec=Section)
+        event = Mock(spec=Event)
+
+        datastore = Mock(spec=Datastore)
+        datastore.get_all_tracks.return_value = [track]
+        datastore.get_all_sections.return_value = [section]
+
+        intersect = Mock(spec=RunIntersect)
+        intersect.run.return_value = [event]
+
+        intersect_tracks_sections = IntersectTracksWithSections(intersect, datastore)
+        intersect_tracks_sections.run()
+
+        datastore.get_all_tracks.assert_called_once()
+        datastore.get_all_sections.assert_called_once()
+
+        assert intersect.run.call_args_list == [call([track], [section])]
+        assert datastore.add_events.call_args_list == [call([event])]
