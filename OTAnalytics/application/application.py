@@ -13,6 +13,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
 from OTAnalytics.domain.flow import (
     Flow,
@@ -106,6 +107,26 @@ class AddFlow:
             stored_flow.name != flow_name
             for stored_flow in self._flow_repository.get_all()
         )
+
+
+class ClearEventRepository(SectionListObserver):
+    """Clears the event repository also on section state changes.
+
+    Args:
+        event_repository (EventRepository): the event repository
+    """
+
+    def __init__(self, event_repository: EventRepository) -> None:
+        self._event_repository = event_repository
+
+    def clear(self) -> None:
+        self._event_repository.clear()
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        self.clear()
+
+    def on_section_changed(self, section_id: SectionId) -> None:
+        self.clear()
 
 
 class OTAnalyticsApplication:
