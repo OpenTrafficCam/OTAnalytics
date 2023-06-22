@@ -23,7 +23,7 @@ class FrameVideos(CTkFrame):
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        self._viewmodel.set_tracks_frame(self)
+        pass
 
     def _get_widgets(self) -> None:
         self.label = CTkLabel(master=self, text="Videos")
