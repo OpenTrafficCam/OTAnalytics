@@ -17,6 +17,7 @@ from OTAnalytics.domain.section import (
     LineSection,
     Section,
     SectionChangedObserver,
+    SectionChangedSubject,
     SectionId,
     SectionListObserver,
     SectionListSubject,
@@ -455,3 +456,30 @@ class TestSectionRepository:
             call([section_id_north, section_id_south]),
             call([]),
         ]
+
+
+class TestSectionChangedSubject:
+    def test_register(self) -> None:
+        observer = Mock(spec=SectionChangedObserver)
+        other_observer = Mock(spec=SectionChangedObserver)
+
+        subject = SectionChangedSubject()
+        subject.register(observer)
+        subject.register(other_observer)
+        assert subject.observers == [observer, other_observer]
+        subject.register(observer)
+        assert subject.observers == [observer, other_observer]
+
+    def test_notify(self) -> None:
+        observer = Mock(spec=SectionChangedObserver)
+        other_observer = Mock(spec=SectionChangedObserver)
+        section_id = Mock(spec=SectionId)
+
+        subject = SectionChangedSubject()
+        subject.register(observer)
+        subject.register(other_observer)
+
+        subject.notify(section_id)
+
+        observer.assert_called_once_with(section_id)
+        other_observer.assert_called_once_with(section_id)

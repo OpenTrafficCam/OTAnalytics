@@ -50,7 +50,7 @@ class SectionChangedSubject:
     """
 
     def __init__(self) -> None:
-        self.observers: set[SectionChangedObserver] = set()
+        self.observers: list[SectionChangedObserver] = []
 
     def register(self, observer: SectionChangedObserver) -> None:
         """
@@ -59,7 +59,9 @@ class SectionChangedSubject:
         Args:
             observer (SectionChangedObserver): listener to add
         """
-        self.observers.add(observer)
+        new_observers = self.observers.copy()
+        new_observers.append(observer)
+        self.observers = list(dict.fromkeys(new_observers))
 
     def notify(self, value: SectionId) -> None:
         """
