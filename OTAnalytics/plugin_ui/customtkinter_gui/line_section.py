@@ -23,7 +23,10 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     RIGHT_BUTTON_UP,
     RIGHT_KEY,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import (
+    coordinate_is_on_widget,
+    get_widget_position,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB,
     KNOB_CORE,
@@ -302,9 +305,14 @@ class SectionGeometryEditor(CanvasObserver):
             self._shift_selected_knob_backward()
         elif event_type == RIGHT_KEY:
             self._shift_selected_knob_forward()
-        elif event_type in [MOTION, MOTION_WHILE_LEFT_BUTTON_DOWN]:
+        elif event_type in [
+            MOTION,
+            MOTION_WHILE_LEFT_BUTTON_DOWN,
+        ] and coordinate_is_on_widget(coordinate, self._canvas):
             self._move_knob(coordinate)
-        elif event_type == LEFT_BUTTON_UP:
+        elif event_type == LEFT_BUTTON_UP and coordinate_is_on_widget(
+            coordinate, self._canvas
+        ):
             self._update_knob(coordinate)
             self._deselect_knob()
         elif event_type == DELETE_KEYS:
@@ -563,9 +571,14 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             key (str | None): Key character that has been pressed while mouse was on
                 canvas.
         """
-        if event_type == LEFT_BUTTON_UP:
+        if event_type == LEFT_BUTTON_UP and coordinate_is_on_widget(
+            coordinate, self._canvas
+        ):
             self.geometry_builder.add_coordinate(coordinate)
-        elif event_type in [MOTION, MOTION_WHILE_LEFT_BUTTON_DOWN]:
+        elif event_type in [
+            MOTION,
+            MOTION_WHILE_LEFT_BUTTON_DOWN,
+        ] and coordinate_is_on_widget(coordinate, self._canvas):
             self.geometry_builder.add_temporary_coordinate(coordinate)
         elif self.geometry_builder.number_of_coordinates() >= 2 and (
             event_type in {RIGHT_BUTTON_UP, RETURN_KEY}
