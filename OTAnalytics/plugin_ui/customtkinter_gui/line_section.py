@@ -17,6 +17,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     LEFT_BUTTON_UP,
     LEFT_KEY,
     MOTION,
+    MOTION_WHILE_LEFT_BUTTON_DOWN,
     PLUS_KEYS,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
@@ -301,7 +302,7 @@ class SectionGeometryEditor(CanvasObserver):
             self._shift_selected_knob_backward()
         elif event_type == RIGHT_KEY:
             self._shift_selected_knob_forward()
-        elif event_type == MOTION:
+        elif event_type in [MOTION, MOTION_WHILE_LEFT_BUTTON_DOWN]:
             self._move_knob(coordinate)
         elif event_type == LEFT_BUTTON_UP:
             self._update_knob(coordinate)
@@ -564,7 +565,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         """
         if event_type == LEFT_BUTTON_UP:
             self.geometry_builder.add_coordinate(coordinate)
-        elif event_type == MOTION:
+        elif event_type in [MOTION, MOTION_WHILE_LEFT_BUTTON_DOWN]:
             self.geometry_builder.add_temporary_coordinate(coordinate)
         elif self.geometry_builder.number_of_coordinates() >= 2 and (
             event_type in {RIGHT_BUTTON_UP, RETURN_KEY}
