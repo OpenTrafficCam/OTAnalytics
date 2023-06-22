@@ -51,7 +51,7 @@ class FrameSections(AbstractFrameSections):
         )
         self.button_edit_metadata = CTkButton(
             master=self,
-            text="Edit metadata",
+            text="Properties",
             command=self._viewmodel.edit_section_metadata,
         )
         self.button_remove = CTkButton(
