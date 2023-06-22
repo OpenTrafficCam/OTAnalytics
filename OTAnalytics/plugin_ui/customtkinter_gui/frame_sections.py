@@ -46,7 +46,7 @@ class FrameSections(AbstractFrameSections):
         )
         self.button_edit_geometry = CTkButton(
             master=self,
-            text="Edit geometry",
+            text="Edit",
             command=self._viewmodel.edit_section_geometry,
         )
         self.button_edit_metadata = CTkButton(
