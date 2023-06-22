@@ -30,7 +30,7 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepository,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.track import TrackId, TrackIdProvider, TrackImage
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video
 
@@ -151,6 +151,33 @@ class IntersectTracksWithSections:
         sections = self._datastore.get_all_sections()
         events = self._intersect.run(tracks, sections)
         self._datastore.add_events(events)
+
+
+class TracksIntersectingSelectedSections(TrackIdProvider):
+    """Returns track ids intersecting selected sections.
+
+    Args:
+        section_state (SectionState): the section state
+        event_repository (EventRepository): the event repository
+    """
+
+    def __init__(
+        self,
+        section_state: SectionState,
+        event_repository: EventRepository,
+    ) -> None:
+        self._section_state = section_state
+        self._event_repository = event_repository
+
+    def get_ids(self) -> Iterable[TrackId]:
+        intersecting_ids: set[TrackId] = set()
+
+        currently_selected_sections = self._section_state.selected_sections.get()
+        for section_id in currently_selected_sections:
+            for event in self._event_repository.get_all():
+                if event.section_id == section_id:
+                    intersecting_ids.add(TrackId(event.road_user_id))
+        return intersecting_ids
 
 
 class OTAnalyticsApplication:

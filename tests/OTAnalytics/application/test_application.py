@@ -10,12 +10,14 @@ from OTAnalytics.application.application import (
     FlowAlreadyExists,
     IntersectTracksWithSections,
     SectionAlreadyExists,
+    TracksIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.state import ObservableProperty, SectionState
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import Track, TrackId
 
 
 class TestAddSection:
@@ -107,3 +109,28 @@ class TestIntersectTracksWithSections:
 
         assert intersect.run.call_args_list == [call([track], [section])]
         assert datastore.add_events.call_args_list == [call([event])]
+
+
+class TestTracksIntersectingSelectedSections:
+    def test_get_ids(self) -> None:
+        section_id = Mock(spec=SectionId)
+        event = Mock(spec=Event)
+        event.section_id = section_id
+        event.road_user_id = 2
+
+        section_state = Mock(spec=SectionState)
+        selected_sections = Mock(spec=ObservableProperty)
+        selected_sections.get.return_value = [section_id]
+        section_state.selected_sections = selected_sections
+
+        event_repository = Mock(spec=EventRepository)
+        event_repository.get_all.return_value = [event]
+
+        tracks_intersecting_sections = TracksIntersectingSelectedSections(
+            section_state, event_repository
+        )
+        track_ids = list(tracks_intersecting_sections.get_ids())
+
+        assert track_ids == [TrackId(2)]
+        section_state.selected_sections.get.assert_called_once()
+        event_repository.get_all.assert_called_once()

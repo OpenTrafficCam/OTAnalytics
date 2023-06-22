@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 from PIL import Image
 
@@ -435,3 +435,16 @@ class TrackRepository:
         """
         self._tracks.clear()
         self.observers.notify([])
+
+
+class TrackIdProvider(ABC):
+    """Interface to provide track ids."""
+
+    @abstractmethod
+    def get_ids(self) -> Iterable[TrackId]:
+        """Provide track ids.
+
+        Returns:
+            Iterable[TrackId]: the track ids.
+        """
+        pass
