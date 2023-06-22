@@ -45,7 +45,7 @@ class FrameFlows(AbstractFrameFlows):
         )
         self.button_edit = CTkButton(
             master=self,
-            text="Edit",
+            text="Properties",
             command=self._viewmodel.edit_flow,
         )
         self.button_remove = CTkButton(
