@@ -9,10 +9,12 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
 class ToplevelTemplate(CTkToplevel, ABC):
     def __init__(
         self,
+        title: str,
         initial_position: tuple[int, int],
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self.title(title)
         self._set_ok_cancel_bindings()
         self._set_initial_position(initial_position)
 

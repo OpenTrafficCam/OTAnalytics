@@ -21,14 +21,12 @@ DISTANCE = "Distance"
 class ToplevelFlows(ToplevelTemplate):
     def __init__(
         self,
-        title: str,
         section_ids: list[IdResource],
         input_values: dict | None = {},
         show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.title(title)
         self._section_ids = section_ids
         self._section_name_to_id = self._create_section_name_to_id(section_ids)
         self._section_id_to_name = self._create_section_id_to_name(section_ids)

@@ -17,14 +17,12 @@ from OTAnalytics.plugin_ui.customtkinter_gui.utility_widgets import FrameOkCance
 class ToplevelSections(ToplevelTemplate):
     def __init__(
         self,
-        title: str,
         viewmodel: ViewModel,
         input_values: dict | None = None,
         show_offset: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.title(title)
         self._viewmodel = viewmodel
         self.input_values: dict = (
             {
