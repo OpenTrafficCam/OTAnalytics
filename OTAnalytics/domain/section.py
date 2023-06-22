@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
+from typing import Any, Callable, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -41,13 +41,10 @@ class SectionListObserver(ABC):
         pass
 
 
-VALUE = TypeVar("VALUE")
-
-
 SectionChangedObserver = Callable[[SectionId], None]
 
 
-class SectionChangedSubject(Generic[VALUE]):
+class SectionChangedSubject:
     """
     Helper class to handle and notify observers
     """
