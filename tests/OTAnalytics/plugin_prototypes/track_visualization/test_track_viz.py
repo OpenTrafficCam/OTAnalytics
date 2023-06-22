@@ -65,7 +65,7 @@ class TestPandasTrackProvider:
         result = provider.get_data()
 
         datastore.get_all_tracks.assert_called_once()
-        assert result is None
+        assert result.empty
 
 
 class TestCachedPandasTrackProvider:
