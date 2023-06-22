@@ -48,7 +48,7 @@ class TestVideoRepository:
 
         assert repository.get(video.path) == video
 
-        repository.remove(video)
+        repository.remove([video])
 
         assert repository.get(video.path) is None
         assert observer.notify_videos.call_args_list == [call([video]), call([])]
