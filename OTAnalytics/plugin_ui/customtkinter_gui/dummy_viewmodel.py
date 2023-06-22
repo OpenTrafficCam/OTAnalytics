@@ -65,6 +65,12 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_KNOB_STYLE,
     SELECTED_SECTION_STYLE,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    EXPORT_FORMAT,
+    INTERVAL,
+    CancelExportCounts,
+    ToplevelExportCounts,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
@@ -959,4 +965,15 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._frame_filter.disable_filter_by_class_button()
 
     def export_counts(self) -> None:
-        pass
+        # TODO: @briemla replace with actual wiring
+        input_values = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
+        try:
+            input_values = ToplevelExportCounts(
+                title="Export counts",
+                initial_position=(50, 50),
+                input_values=input_values,
+                export_formats=["Format 1", "Format 2", "Format 3"],
+            ).get_data()
+            print(input_values)
+        except CancelExportCounts:
+            print("User canceled configuration of export")
