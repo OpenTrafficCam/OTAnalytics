@@ -107,7 +107,7 @@ class ApplicationStarter:
             track_view_state=track_view_state,
         )
         track_geometry_plotter = self._create_track_geometry_plotter(
-            track_view_state, pandas_data_provider, alpha=0.5
+            track_view_state, pandas_data_provider, alpha=0.2
         )
         track_highlighter_sections_intersecting_tracks = (
             self._create_track_highlight_geometry_plotter(
@@ -166,6 +166,7 @@ class ApplicationStarter:
         dummy_viewmodel.register_observers()
         application.connect_observers()
         datastore.register_tracks_observer(selected_video_updater)
+        datastore.register_tracks_observer(dummy_viewmodel)
         datastore.register_tracks_observer(image_updater)
         datastore.register_video_observer(selected_video_updater)
         datastore.register_section_changed_observer(

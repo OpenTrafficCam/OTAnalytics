@@ -48,7 +48,7 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
 )
-from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
@@ -102,7 +102,11 @@ def flow_id(from_section: str, to_section: str) -> str:
 
 
 class DummyViewModel(
-    ViewModel, SectionListObserver, FlowListObserver, VideoListObserver
+    ViewModel,
+    TrackListObserver,
+    SectionListObserver,
+    FlowListObserver,
+    VideoListObserver,
 ):
     def __init__(
         self,
@@ -191,6 +195,9 @@ class DummyViewModel(
         self._frame_filter.update_date_range(
             {"start_date": start_date, "end_date": end_date}
         )
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self._application.intersect_tracks_with_sections()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
@@ -441,6 +448,7 @@ class DummyViewModel(
         print(f"Tracks files to load: {track_files}")
         track_paths = [Path(file) for file in track_files]
         self._application.add_tracks_of_files(track_files=track_paths)
+        self._application.intersect_tracks_with_sections()
 
     def load_sections(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
