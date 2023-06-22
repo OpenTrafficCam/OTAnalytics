@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 from unittest.mock import Mock, patch
 
 import pytest
@@ -136,7 +135,6 @@ class TestTrackGeometryPlotter:
     @pytest.mark.parametrize(
         "data_frame,call_count",
         [
-            (None, 0),
             (DataFrame(), 0),
             (
                 DataFrame.from_dict(
@@ -155,7 +153,7 @@ class TestTrackGeometryPlotter:
     def test_plot(
         self,
         mock_plot_dataframe: Mock,
-        data_frame: Optional[DataFrame],
+        data_frame: DataFrame,
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)
@@ -173,7 +171,6 @@ class TestStartEndPointPlotter:
     @pytest.mark.parametrize(
         "data_frame,call_count",
         [
-            (None, 0),
             (DataFrame(), 0),
             (
                 DataFrame.from_dict(
@@ -192,7 +189,7 @@ class TestStartEndPointPlotter:
     def test_plot(
         self,
         mock_plot_dataframe: Mock,
-        data_frame: Optional[DataFrame],
+        data_frame: DataFrame,
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)

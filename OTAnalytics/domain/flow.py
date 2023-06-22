@@ -186,7 +186,7 @@ class FlowRepository:
         """
         return any(flow.is_using(section) for flow in self._flows.values())
 
-    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+    def flows_using_section(self, section: SectionId) -> list[Flow]:
         """
         Returns a list of flows using the section as start or end.
 
@@ -196,9 +196,7 @@ class FlowRepository:
         Returns:
             list[FlowId]: flows using the section
         """
-        return list(
-            {flow.id for flow in self._flows.values() if flow.is_using(section)}
-        )
+        return list({flow for flow in self._flows.values() if flow.is_using(section)})
 
     def add_all(self, flows: Iterable[Flow]) -> None:
         for flow in flows:
@@ -208,10 +206,11 @@ class FlowRepository:
     def remove(self, flow_id: FlowId) -> None:
         if flow_id in self._flows:
             del self._flows[flow_id]
-        self._repository_content_observers.notify([flow_id])
+        self._repository_content_observers.notify([])
 
     def update(self, flow: Flow) -> None:
         self._flows[flow.id] = flow
+        self._flow_content_observers.notify(flow.id)
 
     def get(self, flow_id: FlowId) -> Optional[Flow]:
         return self._flows.get(flow_id)
