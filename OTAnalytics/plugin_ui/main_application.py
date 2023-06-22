@@ -50,7 +50,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
     MatplotlibTrackPlotter,
-    PandasTrackProvider,
+    PandasDataFrameProvider,
+    PandasTracksOffsetProvider,
     PlotterPrototype,
     SectionGeometryPlotter,
     TrackGeometryPlotter,
@@ -94,8 +95,11 @@ class ApplicationStarter:
 
         background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        pandas_data_provider = CachedPandasTrackProvider(
-            datastore, track_view_state, dataframe_filter_builder
+        pandas_data_provider = PandasTracksOffsetProvider(
+            CachedPandasTrackProvider(
+                datastore, track_view_state, dataframe_filter_builder
+            ),
+            track_view_state=track_view_state,
         )
         track_geometry_plotter = self._create_track_geometry_plotter(
             track_view_state,
@@ -234,7 +238,7 @@ class ApplicationStarter:
     def _create_track_geometry_plotter(
         self,
         state: TrackViewState,
-        pandas_data_provider: PandasTrackProvider,
+        pandas_data_provider: PandasDataFrameProvider,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackGeometryPlotter(pandas_data_provider),
@@ -244,7 +248,7 @@ class ApplicationStarter:
     def _create_track_start_end_point_plotter(
         self,
         state: TrackViewState,
-        pandas_data_provider: PandasTrackProvider,
+        pandas_data_provider: PandasDataFrameProvider,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackStartEndPointPlotter(pandas_data_provider),
