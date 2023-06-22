@@ -210,9 +210,9 @@ class TrackViewState:
         )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
-        self.selected_video: ObservableOptionalProperty[
-            Video
-        ] = ObservableOptionalProperty[Video]()
+        self.selected_videos: ObservableProperty[list[Video]] = ObservableProperty[
+            list[Video]
+        ](default=[])
 
 
 class TrackPropertiesUpdater:
@@ -229,9 +229,9 @@ class TrackPropertiesUpdater:
         self._datastore = datastore
         self._track_view_state = track_view_state
 
-    def notify_video(self, video: Optional[Video]) -> None:
+    def notify_videos(self, video: list[Video]) -> None:
         if video:
-            image = video.get_frame(0)
+            image = video[0].get_frame(0)
             self._track_view_state.view_width.set(image.width())
             self._track_view_state.view_height.set(image.height())
 
@@ -252,12 +252,12 @@ class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         all_tracks = self._datastore.get_all_tracks()
         if tracks:
-            video = self._datastore.get_video_for(all_tracks[0].id)
-            self._track_view_state.selected_video.set(video)
+            if video := self._datastore.get_video_for(all_tracks[0].id):
+                self._track_view_state.selected_videos.set([video])
 
     def notify_videos(self, videos: list[Video]) -> None:
         if videos:
-            self._track_view_state.selected_video.set(videos[0])
+            self._track_view_state.selected_videos.set([videos[0]])
 
 
 class TrackImageUpdater(TrackListObserver):
@@ -275,12 +275,12 @@ class TrackImageUpdater(TrackListObserver):
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._plotter = plotter
-        self._track_view_state.selected_video.register(self.notify_video)
+        self._track_view_state.selected_videos.register(self.notify_video)
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
 
-    def notify_video(self, video: Optional[Video]) -> None:
+    def notify_video(self, video: list[Video]) -> None:
         """
         Will notify this object about changes in the video repository.
 

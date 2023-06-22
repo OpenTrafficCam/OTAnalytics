@@ -135,9 +135,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         self._track_view_state = track_view_state
         self._filter_builder = filter_builder
 
-    def get_data(self) -> Optional[DataFrame]:
-        offset = self._track_view_state.track_offset.get()
-
+    def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
         if not tracks:
             return None
@@ -147,7 +145,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if data.empty:
             return data
 
-        data = self._apply_offset(data, offset)
         return self._filter_tracks(FILTER_CLASSES, NUM_MIN_FRAMES, data)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
@@ -171,14 +168,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if (track.TRACK_ID in converted.columns) and (track.FRAME in converted.columns):
             return converted.sort_values([track.TRACK_ID, track.FRAME])
         return converted
-
-    def _apply_offset(
-        self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
-    ) -> DataFrame:
-        if new_offset := offset:
-            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
-            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
-        return tracks
 
     # % Filter length (number of frames)
     def _min_frames(self, data: DataFrame, min_frames: int = 10) -> list:
@@ -228,6 +217,28 @@ class PandasTrackProvider(PandasDataFrameProvider):
         track_df = next(iter(dataframe_filter.apply([track_df])))
 
         return track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
+
+
+class PandasTracksOffsetProvider(PandasDataFrameProvider):
+    def __init__(
+        self, other: PandasDataFrameProvider, track_view_state: TrackViewState
+    ) -> None:
+        super().__init__()
+        self._other = other
+        self._track_view_state = track_view_state
+
+    def get_data(self) -> DataFrame:
+        offset = self._track_view_state.track_offset.get()
+        data = self._other.get_data()
+        return self._apply_offset(data.copy(), offset)
+
+    def _apply_offset(
+        self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
+    ) -> DataFrame:
+        if new_offset := offset:
+            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
+            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
+        return tracks
 
 
 class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
@@ -281,7 +292,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -289,9 +300,8 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if data is not None:
-            if not data.empty:
-                self._plot_dataframe(data, axes)
+        if not data.empty:
+            self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """
@@ -323,7 +333,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -331,9 +341,8 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if data is not None:
-            if not data.empty:
-                self._plot_dataframe(data, axes)
+        if not data.empty:
+            self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """

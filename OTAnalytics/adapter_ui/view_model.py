@@ -6,12 +6,14 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.video import Video
 
 DISTANCES: str = "distances"
 
@@ -58,6 +60,42 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
+        pass
+
+    @abstractmethod
+    def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
+        pass
+
+    @abstractmethod
+    def update_project(self, name: str, start_date: datetime) -> None:
+        pass
+
+    @abstractmethod
+    def save_configuration(self) -> None:
+        pass
+
+    @abstractmethod
+    def load_configuration(self) -> None:
+        pass
+
+    @abstractmethod
+    def add_video(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove_videos(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_treeview_videos(self, treeview: AbstractTreeviewInterface) -> None:
+        pass
+
+    @abstractmethod
+    def set_selected_videos(self, video: list[str]) -> None:
+        pass
+
+    @abstractmethod
+    def get_all_videos(self) -> list[Video]:
         pass
 
     @abstractmethod
