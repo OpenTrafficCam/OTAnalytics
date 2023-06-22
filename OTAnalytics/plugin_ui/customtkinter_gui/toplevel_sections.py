@@ -89,7 +89,10 @@ class ToplevelSections(ToplevelTemplate):
         self.update()
 
     def _name_is_valid(self) -> bool:
-        if not self._viewmodel.is_section_name_valid(self.entry_name.get()):
+        new_entry_name = self.entry_name.get()
+        if new_entry_name == self.input_values[NAME]:
+            return True
+        if not self._viewmodel.is_section_name_valid(new_entry_name):
             position = (self.winfo_x(), self.winfo_y())
             InfoBox(
                 message="To add a section, a unique name is necessary!",

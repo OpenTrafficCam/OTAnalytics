@@ -524,8 +524,11 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._finish_action()
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(AbstractTreeviewInterface.__name__)
         section = self._flow_parser.parse_section(data)
         self._application.update_section(section)
+        self._treeview_sections.update_selected_items([id.serialize()])
 
     def remove_sections(self) -> None:
         if self._treeview_sections is None:
