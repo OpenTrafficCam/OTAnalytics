@@ -39,6 +39,7 @@ class ToplevelFlows(ToplevelTemplate):
         self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
+        self._set_focus()
 
     def _create_section_name_to_id(self, sections: list[IdResource]) -> dict[str, str]:
         return {resource.name: resource.id for resource in sections}

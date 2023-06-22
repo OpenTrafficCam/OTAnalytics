@@ -44,6 +44,7 @@ class ToplevelSections(ToplevelTemplate):
         self._canceled = False
         self._get_widgets()
         self._place_widgets()
+        self._set_focus()
 
     def _get_widgets(self) -> None:
         self.label_name = CTkLabel(master=self, text="Name:")
