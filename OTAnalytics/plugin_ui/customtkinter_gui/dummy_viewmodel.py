@@ -707,6 +707,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     ) -> dict:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
+            new_entry_name = flow_data[FLOW_NAME]
+            if new_entry_name == input_values[FLOW_NAME]:
+                break
             InfoBox(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
