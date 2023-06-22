@@ -466,9 +466,9 @@ class TestSectionChangedSubject:
         subject = SectionChangedSubject()
         subject.register(observer)
         subject.register(other_observer)
-        assert subject.observers == [observer, other_observer]
+        assert subject._observers == [observer, other_observer]
         subject.register(observer)
-        assert subject.observers == [observer, other_observer]
+        assert subject._observers == [observer, other_observer]
 
     def test_notify(self) -> None:
         observer = Mock(spec=SectionChangedObserver)
