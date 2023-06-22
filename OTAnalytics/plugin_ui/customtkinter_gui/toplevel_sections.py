@@ -11,6 +11,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import ToplevelTemplate
+from OTAnalytics.plugin_ui.customtkinter_gui.utility_widgets import FrameOkCancel
 
 
 class ToplevelSections(ToplevelTemplate):
@@ -25,7 +26,6 @@ class ToplevelSections(ToplevelTemplate):
         super().__init__(**kwargs)
         self.title(title)
         self._viewmodel = viewmodel
-        # TODO: Get default values elsewhere!
         self.input_values: dict = (
             {
                 ID: "",
@@ -57,6 +57,9 @@ class ToplevelSections(ToplevelTemplate):
             relative_offset_coordinates=self.input_values[RELATIVE_OFFSET_COORDINATES][
                 EventType.SECTION_ENTER.serialize()
             ],
+        )
+        self.frame_ok_cancel = FrameOkCancel(
+            master=self, on_ok=self._on_ok, on_cancel=self._on_cancel
         )
 
     def _place_widgets(self) -> None:

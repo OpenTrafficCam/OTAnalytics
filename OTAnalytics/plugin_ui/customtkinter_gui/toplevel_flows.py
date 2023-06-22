@@ -9,6 +9,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import ToplevelTemplate
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
+from OTAnalytics.plugin_ui.customtkinter_gui.utility_widgets import FrameOkCancel
 
 FLOW_ID = "Id"
 FLOW_NAME = "Name"
@@ -93,6 +94,9 @@ class ToplevelFlows(ToplevelTemplate):
         )
         if current_distance := self.input_values[DISTANCE]:
             self.entry_distance.insert(index=0, string=current_distance)
+        self.frame_ok_cancel = FrameOkCancel(
+            master=self, on_ok=self._on_ok, on_cancel=self._on_cancel
+        )
 
     def _section_names(self) -> list[str]:
         return [resource.name for resource in self._section_ids]
