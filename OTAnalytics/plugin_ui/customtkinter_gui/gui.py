@@ -35,6 +35,18 @@ class ModifiedCTk(CTk):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self.protocol("WM_DELETE_WINDOW", self._ask_to_close)
+
+    def _ask_to_close(self) -> None:
+        infobox = InfoBox(
+            title="Close application",
+            message="Do you want to close the application?",
+            initial_position=get_widget_position(self),
+            show_cancel=True,
+        )
+        if infobox.canceled:
+            return
+        self.quit()
 
     def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
         InfoBox(
