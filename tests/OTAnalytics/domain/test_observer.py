@@ -1,16 +1,31 @@
-from OTAnalytics.domain.observer import Registrable
+from typing import Any
+from unittest.mock import Mock
+
+from OTAnalytics.domain.observer import Subject
 
 
-class MockRegistrable(Registrable[int]):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class TestRegistrable:
+class TestSubject:
     def test_register(self) -> None:
-        registrable = MockRegistrable()
-        registrable.register(1)
-        registrable.register(2)
-        assert registrable._observers == [1, 2]
-        registrable.register(1)
-        assert registrable._observers == [1, 2]
+        observer = Mock()
+        other_observer = Mock()
+
+        subject = Subject[Any]()
+        subject.register(observer)
+        subject.register(other_observer)
+        assert subject._observers == [observer, other_observer]
+        subject.register(observer)
+        assert subject._observers == [observer, other_observer]
+
+    def test_notify(self) -> None:
+        observer = Mock()
+        other_observer = Mock()
+
+        subject = Subject[Any]()
+        subject.register(observer)
+        subject.register(other_observer)
+
+        value = Mock()
+        subject.notify(value)
+
+        observer.assert_called_once_with(value)
+        other_observer.assert_called_once_with(value)

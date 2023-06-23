@@ -4,7 +4,7 @@ from typing import Any, Callable, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.observer import Registrable
+from OTAnalytics.domain.observer import Subject
 from OTAnalytics.domain.types import EventType
 
 SECTIONS: str = "sections"
@@ -43,24 +43,6 @@ class SectionListObserver(ABC):
 
 
 SectionChangedObserver = Callable[[SectionId], None]
-
-
-class SectionChangedSubject(Registrable[SectionChangedObserver]):
-    """
-    Helper class to handle and notify observers
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def notify(self, value: SectionId) -> None:
-        """
-        Notifies observers about the changed value.
-
-        Args:
-            value (SectionId): changed value
-        """
-        [observer(value) for observer in self._observers]
 
 
 class SectionListSubject:
@@ -301,7 +283,7 @@ class SectionRepository:
         self._sections: dict[SectionId, Section] = {}
         self._current_id = 0
         self._repository_content_observers: SectionListSubject = SectionListSubject()
-        self._section_content_observers: SectionChangedSubject = SectionChangedSubject()
+        self._section_content_observers: Subject[SectionId] = Subject[SectionId]()
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
         self._repository_content_observers.register(observer)
