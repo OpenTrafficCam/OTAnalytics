@@ -37,7 +37,7 @@ from OTAnalytics.domain.track import (
     TrackListObserver,
 )
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.domain.video import Video
+from OTAnalytics.domain.video import Video, VideoListObserver
 
 
 class SectionAlreadyExists(Exception):
@@ -242,6 +242,9 @@ class OTAnalyticsApplication:
         )
         self._datastore.register_tracks_observer(self._clear_event_repository)
 
+    def register_video_observer(self, observer: VideoListObserver) -> None:
+        self._datastore.register_video_observer(observer)
+
     def register_sections_observer(self, observer: SectionListObserver) -> None:
         self._datastore.register_sections_observer(observer)
 
@@ -277,7 +280,7 @@ class OTAnalyticsApplication:
                 self.track_view_state.selected_videos.set([])
 
     def get_all_videos(self) -> list[Video]:
-        return self._datastore._video_repository.get_all()
+        return self._datastore.get_all_videos()
 
     def get_all_flows(self) -> Iterable[Flow]:
         return self._datastore.get_all_flows()
