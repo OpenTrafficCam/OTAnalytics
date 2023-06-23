@@ -2,11 +2,13 @@ import contextlib
 from tkinter.filedialog import asksaveasfilename
 from typing import Any
 
-from customtkinter import CTkEntry, CTkFrame, CTkLabel, CTkOptionMenu
+from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import ToplevelTemplate
-from OTAnalytics.plugin_ui.customtkinter_gui.utility_widgets import FrameOkCancel
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
+    FrameContent,
+    ToplevelTemplate,
+)
 
 INTERVAL = "interval"
 EXPORT_FORMAT = "export_format"
@@ -22,7 +24,7 @@ class FileSelectionCancelledError(Exception):
     pass
 
 
-class FrameConfigureExportCounts(CTkFrame):
+class FrameConfigureExportCounts(FrameContent):
     def __init__(
         self,
         export_formats: dict[str, str],
@@ -89,29 +91,14 @@ class ToplevelExportCounts(ToplevelTemplate):
     ) -> None:
         self._input_values = input_values
         self._export_formats = export_formats
-        self._canceled: bool = False
         super().__init__(**kwargs)
-        self._get_widgets()
-        self._place_widgets()
-        self._set_focus()
 
-    def _get_widgets(self) -> None:
-        self._frame_configure_export = FrameConfigureExportCounts(
+    def _get_frame_content(self) -> None:
+        self._frame_content = FrameConfigureExportCounts(
             master=self,
-            input_values=self._input_values,
             export_formats=self._export_formats,
+            input_values=self._input_values,
         )
-        self._frame_ok_cancel = FrameOkCancel(
-            master=self, on_ok=self._on_ok, on_cancel=self._on_cancel, ok_text="Export"
-        )
-
-    def _place_widgets(self) -> None:
-        self._frame_configure_export.pack(padx=PADX, pady=PADY)
-        self._frame_ok_cancel.pack(padx=PADX, pady=PADY)
-
-    def _set_focus(self) -> None:
-        self.attributes("-topmost", 1)
-        self._frame_configure_export.set_focus()
 
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
@@ -127,16 +114,10 @@ class ToplevelExportCounts(ToplevelTemplate):
             raise FileSelectionCancelledError
 
     def _on_ok(self, event: Any = None) -> None:
-        self._frame_configure_export.get_input_values()
+        self._input_values = self._frame_content.get_input_values()
         with contextlib.suppress(FileSelectionCancelledError):
             self._choose_file()
-            self.destroy()
-            self.update()
-
-    def _on_cancel(self, event: Any = None) -> None:
-        self._canceled = True
-        self.destroy()
-        self.update()
+            self._close()
 
     def get_data(self) -> dict:
         self.wait_window()

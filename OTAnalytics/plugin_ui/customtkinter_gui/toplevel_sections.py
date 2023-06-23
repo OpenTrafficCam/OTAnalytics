@@ -9,22 +9,28 @@ from OTAnalytics.domain.section import ID, NAME, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import ToplevelTemplate
-from OTAnalytics.plugin_ui.customtkinter_gui.utility_widgets import FrameOkCancel
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
+    FrameContent,
+    ToplevelTemplate,
+)
 
 
-class ToplevelSections(ToplevelTemplate):
+class NoUniqueNameError(Exception):
+    pass
+
+
+class FrameConfigureSection(FrameContent):
     def __init__(
         self,
         viewmodel: ViewModel,
-        input_values: dict | None = None,
+        input_values: dict | None,
         show_offset: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self._show_offset = show_offset
         self._viewmodel = viewmodel
-        self.input_values: dict = (
+        self._input_values: dict = (
             {
                 ID: "",
                 NAME: "",
@@ -38,26 +44,23 @@ class ToplevelSections(ToplevelTemplate):
             if input_values is None
             else input_values
         )
-        self._show_offset = show_offset
-        self._canceled = False
         self._get_widgets()
         self._place_widgets()
-        self._set_focus()
+
+    def set_focus(self) -> None:
+        self.after(0, lambda: self.entry_name.focus_set())
 
     def _get_widgets(self) -> None:
         self.label_name = CTkLabel(master=self, text="Name:")
         self.entry_name = CTkEntry(master=self, width=180)
-        self.entry_name.insert(0, self.input_values[NAME])
+        self.entry_name.insert(0, self._input_values[NAME])
 
         self.frame_bbox_offset = FrameBboxOffset(
             master=self,
             frame_heading="Bounding Box offset for enter-events:",
-            relative_offset_coordinates=self.input_values[RELATIVE_OFFSET_COORDINATES][
+            relative_offset_coordinates=self._input_values[RELATIVE_OFFSET_COORDINATES][
                 EventType.SECTION_ENTER.serialize()
             ],
-        )
-        self.frame_ok_cancel = FrameOkCancel(
-            master=self, on_ok=self._on_ok, on_cancel=self._on_cancel
         )
 
     def _place_widgets(self) -> None:
@@ -67,41 +70,52 @@ class ToplevelSections(ToplevelTemplate):
             self.frame_bbox_offset.grid(
                 row=1, column=0, columnspan=2, padx=PADX, sticky=STICKY
             )
-        self.frame_ok_cancel.grid(
-            row=3, column=0, columnspan=3, padx=PADX, pady=PADY, sticky=STICKY
-        )
 
-    def _set_focus(self) -> None:
-        self.after(0, lambda: self.lift())
-        self.after(0, lambda: self.entry_name.focus_set())
-
-    def _on_ok(self, event: Any = None) -> None:
-        if not self._name_is_valid():
-            return
-        self.input_values[NAME] = self.entry_name.get()
-        self.input_values[RELATIVE_OFFSET_COORDINATES][
+    def get_input_values(self) -> dict:
+        self._check_section_name()
+        self._input_values[NAME] = self.entry_name.get()
+        self._input_values[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
         ] = self.frame_bbox_offset.get_relative_offset_coordintes()
-        self.destroy()
-        self.update()
+        return self._input_values
 
-    def _on_cancel(self, event: Any = None) -> None:
-        self._canceled = True
-        self.destroy()
-        self.update()
-
-    def _name_is_valid(self) -> bool:
-        if not self._viewmodel.is_section_name_valid(self.entry_name.get()):
-            position = (self.winfo_x(), self.winfo_y())
-            InfoBox(
-                message="To add a section, a unique name is necessary!",
-                initial_position=position,
+    def _check_section_name(self) -> None:
+        section_name = self.entry_name.get()
+        if not self._viewmodel.is_section_name_valid(section_name):
+            raise NoUniqueNameError(
+                f"Please choose a unique name, {section_name} is already used!"
             )
-            return False
-        return True
+
+
+class ToplevelSections(ToplevelTemplate):
+    def __init__(
+        self,
+        viewmodel: ViewModel,
+        input_values: dict | None = None,
+        show_offset: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        self._viewmodel = viewmodel
+        self._input_values = input_values
+        self._show_offset = show_offset
+        super().__init__(**kwargs)
+
+    def _get_frame_content(self) -> None:
+        self._frame_content = FrameConfigureSection(
+            master=self,
+            viewmodel=self._viewmodel,
+            input_values=self._input_values,
+            show_offset=self._show_offset,
+        )
+
+    def _on_ok(self, event: Any = None) -> None:
+        self._input_values = self._frame_content.get_input_values()
+        self._close()
 
     def get_metadata(self) -> dict:
         self.wait_window()
         if self._canceled:
             raise CancelAddSection()
-        return self.input_values
+        if self._input_values is None:
+            raise ValueError("input values is None, but should be a dict")
+        return self._input_values

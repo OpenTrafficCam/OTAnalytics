@@ -786,7 +786,7 @@ class DummyViewModel(
         self._finish_action()
 
     def __create_flow(self) -> Flow:
-        flow_data = self._show_distances_window()
+        flow_data = self._show_flow_popup()
         flow_id = self._application.get_flow_id()
         name = flow_data[FLOW_NAME]
         new_from_section_id = SectionId(flow_data[START_SECTION])
@@ -802,9 +802,9 @@ class DummyViewModel(
         self._application.add_flow(flow)
         return flow
 
-    def _show_distances_window(
+    def _show_flow_popup(
         self,
-        input_values: dict = {},
+        input_values: dict | None = None,
         title: str = "Add flow",
     ) -> dict:
         if self._treeview_flows is None:
@@ -823,7 +823,7 @@ class DummyViewModel(
 
     def __create_flow_data(
         self,
-        input_values: dict,
+        input_values: dict | None,
         title: str,
         position: tuple[int, int],
         section_ids: list[IdResource],
@@ -844,7 +844,7 @@ class DummyViewModel(
 
     def __get_flow_data(
         self,
-        input_values: dict,
+        input_values: dict | None,
         title: str,
         position: tuple[int, int],
         section_ids: list[IdResource],
@@ -908,7 +908,7 @@ class DummyViewModel(
             DISTANCE: flow.distance,
         }
 
-        if flow_data := self._show_distances_window(
+        if flow_data := self._show_flow_popup(
             input_values=input_data,
             title="Edit flow",
         ):
