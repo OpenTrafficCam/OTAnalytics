@@ -13,6 +13,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
 from OTAnalytics.domain.flow import (
     Flow,
@@ -29,7 +30,12 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepository,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.track import (
+    TrackId,
+    TrackIdProvider,
+    TrackImage,
+    TrackListObserver,
+)
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
@@ -108,6 +114,82 @@ class AddFlow:
         )
 
 
+class ClearEventRepository(SectionListObserver, TrackListObserver):
+    """Clears the event repository also on section state changes.
+
+    Args:
+        event_repository (EventRepository): the event repository
+    """
+
+    def __init__(self, event_repository: EventRepository) -> None:
+        self._event_repository = event_repository
+
+    def clear(self) -> None:
+        self._event_repository.clear()
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        self.clear()
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self.clear()
+
+    def on_section_changed(self, section_id: SectionId) -> None:
+        self.clear()
+
+
+class IntersectTracksWithSections:
+    """Intersect tracks with sections and add all intersection events in the repository.
+
+    Args:
+        intersect (RunIntersect): intersector to intersect tracks with sections
+        datastore (Datastore): the datastore containing tracks, sections and events
+    """
+
+    def __init__(
+        self,
+        intersect: RunIntersect,
+        datastore: Datastore,
+    ) -> None:
+        self._intersect = intersect
+        self._datastore = datastore
+
+    def run(self) -> None:
+        """Runs the intersection of tracks with sections in the repository."""
+        sections = self._datastore.get_all_sections()
+        if not sections:
+            return
+        tracks = self._datastore.get_all_tracks()
+        events = self._intersect.run(tracks, sections)
+        self._datastore.add_events(events)
+
+
+class TracksIntersectingSelectedSections(TrackIdProvider):
+    """Returns track ids intersecting selected sections.
+
+    Args:
+        section_state (SectionState): the section state
+        event_repository (EventRepository): the event repository
+    """
+
+    def __init__(
+        self,
+        section_state: SectionState,
+        event_repository: EventRepository,
+    ) -> None:
+        self._section_state = section_state
+        self._event_repository = event_repository
+
+    def get_ids(self) -> Iterable[TrackId]:
+        intersecting_ids: set[TrackId] = set()
+
+        currently_selected_sections = self._section_state.selected_sections.get()
+        for section_id in currently_selected_sections:
+            for event in self._event_repository.get_all():
+                if event.section_id == section_id:
+                    intersecting_ids.add(TrackId(event.road_user_id))
+        return intersecting_ids
+
+
 class OTAnalyticsApplication:
     """
     Entrypoint for calls from the UI.
@@ -138,6 +220,12 @@ class OTAnalyticsApplication:
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
         self._add_flow = AddFlow(self._datastore._flow_repository)
+        self._intersect_tracks_with_sections = IntersectTracksWithSections(
+            self._intersect, self._datastore
+        )
+        self._clear_event_repository = ClearEventRepository(
+            self._datastore._event_repository
+        )
 
     def connect_observers(self) -> None:
         """
@@ -146,6 +234,13 @@ class OTAnalyticsApplication:
         self._datastore.register_tracks_observer(self.track_state)
         self._datastore.register_tracks_observer(self._tracks_metadata)
         self._datastore.register_sections_observer(self.section_state)
+
+    def connect_clear_event_repository_observer(self) -> None:
+        self._datastore.register_sections_observer(self._clear_event_repository)
+        self._datastore.register_section_changed_observer(
+            self._clear_event_repository.on_section_changed
+        )
+        self._datastore.register_tracks_observer(self._clear_event_repository)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._datastore.register_video_observer(observer)
@@ -378,6 +473,9 @@ class OTAnalyticsApplication:
 
         scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
         self._datastore.add_events(scene_events)
+
+    def intersect_tracks_with_sections(self) -> None:
+        self._intersect_tracks_with_sections.run()
 
     def save_events(self, file: Path) -> None:
         """

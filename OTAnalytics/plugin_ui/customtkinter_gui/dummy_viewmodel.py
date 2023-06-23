@@ -48,7 +48,7 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
 )
-from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
@@ -102,7 +102,11 @@ def flow_id(from_section: str, to_section: str) -> str:
 
 
 class DummyViewModel(
-    ViewModel, VideoListObserver, SectionListObserver, FlowListObserver
+    ViewModel,
+    VideoListObserver,
+    TrackListObserver,
+    SectionListObserver,
+    FlowListObserver,
 ):
     def __init__(
         self,
@@ -125,7 +129,6 @@ class DummyViewModel(
     def register_to_subjects(self) -> None:
         self._application.register_video_observer(self)
         self._application.register_sections_observer(self)
-        self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_flows_observer(self)
         self._application.register_flow_changed_observer(self._on_flow_changed)
         self._application.track_view_state.selected_videos.register(
@@ -206,11 +209,15 @@ class DummyViewModel(
             {"start_date": start_date, "end_date": end_date}
         )
 
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self._application.intersect_tracks_with_sections()
+
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
+        self._application.intersect_tracks_with_sections()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
@@ -231,6 +238,10 @@ class DummyViewModel(
         self._application.track_view_state.selected_videos.register(
             self._update_selected_videos
         )
+        self._application.section_state.selected_sections.register(
+            self._update_selected_sections
+        )
+        self._application.register_section_changed_observer(self._on_section_changed)
 
     def _start_action(self) -> None:
         self._application.action_state.action_running.set(True)
