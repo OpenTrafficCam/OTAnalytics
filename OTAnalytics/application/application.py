@@ -31,6 +31,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.video import Video
 
 
 class SectionAlreadyExists(Exception):
@@ -46,6 +47,14 @@ class CancelAddFlow(Exception):
 
 
 class FlowAlreadyExists(Exception):
+    pass
+
+
+class MultipleSectionsSelected(Exception):
+    pass
+
+
+class MultipleFlowsSelected(Exception):
     pass
 
 
@@ -161,16 +170,19 @@ class OTAnalyticsApplication:
     def add_videos(self, files: list[Path]) -> None:
         self._datastore.load_video_files(files)
 
-    def remove_video(self) -> None:
+    def remove_videos(self) -> None:
         """
-        Remove the currently selected video from the repository.
+        Remove the currently selected videos from the repository.
         """
-        if video := self.track_view_state.selected_video.get():
-            self._datastore.remove_video(video)
+        if videos := self.track_view_state.selected_videos.get():
+            self._datastore.remove_videos(videos)
             if videos := self._datastore.get_all_videos():
-                self.track_view_state.selected_video.set(videos[0])
+                self.track_view_state.selected_videos.set([videos[0]])
             else:
-                self.track_view_state.selected_video.set(None)
+                self.track_view_state.selected_videos.set([])
+
+    def get_all_videos(self) -> list[Video]:
+        return self._datastore._video_repository.get_all()
 
     def get_all_flows(self) -> Iterable[Flow]:
         return self._datastore.get_all_flows()
@@ -204,6 +216,18 @@ class OTAnalyticsApplication:
 
     def update_flow(self, flow: Flow) -> None:
         self._datastore.update_flow(flow)
+
+    def save_configuration(self, file: Path) -> None:
+        self._datastore._config_parser.serialize(
+            project=self._datastore.project,
+            video_files=self.get_all_videos(),
+            sections=self.get_all_sections(),
+            flows=self.get_all_flows(),
+            file=file,
+        )
+
+    def load_configuration(self, file: Path) -> None:
+        self._datastore.load_configuration_file(file)
 
     def add_tracks_of_file(self, track_file: Path) -> None:
         """
@@ -248,7 +272,7 @@ class OTAnalyticsApplication:
         """
         return self._datastore.is_flow_using_section(section)
 
-    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+    def flows_using_section(self, section: SectionId) -> list[Flow]:
         """
         Returns a list of flows using the section as start or end.
 
@@ -372,28 +396,28 @@ class OTAnalyticsApplication:
             event_type (EventType, optional): event type of the offset at the section.
             Defaults to EventType.SECTION_ENTER.
         """
-        if section_id := self.section_state.selected_section.get():
-            if section := self._datastore.get_section_for(section_id):
+        if len(section_id := self.section_state.selected_sections.get()) == 1:
+            if section := self._datastore.get_section_for(section_id[0]):
                 if offset := section.relative_offset_coordinates.get(event_type):
                     self.track_view_state.track_offset.set(offset)
 
-    def set_selected_section(self, id: Optional[str]) -> None:
+    def set_selected_section(self, ids: list[str]) -> None:
         """Set the current selected section in the UI.
 
         Args:
             id (Optional[str]): the id of the currently selected section
         """
-        section_id = SectionId(id) if id else None
-        self.section_state.selected_section.set(section_id)
+        section_ids = [SectionId(id) for id in ids]
+        self.section_state.selected_sections.set(section_ids)
 
-    def set_selected_flow(self, id: Optional[str]) -> None:
+    def set_selected_flows(self, ids: list[str]) -> None:
         """Set the current selected flow in the UI.
 
         Args:
             id (Optional[str]): the id of the currently selected flow
         """
-        flow_id = FlowId(id) if id else None
-        self.flow_state.selected_flow.set(flow_id)
+        flow_ids = [FlowId(id) for id in ids]
+        self.flow_state.selected_flows.set(flow_ids)
 
     def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
         """Get the current track offset.

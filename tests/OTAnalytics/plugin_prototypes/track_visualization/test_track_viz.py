@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 from unittest.mock import Mock, patch
 
 import pytest
@@ -66,7 +65,7 @@ class TestPandasTrackProvider:
         result = provider.get_data()
 
         datastore.get_all_tracks.assert_called_once()
-        assert result is None
+        assert result.empty
 
 
 class TestCachedPandasTrackProvider:
@@ -94,13 +93,13 @@ class TestCachedPandasTrackProvider:
             datastore, track_view_state, filter_builder
         )
 
-        assert provider._cache_df is None
+        assert provider._cache_df.empty
         result = provider._convert_tracks(tracks)
         assert result is not None
         assert result is provider._cache_df
 
         provider.notify_tracks([])
-        assert provider._cache_df is None
+        assert provider._cache_df.empty
 
 
 class TestBackgroundPlotter:
@@ -136,7 +135,6 @@ class TestTrackGeometryPlotter:
     @pytest.mark.parametrize(
         "data_frame,call_count",
         [
-            (None, 0),
             (DataFrame(), 0),
             (
                 DataFrame.from_dict(
@@ -155,7 +153,7 @@ class TestTrackGeometryPlotter:
     def test_plot(
         self,
         mock_plot_dataframe: Mock,
-        data_frame: Optional[DataFrame],
+        data_frame: DataFrame,
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)
@@ -173,7 +171,6 @@ class TestStartEndPointPlotter:
     @pytest.mark.parametrize(
         "data_frame,call_count",
         [
-            (None, 0),
             (DataFrame(), 0),
             (
                 DataFrame.from_dict(
@@ -192,7 +189,7 @@ class TestStartEndPointPlotter:
     def test_plot(
         self,
         mock_plot_dataframe: Mock,
-        data_frame: Optional[DataFrame],
+        data_frame: DataFrame,
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)

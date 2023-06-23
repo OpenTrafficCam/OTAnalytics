@@ -22,7 +22,8 @@ class InfoBox(CTkToplevel):
         super().__init__(**kwargs)
         self.title(title)
         self.message = message
-        self.protocol("WM_DELETE_WINDOW", self.cancel)
+        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.bind(tk_events.ESCAPE_KEY, self._on_cancel)
         self.canceled = False
         self._initial_position = initial_position
         self._show_cancel = show_cancel
@@ -36,7 +37,9 @@ class InfoBox(CTkToplevel):
     def _get_widgets(self) -> None:
         self.label_name = CTkLabel(master=self, text=self.message)
         self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
-        self.button_cancel = CTkButton(master=self, text="Cancel", command=self.cancel)
+        self.button_cancel = CTkButton(
+            master=self, text="Cancel", command=self._on_cancel
+        )
 
     def _place_widgets(self) -> None:
         if self._show_cancel:
@@ -67,6 +70,6 @@ class InfoBox(CTkToplevel):
         self.destroy()
         self.update()
 
-    def cancel(self, event: Any = None) -> None:
+    def _on_cancel(self, event: Any = None) -> None:
         self.canceled = True
         self.close(event)
