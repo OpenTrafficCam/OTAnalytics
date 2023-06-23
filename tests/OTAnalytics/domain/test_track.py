@@ -12,7 +12,6 @@ from OTAnalytics.domain.track import (
     Track,
     TrackId,
     TrackListObserver,
-    TrackListSubject,
     TrackObserver,
     TrackRepository,
     TrackSubject,
@@ -66,18 +65,6 @@ class TestTrackSubject:
         subject.notify(changed_track)
 
         observer.notify_track.assert_called_with(changed_track)
-
-
-class TestTrackListSubject:
-    def test_notify_observer(self) -> None:
-        changed_tracks = [TrackId(1), TrackId(2)]
-        observer = Mock(spec=TrackListObserver)
-        subject = TrackListSubject()
-        subject.register(observer)
-
-        subject.notify(changed_tracks)
-
-        observer.notify_tracks.assert_called_with(changed_tracks)
 
 
 class TestDetection:

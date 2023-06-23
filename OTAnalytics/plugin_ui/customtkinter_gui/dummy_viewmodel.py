@@ -48,7 +48,7 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
 )
-from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
@@ -108,7 +108,11 @@ def flow_id(from_section: str, to_section: str) -> str:
 
 
 class DummyViewModel(
-    ViewModel, SectionListObserver, FlowListObserver, VideoListObserver
+    ViewModel,
+    VideoListObserver,
+    TrackListObserver,
+    SectionListObserver,
+    FlowListObserver,
 ):
     def __init__(
         self,
@@ -129,8 +133,8 @@ class DummyViewModel(
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
+        self._application.register_video_observer(self)
         self._application.register_sections_observer(self)
-        self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_flows_observer(self)
         self._application.register_flow_changed_observer(self._on_flow_changed)
         self._application.track_view_state.selected_videos.register(
@@ -155,6 +159,18 @@ class DummyViewModel(
         self._application.action_state.action_running.register(
             self._notify_action_running_state
         )
+
+    def notify_videos(self, videos: list[Video]) -> None:
+        if self._treeview_videos is None:
+            raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
+        if self._frame_sections is None:
+            raise MissingInjectedInstanceError(AbstractFrameSections.__name__)
+        if self._frame_flows is None:
+            raise MissingInjectedInstanceError(AbstractFrameFlows.__name__)
+        self._treeview_videos.update_items()
+        enabled = len(self._application.get_all_videos()) > 0
+        self._frame_sections.set_enabled(enabled)
+        self._frame_flows.set_enabled(enabled)
 
     def _on_section_changed(self, section_id: SectionId) -> None:
         self.notify_sections([section_id])
@@ -199,11 +215,15 @@ class DummyViewModel(
             {"start_date": start_date, "end_date": end_date}
         )
 
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self._application.intersect_tracks_with_sections()
+
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
+        self._application.intersect_tracks_with_sections()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
@@ -224,17 +244,16 @@ class DummyViewModel(
         self._application.track_view_state.selected_videos.register(
             self._update_selected_videos
         )
+        self._application.section_state.selected_sections.register(
+            self._update_selected_sections
+        )
+        self._application.register_section_changed_observer(self._on_section_changed)
 
     def _start_action(self) -> None:
         self._application.action_state.action_running.set(True)
 
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
-
-    def notify_videos(self, videos: list[Video]) -> None:
-        if self._treeview_videos is None:
-            raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
-        self._treeview_videos.update_items()
 
     def _update_selected_videos(self, videos: list[Video]) -> None:
         current_paths = [str(video.get_path()) for video in videos]
@@ -338,9 +357,11 @@ class DummyViewModel(
 
     def set_sections_frame(self, frame: AbstractFrameSections) -> None:
         self._frame_sections = frame
+        self._frame_sections.set_enabled(False)
 
     def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
         self._frame_flows = frame
+        self._frame_flows.set_enabled(False)
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
