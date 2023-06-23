@@ -108,7 +108,7 @@ class ApplicationStarter:
             track_view_state=track_view_state,
         )
         track_geometry_plotter = self._create_track_geometry_plotter(
-            track_view_state, pandas_data_provider, alpha=0.2
+            track_view_state, pandas_data_provider, alpha=0.2, enable_legend=True
         )
         track_highlighter_sections_intersecting_tracks = (
             self._create_track_highlight_geometry_plotter(
@@ -116,14 +116,17 @@ class ApplicationStarter:
                 section_state,
                 pandas_data_provider,
                 datastore._event_repository,
+                enable_legend=False,
             )
         )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            track_view_state,
-            pandas_data_provider,
+            track_view_state, pandas_data_provider, enable_legend=False
         )
         section_plotter = PlotterPrototype(
-            track_view_state, MatplotlibTrackPlotter(SectionGeometryPlotter(datastore))
+            track_view_state,
+            MatplotlibTrackPlotter(
+                SectionGeometryPlotter(datastore, enable_legend=False)
+            ),
         )
         layers = [
             background_image_plotter,
@@ -260,9 +263,12 @@ class ApplicationStarter:
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
         alpha: float,
+        enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
-            TrackGeometryPlotter(pandas_data_provider, alpha=alpha),
+            TrackGeometryPlotter(
+                pandas_data_provider, alpha=alpha, enable_legend=enable_legend
+            ),
         )
         return PlotterPrototype(state, track_plotter)
 
@@ -270,9 +276,12 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
+        enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
-            TrackStartEndPointPlotter(pandas_data_provider),
+            TrackStartEndPointPlotter(
+                pandas_data_provider, enable_legend=enable_legend
+            ),
         )
         return PlotterPrototype(state, track_plotter)
 
@@ -282,6 +291,7 @@ class ApplicationStarter:
         section_state: SectionState,
         pandas_track_provider: PandasDataFrameProvider,
         event_repository: EventRepository,
+        enable_legend: bool,
     ) -> Plotter:
         track_intersecting_sections = TracksIntersectingSelectedSections(
             section_state, event_repository
@@ -289,7 +299,9 @@ class ApplicationStarter:
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=track_intersecting_sections
         )
-        return self._create_track_geometry_plotter(state, filter_by_id, alpha=1)
+        return self._create_track_geometry_plotter(
+            state, filter_by_id, alpha=1, enable_legend=enable_legend
+        )
 
     def _create_track_highlight_geometry_plotter_not_intersecting(
         self,

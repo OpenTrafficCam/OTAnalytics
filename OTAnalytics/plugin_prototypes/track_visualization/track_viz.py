@@ -335,9 +335,11 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._enable_legend = enable_legend
         self._alpha = alpha
 
     def plot(self, axes: Axes) -> None:
@@ -367,6 +369,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             ax=axes,
             palette=COLOR_PALETTE,
             hue_order=CLASS_ORDER,
+            legend=self._enable_legend,
         )
 
 
@@ -376,9 +379,11 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._enable_legend = enable_legend
         self._alpha = alpha
 
     def plot(self, axes: Axes) -> None:
@@ -411,7 +416,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             data=track_df_start_end,
             style="type",
             markers=[">", "$x$"],
-            legend=False,
+            legend=self._enable_legend,
             s=15,
             ax=axes,
             palette=COLOR_PALETTE,
@@ -421,8 +426,9 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 class SectionGeometryPlotter(MatplotlibPlotterImplementation):
     """Plot geometry of sections."""
 
-    def __init__(self, datastore: Datastore) -> None:
+    def __init__(self, datastore: Datastore, enable_legend: bool) -> None:
         self._datastore = datastore
+        self.enable_legend = enable_legend
 
     def plot(self, axes: Axes) -> None:
         """
@@ -452,6 +458,7 @@ class SectionGeometryPlotter(MatplotlibPlotterImplementation):
                 alpha=1,
                 color="black",
                 ax=axes,
+                legend=self.enable_legend,
             )
 
 

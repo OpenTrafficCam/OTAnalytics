@@ -170,7 +170,7 @@ class TestTrackGeometryPlotter:
 
         data_provider.get_data.return_value = data_frame
 
-        plotter = TrackGeometryPlotter(data_provider)
+        plotter = TrackGeometryPlotter(data_provider, enable_legend=False)
 
         plotter.plot(axes)
         assert mock_plot_dataframe.call_count == call_count
@@ -206,7 +206,7 @@ class TestStartEndPointPlotter:
 
         data_provider.get_data.return_value = data_frame
 
-        plotter = TrackStartEndPointPlotter(data_provider)
+        plotter = TrackStartEndPointPlotter(data_provider, enable_legend=False)
 
         plotter.plot(axes)
         assert mock_plot_dataframe.call_count == call_count
