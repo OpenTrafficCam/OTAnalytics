@@ -103,10 +103,10 @@ def flow_id(from_section: str, to_section: str) -> str:
 
 class DummyViewModel(
     ViewModel,
+    VideoListObserver,
     TrackListObserver,
     SectionListObserver,
     FlowListObserver,
-    VideoListObserver,
 ):
     def __init__(
         self,
@@ -127,6 +127,7 @@ class DummyViewModel(
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
+        self._application.register_video_observer(self)
         self._application.register_sections_observer(self)
         self._application.register_flows_observer(self)
         self._application.register_flow_changed_observer(self._on_flow_changed)
@@ -152,6 +153,18 @@ class DummyViewModel(
         self._application.action_state.action_running.register(
             self._notify_action_running_state
         )
+
+    def notify_videos(self, videos: list[Video]) -> None:
+        if self._treeview_videos is None:
+            raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
+        if self._frame_sections is None:
+            raise MissingInjectedInstanceError(AbstractFrameSections.__name__)
+        if self._frame_flows is None:
+            raise MissingInjectedInstanceError(AbstractFrameFlows.__name__)
+        self._treeview_videos.update_items()
+        enabled = len(self._application.get_all_videos()) > 0
+        self._frame_sections.set_enabled(enabled)
+        self._frame_flows.set_enabled(enabled)
 
     def _on_section_changed(self, section_id: SectionId) -> None:
         self.notify_sections([section_id])
@@ -235,11 +248,6 @@ class DummyViewModel(
 
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
-
-    def notify_videos(self, videos: list[Video]) -> None:
-        if self._treeview_videos is None:
-            raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
-        self._treeview_videos.update_items()
 
     def _update_selected_videos(self, videos: list[Video]) -> None:
         current_paths = [str(video.get_path()) for video in videos]
@@ -343,9 +351,11 @@ class DummyViewModel(
 
     def set_sections_frame(self, frame: AbstractFrameSections) -> None:
         self._frame_sections = frame
+        self._frame_sections.set_enabled(False)
 
     def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
         self._frame_flows = frame
+        self._frame_flows.set_enabled(False)
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
