@@ -28,38 +28,63 @@ ENCODING = "UTF-8"
 DPI = 100
 
 CLASS_CAR = "car"
-CLASS_MOTORCYCLE = "motorcycle"
-CLASS_PERSON = "person"
+CLASS_CAR_TRAILER = "car_with_trailer"
+CLASS_MOTORCYCLIST = "motorcyclist"
+CLASS_PEDESTRIAN = "pedestrian"
 CLASS_TRUCK = "truck"
-CLASS_BICYCLE = "bicycle"
+CLASS_TRUCK_TRAILER = "truck_with_trailer"
+CLASS_TRUCK_SEMITRAILER = "truck_with_semitrailer"
+CLASS_BICYCLIST = "bicyclist"
+CLASS_BICYCLIST_TRAILER = "bicyclist_with_trailer"
+CLASS_CARGOBIKE = "cargobike_driver"
+CLASS_SCOOTER = "scooter_driver"
+CLASS_DELVAN = "delivery_van"
+CLASS_DELVAN_TRAILER = "delivery_van_with_trailer"
+CLASS_PRVAN = "private_van"
+CLASS_PRVAN_TRAILER = "private_van_with_trailer"
 CLASS_TRAIN = "train"
+CLASS_BUS = "bus"
 
 COLOR_PALETTE: dict[str, str] = {
     CLASS_CAR: "blue",
-    CLASS_MOTORCYCLE: "skyblue",
-    CLASS_PERSON: "salmon",
-    CLASS_TRUCK: "purple",
-    CLASS_BICYCLE: "lime",
-    CLASS_TRAIN: "gold",
+    CLASS_CAR_TRAILER: "skyblue",
+    CLASS_MOTORCYCLIST: "orange",
+    CLASS_PEDESTRIAN: "salmon",
+    CLASS_TRUCK: "red",
+    CLASS_TRUCK_TRAILER: "purple",
+    CLASS_TRUCK_SEMITRAILER: "pink",
+    CLASS_BICYCLIST: "lime",
+    CLASS_BICYCLIST_TRAILER: "lime",
+    CLASS_CARGOBIKE: "green",
+    CLASS_SCOOTER: "white",
+    CLASS_DELVAN: "yellow",
+    CLASS_DELVAN_TRAILER: "yellow",
+    CLASS_PRVAN: "black",
+    CLASS_PRVAN_TRAILER: "black",
+    CLASS_TRAIN: "brown",
+    CLASS_BUS: "beige",
 }
 
 CLASS_ORDER = [
+    CLASS_PEDESTRIAN,
+    CLASS_BICYCLIST,
+    CLASS_BICYCLIST_TRAILER,
+    CLASS_CARGOBIKE,
+    CLASS_SCOOTER,
+    CLASS_MOTORCYCLIST,
     CLASS_CAR,
+    CLASS_CAR_TRAILER,
+    CLASS_PRVAN,
+    CLASS_PRVAN_TRAILER,
+    CLASS_DELVAN,
+    CLASS_DELVAN_TRAILER,
     CLASS_TRUCK,
-    CLASS_MOTORCYCLE,
-    CLASS_PERSON,
-    CLASS_BICYCLE,
+    CLASS_TRUCK_TRAILER,
+    CLASS_TRUCK_SEMITRAILER,
+    CLASS_BUS,
     CLASS_TRAIN,
 ]
 
-FILTER_CLASSES: Iterable[str] = (
-    CLASS_CAR,
-    CLASS_MOTORCYCLE,
-    CLASS_PERSON,
-    CLASS_TRUCK,
-    CLASS_BICYCLE,
-    CLASS_TRAIN,
-)
 
 NUM_MIN_FRAMES = 30
 
@@ -145,7 +170,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if data.empty:
             return data
 
-        return self._filter_tracks(FILTER_CLASSES, NUM_MIN_FRAMES, data)
+        return self._filter_tracks(NUM_MIN_FRAMES, data)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -191,7 +216,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def _filter_tracks(
         self,
-        filter_classes: Iterable[str],
         num_min_frames: int,
         track_df: DataFrame,
     ) -> DataFrame:
@@ -214,9 +238,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         filter_element = self._track_view_state.filter_element.get()
         dataframe_filter = filter_element.build_filter(self._filter_builder)
 
-        track_df = next(iter(dataframe_filter.apply([track_df])))
-
-        return track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
+        return next(iter(dataframe_filter.apply([track_df])))
 
 
 class PandasTracksOffsetProvider(PandasDataFrameProvider):

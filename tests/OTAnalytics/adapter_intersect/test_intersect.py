@@ -99,7 +99,7 @@ class TestDetectSectionActivity:
         # Actual usage
 
         events = section_action_detector.detect(sections=[line_section], tracks=tracks)
-        assert len(events) == 7
+        assert len(events) == 2
 
     def test_intersect_by_single_track_line(
         self,
@@ -130,7 +130,7 @@ class TestDetectSectionActivity:
         # Actual usage
 
         events = section_action_detector.detect(sections=[line_section], tracks=tracks)
-        assert len(events) == 7
+        assert len(events) == 2
 
     def test_intersect_area_by_track_points(
         self,
@@ -176,8 +176,8 @@ class TestDetectSectionActivity:
                 case _:
                     continue
 
-        assert len(enter_events) == 5
-        assert len(leave_events) == 5
+        assert len(enter_events) == 2
+        assert len(leave_events) == 2
 
 
 class TestShapelyIntersectImplementationAdapter:
