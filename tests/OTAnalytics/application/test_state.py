@@ -147,6 +147,7 @@ class TestOptionalObservableProperty:
 class TestTrackImageUpdater:
     def test_update_image(self) -> None:
         plotter = Mock(spec=Plotter)
+        section_state = SectionState()
         background_image = Mock(spec=TrackImage)
         plotter.plot.return_value = background_image
         track_id = TrackId(1)
@@ -155,7 +156,7 @@ class TestTrackImageUpdater:
         track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
         track.id = track_id
-        updater = TrackImageUpdater(datastore, track_view_state, plotter)
+        updater = TrackImageUpdater(datastore, track_view_state, section_state, plotter)
         tracks: list[TrackId] = [track_id]
 
         updater.notify_tracks(tracks)
