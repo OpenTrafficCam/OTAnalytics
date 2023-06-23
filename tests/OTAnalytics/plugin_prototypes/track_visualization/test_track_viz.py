@@ -65,7 +65,7 @@ class TestPandasTrackProvider:
         result = provider.get_data()
 
         datastore.get_all_tracks.assert_called_once()
-        assert result is None
+        assert result.empty
 
 
 class TestCachedPandasTrackProvider:
@@ -93,13 +93,13 @@ class TestCachedPandasTrackProvider:
             datastore, track_view_state, filter_builder
         )
 
-        assert provider._cache_df is None
+        assert provider._cache_df.empty
         result = provider._convert_tracks(tracks)
         assert result is not None
         assert result is provider._cache_df
 
         provider.notify_tracks([])
-        assert provider._cache_df is None
+        assert provider._cache_df.empty
 
 
 class TestBackgroundPlotter:
