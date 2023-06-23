@@ -49,10 +49,10 @@ class ModifiedCTk(CTk):
         self.quit()
 
     def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
+        traceback.print_exception(val)
         InfoBox(
             message=str(val), title="Error", initial_position=get_widget_position(self)
         )
-        traceback.print_exception(val)
 
 
 class TabviewInputFiles(CTkTabview):
