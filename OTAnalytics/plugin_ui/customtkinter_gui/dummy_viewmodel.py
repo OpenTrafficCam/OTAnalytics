@@ -654,6 +654,14 @@ class DummyViewModel(
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         position = get_widget_position(widget=self._canvas)
+        self._start_action()
+        with contextlib.suppress(CancelAddSection):
+            self.__update_section_metadata(selected_section, current_data, position)
+        self._finish_action()
+
+    def __update_section_metadata(
+        self, selected_section: Section, current_data: dict, position: tuple[int, int]
+    ) -> None:
         updated_section_data = self.get_section_metadata(
             title="Edit section",
             initial_position=position,
@@ -665,7 +673,6 @@ class DummyViewModel(
         )
         self.refresh_items_on_canvas()
         print(f"Updated line_section Metadata: {updated_section_data}")
-        self._finish_action()
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
         section = self._flow_parser.parse_section(data)
