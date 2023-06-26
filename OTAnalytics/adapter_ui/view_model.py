@@ -283,3 +283,7 @@ class ViewModel(ABC):
     @abstractmethod
     def switch_to_next_date_range(self) -> None:
         pass
+
+    @abstractmethod
+    def export_counts(self) -> None:
+        raise NotImplementedError
