@@ -203,7 +203,7 @@ class TrackViewState:
         self.background_image = ObservableOptionalProperty[TrackImage]()
         self.show_tracks = ObservableOptionalProperty[bool]()
         self.track_offset = ObservableOptionalProperty[RelativeOffsetCoordinate](
-            RelativeOffsetCoordinate(0, 0)
+            RelativeOffsetCoordinate(0.5, 0.5)
         )
         self.filter_element = ObservableProperty[FilterElement](
             FilterElement(DateRange(None, None), None)
