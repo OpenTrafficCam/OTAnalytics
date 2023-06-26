@@ -571,7 +571,7 @@ class SectionGeometryBuilder:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
 
 
-class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver, ABC):
+class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
     def __init__(
         self,
         viewmodel: ViewModel,
