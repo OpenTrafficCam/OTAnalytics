@@ -68,6 +68,12 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_KNOB_STYLE,
     SELECTED_SECTION_STYLE,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    EXPORT_FORMAT,
+    INTERVAL,
+    CancelExportCounts,
+    ToplevelExportCounts,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
@@ -648,6 +654,14 @@ class DummyViewModel(
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         position = get_widget_position(widget=self._canvas)
+        self._start_action()
+        with contextlib.suppress(CancelAddSection):
+            self.__update_section_metadata(selected_section, current_data, position)
+        self._finish_action()
+
+    def __update_section_metadata(
+        self, selected_section: Section, current_data: dict, position: tuple[int, int]
+    ) -> None:
         updated_section_data = self.get_section_metadata(
             title="Edit section",
             initial_position=position,
@@ -659,7 +673,6 @@ class DummyViewModel(
         )
         self.refresh_items_on_canvas()
         print(f"Updated line_section Metadata: {updated_section_data}")
-        self._finish_action()
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
         section = self._flow_parser.parse_section(data)
@@ -801,7 +814,7 @@ class DummyViewModel(
         self._finish_action()
 
     def __create_flow(self) -> Flow:
-        flow_data = self._show_distances_window()
+        flow_data = self._show_flow_popup()
         flow_id = self._application.get_flow_id()
         name = flow_data[FLOW_NAME]
         new_from_section_id = SectionId(flow_data[START_SECTION])
@@ -817,9 +830,9 @@ class DummyViewModel(
         self._application.add_flow(flow)
         return flow
 
-    def _show_distances_window(
+    def _show_flow_popup(
         self,
-        input_values: dict = {},
+        input_values: dict | None = None,
         title: str = "Add flow",
     ) -> dict:
         if self._treeview_flows is None:
@@ -838,7 +851,7 @@ class DummyViewModel(
 
     def __create_flow_data(
         self,
-        input_values: dict,
+        input_values: dict | None,
         title: str,
         position: tuple[int, int],
         section_ids: list[IdResource],
@@ -859,7 +872,7 @@ class DummyViewModel(
 
     def __get_flow_data(
         self,
-        input_values: dict,
+        input_values: dict | None,
         title: str,
         position: tuple[int, int],
         section_ids: list[IdResource],
@@ -923,7 +936,7 @@ class DummyViewModel(
             DISTANCE: flow.distance,
         }
 
-        if flow_data := self._show_distances_window(
+        if flow_data := self._show_flow_popup(
             input_values=input_data,
             title="Edit flow",
         ):
@@ -1095,3 +1108,22 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
 
         self._frame_filter.disable_filter_by_class_button()
+
+    def export_counts(self) -> None:
+        # TODO: @briemla replace with actual wiring
+        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
+        export_formats: dict = {
+            "Format 1": "csv",
+            "Format 2": "xlsx",
+            "Format 3": "xlsx",
+        }
+        try:
+            input_values: dict = ToplevelExportCounts(
+                title="Export counts",
+                initial_position=(50, 50),
+                input_values=default_values,
+                export_formats=export_formats,
+            ).get_data()
+            print(input_values)
+        except CancelExportCounts:
+            print("User canceled configuration of export")
