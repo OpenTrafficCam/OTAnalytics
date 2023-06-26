@@ -675,8 +675,11 @@ class DummyViewModel(
         print(f"Updated line_section Metadata: {updated_section_data}")
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(AbstractTreeviewInterface.__name__)
         section = self._flow_parser.parse_section(data)
         self._application.update_section(section)
+        self._treeview_sections.update_selected_items([id.serialize()])
 
     def remove_sections(self) -> None:
         if self._treeview_sections is None:
@@ -858,6 +861,11 @@ class DummyViewModel(
     ) -> dict:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
+            new_entry_name = flow_data[FLOW_NAME]
+            if (input_values is not None) and (
+                new_entry_name == input_values[FLOW_NAME]
+            ):
+                break
             InfoBox(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
