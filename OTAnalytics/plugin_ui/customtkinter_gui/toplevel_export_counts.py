@@ -93,7 +93,7 @@ class ToplevelExportCounts(ToplevelTemplate):
         self._export_formats = export_formats
         super().__init__(**kwargs)
 
-    def _get_frame_content(self, master: Any) -> FrameContent:
+    def _create_frame_content(self, master: Any) -> FrameContent:
         return FrameConfigureExportCounts(
             master=master,
             export_formats=self._export_formats,

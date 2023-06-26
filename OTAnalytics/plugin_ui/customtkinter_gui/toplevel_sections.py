@@ -100,7 +100,7 @@ class ToplevelSections(ToplevelTemplate):
         self._show_offset = show_offset
         super().__init__(**kwargs)
 
-    def _get_frame_content(self, master: Any) -> FrameContent:
+    def _create_frame_content(self, master: Any) -> FrameContent:
         return FrameConfigureSection(
             master=master,
             viewmodel=self._viewmodel,
