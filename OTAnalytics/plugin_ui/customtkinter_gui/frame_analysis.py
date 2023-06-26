@@ -26,6 +26,9 @@ class FrameAnalysis(CTkFrame):
             text="Save eventlist",
             command=self._save_eventlist,
         )
+        self.button_export_counts = CTkButton(
+            master=self, text="Export counts", command=self._viewmodel.export_counts
+        )
 
     def _place_widgets(self) -> None:
         self.label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
@@ -34,6 +37,9 @@ class FrameAnalysis(CTkFrame):
         )
         self.button_save_eventlist.grid(
             row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.button_export_counts.grid(
+            row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _start_analysis(self) -> None:
