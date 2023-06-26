@@ -504,7 +504,14 @@ class DummyViewModel(
     def cancel_action(self) -> None:
         self._finish_action()
 
-    def add_section(self) -> None:
+    def add_line_section(self) -> None:
+        self.set_selected_section_ids([])
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
+        self._start_action()
+        SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
+
+    def add_area_section(self) -> None:
         self.set_selected_section_ids([])
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
