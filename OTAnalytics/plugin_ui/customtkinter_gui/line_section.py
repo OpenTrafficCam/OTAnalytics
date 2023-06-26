@@ -401,10 +401,16 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _shift_selected_knob_forward(self) -> None:
         i = self._selected_knob_index
-        if i is None or i >= len(self._temporary_coordinates) - 1:
+        if i is None or i > len(self._temporary_coordinates) - 1:
             return
-        self._swap_temporary_coordinates(index=i, index_other=i + 1)
-        self._selected_knob_index = i + 1
+        elif i == len(self._temporary_coordinates) - 1:
+            if not self._is_area_section:
+                return
+            self._swap_temporary_coordinates(index=i, index_other=0)
+            self._selected_knob_index = 0
+        else:
+            self._swap_temporary_coordinates(index=i, index_other=i + 1)
+            self._selected_knob_index = i + 1
         self._redraw_temporary_section(
             highlighted_knob_index=self._selected_knob_index,
             highlighted_knob_style=self._selected_knob_style,
@@ -412,10 +418,18 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _shift_selected_knob_backward(self) -> None:
         i = self._selected_knob_index
-        if i is None or i == 0:
+        if i is None or i < 0:
             return
-        self._swap_temporary_coordinates(index=i, index_other=i - 1)
-        self._selected_knob_index = i - 1
+        elif i == 0:
+            if not self._is_area_section:
+                return
+            self._swap_temporary_coordinates(
+                index=i, index_other=len(self._temporary_coordinates) - 1
+            )
+            self._selected_knob_index = len(self._temporary_coordinates) - 1
+        else:
+            self._swap_temporary_coordinates(index=i, index_other=i - 1)
+            self._selected_knob_index = i - 1
         self._redraw_temporary_section(
             highlighted_knob_index=self._selected_knob_index,
             highlighted_knob_style=self._selected_knob_style,
