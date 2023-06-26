@@ -516,7 +516,12 @@ class DummyViewModel(
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         self._start_action()
-        SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
+        SectionBuilder(
+            viewmodel=self,
+            canvas=self._canvas,
+            is_area_section=True,
+            style=EDITED_SECTION_STYLE,
+        )
 
     def get_section_metadata(
         self,

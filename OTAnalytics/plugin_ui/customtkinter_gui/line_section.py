@@ -86,6 +86,7 @@ class SectionPainter:
         id: str,
         coordinates: list[tuple[int, int]],
         section_style: dict,
+        is_area_section: bool = False,
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,
         text: str | None = None,
@@ -98,6 +99,9 @@ class SectionPainter:
                 Shall be unique among all sections on the canvas.
             coordinates (list[tuple[int, int]]): Knob coordinates that define a section.
             section_style (dict): Dict of style options for tkinter canvas items.
+            area_section (bool): True, if the section is an area section.
+                False if the seciton is a line section.
+                Defaults to False.
             highlighted_knob_index (int | None, optional): Index of a knob coordinate
                 that should be highlighted with a unique style.
                 Defaults to None.
@@ -114,6 +118,7 @@ class SectionPainter:
         self._draw_geometries(
             coordinates,
             section_style,
+            is_area_section,
             highlighted_knob_index,
             highlighted_knob_style,
             tkinter_tags,
@@ -127,6 +132,7 @@ class SectionPainter:
         self,
         coordinates: list[tuple[int, int]],
         section_style: dict,
+        is_area_section: bool,
         highlighted_knob_index: int | None,
         highlighted_knob_style: dict | None,
         tkinter_tags: tuple[str, ...],
@@ -151,6 +157,18 @@ class SectionPainter:
             if knob_style is not None:
                 self._draw_knob(tkinter_tags, index, coordinate, knob_style)
             start = coordinate
+
+        if is_area_section and len(coordinates) > 2:
+            start = coordinates[-1]
+            end = coordinates[0]
+            self._canvas.create_line(
+                start[0],
+                start[1],
+                end[0],
+                end[1],
+                tags=tkinter_tags + (LINE,),
+                **section_style[LINE],
+            )
 
     def _draw_knob(
         self,
@@ -488,9 +506,11 @@ class SectionGeometryBuilder:
         self,
         observer: SectionGeometryBuilderObserver,
         canvas: AbstractCanvas,
+        is_area_section: bool,
         style: dict,
     ) -> None:
         self._observer = observer
+        self._is_area_section = is_area_section
         self._style = style
 
         self.painter = SectionPainter(canvas=canvas)
@@ -505,6 +525,7 @@ class SectionGeometryBuilder:
             id=self._temporary_id,
             coordinates=self._coordinates + [coordinate],
             section_style=self._style,
+            is_area_section=self._is_area_section,
         )
 
     def number_of_coordinates(self) -> int:
@@ -519,6 +540,7 @@ class SectionGeometryBuilder:
             id=self._temporary_id,
             coordinates=self._coordinates,
             section_style=self._style,
+            is_area_section=self._is_area_section,
         )
         self._observer.finish_building(self._coordinates)
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
@@ -533,16 +555,19 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         viewmodel: ViewModel,
         canvas: AbstractCanvas,
         style: dict,
+        is_area_section: bool = False,
         section: Optional[Section] = None,
     ) -> None:
         self._viewmodel = viewmodel
         self._canvas = canvas
         self._style = style
+        self._is_area_section = is_area_section
         self.attach_to(self._canvas.event_handler)
         self.geometry_builder = SectionGeometryBuilder(
             observer=self,
             canvas=self._canvas,
             style=self._style,
+            is_area_section=self._is_area_section,
         )
         self._id: Optional[str] = None
         self._name: Optional[str] = None
