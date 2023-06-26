@@ -128,12 +128,10 @@ class PlotterPrototype(Plotter):
         self._track_plotter = track_plotter
 
     def plot(self) -> Optional[TrackImage]:
-        if self._track_view_state.show_tracks.get():
-            return self._track_plotter.plot(
-                width=self.__get_plotting_width(),
-                height=self.__get_plotting_height(),
-            )
-        return None
+        return self._track_plotter.plot(
+            width=self.__get_plotting_width(),
+            height=self.__get_plotting_height(),
+        )
 
     def __get_plotting_height(self) -> int:
         return self._track_view_state.view_height.get()
@@ -454,9 +452,9 @@ class SectionGeometryPlotter(MatplotlibPlotterImplementation):
             seaborn.lineplot(
                 x=x_data,
                 y=y_data,
-                linewidth=2,
+                linewidth=50,
                 alpha=1,
-                color="black",
+                color="red",
                 ax=axes,
                 legend=self.enable_legend,
             )
