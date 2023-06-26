@@ -421,45 +421,6 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
         )
 
 
-class SectionGeometryPlotter(MatplotlibPlotterImplementation):
-    """Plot geometry of sections."""
-
-    def __init__(self, datastore: Datastore, enable_legend: bool) -> None:
-        self._datastore = datastore
-        self.enable_legend = enable_legend
-
-    def plot(self, axes: Axes) -> None:
-        """
-        Plot sections on the given axes.
-
-        Args:
-            sections (Iterable[Section]): sections to be plotted
-            axes (Axes): axes to plot on
-        """
-        sections = self._datastore.get_all_sections()
-        sectionlist = [section.to_dict() for section in sections]
-        for section in range(len(sectionlist)):
-            x_data = [
-                sectionlist[section][i]["x"]
-                for i in sectionlist[section].keys()
-                if i in ["start", "end"]
-            ]
-            y_data = [
-                sectionlist[section][i]["y"]
-                for i in sectionlist[section].keys()
-                if i in ["start", "end"]
-            ]
-            seaborn.lineplot(
-                x=x_data,
-                y=y_data,
-                linewidth=50,
-                alpha=1,
-                color="red",
-                ax=axes,
-                legend=self.enable_legend,
-            )
-
-
 class MatplotlibTrackPlotter(TrackPlotter):
     """
     Implementation of the TrackPlotter interface using matplotlib.
