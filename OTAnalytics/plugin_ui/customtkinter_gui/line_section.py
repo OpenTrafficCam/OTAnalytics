@@ -159,16 +159,7 @@ class SectionPainter:
             start = coordinate
 
         if is_area_section and len(coordinates) > 2:
-            start = coordinates[-1]
-            end = coordinates[0]
-            self._canvas.create_line(
-                start[0],
-                start[1],
-                end[0],
-                end[1],
-                tags=tkinter_tags + (LINE,),
-                **section_style[LINE],
-            )
+            self._extend_to_polygon(coordinates, section_style, tkinter_tags)
 
     def _draw_knob(
         self,
@@ -211,6 +202,23 @@ class SectionPainter:
             outline=outline,
             width=width,
             tags=tags,
+        )
+
+    def _extend_to_polygon(
+        self,
+        coordinates: list[tuple[int, int]],
+        section_style: dict,
+        tkinter_tags: tuple[str, ...],
+    ) -> None:
+        start = coordinates[-1]
+        end = coordinates[0]
+        self._canvas.create_line(
+            start[0],
+            start[1],
+            end[0],
+            end[1],
+            tags=tkinter_tags + (LINE,),
+            **section_style[LINE],
         )
 
     def _draw_text(
