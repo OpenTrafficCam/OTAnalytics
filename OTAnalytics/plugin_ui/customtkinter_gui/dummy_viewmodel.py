@@ -7,7 +7,12 @@ from typing import Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_flows import (
+    AbstractFrameFlows,
+    GeometricCenterCalculator,
+    InnerSegmentsCenterCalculator,
+    SectionRefPointCalculator,
+)
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
@@ -807,12 +812,30 @@ class DummyViewModel(
         for flow in self._get_selected_flows():
             if start_section := self._application.get_section_for(flow.start):
                 if end_section := self._application.get_section_for(flow.end):
+                    start_refpt_calculator = self._get_section_refpt_calculator(
+                        start_section
+                    )
+                    end_refpt_calculator = self._get_section_refpt_calculator(
+                        end_section
+                    )
                     ArrowPainter(self._canvas).draw(
                         start_section=start_section,
                         end_section=end_section,
+                        start_refpt_calculator=start_refpt_calculator,
+                        end_refpt_calculator=end_refpt_calculator,
                         tags=[LINE_SECTION],
                         arrow_style=ARROW_STYLE,
                     )
+
+    def _get_section_refpt_calculator(
+        self, section: Section
+    ) -> SectionRefPointCalculator:
+        if isinstance(section, LineSection):
+            return InnerSegmentsCenterCalculator()
+        elif isinstance(section, Area):
+            return GeometricCenterCalculator()
+        else:
+            raise ValueError("section has to be a LineSection or an Area, but isnt")
 
     def _get_selected_flows(self) -> list[Flow]:
         flows: list[Flow] = []

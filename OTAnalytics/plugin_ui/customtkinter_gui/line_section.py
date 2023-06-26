@@ -3,10 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.adapter_ui.abstract_frame_flows import (
-    InnerSegmentsCenterCalculator,
-    SectionRefPointCalculator,
-)
+from OTAnalytics.adapter_ui.abstract_frame_flows import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import Section
@@ -60,12 +57,13 @@ class ArrowPainter:
         self,
         start_section: Section,
         end_section: Section,
+        start_refpt_calculator: SectionRefPointCalculator,
+        end_refpt_calculator: SectionRefPointCalculator,
         arrow_style: dict | None = None,
-        refpt_calculator: SectionRefPointCalculator = InnerSegmentsCenterCalculator(),
         tags: list[str] | None = None,
     ) -> None:
-        start_x, start_y = refpt_calculator.get_reference_point(start_section)
-        end_x, end_y = refpt_calculator.get_reference_point(end_section)
+        start_x, start_y = start_refpt_calculator.get_reference_point(start_section)
+        end_x, end_y = end_refpt_calculator.get_reference_point(end_section)
         self._canvas.create_line(
             start_x,
             start_y,
