@@ -93,9 +93,9 @@ class ToplevelExportCounts(ToplevelTemplate):
         self._export_formats = export_formats
         super().__init__(**kwargs)
 
-    def _get_frame_content(self) -> None:
-        self._frame_content = FrameConfigureExportCounts(
-            master=self,
+    def _get_frame_content(self, master: Any) -> FrameContent:
+        return FrameConfigureExportCounts(
+            master=master,
             export_formats=self._export_formats,
             input_values=self._input_values,
         )

@@ -216,9 +216,9 @@ class ToplevelFlows(ToplevelTemplate):
         self._show_distance = show_distance
         super().__init__(**kwargs)
 
-    def _get_frame_content(self) -> None:
-        self._frame_content = FrameConfigureFlow(
-            master=self,
+    def _get_frame_content(self, master: Any) -> FrameContent:
+        return FrameConfigureFlow(
+            master=master,
             section_ids=self._section_ids,
             input_values=self._input_values,
             show_distance=self._show_distance,

@@ -41,8 +41,7 @@ class ToplevelTemplate(CTkToplevel, ABC):
         self._frame_content.set_focus()
 
     @abstractmethod
-    def _get_frame_content(self) -> None:
-        self._frame_content = FrameContent(master=self)
+    def _get_frame_content(self, master: Any) -> FrameContent:
         raise NotImplementedError
 
     def _get_frame_footer(self) -> None:
@@ -54,7 +53,7 @@ class ToplevelTemplate(CTkToplevel, ABC):
         )
 
     def _get_widgets(self) -> None:
-        self._get_frame_content()
+        self._frame_content = self._get_frame_content(master=self)
         self._get_frame_footer()
 
     def _place_widgets(self) -> None:
