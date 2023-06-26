@@ -1,6 +1,8 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
-from OTAnalytics.application.plotting import LayeredPlotter
+import pytest
+
+from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
 from OTAnalytics.application.state import Plotter
 from OTAnalytics.domain.track import TrackImage
 
@@ -28,3 +30,29 @@ class TestLayeredPlotter:
         assert image == combined_image
         layer_1_image.add.assert_called_with(layer_2_image)
         layer_1_and_2.add.assert_called_with(layer_3_image)
+
+
+class TestPlottingLayer:
+    @pytest.fixture
+    def plotter(self) -> Mock:
+        return Mock(spec=Plotter)
+
+    def test_get_name(self, plotter: Mock) -> None:
+        name = "My Layer"
+        layer = PlottingLayer(name, plotter, enabled=True)
+        assert layer.get_name() == name
+
+    def test_enable_disable(self, plotter: Mock) -> None:
+        name = "My Layer"
+        observer = Mock()
+        layer = PlottingLayer(name, plotter, enabled=False)
+        layer.register(observer)
+
+        layer.enable()
+        assert layer.is_enabled() is True
+        layer.enable()
+        assert layer.is_enabled() is True
+        layer.disable()
+        assert layer.is_enabled() is False
+        layer.disable()
+        assert observer.call_args_list == [call(True), call(False)]

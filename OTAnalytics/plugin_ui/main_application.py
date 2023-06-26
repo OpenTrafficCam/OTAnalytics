@@ -15,7 +15,12 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlotter
+from OTAnalytics.application.plotting import (
+    Layer,
+    LayeredPlotter,
+    PlottingLayer,
+    TrackBackgroundPlotter,
+)
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -58,7 +63,6 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PandasDataFrameProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
-    SectionGeometryPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
@@ -122,20 +126,25 @@ class ApplicationStarter:
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state, pandas_data_provider, enable_legend=False
         )
-        section_plotter = PlotterPrototype(
-            track_view_state,
-            MatplotlibTrackPlotter(
-                SectionGeometryPlotter(datastore, enable_legend=False)
-            ),
+        background = PlottingLayer("Background", background_image_plotter, enabled=True)
+        all_tracks_layer = PlottingLayer(
+            "Show all tracks", track_geometry_plotter, enabled=True
         )
-        layers = [
-            background_image_plotter,
-            track_geometry_plotter,
+        highlight_tracks_intersecting_tracks_layer = PlottingLayer(
+            "Highlight tracks intersecting sections",
             track_highlighter_sections_intersecting_tracks,
-            track_start_end_point_plotter,
-            section_plotter,
+            enabled=True,
+        )
+        start_end_point_layer = PlottingLayer(
+            "Show start and end point", track_start_end_point_plotter, enabled=True
+        )
+        plotting_layers = [
+            background,
+            all_tracks_layer,
+            highlight_tracks_intersecting_tracks_layer,
+            start_end_point_layer,
         ]
-        plotter = LayeredPlotter(layers=layers)
+        plotter = LayeredPlotter(layers=plotting_layers)
         properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         image_updater = TrackImageUpdater(
@@ -176,7 +185,15 @@ class ApplicationStarter:
         datastore.register_section_changed_observer(
             image_updater.notify_section_changed
         )
-        OTAnalyticsGui(dummy_viewmodel).start()
+        layers: list[Layer] = [
+            background,
+            all_tracks_layer,
+            highlight_tracks_intersecting_tracks_layer,
+            start_end_point_layer,
+        ]
+        for layer in plotting_layers:
+            layer.register(image_updater.notify_layers)
+        OTAnalyticsGui(dummy_viewmodel, layers).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_parser = self._create_track_parser(self._create_track_repository())
