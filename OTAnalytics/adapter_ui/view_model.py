@@ -152,7 +152,10 @@ class ViewModel(ABC):
 
     @abstractmethod
     def add_new_section(
-        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+        self,
+        coordinates: list[tuple[int, int]],
+        is_area_section: bool,
+        get_metadata: MetadataProvider,
     ) -> None:
         raise NotImplementedError
 

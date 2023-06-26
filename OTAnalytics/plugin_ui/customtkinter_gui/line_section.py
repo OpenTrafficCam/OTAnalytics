@@ -255,10 +255,12 @@ class SectionGeometryEditor(CanvasObserver):
         pre_edit_section_style: dict,
         selected_knob_style: dict,
         hovered_knob_style: dict | None = None,
+        is_area_section: bool = False,
     ) -> None:
         self._viewmodel = viewmodel
         self._canvas = canvas
         self._section = section
+        self._is_area_section = is_area_section
         self._edited_section_style = edited_section_style
         self._pre_edit_section_style = pre_edit_section_style
         self._hovered_knob_style = hovered_knob_style
@@ -282,18 +284,23 @@ class SectionGeometryEditor(CanvasObserver):
             id=self._pre_edit_id,
             coordinates=self._temporary_coordinates,
             section_style=self._pre_edit_section_style,
+            is_area_section=self._is_area_section,
         )
         self.painter.draw(
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
             section_style=self._edited_section_style,
+            is_area_section=self._is_area_section,
         )
 
     def _get_coordinates(self) -> None:
-        self._coordinates = [
+        coordinates = [
             (int(coordinate.x), int(coordinate.y))
             for coordinate in self._section.get_coordinates()
         ]
+        # INFO: Assumed, that application returns first coordinate == last coordinate
+        # Meaning [x1, x2, x3] => [x1, x2, x3, x1]
+        self._coordinates = coordinates[:-1] if self._is_area_section else coordinates
         self._temporary_coordinates = self._coordinates.copy()
 
     def _get_name(self) -> None:
@@ -491,6 +498,7 @@ class SectionGeometryEditor(CanvasObserver):
             section_style=self._edited_section_style,
             highlighted_knob_index=highlighted_knob_index,
             highlighted_knob_style=highlighted_knob_style,
+            is_area_section=self._is_area_section,
         )
 
     def _finish(self) -> None:
@@ -502,7 +510,13 @@ class SectionGeometryEditor(CanvasObserver):
         return Coordinate(coordinate[0], coordinate[1])
 
     def _update_section(self) -> None:
-        self._viewmodel.update_section_coordinates(self._metadata, self._coordinates)
+        if self._is_area_section:
+            # INFO: Assumed, that application needs first coordinate == last coordinate
+            # Meaning [x1, x2, x3] => [x1, x2, x3, x1]
+            coordinates = self._coordinates + [self._coordinates[0]]
+        else:
+            coordinates = self._coordinates
+        self._viewmodel.update_section_coordinates(self._metadata, coordinates)
 
     def _abort(self) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
@@ -557,7 +571,7 @@ class SectionGeometryBuilder:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
 
 
-class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
+class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver, ABC):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -644,6 +658,14 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         )
 
     def _create_section(self) -> None:
+        if self._is_area_section:
+            # INFO: Assumed, that application needs first coordinate == last coordinate
+            # Meaning [x1, x2, x3] => [x1, x2, x3, x1]
+            coordinates = self._coordinates + [self._coordinates[0]]
+        else:
+            coordinates = self._coordinates
         self._viewmodel.add_new_section(
-            self._coordinates, get_metadata=self._get_metadata
+            coordinates=coordinates,
+            is_area_section=self._is_area_section,
+            get_metadata=self._get_metadata,
         )
