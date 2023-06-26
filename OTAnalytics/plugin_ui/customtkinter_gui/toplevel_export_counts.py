@@ -20,7 +20,7 @@ class CancelExportCounts(Exception):
     pass
 
 
-class FileSelectionCancelledError(Exception):
+class FileSelectionCancelledException(Exception):
     pass
 
 
@@ -111,11 +111,11 @@ class ToplevelExportCounts(ToplevelTemplate):
         )
         self._input_values[EXPORT_FILE] = export_file
         if export_file == "":
-            raise FileSelectionCancelledError
+            raise FileSelectionCancelledException
 
     def _on_ok(self, event: Any = None) -> None:
         self._input_values = self._frame_content.get_input_values()
-        with contextlib.suppress(FileSelectionCancelledError):
+        with contextlib.suppress(FileSelectionCancelledException):
             self._choose_file()
             self._close()
 

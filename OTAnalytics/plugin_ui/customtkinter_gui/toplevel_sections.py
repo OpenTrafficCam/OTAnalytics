@@ -15,7 +15,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
 )
 
 
-class NoUniqueNameError(Exception):
+class NoUniqueNameException(Exception):
     pass
 
 
@@ -82,7 +82,7 @@ class FrameConfigureSection(FrameContent):
     def _check_section_name(self) -> None:
         section_name = self.entry_name.get()
         if not self._viewmodel.is_section_name_valid(section_name):
-            raise NoUniqueNameError(
+            raise NoUniqueNameException(
                 f"Please choose a unique name, {section_name} is already used!"
             )
 

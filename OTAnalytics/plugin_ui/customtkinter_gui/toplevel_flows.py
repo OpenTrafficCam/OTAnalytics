@@ -19,19 +19,19 @@ END_SECTION = "End section"
 DISTANCE = "Distance"
 
 
-class TooFewSectionsForFlowError(Exception):
+class TooFewSectionsForFlowException(Exception):
     pass
 
 
-class SectionSeveralTimesInFlowError(Exception):
+class SectionSeveralTimesInFlowException(Exception):
     pass
 
 
-class NotExistingSectionError(Exception):
+class NotExistingSectionException(Exception):
     pass
 
 
-class InvalidFlowNameError(Exception):
+class InvalidFlowNameException(Exception):
     pass
 
 
@@ -175,23 +175,23 @@ class FrameConfigureFlow(FrameContent):
         section_end = self._get_end_section_id()
         sections = [section_start, section_end]
         if "" in [section_start, section_end]:
-            raise TooFewSectionsForFlowError(
+            raise TooFewSectionsForFlowException(
                 "Please choose both a start and an end section!"
             )
         elif section_start == section_end:
-            raise SectionSeveralTimesInFlowError(
+            raise SectionSeveralTimesInFlowException(
                 "Start and end section have to be different!"
             )
         else:
             for section in sections:
                 if section not in [resource.id for resource in self._section_ids]:
-                    raise NotExistingSectionError(
+                    raise NotExistingSectionException(
                         f"{section} is not an existing section"
                     )
 
     def _check_flow_name(self) -> None:
         if self._current_name.get() == "":
-            raise InvalidFlowNameError("Please choose a flow name!")
+            raise InvalidFlowNameException("Please choose a flow name!")
 
     def get_input_values(self) -> dict:
         self._check_sections()
