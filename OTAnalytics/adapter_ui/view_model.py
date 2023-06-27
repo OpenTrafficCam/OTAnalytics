@@ -193,6 +193,10 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def export_events(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def update_show_tracks_state(self, value: bool) -> None:
         pass
 

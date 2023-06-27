@@ -51,6 +51,9 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
+    EventListExporterStrategies,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -73,6 +76,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     INTERVAL,
     CancelExportCounts,
     ToplevelExportCounts,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_events import (
+    EXPORT_FILE,
+    CancelExportEvents,
+    ToplevelExportEvents,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
@@ -969,6 +977,30 @@ class DummyViewModel(
     def save_events(self, file: str) -> None:
         print(f"Eventlist file to save: {file}")
         self._application.save_events(Path(file))
+
+    def export_events(self) -> None:
+        strategies = EventListExporterStrategies()
+        default_values: dict = {
+            EXPORT_FORMAT: strategies.AVAILABLE_EXPORTERS[0].get_name()
+        }
+        export_formats = {
+            exporter.get_name(): exporter.get_extension()
+            for exporter in strategies.AVAILABLE_EXPORTERS
+        }
+        try:
+            input_values: dict = ToplevelExportEvents(
+                title="Export counts",
+                initial_position=(50, 50),
+                input_values=default_values,
+                export_formats=export_formats,
+            ).get_data()
+            file = input_values[EXPORT_FILE]
+            export_format = input_values[EXPORT_FORMAT]
+            event_list_exporter = strategies.get_exporter_by_name(export_format)
+            self._application.export_events(Path(file), event_list_exporter)
+            print(f"Exporting eventlist using {export_format} to {file}")
+        except CancelExportEvents:
+            print("User canceled configuration of export")
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         offset = geometry.RelativeOffsetCoordinate(offset_x, offset_y)
