@@ -61,8 +61,8 @@ class TestPlottingLayer:
         name = "My Layer"
         layer = PlottingLayer(name, plotter, enabled=False)
 
-        layer.enable()
+        layer.set_enabled(True)
         layer.plot()
-        layer.disable()
+        layer.set_enabled(False)
         layer.plot()
         plotter.plot.assert_called_once()
