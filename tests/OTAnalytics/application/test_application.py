@@ -11,6 +11,7 @@ from OTAnalytics.application.application import (
     IntersectTracksWithSections,
     SectionAlreadyExists,
     TracksIntersectingSelectedSections,
+    TracksNotIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import ObservableProperty, SectionState
@@ -134,3 +135,51 @@ class TestTracksIntersectingSelectedSections:
         assert track_ids == [TrackId(2)]
         section_state.selected_sections.get.assert_called_once()
         event_repository.get_all.assert_called_once()
+
+
+class TestTracksNotIntersectingSelectedSections:
+    def test_get_ids(self) -> None:
+        first_section_id = Mock(spec=SectionId)
+        second_section_id = Mock(spec=SectionId)
+
+        first_section = Mock(spec=Section)
+        first_section.id = first_section_id
+        second_section = Mock(spec=Section)
+        second_section.id = second_section_id
+
+        section_repository = Mock(spec=SectionRepository)
+        section_repository.get_all.return_value = [first_section, second_section]
+
+        event_first_track_intersecting_first = Mock(spec=Event)
+        event_first_track_intersecting_first.section_id = first_section_id
+        event_first_track_intersecting_first.road_user_id = 1
+
+        event_first_track_intersecting_second = Mock(spec=Event)
+        event_first_track_intersecting_second.section_id = second_section
+        event_first_track_intersecting_second.road_user_id = 1
+
+        event_second_track_intersecting_second = Mock(spec=Event)
+        event_second_track_intersecting_second.section_id = second_section_id
+        event_second_track_intersecting_second.road_user_id = 2
+
+        section_state = Mock(spec=SectionState)
+        selected_sections = Mock(spec=ObservableProperty)
+        selected_sections.get.return_value = [first_section_id]
+        section_state.selected_sections = selected_sections
+
+        event_repository = Mock(spec=EventRepository)
+        event_repository.get_all.return_value = [
+            event_first_track_intersecting_first,
+            event_first_track_intersecting_second,
+            event_second_track_intersecting_second,
+        ]
+
+        tracks_intersecting_sections = TracksNotIntersectingSelectedSections(
+            section_state, section_repository, event_repository
+        )
+        track_ids = list(tracks_intersecting_sections.get_ids())
+
+        assert track_ids == [TrackId(2)]
+        assert event_repository.get_all.call_count == 2
+        section_repository.get_all.assert_called_once()
+        section_state.selected_sections.get.assert_called_once()

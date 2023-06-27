@@ -190,6 +190,48 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
         return intersecting_ids
 
 
+class TracksNotIntersectingSelectedSections(TrackIdProvider):
+    """Returns track ids that are not intersecting the currently selected sections.
+
+    Args:
+        section_state (SectionState): the section state
+        section_repository (SectionRepository): the section repository
+        event_repository (EventRepository): the event repository
+    """
+
+    def __init__(
+        self,
+        section_state: SectionState,
+        section_repository: SectionRepository,
+        event_repository: EventRepository,
+    ) -> None:
+        self._section_state = section_state
+        self._section_repository = section_repository
+        self._event_repository = event_repository
+
+    def get_ids(self) -> Iterable[TrackId]:
+        selected_sections = self._section_state.selected_sections.get()
+        not_selected_sections = [
+            section.id
+            for section in self._section_repository.get_all()
+            if section.id not in selected_sections
+        ]
+        intersecting_selected_sections: set[TrackId] = self._get_ids(selected_sections)
+        not_intersecting_selected_sections: set[TrackId] = self._get_ids(
+            not_selected_sections
+        )
+        return not_intersecting_selected_sections - intersecting_selected_sections
+
+    def _get_ids(self, sections: list[SectionId]) -> set[TrackId]:
+        track_ids: set[TrackId] = set()
+        for section_id in sections:
+            for event in self._event_repository.get_all():
+                if event.section_id == section_id:
+                    track_ids.add(TrackId(event.road_user_id))
+
+        return track_ids
+
+
 class OTAnalyticsApplication:
     """
     Entrypoint for calls from the UI.

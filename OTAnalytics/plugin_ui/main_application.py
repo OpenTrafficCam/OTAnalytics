@@ -5,6 +5,7 @@ from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetectio
 from OTAnalytics.application.application import (
     OTAnalyticsApplication,
     TracksIntersectingSelectedSections,
+    TracksNotIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import (
     Datastore,
@@ -287,6 +288,22 @@ class ApplicationStarter:
         )
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=track_intersecting_sections
+        )
+        return self._create_track_geometry_plotter(state, filter_by_id, alpha=1)
+
+    def _create_track_highlight_geometry_plotter_not_intersecting(
+        self,
+        state: TrackViewState,
+        section_state: SectionState,
+        pandas_track_provider: PandasDataFrameProvider,
+        section_repository: SectionRepository,
+        event_repository: EventRepository,
+    ) -> Plotter:
+        track_not_intersecting_sections = TracksNotIntersectingSelectedSections(
+            section_state, section_repository, event_repository
+        )
+        filter_by_id = FilterById(
+            pandas_track_provider, id_filter=track_not_intersecting_sections
         )
         return self._create_track_geometry_plotter(state, filter_by_id, alpha=1)
 
