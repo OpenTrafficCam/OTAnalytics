@@ -203,16 +203,16 @@ class TrackViewState:
         self.background_image = ObservableOptionalProperty[TrackImage]()
         self.show_tracks = ObservableOptionalProperty[bool]()
         self.track_offset = ObservableOptionalProperty[RelativeOffsetCoordinate](
-            RelativeOffsetCoordinate(0, 0)
+            RelativeOffsetCoordinate(0.5, 0.5)
         )
         self.filter_element = ObservableProperty[FilterElement](
             FilterElement(DateRange(None, None), None)
         )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
-        self.selected_video: ObservableOptionalProperty[
-            Video
-        ] = ObservableOptionalProperty[Video]()
+        self.selected_videos: ObservableProperty[list[Video]] = ObservableProperty[
+            list[Video]
+        ](default=[])
 
 
 class TrackPropertiesUpdater:
@@ -229,9 +229,9 @@ class TrackPropertiesUpdater:
         self._datastore = datastore
         self._track_view_state = track_view_state
 
-    def notify_video(self, video: Optional[Video]) -> None:
+    def notify_videos(self, video: list[Video]) -> None:
         if video:
-            image = video.get_frame(0)
+            image = video[0].get_frame(0)
             self._track_view_state.view_width.set(image.width())
             self._track_view_state.view_height.set(image.height())
 
@@ -252,15 +252,38 @@ class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         all_tracks = self._datastore.get_all_tracks()
         if tracks:
-            video = self._datastore.get_video_for(all_tracks[0].id)
-            self._track_view_state.selected_video.set(video)
+            if video := self._datastore.get_video_for(all_tracks[0].id):
+                self._track_view_state.selected_videos.set([video])
 
     def notify_videos(self, videos: list[Video]) -> None:
         if videos:
-            self._track_view_state.selected_video.set(videos[0])
+            self._track_view_state.selected_videos.set([videos[0]])
 
 
-class TrackImageUpdater(TrackListObserver):
+class SectionState(SectionListObserver):
+    """
+    This state represents the currently selected sections.
+    """
+
+    def __init__(self) -> None:
+        self.selected_sections: ObservableProperty[
+            list[SectionId]
+        ] = ObservableProperty[list]([])
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        """
+        Notify the state about changes in the section list.
+
+        Args:
+            sections (list[SectionId]): newly added sections
+        """
+        if sections:
+            self.selected_sections.set([sections[0]])
+        else:
+            self.selected_sections.set([])
+
+
+class TrackImageUpdater(TrackListObserver, SectionListObserver):
     """
     This class listens to track changes in the repository and updates the background
     image. It takes into account whether the tracks and sections should be shown or not.
@@ -270,17 +293,20 @@ class TrackImageUpdater(TrackListObserver):
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
+        section_state: SectionState,
         plotter: Plotter,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
+        self._section_state = section_state
         self._plotter = plotter
-        self._track_view_state.selected_video.register(self.notify_video)
+        self._track_view_state.selected_videos.register(self.notify_video)
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
+        self._section_state.selected_sections.register(self._notify_section_selection)
 
-    def notify_video(self, video: Optional[Video]) -> None:
+    def notify_video(self, video: list[Video]) -> None:
         """
         Will notify this object about changes in the video repository.
 
@@ -325,6 +351,20 @@ class TrackImageUpdater(TrackListObserver):
         """
         self._update()
 
+    def _notify_section_selection(self, _: list[SectionId]) -> None:
+        """Will update the image according to changes of the selected section.
+
+        Args:
+            _ (list[SectionId]): current selected section
+        """
+        self._update()
+
+    def notify_section_changed(self, _: SectionId) -> None:
+        self._update()
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        self._update()
+
     def _update(self) -> None:
         """
         Update the image if at least one track is available.
@@ -339,29 +379,6 @@ class TrackImageUpdater(TrackListObserver):
             track_id (TrackId): track id used to get the video image
         """
         self._track_view_state.background_image.set(self._plotter.plot())
-
-
-class SectionState(SectionListObserver):
-    """
-    This state represents the currently selected sections.
-    """
-
-    def __init__(self) -> None:
-        self.selected_sections: ObservableProperty[
-            list[SectionId]
-        ] = ObservableProperty[list]([])
-
-    def notify_sections(self, sections: list[SectionId]) -> None:
-        """
-        Notify the state about changes in the section list.
-
-        Args:
-            sections (list[SectionId]): newly added sections
-        """
-        if sections:
-            self.selected_sections.set([sections[0]])
-        else:
-            self.selected_sections.set([])
 
 
 class FlowState(FlowListObserver):

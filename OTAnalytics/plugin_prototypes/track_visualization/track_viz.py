@@ -19,6 +19,7 @@ from OTAnalytics.domain.track import (
     PilImage,
     Track,
     TrackId,
+    TrackIdProvider,
     TrackImage,
     TrackListObserver,
 )
@@ -28,38 +29,63 @@ ENCODING = "UTF-8"
 DPI = 100
 
 CLASS_CAR = "car"
-CLASS_MOTORCYCLE = "motorcycle"
-CLASS_PERSON = "person"
+CLASS_CAR_TRAILER = "car_with_trailer"
+CLASS_MOTORCYCLIST = "motorcyclist"
+CLASS_PEDESTRIAN = "pedestrian"
 CLASS_TRUCK = "truck"
-CLASS_BICYCLE = "bicycle"
+CLASS_TRUCK_TRAILER = "truck_with_trailer"
+CLASS_TRUCK_SEMITRAILER = "truck_with_semitrailer"
+CLASS_BICYCLIST = "bicyclist"
+CLASS_BICYCLIST_TRAILER = "bicyclist_with_trailer"
+CLASS_CARGOBIKE = "cargobike_driver"
+CLASS_SCOOTER = "scooter_driver"
+CLASS_DELVAN = "delivery_van"
+CLASS_DELVAN_TRAILER = "delivery_van_with_trailer"
+CLASS_PRVAN = "private_van"
+CLASS_PRVAN_TRAILER = "private_van_with_trailer"
 CLASS_TRAIN = "train"
+CLASS_BUS = "bus"
 
 COLOR_PALETTE: dict[str, str] = {
     CLASS_CAR: "blue",
-    CLASS_MOTORCYCLE: "skyblue",
-    CLASS_PERSON: "salmon",
-    CLASS_TRUCK: "purple",
-    CLASS_BICYCLE: "lime",
-    CLASS_TRAIN: "gold",
+    CLASS_CAR_TRAILER: "skyblue",
+    CLASS_MOTORCYCLIST: "orange",
+    CLASS_PEDESTRIAN: "salmon",
+    CLASS_TRUCK: "red",
+    CLASS_TRUCK_TRAILER: "purple",
+    CLASS_TRUCK_SEMITRAILER: "pink",
+    CLASS_BICYCLIST: "lime",
+    CLASS_BICYCLIST_TRAILER: "lime",
+    CLASS_CARGOBIKE: "green",
+    CLASS_SCOOTER: "white",
+    CLASS_DELVAN: "yellow",
+    CLASS_DELVAN_TRAILER: "yellow",
+    CLASS_PRVAN: "black",
+    CLASS_PRVAN_TRAILER: "black",
+    CLASS_TRAIN: "brown",
+    CLASS_BUS: "beige",
 }
 
 CLASS_ORDER = [
+    CLASS_PEDESTRIAN,
+    CLASS_BICYCLIST,
+    CLASS_BICYCLIST_TRAILER,
+    CLASS_CARGOBIKE,
+    CLASS_SCOOTER,
+    CLASS_MOTORCYCLIST,
     CLASS_CAR,
+    CLASS_CAR_TRAILER,
+    CLASS_PRVAN,
+    CLASS_PRVAN_TRAILER,
+    CLASS_DELVAN,
+    CLASS_DELVAN_TRAILER,
     CLASS_TRUCK,
-    CLASS_MOTORCYCLE,
-    CLASS_PERSON,
-    CLASS_BICYCLE,
+    CLASS_TRUCK_TRAILER,
+    CLASS_TRUCK_SEMITRAILER,
+    CLASS_BUS,
     CLASS_TRAIN,
 ]
 
-FILTER_CLASSES: Iterable[str] = (
-    CLASS_CAR,
-    CLASS_MOTORCYCLE,
-    CLASS_PERSON,
-    CLASS_TRUCK,
-    CLASS_BICYCLE,
-    CLASS_TRAIN,
-)
 
 NUM_MIN_FRAMES = 30
 
@@ -122,6 +148,23 @@ class PandasDataFrameProvider:
         pass
 
 
+class FilterById(PandasDataFrameProvider):
+    """Filter tracks by id before providing tracks as pandas DataFrame."""
+
+    def __init__(
+        self, other: PandasDataFrameProvider, id_filter: TrackIdProvider
+    ) -> None:
+        self._other = other
+        self._filter = id_filter
+
+    def get_data(self) -> DataFrame:
+        data = self._other.get_data()
+        if data.empty:
+            return data
+        ids: set[int] = {track_id.id for track_id in self._filter.get_ids()}
+        return data.loc[data[track.TRACK_ID].isin(ids)]
+
+
 class PandasTrackProvider(PandasDataFrameProvider):
     """Provides tracks as pandas DataFrame."""
 
@@ -135,20 +178,17 @@ class PandasTrackProvider(PandasDataFrameProvider):
         self._track_view_state = track_view_state
         self._filter_builder = filter_builder
 
-    def get_data(self) -> Optional[DataFrame]:
-        offset = self._track_view_state.track_offset.get()
-
+    def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
         if not tracks:
-            return None
+            return DataFrame()
 
         data = self._convert_tracks(tracks)
 
         if data.empty:
             return data
 
-        data = self._apply_offset(data, offset)
-        return self._filter_tracks(FILTER_CLASSES, NUM_MIN_FRAMES, data)
+        return self._filter_tracks(NUM_MIN_FRAMES, data)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -172,14 +212,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
             return converted.sort_values([track.TRACK_ID, track.FRAME])
         return converted
 
-    def _apply_offset(
-        self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
-    ) -> DataFrame:
-        if new_offset := offset:
-            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
-            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
-        return tracks
-
     # % Filter length (number of frames)
     def _min_frames(self, data: DataFrame, min_frames: int = 10) -> list:
         """
@@ -202,7 +234,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def _filter_tracks(
         self,
-        filter_classes: Iterable[str],
         num_min_frames: int,
         track_df: DataFrame,
     ) -> DataFrame:
@@ -225,9 +256,31 @@ class PandasTrackProvider(PandasDataFrameProvider):
         filter_element = self._track_view_state.filter_element.get()
         dataframe_filter = filter_element.build_filter(self._filter_builder)
 
-        track_df = next(iter(dataframe_filter.apply([track_df])))
+        return next(iter(dataframe_filter.apply([track_df])))
 
-        return track_df[track_df[track.CLASSIFICATION].isin(filter_classes)]
+
+class PandasTracksOffsetProvider(PandasDataFrameProvider):
+    def __init__(
+        self, other: PandasDataFrameProvider, track_view_state: TrackViewState
+    ) -> None:
+        super().__init__()
+        self._other = other
+        self._track_view_state = track_view_state
+
+    def get_data(self) -> DataFrame:
+        offset = self._track_view_state.track_offset.get()
+        data = self._other.get_data()
+        if data.empty:
+            return data
+        return self._apply_offset(data.copy(), offset)
+
+    def _apply_offset(
+        self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
+    ) -> DataFrame:
+        if new_offset := offset:
+            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
+            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
+        return tracks
 
 
 class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
@@ -241,7 +294,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
     ) -> None:
         super().__init__(datastore, track_view_state, filter_builder)
         datastore.register_tracks_observer(self)
-        self._cache_df: Optional[DataFrame] = None
+        self._cache_df: DataFrame = DataFrame()
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """Converts the given tracks to dataframe.
@@ -253,7 +306,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         Returns:
             DataFrame: a dataframe containing the detections of the given tracks.
         """
-        if self._cache_df is None:
+        if self._cache_df.empty:
             self._cache_df = super()._convert_tracks(tracks)
 
         return self._cache_df
@@ -265,7 +318,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         Args:
             tracks (list[TrackId]): the ids of changed tracks
         """
-        self._cache_df = None
+        self._cache_df = DataFrame()
 
 
 class MatplotlibPlotterImplementation(ABC):
@@ -281,7 +334,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -289,9 +342,8 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if data is not None:
-            if not data.empty:
-                self._plot_dataframe(data, axes)
+        if not data.empty:
+            self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """
@@ -323,7 +375,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasTrackProvider,
+        data_provider: PandasDataFrameProvider,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
@@ -331,9 +383,8 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if data is not None:
-            if not data.empty:
-                self._plot_dataframe(data, axes)
+        if not data.empty:
+            self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
         """

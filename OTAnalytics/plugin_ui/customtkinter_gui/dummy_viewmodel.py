@@ -8,6 +8,7 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -26,6 +27,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
+from OTAnalytics.application.project import Project
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -47,8 +49,9 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
 )
-from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
     CanvasElementDeleter,
@@ -65,6 +68,12 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_KNOB_STYLE,
     SELECTED_SECTION_STYLE,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    EXPORT_FORMAT,
+    INTERVAL,
+    CancelExportCounts,
+    ToplevelExportCounts,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
@@ -77,6 +86,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import ToplevelPr
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
+SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
 TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
@@ -98,7 +108,13 @@ def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
 
 
-class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
+class DummyViewModel(
+    ViewModel,
+    VideoListObserver,
+    TrackListObserver,
+    SectionListObserver,
+    FlowListObserver,
+):
     def __init__(
         self,
         application: OTAnalyticsApplication,
@@ -119,10 +135,13 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self.register_to_subjects()
 
     def register_to_subjects(self) -> None:
+        self._application.register_video_observer(self)
         self._application.register_sections_observer(self)
-        self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_flows_observer(self)
         self._application.register_flow_changed_observer(self._on_flow_changed)
+        self._application.track_view_state.selected_videos.register(
+            self._update_selected_videos
+        )
         self._application.track_view_state.show_tracks.register(
             self._on_show_tracks_state_updated
         )
@@ -142,6 +161,18 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.action_state.action_running.register(
             self._notify_action_running_state
         )
+
+    def notify_videos(self, videos: list[Video]) -> None:
+        if self._treeview_videos is None:
+            raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
+        if self._frame_sections is None:
+            raise MissingInjectedInstanceError(AbstractFrameSections.__name__)
+        if self._frame_flows is None:
+            raise MissingInjectedInstanceError(AbstractFrameFlows.__name__)
+        self._treeview_videos.update_items()
+        enabled = len(self._application.get_all_videos()) > 0
+        self._frame_sections.set_enabled(enabled)
+        self._frame_flows.set_enabled(enabled)
 
     def _on_section_changed(self, section_id: SectionId) -> None:
         self.notify_sections([section_id])
@@ -186,11 +217,15 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             {"start_date": start_date, "end_date": end_date}
         )
 
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self._application.intersect_tracks_with_sections()
+
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
+        self._application.intersect_tracks_with_sections()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
@@ -206,6 +241,16 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._frame_flows.set_enabled(not running)
         self._frame_sections.set_enabled(not running)
 
+    def register_observers(self) -> None:
+        self._application._datastore.register_video_observer(self)
+        self._application.track_view_state.selected_videos.register(
+            self._update_selected_videos
+        )
+        self._application.section_state.selected_sections.register(
+            self._update_selected_sections
+        )
+        self._application.register_section_changed_observer(self._on_section_changed)
+
     def _start_action(self) -> None:
         self._application.action_state.action_running.set(True)
 
@@ -215,14 +260,113 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
     def set_window(self, window: AbstractWindow) -> None:
         self._window = window
 
+    def _update_selected_videos(self, videos: list[Video]) -> None:
+        current_paths = [str(video.get_path()) for video in videos]
+        self._selected_videos = current_paths
+        if self._treeview_videos is None:
+            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
+        self._treeview_videos.update_selected_items(current_paths)
+
+    def add_video(self) -> None:
+        track_files = askopenfilenames(
+            title="Load video files",
+            filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
+        )
+        if not track_files:
+            return
+        print(f"Video files to load: {track_files}")
+        paths = [Path(file) for file in track_files]
+        self._application.add_videos(files=paths)
+
+    def remove_videos(self) -> None:
+        self._application.remove_videos()
+
+    def set_treeview_videos(self, treeview: AbstractTreeviewInterface) -> None:
+        self._treeview_videos = treeview
+
+    def set_selected_videos(self, video_paths: list[str]) -> None:
+        self._selected_videos = video_paths
+        selected_videos: list[Video] = []
+        for path in video_paths:
+            if video := self._application._datastore.get_video_at(Path(path)):
+                selected_videos.append(video)
+        self._application.track_view_state.selected_videos.set(selected_videos)
+
+    def get_all_videos(self) -> list[Video]:
+        return self._application.get_all_videos()
+
+    def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
+        self._frame_project = project_frame
+        self._show_current_project()
+
+    def _show_current_project(self) -> None:
+        if self._frame_project is None:
+            raise MissingInjectedInstanceError(type(self._frame_project).__name__)
+        project = self._application._datastore.project
+        self._frame_project.update(name=project.name, start_date=project.start_date)
+
+    def update_project(self, name: str, start_date: datetime) -> None:
+        self._application._datastore.project = Project(name=name, start_date=start_date)
+
+    def save_configuration(self) -> None:
+        file = asksaveasfilename(
+            title="Save config file as", filetypes=[("config file", "*.otconfig")]
+        )
+        if not file:
+            return
+        print(f"Config file to save: {file}")
+        try:
+            self._application.save_configuration(
+                Path(file),
+            )
+        except NoSectionsToSave as cause:
+            if self._treeview_sections is None:
+                raise MissingInjectedInstanceError(
+                    type(self._treeview_sections).__name__
+                ) from cause
+            position = self._treeview_sections.get_position()
+            InfoBox(
+                message="No sections to save, please add new sections first",
+                initial_position=position,
+            )
+            return
+
+    def load_configuration(self) -> None:
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
+        position = self._treeview_sections.get_position()
+        proceed = InfoBox(
+            message=(
+                "This will load a stored configuration from file. \n"
+                "All configured sections, flows and videos will be removed before "
+                "loading."
+            ),
+            initial_position=position,
+            show_cancel=True,
+        )
+        if proceed.canceled:
+            return
+        configuration_file = askopenfilename(
+            title="Load config file",
+            filetypes=[("otconfig file", "*.otconfig")],
+            defaultextension=".otconfig",
+        )
+        if not configuration_file:
+            return
+        print(f"Config file to load: {configuration_file}")
+        self._application.load_configuration(file=Path(configuration_file))
+        self._show_current_project()
+
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
 
     def set_sections_frame(self, frame: AbstractFrameSections) -> None:
         self._frame_sections = frame
+        self._frame_sections.set_enabled(False)
 
     def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
         self._frame_flows = frame
+        self._frame_flows.set_enabled(False)
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
@@ -515,6 +659,14 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         position = self._canvas.get_position()
+        self._start_action()
+        with contextlib.suppress(CancelAddSection):
+            self.__update_section_metadata(selected_section, current_data, position)
+        self._finish_action()
+
+    def __update_section_metadata(
+        self, selected_section: Section, current_data: dict, position: tuple[int, int]
+    ) -> None:
         updated_section_data = self.get_section_metadata(
             title="Edit section",
             initial_position=position,
@@ -526,11 +678,13 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         )
         self.refresh_items_on_canvas()
         print(f"Updated line_section Metadata: {updated_section_data}")
-        self._finish_action()
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(AbstractTreeviewInterface.__name__)
         section = self._flow_parser.parse_section(data)
         self._application.update_section(section)
+        self._treeview_sections.update_selected_items([id.serialize()])
 
     def remove_sections(self) -> None:
         if self._treeview_sections is None:
@@ -552,8 +706,8 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
                     "The section you want to remove is being used in flows.\n"
                     "Please remove the following flows before removing the section.\n"
                 )
-                for flow_id in self._application.flows_using_section(section_id):
-                    message += flow_id.serialize() + "\n"
+                for flow in self._application.flows_using_section(section_id):
+                    message += flow.name + "\n"
                 position = self._treeview_sections.get_position()
                 InfoBox(
                     message=message,
@@ -668,7 +822,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._finish_action()
 
     def __create_flow(self) -> Flow:
-        flow_data = self._show_distances_window()
+        flow_data = self._show_flow_popup()
         flow_id = self._application.get_flow_id()
         name = flow_data[FLOW_NAME]
         new_from_section_id = SectionId(flow_data[START_SECTION])
@@ -684,9 +838,9 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
         self._application.add_flow(flow)
         return flow
 
-    def _show_distances_window(
+    def _show_flow_popup(
         self,
-        input_values: dict = {},
+        input_values: dict | None = None,
         title: str = "Add flow",
     ) -> dict:
         if self._treeview_flows is None:
@@ -705,13 +859,18 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def __create_flow_data(
         self,
-        input_values: dict,
+        input_values: dict | None,
         title: str,
         position: tuple[int, int],
         section_ids: list[IdResource],
     ) -> dict:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
+            new_entry_name = flow_data[FLOW_NAME]
+            if (input_values is not None) and (
+                new_entry_name == input_values[FLOW_NAME]
+            ):
+                break
             InfoBox(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
@@ -726,7 +885,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
 
     def __get_flow_data(
         self,
-        input_values: dict,
+        input_values: dict | None,
         title: str,
         position: tuple[int, int],
         section_ids: list[IdResource],
@@ -790,7 +949,7 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             DISTANCE: flow.distance,
         }
 
-        if flow_data := self._show_distances_window(
+        if flow_data := self._show_flow_popup(
             input_values=input_data,
             title="Edit flow",
         ):
@@ -962,6 +1121,25 @@ class DummyViewModel(ViewModel, SectionListObserver, FlowListObserver):
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
 
         self._frame_filter.disable_filter_by_class_button()
+
+    def export_counts(self) -> None:
+        # TODO: @briemla replace with actual wiring
+        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
+        export_formats: dict = {
+            "Format 1": "csv",
+            "Format 2": "xlsx",
+            "Format 3": "xlsx",
+        }
+        try:
+            input_values: dict = ToplevelExportCounts(
+                title="Export counts",
+                initial_position=(50, 50),
+                input_values=default_values,
+                export_formats=export_formats,
+            ).get_data()
+            print(input_values)
+        except CancelExportCounts:
+            print("User canceled configuration of export")
 
     def _temporary_showcase_toplevel_progress(self) -> None:
         # TODO: @randyseng delete this method after instantiating in other places

@@ -2,11 +2,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 from PIL import Image
 
 from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.observer import Subject
 
 CLASSIFICATION: str = "classification"
 CONFIDENCE: str = "confidence"
@@ -89,33 +90,6 @@ class TrackSubject:
             track_id (Optional[TrackId]): id of the changed track
         """
         [observer.notify_track(track_id) for observer in self.observers]
-
-
-class TrackListSubject:
-    """
-    Helper class to handle and notify observers
-    """
-
-    def __init__(self) -> None:
-        self.observers: set[TrackListObserver] = set()
-
-    def register(self, observer: TrackListObserver) -> None:
-        """
-        Listen to events.
-
-        Args:
-            observer (TrackListObserver): listener to add
-        """
-        self.observers.add(observer)
-
-    def notify(self, tracks: list[TrackId]) -> None:
-        """
-        Notifies observers about the list of tracks.
-
-        Args:
-            tracks (list[TrackId]): list of added tracks
-        """
-        [observer.notify_tracks(tracks) for observer in self.observers]
 
 
 class TrackError(Exception):
@@ -354,7 +328,7 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
 class TrackRepository:
     def __init__(self) -> None:
         self._tracks: dict[TrackId, Track] = {}
-        self.observers = TrackListSubject()
+        self.observers = Subject[list[TrackId]]()
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
         """
@@ -363,7 +337,7 @@ class TrackRepository:
         Args:
             observer (TrackListObserver): listener to be notifed about changes
         """
-        self.observers.register(observer)
+        self.observers.register(observer.notify_tracks)
 
     def add(self, track: Track) -> None:
         """
@@ -435,3 +409,16 @@ class TrackRepository:
         """
         self._tracks.clear()
         self.observers.notify([])
+
+
+class TrackIdProvider(ABC):
+    """Interface to provide track ids."""
+
+    @abstractmethod
+    def get_ids(self) -> Iterable[TrackId]:
+        """Provide track ids.
+
+        Returns:
+            Iterable[TrackId]: the track ids.
+        """
+        pass

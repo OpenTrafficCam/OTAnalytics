@@ -32,6 +32,7 @@ class TrackBackgroundPlotter(Plotter):
         self._datastore = datastore
 
     def plot(self) -> Optional[TrackImage]:
-        if video := self._track_view_state.selected_video.get():
-            return video.get_frame(0)
+        if videos := self._track_view_state.selected_videos.get():
+            if len(videos) > 0:
+                return videos[0].get_frame(0)
         return None
