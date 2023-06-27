@@ -42,17 +42,17 @@ class TestPlottingLayer:
         layer = PlottingLayer(name, plotter, enabled=True)
         assert layer.get_name() == name
 
-    def test_enable_disable(self, plotter: Mock) -> None:
+    def test_set_enabled(self, plotter: Mock) -> None:
         name = "My Layer"
         observer = Mock()
         layer = PlottingLayer(name, plotter, enabled=False)
         layer.register(observer)
 
-        layer.enable()
+        layer.set_enabled(True)
         assert layer.is_enabled() is True
-        layer.enable()
+        layer.set_enabled(True)
         assert layer.is_enabled() is True
-        layer.disable()
+        layer.set_enabled(False)
         assert layer.is_enabled() is False
-        layer.disable()
+        layer.set_enabled(False)
         assert observer.call_args_list == [call(True), call(False)]
