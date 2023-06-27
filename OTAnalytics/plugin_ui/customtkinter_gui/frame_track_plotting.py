@@ -51,7 +51,4 @@ class CheckBoxLayer(CTkFrame):
         self._label.grid(row=0, column=1, padx=0, pady=0, sticky=STICKY_WEST)
 
     def _on_checkbox_clicked(self) -> None:
-        if self._enabled.get():
-            self._layer.enable()
-        else:
-            self._layer.disable()
+        self._layer.set_enabled(self._enabled.get())
