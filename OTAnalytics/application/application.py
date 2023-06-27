@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.datastore import Datastore, EventListExporter
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -485,6 +485,16 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def export_events(self, file: Path, event_list_exporter: EventListExporter) -> None:
+        """
+        Export the event repository into other formats (like CSV or Excel)
+
+        Args:
+            file (Path): File to export the events to
+            event_list_exporter (EventListExporter): Exporter building the format
+        """
+        self._datastore.export_event_list_file(file, event_list_exporter)
 
     def change_track_offset_to_section_offset(
         self, event_type: EventType = EventType.SECTION_ENTER
