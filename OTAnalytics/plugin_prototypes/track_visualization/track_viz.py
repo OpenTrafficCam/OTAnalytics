@@ -87,7 +87,7 @@ CLASS_ORDER = [
 ]
 
 
-NUM_MIN_FRAMES = 30
+NUM_MIN_FRAMES = 1
 
 
 class TrackPlotter(ABC):
@@ -248,7 +248,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         Returns:
             DataFrame: filtered by classes, time and number of images
         """
-        track_df[
+        filtered_df = track_df[
             track_df[track.TRACK_ID].isin(self._min_frames(track_df, num_min_frames))
         ]
         self._filter_builder.set_classification_column(track.CLASSIFICATION)
@@ -256,7 +256,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         filter_element = self._track_view_state.filter_element.get()
         dataframe_filter = filter_element.build_filter(self._filter_builder)
 
-        return next(iter(dataframe_filter.apply([track_df])))
+        return next(iter(dataframe_filter.apply([filtered_df])))
 
 
 class PandasTracksOffsetProvider(PandasDataFrameProvider):
