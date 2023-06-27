@@ -243,6 +243,23 @@ class CanvasElementDeleter:
         self._canvas.delete(tag_or_id)
 
 
+def add_last_coordinate(
+    is_area_section: bool, coordinates: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    """
+    For area sections, the first and last coordinate are equal. Therefore, this
+    method addds the first coordinate as the last one, if the section is an area.
+
+    Args:
+        is_area_section (bool): should coordinates form an area
+        coordinates (list[tuple[int, int]]): coordinates to form a line or an area
+
+    Returns:
+        list[tuple[int, int]]: coordinates to forma a line or an area
+    """
+    return coordinates + [coordinates[0]] if is_area_section else coordinates
+
+
 class SectionGeometryEditor(CanvasObserver):
     def __init__(
         self,
@@ -296,10 +313,23 @@ class SectionGeometryEditor(CanvasObserver):
             (int(coordinate.x), int(coordinate.y))
             for coordinate in self._section.get_coordinates()
         ]
-        # INFO: Assumed, that application returns first coordinate == last coordinate
-        # Meaning [x1, x2, x3] => [x1, x2, x3, x1]
-        self._coordinates = coordinates[:-1] if self._is_area_section else coordinates
+        self._coordinates = self.drop_last_coordinate(coordinates)
         self._temporary_coordinates = self._coordinates.copy()
+
+    def drop_last_coordinate(
+        self, coordinates: list[tuple[int, int]]
+    ) -> list[tuple[int, int]]:
+        """
+        If the section is an area section, the first and the last coordinates are same.
+        To visualize an area section, the last coordinate has to be removed.
+
+        Args:
+            coordinates (list[tuple[int, int]]): coordinates to visualize
+
+        Returns:
+            list[tuple[int, int]]: coordinates to visualize
+        """
+        return coordinates[:-1] if self._is_area_section else coordinates
 
     def _get_name(self) -> None:
         self._name = self._section.id.id
@@ -522,12 +552,7 @@ class SectionGeometryEditor(CanvasObserver):
         return Coordinate(coordinate[0], coordinate[1])
 
     def _update_section(self) -> None:
-        if self._is_area_section:
-            # INFO: Assumed, that application needs first coordinate == last coordinate
-            # Meaning [x1, x2, x3] => [x1, x2, x3, x1]
-            coordinates = self._coordinates + [self._coordinates[0]]
-        else:
-            coordinates = self._coordinates
+        coordinates = add_last_coordinate(self._is_area_section, self._coordinates)
         self._viewmodel.update_section_coordinates(self._metadata, coordinates)
 
     def _abort(self) -> None:
@@ -670,12 +695,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         )
 
     def _create_section(self) -> None:
-        if self._is_area_section:
-            # INFO: Assumed, that application needs first coordinate == last coordinate
-            # Meaning [x1, x2, x3] => [x1, x2, x3, x1]
-            coordinates = self._coordinates + [self._coordinates[0]]
-        else:
-            coordinates = self._coordinates
+        coordinates = add_last_coordinate(self._is_area_section, self._coordinates)
         self._viewmodel.add_new_section(
             coordinates=coordinates,
             is_area_section=self._is_area_section,
