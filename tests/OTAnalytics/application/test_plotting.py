@@ -56,3 +56,13 @@ class TestPlottingLayer:
         assert layer.is_enabled() is False
         layer.disable()
         assert observer.call_args_list == [call(True), call(False)]
+
+    def test_plot(self, plotter: Mock) -> None:
+        name = "My Layer"
+        layer = PlottingLayer(name, plotter, enabled=False)
+
+        layer.enable()
+        layer.plot()
+        layer.disable()
+        layer.plot()
+        plotter.plot.assert_called_once()
