@@ -80,10 +80,12 @@ class FrameConfigureSection(FrameContent):
         return self._input_values
 
     def _check_section_name(self) -> None:
-        section_name = self.entry_name.get()
-        if not self._viewmodel.is_section_name_valid(section_name):
+        new_entry_name = self.entry_name.get()
+        if new_entry_name == self._input_values[NAME]:
+            return
+        if not self._viewmodel.is_section_name_valid(new_entry_name):
             raise NoUniqueNameException(
-                f"Please choose a unique name, {section_name} is already used!"
+                f"Please choose a unique name, {new_entry_name} is already used!"
             )
 
 
