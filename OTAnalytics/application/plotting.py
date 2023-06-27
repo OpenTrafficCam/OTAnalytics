@@ -16,14 +16,12 @@ class Layer:
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def enable(self) -> None:
-        """Enables the layer."""
-        raise NotImplementedError
+    def set_enabled(self, enabled: bool) -> None:
+        """Disable or enable the layer.
 
-    @abstractmethod
-    def disable(self) -> None:
-        """Disables the layer."""
+        Args:
+            enabled (bool): `True` to enable. `False` to disable.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -56,13 +54,8 @@ class PlottingLayer(Plotter, Layer):
     def get_name(self) -> str:
         return self._name
 
-    def enable(self) -> None:
-        if not self._enabled.get():
-            self._enabled.set(True)
-
-    def disable(self) -> None:
-        if self._enabled.get():
-            self._enabled.set(False)
+    def set_enabled(self, enabled: bool) -> None:
+        self._enabled.set(enabled)
 
     def is_enabled(self) -> bool:
         return self._enabled.get()
