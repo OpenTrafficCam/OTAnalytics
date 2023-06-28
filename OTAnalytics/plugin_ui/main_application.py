@@ -332,6 +332,26 @@ class ApplicationStarter:
             state, filter_by_id, enable_legend=enable_legend
         )
 
+    def _create_start_end_point_tracks_not_intersecting_sections_plotter(
+        self,
+        state: TrackViewState,
+        section_state: SectionState,
+        pandas_track_provider: PandasDataFrameProvider,
+        track_repository: TrackRepository,
+        event_repository: EventRepository,
+        enable_legend: bool,
+    ) -> Plotter:
+        track_not_intersecting_sections = TracksNotIntersectingSelectedSections(
+            section_state, track_repository, event_repository
+        )
+        filter_by_id = FilterById(
+            pandas_track_provider, id_filter=track_not_intersecting_sections
+        )
+
+        return self._create_track_start_end_point_plotter(
+            state, filter_by_id, enable_legend=enable_legend
+        )
+
     def _create_layers(
         self,
         datastore: Datastore,
@@ -372,6 +392,16 @@ class ApplicationStarter:
                 enable_legend=False,
             )
         )
+        start_end_points_tracks_not_intersecting_sections = (
+            self._create_start_end_point_tracks_not_intersecting_sections_plotter(
+                track_view_state,
+                section_state,
+                pandas_data_provider,
+                datastore._track_repository,
+                datastore._event_repository,
+                enable_legend=False,
+            )
+        )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state, pandas_data_provider, enable_legend=False
         )
@@ -394,6 +424,11 @@ class ApplicationStarter:
             start_end_points_tracks_intersecting_sections,
             enabled=True,
         )
+        start_end_points_tracks_not_intersecting_sections_layer = PlottingLayer(
+            "Show start and end point of tracks not intersecting sections",
+            start_end_points_tracks_not_intersecting_sections,
+            enabled=True,
+        )
         start_end_point_layer = PlottingLayer(
             "Show start and end point", track_start_end_point_plotter, enabled=True
         )
@@ -402,8 +437,9 @@ class ApplicationStarter:
             background,
             all_tracks_layer,
             highlight_tracks_intersecting_sections_layer,
-            highlight_tracks_not_intersecting_sections_layer,
             start_end_points_tracks_intersecting_sections_layer,
+            highlight_tracks_not_intersecting_sections_layer,
+            start_end_points_tracks_not_intersecting_sections_layer,
             start_end_point_layer,
         ]
 
