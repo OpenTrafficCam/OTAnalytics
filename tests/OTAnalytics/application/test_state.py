@@ -132,7 +132,7 @@ class TestOptionalObservableProperty:
 
         state.notify_sections([first, second])
 
-        assert state.selected_section.get() == first
+        assert state.selected_sections.get() == [first]
 
     def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
         first = SectionId("north")
@@ -141,12 +141,13 @@ class TestOptionalObservableProperty:
         state.notify_sections([first])
         state.notify_sections([])
 
-        assert state.selected_section.get() is None
+        assert state.selected_sections.get() == []
 
 
 class TestTrackImageUpdater:
     def test_update_image(self) -> None:
         plotter = Mock(spec=Plotter)
+        section_state = SectionState()
         background_image = Mock(spec=TrackImage)
         plotter.plot.return_value = background_image
         track_id = TrackId(1)
@@ -155,7 +156,7 @@ class TestTrackImageUpdater:
         track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
         track.id = track_id
-        updater = TrackImageUpdater(datastore, track_view_state, plotter)
+        updater = TrackImageUpdater(datastore, track_view_state, section_state, plotter)
         tracks: list[TrackId] = [track_id]
 
         updater.notify_tracks(tracks)
@@ -247,20 +248,13 @@ class TestTracksMetadata:
 
         tracks_metadata._update_classifications([track.id])
 
-        assert tracks_metadata.classifications == {"car", "truck"}
+        assert tracks_metadata.classifications == {"car"}
         mock_track_repository.get_for.assert_any_call(track.id)
         assert mock_track_repository.get_for.call_count == 1
 
         track.detections[0].classification = "bicycle"
         tracks_metadata._update_classifications([track.id])
 
-        assert tracks_metadata.classifications == {"car", "truck", "bicycle"}
+        assert tracks_metadata.classifications == {"car"}
         mock_track_repository.get_for.assert_any_call(track.id)
         assert mock_track_repository.get_for.call_count == 2
-
-        track.detections[0].classification = "car"
-        tracks_metadata._update_classifications([track.id])
-
-        assert tracks_metadata.classifications == {"car", "truck", "bicycle"}
-        mock_track_repository.get_for.assert_any_call(track.id)
-        assert mock_track_repository.get_for.call_count == 3

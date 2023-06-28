@@ -61,3 +61,19 @@ class AbstractFrameFlows(AbstractFrame, CTkFrame):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass
+
+    @abstractmethod
+    def enable_remove_button(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def disable_remove_button(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def enable_edit_button(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def disable_edit_button(self) -> None:
+        raise NotImplementedError
