@@ -22,6 +22,7 @@ from OTAnalytics.adapter_ui.default_values import (
     DATETIME_FORMAT,
 )
 from OTAnalytics.adapter_ui.dto import DateRangeDto
+from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
@@ -240,7 +241,7 @@ class FilterTracksByDateFilterButton(FilterButton):
         self.button.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
-class FilterTracksByDatePopup(CTkToplevel):
+class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -636,7 +637,7 @@ class FilterTracksbyClassificationButton(FilterButton):
         self.button.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
-class FilterTracksByClassPopup(CTkToplevel):
+class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -793,7 +794,6 @@ class DateRangeSwitcher(CTkFrame):
 
     def _switch_to_next_date_range(self) -> None:
         self._viewmodel.switch_to_next_date_range()
-        pass
 
     def enable(self) -> None:
         self.button_prev_range.configure(
