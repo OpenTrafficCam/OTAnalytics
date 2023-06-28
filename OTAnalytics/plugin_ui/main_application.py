@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
@@ -16,7 +18,6 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.plotting import (
-    Layer,
     LayeredPlotter,
     PlottingLayer,
     TrackBackgroundPlotter,
@@ -103,64 +104,16 @@ class ApplicationStarter:
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
 
-        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
-        dataframe_filter_builder = self._create_dataframe_filter_builder()
-        pandas_data_provider = PandasTracksOffsetProvider(
-            CachedPandasTrackProvider(
-                datastore, track_view_state, dataframe_filter_builder
-            ),
-            track_view_state=track_view_state,
+        pandas_data_provider = self._create_pandas_data_provider(
+            datastore, track_view_state
         )
-        track_geometry_plotter = self._create_track_geometry_plotter(
-            track_view_state, pandas_data_provider, alpha=0.2, enable_legend=True
+        layers = self._create_layers(
+            datastore,
+            track_view_state,
+            section_state,
+            pandas_data_provider,
         )
-        highlight_tracks_intersecting_sections = (
-            self._create_track_highlight_geometry_plotter(
-                track_view_state,
-                section_state,
-                pandas_data_provider,
-                datastore._event_repository,
-                enable_legend=False,
-            )
-        )
-        highlight_tracks_not_intersecting_sections = (
-            self._create_track_highlight_geometry_plotter_not_intersecting(
-                track_view_state,
-                section_state,
-                pandas_data_provider,
-                datastore._track_repository,
-                datastore._event_repository,
-                enable_legend=False,
-            )
-        )
-        track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            track_view_state, pandas_data_provider, enable_legend=False
-        )
-        background = PlottingLayer("Background", background_image_plotter, enabled=True)
-        all_tracks_layer = PlottingLayer(
-            "Show all tracks", track_geometry_plotter, enabled=True
-        )
-        highlight_tracks_intersecting_sections_layer = PlottingLayer(
-            "Highlight tracks intersecting sections",
-            highlight_tracks_intersecting_sections,
-            enabled=True,
-        )
-        highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
-            "Highlight tracks not intersecting sections",
-            highlight_tracks_not_intersecting_sections,
-            enabled=True,
-        )
-        start_end_point_layer = PlottingLayer(
-            "Show start and end point", track_start_end_point_plotter, enabled=True
-        )
-        plotting_layers = [
-            background,
-            all_tracks_layer,
-            highlight_tracks_intersecting_sections_layer,
-            highlight_tracks_not_intersecting_sections_layer,
-            start_end_point_layer,
-        ]
-        plotter = LayeredPlotter(layers=plotting_layers)
+        plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         image_updater = TrackImageUpdater(
@@ -201,13 +154,6 @@ class ApplicationStarter:
         datastore.register_section_changed_observer(
             image_updater.notify_section_changed
         )
-        layers: list[Layer] = [
-            background,
-            all_tracks_layer,
-            highlight_tracks_intersecting_sections_layer,
-            highlight_tracks_not_intersecting_sections_layer,
-            start_end_point_layer,
-        ]
         for layer in layers:
             layer.register(image_updater.notify_layers)
         OTAnalyticsGui(dummy_viewmodel, layers).start()
@@ -292,6 +238,17 @@ class ApplicationStarter:
     def _create_track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
+    def _create_pandas_data_provider(
+        self, datastore: Datastore, track_view_state: TrackViewState
+    ) -> PandasDataFrameProvider:
+        dataframe_filter_builder = self._create_dataframe_filter_builder()
+        return PandasTracksOffsetProvider(
+            CachedPandasTrackProvider(
+                datastore, track_view_state, dataframe_filter_builder
+            ),
+            track_view_state=track_view_state,
+        )
+
     def _create_track_geometry_plotter(
         self,
         state: TrackViewState,
@@ -355,6 +312,66 @@ class ApplicationStarter:
         return self._create_track_geometry_plotter(
             state, filter_by_id, alpha=1, enable_legend=enable_legend
         )
+
+    def _create_layers(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+        section_state: SectionState,
+        pandas_data_provider: PandasDataFrameProvider,
+    ) -> Sequence[PlottingLayer]:
+        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
+
+        track_geometry_plotter = self._create_track_geometry_plotter(
+            track_view_state, pandas_data_provider, alpha=0.2, enable_legend=True
+        )
+        highlight_tracks_intersecting_sections = (
+            self._create_track_highlight_geometry_plotter(
+                track_view_state,
+                section_state,
+                pandas_data_provider,
+                datastore._event_repository,
+                enable_legend=False,
+            )
+        )
+        highlight_tracks_not_intersecting_sections = (
+            self._create_track_highlight_geometry_plotter_not_intersecting(
+                track_view_state,
+                section_state,
+                pandas_data_provider,
+                datastore._track_repository,
+                datastore._event_repository,
+                enable_legend=False,
+            )
+        )
+        track_start_end_point_plotter = self._create_track_start_end_point_plotter(
+            track_view_state, pandas_data_provider, enable_legend=False
+        )
+        background = PlottingLayer("Background", background_image_plotter, enabled=True)
+        all_tracks_layer = PlottingLayer(
+            "Show all tracks", track_geometry_plotter, enabled=True
+        )
+        highlight_tracks_intersecting_sections_layer = PlottingLayer(
+            "Highlight tracks intersecting sections",
+            highlight_tracks_intersecting_sections,
+            enabled=True,
+        )
+        highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
+            "Highlight tracks not intersecting sections",
+            highlight_tracks_not_intersecting_sections,
+            enabled=True,
+        )
+        start_end_point_layer = PlottingLayer(
+            "Show start and end point", track_start_end_point_plotter, enabled=True
+        )
+
+        return [
+            background,
+            all_tracks_layer,
+            highlight_tracks_intersecting_sections_layer,
+            highlight_tracks_not_intersecting_sections_layer,
+            start_end_point_layer,
+        ]
 
     def _create_section_state(self) -> SectionState:
         return SectionState()

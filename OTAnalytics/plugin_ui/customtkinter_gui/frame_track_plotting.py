@@ -1,5 +1,5 @@
 import tkinter
-from typing import Any
+from typing import Any, Sequence
 
 from customtkinter import CTkCheckBox, CTkFrame, CTkLabel, ThemeManager
 
@@ -11,7 +11,7 @@ DEFAULT_COLOR = ThemeManager.theme["CTkFrame"]["fg_color"]
 
 
 class FrameTrackPlotting(CTkFrame):
-    def __init__(self, layers: list[Layer], **kwargs: Any) -> None:
+    def __init__(self, layers: Sequence[Layer], **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._layers = layers
         self.get_widgets()
