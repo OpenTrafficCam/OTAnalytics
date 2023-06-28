@@ -11,7 +11,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     RoadUserAssigner,
     SimpleCounterFactory,
-    SimpleExporterFactory,
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
@@ -48,6 +47,7 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_ui.exporter_factory import SimpleExporterFactory
 
 
 class SectionAlreadyExists(Exception):

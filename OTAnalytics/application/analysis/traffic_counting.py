@@ -308,20 +308,6 @@ class SimpleCounterFactory(CounterFactory):
         return SimpleCounter()
 
 
-class CsvExport(Exporter):
-    def __init__(self, output_file: str) -> None:
-        self._output_file = output_file
-
-    def export(self, counts: Count) -> None:
-        print(f"Exporting counts {counts} to {self._output_file}")
-
-
-class SimpleExporterFactory(ExporterFactory):
-    def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
-        factories = {"csv": lambda: CsvExport(specification.output_file)}
-        return factories[specification.format.lower()]()
-
-
 class ExportTrafficCounting:
     def __init__(
         self,
