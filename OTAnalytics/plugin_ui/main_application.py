@@ -114,7 +114,7 @@ class ApplicationStarter:
         track_geometry_plotter = self._create_track_geometry_plotter(
             track_view_state, pandas_data_provider, alpha=0.2, enable_legend=True
         )
-        track_highlighter_sections_intersecting_tracks = (
+        highlight_tracks_intersecting_sections = (
             self._create_track_highlight_geometry_plotter(
                 track_view_state,
                 section_state,
@@ -123,7 +123,7 @@ class ApplicationStarter:
                 enable_legend=False,
             )
         )
-        track_highlighter_sections_not_intersecting_tracks = (
+        highlight_tracks_not_intersecting_sections = (
             self._create_track_highlight_geometry_plotter_not_intersecting(
                 track_view_state,
                 section_state,
@@ -142,12 +142,12 @@ class ApplicationStarter:
         )
         highlight_tracks_intersecting_sections_layer = PlottingLayer(
             "Highlight tracks intersecting sections",
-            track_highlighter_sections_intersecting_tracks,
+            highlight_tracks_intersecting_sections,
             enabled=True,
         )
         highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
             "Highlight tracks not intersecting sections",
-            track_highlighter_sections_not_intersecting_tracks,
+            highlight_tracks_not_intersecting_sections,
             enabled=True,
         )
         start_end_point_layer = PlottingLayer(
