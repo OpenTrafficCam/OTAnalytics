@@ -86,8 +86,8 @@ class RoadUserAssigner:
         flows_by_start_and_end: dict[
             tuple[SectionId, SectionId], list[Flow]
         ] = defaultdict(list)
-        for flow in flows:
-            flows_by_start_and_end[(flow.start, flow.end)].append(flow)
+        for current in flows:
+            flows_by_start_and_end[(current.start, current.end)].append(current)
         return flows_by_start_and_end
 
     def __group_events_by_road_user(
@@ -123,9 +123,9 @@ class RoadUserAssigner:
         assignments: list[RoadUserAssignement] = []
         for road_user, events in events_by_road_user.items():
             if candidate_flows := self.__create_candidates(flows, events):
-                flow = self.__select_flow(candidate_flows)
+                current = self.__select_flow(candidate_flows)
                 assignments.append(
-                    RoadUserAssignement(road_user=road_user, assignment=flow.id)
+                    RoadUserAssignement(road_user=road_user, assignment=current.id)
                 )
         return assignments
 
@@ -183,8 +183,10 @@ class RoadUserAssigner:
                         start_section,
                         end_section,
                     )
-                    for flow in flows.get(candidate_id, []):
-                        candidate_flow = FlowCandidate(flow=flow, candidate=candidate)
+                    for current in flows.get(candidate_id, []):
+                        candidate_flow = FlowCandidate(
+                            flow=current, candidate=candidate
+                        )
                         candidate_flows.append(candidate_flow)
         return candidate_flows
 
@@ -224,7 +226,7 @@ class SimpleCounter(TrafficCounter):
         for assignement in assignements:
             flow_to_user[assignement.assignment].append(assignement.road_user)
 
-        return {flow: len(users) for flow, users in flow_to_user.items()}
+        return {current: len(users) for current, users in flow_to_user.items()}
 
     def __fill_empty_flows(
         self, flows: Iterable[Flow], counts: dict[FlowId, int]
@@ -238,9 +240,9 @@ class SimpleCounter(TrafficCounter):
         Returns:
             dict[FlowId, int]: counted users per flow, filled with zero for empty flows
         """
-        for flow in flows:
-            if flow.id not in counts:
-                counts[flow.id] = 0
+        for current in flows:
+            if current.id not in counts:
+                counts[current.id] = 0
         return counts
 
 
