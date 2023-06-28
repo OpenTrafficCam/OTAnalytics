@@ -15,9 +15,11 @@ from OTAnalytics.application.analysis.traffic_counting import (
     GroupedCount,
     GroupedCounter,
     RoadUserAssignement,
+    RoadUserAssignements,
     RoadUserAssigner,
     SimpleCount,
     SimpleCounter,
+    Splitter,
     TrafficCounter,
 )
 from OTAnalytics.domain.event import Event, EventRepository
@@ -107,27 +109,29 @@ def create_assignement_test_cases() -> list[tuple]:
         create_event(fifth_track, south_section_id, 11),
         create_event(sixth_track, south_section_id, 12),
     ]
-    some_expected_result: list[RoadUserAssignement] = [
-        RoadUserAssignement(first_track.id, south_to_west_id),
-        RoadUserAssignement(second_track.id, south_to_west_id),
-        RoadUserAssignement(third_track.id, south_to_west_id),
-        RoadUserAssignement(forth_track.id, south_to_west_id),
-        RoadUserAssignement(fifth_track.id, north_to_south_id),
-        RoadUserAssignement(sixth_track.id, north_to_south_id),
-    ]
+    some_expected_result: RoadUserAssignements = RoadUserAssignements(
+        [
+            RoadUserAssignement(first_track.id, south_to_west_id),
+            RoadUserAssignement(second_track.id, south_to_west_id),
+            RoadUserAssignement(third_track.id, south_to_west_id),
+            RoadUserAssignement(forth_track.id, south_to_west_id),
+            RoadUserAssignement(fifth_track.id, north_to_south_id),
+            RoadUserAssignement(sixth_track.id, north_to_south_id),
+        ]
+    )
     single_track_multiple_sections_events = [
         create_event(first_track, south_section_id, 0),
         create_event(first_track, north_section_id, 1),
         create_event(first_track, west_section_id, 2),
         create_event(first_track, east_section_id, 3),
     ]
-    single_track_multiple_sections_result: list[RoadUserAssignement] = [
-        RoadUserAssignement(first_track.id, south_to_east_id)
-    ]
+    single_track_multiple_sections_result: RoadUserAssignements = RoadUserAssignements(
+        [RoadUserAssignement(first_track.id, south_to_east_id)]
+    )
     single_track_single_sections_events = [
         create_event(first_track, south_section_id, 0),
     ]
-    single_track_single_sections_result: list[RoadUserAssignement] = []
+    single_track_single_sections_result: RoadUserAssignements = RoadUserAssignements([])
     return [
         (some_events, flows, some_expected_result),
         (
@@ -201,14 +205,16 @@ def create_counting_test_cases() -> list[tuple]:
     )
     flows: list[Flow] = [south_to_north, south_to_west, south_to_east, north_to_south]
 
-    some_assignements: list[RoadUserAssignement] = [
-        RoadUserAssignement(first_track.id, south_to_west_id),
-        RoadUserAssignement(second_track.id, south_to_west_id),
-        RoadUserAssignement(third_track.id, south_to_west_id),
-        RoadUserAssignement(forth_track.id, south_to_west_id),
-        RoadUserAssignement(fifth_track.id, north_to_south_id),
-        RoadUserAssignement(sixth_track.id, north_to_south_id),
-    ]
+    some_assignements: RoadUserAssignements = RoadUserAssignements(
+        [
+            RoadUserAssignement(first_track.id, south_to_west_id),
+            RoadUserAssignement(second_track.id, south_to_west_id),
+            RoadUserAssignement(third_track.id, south_to_west_id),
+            RoadUserAssignement(forth_track.id, south_to_west_id),
+            RoadUserAssignement(fifth_track.id, north_to_south_id),
+            RoadUserAssignement(sixth_track.id, north_to_south_id),
+        ]
+    )
     some_expected_result = SimpleCount(
         {
             south_to_north_id: 0,
@@ -217,7 +223,9 @@ def create_counting_test_cases() -> list[tuple]:
             south_to_east_id: 0,
         }
     )
-    single_assignement = [RoadUserAssignement(first_track.id, south_to_east_id)]
+    single_assignement = RoadUserAssignements(
+        [RoadUserAssignement(first_track.id, south_to_east_id)]
+    )
     single_assignement_result = SimpleCount(
         {
             south_to_north_id: 0,
@@ -226,7 +234,7 @@ def create_counting_test_cases() -> list[tuple]:
             south_to_east_id: 1,
         }
     )
-    no_assignement: list[RoadUserAssignement] = []
+    no_assignement: RoadUserAssignements = RoadUserAssignements([])
     no_assignement_result = SimpleCount(
         {
             south_to_north_id: 0,
@@ -250,13 +258,29 @@ def create_counting_test_cases() -> list[tuple]:
     ]
 
 
+class TestRoadUserAssignement:
+    def test_split(self) -> None:
+        car_assignement = Mock(spec=RoadUserAssignement)
+        bike_assignement = Mock(spec=RoadUserAssignement)
+        mode = Mock(spec=Splitter)
+        mode.group_name.side_effect = ["car", "bike"]
+        assignements = RoadUserAssignements([car_assignement, bike_assignement])
+
+        splitted = assignements.split(by=mode)
+
+        assert splitted == {
+            "car": RoadUserAssignements([car_assignement]),
+            "bike": RoadUserAssignements([bike_assignement]),
+        }
+
+
 class TestSimpleCounter:
     @pytest.mark.parametrize(
         "assignements, flows, expected_result", create_counting_test_cases()
     )
     def test_run(
         self,
-        assignements: list[RoadUserAssignement],
+        assignements: RoadUserAssignements,
         flows: list[Flow],
         expected_result: dict,
     ) -> None:
