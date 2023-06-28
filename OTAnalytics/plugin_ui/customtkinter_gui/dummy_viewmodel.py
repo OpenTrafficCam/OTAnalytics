@@ -18,6 +18,7 @@ from OTAnalytics.adapter_ui.view_model import (
     MissingCoordinate,
     ViewModel,
 )
+from OTAnalytics.application.analysis.traffic_counting import CountingSpecificationDto
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,
@@ -69,6 +70,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
     CancelExportCounts,
@@ -1121,17 +1123,23 @@ class DummyViewModel(
         # TODO: @briemla replace with actual wiring
         default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
         export_formats: dict = {
-            "Format 1": "csv",
+            "CSV": "csv",
             "Format 2": "xlsx",
             "Format 3": "xlsx",
         }
         try:
-            input_values: dict = ToplevelExportCounts(
+            export_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
             ).get_data()
-            print(input_values)
+            print(export_values)
+            export_specification = CountingSpecificationDto(
+                interval_in_minutes=export_values[INTERVAL],
+                format=export_values[EXPORT_FORMAT],
+                output_file=export_values[EXPORT_FILE],
+            )
+            self._application.export_counts(export_specification)
         except CancelExportCounts:
             print("User canceled configuration of export")

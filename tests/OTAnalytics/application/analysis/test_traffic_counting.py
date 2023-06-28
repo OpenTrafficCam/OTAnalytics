@@ -5,7 +5,12 @@ import pytest
 
 from OTAnalytics.application.analysis.traffic_counting import (
     Count,
+    CounterFactory,
     CounterFilter,
+    CountingSpecificationDto,
+    Exporter,
+    ExporterFactory,
+    ExportTrafficCounting,
     FilteredCounter,
     GroupedCount,
     GroupedCounter,
@@ -14,7 +19,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     SimpleCount,
     SimpleCounter,
     TrafficCounter,
-    TrafficCounting,
 )
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
@@ -311,24 +315,37 @@ class TestTrafficCounting:
         event_repository = Mock(spec=EventRepository)
         flow_repository = Mock(spec=FlowRepository)
         road_user_assigner = Mock(spec=RoadUserAssigner)
+        counter_factory = Mock(spec=CounterFactory)
         counter = Mock(spec=TrafficCounter)
+        exporter_factory = Mock(spec=ExporterFactory)
+        exporter = Mock(spec=Exporter)
         events: list[Event] = []
         flows: list[Flow] = []
-        expected_counts = Mock(spec=Count)
+        counts = Mock(spec=Count)
         event_repository.get_all.return_value = events
         flow_repository.get_all.return_value = flows
-        counter.count.return_value = expected_counts
-        use_case = TrafficCounting(
+        counter_factory.create_counter.return_value = counter
+        exporter_factory.create_exporter.return_value = exporter
+        counter.count.return_value = counts
+        specification = CountingSpecificationDto(
+            interval_in_minutes=15,
+            format="csv",
+            output_file="counts.csv",
+        )
+        use_case = ExportTrafficCounting(
             event_repository,
             flow_repository,
             road_user_assigner,
-            counter,
+            counter_factory,
+            exporter_factory,
         )
 
-        counts = use_case.count()
+        use_case.export(specification)
 
-        assert counts == expected_counts
         event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
         road_user_assigner.assign.assert_called_once()
+        counter_factory.create_counter.assert_called_once_with(specification)
         counter.count.assert_called_once()
+        exporter_factory.create_exporter.assert_called_once_with(specification)
+        exporter.export.assert_called_once_with(counts)

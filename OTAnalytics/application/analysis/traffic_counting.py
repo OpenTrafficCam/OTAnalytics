@@ -285,23 +285,63 @@ class GroupedCounter:
 class CountingSpecificationDto:
     interval_in_minutes: int
     format: str
+    output_file: str
 
 
-class TrafficCounting:
+class CounterFactory(ABC):
+    def create_counter(self, specification: CountingSpecificationDto) -> TrafficCounter:
+        raise NotImplementedError
+
+
+class Exporter(ABC):
+    def export(self, counts: Count) -> None:
+        raise NotImplementedError
+
+
+class ExporterFactory(ABC):
+    def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
+        raise NotImplementedError
+
+
+class SimpleCounterFactory(CounterFactory):
+    def create_counter(self, specification: CountingSpecificationDto) -> TrafficCounter:
+        return SimpleCounter()
+
+
+class CsvExport(Exporter):
+    def __init__(self, output_file: str) -> None:
+        self._output_file = output_file
+
+    def export(self, counts: Count) -> None:
+        print(f"Exporting counts {counts} to {self._output_file}")
+
+
+class SimpleExporterFactory(ExporterFactory):
+    def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
+        factories = {"csv": lambda: CsvExport(specification.output_file)}
+        return factories[specification.format.lower()]()
+
+
+class ExportTrafficCounting:
     def __init__(
         self,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
         assigner: RoadUserAssigner,
-        counter: TrafficCounter,
+        counter_factory: CounterFactory,
+        exporter_factory: ExporterFactory,
     ) -> None:
         self._event_repository = event_repository
         self._flow_repository = flow_repository
         self._assigner = assigner
-        self._counter = counter
+        self._counter_factory = counter_factory
+        self._exporter_factory = exporter_factory
 
-    def count(self) -> Count:
+    def export(self, specification: CountingSpecificationDto) -> None:
         events = self._event_repository.get_all()
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)
-        return self._counter.count(assigned_flows, flows)
+        counter = self._counter_factory.create_counter(specification)
+        counts = counter.count(assigned_flows, flows)
+        exporter = self._exporter_factory.create_exporter(specification)
+        exporter.export(counts)

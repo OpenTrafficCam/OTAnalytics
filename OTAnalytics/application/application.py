@@ -6,6 +6,13 @@ from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
 )
+from OTAnalytics.application.analysis.traffic_counting import (
+    CountingSpecificationDto,
+    ExportTrafficCounting,
+    RoadUserAssigner,
+    SimpleCounterFactory,
+    SimpleExporterFactory,
+)
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     ActionState,
@@ -228,6 +235,16 @@ class OTAnalyticsApplication:
         )
         self._clear_event_repository = ClearEventRepository(
             self._datastore._event_repository
+        )
+        self._export_counts = self.__create_export_traffic_counting()
+
+    def __create_export_traffic_counting(self) -> ExportTrafficCounting:
+        return ExportTrafficCounting(
+            self._datastore._event_repository,
+            self._datastore._flow_repository,
+            RoadUserAssigner(),
+            SimpleCounterFactory(),
+            SimpleExporterFactory(),
         )
 
     def connect_observers(self) -> None:
@@ -488,6 +505,9 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def export_counts(self, specification: CountingSpecificationDto) -> None:
+        self._export_counts.export(specification)
 
     def change_track_offset_to_section_offset(
         self, event_type: EventType = EventType.SECTION_ENTER
