@@ -12,6 +12,7 @@ from customtkinter import (
 )
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
@@ -85,7 +86,9 @@ class TabviewInputFiles(CTkTabview):
 
 
 class FrameContent(CTkFrame):
-    def __init__(self, master: Any, viewmodel: ViewModel, **kwargs: Any) -> None:
+    def __init__(
+        self, master: Any, viewmodel: ViewModel, layers: list[Layer], **kwargs: Any
+    ) -> None:
         super().__init__(master, **kwargs)
         self._viewmodel = viewmodel
         self.ctkscrollableframe = CTkScrollableFrame(
@@ -95,7 +98,7 @@ class FrameContent(CTkFrame):
 
         self._frame_track_plotting = FrameTrackPlotting(
             master=self.ctkscrollableframe,
-            viewmodel=self._viewmodel,
+            layers=layers,
         )
         self._frame_filter = FrameFilter(
             master=self.ctkscrollableframe, viewmodel=self._viewmodel
@@ -144,9 +147,11 @@ class OTAnalyticsGui:
     def __init__(
         self,
         view_model: ViewModel,
+        layers: list[Layer],
         app: CTk = ModifiedCTk(),
     ) -> None:
         self._viewmodel = view_model
+        self._layers = layers
         self._app: CTk = app
 
     def start(self) -> None:
@@ -169,7 +174,9 @@ class OTAnalyticsGui:
         self._app.grid_columnconfigure(1, weight=1)
         self._app.grid_rowconfigure(0, weight=1)
         self._navigation = FrameNavigation(master=self._app, viewmodel=self._viewmodel)
-        self._content = FrameContent(master=self._app, viewmodel=self._viewmodel)
+        self._content = FrameContent(
+            master=self._app, viewmodel=self._viewmodel, layers=self._layers
+        )
 
     def _place_widgets(self) -> None:
         self._navigation.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
