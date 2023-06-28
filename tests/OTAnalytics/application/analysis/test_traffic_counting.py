@@ -4,6 +4,7 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.analysis.traffic_counting import (
+    Count,
     CounterFilter,
     FilteredCounter,
     GroupedCount,
@@ -13,9 +14,10 @@ from OTAnalytics.application.analysis.traffic_counting import (
     SimpleCount,
     SimpleCounter,
     TrafficCounter,
+    TrafficCounting,
 )
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.flow import Flow, FlowId
+from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import TrackId
@@ -302,3 +304,31 @@ class TestGroupedCounter:
                 second_group_name: second_counts,
             }
         )
+
+
+class TestTrafficCounting:
+    def test_count_traffic(self) -> None:
+        event_repository = Mock(spec=EventRepository)
+        flow_repository = Mock(spec=FlowRepository)
+        road_user_assigner = Mock(spec=RoadUserAssigner)
+        counter = Mock(spec=TrafficCounter)
+        events: list[Event] = []
+        flows: list[Flow] = []
+        expected_counts = Mock(spec=Count)
+        event_repository.get_all.return_value = events
+        flow_repository.get_all.return_value = flows
+        counter.count.return_value = expected_counts
+        use_case = TrafficCounting(
+            event_repository,
+            flow_repository,
+            road_user_assigner,
+            counter,
+        )
+
+        counts = use_case.count()
+
+        assert counts == expected_counts
+        event_repository.get_all.assert_called_once()
+        flow_repository.get_all.assert_called_once()
+        road_user_assigner.assign.assert_called_once()
+        counter.count.assert_called_once()
