@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Iterable, Optional
 
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.flow import Flow, FlowId
+from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
 
 
@@ -66,7 +66,7 @@ class TrafficCounter(ABC):
 
 class RoadUserAssigner:
     def assign(
-        self, events: list[Event], flows: list[Flow]
+        self, events: Iterable[Event], flows: list[Flow]
     ) -> list[RoadUserAssignement]:
         grouped_flows = self.__group_flows_by_sections(flows)
         grouped_sections = self.__group_events_by_road_user(events)
@@ -279,3 +279,29 @@ class GroupedCounter:
                 for name, counter in self._groups.items()
             }
         )
+
+
+@dataclass(frozen=True)
+class CountingSpecificationDto:
+    interval_in_minutes: int
+    format: str
+
+
+class TrafficCounting:
+    def __init__(
+        self,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        assigner: RoadUserAssigner,
+        counter: TrafficCounter,
+    ) -> None:
+        self._event_repository = event_repository
+        self._flow_repository = flow_repository
+        self._assigner = assigner
+        self._counter = counter
+
+    def count(self) -> Count:
+        events = self._event_repository.get_all()
+        flows = self._flow_repository.get_all()
+        assigned_flows = self._assigner.assign(events, flows)
+        return self._counter.count(assigned_flows, flows)
