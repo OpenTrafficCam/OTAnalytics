@@ -11,8 +11,8 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
+from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.abstract_window import AbstractWindow
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
@@ -122,7 +122,7 @@ class DummyViewModel(
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
-        self._window: Optional[AbstractWindow] = None
+        self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_sections: Optional[AbstractFrameSections] = None
@@ -257,7 +257,7 @@ class DummyViewModel(
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
 
-    def set_window(self, window: AbstractWindow) -> None:
+    def set_window(self, window: AbstractMainWindow) -> None:
         self._window = window
 
     def _update_selected_videos(self, videos: list[Video]) -> None:

@@ -9,8 +9,8 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
+from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.abstract_window import AbstractWindow
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -32,7 +32,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def set_window(self, window: AbstractWindow) -> None:
+    def set_window(self, window: AbstractMainWindow) -> None:
         pass
 
     @abstractmethod

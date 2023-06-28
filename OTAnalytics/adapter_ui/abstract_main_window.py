@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class AbstractWindow(ABC):
+class AbstractMainWindow(ABC):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         raise NotImplementedError

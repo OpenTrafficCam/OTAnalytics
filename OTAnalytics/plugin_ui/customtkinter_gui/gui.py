@@ -11,7 +11,7 @@ from customtkinter import (
     set_default_color_theme,
 )
 
-from OTAnalytics.adapter_ui.abstract_window import AbstractWindow
+from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
@@ -30,7 +30,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
 
-class ModifiedCTk(AbstractWindow, CTk):
+class ModifiedCTk(AbstractMainWindow, CTk):
     def __init__(
         self,
         viewmodel: ViewModel,
