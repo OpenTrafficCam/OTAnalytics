@@ -35,6 +35,7 @@ from OTAnalytics.domain.track import (
     TrackIdProvider,
     TrackImage,
     TrackListObserver,
+    TrackRepository,
 )
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
@@ -202,25 +203,18 @@ class TracksNotIntersectingSelectedSections(TrackIdProvider):
     def __init__(
         self,
         section_state: SectionState,
-        section_repository: SectionRepository,
+        track_repository: TrackRepository,
         event_repository: EventRepository,
     ) -> None:
         self._section_state = section_state
-        self._section_repository = section_repository
+        self._track_repository = track_repository
         self._event_repository = event_repository
 
     def get_ids(self) -> Iterable[TrackId]:
         selected_sections = self._section_state.selected_sections.get()
-        not_selected_sections = [
-            section.id
-            for section in self._section_repository.get_all()
-            if section.id not in selected_sections
-        ]
+        all_track_ids = {track.id for track in self._track_repository.get_all()}
         intersecting_selected_sections: set[TrackId] = self._get_ids(selected_sections)
-        not_intersecting_selected_sections: set[TrackId] = self._get_ids(
-            not_selected_sections
-        )
-        return not_intersecting_selected_sections - intersecting_selected_sections
+        return all_track_ids - intersecting_selected_sections
 
     def _get_ids(self, sections: list[SectionId]) -> set[TrackId]:
         track_ids: set[TrackId] = set()
@@ -228,7 +222,6 @@ class TracksNotIntersectingSelectedSections(TrackIdProvider):
             for event in self._event_repository.get_all():
                 if event.section_id == section_id:
                     track_ids.add(TrackId(event.road_user_id))
-
         return track_ids
 
 
