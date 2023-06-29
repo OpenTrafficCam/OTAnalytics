@@ -11,6 +11,7 @@ from customtkinter import (
     set_default_color_theme,
 )
 
+from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
@@ -30,13 +31,16 @@ from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
 
-class ModifiedCTk(CTk):
+class ModifiedCTk(AbstractMainWindow, CTk):
     def __init__(
         self,
+        viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self.protocol("WM_DELETE_WINDOW", self._ask_to_close)
+        self._viewmodel: ViewModel = viewmodel
+        self.introduce_to_viewmodel()
 
     def _ask_to_close(self) -> None:
         infobox = InfoBox(
@@ -49,11 +53,16 @@ class ModifiedCTk(CTk):
             return
         self.quit()
 
+    def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_window(self)
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
+
     def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
         traceback.print_exception(val)
-        InfoBox(
-            message=str(val), title="Error", initial_position=get_widget_position(self)
-        )
+        InfoBox(message=str(val), title="Error", initial_position=self.get_position())
 
 
 class TabviewInputFiles(CTkTabview):
@@ -148,11 +157,10 @@ class OTAnalyticsGui:
         self,
         view_model: ViewModel,
         layers: Sequence[Layer],
-        app: CTk = ModifiedCTk(),
     ) -> None:
         self._viewmodel = view_model
+        self._app: ModifiedCTk = ModifiedCTk(viewmodel=view_model)
         self._layers = layers
-        self._app: CTk = app
 
     def start(self) -> None:
         self._show_gui()
