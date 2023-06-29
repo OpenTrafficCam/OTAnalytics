@@ -888,10 +888,11 @@ class CsvExport(Exporter):
 
     def __create_data_frame(self, counts: Count) -> DataFrame:
         transformed = counts.to_dict()
-        indexed = [
-            {"flow": key.serialize(), "count": value}
-            for key, value in transformed.items()
-        ]
+        indexed: list[dict] = []
+        for key, value in transformed.items():
+            result_dict: dict = key.as_dict()
+            result_dict["count"] = value
+            indexed.append(result_dict)
         return DataFrame.from_dict(indexed)
 
     def __create_path(self) -> Path:

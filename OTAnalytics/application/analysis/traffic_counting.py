@@ -28,10 +28,60 @@ class FlowCandidate:
         return self.candidate.end.occurrence - self.candidate.start.occurrence
 
 
+class SplitId(ABC):
+    @abstractmethod
+    def combine(self, other: "SplitId") -> "SplitId":
+        raise NotImplementedError
+
+    @abstractmethod
+    def ids(self) -> list["SplitId"]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def as_dict(self) -> dict[str, str]:
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class CombinedId(SplitId):
+    id: list[SplitId]
+
+    def combine(self, other: SplitId) -> SplitId:
+        combined_ids: list[SplitId] = self.ids() + other.ids()
+        return CombinedId(id=combined_ids)
+
+    def ids(self) -> list[SplitId]:
+        return self.id.copy()
+
+    def as_dict(self) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for id in self.id:
+            result |= id.as_dict()
+        return result
+
+    def __hash__(self) -> int:
+        return hash(tuple(self.id))
+
+
+@dataclass(frozen=True)
+class SingleId(SplitId):
+    level: str
+    id: str
+
+    def combine(self, other: SplitId) -> SplitId:
+        return CombinedId(self.ids() + other.ids())
+
+    def ids(self) -> list[SplitId]:
+        return [self]
+
+    def as_dict(self) -> dict[str, str]:
+        return {self.level: self.id}
+
+
 @dataclass(frozen=True)
 class Count(ABC):
     @abstractmethod
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[SplitId, int]:
         pass
 
 
@@ -39,78 +89,124 @@ class Count(ABC):
 class SimpleCount(Count):
     result: dict[FlowId, int]
 
-    def to_dict(self) -> dict:
-        return self.result
+    def to_dict(self) -> dict[SplitId, int]:
+        return {
+            SingleId(level="flow", id=id.serialize()): value
+            for id, value in self.result.items()
+        }
 
 
 @dataclass(frozen=True)
 class GroupedCount(Count):
-    result: dict[str, Count]
+    result: dict[SplitId, Count]
 
-    def to_dict(self) -> dict:
-        return {name: sub_result.to_dict() for name, sub_result in self.result.items()}
+    def to_dict(self) -> dict[SplitId, int]:
+        result: dict[SplitId, int] = {}
+        for split_id, sub_result in self.result.items():
+            sub_dict: dict[SplitId, int] = sub_result.to_dict()
+            for sub_id, value in sub_dict.items():
+                result[split_id.combine(sub_id)] = value
+        return result
 
 
 @dataclass(frozen=True)
-class RoadUserAssignement:
+class RoadUserAssignment:
     road_user: int
     assignment: FlowId
 
 
 class Splitter(ABC):
     @abstractmethod
-    def group_name(self, assignement: RoadUserAssignement) -> str:
+    def group_name(self, assignment: RoadUserAssignment) -> SplitId:
         raise NotImplementedError
 
 
 UNCLASSIFIED = "unclassified"
+CLASSIFICATION = "classification"
 
 
 class ModeSplitter(Splitter):
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def group_name(self, assignement: RoadUserAssignement) -> str:
-        track = self._track_repository.get_for(TrackId(assignement.road_user))
-        return track.classification if track else UNCLASSIFIED
+    def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+        track = self._track_repository.get_for(TrackId(assignment.road_user))
+        split_id = track.classification if track else UNCLASSIFIED
+        return SingleId(level=CLASSIFICATION, id=split_id)
 
 
-class RoadUserAssignements:
-    def __init__(self, assignements: list[RoadUserAssignement]) -> None:
-        self._assignements = assignements.copy()
+class CountableRoadUserAssignments:
+    def __init__(self, assignments: list[RoadUserAssignment]) -> None:
+        self._assignments = assignments.copy()
 
-    def split(self, by: Splitter) -> dict[str, "RoadUserAssignements"]:
-        splitted: dict[str, list[RoadUserAssignement]] = defaultdict(list)
-        for assignement in self._assignements:
-            group_name = by.group_name(assignement)
-            splitted[group_name].append(assignement)
-        return {key: RoadUserAssignements(value) for key, value in splitted.items()}
+    def count(self, flows: list[Flow]) -> Count:
+        counts = self.__count_per_flow()
+        self.__fill_empty_flows(flows, counts)
+        return SimpleCount(counts)
 
-    def count_per_flow(self) -> dict[FlowId, int]:
+    def __count_per_flow(self) -> dict[FlowId, int]:
+        """
+        Count users per flow.
+        Args:
+            user_to_flow (dict[int, FlowId]): assigment of users to flows
+        Returns:
+            dict[FlowId, int]: count per flow
+        """
         flow_to_user: dict[FlowId, list[int]] = defaultdict(list)
-        for assignement in self._assignements:
-            flow_to_user[assignement.assignment].append(assignement.road_user)
+        for assignment in self._assignments:
+            flow_to_user[assignment.assignment].append(assignment.road_user)
         return {current: len(users) for current, users in flow_to_user.items()}
 
+    def __fill_empty_flows(
+        self, flows: Iterable[Flow], counts: dict[FlowId, int]
+    ) -> dict[FlowId, int]:
+        """
+        Assign all flows a counting of zero if they are not present in the counts
+        dictionary.
+        Args:
+            flows (Iterable[Flow]): all flows to count for
+            counts (dict[FlowId, int]): counted users per flow
+        Returns:
+            dict[FlowId, int]: counted users per flow, filled with zero for empty flows
+        """
+        for current in flows:
+            if current.id not in counts:
+                counts[current.id] = 0
+        return counts
+
     def __hash__(self) -> int:
-        return hash(self._assignements)
+        return hash(self._assignments)
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, RoadUserAssignements):
-            return self._assignements == other._assignements
+        if isinstance(other, CountableRoadUserAssignments):
+            return self._assignments == other._assignments
         return False
 
 
-class TrafficCounter(ABC):
-    @abstractmethod
-    def count(self, assigned_flows: RoadUserAssignements, flows: list[Flow]) -> Count:
-        pass
+class RoadUserAssignments:
+    def __init__(self, assignments: list[RoadUserAssignment]) -> None:
+        self._assignments = assignments.copy()
+
+    def split(self, by: Splitter) -> dict[SplitId, CountableRoadUserAssignments]:
+        splitted: dict[SplitId, list[RoadUserAssignment]] = defaultdict(list)
+        for assignment in self._assignments:
+            group_name = by.group_name(assignment)
+            splitted[group_name].append(assignment)
+        return {
+            key: CountableRoadUserAssignments(value) for key, value in splitted.items()
+        }
+
+    def __hash__(self) -> int:
+        return hash(self._assignments)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, RoadUserAssignments):
+            return self._assignments == other._assignments
+        return False
 
 
 class RoadUserAssigner:
-    def assign(
-        self, events: Iterable[Event], flows: list[Flow]
-    ) -> RoadUserAssignements:
+    def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
         grouped_flows = self.__group_flows_by_sections(flows)
         grouped_sections = self.__group_events_by_road_user(events)
         return self.__assign_user_to_flow(grouped_flows, grouped_sections)
@@ -153,7 +249,7 @@ class RoadUserAssigner:
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
         events_by_road_user: dict[int, list[Event]],
-    ) -> RoadUserAssignements:
+    ) -> RoadUserAssignments:
         """
         Assign each user to exactly one flow.
         Args:
@@ -163,14 +259,14 @@ class RoadUserAssigner:
         Returns:
             dict[int, FlowId]: assignment of flow to road user
         """
-        assignments: list[RoadUserAssignement] = []
+        assignments: list[RoadUserAssignment] = []
         for road_user, events in events_by_road_user.items():
             if candidate_flows := self.__create_candidates(flows, events):
                 current = self.__select_flow(candidate_flows)
                 assignments.append(
-                    RoadUserAssignement(road_user=road_user, assignment=current.id)
+                    RoadUserAssignment(road_user=road_user, assignment=current.id)
                 )
-        return RoadUserAssignements(assignments)
+        return RoadUserAssignments(assignments)
 
     def __create_candidates(
         self,
@@ -245,73 +341,6 @@ class RoadUserAssigner:
         return max(candidate_flows, key=lambda current: current.duration()).flow
 
 
-class SimpleCounter(TrafficCounter):
-    """Count road users per flow."""
-
-    def count(self, assigned_flows: RoadUserAssignements, flows: list[Flow]) -> Count:
-        counts = self.__count_users_per_flow(assigned_flows)
-        self.__fill_empty_flows(flows, counts)
-        return SimpleCount(counts)
-
-    def __count_users_per_flow(
-        self, assignements: RoadUserAssignements
-    ) -> dict[FlowId, int]:
-        """
-        Count users per flow.
-        Args:
-            user_to_flow (dict[int, FlowId]): assigment of users to flows
-        Returns:
-            dict[FlowId, int]: count per flow
-        """
-        return assignements.count_per_flow()
-
-    def __fill_empty_flows(
-        self, flows: Iterable[Flow], counts: dict[FlowId, int]
-    ) -> dict[FlowId, int]:
-        """
-        Assign all flows a counting of zero if they are not present in the counts
-        dictionary.
-        Args:
-            flows (Iterable[Flow]): all flows to count for
-            counts (dict[FlowId, int]): counted users per flow
-        Returns:
-            dict[FlowId, int]: counted users per flow, filled with zero for empty flows
-        """
-        for current in flows:
-            if current.id not in counts:
-                counts[current.id] = 0
-        return counts
-
-
-class CounterFilter(ABC):
-    @abstractmethod
-    def filter(self, assignements: RoadUserAssignements) -> RoadUserAssignements:
-        pass
-
-
-class FilteredCounter(TrafficCounter):
-    def __init__(self, filter: CounterFilter, counter: TrafficCounter) -> None:
-        self._filter = filter
-        self._counter = counter
-
-    def count(self, assignements: RoadUserAssignements, flows: list[Flow]) -> Count:
-        filtered_assignements = self._filter.filter(assignements)
-        return self._counter.count(filtered_assignements, flows)
-
-
-class GroupedCounter:
-    def __init__(self, groups: dict[str, TrafficCounter]) -> None:
-        self._groups = groups
-
-    def count(self, assignements: RoadUserAssignements, flows: list[Flow]) -> Count:
-        return GroupedCount(
-            {
-                name: counter.count(assignements, flows)
-                for name, counter in self._groups.items()
-            }
-        )
-
-
 @dataclass(frozen=True)
 class CountingSpecificationDto:
     interval_in_minutes: int
@@ -319,9 +348,17 @@ class CountingSpecificationDto:
     output_file: str
 
 
-class CounterFactory(ABC):
-    def create_counter(self, specification: CountingSpecificationDto) -> TrafficCounter:
+class SplitterFactory(ABC):
+    def create_splitter(self, specification: CountingSpecificationDto) -> Splitter:
         raise NotImplementedError
+
+
+class SimpleSplitterFactory(SplitterFactory):
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+
+    def create_splitter(self, specification: CountingSpecificationDto) -> Splitter:
+        return ModeSplitter(self._track_repository)
 
 
 class Exporter(ABC):
@@ -334,31 +371,32 @@ class ExporterFactory(ABC):
         raise NotImplementedError
 
 
-class SimpleCounterFactory(CounterFactory):
-    def create_counter(self, specification: CountingSpecificationDto) -> TrafficCounter:
-        return SimpleCounter()
-
-
 class ExportTrafficCounting:
     def __init__(
         self,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
         assigner: RoadUserAssigner,
-        counter_factory: CounterFactory,
+        splitter_factory: SplitterFactory,
         exporter_factory: ExporterFactory,
     ) -> None:
         self._event_repository = event_repository
         self._flow_repository = flow_repository
         self._assigner = assigner
-        self._counter_factory = counter_factory
+        self._splitter_factory = splitter_factory
         self._exporter_factory = exporter_factory
 
     def export(self, specification: CountingSpecificationDto) -> None:
         events = self._event_repository.get_all()
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)
-        counter = self._counter_factory.create_counter(specification)
-        counts = counter.count(assigned_flows, flows)
+        splitter = self._splitter_factory.create_splitter(specification)
+        splitted_assignments = assigned_flows.split(by=splitter)
+        counts = GroupedCount(
+            {
+                split_id: assignment.count(flows)
+                for split_id, assignment in splitted_assignments.items()
+            }
+        )
         exporter = self._exporter_factory.create_exporter(specification)
         exporter.export(counts)

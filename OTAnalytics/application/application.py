@@ -10,7 +10,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     CountingSpecificationDto,
     ExportTrafficCounting,
     RoadUserAssigner,
-    SimpleCounterFactory,
+    SimpleSplitterFactory,
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
@@ -243,7 +243,7 @@ class OTAnalyticsApplication:
             self._datastore._event_repository,
             self._datastore._flow_repository,
             RoadUserAssigner(),
-            SimpleCounterFactory(),
+            SimpleSplitterFactory(self._datastore._track_repository),
             SimpleExporterFactory(),
         )
 
