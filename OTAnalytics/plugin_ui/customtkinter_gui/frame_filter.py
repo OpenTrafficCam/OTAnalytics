@@ -748,6 +748,10 @@ class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
         self._viewmodel.reset_filter_tracks_by_class()
         self._close()
 
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
+
 
 class DateRangeSwitcher(CTkFrame):
     def __init__(self, viewmodel: ViewModel, enabled: bool, **kwargs: Any):
