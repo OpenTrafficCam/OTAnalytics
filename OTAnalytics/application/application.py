@@ -235,6 +235,39 @@ class TracksNotIntersectingSelectedSections(TrackIdProvider):
         return track_ids
 
 
+class TracksAssignedToFlow(TrackIdProvider):
+    def __init__(
+        self,
+        assigner: RoadUserAssigner,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        flow_state: FlowState,
+    ) -> None:
+        self._assigner = assigner
+        self._event_repository = event_repository
+        self._flow_repository = flow_repository
+        self._flow_state = flow_state
+
+    def get_ids(self) -> Iterable[TrackId]:
+        events = self._event_repository.get_all()
+        flows = self._get_selected_flows()
+        selected_flow_ids = self._flow_state.selected_flows.get()
+        assignments = self._assigner.assign(events, flows).as_list()
+
+        ids = set()
+        for assignment in assignments:
+            if assignment.assignment in selected_flow_ids:
+                ids.add(TrackId(assignment.road_user))
+        return ids
+
+    def _get_selected_flows(self) -> list[Flow]:
+        flows = []
+        for id in self._flow_state.selected_flows.get():
+            if flow := self._flow_repository.get(id):
+                flows.append(flow)
+        return flows
+
+
 class OTAnalyticsApplication:
     """
     Entrypoint for calls from the UI.
