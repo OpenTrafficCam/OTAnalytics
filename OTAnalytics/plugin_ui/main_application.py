@@ -5,6 +5,7 @@ from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetectio
 from OTAnalytics.application.application import (
     OTAnalyticsApplication,
     TracksIntersectingSelectedSections,
+    TracksNotIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import (
     Datastore,
@@ -122,6 +123,16 @@ class ApplicationStarter:
                 enable_legend=False,
             )
         )
+        track_highlighter_sections_not_intersecting_tracks = (
+            self._create_track_highlight_geometry_plotter_not_intersecting(
+                track_view_state,
+                section_state,
+                pandas_data_provider,
+                datastore._track_repository,
+                datastore._event_repository,
+                enable_legend=False,
+            )
+        )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state, pandas_data_provider, enable_legend=False
         )
@@ -129,9 +140,14 @@ class ApplicationStarter:
         all_tracks_layer = PlottingLayer(
             "Show all tracks", track_geometry_plotter, enabled=True
         )
-        highlight_tracks_intersecting_tracks_layer = PlottingLayer(
+        highlight_tracks_intersecting_sections_layer = PlottingLayer(
             "Highlight tracks intersecting sections",
             track_highlighter_sections_intersecting_tracks,
+            enabled=True,
+        )
+        highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
+            "Highlight tracks not intersecting sections",
+            track_highlighter_sections_not_intersecting_tracks,
             enabled=True,
         )
         start_end_point_layer = PlottingLayer(
@@ -140,7 +156,8 @@ class ApplicationStarter:
         plotting_layers = [
             background,
             all_tracks_layer,
-            highlight_tracks_intersecting_tracks_layer,
+            highlight_tracks_intersecting_sections_layer,
+            highlight_tracks_not_intersecting_sections_layer,
             start_end_point_layer,
         ]
         plotter = LayeredPlotter(layers=plotting_layers)
@@ -187,10 +204,11 @@ class ApplicationStarter:
         layers: list[Layer] = [
             background,
             all_tracks_layer,
-            highlight_tracks_intersecting_tracks_layer,
+            highlight_tracks_intersecting_sections_layer,
+            highlight_tracks_not_intersecting_sections_layer,
             start_end_point_layer,
         ]
-        for layer in plotting_layers:
+        for layer in layers:
             layer.register(image_updater.notify_layers)
         OTAnalyticsGui(dummy_viewmodel, layers).start()
 
@@ -314,6 +332,25 @@ class ApplicationStarter:
         )
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=track_intersecting_sections
+        )
+        return self._create_track_geometry_plotter(
+            state, filter_by_id, alpha=1, enable_legend=enable_legend
+        )
+
+    def _create_track_highlight_geometry_plotter_not_intersecting(
+        self,
+        state: TrackViewState,
+        section_state: SectionState,
+        pandas_track_provider: PandasDataFrameProvider,
+        track_repository: TrackRepository,
+        event_repository: EventRepository,
+        enable_legend: bool,
+    ) -> Plotter:
+        track_not_intersecting_sections = TracksNotIntersectingSelectedSections(
+            section_state, track_repository, event_repository
+        )
+        filter_by_id = FilterById(
+            pandas_track_provider, id_filter=track_not_intersecting_sections
         )
         return self._create_track_geometry_plotter(
             state, filter_by_id, alpha=1, enable_legend=enable_legend
