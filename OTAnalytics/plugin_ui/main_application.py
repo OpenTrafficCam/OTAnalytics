@@ -437,10 +437,10 @@ class ApplicationStarter:
             background,
             all_tracks_layer,
             highlight_tracks_intersecting_sections_layer,
-            start_end_points_tracks_intersecting_sections_layer,
             highlight_tracks_not_intersecting_sections_layer,
-            start_end_points_tracks_not_intersecting_sections_layer,
             start_end_point_layer,
+            start_end_points_tracks_intersecting_sections_layer,
+            start_end_points_tracks_not_intersecting_sections_layer,
         ]
 
     def _create_section_state(self) -> SectionState:
