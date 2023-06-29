@@ -196,6 +196,9 @@ class RoadUserAssignments:
             key: CountableRoadUserAssignments(value) for key, value in splitted.items()
         }
 
+    def as_list(self) -> list[RoadUserAssignment]:
+        return self._assignments.copy()
+
     def __hash__(self) -> int:
         return hash(self._assignments)
 
