@@ -364,9 +364,6 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
             last_detection_occurrence = self._viewmodel.get_last_detection_occurrence()
             self.to_date_row.set_datetime(last_detection_occurrence)
 
-    def _get_position(self) -> tuple[int, int]:
-        return self.winfo_rootx(), self.winfo_rooty()
-
     def _on_apply_button_clicked(self) -> None:
         try:
             date_range = DateRange(self.get_start_date(), self.get_end_date())
@@ -375,7 +372,7 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
             print("Filter tracks by date applied.")
             self._close()
         except InvalidDatetimeFormatError as e:
-            InfoBox(message=str(e), initial_position=self._get_position())
+            InfoBox(message=str(e), initial_position=self.get_position())
 
     def _on_reset_button_clicked(self) -> None:
         self._viewmodel.reset_filter_tracks_by_date()
@@ -733,9 +730,6 @@ class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
     def _close(self, _: Any = None) -> None:
         self.destroy()
         self.update()
-
-    def _get_position(self) -> tuple[int, int]:
-        return self.winfo_rootx(), self.winfo_rooty()
 
     def _on_apply_button_clicked(self) -> None:
         self._viewmodel.apply_filter_tracks_by_class(
