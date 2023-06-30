@@ -31,6 +31,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STICKY,
     tk_events,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
 
 @dataclass
@@ -112,6 +113,10 @@ class CanvasBackground(AbstractCanvas):
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_canvas(self)
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
 
     def clear_image(self) -> None:
         if self._current_id:
