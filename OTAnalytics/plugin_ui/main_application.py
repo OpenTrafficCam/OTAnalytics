@@ -10,9 +10,9 @@ from OTAnalytics.application.analysis.intersect import (
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.application import (
     OTAnalyticsApplication,
-    TracksAssignedToFlow,
+    TracksAssignedToSelectedFlows,
     TracksIntersectingSelectedSections,
-    TracksNotAssignedToFlow,
+    TracksNotAssignedToSelectedFlows,
     TracksNotIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import (
@@ -354,7 +354,7 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         pandas_track_provider: PandasDataFrameProvider,
-        tracks_assigned_to_flow: TracksAssignedToFlow,
+        tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
         enable_legend: bool,
     ) -> Plotter:
         filter_by_id = FilterById(
@@ -368,11 +368,11 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         track_repository: TrackRepository,
-        tracks_assigned_to_flow: TracksAssignedToFlow,
+        tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
         pandas_track_provider: PandasDataFrameProvider,
         enable_legend: bool,
     ) -> Plotter:
-        tracks_not_assigned_to_flow = TracksNotAssignedToFlow(
+        tracks_not_assigned_to_flow = TracksNotAssignedToSelectedFlows(
             track_repository, tracks_assigned_to_flow
         )
         filter_by_id = FilterById(
@@ -438,7 +438,7 @@ class ApplicationStarter:
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state, pandas_data_provider, enable_legend=False
         )
-        tracks_assigned_to_flow = TracksAssignedToFlow(
+        tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
             road_user_assigner,
             datastore._event_repository,
             datastore._flow_repository,

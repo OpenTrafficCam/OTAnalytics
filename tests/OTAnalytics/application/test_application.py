@@ -15,9 +15,9 @@ from OTAnalytics.application.application import (
     FlowAlreadyExists,
     IntersectTracksWithSections,
     SectionAlreadyExists,
-    TracksAssignedToFlow,
+    TracksAssignedToSelectedFlows,
     TracksIntersectingSelectedSections,
-    TracksNotAssignedToFlow,
+    TracksNotAssignedToSelectedFlows,
     TracksNotIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import Datastore
@@ -190,7 +190,7 @@ class TestTracksNotIntersectingSelectedSections:
         tracks_intersecting_sections.get_ids.assert_called_once()
 
 
-class TestTracksAssignedToFlow:
+class TestTracksAssignedToSelectedFlows:
     def test_get_ids(self) -> None:
         first_flow_id = FlowId("North-South")
         first_flow = Mock(spec=Flow)
@@ -219,7 +219,7 @@ class TestTracksAssignedToFlow:
         flow_repository = Mock(spec=FlowRepository)
         flow_repository.get_all.return_value = [first_flow, second_flow]
 
-        tracks_assigned_to_flow = TracksAssignedToFlow(
+        tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
             assigner, event_repository, flow_repository, flow_state
         )
         track_ids = list(tracks_assigned_to_flow.get_ids())
@@ -232,7 +232,7 @@ class TestTracksAssignedToFlow:
         assignments.as_list.assert_called_once()
 
 
-class TestTracksNotAssignedToFlow:
+class TestTracksNotAssignedToSelectedFlows:
     def test_get_ids(self) -> None:
         first_track_id = Mock(TrackId)
         first_track = Mock(spec=Track)
@@ -245,10 +245,10 @@ class TestTracksNotAssignedToFlow:
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_all.return_value = [first_track, second_track]
 
-        tracks_assigned_to_flow = Mock(spec=TracksAssignedToFlow)
+        tracks_assigned_to_flow = Mock(spec=TracksAssignedToSelectedFlows)
         tracks_assigned_to_flow.get_ids.return_value = {second_track_id}
 
-        tracks_not_assigned_to_flow = TracksNotAssignedToFlow(
+        tracks_not_assigned_to_flow = TracksNotAssignedToSelectedFlows(
             track_repository, tracks_assigned_to_flow
         )
         track_ids = list(tracks_not_assigned_to_flow.get_ids())
