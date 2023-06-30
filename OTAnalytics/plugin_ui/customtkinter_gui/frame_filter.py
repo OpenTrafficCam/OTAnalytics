@@ -22,6 +22,7 @@ from OTAnalytics.adapter_ui.default_values import (
     DATETIME_FORMAT,
 )
 from OTAnalytics.adapter_ui.dto import DateRangeDto
+from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
@@ -30,6 +31,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STICKY,
     tk_events,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ANCHOR_WEST,
@@ -240,7 +242,7 @@ class FilterTracksByDateFilterButton(FilterButton):
         self.button.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
-class FilterTracksByDatePopup(CTkToplevel):
+class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -362,9 +364,6 @@ class FilterTracksByDatePopup(CTkToplevel):
             last_detection_occurrence = self._viewmodel.get_last_detection_occurrence()
             self.to_date_row.set_datetime(last_detection_occurrence)
 
-    def _get_position(self) -> tuple[int, int]:
-        return self.winfo_rootx(), self.winfo_rooty()
-
     def _on_apply_button_clicked(self) -> None:
         try:
             date_range = DateRange(self.get_start_date(), self.get_end_date())
@@ -373,11 +372,15 @@ class FilterTracksByDatePopup(CTkToplevel):
             print("Filter tracks by date applied.")
             self._close()
         except InvalidDatetimeFormatError as e:
-            InfoBox(message=str(e), initial_position=self._get_position())
+            InfoBox(message=str(e), initial_position=self.get_position())
 
     def _on_reset_button_clicked(self) -> None:
         self._viewmodel.reset_filter_tracks_by_date()
         self._close()
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
 
 
 class DateRow(CTkFrame):
@@ -636,7 +639,7 @@ class FilterTracksbyClassificationButton(FilterButton):
         self.button.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
-class FilterTracksByClassPopup(CTkToplevel):
+class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -728,9 +731,6 @@ class FilterTracksByClassPopup(CTkToplevel):
         self.destroy()
         self.update()
 
-    def _get_position(self) -> tuple[int, int]:
-        return self.winfo_rootx(), self.winfo_rooty()
-
     def _on_apply_button_clicked(self) -> None:
         self._viewmodel.apply_filter_tracks_by_class(
             list(self.treeview_classes.selection())
@@ -741,6 +741,10 @@ class FilterTracksByClassPopup(CTkToplevel):
     def _on_reset_button_clicked(self) -> None:
         self._viewmodel.reset_filter_tracks_by_class()
         self._close()
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
 
 
 class DateRangeSwitcher(CTkFrame):
@@ -793,7 +797,6 @@ class DateRangeSwitcher(CTkFrame):
 
     def _switch_to_next_date_range(self) -> None:
         self._viewmodel.switch_to_next_date_range()
-        pass
 
     def enable(self) -> None:
         self.button_prev_range.configure(

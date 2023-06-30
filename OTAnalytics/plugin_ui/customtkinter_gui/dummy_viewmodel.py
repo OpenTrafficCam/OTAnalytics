@@ -11,6 +11,7 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
+from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
 from OTAnalytics.adapter_ui.view_model import (
@@ -51,7 +52,6 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
     CanvasElementDeleter,
@@ -82,6 +82,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     START_SECTION,
     ToplevelFlows,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import ToplevelProgress
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
@@ -121,6 +122,7 @@ class DummyViewModel(
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
+        self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_sections: Optional[AbstractFrameSections] = None
@@ -254,6 +256,9 @@ class DummyViewModel(
 
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
+
+    def set_window(self, window: AbstractMainWindow) -> None:
+        self._window = window
 
     def _update_selected_videos(self, videos: list[Video]) -> None:
         current_paths = [str(video.get_path()) for video in videos]
@@ -653,7 +658,7 @@ class DummyViewModel(
         current_data = selected_section.to_dict()
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
-        position = get_widget_position(widget=self._canvas)
+        position = self._canvas.get_position()
         self._start_action()
         with contextlib.suppress(CancelAddSection):
             self.__update_section_metadata(selected_section, current_data, position)
@@ -1135,3 +1140,20 @@ class DummyViewModel(
             print(input_values)
         except CancelExportCounts:
             print("User canceled configuration of export")
+
+    def _temporary_showcase_toplevel_progress(self) -> None:
+        # TODO: @randyseng delete this method after instantiating in other places
+        from time import sleep
+
+        if self._window is not None:
+            position = self._window.get_position()
+            goal = 100
+            progressbar = ToplevelProgress(
+                initial_message=f"0 of {goal} videos loaded",
+                initial_position=position,
+            )
+            for i in range(goal):
+                sleep(0.02)
+                progressbar.proceed_to(
+                    (i + 1) / goal, message=f"{i} of {goal} videos loaded"
+                )
