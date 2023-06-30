@@ -250,22 +250,16 @@ class TracksAssignedToFlow(TrackIdProvider):
 
     def get_ids(self) -> Iterable[TrackId]:
         events = self._event_repository.get_all()
-        flows = self._get_selected_flows()
-        selected_flow_ids = self._flow_state.selected_flows.get()
-        assignments = self._assigner.assign(events, flows).as_list()
+        # All flows must be passed to assigner to ensure that a track potentially
+        # belonging to several flows is assigned to the correct one.
+        all_flows = self._flow_repository.get_all()
+        assignments = self._assigner.assign(events, all_flows).as_list()
 
         ids = set()
         for assignment in assignments:
-            if assignment.assignment in selected_flow_ids:
+            if assignment.assignment in self._flow_state.selected_flows.get():
                 ids.add(TrackId(assignment.road_user))
         return ids
-
-    def _get_selected_flows(self) -> list[Flow]:
-        flows = []
-        for id in self._flow_state.selected_flows.get():
-            if flow := self._flow_repository.get(id):
-                flows.append(flow)
-        return flows
 
 
 class TracksNotAssignedToFlow(TrackIdProvider):

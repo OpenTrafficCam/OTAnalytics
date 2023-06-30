@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -211,10 +211,7 @@ class TestTracksNotIntersectingSelectedSections:
 
 
 class TestTracksAssignedToFlow:
-    @patch(
-        "OTAnalytics.application.application.TracksAssignedToFlow._get_selected_flows"
-    )
-    def test_get_ids(self, get_selected_flows: Mock) -> None:
+    def test_get_ids(self) -> None:
         first_flow_id = FlowId("North-South")
         first_flow = Mock(spec=Flow)
         first_flow.id = first_flow_id
@@ -235,13 +232,12 @@ class TestTracksAssignedToFlow:
         assigner = Mock(spec=RoadUserAssigner)
         assigner.assign.return_value = assignments
 
-        get_selected_flows.return_value = [first_flow_id]
-
         event = Mock(spec=Event)
         event_repository = Mock(spec=EventRepository)
         event_repository.get_all.return_value = [event]
 
         flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = [first_flow, second_flow]
 
         tracks_assigned_to_flow = TracksAssignedToFlow(
             assigner, event_repository, flow_repository, flow_state
@@ -250,39 +246,10 @@ class TestTracksAssignedToFlow:
 
         assert track_ids == [TrackId(1)]
         event_repository.get_all.assert_called_once()
-        get_selected_flows.assert_called_once()
-        selected_flows.get.assert_called_once()
-        assigner.assign.assert_called_once_with([event], [first_flow_id])
+        flow_repository.get_all.assert_called_once()
+        assert selected_flows.get.call_count == 2
+        assigner.assign.assert_called_once_with([event], [first_flow, second_flow])
         assignments.as_list.assert_called_once()
-
-    def test_get_selected_flows(self) -> None:
-        first_flow_id = FlowId("North-South")
-        first_flow = Mock(spec=Flow)
-        first_flow.id = first_flow_id
-
-        second_flow_id = FlowId("North-West")
-        second_flow = Mock(spec=Flow)
-        second_flow.id = second_flow_id
-
-        selected_flows = Mock(spec=ObservableProperty)
-        selected_flows.get.return_value = [first_flow_id]
-        flow_state = Mock(spec=FlowState)
-        flow_state.selected_flows = selected_flows
-
-        assigner = Mock(spec=RoadUserAssigner)
-        event_repository = Mock(spec=EventRepository)
-
-        flow_repository = Mock(spec=FlowRepository)
-        flow_repository.get.return_value = first_flow
-
-        tracks_assigned_to_flow = TracksAssignedToFlow(
-            assigner, event_repository, flow_repository, flow_state
-        )
-        flows = tracks_assigned_to_flow._get_selected_flows()
-
-        assert flows == [first_flow]
-        selected_flows.get.assert_called_once()
-        flow_repository.get.assert_called_once_with(first_flow_id)
 
 
 class TestTracksNotAssignedToFlow:
