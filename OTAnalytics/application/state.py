@@ -203,7 +203,7 @@ class TrackViewState:
         self.background_image = ObservableOptionalProperty[TrackImage]()
         self.show_tracks = ObservableOptionalProperty[bool]()
         self.track_offset = ObservableOptionalProperty[RelativeOffsetCoordinate](
-            RelativeOffsetCoordinate(0, 0)
+            RelativeOffsetCoordinate(0.5, 0.5)
         )
         self.filter_element = ObservableProperty[FilterElement](
             FilterElement(DateRange(None, None), None)
@@ -363,6 +363,14 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._update()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
+        self._update()
+
+    def notify_layers(self, _: bool) -> None:
+        """Will update the image
+
+        Args:
+            _ (bool): wether layer is enabled or disabled.
+        """
         self._update()
 
     def _update(self) -> None:

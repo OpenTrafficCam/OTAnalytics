@@ -87,9 +87,6 @@ CLASS_ORDER = [
 ]
 
 
-NUM_MIN_FRAMES = 30
-
-
 class TrackPlotter(ABC):
     """
     Abstraction to plot the background image.
@@ -128,12 +125,10 @@ class PlotterPrototype(Plotter):
         self._track_plotter = track_plotter
 
     def plot(self) -> Optional[TrackImage]:
-        if self._track_view_state.show_tracks.get():
-            return self._track_plotter.plot(
-                width=self.__get_plotting_width(),
-                height=self.__get_plotting_height(),
-            )
-        return None
+        return self._track_plotter.plot(
+            width=self.__get_plotting_width(),
+            height=self.__get_plotting_height(),
+        )
 
     def __get_plotting_height(self) -> int:
         return self._track_view_state.view_height.get()
@@ -188,7 +183,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if data.empty:
             return data
 
-        return self._filter_tracks(NUM_MIN_FRAMES, data)
+        return self._filter_tracks(data)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -212,29 +207,8 @@ class PandasTrackProvider(PandasDataFrameProvider):
             return converted.sort_values([track.TRACK_ID, track.FRAME])
         return converted
 
-    # % Filter length (number of frames)
-    def _min_frames(self, data: DataFrame, min_frames: int = 10) -> list:
-        """
-        Filter tracks by the number of frames.
-
-        Args:
-            data (DataFrame): dataframe containing tracks
-            min_frames (int, optional): minimum number of frames. Defaults to 10.
-
-        Returns:
-            list: tracks with at least the minimum number of frames
-        """
-        tmp = data[[track.FRAME, track.TRACK_ID]]
-        tmp_min_frames = tmp.groupby(track.TRACK_ID).count().reset_index()
-        return [
-            tmp_min_frames.loc[i, track.TRACK_ID]
-            for i in range(len(tmp_min_frames))
-            if tmp_min_frames.loc[i, track.FRAME] >= min_frames
-        ]
-
     def _filter_tracks(
         self,
-        num_min_frames: int,
         track_df: DataFrame,
     ) -> DataFrame:
         """
@@ -242,15 +216,11 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
         Args:
             filter_classes (Iterable[str]): classes to show
-            num_min_frames (int): minimum number of frames of a track to be shown
             track_df (DataFrame): dataframe of tracks
 
         Returns:
             DataFrame: filtered by classes, time and number of images
         """
-        track_df[
-            track_df[track.TRACK_ID].isin(self._min_frames(track_df, num_min_frames))
-        ]
         self._filter_builder.set_classification_column(track.CLASSIFICATION)
         self._filter_builder.set_occurrence_column(track.OCCURRENCE)
         filter_element = self._track_view_state.filter_element.get()
@@ -335,9 +305,11 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._enable_legend = enable_legend
         self._alpha = alpha
 
     def plot(self, axes: Axes) -> None:
@@ -367,6 +339,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             ax=axes,
             palette=COLOR_PALETTE,
             hue_order=CLASS_ORDER,
+            legend=self._enable_legend,
         )
 
 
@@ -376,9 +349,11 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._enable_legend = enable_legend
         self._alpha = alpha
 
     def plot(self, axes: Axes) -> None:
@@ -411,48 +386,11 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             data=track_df_start_end,
             style="type",
             markers=[">", "$x$"],
-            legend=False,
+            legend=self._enable_legend,
             s=15,
             ax=axes,
             palette=COLOR_PALETTE,
         )
-
-
-class SectionGeometryPlotter(MatplotlibPlotterImplementation):
-    """Plot geometry of sections."""
-
-    def __init__(self, datastore: Datastore) -> None:
-        self._datastore = datastore
-
-    def plot(self, axes: Axes) -> None:
-        """
-        Plot sections on the given axes.
-
-        Args:
-            sections (Iterable[Section]): sections to be plotted
-            axes (Axes): axes to plot on
-        """
-        sections = self._datastore.get_all_sections()
-        sectionlist = [section.to_dict() for section in sections]
-        for section in range(len(sectionlist)):
-            x_data = [
-                sectionlist[section][i]["x"]
-                for i in sectionlist[section].keys()
-                if i in ["start", "end"]
-            ]
-            y_data = [
-                sectionlist[section][i]["y"]
-                for i in sectionlist[section].keys()
-                if i in ["start", "end"]
-            ]
-            seaborn.lineplot(
-                x=x_data,
-                y=y_data,
-                linewidth=2,
-                alpha=1,
-                color="black",
-                ax=axes,
-            )
 
 
 class MatplotlibTrackPlotter(TrackPlotter):
