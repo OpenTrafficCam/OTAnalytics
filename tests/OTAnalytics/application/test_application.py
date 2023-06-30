@@ -155,31 +155,17 @@ class TestTracksNotIntersectingSelectedSections:
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_all.return_value = [first_track, second_track]
 
-        first_section_id = Mock(spec=SectionId)
+        tracks_intersecting_sections = Mock(spec=TracksIntersectingSelectedSections)
+        tracks_intersecting_sections.get_ids.return_value = {first_track_id}
 
-        event_first_track_intersecting_first = Mock(spec=Event)
-        event_first_track_intersecting_first.section_id = first_section_id
-        event_first_track_intersecting_first.road_user_id = 1
-
-        section_state = Mock(spec=SectionState)
-        selected_sections = Mock(spec=ObservableProperty)
-        selected_sections.get.return_value = [first_section_id]
-        section_state.selected_sections = selected_sections
-
-        event_repository = Mock(spec=EventRepository)
-        event_repository.get_all.return_value = [
-            event_first_track_intersecting_first,
-        ]
-
-        tracks_intersecting_sections = TracksNotIntersectingSelectedSections(
-            section_state, track_repository, event_repository
+        tracks_not_intersecting_sections = TracksNotIntersectingSelectedSections(
+            tracks_intersecting_sections, track_repository
         )
-        track_ids = list(tracks_intersecting_sections.get_ids())
+        track_ids = list(tracks_not_intersecting_sections.get_ids())
 
         assert track_ids == [second_track_id]
-        assert event_repository.get_all.call_count == 1
         track_repository.get_all.assert_called_once()
-        section_state.selected_sections.get.assert_called_once()
+        tracks_intersecting_sections.get_ids.assert_called_once()
 
     def test_no_selection_returns_all_tracks(self) -> None:
         first_track_id = TrackId(1)
@@ -191,23 +177,17 @@ class TestTracksNotIntersectingSelectedSections:
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_all.return_value = [first_track, second_track]
 
-        section_state = Mock(spec=SectionState)
-        selected_sections = Mock(spec=ObservableProperty)
-        selected_sections.get.return_value = []
-        section_state.selected_sections = selected_sections
+        tracks_intersecting_sections = Mock(spec=TracksIntersectingSelectedSections)
+        tracks_intersecting_sections.get_ids.return_value = {}
 
-        event_repository = Mock(spec=EventRepository)
-        event_repository.get_all.return_value = []
-
-        tracks_intersecting_sections = TracksNotIntersectingSelectedSections(
-            section_state, track_repository, event_repository
+        tracks_not_intersecting_sections = TracksNotIntersectingSelectedSections(
+            tracks_intersecting_sections, track_repository
         )
-        track_ids = list(tracks_intersecting_sections.get_ids())
+        track_ids = list(tracks_not_intersecting_sections.get_ids())
 
         assert track_ids == [first_track_id, second_track_id]
-        event_repository.get_all.assert_not_called()
         track_repository.get_all.assert_called_once()
-        section_state.selected_sections.get.assert_called_once()
+        tracks_intersecting_sections.get_ids.assert_called_once()
 
 
 class TestTracksAssignedToFlow:

@@ -212,27 +212,20 @@ class TracksNotIntersectingSelectedSections(TrackIdProvider):
 
     def __init__(
         self,
-        section_state: SectionState,
+        tracks_intersecting_selected_sections: TracksIntersectingSelectedSections,
         track_repository: TrackRepository,
-        event_repository: EventRepository,
     ) -> None:
-        self._section_state = section_state
+        self._tracks_intersecting_selected_sections = (
+            tracks_intersecting_selected_sections
+        )
         self._track_repository = track_repository
-        self._event_repository = event_repository
 
     def get_ids(self) -> Iterable[TrackId]:
-        selected_sections = self._section_state.selected_sections.get()
         all_track_ids = {track.id for track in self._track_repository.get_all()}
-        intersecting_selected_sections: set[TrackId] = self._get_ids(selected_sections)
-        return all_track_ids - intersecting_selected_sections
-
-    def _get_ids(self, sections: list[SectionId]) -> set[TrackId]:
-        track_ids: set[TrackId] = set()
-        for section_id in sections:
-            for event in self._event_repository.get_all():
-                if event.section_id == section_id:
-                    track_ids.add(TrackId(event.road_user_id))
-        return track_ids
+        tracks_intersecting_selected_sections = set(
+            self._tracks_intersecting_selected_sections.get_ids()
+        )
+        return all_track_ids - tracks_intersecting_selected_sections
 
 
 class TracksAssignedToFlow(TrackIdProvider):

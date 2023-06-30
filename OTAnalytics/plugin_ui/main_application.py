@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Self, Sequence
 
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
@@ -288,35 +288,33 @@ class ApplicationStarter:
     def _create_track_highlight_geometry_plotter(
         self,
         state: TrackViewState,
-        section_state: SectionState,
+        tracks_intersecting_selected_sections: TracksIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
-        event_repository: EventRepository,
         enable_legend: bool,
     ) -> Plotter:
-        track_intersecting_sections = TracksIntersectingSelectedSections(
-            section_state, event_repository
-        )
         filter_by_id = FilterById(
-            pandas_track_provider, id_filter=track_intersecting_sections
+            pandas_track_provider, id_filter=tracks_intersecting_selected_sections
         )
         return self._create_track_geometry_plotter(
             state, filter_by_id, alpha=1, enable_legend=enable_legend
         )
 
+    def _create_tracks_intersecting_selected_sections(
+        self: Self,
+        section_state: SectionState,
+        event_repository: EventRepository,
+    ) -> TracksIntersectingSelectedSections:
+        return TracksIntersectingSelectedSections(section_state, event_repository)
+
     def _create_track_highlight_geometry_plotter_not_intersecting(
         self,
         state: TrackViewState,
-        section_state: SectionState,
+        tracks_not_intersecting_sections: TracksNotIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
-        event_repository: EventRepository,
         enable_legend: bool,
     ) -> Plotter:
-        track_not_intersecting_sections = TracksNotIntersectingSelectedSections(
-            section_state, track_repository, event_repository
-        )
         filter_by_id = FilterById(
-            pandas_track_provider, id_filter=track_not_intersecting_sections
+            pandas_track_provider, id_filter=tracks_not_intersecting_sections
         )
         return self._create_track_geometry_plotter(
             state, filter_by_id, alpha=1, enable_legend=enable_legend
@@ -325,16 +323,12 @@ class ApplicationStarter:
     def _create_start_end_point_tracks_intersecting_sections_plotter(
         self,
         state: TrackViewState,
-        section_state: SectionState,
+        tracks_intersecting_sections: TracksIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
-        event_repository: EventRepository,
         enable_legend: bool,
     ) -> Plotter:
-        track_intersecting_sections = TracksIntersectingSelectedSections(
-            section_state, event_repository
-        )
         filter_by_id = FilterById(
-            pandas_track_provider, id_filter=track_intersecting_sections
+            pandas_track_provider, id_filter=tracks_intersecting_sections
         )
 
         return self._create_track_start_end_point_plotter(
@@ -344,17 +338,12 @@ class ApplicationStarter:
     def _create_start_end_point_tracks_not_intersecting_sections_plotter(
         self,
         state: TrackViewState,
-        section_state: SectionState,
+        tracks_not_intersecting_sections: TracksNotIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
-        event_repository: EventRepository,
         enable_legend: bool,
     ) -> Plotter:
-        track_not_intersecting_sections = TracksNotIntersectingSelectedSections(
-            section_state, track_repository, event_repository
-        )
         filter_by_id = FilterById(
-            pandas_track_provider, id_filter=track_not_intersecting_sections
+            pandas_track_provider, id_filter=tracks_not_intersecting_sections
         )
 
         return self._create_track_start_end_point_plotter(
@@ -373,17 +362,6 @@ class ApplicationStarter:
         )
         return self._create_track_geometry_plotter(
             state, filter_by_id, alpha=1, enable_legend=enable_legend
-        )
-
-    def _create_tracks_assigned_to_flow(
-        self,
-        assigner: RoadUserAssigner,
-        even_repository: EventRepository,
-        flow_repository: FlowRepository,
-        flow_state: FlowState,
-    ) -> TracksAssignedToFlow:
-        return TracksAssignedToFlow(
-            assigner, even_repository, flow_repository, flow_state
         )
 
     def _create_highlight_tracks_not_assigned_to_flow(
@@ -418,48 +396,49 @@ class ApplicationStarter:
         track_geometry_plotter = self._create_track_geometry_plotter(
             track_view_state, pandas_data_provider, alpha=0.2, enable_legend=True
         )
+        tracks_intersecting_sections = TracksIntersectingSelectedSections(
+            section_state, datastore._event_repository
+        )
+        tracks_not_intersecting_sections = TracksNotIntersectingSelectedSections(
+            tracks_intersecting_sections, datastore._track_repository
+        )
+
         highlight_tracks_intersecting_sections = (
             self._create_track_highlight_geometry_plotter(
                 track_view_state,
-                section_state,
+                tracks_intersecting_sections,
                 pandas_data_provider,
-                datastore._event_repository,
                 enable_legend=False,
             )
         )
         highlight_tracks_not_intersecting_sections = (
             self._create_track_highlight_geometry_plotter_not_intersecting(
                 track_view_state,
-                section_state,
+                tracks_not_intersecting_sections,
                 pandas_data_provider,
-                datastore._track_repository,
-                datastore._event_repository,
                 enable_legend=False,
             )
         )
         start_end_points_tracks_intersecting_sections = (
             self._create_start_end_point_tracks_intersecting_sections_plotter(
                 track_view_state,
-                section_state,
+                tracks_intersecting_sections,
                 pandas_data_provider,
-                datastore._event_repository,
                 enable_legend=False,
             )
         )
         start_end_points_tracks_not_intersecting_sections = (
             self._create_start_end_point_tracks_not_intersecting_sections_plotter(
                 track_view_state,
-                section_state,
+                tracks_not_intersecting_sections,
                 pandas_data_provider,
-                datastore._track_repository,
-                datastore._event_repository,
                 enable_legend=False,
             )
         )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state, pandas_data_provider, enable_legend=False
         )
-        tracks_assigned_to_flow = self._create_tracks_assigned_to_flow(
+        tracks_assigned_to_flow = TracksAssignedToFlow(
             road_user_assigner,
             datastore._event_repository,
             datastore._flow_repository,
