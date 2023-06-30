@@ -7,8 +7,10 @@ from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
 )
+from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.application import (
     OTAnalyticsApplication,
+    TracksAssignedToFlow,
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelectedSections,
 )
@@ -106,6 +108,8 @@ class ApplicationStarter:
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
+        flow_state = self._create_flow_state()
+        road_user_assigner = RoadUserAssigner()
 
         pandas_data_provider = self._create_pandas_data_provider(
             datastore, track_view_state
@@ -113,18 +117,19 @@ class ApplicationStarter:
         layers = self._create_layers(
             datastore,
             track_view_state,
+            flow_state,
             section_state,
             pandas_data_provider,
+            road_user_assigner,
         )
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         image_updater = TrackImageUpdater(
-            datastore, track_view_state, section_state, plotter
+            datastore, track_view_state, section_state, flow_state, plotter
         )
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
-        flow_state = self._create_flow_state()
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         tracks_metadata = self._create_tracks_metadata(track_repository)
@@ -355,12 +360,39 @@ class ApplicationStarter:
             state, filter_by_id, enable_legend=enable_legend
         )
 
+    def _create_highlight_tracks_assigned_to_flow(
+        self,
+        state: TrackViewState,
+        pandas_track_provider: PandasDataFrameProvider,
+        tracks_assigned_to_flow: TracksAssignedToFlow,
+        enable_legend: bool,
+    ) -> Plotter:
+        filter_by_id = FilterById(
+            pandas_track_provider, id_filter=tracks_assigned_to_flow
+        )
+        return self._create_track_geometry_plotter(
+            state, filter_by_id, alpha=1, enable_legend=enable_legend
+        )
+
+    def _create_tracks_assigned_to_flow(
+        self,
+        assigner: RoadUserAssigner,
+        even_repository: EventRepository,
+        flow_repository: FlowRepository,
+        flow_state: FlowState,
+    ) -> TracksAssignedToFlow:
+        return TracksAssignedToFlow(
+            assigner, even_repository, flow_repository, flow_state
+        )
+
     def _create_layers(
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
+        flow_state: FlowState,
         section_state: SectionState,
         pandas_data_provider: PandasDataFrameProvider,
+        road_user_assigner: RoadUserAssigner,
     ) -> Sequence[PlottingLayer]:
         background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
 
@@ -408,6 +440,20 @@ class ApplicationStarter:
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state, pandas_data_provider, enable_legend=False
         )
+        tracks_assigned_to_flow = self._create_tracks_assigned_to_flow(
+            road_user_assigner,
+            datastore._event_repository,
+            datastore._flow_repository,
+            flow_state,
+        )
+        highlight_tracks_assigned_to_flow = (
+            self._create_highlight_tracks_assigned_to_flow(
+                track_view_state,
+                pandas_data_provider,
+                tracks_assigned_to_flow,
+                enable_legend=False,
+            )
+        )
         background = PlottingLayer("Background", background_image_plotter, enabled=True)
         all_tracks_layer = PlottingLayer(
             "Show all tracks", track_geometry_plotter, enabled=True
@@ -435,6 +481,11 @@ class ApplicationStarter:
         start_end_point_layer = PlottingLayer(
             "Show start and end point", track_start_end_point_plotter, enabled=True
         )
+        highlight_tracks_assigned_to_flow_layer = PlottingLayer(
+            "Highlight tracks assigned to flow",
+            highlight_tracks_assigned_to_flow,
+            enabled=True,
+        )
 
         return [
             background,
@@ -444,6 +495,7 @@ class ApplicationStarter:
             start_end_point_layer,
             start_end_points_tracks_intersecting_sections_layer,
             start_end_points_tracks_not_intersecting_sections_layer,
+            highlight_tracks_assigned_to_flow_layer,
         ]
 
     def _create_section_state(self) -> SectionState:
