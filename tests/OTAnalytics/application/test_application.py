@@ -17,6 +17,7 @@ from OTAnalytics.application.application import (
     SectionAlreadyExists,
     TracksAssignedToFlow,
     TracksIntersectingSelectedSections,
+    TracksNotAssignedToFlow,
     TracksNotIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import Datastore
@@ -282,3 +283,29 @@ class TestTracksAssignedToFlow:
         assert flows == [first_flow]
         selected_flows.get.assert_called_once()
         flow_repository.get.assert_called_once_with(first_flow_id)
+
+
+class TestTracksNotAssignedToFlow:
+    def test_get_ids(self) -> None:
+        first_track_id = Mock(TrackId)
+        first_track = Mock(spec=Track)
+        first_track.id = first_track_id
+
+        second_track_id = Mock(TrackId)
+        second_track = Mock(spec=Track)
+        second_track.id = second_track_id
+
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_all.return_value = [first_track, second_track]
+
+        tracks_assigned_to_flow = Mock(spec=TracksAssignedToFlow)
+        tracks_assigned_to_flow.get_ids.return_value = {second_track_id}
+
+        tracks_not_assigned_to_flow = TracksNotAssignedToFlow(
+            track_repository, tracks_assigned_to_flow
+        )
+        track_ids = list(tracks_not_assigned_to_flow.get_ids())
+
+        assert track_ids == [first_track_id]
+        track_repository.get_all.assert_called_once()
+        tracks_assigned_to_flow.get_ids.assert_called_once()

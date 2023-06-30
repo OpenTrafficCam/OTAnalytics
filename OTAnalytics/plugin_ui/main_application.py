@@ -12,6 +12,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
     TracksAssignedToFlow,
     TracksIntersectingSelectedSections,
+    TracksNotAssignedToFlow,
     TracksNotIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import (
@@ -385,6 +386,24 @@ class ApplicationStarter:
             assigner, even_repository, flow_repository, flow_state
         )
 
+    def _create_highlight_tracks_not_assigned_to_flow(
+        self,
+        state: TrackViewState,
+        track_repository: TrackRepository,
+        tracks_assigned_to_flow: TracksAssignedToFlow,
+        pandas_track_provider: PandasDataFrameProvider,
+        enable_legend: bool,
+    ) -> Plotter:
+        tracks_not_assigned_to_flow = TracksNotAssignedToFlow(
+            track_repository, tracks_assigned_to_flow
+        )
+        filter_by_id = FilterById(
+            pandas_track_provider, id_filter=tracks_not_assigned_to_flow
+        )
+        return self._create_track_geometry_plotter(
+            state, filter_by_id, alpha=1, enable_legend=enable_legend
+        )
+
     def _create_layers(
         self,
         datastore: Datastore,
@@ -454,6 +473,15 @@ class ApplicationStarter:
                 enable_legend=False,
             )
         )
+        highlight_tracks_not_assigned_to_flow = (
+            self._create_highlight_tracks_not_assigned_to_flow(
+                track_view_state,
+                datastore._track_repository,
+                tracks_assigned_to_flow,
+                pandas_data_provider,
+                enable_legend=False,
+            )
+        )
         background = PlottingLayer("Background", background_image_plotter, enabled=True)
         all_tracks_layer = PlottingLayer(
             "Show all tracks", track_geometry_plotter, enabled=True
@@ -486,6 +514,11 @@ class ApplicationStarter:
             highlight_tracks_assigned_to_flow,
             enabled=True,
         )
+        highlight_tracks_not_assigned_to_flow_layer = PlottingLayer(
+            "Highlight tracks not assigned to flow",
+            highlight_tracks_not_assigned_to_flow,
+            enabled=True,
+        )
 
         return [
             background,
@@ -496,6 +529,7 @@ class ApplicationStarter:
             start_end_points_tracks_intersecting_sections_layer,
             start_end_points_tracks_not_intersecting_sections_layer,
             highlight_tracks_assigned_to_flow_layer,
+            highlight_tracks_not_assigned_to_flow_layer,
         ]
 
     def _create_section_state(self) -> SectionState:

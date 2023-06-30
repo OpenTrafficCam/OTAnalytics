@@ -268,6 +268,22 @@ class TracksAssignedToFlow(TrackIdProvider):
         return flows
 
 
+class TracksNotAssignedToFlow(TrackIdProvider):
+    def __init__(
+        self,
+        track_repository: TrackRepository,
+        tracks_assigned_to_flow: TracksAssignedToFlow,
+    ) -> None:
+        self._tracks_assigned_to_flow = tracks_assigned_to_flow
+        self._track_repository = track_repository
+
+    def get_ids(self) -> Iterable[TrackId]:
+        all_tracks = {track.id for track in self._track_repository.get_all()}
+        tracks_assigned_to_flow = set(self._tracks_assigned_to_flow.get_ids())
+
+        return all_tracks - tracks_assigned_to_flow
+
+
 class OTAnalyticsApplication:
     """
     Entrypoint for calls from the UI.
