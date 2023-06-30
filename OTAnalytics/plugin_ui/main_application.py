@@ -489,35 +489,35 @@ class ApplicationStarter:
         highlight_tracks_intersecting_sections_layer = PlottingLayer(
             "Highlight tracks intersecting sections",
             highlight_tracks_intersecting_sections,
-            enabled=True,
+            enabled=False,
         )
         highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
             "Highlight tracks not intersecting sections",
             highlight_tracks_not_intersecting_sections,
-            enabled=True,
+            enabled=False,
         )
         start_end_points_tracks_intersecting_sections_layer = PlottingLayer(
             "Show start and end point of tracks intersecting sections",
             start_end_points_tracks_intersecting_sections,
-            enabled=True,
+            enabled=False,
         )
         start_end_points_tracks_not_intersecting_sections_layer = PlottingLayer(
             "Show start and end point of tracks not intersecting sections",
             start_end_points_tracks_not_intersecting_sections,
-            enabled=True,
+            enabled=False,
         )
         start_end_point_layer = PlottingLayer(
-            "Show start and end point", track_start_end_point_plotter, enabled=True
+            "Show start and end point", track_start_end_point_plotter, enabled=False
         )
         highlight_tracks_assigned_to_flow_layer = PlottingLayer(
             "Highlight tracks assigned to flow",
             highlight_tracks_assigned_to_flow,
-            enabled=True,
+            enabled=False,
         )
         highlight_tracks_not_assigned_to_flow_layer = PlottingLayer(
             "Highlight tracks not assigned to flow",
             highlight_tracks_not_assigned_to_flow,
-            enabled=True,
+            enabled=False,
         )
 
         return [
