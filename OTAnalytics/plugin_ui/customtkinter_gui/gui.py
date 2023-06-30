@@ -1,6 +1,6 @@
 import tkinter
 import traceback
-from typing import Any
+from typing import Any, Sequence
 
 from customtkinter import (
     CTk,
@@ -96,7 +96,7 @@ class TabviewInputFiles(CTkTabview):
 
 class FrameContent(CTkFrame):
     def __init__(
-        self, master: Any, viewmodel: ViewModel, layers: list[Layer], **kwargs: Any
+        self, master: Any, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
     ) -> None:
         super().__init__(master, **kwargs)
         self._viewmodel = viewmodel
@@ -156,7 +156,7 @@ class OTAnalyticsGui:
     def __init__(
         self,
         view_model: ViewModel,
-        layers: list[Layer],
+        layers: Sequence[Layer],
     ) -> None:
         self._viewmodel = view_model
         self._app: ModifiedCTk = ModifiedCTk(viewmodel=view_model)
