@@ -87,9 +87,6 @@ CLASS_ORDER = [
 ]
 
 
-NUM_MIN_FRAMES = 30
-
-
 class TrackPlotter(ABC):
     """
     Abstraction to plot the background image.
@@ -186,7 +183,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if data.empty:
             return data
 
-        return self._filter_tracks(NUM_MIN_FRAMES, data)
+        return self._filter_tracks(data)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -210,29 +207,8 @@ class PandasTrackProvider(PandasDataFrameProvider):
             return converted.sort_values([track.TRACK_ID, track.FRAME])
         return converted
 
-    # % Filter length (number of frames)
-    def _min_frames(self, data: DataFrame, min_frames: int = 10) -> list:
-        """
-        Filter tracks by the number of frames.
-
-        Args:
-            data (DataFrame): dataframe containing tracks
-            min_frames (int, optional): minimum number of frames. Defaults to 10.
-
-        Returns:
-            list: tracks with at least the minimum number of frames
-        """
-        tmp = data[[track.FRAME, track.TRACK_ID]]
-        tmp_min_frames = tmp.groupby(track.TRACK_ID).count().reset_index()
-        return [
-            tmp_min_frames.loc[i, track.TRACK_ID]
-            for i in range(len(tmp_min_frames))
-            if tmp_min_frames.loc[i, track.FRAME] >= min_frames
-        ]
-
     def _filter_tracks(
         self,
-        num_min_frames: int,
         track_df: DataFrame,
     ) -> DataFrame:
         """
@@ -240,15 +216,11 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
         Args:
             filter_classes (Iterable[str]): classes to show
-            num_min_frames (int): minimum number of frames of a track to be shown
             track_df (DataFrame): dataframe of tracks
 
         Returns:
             DataFrame: filtered by classes, time and number of images
         """
-        track_df[
-            track_df[track.TRACK_ID].isin(self._min_frames(track_df, num_min_frames))
-        ]
         self._filter_builder.set_classification_column(track.CLASSIFICATION)
         self._filter_builder.set_occurrence_column(track.OCCURRENCE)
         filter_element = self._track_view_state.filter_element.get()
