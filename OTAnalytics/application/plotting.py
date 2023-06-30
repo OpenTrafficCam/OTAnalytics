@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import ObservableProperty, Plotter, TrackViewState
@@ -16,6 +16,7 @@ class Layer:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def set_enabled(self, enabled: bool) -> None:
         """Disable or enable the layer.
 
@@ -65,7 +66,7 @@ class PlottingLayer(Plotter, Layer):
 
 
 class LayeredPlotter(Plotter):
-    def __init__(self, layers: list[PlottingLayer]) -> None:
+    def __init__(self, layers: Sequence[PlottingLayer]) -> None:
         self._layers = layers
         self._current_image: Optional[TrackImage] = None
 
