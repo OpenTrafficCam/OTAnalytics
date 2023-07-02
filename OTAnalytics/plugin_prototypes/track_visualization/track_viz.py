@@ -202,10 +202,22 @@ class PandasTrackProvider(PandasDataFrameProvider):
                 detection_dict[track.CLASSIFICATION] = current_track.classification
                 prepared.append(detection_dict)
 
-        converted = DataFrame(prepared)
-        if (track.TRACK_ID in converted.columns) and (track.FRAME in converted.columns):
-            return converted.sort_values([track.TRACK_ID, track.FRAME])
-        return converted
+        return self._sort_tracks(DataFrame(prepared))
+
+    def _sort_tracks(self, track_df: DataFrame) -> DataFrame:
+        """Sort the given dataframe by trackId and frame,
+        if both collumns are available.
+
+        Args:
+            track_df (DataFrame): dataframe of tracks
+
+        Returns:
+            DataFrame: sorted dataframe by track id and frame
+        """
+        if (track.TRACK_ID in track_df.columns) and (track.FRAME in track_df.columns):
+            return track_df.sort_values([track.TRACK_ID, track.FRAME])
+        else:
+            return track_df
 
     def _filter_tracks(
         self,
@@ -277,9 +289,21 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
             DataFrame: a dataframe containing the detections of the given tracks.
         """
         if self._cache_df.empty:
-            self._cache_df = super()._convert_tracks(tracks)
+            self._cache_df = self.__do_convert_tracks(tracks)
 
         return self._cache_df
+
+    def __do_convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
+        """Internal method to convert the given tracks
+            to dataframe format without caching.
+
+        Args:
+            tracks (Iterable[Track]): the tracks to be converted.
+
+        Returns:
+            DataFrame: the dataframe representation of the given tracks.
+        """
+        return super()._convert_tracks(tracks)
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """Take notice of some change in the track repository.
@@ -288,7 +312,31 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         Args:
             tracks (list[TrackId]): the ids of changed tracks
         """
-        self._cache_df = DataFrame()
+        match (tracks):
+            case None:
+                self._cache_df = DataFrame()
+            case []:
+                self._cache_df = DataFrame()
+            case _:
+                new_tracks = [
+                    self._datastore._track_repository.get_for(t)
+                    for t in tracks
+                    if self._cache_df.empty or t not in self._cache_df[track.TRACK_ID]
+                ]
+
+                # convert tracks not yet in cache
+                new_df = self.__do_convert_tracks(
+                    [t for t in new_tracks if t is not None]
+                )
+
+                if not self._cache_df.empty:
+                    # remove given tracks from cache
+                    df = self._cache_df[~self._cache_df[track.TRACK_ID].isin(tracks)]
+                    df = pandas.concat([df, new_df], ignore_index=True)
+                else:
+                    df = new_df
+
+                self._cache_df = self._sort_tracks(df)
 
 
 class MatplotlibPlotterImplementation(ABC):
