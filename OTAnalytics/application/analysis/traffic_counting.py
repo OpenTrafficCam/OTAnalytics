@@ -9,6 +9,10 @@ from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import TrackId, TrackRepository
 
+UNCLASSIFIED = "unclassified"
+CLASSIFICATION = "classification"
+LEVEL_FLOW = "flow"
+
 
 @dataclass(frozen=True)
 class EventPair:
@@ -163,9 +167,6 @@ class Count(ABC):
         raise NotImplementedError
 
 
-LEVEL_FLOW = "flow"
-
-
 @dataclass(frozen=True)
 class CountByFlow(Count):
     """
@@ -239,10 +240,6 @@ class Splitter(ABC):
             SplitId: id of the split
         """
         raise NotImplementedError
-
-
-UNCLASSIFIED = "unclassified"
-CLASSIFICATION = "classification"
 
 
 class ModeSplitter(Splitter):
