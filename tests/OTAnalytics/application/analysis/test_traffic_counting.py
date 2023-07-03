@@ -4,6 +4,8 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.analysis.traffic_counting import (
+    LEVEL_CLASSIFICATION,
+    UNCLASSIFIED,
     Count,
     CountableAssignments,
     CountByFlow,
@@ -11,6 +13,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Exporter,
     ExporterFactory,
     ExportTrafficCounting,
+    ModeSplitter,
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
@@ -23,8 +26,47 @@ from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track import Track, TrackId, TrackRepository
 from OTAnalytics.domain.types import EventType
+from tests.conftest import TrackBuilder
+
+
+@pytest.fixture
+def track(track_builder: TrackBuilder) -> Track:
+    track_builder.add_occurrence(2000, 1, 2, 0, 0, 0, 0)
+    track_builder.append_detection()
+    track_builder.append_detection()
+    track_builder.append_detection()
+    track_builder.append_detection()
+    track_builder.append_detection()
+    return track_builder.build_track()
+
+
+class TestModeSplitter:
+    def test_group_name_existing_track(self, track: Track) -> None:
+        flow_id = FlowId("0")
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_for.return_value = track
+        assignment = RoadUserAssignment(track.id.id, flow_id)
+        splitter = ModeSplitter(track_repository)
+
+        group_name = splitter.group_name(assignment)
+
+        assert group_name == SingleId(
+            level=LEVEL_CLASSIFICATION, id=track.classification
+        )
+
+    def test_group_name_missing_track(self) -> None:
+        track_id = 1
+        flow_id = FlowId("0")
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_for.return_value = None
+        assignment = RoadUserAssignment(track_id, flow_id)
+        splitter = ModeSplitter(track_repository)
+
+        group_name = splitter.group_name(assignment)
+
+        assert group_name == SingleId(level=LEVEL_CLASSIFICATION, id=UNCLASSIFIED)
 
 
 def create_event(

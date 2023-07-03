@@ -9,9 +9,9 @@ from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import TrackId, TrackRepository
 
-UNCLASSIFIED = "unclassified"
-CLASSIFICATION = "classification"
 LEVEL_FLOW = "flow"
+LEVEL_CLASSIFICATION = "classification"
+UNCLASSIFIED = "unclassified"
 
 
 @dataclass(frozen=True)
@@ -262,7 +262,7 @@ class ModeSplitter(Splitter):
         """
         track = self._track_repository.get_for(TrackId(assignment.road_user))
         split_id = track.classification if track else UNCLASSIFIED
-        return SingleId(level=CLASSIFICATION, id=split_id)
+        return SingleId(level=LEVEL_CLASSIFICATION, id=split_id)
 
 
 class CountableAssignments:
