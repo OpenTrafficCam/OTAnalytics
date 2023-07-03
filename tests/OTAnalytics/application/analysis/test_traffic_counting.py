@@ -43,45 +43,6 @@ def track(track_builder: TrackBuilder) -> Track:
     return track_builder.build_track()
 
 
-class TestModeSplitter:
-    def test_group_name_existing_track(self, track: Track) -> None:
-        flow_id = FlowId("0")
-        first_event = Mock(spec=Event)
-        second_event = Mock(spec=Event)
-        track_repository = Mock(spec=TrackRepository)
-        track_repository.get_for.return_value = track
-        assignment = RoadUserAssignment(
-            track.id.id,
-            flow_id,
-            EventPair(first_event, second_event),
-        )
-        splitter = ModeSplitter(track_repository)
-
-        group_name = splitter.group_name(assignment)
-
-        assert group_name == SingleId(
-            level=LEVEL_CLASSIFICATION, id=track.classification
-        )
-
-    def test_group_name_missing_track(self) -> None:
-        track_id = 1
-        flow_id = FlowId("0")
-        first_event = Mock(spec=Event)
-        second_event = Mock(spec=Event)
-        track_repository = Mock(spec=TrackRepository)
-        track_repository.get_for.return_value = None
-        assignment = RoadUserAssignment(
-            track_id,
-            flow_id,
-            EventPair(first_event, second_event),
-        )
-        splitter = ModeSplitter(track_repository)
-
-        group_name = splitter.group_name(assignment)
-
-        assert group_name == SingleId(level=LEVEL_CLASSIFICATION, id=UNCLASSIFIED)
-
-
 def create_event(
     track_id: TrackId,
     section: SectionId,
@@ -415,6 +376,45 @@ class TestRoadUserAssignment:
                 second_groupd: CountableAssignments([bike_assignment]),
             }
         )
+
+
+class TestModeSplitter:
+    def test_group_name_existing_track(self, track: Track) -> None:
+        flow_id = FlowId("0")
+        first_event = Mock(spec=Event)
+        second_event = Mock(spec=Event)
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_for.return_value = track
+        assignment = RoadUserAssignment(
+            track.id.id,
+            flow_id,
+            EventPair(first_event, second_event),
+        )
+        splitter = ModeSplitter(track_repository)
+
+        group_name = splitter.group_name(assignment)
+
+        assert group_name == SingleId(
+            level=LEVEL_CLASSIFICATION, id=track.classification
+        )
+
+    def test_group_name_missing_track(self) -> None:
+        track_id = 1
+        flow_id = FlowId("0")
+        first_event = Mock(spec=Event)
+        second_event = Mock(spec=Event)
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_for.return_value = None
+        assignment = RoadUserAssignment(
+            track_id,
+            flow_id,
+            EventPair(first_event, second_event),
+        )
+        splitter = ModeSplitter(track_repository)
+
+        group_name = splitter.group_name(assignment)
+
+        assert group_name == SingleId(level=LEVEL_CLASSIFICATION, id=UNCLASSIFIED)
 
 
 class TestCountableAssignments:
