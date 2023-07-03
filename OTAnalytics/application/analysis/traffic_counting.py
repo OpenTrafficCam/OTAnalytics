@@ -135,7 +135,7 @@ class ModeSplitter(Splitter):
         return SingleId(level=CLASSIFICATION, id=split_id)
 
 
-class CountableRoadUserAssignments:
+class CountableAssignments:
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()
 
@@ -178,18 +178,16 @@ class CountableRoadUserAssignments:
         return hash(self._assignments)
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, CountableRoadUserAssignments):
+        if isinstance(other, CountableAssignments):
             return self._assignments == other._assignments
         return False
 
     def __repr__(self) -> str:
-        return CountableRoadUserAssignments.__name__ + repr(self._assignments)
+        return CountableAssignments.__name__ + repr(self._assignments)
 
 
 class SplittedAssignments:
-    def __init__(
-        self, assignments: dict[SplitId, CountableRoadUserAssignments]
-    ) -> None:
+    def __init__(self, assignments: dict[SplitId, CountableAssignments]) -> None:
         self._assignments = assignments
 
     def count(self, flows: list[Flow]) -> Count:
@@ -222,10 +220,7 @@ class RoadUserAssignments:
             group_name = by.group_name(assignment)
             splitted[group_name].append(assignment)
         return SplittedAssignments(
-            {
-                key: CountableRoadUserAssignments(value)
-                for key, value in splitted.items()
-            }
+            {key: CountableAssignments(value) for key, value in splitted.items()}
         )
 
     def as_list(self) -> list[RoadUserAssignment]:

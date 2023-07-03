@@ -5,7 +5,7 @@ import pytest
 
 from OTAnalytics.application.analysis.traffic_counting import (
     Count,
-    CountableRoadUserAssignments,
+    CountableAssignments,
     CountingSpecificationDto,
     Exporter,
     ExporterFactory,
@@ -277,13 +277,13 @@ class TestRoadUserAssignment:
 
         assert splitted == SplittedAssignments(
             {
-                first_groupd: CountableRoadUserAssignments([car_assignment]),
-                second_groupd: CountableRoadUserAssignments([bike_assignment]),
+                first_groupd: CountableAssignments([car_assignment]),
+                second_groupd: CountableAssignments([bike_assignment]),
             }
         )
 
 
-class TestCountableRoadUserAssignments:
+class TestCountableAssignments:
     @pytest.mark.parametrize(
         "assignments, flows, expected_result", create_counting_test_cases()
     )
@@ -293,7 +293,7 @@ class TestCountableRoadUserAssignments:
         flows: list[Flow],
         expected_result: dict,
     ) -> None:
-        counter = CountableRoadUserAssignments(assignments)
+        counter = CountableAssignments(assignments)
         result = counter.count(flows)
 
         assert result == expected_result
