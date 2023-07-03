@@ -396,7 +396,7 @@ class ExportTrafficCounting:
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)
         splitter = self._splitter_factory.create_splitter(specification)
-        splitted_assignments = assigned_flows.split(by=splitter)
+        splitted_assignments = assigned_flows.split(splitter)
         counts = GroupedCount(
             {
                 split_id: assignment.count(flows)
