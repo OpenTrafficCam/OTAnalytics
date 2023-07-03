@@ -296,9 +296,11 @@ class RoadUserAssigner:
             list[tuple[SectionId, SectionId]]: section pairs
         """
         candidates: list[EventPair] = []
-        for start in events:
+        for index, start in enumerate(events):
             candidates.extend(
-                EventPair(start=start, end=end) for end in events if end != start
+                EventPair(start=start, end=end)
+                for end in events[index + 1 :]
+                if end != start
             )
         return candidates
 

@@ -121,6 +121,11 @@ def create_assignment_test_cases() -> list[tuple]:
         create_event(first_track, south_section_id, 0),
     ]
     single_track_single_sections_result: RoadUserAssignments = RoadUserAssignments([])
+    track_without_match_events = [
+        create_event(first_track, west_section_id, 0),
+        create_event(first_track, south_section_id, 1),
+    ]
+    track_without_match_result = RoadUserAssignments([])
     return [
         (some_events, flows, some_expected_result),
         (
@@ -132,6 +137,11 @@ def create_assignment_test_cases() -> list[tuple]:
             single_track_single_sections_events,
             flows,
             single_track_single_sections_result,
+        ),
+        (
+            track_without_match_events,
+            flows,
+            track_without_match_result,
         ),
     ]
 
