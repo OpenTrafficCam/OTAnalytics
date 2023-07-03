@@ -204,16 +204,14 @@ def create_counting_test_cases() -> list[tuple]:
     )
     flows: list[Flow] = [south_to_north, south_to_west, south_to_east, north_to_south]
 
-    some_assignments: RoadUserAssignments = RoadUserAssignments(
-        [
-            RoadUserAssignment(first_track.id, south_to_west_id),
-            RoadUserAssignment(second_track.id, south_to_west_id),
-            RoadUserAssignment(third_track.id, south_to_west_id),
-            RoadUserAssignment(forth_track.id, south_to_west_id),
-            RoadUserAssignment(fifth_track.id, north_to_south_id),
-            RoadUserAssignment(sixth_track.id, north_to_south_id),
-        ]
-    )
+    some_assignments: list[RoadUserAssignment] = [
+        RoadUserAssignment(first_track.id, south_to_west_id),
+        RoadUserAssignment(second_track.id, south_to_west_id),
+        RoadUserAssignment(third_track.id, south_to_west_id),
+        RoadUserAssignment(forth_track.id, south_to_west_id),
+        RoadUserAssignment(fifth_track.id, north_to_south_id),
+        RoadUserAssignment(sixth_track.id, north_to_south_id),
+    ]
     some_expected_result = SimpleCount(
         {
             south_to_north_id: 0,
@@ -222,9 +220,9 @@ def create_counting_test_cases() -> list[tuple]:
             south_to_east_id: 0,
         }
     )
-    single_assignment = RoadUserAssignments(
-        [RoadUserAssignment(first_track.id, south_to_east_id)]
-    )
+    single_assignment: list[RoadUserAssignment] = [
+        RoadUserAssignment(first_track.id, south_to_east_id)
+    ]
     single_assignment_result = SimpleCount(
         {
             south_to_north_id: 0,
@@ -233,7 +231,7 @@ def create_counting_test_cases() -> list[tuple]:
             south_to_east_id: 1,
         }
     )
-    no_assignment: RoadUserAssignments = RoadUserAssignments([])
+    no_assignment: list[RoadUserAssignment] = []
     no_assignment_result = SimpleCount(
         {
             south_to_north_id: 0,
@@ -274,20 +272,20 @@ class TestRoadUserAssignment:
 
 
 # TODO transform following tests to CountableRoadUserAssignments
-# class TestSimpleCounter:
-#     @pytest.mark.parametrize(
-#         "assignments, flows, expected_result", create_counting_test_cases()
-#     )
-#     def test_run(
-#         self,
-#         assignments: RoadUserAssignments,
-#         flows: list[Flow],
-#         expected_result: dict,
-#     ) -> None:
-#         analysis = SimpleCounter()
-#         result = analysis.count(assignments, flows)
+class TestCountableRoadUserAssignments:
+    @pytest.mark.parametrize(
+        "assignments, flows, expected_result", create_counting_test_cases()
+    )
+    def test_run(
+        self,
+        assignments: list[RoadUserAssignment],
+        flows: list[Flow],
+        expected_result: dict,
+    ) -> None:
+        counter = CountableRoadUserAssignments(assignments)
+        result = counter.count(flows)
 
-#         assert result == expected_result
+        assert result == expected_result
 
 
 # class TestTrafficCounting:
