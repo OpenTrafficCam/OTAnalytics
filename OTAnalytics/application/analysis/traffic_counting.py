@@ -12,12 +12,20 @@ from OTAnalytics.domain.track import TrackId, TrackRepository
 
 @dataclass(frozen=True)
 class EventPair:
+    """
+    Pair of events of one track to find a matching flow.
+    """
+
     start: Event
     end: Event
 
 
 @dataclass(frozen=True)
 class FlowCandidate:
+    """
+    Possible candidate to match a flow with a track.
+    """
+
     flow: Flow
     candidate: EventPair
 
@@ -29,16 +37,39 @@ class FlowCandidate:
 
 
 class SplitId(ABC):
+    """
+    Id class to be used to identify assignments for flows.
+    """
+
     @abstractmethod
     def combine(self, other: "SplitId") -> "SplitId":
+        """
+        Combine two ids to a one id.
+
+        Args:
+            other (SplitId): id to combine with
+
+        Returns:
+            SplitId: combined id
+        """
         raise NotImplementedError
 
     @abstractmethod
     def ids(self) -> list["SplitId"]:
+        """
+        List all ids this id consists of.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def as_dict(self) -> dict[str, str]:
+        """
+        Provide a single dictionary containing the levels and names of the contained
+        ids.
+
+        Returns:
+            dict[str, str]: dictionary of levels and names of ids
+        """
         raise NotImplementedError
 
 
@@ -47,13 +78,32 @@ class CombinedId(SplitId):
     id: list[SplitId]
 
     def combine(self, other: SplitId) -> SplitId:
+        """
+        Append other id to this one and return a new id object.
+
+        Args:
+            other (SplitId): id to combine with
+
+        Returns:
+            SplitId: combined id
+        """
         combined_ids: list[SplitId] = self.ids() + other.ids()
         return CombinedId(id=combined_ids)
 
     def ids(self) -> list[SplitId]:
+        """
+        List all ids this id consists of.
+        """
         return self.id.copy()
 
     def as_dict(self) -> dict[str, str]:
+        """
+        Provide a single dictionary containing the levels and names of the contained
+        ids.
+
+        Returns:
+            dict[str, str]: dictionary of levels and names of ids
+        """
         result: dict[str, str] = {}
         for id in self.id:
             result |= id.as_dict()
@@ -69,38 +119,91 @@ class SingleId(SplitId):
     id: str
 
     def combine(self, other: SplitId) -> SplitId:
+        """
+        Append other id to this one and return a new id object.
+
+        Args:
+            other (SplitId): id to combine with
+
+        Returns:
+            SplitId: combined id
+        """
         return CombinedId(self.ids() + other.ids())
 
     def ids(self) -> list[SplitId]:
+        """
+        List all ids this id consists of.
+        """
         return [self]
 
     def as_dict(self) -> dict[str, str]:
+        """
+        Provide a single dictionary containing the level and name of the id.
+
+        Returns:
+            dict[str, str]: dictionary of level and name of this ids
+        """
         return {self.level: self.id}
 
 
 @dataclass(frozen=True)
 class Count(ABC):
+    """
+    Represents the result of counting traffic assigned to flows.
+    """
+
     @abstractmethod
     def to_dict(self) -> dict[SplitId, int]:
-        pass
+        """
+        Convert the count into a serializable dictionary.
+
+        Returns:
+            dict[SplitId, int]: serializable counts
+        """
+        raise NotImplementedError
+
+
+LEVEL_FLOW = "flow"
 
 
 @dataclass(frozen=True)
 class SimpleCount(Count):
+    """
+    Class represents the counts of a single flow. Every flow is counted separately.
+    The level of this count is LEVEL_FLOW
+    """
+
     result: dict[FlowId, int]
 
     def to_dict(self) -> dict[SplitId, int]:
+        """
+        Convert the count into a serializable dictionary.
+
+        Returns:
+            dict[SplitId, int]: serializable counts
+        """
         return {
-            SingleId(level="flow", id=id.serialize()): value
+            SingleId(level=LEVEL_FLOW, id=id.serialize()): value
             for id, value in self.result.items()
         }
 
 
 @dataclass(frozen=True)
 class GroupedCount(Count):
+    """
+    Group various Count objects by SplitId.
+    """
+
     result: dict[SplitId, Count]
 
     def to_dict(self) -> dict[SplitId, int]:
+        """
+        Convert the count into a serializable dictionary.
+
+        Returns:
+            dict[SplitId, int]: serializable counts
+        """
+
         result: dict[SplitId, int] = {}
         for split_id, sub_result in self.result.items():
             sub_dict: dict[SplitId, int] = sub_result.to_dict()
@@ -111,13 +214,30 @@ class GroupedCount(Count):
 
 @dataclass(frozen=True)
 class RoadUserAssignment:
+    """
+    Assignment of a road user to a flow.
+    """
+
     road_user: int
     assignment: FlowId
 
 
 class Splitter(ABC):
+    """
+    Interface to split road user assignments into groups, e.g. by mode.
+    """
+
     @abstractmethod
     def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+        """
+        Determine a group name for the assignment, e.g. mode of the track.
+
+        Args:
+            assignment (RoadUserAssignment): assignment to determine the group name for
+
+        Returns:
+            SplitId: id of the split
+        """
         raise NotImplementedError
 
 
@@ -126,20 +246,46 @@ CLASSIFICATION = "classification"
 
 
 class ModeSplitter(Splitter):
+    """
+    Split RoadUserAssignments by mode.
+    """
+
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
     def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+        """
+        Group name for classification of a track or UNCLASSIFIED.
+
+        Args:
+            assignment (RoadUserAssignment): assignment to determine the group name for
+
+        Returns:
+            SplitId: id of the split
+        """
         track = self._track_repository.get_for(TrackId(assignment.road_user))
         split_id = track.classification if track else UNCLASSIFIED
         return SingleId(level=CLASSIFICATION, id=split_id)
 
 
 class CountableAssignments:
+    """
+    Class to represent countable road users.
+    """
+
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()
 
     def count(self, flows: list[Flow]) -> Count:
+        """
+        Count the assignments. Flow without an assignment are assigned a zero count.
+
+        Args:
+            flows (list[Flow]): flows to count for
+
+        Returns:
+            Count: traffic counts per flow
+        """
         counts = self.__count_per_flow()
         self.__fill_empty_flows(flows, counts)
         return SimpleCount(counts)
@@ -187,10 +333,23 @@ class CountableAssignments:
 
 
 class SplittedAssignments:
+    """
+    Represents a group of CountableAssignments by their id.
+    """
+
     def __init__(self, assignments: dict[SplitId, CountableAssignments]) -> None:
         self._assignments = assignments
 
     def count(self, flows: list[Flow]) -> Count:
+        """
+        Count per assignment and assign the result to the respective id.
+
+        Args:
+            flows (list[Flow]): flows to count for
+
+        Returns:
+            Count: traffic counts per SplitId
+        """
         return GroupedCount(
             {
                 split_id: assignment.count(flows)
@@ -211,10 +370,24 @@ class SplittedAssignments:
 
 
 class RoadUserAssignments:
+    """
+    Represents a group of RoadUserAssignment objects.
+    """
+
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()
 
     def split(self, by: Splitter) -> SplittedAssignments:
+        """
+        Split the assignments using the given splitter. Each assignment is assigned to
+        exactly one part.
+
+        Args:
+            by (Splitter): splitter to determine the group name
+
+        Returns:
+            SplittedAssignments: group of RoadUserAssignments splitted by group name
+        """
         splitted: dict[SplitId, list[RoadUserAssignment]] = defaultdict(list)
         for assignment in self._assignments:
             group_name = by.group_name(assignment)
@@ -224,6 +397,12 @@ class RoadUserAssignments:
         )
 
     def as_list(self) -> list[RoadUserAssignment]:
+        """
+        Retrieves a copy of the contained assignments.
+
+        Returns:
+            list[RoadUserAssignment]: a copy of the assignments
+        """
         return self._assignments.copy()
 
     def __hash__(self) -> int:
@@ -239,7 +418,21 @@ class RoadUserAssignments:
 
 
 class RoadUserAssigner:
+    """
+    Class to assign tracks to flows.
+    """
+
     def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
+        """
+        Assign each track to exactly one flow.
+
+        Args:
+            events (Iterable[Event]): events to be used during assignment
+            flows (list[Flow]): flows to assign tracks to
+
+        Returns:
+            RoadUserAssignments: group of RoadUserAssignment objects
+        """
         grouped_flows = self.__group_flows_by_sections(flows)
         grouped_sections = self.__group_events_by_road_user(events)
         return self.__assign_user_to_flow(grouped_flows, grouped_sections)
@@ -378,35 +571,93 @@ class RoadUserAssigner:
 
 @dataclass(frozen=True)
 class CountingSpecificationDto:
+    """
+    Data transfer object to represent the counting.
+    """
+
     interval_in_minutes: int
     format: str
     output_file: str
 
 
 class SplitterFactory(ABC):
+    """
+    Factory interface to create a Splitter based on the given CountingSpecificationDto.
+    """
+
     def create_splitter(self, specification: CountingSpecificationDto) -> Splitter:
+        """
+        Create a Splitter based on the given CountingSpecificationDto.
+
+        Args:
+            specification (CountingSpecificationDto): specification to create a
+            splitter for
+
+        Returns:
+            Splitter: Splitter matching the given specification
+        """
         raise NotImplementedError
 
 
 class SimpleSplitterFactory(SplitterFactory):
+    """
+    Factory to create Splitter for a given CountingSpecification.
+    """
+
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
     def create_splitter(self, specification: CountingSpecificationDto) -> Splitter:
+        """
+        Create a splitter for the given CountingSpecificationDto.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the Splitter
+
+        Returns:
+            Splitter: Splitter specifiec by the given CountingSpecificationDto
+        """
         return ModeSplitter(self._track_repository)
 
 
 class Exporter(ABC):
+    """
+    Interface to abstract various export formats.
+    """
+
     def export(self, counts: Count) -> None:
+        """
+        Export the given counts.
+
+        Args:
+            counts (Count): counts to export
+        """
         raise NotImplementedError
 
 
 class ExporterFactory(ABC):
+    """
+    Factory to create the exporter for the given CountingSpecificationDto.
+    """
+
     def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
+        """
+        Create the exporter for the given CountingSpecificationDto.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the Exporter
+
+        Returns:
+            Exporter: Exporter to export counts
+        """
         raise NotImplementedError
 
 
 class ExportTrafficCounting:
+    """
+    Use case to export traffic countings.
+    """
+
     def __init__(
         self,
         event_repository: EventRepository,
@@ -422,6 +673,12 @@ class ExportTrafficCounting:
         self._exporter_factory = exporter_factory
 
     def export(self, specification: CountingSpecificationDto) -> None:
+        """
+        Export the traffic countings based on the currently available evens and flows.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the export
+        """
         events = self._event_repository.get_all()
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)
