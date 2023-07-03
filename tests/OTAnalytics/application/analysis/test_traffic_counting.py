@@ -6,6 +6,7 @@ import pytest
 from OTAnalytics.application.analysis.traffic_counting import (
     Count,
     CountableAssignments,
+    CountByFlow,
     CountingSpecificationDto,
     Exporter,
     ExporterFactory,
@@ -13,7 +14,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
-    SimpleCount,
     SingleId,
     SplittedAssignments,
     Splitter,
@@ -220,7 +220,7 @@ def create_counting_test_cases() -> list[tuple]:
         RoadUserAssignment(fifth_track.id, north_to_south_id),
         RoadUserAssignment(sixth_track.id, north_to_south_id),
     ]
-    some_expected_result = SimpleCount(
+    some_expected_result = CountByFlow(
         {
             south_to_north_id: 0,
             north_to_south_id: 2,
@@ -231,7 +231,7 @@ def create_counting_test_cases() -> list[tuple]:
     single_assignment: list[RoadUserAssignment] = [
         RoadUserAssignment(first_track.id, south_to_east_id)
     ]
-    single_assignment_result = SimpleCount(
+    single_assignment_result = CountByFlow(
         {
             south_to_north_id: 0,
             north_to_south_id: 0,
@@ -240,7 +240,7 @@ def create_counting_test_cases() -> list[tuple]:
         }
     )
     no_assignment: list[RoadUserAssignment] = []
-    no_assignment_result = SimpleCount(
+    no_assignment_result = CountByFlow(
         {
             south_to_north_id: 0,
             north_to_south_id: 0,

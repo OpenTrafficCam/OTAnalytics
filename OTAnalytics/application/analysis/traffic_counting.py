@@ -167,7 +167,7 @@ LEVEL_FLOW = "flow"
 
 
 @dataclass(frozen=True)
-class SimpleCount(Count):
+class CountByFlow(Count):
     """
     Class represents the counts of a single flow. Every flow is counted separately.
     The level of this count is LEVEL_FLOW
@@ -288,7 +288,7 @@ class CountableAssignments:
         """
         counts = self.__count_per_flow()
         self.__fill_empty_flows(flows, counts)
-        return SimpleCount(counts)
+        return CountByFlow(counts)
 
     def __count_per_flow(self) -> dict[FlowId, int]:
         """
