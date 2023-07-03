@@ -463,7 +463,8 @@ class RoadUserAssigner:
             dict[int, list[SectionId]]: sections grouped by user
         """
         events_by_road_user: dict[int, list[Event]] = defaultdict(list)
-        for event in events:
+        sorted_events = sorted(events, key=lambda event: event.occurrence)
+        for event in sorted_events:
             if event.section_id:
                 events_by_road_user[event.road_user_id].append(event)
         return events_by_road_user
