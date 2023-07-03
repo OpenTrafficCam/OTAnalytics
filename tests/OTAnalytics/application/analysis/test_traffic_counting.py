@@ -15,6 +15,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     RoadUserAssignments,
     SimpleCount,
     SingleId,
+    SplittedAssignments,
     Splitter,
     SplitterFactory,
 )
@@ -264,18 +265,22 @@ def create_counting_test_cases() -> list[tuple]:
 
 class TestRoadUserAssignment:
     def test_split(self) -> None:
+        first_groupd = SingleId(level="mode", id="car")
+        second_groupd = SingleId(level="mode", id="bike")
         car_assignment = Mock(spec=RoadUserAssignment)
         bike_assignment = Mock(spec=RoadUserAssignment)
         mode = Mock(spec=Splitter)
-        mode.group_name.side_effect = ["car", "bike"]
+        mode.group_name.side_effect = [first_groupd, second_groupd]
         assignments = RoadUserAssignments([car_assignment, bike_assignment])
 
         splitted = assignments.split(by=mode)
 
-        assert splitted == {
-            "car": CountableRoadUserAssignments([car_assignment]),
-            "bike": CountableRoadUserAssignments([bike_assignment]),
-        }
+        assert splitted == SplittedAssignments(
+            {
+                first_groupd: CountableRoadUserAssignments([car_assignment]),
+                second_groupd: CountableRoadUserAssignments([bike_assignment]),
+            }
+        )
 
 
 class TestCountableRoadUserAssignments:
@@ -306,16 +311,14 @@ class TestTrafficCounting:
         events: list[Event] = []
         flows: list[Flow] = []
         assignments = Mock(spec=RoadUserAssignments)
-        countable_assignments = Mock(spec=CountableRoadUserAssignments)
+        splitted_assignments = Mock(spec=SplittedAssignments)
         counts = Mock(spec=Count)
         event_repository.get_all.return_value = events
         flow_repository.get_all.return_value = flows
         road_user_assigner.assign.return_value = assignments
         splitter_factory.create_splitter.return_value = splitter
-        assignments.split.return_value = {
-            SingleId(level="flow", id="mocked"): countable_assignments
-        }
-        countable_assignments.count.return_value = counts
+        assignments.split.return_value = splitted_assignments
+        splitted_assignments.count.return_value = counts
         exporter_factory.create_exporter.return_value = exporter
         specification = CountingSpecificationDto(
             interval_in_minutes=15,
@@ -337,6 +340,6 @@ class TestTrafficCounting:
         road_user_assigner.assign.assert_called_once()
         splitter_factory.create_splitter.assert_called_once_with(specification)
         assignments.split.assert_called_once_with(splitter)
-        countable_assignments.count.assert_called_once_with(flows)
+        splitted_assignments.count.assert_called_once_with(flows)
         exporter_factory.create_exporter.assert_called_once_with(specification)
         exporter.export.assert_called_once()

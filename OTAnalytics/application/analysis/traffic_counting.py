@@ -182,19 +182,51 @@ class CountableRoadUserAssignments:
             return self._assignments == other._assignments
         return False
 
+    def __repr__(self) -> str:
+        return CountableRoadUserAssignments.__name__ + repr(self._assignments)
+
+
+class SplittedAssignments:
+    def __init__(
+        self, assignments: dict[SplitId, CountableRoadUserAssignments]
+    ) -> None:
+        self._assignments = assignments
+
+    def count(self, flows: list[Flow]) -> Count:
+        return GroupedCount(
+            {
+                split_id: assignment.count(flows)
+                for split_id, assignment in self._assignments.items()
+            }
+        )
+
+    def __hash__(self) -> int:
+        return hash(self._assignments)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, SplittedAssignments):
+            return self._assignments == other._assignments
+        return False
+
+    def __repr__(self) -> str:
+        return SplittedAssignments.__name__ + repr(self._assignments)
+
 
 class RoadUserAssignments:
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()
 
-    def split(self, by: Splitter) -> dict[SplitId, CountableRoadUserAssignments]:
+    def split(self, by: Splitter) -> SplittedAssignments:
         splitted: dict[SplitId, list[RoadUserAssignment]] = defaultdict(list)
         for assignment in self._assignments:
             group_name = by.group_name(assignment)
             splitted[group_name].append(assignment)
-        return {
-            key: CountableRoadUserAssignments(value) for key, value in splitted.items()
-        }
+        return SplittedAssignments(
+            {
+                key: CountableRoadUserAssignments(value)
+                for key, value in splitted.items()
+            }
+        )
 
     def as_list(self) -> list[RoadUserAssignment]:
         return self._assignments.copy()
@@ -206,6 +238,9 @@ class RoadUserAssignments:
         if isinstance(other, RoadUserAssignments):
             return self._assignments == other._assignments
         return False
+
+    def __repr__(self) -> str:
+        return RoadUserAssignments.__name__ + repr(self._assignments)
 
 
 class RoadUserAssigner:
@@ -397,11 +432,6 @@ class ExportTrafficCounting:
         assigned_flows = self._assigner.assign(events, flows)
         splitter = self._splitter_factory.create_splitter(specification)
         splitted_assignments = assigned_flows.split(splitter)
-        counts = GroupedCount(
-            {
-                split_id: assignment.count(flows)
-                for split_id, assignment in splitted_assignments.items()
-            }
-        )
+        counts = splitted_assignments.count(flows)
         exporter = self._exporter_factory.create_exporter(specification)
         exporter.export(counts)
