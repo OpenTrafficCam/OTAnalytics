@@ -221,6 +221,7 @@ class RoadUserAssignment:
 
     road_user: int
     assignment: FlowId
+    events: EventPair
 
 
 class Splitter(ABC):
@@ -488,7 +489,11 @@ class RoadUserAssigner:
             if candidate_flows := self.__create_candidates(flows, events):
                 current = self.__select_flow(candidate_flows)
                 assignments.append(
-                    RoadUserAssignment(road_user=road_user, assignment=current.id)
+                    RoadUserAssignment(
+                        road_user=road_user,
+                        assignment=current.flow.id,
+                        events=current.candidate,
+                    )
                 )
         return RoadUserAssignments(assignments)
 
@@ -555,7 +560,7 @@ class RoadUserAssigner:
                         candidate_flows.append(candidate_flow)
         return candidate_flows
 
-    def __select_flow(self, candidate_flows: list[FlowCandidate]) -> Flow:
+    def __select_flow(self, candidate_flows: list[FlowCandidate]) -> FlowCandidate:
         """
         Select the best matching flow for the user. Best match is defined as the flow
         with the largest distance.
@@ -564,7 +569,7 @@ class RoadUserAssigner:
         Returns:
             Flow: best matching flow
         """
-        return max(candidate_flows, key=lambda current: current.duration()).flow
+        return max(candidate_flows, key=lambda current: current.duration())
 
 
 @dataclass(frozen=True)

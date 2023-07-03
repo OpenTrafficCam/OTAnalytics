@@ -10,6 +10,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     CountableAssignments,
     CountByFlow,
     CountingSpecificationDto,
+    EventPair,
     Exporter,
     ExporterFactory,
     ExportTrafficCounting,
@@ -45,9 +46,15 @@ def track(track_builder: TrackBuilder) -> Track:
 class TestModeSplitter:
     def test_group_name_existing_track(self, track: Track) -> None:
         flow_id = FlowId("0")
+        first_event = Mock(spec=Event)
+        second_event = Mock(spec=Event)
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_for.return_value = track
-        assignment = RoadUserAssignment(track.id.id, flow_id)
+        assignment = RoadUserAssignment(
+            track.id.id,
+            flow_id,
+            EventPair(first_event, second_event),
+        )
         splitter = ModeSplitter(track_repository)
 
         group_name = splitter.group_name(assignment)
@@ -59,9 +66,15 @@ class TestModeSplitter:
     def test_group_name_missing_track(self) -> None:
         track_id = 1
         flow_id = FlowId("0")
+        first_event = Mock(spec=Event)
+        second_event = Mock(spec=Event)
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_for.return_value = None
-        assignment = RoadUserAssignment(track_id, flow_id)
+        assignment = RoadUserAssignment(
+            track_id,
+            flow_id,
+            EventPair(first_event, second_event),
+        )
         splitter = ModeSplitter(track_repository)
 
         group_name = splitter.group_name(assignment)
@@ -88,124 +101,283 @@ def create_event(
     )
 
 
-def create_assignment_test_cases() -> list[tuple]:
-    first_track = TrackId(1)
-    second_track = TrackId(2)
-    third_track = TrackId(3)
-    forth_track = TrackId(4)
-    fifth_track = TrackId(5)
-    sixth_track = TrackId(6)
-    south_section_id = SectionId("south")
-    north_section_id = SectionId("north")
-    west_section_id = SectionId("west")
-    east_section_id = SectionId("east")
-    south_to_north_id = FlowId("south to north")
-    south_to_north = Flow(
-        south_to_north_id,
-        name=south_to_north_id.id,
-        start=south_section_id,
-        end=north_section_id,
-        distance=10,
-    )
-    south_to_west_id = FlowId("south to west")
-    south_to_west = Flow(
-        south_to_west_id,
-        name=south_to_west_id.id,
-        start=south_section_id,
-        end=west_section_id,
-        distance=11,
-    )
-    south_to_east_id = FlowId("south to east")
-    south_to_east = Flow(
-        south_to_east_id,
-        name=south_to_east_id.id,
-        start=south_section_id,
-        end=east_section_id,
-        distance=9,
-    )
-    north_to_south_id = FlowId("north to south")
-    north_to_south = Flow(
-        north_to_south_id,
-        name=north_to_south_id.id,
-        start=north_section_id,
-        end=south_section_id,
-        distance=10,
-    )
-    flows: list[Flow] = [south_to_north, south_to_west, south_to_east, north_to_south]
-
-    some_events: list[Event] = [
-        create_event(first_track, south_section_id, 0),
-        create_event(second_track, south_section_id, 1),
-        create_event(third_track, south_section_id, 2),
-        create_event(forth_track, south_section_id, 3),
-        create_event(fifth_track, north_section_id, 4),
-        create_event(sixth_track, north_section_id, 5),
-        create_event(first_track, north_section_id, 6),
-        create_event(first_track, west_section_id, 7),
-        create_event(second_track, west_section_id, 8),
-        create_event(third_track, west_section_id, 9),
-        create_event(forth_track, west_section_id, 10),
-        create_event(fifth_track, south_section_id, 11),
-        create_event(sixth_track, south_section_id, 12),
-    ]
-    some_expected_result: RoadUserAssignments = RoadUserAssignments(
-        [
-            RoadUserAssignment(first_track.id, south_to_west_id),
-            RoadUserAssignment(second_track.id, south_to_west_id),
-            RoadUserAssignment(third_track.id, south_to_west_id),
-            RoadUserAssignment(forth_track.id, south_to_west_id),
-            RoadUserAssignment(fifth_track.id, north_to_south_id),
-            RoadUserAssignment(sixth_track.id, north_to_south_id),
+class TestCaseBuilder:
+    def __init__(self) -> None:
+        self.first_track = TrackId(1)
+        self.second_track = TrackId(2)
+        self.third_track = TrackId(3)
+        self.forth_track = TrackId(4)
+        self.fifth_track = TrackId(5)
+        self.sixth_track = TrackId(6)
+        self.south_section_id = SectionId("south")
+        self.north_section_id = SectionId("north")
+        self.west_section_id = SectionId("west")
+        self.east_section_id = SectionId("east")
+        self.south_to_north_id = FlowId("south to north")
+        self.south_to_north = Flow(
+            self.south_to_north_id,
+            name=self.south_to_north_id.id,
+            start=self.south_section_id,
+            end=self.north_section_id,
+            distance=10,
+        )
+        self.south_to_west_id = FlowId("south to west")
+        self.south_to_west = Flow(
+            self.south_to_west_id,
+            name=self.south_to_west_id.id,
+            start=self.south_section_id,
+            end=self.west_section_id,
+            distance=11,
+        )
+        self.south_to_east_id = FlowId("south to east")
+        self.south_to_east = Flow(
+            self.south_to_east_id,
+            name=self.south_to_east_id.id,
+            start=self.south_section_id,
+            end=self.east_section_id,
+            distance=9,
+        )
+        self.north_to_south_id = FlowId("north to south")
+        self.north_to_south = Flow(
+            self.north_to_south_id,
+            name=self.north_to_south_id.id,
+            start=self.north_section_id,
+            end=self.south_section_id,
+            distance=10,
+        )
+        self.flows: list[Flow] = [
+            self.south_to_north,
+            self.south_to_west,
+            self.south_to_east,
+            self.north_to_south,
         ]
-    )
-    single_track_multiple_sections_events = [
-        create_event(first_track, south_section_id, 0),
-        create_event(first_track, north_section_id, 1),
-        create_event(first_track, west_section_id, 2),
-        create_event(first_track, east_section_id, 3),
-    ]
-    single_track_multiple_sections_result: RoadUserAssignments = RoadUserAssignments(
-        [RoadUserAssignment(first_track.id, south_to_east_id)]
-    )
-    single_track_single_sections_events = [
-        create_event(first_track, south_section_id, 0),
-    ]
-    single_track_single_sections_result: RoadUserAssignments = RoadUserAssignments([])
-    track_without_match_events = [
-        create_event(first_track, west_section_id, 0),
-        create_event(first_track, south_section_id, 1),
-    ]
-    track_without_match_result = RoadUserAssignments([])
-    unordered_single_track_single_sections_events = [
-        create_event(first_track, south_section_id, 1),
-        create_event(first_track, north_section_id, 0),
-    ]
-    unordered_single_track_single_sections_result: RoadUserAssignments = (
-        RoadUserAssignments([RoadUserAssignment(first_track.id, north_to_south_id)])
-    )
-    return [
-        (some_events, flows, some_expected_result),
-        (
-            single_track_multiple_sections_events,
-            flows,
-            single_track_multiple_sections_result,
-        ),
-        (
-            single_track_single_sections_events,
-            flows,
-            single_track_single_sections_result,
-        ),
-        (
-            track_without_match_events,
-            flows,
-            track_without_match_result,
-        ),
-        (
-            unordered_single_track_single_sections_events,
-            flows,
-            unordered_single_track_single_sections_result,
-        ),
-    ]
+
+    def build_assignment_test_cases(self) -> list[tuple]:
+        return [
+            self.__create_complex_test_case(),
+            self.__create_single_track_multiple_selection(),
+            self.__create_single_track_single_event(),
+            self.__create_tracks_without_match(),
+            self.__create_unordered_events(),
+        ]
+
+    def __create_single_track_single_event(self) -> tuple:
+        events = [
+            create_event(self.first_track, self.south_section_id, 0),
+        ]
+        expected_result: RoadUserAssignments = RoadUserAssignments([])
+
+        return (events, self.flows, expected_result)
+
+    def __create_tracks_without_match(self) -> tuple:
+        events = [
+            create_event(self.first_track, self.west_section_id, 0),
+            create_event(self.first_track, self.south_section_id, 1),
+        ]
+        expected_result = RoadUserAssignments([])
+        return (events, self.flows, expected_result)
+
+    def __create_unordered_events(self) -> tuple:
+        first_south = create_event(self.first_track, self.south_section_id, 1)
+        first_north = create_event(self.first_track, self.north_section_id, 0)
+        events = [
+            first_south,
+            first_north,
+        ]
+        expected_result: RoadUserAssignments = RoadUserAssignments(
+            [
+                RoadUserAssignment(
+                    self.first_track.id,
+                    self.north_to_south_id,
+                    EventPair(first_north, first_south),
+                )
+            ]
+        )
+
+        return (events, self.flows, expected_result)
+
+    def __create_single_track_multiple_selection(self) -> tuple:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_west = create_event(self.first_track, self.west_section_id, 2)
+        first_east = create_event(self.first_track, self.east_section_id, 3)
+        events = [
+            first_south,
+            first_north,
+            first_west,
+            first_east,
+        ]
+        expected_result: RoadUserAssignments = RoadUserAssignments(
+            [
+                RoadUserAssignment(
+                    self.first_track.id,
+                    self.south_to_east_id,
+                    EventPair(first_south, first_east),
+                )
+            ]
+        )
+        return (events, self.flows, expected_result)
+
+    def __create_complex_test_case(self) -> tuple:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        second_south = create_event(self.second_track, self.south_section_id, 1)
+        third_south = create_event(self.third_track, self.south_section_id, 2)
+        forth_south = create_event(self.forth_track, self.south_section_id, 3)
+        fifth_north = create_event(self.fifth_track, self.north_section_id, 4)
+        sixth_north = create_event(self.sixth_track, self.north_section_id, 5)
+        first_north = create_event(self.first_track, self.north_section_id, 6)
+        first_west = create_event(self.first_track, self.west_section_id, 7)
+        second_west = create_event(self.second_track, self.west_section_id, 8)
+        third_west = create_event(self.third_track, self.west_section_id, 9)
+        forth_west = create_event(self.forth_track, self.west_section_id, 10)
+        fifth_south = create_event(self.fifth_track, self.south_section_id, 11)
+        sixth_south = create_event(self.sixth_track, self.south_section_id, 12)
+        events: list[Event] = [
+            first_south,
+            second_south,
+            third_south,
+            forth_south,
+            fifth_north,
+            sixth_north,
+            first_north,
+            first_west,
+            second_west,
+            third_west,
+            forth_west,
+            fifth_south,
+            sixth_south,
+        ]
+        expected_result: RoadUserAssignments = RoadUserAssignments(
+            [
+                RoadUserAssignment(
+                    self.first_track.id,
+                    self.south_to_west_id,
+                    EventPair(first_south, first_west),
+                ),
+                RoadUserAssignment(
+                    self.second_track.id,
+                    self.south_to_west_id,
+                    EventPair(second_south, second_west),
+                ),
+                RoadUserAssignment(
+                    self.third_track.id,
+                    self.south_to_west_id,
+                    EventPair(third_south, third_west),
+                ),
+                RoadUserAssignment(
+                    self.forth_track.id,
+                    self.south_to_west_id,
+                    EventPair(forth_south, forth_west),
+                ),
+                RoadUserAssignment(
+                    self.fifth_track.id,
+                    self.north_to_south_id,
+                    EventPair(fifth_north, fifth_south),
+                ),
+                RoadUserAssignment(
+                    self.sixth_track.id,
+                    self.north_to_south_id,
+                    EventPair(sixth_north, sixth_south),
+                ),
+            ]
+        )
+        return (events, self.flows, expected_result)
+
+    def create_counting_test_cases(self) -> list[tuple]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        second_south = create_event(self.second_track, self.south_section_id, 1)
+        third_south = create_event(self.third_track, self.south_section_id, 2)
+        forth_south = create_event(self.forth_track, self.south_section_id, 3)
+        fifth_north = create_event(self.fifth_track, self.north_section_id, 4)
+        sixth_north = create_event(self.sixth_track, self.north_section_id, 5)
+        first_east = create_event(self.first_track, self.east_section_id, 6)
+        first_west = create_event(self.first_track, self.west_section_id, 7)
+        second_west = create_event(self.second_track, self.west_section_id, 8)
+        third_west = create_event(self.third_track, self.west_section_id, 9)
+        forth_west = create_event(self.forth_track, self.west_section_id, 10)
+        fifth_south = create_event(self.fifth_track, self.south_section_id, 11)
+        sixth_south = create_event(self.sixth_track, self.south_section_id, 12)
+        multiple_assignments: list[RoadUserAssignment] = [
+            RoadUserAssignment(
+                self.first_track.id,
+                self.south_to_west_id,
+                EventPair(first_south, first_west),
+            ),
+            RoadUserAssignment(
+                self.second_track.id,
+                self.south_to_west_id,
+                EventPair(second_south, second_west),
+            ),
+            RoadUserAssignment(
+                self.third_track.id,
+                self.south_to_west_id,
+                EventPair(third_south, third_west),
+            ),
+            RoadUserAssignment(
+                self.forth_track.id,
+                self.south_to_west_id,
+                EventPair(forth_south, forth_west),
+            ),
+            RoadUserAssignment(
+                self.fifth_track.id,
+                self.north_to_south_id,
+                EventPair(fifth_north, fifth_south),
+            ),
+            RoadUserAssignment(
+                self.sixth_track.id,
+                self.north_to_south_id,
+                EventPair(sixth_north, sixth_south),
+            ),
+        ]
+        some_expected_result = CountByFlow(
+            {
+                self.south_to_north_id: 0,
+                self.north_to_south_id: 2,
+                self.south_to_west_id: 4,
+                self.south_to_east_id: 0,
+            }
+        )
+        single_assignment: list[RoadUserAssignment] = [
+            RoadUserAssignment(
+                self.first_track.id,
+                self.south_to_east_id,
+                EventPair(first_south, first_east),
+            )
+        ]
+        single_assignment_result = CountByFlow(
+            {
+                self.south_to_north_id: 0,
+                self.north_to_south_id: 0,
+                self.south_to_west_id: 0,
+                self.south_to_east_id: 1,
+            }
+        )
+        no_assignment: list[RoadUserAssignment] = []
+        no_assignment_result = CountByFlow(
+            {
+                self.south_to_north_id: 0,
+                self.north_to_south_id: 0,
+                self.south_to_west_id: 0,
+                self.south_to_east_id: 0,
+            }
+        )
+        return [
+            (multiple_assignments, self.flows, some_expected_result),
+            (
+                single_assignment,
+                self.flows,
+                single_assignment_result,
+            ),
+            (
+                no_assignment,
+                self.flows,
+                no_assignment_result,
+            ),
+        ]
+
+
+def create_assignment_test_cases() -> list[tuple]:
+    return TestCaseBuilder().build_assignment_test_cases()
 
 
 class TestRoadUserAssigner:
@@ -222,99 +394,7 @@ class TestRoadUserAssigner:
 
 
 def create_counting_test_cases() -> list[tuple]:
-    first_track = TrackId(1)
-    second_track = TrackId(2)
-    third_track = TrackId(3)
-    forth_track = TrackId(4)
-    fifth_track = TrackId(5)
-    sixth_track = TrackId(6)
-    south_section_id = SectionId("south")
-    north_section_id = SectionId("north")
-    west_section_id = SectionId("west")
-    east_section_id = SectionId("east")
-    south_to_north_id = FlowId("south to north")
-    south_to_north = Flow(
-        south_to_north_id,
-        name=south_to_north_id.id,
-        start=south_section_id,
-        end=north_section_id,
-        distance=10,
-    )
-    south_to_west_id = FlowId("south to west")
-    south_to_west = Flow(
-        south_to_west_id,
-        name=south_to_west_id.id,
-        start=south_section_id,
-        end=west_section_id,
-        distance=11,
-    )
-    south_to_east_id = FlowId("south to east")
-    south_to_east = Flow(
-        south_to_east_id,
-        name=south_to_east_id.id,
-        start=south_section_id,
-        end=east_section_id,
-        distance=9,
-    )
-    north_to_south_id = FlowId("north to south")
-    north_to_south = Flow(
-        north_to_south_id,
-        name=north_to_south_id.id,
-        start=north_section_id,
-        end=south_section_id,
-        distance=10,
-    )
-    flows: list[Flow] = [south_to_north, south_to_west, south_to_east, north_to_south]
-
-    some_assignments: list[RoadUserAssignment] = [
-        RoadUserAssignment(first_track.id, south_to_west_id),
-        RoadUserAssignment(second_track.id, south_to_west_id),
-        RoadUserAssignment(third_track.id, south_to_west_id),
-        RoadUserAssignment(forth_track.id, south_to_west_id),
-        RoadUserAssignment(fifth_track.id, north_to_south_id),
-        RoadUserAssignment(sixth_track.id, north_to_south_id),
-    ]
-    some_expected_result = CountByFlow(
-        {
-            south_to_north_id: 0,
-            north_to_south_id: 2,
-            south_to_west_id: 4,
-            south_to_east_id: 0,
-        }
-    )
-    single_assignment: list[RoadUserAssignment] = [
-        RoadUserAssignment(first_track.id, south_to_east_id)
-    ]
-    single_assignment_result = CountByFlow(
-        {
-            south_to_north_id: 0,
-            north_to_south_id: 0,
-            south_to_west_id: 0,
-            south_to_east_id: 1,
-        }
-    )
-    no_assignment: list[RoadUserAssignment] = []
-    no_assignment_result = CountByFlow(
-        {
-            south_to_north_id: 0,
-            north_to_south_id: 0,
-            south_to_west_id: 0,
-            south_to_east_id: 0,
-        }
-    )
-    return [
-        (some_assignments, flows, some_expected_result),
-        (
-            single_assignment,
-            flows,
-            single_assignment_result,
-        ),
-        (
-            no_assignment,
-            flows,
-            no_assignment_result,
-        ),
-    ]
+    return TestCaseBuilder().create_counting_test_cases()
 
 
 class TestRoadUserAssignment:
