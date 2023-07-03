@@ -615,6 +615,30 @@ class SplitterFactory(ABC):
         raise NotImplementedError
 
 
+class CombinedSplitter(Splitter):
+    """
+    Combine two splitters and apply both splitting operations.
+    """
+
+    def __init__(self, first: Splitter, second: Splitter) -> None:
+        self._first = first
+        self._second = second
+
+    def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+        """
+        Apply first and second splitting operations and combine both ids.
+
+        Args:
+            assignment (RoadUserAssignment): assignment to split
+
+        Returns:
+            SplitId: combined split id of both splitters
+        """
+        first_assignment = self._first.group_name(assignment)
+        second_assignment = self._second.group_name(assignment)
+        return first_assignment.combine(second_assignment)
+
+
 class SimpleSplitterFactory(SplitterFactory):
     """
     Factory to create Splitter for a given CountingSpecification.
@@ -633,7 +657,11 @@ class SimpleSplitterFactory(SplitterFactory):
         Returns:
             Splitter: Splitter specifiec by the given CountingSpecificationDto
         """
-        return ModeSplitter(self._track_repository)
+        mode_splitter = ModeSplitter(self._track_repository)
+        time_splitter = TimeSplitter(
+            timedelta(minutes=specification.interval_in_minutes)
+        )
+        return CombinedSplitter(mode_splitter, time_splitter)
 
 
 class Exporter(ABC):

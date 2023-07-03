@@ -7,6 +7,8 @@ from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
     LEVEL_TIME,
     UNCLASSIFIED,
+    CombinedId,
+    CombinedSplitter,
     Count,
     CountableAssignments,
     CountByFlow,
@@ -477,6 +479,22 @@ class TestTimeSplitter:
         group_name = splitter.group_name(assignment)
 
         assert group_name == expected_result
+
+
+class TestCombinedSplitter:
+    def test_group_name(self) -> None:
+        first_id = SingleId(level=LEVEL_TIME, id="00:00")
+        second_id = SingleId(level=LEVEL_CLASSIFICATION, id="car")
+        first = Mock(spec=Splitter)
+        second = Mock(spec=Splitter)
+        first.group_name.return_value = first_id
+        second.group_name.return_value = second_id
+        assignment = Mock(spec=RoadUserAssignment)
+        splitter = CombinedSplitter(first, second)
+
+        group_name = splitter.group_name(assignment)
+
+        assert group_name == CombinedId([first_id, second_id])
 
 
 class TestCountableAssignments:
