@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Iterable, Optional
 
 from OTAnalytics.domain.event import Event, EventRepository
@@ -11,6 +11,7 @@ from OTAnalytics.domain.track import TrackId, TrackRepository
 
 LEVEL_FLOW = "flow"
 LEVEL_CLASSIFICATION = "classification"
+LEVEL_TIME = "time"
 UNCLASSIFIED = "unclassified"
 
 
@@ -264,6 +265,18 @@ class ModeSplitter(Splitter):
         track = self._track_repository.get_for(TrackId(assignment.road_user))
         split_id = track.classification if track else UNCLASSIFIED
         return SingleId(level=LEVEL_CLASSIFICATION, id=split_id)
+
+
+class TimeSplitter(Splitter):
+    def __init__(self, interval: timedelta) -> None:
+        self._interval = interval
+
+    def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+        original_time = int(assignment.events.start.occurrence.timestamp())
+        interval_seconds = self._interval.total_seconds()
+        result = int(original_time / interval_seconds) * interval_seconds
+        time_slot = datetime.fromtimestamp(result).strftime("%H:%M")
+        return SingleId(level=LEVEL_TIME, id=time_slot)
 
 
 class CountableAssignments:

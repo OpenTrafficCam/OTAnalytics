@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
 
 from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
+    LEVEL_TIME,
     UNCLASSIFIED,
     Count,
     CountableAssignments,
@@ -19,9 +20,11 @@ from OTAnalytics.application.analysis.traffic_counting import (
     RoadUserAssignment,
     RoadUserAssignments,
     SingleId,
+    SplitId,
     SplittedAssignments,
     Splitter,
     SplitterFactory,
+    TimeSplitter,
 )
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
@@ -48,11 +51,13 @@ def create_event(
     section: SectionId,
     second: int,
 ) -> Event:
+    real_seconds = second % 60
+    minute = int(second / 60)
     return Event(
         road_user_id=track_id.id,
         road_user_type="car",
         hostname="my_hostname",
-        occurrence=datetime(2020, 1, 1, 0, 0, second=second),
+        occurrence=datetime(2020, 1, 1, 0, minute, second=real_seconds),
         frame_number=1,
         section_id=section,
         event_coordinate=ImageCoordinate(0, 0),
@@ -244,6 +249,49 @@ class TestCaseBuilder:
         )
         return (events, self.flows, expected_result)
 
+    def create_splitting_test_cases(self) -> list[tuple[RoadUserAssignment, SplitId]]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_west = create_event(self.first_track, self.west_section_id, 7)
+        first_assignment = RoadUserAssignment(
+            self.first_track.id,
+            self.south_to_west_id,
+            EventPair(first_south, first_west),
+        )
+        first_result = SingleId(level=LEVEL_TIME, id="00:00")
+
+        second_south = create_event(self.first_track, self.south_section_id, 59)
+        second_west = create_event(self.second_track, self.west_section_id, 60)
+        second_assignment = RoadUserAssignment(
+            self.second_track.id,
+            self.south_to_west_id,
+            EventPair(second_south, second_west),
+        )
+        second_result = SingleId(level=LEVEL_TIME, id="00:00")
+
+        third_south = create_event(self.third_track, self.south_section_id, 60)
+        third_west = create_event(self.third_track, self.west_section_id, 62)
+        third_assignment = RoadUserAssignment(
+            self.third_track.id,
+            self.south_to_west_id,
+            EventPair(third_south, third_west),
+        )
+        third_result = SingleId(level=LEVEL_TIME, id="00:01")
+
+        forth_south = create_event(self.forth_track, self.south_section_id, 120)
+        forth_west = create_event(self.forth_track, self.west_section_id, 181)
+        forth_assignment = RoadUserAssignment(
+            self.forth_track.id,
+            self.south_to_west_id,
+            EventPair(forth_south, forth_west),
+        )
+        forth_result = SingleId(level=LEVEL_TIME, id="00:02")
+        return [
+            (first_assignment, first_result),
+            (second_assignment, second_result),
+            (third_assignment, third_result),
+            (forth_assignment, forth_result),
+        ]
+
     def create_counting_test_cases(self) -> list[tuple]:
         first_south = create_event(self.first_track, self.south_section_id, 0)
         second_south = create_event(self.second_track, self.south_section_id, 1)
@@ -415,6 +463,20 @@ class TestModeSplitter:
         group_name = splitter.group_name(assignment)
 
         assert group_name == SingleId(level=LEVEL_CLASSIFICATION, id=UNCLASSIFIED)
+
+
+class TestTimeSplitter:
+    @pytest.mark.parametrize(
+        "assignment, expected_result", TestCaseBuilder().create_splitting_test_cases()
+    )
+    def test_group_name(
+        self, assignment: RoadUserAssignment, expected_result: SplitId
+    ) -> None:
+        splitter = TimeSplitter(interval=timedelta(minutes=1))
+
+        group_name = splitter.group_name(assignment)
+
+        assert group_name == expected_result
 
 
 class TestCountableAssignments:
