@@ -1125,13 +1125,12 @@ class DummyViewModel(
         self._frame_filter.disable_filter_by_class_button()
 
     def export_counts(self) -> None:
-        # TODO: @briemla replace with actual wiring
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
         export_formats: dict = {
-            "CSV": "csv",
-            "Format 2": "xlsx",
-            "Format 3": "xlsx",
+            format.name: format.file_extension
+            for format in self._application.get_supported_export_formats()
         }
+        default_format = next(iter(export_formats.keys()))
+        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
         try:
             export_values: dict = ToplevelExportCounts(
                 title="Export counts",

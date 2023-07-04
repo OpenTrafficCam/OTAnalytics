@@ -679,10 +679,25 @@ class Exporter(ABC):
         raise NotImplementedError
 
 
+@dataclass(frozen=True)
+class ExportFormat:
+    name: str
+    file_extension: str
+
+
 class ExporterFactory(ABC):
     """
     Factory to create the exporter for the given CountingSpecificationDto.
     """
+
+    def get_supported_formats(self) -> Iterable[ExportFormat]:
+        """
+        Returns an iterable of the supported export formats.
+
+        Returns:
+            Iterable[ExportFormat]: supported export formats
+        """
+        raise NotImplementedError
 
     def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
         """
@@ -731,3 +746,12 @@ class ExportTrafficCounting:
         counts = splitted_assignments.count(flows)
         exporter = self._exporter_factory.create_exporter(specification)
         exporter.export(counts)
+
+    def get_supported_formats(self) -> Iterable[ExportFormat]:
+        """
+        Returns an iterable of the supported export formats.
+
+        Returns:
+            Iterable[ExportFormat]: supported export formats
+        """
+        return self._exporter_factory.get_supported_formats()

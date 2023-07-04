@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.intersect import (
 )
 from OTAnalytics.application.analysis.traffic_counting import (
     CountingSpecificationDto,
+    ExportFormat,
     ExportTrafficCounting,
     RoadUserAssigner,
     SimpleSplitterFactory,
@@ -541,7 +542,22 @@ class OTAnalyticsApplication:
         """
         self._datastore.save_event_list_file(file)
 
+    def get_supported_export_formats(self) -> Iterable[ExportFormat]:
+        """
+        Returns an iterable of the supported export formats.
+
+        Returns:
+            Iterable[ExportFormat]: supported export formats
+        """
+        return self._export_counts.get_supported_formats()
+
     def export_counts(self, specification: CountingSpecificationDto) -> None:
+        """
+        Export the traffic countings based on the currently available evens and flows.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the export
+        """
         self._export_counts.export(specification)
 
     def change_track_offset_to_section_offset(
