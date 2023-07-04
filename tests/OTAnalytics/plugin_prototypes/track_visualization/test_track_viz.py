@@ -85,6 +85,7 @@ class TestCachedPandasTrackProvider:
         self.track_2 = self.set_up_track(2)
 
     def set_up_track(self, id: int) -> Track:
+        """Create a dummy track with the given id and 5 car detections."""
         t_id = TrackId(id)
         detections = [
             Detection("car", 0.99, 0, 1, 2, 7, 1, datetime.min, Path(""), False, t_id),
@@ -119,8 +120,26 @@ class TestCachedPandasTrackProvider:
         result = provider._convert_tracks(init_tracks)
         assert result is not None
         assert result is provider._cache_df
+        self.check_expected_ids(provider, init_tracks)
 
         return provider
+
+    def check_expected_ids(
+        self, provider: CachedPandasTrackProvider, expected_tracks: list[Track]
+    ) -> None:
+        """Check whether provider cache contains the expected tracks/detections."""
+        if not expected_tracks:
+            assert provider._cache_df.empty
+
+        else:
+            cached_ids = provider._cache_df[TRACK_ID].unique()
+
+            expected_detections = sum(len(t.detections) for t in expected_tracks)
+            assert expected_detections == len(provider._cache_df)
+            assert len(expected_tracks) == len(cached_ids)
+
+            for track in expected_tracks:
+                assert track.id.id in cached_ids
 
     def test_notify_tracks_clear_cache(self) -> None:
         """Test clearing cache."""
@@ -128,7 +147,15 @@ class TestCachedPandasTrackProvider:
         provider = self.set_up_provider([self.track_1], [])
 
         provider.notify_tracks([])
-        assert provider._cache_df.empty
+        self.check_expected_ids(provider, [])
+
+    def test_notify_update_add(self) -> None:
+        """Test adding track to non empty cache."""
+        self.create_tracks()
+        provider = self.set_up_provider([self.track_1], [self.track_2])
+
+        provider.notify_tracks([self.track_2.id])
+        self.check_expected_ids(provider, [self.track_1, self.track_2])
 
 
 class TestBackgroundPlotter:
