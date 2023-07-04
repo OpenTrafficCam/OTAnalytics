@@ -307,7 +307,9 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """Take notice of some change in the track repository.
-        Resets the cached dataframe, so it will be recomputed.
+        Remove cached tracks matching any given id.
+        Add tracks of ids not yet present in cache.
+        Clear cache if no ids are given.
 
         Args:
             tracks (list[TrackId]): the ids of changed tracks
