@@ -5,7 +5,8 @@ import pytest
 
 from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
-    LEVEL_TIME,
+    LEVEL_END_TIME,
+    LEVEL_START_TIME,
     UNCLASSIFIED,
     CombinedId,
     CombinedSplitter,
@@ -259,7 +260,12 @@ class TestCaseBuilder:
             self.south_to_west,
             EventPair(first_south, first_west),
         )
-        first_result = SingleId(level=LEVEL_TIME, id="00:00")
+        first_result = CombinedId(
+            [
+                SingleId(level=LEVEL_START_TIME, id="00:00"),
+                SingleId(level=LEVEL_END_TIME, id="00:01"),
+            ]
+        )
 
         second_south = create_event(self.first_track, self.south_section_id, 59)
         second_west = create_event(self.second_track, self.west_section_id, 60)
@@ -268,7 +274,12 @@ class TestCaseBuilder:
             self.south_to_west,
             EventPair(second_south, second_west),
         )
-        second_result = SingleId(level=LEVEL_TIME, id="00:00")
+        second_result = CombinedId(
+            [
+                SingleId(level=LEVEL_START_TIME, id="00:00"),
+                SingleId(level=LEVEL_END_TIME, id="00:01"),
+            ]
+        )
 
         third_south = create_event(self.third_track, self.south_section_id, 60)
         third_west = create_event(self.third_track, self.west_section_id, 62)
@@ -277,7 +288,12 @@ class TestCaseBuilder:
             self.south_to_west,
             EventPair(third_south, third_west),
         )
-        third_result = SingleId(level=LEVEL_TIME, id="00:01")
+        third_result = CombinedId(
+            [
+                SingleId(level=LEVEL_START_TIME, id="00:01"),
+                SingleId(level=LEVEL_END_TIME, id="00:02"),
+            ]
+        )
 
         forth_south = create_event(self.forth_track, self.south_section_id, 120)
         forth_west = create_event(self.forth_track, self.west_section_id, 181)
@@ -286,7 +302,12 @@ class TestCaseBuilder:
             self.south_to_west,
             EventPair(forth_south, forth_west),
         )
-        forth_result = SingleId(level=LEVEL_TIME, id="00:02")
+        forth_result = CombinedId(
+            [
+                SingleId(level=LEVEL_START_TIME, id="00:02"),
+                SingleId(level=LEVEL_END_TIME, id="00:03"),
+            ]
+        )
         return [
             (first_assignment, first_result),
             (second_assignment, second_result),
@@ -483,7 +504,7 @@ class TestTimeSplitter:
 
 class TestCombinedSplitter:
     def test_group_name(self) -> None:
-        first_id = SingleId(level=LEVEL_TIME, id="00:00")
+        first_id = SingleId(level=LEVEL_START_TIME, id="00:00")
         second_id = SingleId(level=LEVEL_CLASSIFICATION, id="car")
         first = Mock(spec=Splitter)
         second = Mock(spec=Splitter)

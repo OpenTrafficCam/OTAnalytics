@@ -11,7 +11,8 @@ from OTAnalytics.domain.track import TrackId, TrackRepository
 
 LEVEL_FLOW = "flow"
 LEVEL_CLASSIFICATION = "classification"
-LEVEL_TIME = "time"
+LEVEL_START_TIME = "start time"
+LEVEL_END_TIME = "end time"
 UNCLASSIFIED = "unclassified"
 
 
@@ -275,8 +276,16 @@ class TimeSplitter(Splitter):
         original_time = int(assignment.events.start.occurrence.timestamp())
         interval_seconds = self._interval.total_seconds()
         result = int(original_time / interval_seconds) * interval_seconds
-        time_slot = datetime.fromtimestamp(result).strftime("%H:%M")
-        return SingleId(level=LEVEL_TIME, id=time_slot)
+        start_of_time_slot = datetime.fromtimestamp(result)
+        end_of_time_slot = start_of_time_slot + self._interval
+        serialized_start = start_of_time_slot.strftime("%H:%M")
+        serialized_end = end_of_time_slot.strftime("%H:%M")
+        return CombinedId(
+            [
+                SingleId(level=LEVEL_START_TIME, id=serialized_start),
+                SingleId(level=LEVEL_END_TIME, id=serialized_end),
+            ]
+        )
 
 
 class CountableAssignments:
