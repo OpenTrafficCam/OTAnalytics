@@ -553,7 +553,7 @@ class OTAnalyticsApplication:
 
     def export_counts(self, specification: CountingSpecificationDto) -> None:
         """
-        Export the traffic countings based on the currently available evens and flows.
+        Export the traffic countings based on the currently available events and flows.
 
         Args:
             specification (CountingSpecificationDto): specification of the export

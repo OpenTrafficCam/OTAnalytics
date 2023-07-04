@@ -49,7 +49,7 @@ class SplitId(ABC):
     @abstractmethod
     def combine(self, other: "SplitId") -> "SplitId":
         """
-        Combine two ids to a one id.
+        Combine two ids to one id.
 
         Args:
             other (SplitId): id to combine with
