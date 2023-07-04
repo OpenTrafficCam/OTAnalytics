@@ -316,25 +316,54 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
             case []:
                 self._cache_df = DataFrame()
             case _:
-                new_tracks = [
-                    self._datastore._track_repository.get_for(t)
-                    for t in tracks
-                    if self._cache_df.empty or t not in self._cache_df[track.TRACK_ID]
-                ]
+                # filter existing tracks from cache
+                filtered_cache = self._cache_without_existing_tracks(track_ids=tracks)
 
                 # convert tracks not yet in cache
                 new_df = self.__do_convert_tracks(
-                    [t for t in new_tracks if t is not None]
+                    self._fetch_new_track_data(track_ids=tracks)
                 )
 
-                if not self._cache_df.empty:
-                    # remove given tracks from cache
-                    df = self._cache_df[~self._cache_df[track.TRACK_ID].isin(tracks)]
-                    df = pandas.concat([df, new_df], ignore_index=True)
+                # concat remaining tracks and new tracks
+                if filtered_cache is not None:
+                    df = pandas.concat([filtered_cache, new_df])
                 else:
                     df = new_df
 
                 self._cache_df = self._sort_tracks(df)
+
+    def _fetch_new_track_data(self, track_ids: list[TrackId]) -> list[Track]:
+        existing_tracks: list[int] = []
+
+        if not self._cache_df.empty:
+            existing_tracks = self._cache_df[track.TRACK_ID].unique().tolist()
+
+        return [
+            t
+            for t_id in track_ids
+            if t_id.id not in existing_tracks
+            and (t := self._datastore._track_repository.get_for(t_id)) is not None
+        ]
+
+    def _cache_without_existing_tracks(
+        self, track_ids: list[TrackId]
+    ) -> DataFrame | None:
+        """Filter cached tracks.
+        Only keep those not matching the ids in the given list of track_ids.
+        Return None if the current cache is empty.
+
+        Args:
+            track_ids (list[TrackId]): ids of tracks to be removed from cache.
+
+        Returns:
+            DataFrame | None: filtered cache or None if it is already empty.
+        """
+        if self._cache_df.empty:
+            return None
+
+        track_id_nums = [t.id for t in track_ids]
+        df = self._cache_df
+        return df[~df[track.TRACK_ID].isin(track_id_nums)]
 
 
 class MatplotlibPlotterImplementation(ABC):
