@@ -42,28 +42,28 @@ class FlowCandidate:
         return self.candidate.end.occurrence - self.candidate.start.occurrence
 
 
-class SplitId(ABC):
+class Tag(ABC):
     """
-    Id class to be used to identify assignments for flows.
+    Class to identify assignments for flows.
     """
 
     @abstractmethod
-    def combine(self, other: "SplitId") -> "SplitId":
+    def combine(self, other: "Tag") -> "Tag":
         """
-        Combine two ids to one id.
+        Combine two tags to one tag.
 
         Args:
-            other (SplitId): id to combine with
+            other (Tag): tag to combine with
 
         Returns:
-            SplitId: combined id
+            Tag: combined tag
         """
         raise NotImplementedError
 
     @abstractmethod
-    def ids(self) -> list["SplitId"]:
+    def contained_tags(self) -> list["Tag"]:
         """
-        List all ids this id consists of.
+        List all tags this tag consists of.
         """
         raise NotImplementedError
 
@@ -71,83 +71,83 @@ class SplitId(ABC):
     def as_dict(self) -> dict[str, str]:
         """
         Provide a single dictionary containing the levels and names of the contained
-        ids.
+        tags.
 
         Returns:
-            dict[str, str]: dictionary of levels and names of ids
+            dict[str, str]: dictionary of levels and names of tags
         """
         raise NotImplementedError
 
 
 @dataclass(frozen=True)
-class CombinedId(SplitId):
-    id: list[SplitId]
+class MultiTag(Tag):
+    tags: list[Tag]
 
-    def combine(self, other: SplitId) -> SplitId:
+    def combine(self, other: Tag) -> Tag:
         """
-        Append other id to this one and return a new id object.
+        Append other tag to this one and return a new tag object.
 
         Args:
-            other (SplitId): id to combine with
+            other (Tag): tag to combine with
 
         Returns:
-            SplitId: combined id
+            Tag: combined tag
         """
-        combined_ids: list[SplitId] = self.ids() + other.ids()
-        return CombinedId(id=combined_ids)
+        combined_tags: list[Tag] = self.contained_tags() + other.contained_tags()
+        return MultiTag(tags=combined_tags)
 
-    def ids(self) -> list[SplitId]:
+    def contained_tags(self) -> list[Tag]:
         """
-        List all ids this id consists of.
+        List all tags this tag consists of.
         """
-        return self.id.copy()
+        return self.tags.copy()
 
     def as_dict(self) -> dict[str, str]:
         """
         Provide a single dictionary containing the levels and names of the contained
-        ids.
+        tags.
 
         Returns:
-            dict[str, str]: dictionary of levels and names of ids
+            dict[str, str]: dictionary of levels and names of tags
         """
         result: dict[str, str] = {}
-        for id in self.id:
-            result |= id.as_dict()
+        for tag in self.tags:
+            result |= tag.as_dict()
         return result
 
     def __hash__(self) -> int:
-        return hash(tuple(self.id))
+        return hash(tuple(self.tags))
 
 
 @dataclass(frozen=True)
-class SingleId(SplitId):
+class SingleTag(Tag):
     level: str
     id: str
 
-    def combine(self, other: SplitId) -> SplitId:
+    def combine(self, other: Tag) -> Tag:
         """
-        Append other id to this one and return a new id object.
+        Append other tag to this one and return a new tag object.
 
         Args:
-            other (SplitId): id to combine with
+            other (Tag): tag to combine with
 
         Returns:
-            SplitId: combined id
+            Tag: combined tag
         """
-        return CombinedId(self.ids() + other.ids())
+        return MultiTag(self.contained_tags() + other.contained_tags())
 
-    def ids(self) -> list[SplitId]:
+    def contained_tags(self) -> list[Tag]:
         """
-        List all ids this id consists of.
+        List all tags this tag consists of.
         """
         return [self]
 
     def as_dict(self) -> dict[str, str]:
         """
-        Provide a single dictionary containing the level and name of the id.
+        Provide a single dictionary containing the level and name of the tag.
 
         Returns:
-            dict[str, str]: dictionary of level and name of this ids
+            dict[str, str]: dictionary of level and name of this tags
         """
         return {self.level: self.id}
 
@@ -159,12 +159,12 @@ class Count(ABC):
     """
 
     @abstractmethod
-    def to_dict(self) -> dict[SplitId, int]:
+    def to_dict(self) -> dict[Tag, int]:
         """
         Convert the count into a serializable dictionary.
 
         Returns:
-            dict[SplitId, int]: serializable counts
+            dict[Tag, int]: serializable counts
         """
         raise NotImplementedError
 
@@ -178,15 +178,15 @@ class CountByFlow(Count):
 
     result: dict[Flow, int]
 
-    def to_dict(self) -> dict[SplitId, int]:
+    def to_dict(self) -> dict[Tag, int]:
         """
         Convert the count into a serializable dictionary.
 
         Returns:
-            dict[SplitId, int]: serializable counts
+            dict[Tag, int]: serializable counts
         """
         return {
-            SingleId(level=LEVEL_FLOW, id=flow.name): value
+            SingleTag(level=LEVEL_FLOW, id=flow.name): value
             for flow, value in self.result.items()
         }
 
@@ -194,24 +194,24 @@ class CountByFlow(Count):
 @dataclass(frozen=True)
 class GroupedCount(Count):
     """
-    Group various Count objects by SplitId.
+    Group various Count objects by Tag.
     """
 
-    result: dict[SplitId, Count]
+    result: dict[Tag, Count]
 
-    def to_dict(self) -> dict[SplitId, int]:
+    def to_dict(self) -> dict[Tag, int]:
         """
         Convert the count into a serializable dictionary.
 
         Returns:
-            dict[SplitId, int]: serializable counts
+            dict[Tag, int]: serializable counts
         """
 
-        result: dict[SplitId, int] = {}
-        for split_id, sub_result in self.result.items():
-            sub_dict: dict[SplitId, int] = sub_result.to_dict()
-            for sub_id, value in sub_dict.items():
-                result[split_id.combine(sub_id)] = value
+        result: dict[Tag, int] = {}
+        for tag, sub_result in self.result.items():
+            sub_dict: dict[Tag, int] = sub_result.to_dict()
+            for sub_tag, value in sub_dict.items():
+                result[tag.combine(sub_tag)] = value
         return result
 
 
@@ -226,26 +226,26 @@ class RoadUserAssignment:
     events: EventPair
 
 
-class Splitter(ABC):
+class Tagger(ABC):
     """
     Interface to split road user assignments into groups, e.g. by mode.
     """
 
     @abstractmethod
-    def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+    def create_tag(self, assignment: RoadUserAssignment) -> Tag:
         """
-        Determine a group name for the assignment, e.g. mode of the track.
+        Determine a tag for the assignment, e.g. mode of the track.
 
         Args:
-            assignment (RoadUserAssignment): assignment to determine the group name for
+            assignment (RoadUserAssignment): assignment to determine the tag for
 
         Returns:
-            SplitId: id of the split
+            Tag: tag of the assignment
         """
         raise NotImplementedError
 
 
-class ModeSplitter(Splitter):
+class ModeTagger(Tagger):
     """
     Split RoadUserAssignments by mode.
     """
@@ -253,26 +253,26 @@ class ModeSplitter(Splitter):
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+    def create_tag(self, assignment: RoadUserAssignment) -> Tag:
         """
         Group name for classification of a track or UNCLASSIFIED.
 
         Args:
-            assignment (RoadUserAssignment): assignment to determine the group name for
+            assignment (RoadUserAssignment): assignment to determine the tag for
 
         Returns:
-            SplitId: id of the split
+            Tag: tag of the assignment
         """
         track = self._track_repository.get_for(TrackId(assignment.road_user))
-        split_id = track.classification if track else UNCLASSIFIED
-        return SingleId(level=LEVEL_CLASSIFICATION, id=split_id)
+        tag = track.classification if track else UNCLASSIFIED
+        return SingleTag(level=LEVEL_CLASSIFICATION, id=tag)
 
 
-class TimeSplitter(Splitter):
+class TimeslotTagger(Tagger):
     def __init__(self, interval: timedelta) -> None:
         self._interval = interval
 
-    def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+    def create_tag(self, assignment: RoadUserAssignment) -> Tag:
         original_time = int(assignment.events.start.occurrence.timestamp())
         interval_seconds = self._interval.total_seconds()
         result = int(original_time / interval_seconds) * interval_seconds
@@ -280,10 +280,10 @@ class TimeSplitter(Splitter):
         end_of_time_slot = start_of_time_slot + self._interval
         serialized_start = start_of_time_slot.strftime("%H:%M")
         serialized_end = end_of_time_slot.strftime("%H:%M")
-        return CombinedId(
+        return MultiTag(
             [
-                SingleId(level=LEVEL_START_TIME, id=serialized_start),
-                SingleId(level=LEVEL_END_TIME, id=serialized_end),
+                SingleTag(level=LEVEL_START_TIME, id=serialized_start),
+                SingleTag(level=LEVEL_END_TIME, id=serialized_end),
             ]
         )
 
@@ -352,28 +352,28 @@ class CountableAssignments:
         return CountableAssignments.__name__ + repr(self._assignments)
 
 
-class SplittedAssignments:
+class TaggedAssignments:
     """
-    Represents a group of CountableAssignments by their id.
+    Represents a group of CountableAssignments by their tag.
     """
 
-    def __init__(self, assignments: dict[SplitId, CountableAssignments]) -> None:
+    def __init__(self, assignments: dict[Tag, CountableAssignments]) -> None:
         self._assignments = assignments
 
     def count(self, flows: list[Flow]) -> Count:
         """
-        Count per assignment and assign the result to the respective id.
+        Count per assignment and assign the result to the respective tag.
 
         Args:
             flows (list[Flow]): flows to count for
 
         Returns:
-            Count: traffic counts per SplitId
+            Count: traffic counts per Tag
         """
         return GroupedCount(
             {
-                split_id: assignment.count(flows)
-                for split_id, assignment in self._assignments.items()
+                tag: assignment.count(flows)
+                for tag, assignment in self._assignments.items()
             }
         )
 
@@ -381,12 +381,12 @@ class SplittedAssignments:
         return hash(self._assignments)
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, SplittedAssignments):
+        if isinstance(other, TaggedAssignments):
             return self._assignments == other._assignments
         return False
 
     def __repr__(self) -> str:
-        return SplittedAssignments.__name__ + repr(self._assignments)
+        return TaggedAssignments.__name__ + repr(self._assignments)
 
 
 class RoadUserAssignments:
@@ -397,23 +397,23 @@ class RoadUserAssignments:
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()
 
-    def split(self, by: Splitter) -> SplittedAssignments:
+    def tag(self, by: Tagger) -> TaggedAssignments:
         """
-        Split the assignments using the given splitter. Each assignment is assigned to
+        Split the assignments using the given tagger. Each assignment is assigned to
         exactly one part.
 
         Args:
-            by (Splitter): splitter to determine the group name
+            by (Tagger): tagger to determine the tag
 
         Returns:
-            SplittedAssignments: group of RoadUserAssignments splitted by group name
+            TaggedAssignments: group of RoadUserAssignments splitted by tag
         """
-        splitted: dict[SplitId, list[RoadUserAssignment]] = defaultdict(list)
+        tagged: dict[Tag, list[RoadUserAssignment]] = defaultdict(list)
         for assignment in self._assignments:
-            group_name = by.group_name(assignment)
-            splitted[group_name].append(assignment)
-        return SplittedAssignments(
-            {key: CountableAssignments(value) for key, value in splitted.items()}
+            tag = by.create_tag(assignment)
+            tagged[tag].append(assignment)
+        return TaggedAssignments(
+            {key: CountableAssignments(value) for key, value in tagged.items()}
         )
 
     def as_list(self) -> list[RoadUserAssignment]:
@@ -605,72 +605,72 @@ class CountingSpecificationDto:
     output_file: str
 
 
-class SplitterFactory(ABC):
+class TaggerFactory(ABC):
     """
-    Factory interface to create a Splitter based on the given CountingSpecificationDto.
+    Factory interface to create a Tagger based on the given CountingSpecificationDto.
     """
 
-    def create_splitter(self, specification: CountingSpecificationDto) -> Splitter:
+    def create_tagger(self, specification: CountingSpecificationDto) -> Tagger:
         """
-        Create a Splitter based on the given CountingSpecificationDto.
+        Create a Tagger based on the given CountingSpecificationDto.
 
         Args:
             specification (CountingSpecificationDto): specification to create a
-            splitter for
+            tagger for
 
         Returns:
-            Splitter: Splitter matching the given specification
+            Tagger: Tagger matching the given specification
         """
         raise NotImplementedError
 
 
-class CombinedSplitter(Splitter):
+class CombinedTagger(Tagger):
     """
-    Combine two splitters and apply both splitting operations.
+    Combine two taggers and apply both splitting operations.
     """
 
-    def __init__(self, first: Splitter, second: Splitter) -> None:
+    def __init__(self, first: Tagger, second: Tagger) -> None:
         self._first = first
         self._second = second
 
-    def group_name(self, assignment: RoadUserAssignment) -> SplitId:
+    def create_tag(self, assignment: RoadUserAssignment) -> Tag:
         """
-        Apply first and second splitting operations and combine both ids.
+        Apply first and second splitting operations and combine both tags.
 
         Args:
             assignment (RoadUserAssignment): assignment to split
 
         Returns:
-            SplitId: combined split id of both splitters
+            Tag: combined tags of both taggers
         """
-        first_assignment = self._first.group_name(assignment)
-        second_assignment = self._second.group_name(assignment)
+        first_assignment = self._first.create_tag(assignment)
+        second_assignment = self._second.create_tag(assignment)
         return first_assignment.combine(second_assignment)
 
 
-class SimpleSplitterFactory(SplitterFactory):
+class SimpleTaggerFactory(TaggerFactory):
     """
-    Factory to create Splitter for a given CountingSpecification.
+    Factory to create Tagger for a given CountingSpecification.
     """
 
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def create_splitter(self, specification: CountingSpecificationDto) -> Splitter:
+    def create_tagger(self, specification: CountingSpecificationDto) -> Tagger:
         """
-        Create a splitter for the given CountingSpecificationDto.
+        Create a tagger for the given CountingSpecificationDto.
 
         Args:
-            specification (CountingSpecificationDto): specification of the Splitter
+            specification (CountingSpecificationDto): specification of the Tagger
 
         Returns:
-            Splitter: Splitter specifiec by the given CountingSpecificationDto
+            Tagger: Tagger specifiec by the given CountingSpecificationDto
         """
-        mode_splitter = ModeSplitter(self._track_repository)
-        time_splitter = TimeSplitter(
+        mode_tagger = ModeTagger(self._track_repository)
+        time_tagger = TimeslotTagger(
             timedelta(minutes=specification.interval_in_minutes)
         )
-        return CombinedSplitter(mode_splitter, time_splitter)
+        return CombinedTagger(mode_tagger, time_tagger)
 
 
 class Exporter(ABC):
@@ -731,13 +731,13 @@ class ExportTrafficCounting:
         event_repository: EventRepository,
         flow_repository: FlowRepository,
         assigner: RoadUserAssigner,
-        splitter_factory: SplitterFactory,
+        tagger_factory: TaggerFactory,
         exporter_factory: ExporterFactory,
     ) -> None:
         self._event_repository = event_repository
         self._flow_repository = flow_repository
         self._assigner = assigner
-        self._splitter_factory = splitter_factory
+        self._tagger_factory = tagger_factory
         self._exporter_factory = exporter_factory
 
     def export(self, specification: CountingSpecificationDto) -> None:
@@ -750,9 +750,9 @@ class ExportTrafficCounting:
         events = self._event_repository.get_all()
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)
-        splitter = self._splitter_factory.create_splitter(specification)
-        splitted_assignments = assigned_flows.split(splitter)
-        counts = splitted_assignments.count(flows)
+        tagger = self._tagger_factory.create_tagger(specification)
+        tagged_assignments = assigned_flows.tag(tagger)
+        counts = tagged_assignments.count(flows)
         exporter = self._exporter_factory.create_exporter(specification)
         exporter.export(counts)
 

@@ -8,8 +8,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_END_TIME,
     LEVEL_START_TIME,
     UNCLASSIFIED,
-    CombinedId,
-    CombinedSplitter,
+    CombinedTagger,
     Count,
     CountableAssignments,
     CountByFlow,
@@ -18,16 +17,17 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Exporter,
     ExporterFactory,
     ExportTrafficCounting,
-    ModeSplitter,
+    ModeTagger,
+    MultiTag,
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
-    SingleId,
-    SplitId,
-    SplittedAssignments,
-    Splitter,
-    SplitterFactory,
-    TimeSplitter,
+    SingleTag,
+    Tag,
+    TaggedAssignments,
+    Tagger,
+    TaggerFactory,
+    TimeslotTagger,
 )
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
@@ -252,7 +252,7 @@ class TestCaseBuilder:
         )
         return (events, self.flows, expected_result)
 
-    def create_splitting_test_cases(self) -> list[tuple[RoadUserAssignment, SplitId]]:
+    def create_tagging_test_cases(self) -> list[tuple[RoadUserAssignment, Tag]]:
         first_south = create_event(self.first_track, self.south_section_id, 0)
         first_west = create_event(self.first_track, self.west_section_id, 7)
         first_assignment = RoadUserAssignment(
@@ -260,10 +260,10 @@ class TestCaseBuilder:
             self.south_to_west,
             EventPair(first_south, first_west),
         )
-        first_result = CombinedId(
+        first_result = MultiTag(
             [
-                SingleId(level=LEVEL_START_TIME, id="00:00"),
-                SingleId(level=LEVEL_END_TIME, id="00:01"),
+                SingleTag(level=LEVEL_START_TIME, id="00:00"),
+                SingleTag(level=LEVEL_END_TIME, id="00:01"),
             ]
         )
 
@@ -274,10 +274,10 @@ class TestCaseBuilder:
             self.south_to_west,
             EventPair(second_south, second_west),
         )
-        second_result = CombinedId(
+        second_result = MultiTag(
             [
-                SingleId(level=LEVEL_START_TIME, id="00:00"),
-                SingleId(level=LEVEL_END_TIME, id="00:01"),
+                SingleTag(level=LEVEL_START_TIME, id="00:00"),
+                SingleTag(level=LEVEL_END_TIME, id="00:01"),
             ]
         )
 
@@ -288,10 +288,10 @@ class TestCaseBuilder:
             self.south_to_west,
             EventPair(third_south, third_west),
         )
-        third_result = CombinedId(
+        third_result = MultiTag(
             [
-                SingleId(level=LEVEL_START_TIME, id="00:01"),
-                SingleId(level=LEVEL_END_TIME, id="00:02"),
+                SingleTag(level=LEVEL_START_TIME, id="00:01"),
+                SingleTag(level=LEVEL_END_TIME, id="00:02"),
             ]
         )
 
@@ -302,10 +302,10 @@ class TestCaseBuilder:
             self.south_to_west,
             EventPair(forth_south, forth_west),
         )
-        forth_result = CombinedId(
+        forth_result = MultiTag(
             [
-                SingleId(level=LEVEL_START_TIME, id="00:02"),
-                SingleId(level=LEVEL_END_TIME, id="00:03"),
+                SingleTag(level=LEVEL_START_TIME, id="00:02"),
+                SingleTag(level=LEVEL_END_TIME, id="00:03"),
             ]
         )
         return [
@@ -430,18 +430,18 @@ def create_counting_test_cases() -> list[tuple]:
 
 
 class TestRoadUserAssignment:
-    def test_split(self) -> None:
-        first_groupd = SingleId(level="mode", id="car")
-        second_groupd = SingleId(level="mode", id="bike")
+    def test_tag(self) -> None:
+        first_groupd = SingleTag(level="mode", id="car")
+        second_groupd = SingleTag(level="mode", id="bike")
         car_assignment = Mock(spec=RoadUserAssignment)
         bike_assignment = Mock(spec=RoadUserAssignment)
-        mode = Mock(spec=Splitter)
-        mode.group_name.side_effect = [first_groupd, second_groupd]
+        mode = Mock(spec=Tagger)
+        mode.create_tag.side_effect = [first_groupd, second_groupd]
         assignments = RoadUserAssignments([car_assignment, bike_assignment])
 
-        splitted = assignments.split(by=mode)
+        tagged = assignments.tag(by=mode)
 
-        assert splitted == SplittedAssignments(
+        assert tagged == TaggedAssignments(
             {
                 first_groupd: CountableAssignments([car_assignment]),
                 second_groupd: CountableAssignments([bike_assignment]),
@@ -449,7 +449,7 @@ class TestRoadUserAssignment:
         )
 
 
-class TestModeSplitter:
+class TestModeTagger:
     def test_group_name_existing_track(self, track: Track) -> None:
         flow = Mock(spec=Flow)
         first_event = Mock(spec=Event)
@@ -461,11 +461,11 @@ class TestModeSplitter:
             flow,
             EventPair(first_event, second_event),
         )
-        splitter = ModeSplitter(track_repository)
+        tagger = ModeTagger(track_repository)
 
-        group_name = splitter.group_name(assignment)
+        group_name = tagger.create_tag(assignment)
 
-        assert group_name == SingleId(
+        assert group_name == SingleTag(
             level=LEVEL_CLASSIFICATION, id=track.classification
         )
 
@@ -481,41 +481,41 @@ class TestModeSplitter:
             flow,
             EventPair(first_event, second_event),
         )
-        splitter = ModeSplitter(track_repository)
+        tagger = ModeTagger(track_repository)
 
-        group_name = splitter.group_name(assignment)
+        group_name = tagger.create_tag(assignment)
 
-        assert group_name == SingleId(level=LEVEL_CLASSIFICATION, id=UNCLASSIFIED)
+        assert group_name == SingleTag(level=LEVEL_CLASSIFICATION, id=UNCLASSIFIED)
 
 
-class TestTimeSplitter:
+class TestTimeTagger:
     @pytest.mark.parametrize(
-        "assignment, expected_result", TestCaseBuilder().create_splitting_test_cases()
+        "assignment, expected_result", TestCaseBuilder().create_tagging_test_cases()
     )
     def test_group_name(
-        self, assignment: RoadUserAssignment, expected_result: SplitId
+        self, assignment: RoadUserAssignment, expected_result: Tag
     ) -> None:
-        splitter = TimeSplitter(interval=timedelta(minutes=1))
+        tagger = TimeslotTagger(interval=timedelta(minutes=1))
 
-        group_name = splitter.group_name(assignment)
+        group_name = tagger.create_tag(assignment)
 
         assert group_name == expected_result
 
 
-class TestCombinedSplitter:
+class TestCombinedTagger:
     def test_group_name(self) -> None:
-        first_id = SingleId(level=LEVEL_START_TIME, id="00:00")
-        second_id = SingleId(level=LEVEL_CLASSIFICATION, id="car")
-        first = Mock(spec=Splitter)
-        second = Mock(spec=Splitter)
-        first.group_name.return_value = first_id
-        second.group_name.return_value = second_id
+        first_id = SingleTag(level=LEVEL_START_TIME, id="00:00")
+        second_id = SingleTag(level=LEVEL_CLASSIFICATION, id="car")
+        first = Mock(spec=Tagger)
+        second = Mock(spec=Tagger)
+        first.create_tag.return_value = first_id
+        second.create_tag.return_value = second_id
         assignment = Mock(spec=RoadUserAssignment)
-        splitter = CombinedSplitter(first, second)
+        tagger = CombinedTagger(first, second)
 
-        group_name = splitter.group_name(assignment)
+        group_name = tagger.create_tag(assignment)
 
-        assert group_name == CombinedId([first_id, second_id])
+        assert group_name == MultiTag([first_id, second_id])
 
 
 class TestCountableAssignments:
@@ -539,21 +539,21 @@ class TestTrafficCounting:
         event_repository = Mock(spec=EventRepository)
         flow_repository = Mock(spec=FlowRepository)
         road_user_assigner = Mock(spec=RoadUserAssigner)
-        splitter_factory = Mock(spec=SplitterFactory)
-        splitter = Mock(spec=Splitter)
+        tagger_factory = Mock(spec=TaggerFactory)
+        tagger = Mock(spec=Tagger)
         exporter_factory = Mock(spec=ExporterFactory)
         exporter = Mock(spec=Exporter)
         events: list[Event] = []
         flows: list[Flow] = []
         assignments = Mock(spec=RoadUserAssignments)
-        splitted_assignments = Mock(spec=SplittedAssignments)
+        tagged_assignments = Mock(spec=TaggedAssignments)
         counts = Mock(spec=Count)
         event_repository.get_all.return_value = events
         flow_repository.get_all.return_value = flows
         road_user_assigner.assign.return_value = assignments
-        splitter_factory.create_splitter.return_value = splitter
-        assignments.split.return_value = splitted_assignments
-        splitted_assignments.count.return_value = counts
+        tagger_factory.create_tagger.return_value = tagger
+        assignments.tag.return_value = tagged_assignments
+        tagged_assignments.count.return_value = counts
         exporter_factory.create_exporter.return_value = exporter
         specification = CountingSpecificationDto(
             interval_in_minutes=15,
@@ -564,7 +564,7 @@ class TestTrafficCounting:
             event_repository,
             flow_repository,
             road_user_assigner,
-            splitter_factory,
+            tagger_factory,
             exporter_factory,
         )
 
@@ -573,8 +573,8 @@ class TestTrafficCounting:
         event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
         road_user_assigner.assign.assert_called_once()
-        splitter_factory.create_splitter.assert_called_once_with(specification)
-        assignments.split.assert_called_once_with(splitter)
-        splitted_assignments.count.assert_called_once_with(flows)
+        tagger_factory.create_tagger.assert_called_once_with(specification)
+        assignments.tag.assert_called_once_with(tagger)
+        tagged_assignments.count.assert_called_once_with(flows)
         exporter_factory.create_exporter.assert_called_once_with(specification)
         exporter.export.assert_called_once()
