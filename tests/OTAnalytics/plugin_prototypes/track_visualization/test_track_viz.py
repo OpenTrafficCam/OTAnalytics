@@ -16,6 +16,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackIdProvider,
     TrackImage,
+    TrackRepository,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
@@ -78,23 +79,35 @@ class TestPandasTrackProvider:
 
 
 class TestCachedPandasTrackProvider:
-    #    @patch(
-    #        "OTAnalytics.plugin_prototypes.track_visualization.track_viz.PandasTrackProvider._convert_tracks"
-    #    )
-    def test_get_data_reset_cache(
-        self,
-    ) -> None:
-        id = TrackId(1)
-        detections = [
-            Detection("car", 0.99, 0, 1, 2, 7, 1, datetime.min, Path(""), False, id),
-            Detection("car", 0.99, 0, 2, 2, 7, 2, datetime.min, Path(""), False, id),
-            Detection("car", 0.99, 0, 3, 2, 7, 3, datetime.min, Path(""), False, id),
-            Detection("car", 0.99, 0, 4, 2, 7, 4, datetime.min, Path(""), False, id),
-            Detection("car", 0.99, 0, 5, 2, 7, 5, datetime.min, Path(""), False, id),
-        ]
-        tracks = [Track(id, "car", detections)]
+    def create_tracks(self) -> None:
+        """Create two dummy tracks with ids 1 and 2, each 5 detections."""
+        self.track_1 = self.set_up_track(1)
+        self.track_2 = self.set_up_track(2)
 
+    def set_up_track(self, id: int) -> Track:
+        t_id = TrackId(id)
+        detections = [
+            Detection("car", 0.99, 0, 1, 2, 7, 1, datetime.min, Path(""), False, t_id),
+            Detection("car", 0.99, 0, 2, 2, 7, 2, datetime.min, Path(""), False, t_id),
+            Detection("car", 0.99, 0, 3, 2, 7, 3, datetime.min, Path(""), False, t_id),
+            Detection("car", 0.99, 0, 4, 2, 7, 4, datetime.min, Path(""), False, t_id),
+            Detection("car", 0.99, 0, 5, 2, 7, 5, datetime.min, Path(""), False, t_id),
+        ]
+        return Track(t_id, "car", detections)
+
+    def set_up_provider(
+        self, init_tracks: list[Track], query_tracks: list[Track]
+    ) -> CachedPandasTrackProvider:
+        """Create cached track provider with moc´ked datastore.
+        Mocked datastore uses given query_tracks for track repository id queries.
+        Initializes provider cache with given init_tracks.
+        """
         datastore = Mock(spec=Datastore)
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_for.side_effect = query_tracks
+
+        datastore._track_repository = track_repository
+
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
@@ -103,9 +116,16 @@ class TestCachedPandasTrackProvider:
         )
 
         assert provider._cache_df.empty
-        result = provider._convert_tracks(tracks)
+        result = provider._convert_tracks(init_tracks)
         assert result is not None
         assert result is provider._cache_df
+
+        return provider
+
+    def test_notify_tracks_clear_cache(self) -> None:
+        """Test clearing cache."""
+        self.create_tracks()
+        provider = self.set_up_provider([self.track_1], [])
 
         provider.notify_tracks([])
         assert provider._cache_df.empty
