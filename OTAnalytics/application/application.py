@@ -338,7 +338,7 @@ class OTAnalyticsApplication:
     def get_all_videos(self) -> list[Video]:
         return self._datastore.get_all_videos()
 
-    def get_all_flows(self) -> Iterable[Flow]:
+    def get_all_flows(self) -> list[Flow]:
         return self._datastore.get_all_flows()
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
