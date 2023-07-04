@@ -313,8 +313,6 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
             tracks (list[TrackId]): the ids of changed tracks
         """
         match (tracks):
-            case None:
-                self._cache_df = DataFrame()
             case []:
                 self._cache_df = DataFrame()
             case _:
