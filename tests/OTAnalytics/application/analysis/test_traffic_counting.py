@@ -156,7 +156,7 @@ class TestCaseBuilder:
             [
                 RoadUserAssignment(
                     self.first_track.id,
-                    self.north_to_south_id,
+                    self.north_to_south,
                     EventPair(first_north, first_south),
                 )
             ]
@@ -179,7 +179,7 @@ class TestCaseBuilder:
             [
                 RoadUserAssignment(
                     self.first_track.id,
-                    self.south_to_east_id,
+                    self.south_to_east,
                     EventPair(first_south, first_east),
                 )
             ]
@@ -219,32 +219,32 @@ class TestCaseBuilder:
             [
                 RoadUserAssignment(
                     self.first_track.id,
-                    self.south_to_west_id,
+                    self.south_to_west,
                     EventPair(first_south, first_west),
                 ),
                 RoadUserAssignment(
                     self.second_track.id,
-                    self.south_to_west_id,
+                    self.south_to_west,
                     EventPair(second_south, second_west),
                 ),
                 RoadUserAssignment(
                     self.third_track.id,
-                    self.south_to_west_id,
+                    self.south_to_west,
                     EventPair(third_south, third_west),
                 ),
                 RoadUserAssignment(
                     self.forth_track.id,
-                    self.south_to_west_id,
+                    self.south_to_west,
                     EventPair(forth_south, forth_west),
                 ),
                 RoadUserAssignment(
                     self.fifth_track.id,
-                    self.north_to_south_id,
+                    self.north_to_south,
                     EventPair(fifth_north, fifth_south),
                 ),
                 RoadUserAssignment(
                     self.sixth_track.id,
-                    self.north_to_south_id,
+                    self.north_to_south,
                     EventPair(sixth_north, sixth_south),
                 ),
             ]
@@ -256,7 +256,7 @@ class TestCaseBuilder:
         first_west = create_event(self.first_track, self.west_section_id, 7)
         first_assignment = RoadUserAssignment(
             self.first_track.id,
-            self.south_to_west_id,
+            self.south_to_west,
             EventPair(first_south, first_west),
         )
         first_result = SingleId(level=LEVEL_TIME, id="00:00")
@@ -265,7 +265,7 @@ class TestCaseBuilder:
         second_west = create_event(self.second_track, self.west_section_id, 60)
         second_assignment = RoadUserAssignment(
             self.second_track.id,
-            self.south_to_west_id,
+            self.south_to_west,
             EventPair(second_south, second_west),
         )
         second_result = SingleId(level=LEVEL_TIME, id="00:00")
@@ -274,7 +274,7 @@ class TestCaseBuilder:
         third_west = create_event(self.third_track, self.west_section_id, 62)
         third_assignment = RoadUserAssignment(
             self.third_track.id,
-            self.south_to_west_id,
+            self.south_to_west,
             EventPair(third_south, third_west),
         )
         third_result = SingleId(level=LEVEL_TIME, id="00:01")
@@ -283,7 +283,7 @@ class TestCaseBuilder:
         forth_west = create_event(self.forth_track, self.west_section_id, 181)
         forth_assignment = RoadUserAssignment(
             self.forth_track.id,
-            self.south_to_west_id,
+            self.south_to_west,
             EventPair(forth_south, forth_west),
         )
         forth_result = SingleId(level=LEVEL_TIME, id="00:02")
@@ -311,65 +311,65 @@ class TestCaseBuilder:
         multiple_assignments: list[RoadUserAssignment] = [
             RoadUserAssignment(
                 self.first_track.id,
-                self.south_to_west_id,
+                self.south_to_west,
                 EventPair(first_south, first_west),
             ),
             RoadUserAssignment(
                 self.second_track.id,
-                self.south_to_west_id,
+                self.south_to_west,
                 EventPair(second_south, second_west),
             ),
             RoadUserAssignment(
                 self.third_track.id,
-                self.south_to_west_id,
+                self.south_to_west,
                 EventPair(third_south, third_west),
             ),
             RoadUserAssignment(
                 self.forth_track.id,
-                self.south_to_west_id,
+                self.south_to_west,
                 EventPair(forth_south, forth_west),
             ),
             RoadUserAssignment(
                 self.fifth_track.id,
-                self.north_to_south_id,
+                self.north_to_south,
                 EventPair(fifth_north, fifth_south),
             ),
             RoadUserAssignment(
                 self.sixth_track.id,
-                self.north_to_south_id,
+                self.north_to_south,
                 EventPair(sixth_north, sixth_south),
             ),
         ]
         some_expected_result = CountByFlow(
             {
-                self.south_to_north_id: 0,
-                self.north_to_south_id: 2,
-                self.south_to_west_id: 4,
-                self.south_to_east_id: 0,
+                self.south_to_north: 0,
+                self.north_to_south: 2,
+                self.south_to_west: 4,
+                self.south_to_east: 0,
             }
         )
         single_assignment: list[RoadUserAssignment] = [
             RoadUserAssignment(
                 self.first_track.id,
-                self.south_to_east_id,
+                self.south_to_east,
                 EventPair(first_south, first_east),
             )
         ]
         single_assignment_result = CountByFlow(
             {
-                self.south_to_north_id: 0,
-                self.north_to_south_id: 0,
-                self.south_to_west_id: 0,
-                self.south_to_east_id: 1,
+                self.south_to_north: 0,
+                self.north_to_south: 0,
+                self.south_to_west: 0,
+                self.south_to_east: 1,
             }
         )
         no_assignment: list[RoadUserAssignment] = []
         no_assignment_result = CountByFlow(
             {
-                self.south_to_north_id: 0,
-                self.north_to_south_id: 0,
-                self.south_to_west_id: 0,
-                self.south_to_east_id: 0,
+                self.south_to_north: 0,
+                self.north_to_south: 0,
+                self.south_to_west: 0,
+                self.south_to_east: 0,
             }
         )
         return [
@@ -430,14 +430,14 @@ class TestRoadUserAssignment:
 
 class TestModeSplitter:
     def test_group_name_existing_track(self, track: Track) -> None:
-        flow_id = FlowId("0")
+        flow = Mock(spec=Flow)
         first_event = Mock(spec=Event)
         second_event = Mock(spec=Event)
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_for.return_value = track
         assignment = RoadUserAssignment(
             track.id.id,
-            flow_id,
+            flow,
             EventPair(first_event, second_event),
         )
         splitter = ModeSplitter(track_repository)
@@ -450,14 +450,14 @@ class TestModeSplitter:
 
     def test_group_name_missing_track(self) -> None:
         track_id = 1
-        flow_id = FlowId("0")
+        flow = Mock(spec=Flow)
         first_event = Mock(spec=Event)
         second_event = Mock(spec=Event)
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_for.return_value = None
         assignment = RoadUserAssignment(
             track_id,
-            flow_id,
+            flow,
             EventPair(first_event, second_event),
         )
         splitter = ModeSplitter(track_repository)

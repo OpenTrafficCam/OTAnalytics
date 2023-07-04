@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Iterable, Optional
 
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
+from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import TrackId, TrackRepository
 
@@ -175,7 +175,7 @@ class CountByFlow(Count):
     The level of this count is LEVEL_FLOW
     """
 
-    result: dict[FlowId, int]
+    result: dict[Flow, int]
 
     def to_dict(self) -> dict[SplitId, int]:
         """
@@ -185,8 +185,8 @@ class CountByFlow(Count):
             dict[SplitId, int]: serializable counts
         """
         return {
-            SingleId(level=LEVEL_FLOW, id=id.serialize()): value
-            for id, value in self.result.items()
+            SingleId(level=LEVEL_FLOW, id=flow.name): value
+            for flow, value in self.result.items()
         }
 
 
@@ -221,7 +221,7 @@ class RoadUserAssignment:
     """
 
     road_user: int
-    assignment: FlowId
+    assignment: Flow
     events: EventPair
 
 
@@ -301,7 +301,7 @@ class CountableAssignments:
         self.__fill_empty_flows(flows, counts)
         return CountByFlow(counts)
 
-    def __count_per_flow(self) -> dict[FlowId, int]:
+    def __count_per_flow(self) -> dict[Flow, int]:
         """
         Count users per flow.
         Args:
@@ -309,14 +309,14 @@ class CountableAssignments:
         Returns:
             dict[FlowId, int]: count per flow
         """
-        flow_to_user: dict[FlowId, list[int]] = defaultdict(list)
+        flow_to_user: dict[Flow, list[int]] = defaultdict(list)
         for assignment in self._assignments:
             flow_to_user[assignment.assignment].append(assignment.road_user)
         return {current: len(users) for current, users in flow_to_user.items()}
 
     def __fill_empty_flows(
-        self, flows: Iterable[Flow], counts: dict[FlowId, int]
-    ) -> dict[FlowId, int]:
+        self, flows: Iterable[Flow], counts: dict[Flow, int]
+    ) -> dict[Flow, int]:
         """
         Assign all flows a counting of zero if they are not present in the counts
         dictionary.
@@ -327,8 +327,8 @@ class CountableAssignments:
             dict[FlowId, int]: counted users per flow, filled with zero for empty flows
         """
         for current in flows:
-            if current.id not in counts:
-                counts[current.id] = 0
+            if current not in counts:
+                counts[current] = 0
         return counts
 
     def __hash__(self) -> int:
@@ -504,7 +504,7 @@ class RoadUserAssigner:
                 assignments.append(
                     RoadUserAssignment(
                         road_user=road_user,
-                        assignment=current.flow.id,
+                        assignment=current.flow,
                         events=current.candidate,
                     )
                 )
