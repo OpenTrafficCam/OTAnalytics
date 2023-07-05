@@ -14,7 +14,10 @@ class TqdmProgressBar(Progressbar):
 
     def __iter__(self) -> Iterator:
         self.__current_iterator = tqdm(
-            iterable=self.__sequence, desc=self.__description, unit=self.__unit
+            iterable=self.__sequence,
+            desc=self.__description,
+            unit=self.__unit,
+            total=len(self.__sequence),
         ).__iter__()
         return self
 
