@@ -2,7 +2,7 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.application.analysis import RunIntersect
+from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.application import (
     AddFlow,
     AddSection,
