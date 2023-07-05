@@ -19,6 +19,7 @@ from OTAnalytics.adapter_ui.view_model import (
     MissingCoordinate,
     ViewModel,
 )
+from OTAnalytics.application.analysis.traffic_counting import CountingSpecificationDto
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,
@@ -69,6 +70,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
     CancelExportCounts,
@@ -968,8 +970,8 @@ class DummyViewModel(
             InfoBox(message="Please select a flow to remove", initial_position=position)
         self._finish_action()
 
-    def start_analysis(self) -> None:
-        self._application.start_analysis()
+    def create_events(self) -> None:
+        self._application.create_events()
 
     def save_events(self, file: str) -> None:
         print(f"Eventlist file to save: {file}")
@@ -1123,21 +1125,38 @@ class DummyViewModel(
         self._frame_filter.disable_filter_by_class_button()
 
     def export_counts(self) -> None:
-        # TODO: @briemla replace with actual wiring
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
+        if len(self._application.get_all_flows()) == 0:
+            InfoBox(
+                message=(
+                    "Counting needs at least one flow.\n"
+                    "There is no flow configurated.\n"
+                    "Please create a flow."
+                ),
+                initial_position=self._window.get_position()
+                if self._window
+                else (0, 0),
+            )
+            return
         export_formats: dict = {
-            "Format 1": "csv",
-            "Format 2": "xlsx",
-            "Format 3": "xlsx",
+            format.name: format.file_extension
+            for format in self._application.get_supported_export_formats()
         }
+        default_format = next(iter(export_formats.keys()))
+        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
         try:
-            input_values: dict = ToplevelExportCounts(
+            export_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
             ).get_data()
-            print(input_values)
+            print(export_values)
+            export_specification = CountingSpecificationDto(
+                interval_in_minutes=export_values[INTERVAL],
+                format=export_values[EXPORT_FORMAT],
+                output_file=export_values[EXPORT_FILE],
+            )
+            self._application.export_counts(export_specification)
         except CancelExportCounts:
             print("User canceled configuration of export")
 

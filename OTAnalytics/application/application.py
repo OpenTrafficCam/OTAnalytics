@@ -2,7 +2,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
+from OTAnalytics.application.analysis.intersect import (
+    RunIntersect,
+    RunSceneEventDetection,
+)
+from OTAnalytics.application.analysis.traffic_counting import (
+    CountingSpecificationDto,
+    ExportFormat,
+    ExportTrafficCounting,
+    RoadUserAssigner,
+    SimpleTaggerFactory,
+)
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     ActionState,
@@ -39,6 +49,7 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_parser.export import SimpleExporterFactory
 
 
 class SectionAlreadyExists(Exception):
@@ -261,6 +272,16 @@ class OTAnalyticsApplication:
         self._clear_event_repository = ClearEventRepository(
             self._datastore._event_repository
         )
+        self._export_counts = self.__create_export_traffic_counting()
+
+    def __create_export_traffic_counting(self) -> ExportTrafficCounting:
+        return ExportTrafficCounting(
+            self._datastore._event_repository,
+            self._datastore._flow_repository,
+            RoadUserAssigner(),
+            SimpleTaggerFactory(self._datastore._track_repository),
+            SimpleExporterFactory(),
+        )
 
     def connect_observers(self) -> None:
         """
@@ -317,7 +338,7 @@ class OTAnalyticsApplication:
     def get_all_videos(self) -> list[Video]:
         return self._datastore.get_all_videos()
 
-    def get_all_flows(self) -> Iterable[Flow]:
+    def get_all_flows(self) -> list[Flow]:
         return self._datastore.get_all_flows()
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
@@ -496,7 +517,7 @@ class OTAnalyticsApplication:
         """
         return self._datastore.get_image_of_track(track_id)
 
-    def start_analysis(self) -> None:
+    def create_events(self) -> None:
         """
         Intersect all tracks with all sections and write the events into the event
         repository
@@ -504,6 +525,7 @@ class OTAnalyticsApplication:
         tracks = self._datastore.get_all_tracks()
         sections = self._datastore.get_all_sections()
         events = self._intersect.run(tracks, sections)
+        self._clear_event_repository.clear()
         self._datastore.add_events(events)
 
         scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
@@ -520,6 +542,24 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def get_supported_export_formats(self) -> Iterable[ExportFormat]:
+        """
+        Returns an iterable of the supported export formats.
+
+        Returns:
+            Iterable[ExportFormat]: supported export formats
+        """
+        return self._export_counts.get_supported_formats()
+
+    def export_counts(self, specification: CountingSpecificationDto) -> None:
+        """
+        Export the traffic countings based on the currently available events and flows.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the export
+        """
+        self._export_counts.export(specification)
 
     def change_track_offset_to_section_offset(
         self, event_type: EventType = EventType.SECTION_ENTER

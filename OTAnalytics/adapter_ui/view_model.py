@@ -190,7 +190,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def start_analysis(self) -> None:
+    def create_events(self) -> None:
         pass
 
     @abstractmethod
