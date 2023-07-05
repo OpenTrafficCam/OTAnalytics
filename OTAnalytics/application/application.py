@@ -49,7 +49,7 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.exporter_factory import SimpleExporterFactory
+from OTAnalytics.plugin_parser.export import SimpleExporterFactory
 
 
 class SectionAlreadyExists(Exception):
