@@ -121,7 +121,9 @@ class TestCaseBuilder:
             self.north_to_south,
         ]
 
-    def build_assignment_test_cases(self) -> list[tuple]:
+    def build_assignment_test_cases(
+        self,
+    ) -> list[tuple[list[Event], list[Flow], RoadUserAssignments]]:
         return [
             self.__create_complex_test_case(),
             self.__create_single_track_multiple_selection(),
@@ -130,7 +132,9 @@ class TestCaseBuilder:
             self.__create_unordered_events(),
         ]
 
-    def __create_single_track_single_event(self) -> tuple:
+    def __create_single_track_single_event(
+        self,
+    ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         events = [
             create_event(self.first_track, self.south_section_id, 0),
         ]
@@ -138,7 +142,9 @@ class TestCaseBuilder:
 
         return (events, self.flows, expected_result)
 
-    def __create_tracks_without_match(self) -> tuple:
+    def __create_tracks_without_match(
+        self,
+    ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         events = [
             create_event(self.first_track, self.west_section_id, 0),
             create_event(self.first_track, self.south_section_id, 1),
@@ -146,7 +152,9 @@ class TestCaseBuilder:
         expected_result = RoadUserAssignments([])
         return (events, self.flows, expected_result)
 
-    def __create_unordered_events(self) -> tuple:
+    def __create_unordered_events(
+        self,
+    ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         first_south = create_event(self.first_track, self.south_section_id, 1)
         first_north = create_event(self.first_track, self.north_section_id, 0)
         events = [
@@ -165,7 +173,9 @@ class TestCaseBuilder:
 
         return (events, self.flows, expected_result)
 
-    def __create_single_track_multiple_selection(self) -> tuple:
+    def __create_single_track_multiple_selection(
+        self,
+    ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         first_south = create_event(self.first_track, self.south_section_id, 0)
         first_north = create_event(self.first_track, self.north_section_id, 1)
         first_west = create_event(self.first_track, self.west_section_id, 2)
@@ -187,7 +197,9 @@ class TestCaseBuilder:
         )
         return (events, self.flows, expected_result)
 
-    def __create_complex_test_case(self) -> tuple:
+    def __create_complex_test_case(
+        self,
+    ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         first_south = create_event(self.first_track, self.south_section_id, 0)
         second_south = create_event(self.second_track, self.south_section_id, 1)
         third_south = create_event(self.third_track, self.south_section_id, 2)
@@ -408,7 +420,9 @@ class TestCaseBuilder:
         ]
 
 
-def create_assignment_test_cases() -> list[tuple]:
+def create_assignment_test_cases() -> (
+    list[tuple[list[Event], list[Flow], RoadUserAssignments]]
+):
     return TestCaseBuilder().build_assignment_test_cases()
 
 
@@ -417,7 +431,10 @@ class TestRoadUserAssigner:
         "events, flows, expected_result", create_assignment_test_cases()
     )
     def test_run(
-        self, events: list[Event], flows: list[Flow], expected_result: dict
+        self,
+        events: list[Event],
+        flows: list[Flow],
+        expected_result: RoadUserAssignments,
     ) -> None:
         analysis = RoadUserAssigner()
         result = analysis.assign(events, flows)
