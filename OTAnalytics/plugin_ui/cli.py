@@ -3,14 +3,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from tqdm import tqdm
-
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
 )
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
 
@@ -103,6 +102,7 @@ class OTAnalyticsCli:
         event_list_parser: EventListParser,
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
+        progressbar: ProgressbarBuilder,
     ) -> None:
         self._validate_cli_args(cli_args)
         self.cli_args = cli_args
@@ -112,6 +112,7 @@ class OTAnalyticsCli:
         self._event_list_parser = event_list_parser
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
+        self._progressbar = progressbar
 
     def start(self) -> None:
         """Start analysis."""
@@ -137,7 +138,9 @@ class OTAnalyticsCli:
         Args:
             ottrk_files (list[Path]): the ottrk files to be analyzed
         """
-        for ottrk_file in tqdm(ottrk_files, desc="Analyzed files", unit=" files"):
+        for ottrk_file in self._progressbar(
+            list(ottrk_files), "Analyzed files", " files"
+        ):
             save_path = self._determine_eventlist_save_path(ottrk_file)
             tracks = self._parse_tracks(ottrk_file)
             events = self._intersect.run(tracks, sections)
