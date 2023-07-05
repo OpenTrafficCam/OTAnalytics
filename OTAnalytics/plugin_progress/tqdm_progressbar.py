@@ -24,4 +24,4 @@ class TqdmProgressBar(Progressbar):
 
 class TqdmBuilder(ProgressbarBuilder):
     def __call__(self, sequence: Sequence, description: str, unit: str) -> Progressbar:
-        return TqdmProgressBar(sequence, description, unit)
+        return TqdmProgressBar(sequence, description, " " + unit)
