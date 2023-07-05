@@ -1125,13 +1125,24 @@ class DummyViewModel(
         self._frame_filter.disable_filter_by_class_button()
 
     def export_counts(self) -> None:
-        # TODO: @briemla replace with actual wiring
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
+        if len(self._application.get_all_flows()) == 0:
+            InfoBox(
+                message=(
+                    "Counting needs at least one flow.\n"
+                    "There is no flow configurated.\n"
+                    "Please create a flow."
+                ),
+                initial_position=self._window.get_position()
+                if self._window
+                else (0, 0),
+            )
+            return
         export_formats: dict = {
-            "CSV": "csv",
-            "Format 2": "xlsx",
-            "Format 3": "xlsx",
+            format.name: format.file_extension
+            for format in self._application.get_supported_export_formats()
         }
+        default_format = next(iter(export_formats.keys()))
+        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
         try:
             export_values: dict = ToplevelExportCounts(
                 title="Export counts",

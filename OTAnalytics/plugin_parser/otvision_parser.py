@@ -6,12 +6,10 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Tuple
 
 import ujson
-from pandas import DataFrame
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
 from OTAnalytics.application import project
-from OTAnalytics.application.analysis.traffic_counting import Count, Exporter
 from OTAnalytics.application.datastore import (
     ConfigParser,
     EventListParser,
@@ -875,32 +873,3 @@ class OtConfigParser(ConfigParser):
         content |= video_content
         content |= section_content
         _write_json(data=content, path=file)
-
-
-class CsvExport(Exporter):
-    def __init__(self, output_file: str) -> None:
-        self._output_file = output_file
-
-    def export(self, counts: Count) -> None:
-        print(f"Exporting counts {counts} to {self._output_file}")
-        dataframe = self.__create_data_frame(counts)
-        dataframe.to_csv(self.__create_path(), index=False)
-
-    def __create_data_frame(self, counts: Count) -> DataFrame:
-        transformed = counts.to_dict()
-        indexed: list[dict] = []
-        for key, value in transformed.items():
-            result_dict: dict = key.as_dict()
-            result_dict["count"] = value
-            indexed.append(result_dict)
-        return DataFrame.from_dict(indexed)
-
-    def __create_path(self) -> Path:
-        fixed_file_ending = (
-            self._output_file
-            if self._output_file.lower().endswith(".csv")
-            else self._output_file + ".csv"
-        )
-        path = Path(fixed_file_ending)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
