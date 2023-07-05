@@ -1,4 +1,4 @@
-from typing import Self, Sequence
+from typing import Sequence
 
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
@@ -300,7 +300,7 @@ class ApplicationStarter:
         )
 
     def _create_tracks_intersecting_selected_sections(
-        self: Self,
+        self,
         section_state: SectionState,
         event_repository: EventRepository,
     ) -> TracksIntersectingSelectedSections:

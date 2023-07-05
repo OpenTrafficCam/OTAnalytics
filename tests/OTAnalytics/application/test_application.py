@@ -4,6 +4,7 @@ import pytest
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.analysis.traffic_counting import (
+    EventPair,
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
@@ -205,8 +206,8 @@ class TestTracksAssignedToSelectedFlows:
         flow_state = Mock(spec=FlowState)
         flow_state.selected_flows = selected_flows
 
-        first_assignment = RoadUserAssignment(1, first_flow_id)
-        second_assignment = RoadUserAssignment(2, second_flow_id)
+        first_assignment = RoadUserAssignment(1, first_flow, Mock(spec=EventPair))
+        second_assignment = RoadUserAssignment(2, second_flow, Mock(spec=EventPair))
         assignments = Mock(spec=RoadUserAssignments)
         assignments.as_list.return_value = [first_assignment, second_assignment]
         assigner = Mock(spec=RoadUserAssigner)

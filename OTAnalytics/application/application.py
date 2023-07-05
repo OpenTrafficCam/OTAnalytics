@@ -260,7 +260,7 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
 
         ids = set()
         for assignment in assignments:
-            if assignment.assignment in self._flow_state.selected_flows.get():
+            if assignment.assignment.id in self._flow_state.selected_flows.get():
                 ids.add(TrackId(assignment.road_user))
         return ids
 
