@@ -313,8 +313,10 @@ class CountableAssignments:
     def __count_per_flow(self) -> dict[Flow, int]:
         """
         Count users per flow.
+
         Args:
             user_to_flow (dict[int, FlowId]): assigment of users to flows
+
         Returns:
             dict[FlowId, int]: count per flow
         """
@@ -329,9 +331,11 @@ class CountableAssignments:
         """
         Assign all flows a counting of zero if they are not present in the counts
         dictionary.
+
         Args:
             flows (Iterable[Flow]): all flows to count for
             counts (dict[FlowId, int]): counted users per flow
+
         Returns:
             dict[FlowId, int]: counted users per flow, filled with zero for empty flows
         """
@@ -454,16 +458,18 @@ class RoadUserAssigner:
             RoadUserAssignments: group of RoadUserAssignment objects
         """
         grouped_flows = self.__group_flows_by_sections(flows)
-        grouped_sections = self.__group_events_by_road_user(events)
-        return self.__assign_user_to_flow(grouped_flows, grouped_sections)
+        grouped_events = self.__group_events_by_road_user(events)
+        return self.__assign_user_to_flow(grouped_flows, grouped_events)
 
     def __group_flows_by_sections(
         self, flows: Iterable[Flow]
     ) -> dict[tuple[SectionId, SectionId], list[Flow]]:
         """
         Group the flows by start and end section.
+
         Args:
             flows (Iterable[Flow]): flows to group
+
         Returns:
             dict[tuple[SectionId, SectionId], list[Flow]]: flows grouped by start and
             end section
@@ -479,11 +485,13 @@ class RoadUserAssigner:
         self, events: Iterable[Event]
     ) -> dict[int, list[Event]]:
         """
-        Group the sections of the events by road user.
+        Group events by road user.
+
         Args:
             events (Iterable[Event]): events of a road user
+
         Returns:
-            dict[int, list[SectionId]]: sections grouped by user
+            dict[int, list[Event]]: events grouped by user
         """
         events_by_road_user: dict[int, list[Event]] = defaultdict(list)
         sorted_events = sorted(events, key=lambda event: event.occurrence)
@@ -499,10 +507,12 @@ class RoadUserAssigner:
     ) -> RoadUserAssignments:
         """
         Assign each user to exactly one flow.
+
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
-            end section
-            sections_by_road_user (dict[int, list[SectionId]]): sections by road user
+                end section
+            events_by_road_user (dict[int, list[Event]]): events by road user
+
         Returns:
             dict[int, FlowId]: assignment of flow to road user
         """
@@ -526,22 +536,29 @@ class RoadUserAssigner:
     ) -> list[FlowCandidate]:
         """
         Create flow candidates to select one from in a later step.
+
         Args:
-            flows (dict[tuple[SectionId, SectionId], list[Flow]]): _description_
-            sections (list[SectionId]): _description_
+            flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
+                end section
+            events (list[Event]): events belonging to road user
+
         Returns:
-            list[Flow]: _description_
+            list[FlowCandidate]: the flow candidates pertaining to road user
         """
         event_pairs = self.__create_event_pairs(events)
         return self.__create_candidate_flows(flows, event_pairs)
 
     def __create_event_pairs(self, events: list[Event]) -> list[EventPair]:
         """
-        Create section pairs. This is effectively the cross product of the given list.
+        Create event pairs.
+
+        Requires and assumes events to be sorted by occurrence.
+
         Args:
-            sections (list[SectionId]): sections to create the cross product from
+            events(list[Event]): events to create the event pairs with
+
         Returns:
-            list[tuple[SectionId, SectionId]]: section pairs
+            list[EventPair]: event pairs
         """
         candidates: list[EventPair] = []
         for index, start in enumerate(events):
@@ -559,13 +576,14 @@ class RoadUserAssigner:
     ) -> list[FlowCandidate]:
         """
         Intersect the section pairs with the flows. Emit a candidate per match.
+
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows grouped by
-            start and end section
-            section_pairs (list[tuple[SectionId, SectionId]]): pairs of sections
-            to match with flows
+                start and end section
+            event_pairs (list[EventPair]): pairs of events to match with flows
+
         Returns:
-            list[Flow]: flows matching one pair of events
+            list[FlowCandidate]: flows matching one pair of events
         """
         candidate_flows: list[FlowCandidate] = []
         for candidate in event_pairs:
@@ -585,11 +603,11 @@ class RoadUserAssigner:
     def __select_flow(self, candidate_flows: list[FlowCandidate]) -> FlowCandidate:
         """
         Select the best matching flow for the user. Best match is defined as the flow
-        with the largest distance.
+        with the largest distance by time.
         Args:
-            candidate_flows (list[Flow]): candidate flows to select from
+            candidate_flows (list[FlowCandidate]): flow candidates to select from
         Returns:
-            Flow: best matching flow
+            Flow: best matching flow candidate
         """
         return max(candidate_flows, key=lambda current: current.duration())
 
@@ -626,7 +644,7 @@ class TaggerFactory(ABC):
 
 class CombinedTagger(Tagger):
     """
-    Combine two taggers and apply both splitting operations.
+    Combine two taggers and apply both tagging operations.
     """
 
     def __init__(self, first: Tagger, second: Tagger) -> None:
@@ -635,10 +653,10 @@ class CombinedTagger(Tagger):
 
     def create_tag(self, assignment: RoadUserAssignment) -> Tag:
         """
-        Apply first and second splitting operations and combine both tags.
+        Apply first and second tagging operations and combine both tags.
 
         Args:
-            assignment (RoadUserAssignment): assignment to split
+            assignment (RoadUserAssignment): assignment to tag
 
         Returns:
             Tag: combined tags of both taggers
@@ -664,7 +682,7 @@ class SimpleTaggerFactory(TaggerFactory):
             specification (CountingSpecificationDto): specification of the Tagger
 
         Returns:
-            Tagger: Tagger specifiec by the given CountingSpecificationDto
+            Tagger: Tagger specified by the given CountingSpecificationDto
         """
         mode_tagger = ModeTagger(self._track_repository)
         time_tagger = TimeslotTagger(
