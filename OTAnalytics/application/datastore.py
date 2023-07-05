@@ -343,7 +343,9 @@ class Datastore:
             file (Path): file in ottrk format
         """
         raised_exceptions: list[Exception] = []
-        for file in self._progressbar(files, unit="files", description=""):
+        for file in self._progressbar(
+            files, unit="files", description="Processed ottrk files: "
+        ):
             try:
                 self.load_track_file(file)
             except Exception as cause:
