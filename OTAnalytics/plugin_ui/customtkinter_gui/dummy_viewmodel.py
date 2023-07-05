@@ -84,7 +84,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     START_SECTION,
     ToplevelFlows,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import ToplevelProgress
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
@@ -1159,20 +1158,3 @@ class DummyViewModel(
             self._application.export_counts(export_specification)
         except CancelExportCounts:
             print("User canceled configuration of export")
-
-    def _temporary_showcase_toplevel_progress(self) -> None:
-        # TODO: @randyseng delete this method after instantiating in other places
-        from time import sleep
-
-        if self._window is not None:
-            position = self._window.get_position()
-            goal = 100
-            progressbar = ToplevelProgress(
-                initial_message=f"0 of {goal} videos loaded",
-                initial_position=position,
-            )
-            for i in range(goal):
-                sleep(0.02)
-                progressbar.proceed_to(
-                    (i + 1) / goal, message=f"{i} of {goal} videos loaded"
-                )

@@ -155,11 +155,12 @@ class FrameNavigation(CTkFrame):
 class OTAnalyticsGui:
     def __init__(
         self,
+        app: ModifiedCTk,
         view_model: ViewModel,
         layers: Sequence[Layer],
     ) -> None:
         self._viewmodel = view_model
-        self._app: ModifiedCTk = ModifiedCTk(viewmodel=view_model)
+        self._app = app
         self._layers = layers
 
     def start(self) -> None:

@@ -40,6 +40,7 @@ from OTAnalytics.application.state import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
@@ -60,6 +61,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkVideoParser,
     SimpleVideoParser,
 )
+from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
     FilterById,
@@ -99,10 +101,18 @@ class ApplicationStarter:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
             DummyViewModel,
         )
-        from OTAnalytics.plugin_ui.customtkinter_gui.gui import OTAnalyticsGui
+        from OTAnalytics.plugin_ui.customtkinter_gui.gui import (
+            ModifiedCTk,
+            OTAnalyticsGui,
+        )
+        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
+            PopupProgressbarBuilder,
+        )
+
+        progressbar_builder = PopupProgressbarBuilder()
 
         track_repository = self._create_track_repository()
-        datastore = self._create_datastore(track_repository)
+        datastore = self._create_datastore(track_repository, progressbar_builder)
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
@@ -159,7 +169,9 @@ class ApplicationStarter:
         )
         for layer in layers:
             layer.register(image_updater.notify_layers)
-        OTAnalyticsGui(dummy_viewmodel, layers).start()
+        main_window = ModifiedCTk(dummy_viewmodel)
+        progressbar_builder.add_widget(main_window)
+        OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_parser = self._create_track_parser(self._create_track_repository())
@@ -174,14 +186,18 @@ class ApplicationStarter:
             event_list_parser=event_list_parser,
             intersect=intersect,
             scene_event_detection=scene_event_detection,
+            progressbar=TqdmBuilder(),
         ).start()
 
-    def _create_datastore(self, track_repository: TrackRepository) -> Datastore:
+    def _create_datastore(
+        self, track_repository: TrackRepository, progressbar_builder: ProgressbarBuilder
+    ) -> Datastore:
         """
         Build all required objects and inject them where necessary
 
         Args:
             track_repository (TrackRepository): the track repository to inject
+            progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
         track_parser = self._create_track_parser(track_repository)
         section_repository = self._create_section_repository()
@@ -209,6 +225,7 @@ class ApplicationStarter:
             video_repository,
             video_parser,
             track_video_parser,
+            progressbar_builder,
             config_parser=config_parser,
         )
 

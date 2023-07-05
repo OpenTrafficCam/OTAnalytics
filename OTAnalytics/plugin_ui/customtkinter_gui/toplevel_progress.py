@@ -1,23 +1,37 @@
-from typing import Any
+from tkinter import Widget
+from typing import Any, Iterator, Optional, Sequence
 
 from customtkinter import CTkLabel, CTkProgressBar, CTkToplevel
 
+from OTAnalytics.domain.progress import (
+    Progressbar,
+    ProgressbarBuilder,
+    ProgressbarBuildError,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
 
 class InvalidRelativeProgressError(Exception):
     pass
 
 
-class ToplevelProgress(CTkToplevel):
+class PopupProgressbar(Progressbar, CTkToplevel):
     def __init__(
         self,
+        sequence: Sequence,
+        unit: str,
         initial_position: tuple[int, int],
         initial_message: str,
         initial_progress: float = 0.0,
         title: str = "",
         **kwargs: Any,
     ) -> None:
+        self.__sequence = sequence
+        self.__unit = unit
+        self.__current_progress = 0
+        self.__current_iterator = iter(sequence)
+
         super().__init__(**kwargs)
         self.title(title)
         self._initial_message = initial_message
@@ -62,3 +76,53 @@ class ToplevelProgress(CTkToplevel):
 
     def _on_cancel(self) -> None:
         pass
+
+    def __iter__(self) -> Iterator:
+        self.__current_progress = 0
+        self.__current_iterator = iter(self.__sequence)
+        return self
+
+    def __next__(self) -> Any:
+        try:
+            next_element = next(self.__current_iterator)
+            self.__update_progress()
+            return next_element
+        except StopIteration:
+            self.__update_progress()
+            raise StopIteration
+
+    def __update_progress(self) -> None:
+        len_sequence = len(self.__sequence)
+        progress_in_percent = self.__current_progress / len_sequence
+        self.proceed_to(
+            progress_in_percent,
+            message=f"{self.__current_progress} of {len_sequence} "
+            f"{self.__unit} processed.",
+        )
+        self.__current_progress += 1
+
+
+class PopupProgressbarBuilder(ProgressbarBuilder):
+    def __init__(self) -> None:
+        self._master: Optional[Widget] = None
+
+    def add_widget(self, widget: Widget) -> None:
+        self._master = widget
+
+    def __call__(self, sequence: Sequence, description: str, unit: str) -> Progressbar:
+        if not self._master:
+            raise ProgressbarBuildError(
+                f"Missing master widget in {ProgressbarBuilder.__name__}"
+            )
+
+        initial_position = self._get_position(self._master)
+        return PopupProgressbar(
+            master=self._master,
+            sequence=sequence,
+            unit=unit,
+            initial_position=initial_position,
+            initial_message=description,
+        )
+
+    def _get_position(self, widget: Widget) -> tuple[int, int]:
+        return get_widget_position(widget)
