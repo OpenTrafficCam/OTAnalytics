@@ -43,7 +43,6 @@ class CsvExport(Exporter):
 
 class SimpleExporterFactory(ExporterFactory):
     def __init__(self) -> None:
-        super().__init__()
         self._formats = {
             ExportFormat("CSV", ".csv"): lambda output_file: CsvExport(output_file)
         }
