@@ -118,7 +118,7 @@ class ApplicationStarter:
         section_state = self._create_section_state()
 
         pandas_data_provider = self._create_pandas_data_provider(
-            datastore, track_view_state
+            datastore, track_view_state, progressbar_builder
         )
         layers = self._create_layers(
             datastore,
@@ -259,12 +259,15 @@ class ApplicationStarter:
         return TrackViewState()
 
     def _create_pandas_data_provider(
-        self, datastore: Datastore, track_view_state: TrackViewState
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+        progressbar: ProgressbarBuilder,
     ) -> PandasDataFrameProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
         return PandasTracksOffsetProvider(
             CachedPandasTrackProvider(
-                datastore, track_view_state, dataframe_filter_builder
+                datastore, track_view_state, dataframe_filter_builder, progressbar
             ),
             track_view_state=track_view_state,
         )
