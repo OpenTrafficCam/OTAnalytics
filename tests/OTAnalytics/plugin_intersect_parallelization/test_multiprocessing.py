@@ -1,6 +1,7 @@
 from unittest.mock import Mock, patch
 
 from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -20,15 +21,19 @@ class TestMultiprocessingIntersectParallelization:
 
         mock_intersect = Mock()
         tracks = [Mock(spec=Track), Mock(spec=Track)]
+        progressbar = Mock(spec=ProgressbarBuilder)
+        progressbar.return_value = tracks
 
-        intersect = MultiprocessingIntersectParallelization()
+        intersect = MultiprocessingIntersectParallelization(progressbar)
         result = intersect.execute(mock_intersect, tracks, sections)
 
         assert result == [event_1, event_2]
         mock_pool_instance.starmap.assert_called_once()
 
     def test_flatten_events(self) -> None:
-        intersect = MultiprocessingIntersectParallelization()
+        intersect = MultiprocessingIntersectParallelization(
+            Mock(spec=ProgressbarBuilder)
+        )
         event_1 = Mock(spec=Event)
         event_2 = Mock(spec=Event)
         events_to_flatten = [[event_1], [event_2]]

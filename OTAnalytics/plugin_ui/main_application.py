@@ -135,7 +135,7 @@ class ApplicationStarter:
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
         flow_state = self._create_flow_state()
-        intersect = self._create_intersect()
+        intersect = self._create_intersect(progressbar_builder)
         scene_event_detection = self._create_scene_event_detection()
         tracks_metadata = self._create_tracks_metadata(track_repository)
         action_state = self._create_action_state()
@@ -177,7 +177,7 @@ class ApplicationStarter:
         track_parser = self._create_track_parser(self._create_track_repository())
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
-        intersect = self._create_intersect()
+        intersect = self._create_intersect(TqdmBuilder())
         scene_event_detection = self._create_scene_event_detection()
         OTAnalyticsCli(
             cli_args,
@@ -469,12 +469,12 @@ class ApplicationStarter:
     def _create_flow_state(self) -> FlowState:
         return FlowState()
 
-    def _create_intersect(self) -> RunIntersect:
+    def _create_intersect(self, progressbar: ProgressbarBuilder) -> RunIntersect:
         return RunIntersect(
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
             ),
-            intersect_parallelizer=MultiprocessingIntersectParallelization(),
+            intersect_parallelizer=MultiprocessingIntersectParallelization(progressbar),
         )
 
     def _create_scene_event_detection(self) -> RunSceneEventDetection:

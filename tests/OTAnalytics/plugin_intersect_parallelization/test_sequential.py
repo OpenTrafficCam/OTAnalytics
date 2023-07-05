@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect_parallelization.sequential import SequentialIntersect
@@ -16,7 +17,7 @@ class TestSequentialIntersect:
         tracks = [Mock(spec=Track), Mock(spec=Track)]
 
         sections = [Mock(spec=Section)]
-        sequential_intersect = SequentialIntersect()
+        sequential_intersect = SequentialIntersect(Mock(spec=ProgressbarBuilder))
 
         result = sequential_intersect.execute(mock_intersect, tracks, sections)
         assert result == [event_1, event_2]
