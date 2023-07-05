@@ -63,12 +63,10 @@ class PopupProgressbar(Progressbar, CTkToplevel):
         self._progressbar.pack(padx=PADX, pady=PADY)
 
     def proceed_to(self, percent: float, message: str | None = None) -> None:
-        print(percent)
         if percent < 0 or percent > 1:
             raise InvalidRelativeProgressError
         elif percent == 1:
             self.destroy()
-            self.mainloop()
         else:
             self._label_message.configure(text=message)
             self._progressbar.set(value=percent)
