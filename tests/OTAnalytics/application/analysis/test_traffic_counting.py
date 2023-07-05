@@ -467,7 +467,7 @@ class TestRoadUserAssignment:
 
 
 class TestModeTagger:
-    def test_group_name_existing_track(self, track: Track) -> None:
+    def test_create_tag_existing_track(self, track: Track) -> None:
         flow = Mock(spec=Flow)
         first_event = Mock(spec=Event)
         second_event = Mock(spec=Event)
@@ -486,7 +486,7 @@ class TestModeTagger:
             level=LEVEL_CLASSIFICATION, id=track.classification
         )
 
-    def test_group_name_missing_track(self) -> None:
+    def test_create_tag_missing_track(self) -> None:
         track_id = 1
         flow = Mock(spec=Flow)
         first_event = Mock(spec=Event)
@@ -509,7 +509,7 @@ class TestTimeTagger:
     @pytest.mark.parametrize(
         "assignment, expected_result", TestCaseBuilder().create_tagging_test_cases()
     )
-    def test_group_name(
+    def test_create_tag(
         self, assignment: RoadUserAssignment, expected_result: Tag
     ) -> None:
         tagger = TimeslotTagger(interval=timedelta(minutes=1))
@@ -520,7 +520,7 @@ class TestTimeTagger:
 
 
 class TestCombinedTagger:
-    def test_group_name(self) -> None:
+    def test_create_tag(self) -> None:
         first_id = SingleTag(level=LEVEL_START_TIME, id="00:00")
         second_id = SingleTag(level=LEVEL_CLASSIFICATION, id="car")
         first = Mock(spec=Tagger)
@@ -594,4 +594,4 @@ class TestTrafficCounting:
         assignments.tag.assert_called_once_with(tagger)
         tagged_assignments.count.assert_called_once_with(flows)
         exporter_factory.create_exporter.assert_called_once_with(specification)
-        exporter.export.assert_called_once()
+        exporter.export.assert_called_once_with(counts)
