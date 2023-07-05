@@ -138,15 +138,19 @@ class OTAnalyticsCli:
         Args:
             ottrk_files (list[Path]): the ottrk files to be analyzed
         """
+        messages: list[str] = []
         for ottrk_file in self._progressbar(
-            list(ottrk_files), "Analyzed files", " files"
+            list(ottrk_files), "Analyzed files", "files"
         ):
             save_path = self._determine_eventlist_save_path(ottrk_file)
             tracks = self._parse_tracks(ottrk_file)
             events = self._intersect.run(tracks, sections)
             events.extend(self._scene_event_detection.run(tracks))
             self._event_list_parser.serialize(events, sections, save_path)
-            print(f"Analysis finished. Event list saved at '{save_path}'")
+            messages.append(f"Analysis finished. Event list saved at '{save_path}'")
+
+        for msg in messages:
+            print(msg)
 
     @staticmethod
     def _determine_eventlist_save_path(track_file: Path) -> Path:
