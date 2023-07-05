@@ -16,6 +16,7 @@ from OTAnalytics.application.analysis.intersect import (
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.domain.event import SceneEventBuilder
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
@@ -127,7 +128,7 @@ class TestOTAnalyticsCli:
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.INTERSECT: RunIntersect(
                 ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
-                MultiprocessingIntersectParallelization(),
+                MultiprocessingIntersectParallelization(Mock(spec=ProgressbarBuilder)),
             ),
             self.SCENE_EVENT_DETECTION: RunSceneEventDetection(
                 SceneActionDetector(SceneEventBuilder())
