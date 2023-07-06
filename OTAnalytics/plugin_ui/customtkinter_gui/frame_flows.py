@@ -8,7 +8,6 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     IdResource,
     TreeviewTemplate,
@@ -78,10 +77,6 @@ class FrameFlows(AbstractFrameFlows):
 
     def disable_edit_button(self) -> None:
         self._disable_button(self.button_edit)
-
-    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
-        x, y = get_widget_position(self, offset=offset)
-        return x, y
 
 
 class TreeviewFlows(TreeviewTemplate, Treeview):

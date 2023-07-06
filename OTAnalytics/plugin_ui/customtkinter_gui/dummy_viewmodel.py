@@ -11,7 +11,6 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
-from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
 from OTAnalytics.adapter_ui.view_model import (
@@ -19,7 +18,6 @@ from OTAnalytics.adapter_ui.view_model import (
     MissingCoordinate,
     ViewModel,
 )
-from OTAnalytics.application.analysis.traffic_counting import CountingSpecificationDto
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,
@@ -56,7 +54,7 @@ from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     EventListExporterStrategies,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
     CanvasElementDeleter,
@@ -74,13 +72,13 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
-    EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
     CancelExportCounts,
     ToplevelExportCounts,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_events import (
+    EXPORT_FILE,
     CancelExportEvents,
     ToplevelExportEvents,
 )
@@ -92,7 +90,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     START_SECTION,
     ToplevelFlows,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import ToplevelProgress
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
@@ -132,7 +129,6 @@ class DummyViewModel(
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
-        self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_sections: Optional[AbstractFrameSections] = None
@@ -266,9 +262,6 @@ class DummyViewModel(
 
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
-
-    def set_window(self, window: AbstractMainWindow) -> None:
-        self._window = window
 
     def _update_selected_videos(self, videos: list[Video]) -> None:
         current_paths = [str(video.get_path()) for video in videos]
@@ -668,7 +661,7 @@ class DummyViewModel(
         current_data = selected_section.to_dict()
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
-        position = self._canvas.get_position()
+        position = get_widget_position(widget=self._canvas)
         self._start_action()
         with contextlib.suppress(CancelAddSection):
             self.__update_section_metadata(selected_section, current_data, position)
@@ -978,8 +971,8 @@ class DummyViewModel(
             InfoBox(message="Please select a flow to remove", initial_position=position)
         self._finish_action()
 
-    def create_events(self) -> None:
-        self._application.create_events()
+    def start_analysis(self) -> None:
+        self._application.start_analysis()
 
     def save_events(self, file: str) -> None:
         print(f"Eventlist file to save: {file}")
@@ -1001,8 +994,8 @@ class DummyViewModel(
                 input_values=default_values,
                 export_formats=export_formats,
             ).get_data()
-            file = input_values[toplevel_export_events.EXPORT_FILE]
-            export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
+            file = input_values[EXPORT_FILE]
+            export_format = input_values[EXPORT_FORMAT]
             event_list_exporter = strategies.get_exporter_by_name(export_format)
             self._application.export_events(Path(file), event_list_exporter)
             print(f"Exporting eventlist using {export_format} to {file}")
@@ -1157,54 +1150,20 @@ class DummyViewModel(
         self._frame_filter.disable_filter_by_class_button()
 
     def export_counts(self) -> None:
-        if len(self._application.get_all_flows()) == 0:
-            InfoBox(
-                message=(
-                    "Counting needs at least one flow.\n"
-                    "There is no flow configurated.\n"
-                    "Please create a flow."
-                ),
-                initial_position=self._window.get_position()
-                if self._window
-                else (0, 0),
-            )
-            return
+        # TODO: @briemla replace with actual wiring
+        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
         export_formats: dict = {
-            format.name: format.file_extension
-            for format in self._application.get_supported_export_formats()
+            "Format 1": "csv",
+            "Format 2": "xlsx",
+            "Format 3": "xlsx",
         }
-        default_format = next(iter(export_formats.keys()))
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
         try:
-            export_values: dict = ToplevelExportCounts(
+            input_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
             ).get_data()
-            print(export_values)
-            export_specification = CountingSpecificationDto(
-                interval_in_minutes=export_values[INTERVAL],
-                format=export_values[EXPORT_FORMAT],
-                output_file=export_values[EXPORT_FILE],
-            )
-            self._application.export_counts(export_specification)
+            print(input_values)
         except CancelExportCounts:
             print("User canceled configuration of export")
-
-    def _temporary_showcase_toplevel_progress(self) -> None:
-        # TODO: @randyseng delete this method after instantiating in other places
-        from time import sleep
-
-        if self._window is not None:
-            position = self._window.get_position()
-            goal = 100
-            progressbar = ToplevelProgress(
-                initial_message=f"0 of {goal} videos loaded",
-                initial_position=position,
-            )
-            for i in range(goal):
-                sleep(0.02)
-                progressbar.proceed_to(
-                    (i + 1) / goal, message=f"{i} of {goal} videos loaded"
-                )

@@ -1,54 +1,41 @@
 import tkinter
-from typing import Any, Sequence
+from typing import Any, Optional
 
-from customtkinter import CTkCheckBox, CTkFrame, CTkLabel, ThemeManager
+from customtkinter import CTkCheckBox, CTkFrame
 
-from OTAnalytics.application.plotting import Layer
+from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.style import STICKY_WEST
-
-DEFAULT_COLOR = ThemeManager.theme["CTkFrame"]["fg_color"]
 
 
-class FrameTrackPlotting(CTkFrame):
-    def __init__(self, layers: Sequence[Layer], **kwargs: Any) -> None:
+class FrameTrackPlotting(AbstractFrameCanvas, CTkFrame):
+    def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._layers = layers
-        self.get_widgets()
+        self._viewmodel = viewmodel
+        self._show_tracks = tkinter.BooleanVar()
+        self._get_widgets()
+        self._place_widgets()
 
-    def get_widgets(self) -> None:
-        PADY = 10
-        for idx, layer in enumerate(self._layers):
-            checkbox_layer = CheckBoxLayer(master=self, layer=layer)
-            checkbox_layer.grid(
-                row=idx, column=0, padx=PADX, pady=(0, PADY), sticky=STICKY
-            )
-
-
-class CheckBoxLayer(CTkFrame):
-    def __init__(self, layer: Layer, **kwargs: Any) -> None:
-        super().__init__(fg_color=DEFAULT_COLOR, **kwargs)
-        self._enabled = tkinter.BooleanVar()
-        self._layer = layer
-        self._enabled.set(self._layer.is_enabled())
-        self.get_widgets()
-
-    def get_widgets(self) -> None:
-        self._label = CTkLabel(
-            master=self, text=self._layer.get_name(), bg_color=DEFAULT_COLOR
-        )
-        self._checkbox = CTkCheckBox(
+    def _get_widgets(self) -> None:
+        self.button_show_tracks = CTkCheckBox(
             master=self,
-            text="",
-            command=self._on_checkbox_clicked,
-            variable=self._enabled,
+            text="Show tracks",
+            command=self._update_show_tracks_state,
+            variable=self._show_tracks,
             onvalue=True,
             offvalue=False,
-            bg_color=DEFAULT_COLOR,
-            width=5,
         )
-        self._checkbox.grid(row=0, column=0, padx=0, pady=0, sticky=STICKY_WEST)
-        self._label.grid(row=0, column=1, padx=0, pady=0, sticky=STICKY_WEST)
 
-    def _on_checkbox_clicked(self) -> None:
-        self._layer.set_enabled(self._enabled.get())
+    def _place_widgets(self) -> None:
+        PADY = 10
+        self.button_show_tracks.grid(
+            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
+        )
+
+    def update_show_tracks(self, value: Optional[bool]) -> None:
+        new_value = value or False
+        self._show_tracks.set(new_value)
+
+    def _update_show_tracks_state(self) -> None:
+        new_value = self._show_tracks.get()
+        self._viewmodel.update_show_tracks_state(new_value)

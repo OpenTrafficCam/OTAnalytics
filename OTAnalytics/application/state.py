@@ -365,14 +365,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
     def notify_sections(self, sections: list[SectionId]) -> None:
         self._update()
 
-    def notify_layers(self, _: bool) -> None:
-        """Will update the image
-
-        Args:
-            _ (bool): wether layer is enabled or disabled.
-        """
-        self._update()
-
     def _update(self) -> None:
         """
         Update the image if at least one track is available.

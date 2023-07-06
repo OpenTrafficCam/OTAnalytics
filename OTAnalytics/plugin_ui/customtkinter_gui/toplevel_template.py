@@ -33,9 +33,7 @@ class ToplevelTemplate(CTkToplevel, ABC):
 
     def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
         x, y = initial_position
-        x0 = x - (self.winfo_width() // 2)
-        y0 = y - (self.winfo_height() // 2)
-        self.geometry(f"+{x0+10}+{y0+10}")
+        self.geometry(f"+{x+10}+{y+10}")
 
     def _set_focus(self) -> None:
         self.attributes("-topmost", 1)

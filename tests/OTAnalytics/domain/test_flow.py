@@ -26,8 +26,8 @@ class TestFlow:
     def test_unset_distance(self) -> None:
         flow_id = FlowId("1")
         name = "some"
-        start = Mock(spec=SectionId)
-        end = Mock(spec=SectionId)
+        start = Mock(spec=Section)
+        end = Mock(spec=Section)
 
         flow = Flow(flow_id, name, start=start, end=end)
 
@@ -36,8 +36,8 @@ class TestFlow:
     def test_invalid_distance(self) -> None:
         flow_id = FlowId("1")
         name = "some"
-        start = Mock(spec=SectionId)
-        end = Mock(spec=SectionId)
+        start = Mock(spec=Section)
+        end = Mock(spec=Section)
         with pytest.raises(ValueError):
             Flow(flow_id, name, start=start, end=end, distance=-1)
 

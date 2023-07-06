@@ -9,7 +9,6 @@ from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     IdResource,
     TreeviewTemplate,
@@ -100,10 +99,6 @@ class FrameSections(AbstractFrameSections):
 
     def disable_remove_button(self) -> None:
         self._disable_button(self.button_remove)
-
-    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
-        x, y = get_widget_position(self, offset=offset)
-        return x, y
 
 
 class TreeviewSections(TreeviewTemplate, Treeview):

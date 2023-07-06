@@ -1,16 +1,10 @@
-from typing import Sequence
-
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
-from OTAnalytics.application.analysis.intersect import (
-    RunIntersect,
-    RunSceneEventDetection,
-)
+from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
 from OTAnalytics.application.application import (
     OTAnalyticsApplication,
     TracksIntersectingSelectedSections,
-    TracksNotIntersectingSelectedSections,
 )
 from OTAnalytics.application.datastore import (
     Datastore,
@@ -20,11 +14,7 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.plotting import (
-    LayeredPlotter,
-    PlottingLayer,
-    TrackBackgroundPlotter,
-)
+from OTAnalytics.application.plotting import LayeredPlotter, TrackBackgroundPlotter
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -67,6 +57,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PandasDataFrameProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
+    SectionGeometryPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
@@ -107,15 +98,39 @@ class ApplicationStarter:
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
 
-        pandas_data_provider = self._create_pandas_data_provider(
-            datastore, track_view_state
+        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
+        dataframe_filter_builder = self._create_dataframe_filter_builder()
+        pandas_data_provider = PandasTracksOffsetProvider(
+            CachedPandasTrackProvider(
+                datastore, track_view_state, dataframe_filter_builder
+            ),
+            track_view_state=track_view_state,
         )
-        layers = self._create_layers(
-            datastore,
+        track_geometry_plotter = self._create_track_geometry_plotter(
+            track_view_state, pandas_data_provider, alpha=0.2
+        )
+        track_highlighter_sections_intersecting_tracks = (
+            self._create_track_highlight_geometry_plotter(
+                track_view_state,
+                section_state,
+                pandas_data_provider,
+                datastore._event_repository,
+            )
+        )
+        track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state,
-            section_state,
             pandas_data_provider,
         )
+        section_plotter = PlotterPrototype(
+            track_view_state, MatplotlibTrackPlotter(SectionGeometryPlotter(datastore))
+        )
+        layers = [
+            background_image_plotter,
+            track_geometry_plotter,
+            track_highlighter_sections_intersecting_tracks,
+            track_start_end_point_plotter,
+            section_plotter,
+        ]
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
         track_view_state.selected_videos.register(properties_updater.notify_videos)
@@ -157,9 +172,7 @@ class ApplicationStarter:
         datastore.register_section_changed_observer(
             image_updater.notify_section_changed
         )
-        for layer in layers:
-            layer.register(image_updater.notify_layers)
-        OTAnalyticsGui(dummy_viewmodel, layers).start()
+        OTAnalyticsGui(dummy_viewmodel).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_parser = self._create_track_parser(self._create_track_repository())
@@ -241,28 +254,14 @@ class ApplicationStarter:
     def _create_track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_pandas_data_provider(
-        self, datastore: Datastore, track_view_state: TrackViewState
-    ) -> PandasDataFrameProvider:
-        dataframe_filter_builder = self._create_dataframe_filter_builder()
-        return PandasTracksOffsetProvider(
-            CachedPandasTrackProvider(
-                datastore, track_view_state, dataframe_filter_builder
-            ),
-            track_view_state=track_view_state,
-        )
-
     def _create_track_geometry_plotter(
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
         alpha: float,
-        enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
-            TrackGeometryPlotter(
-                pandas_data_provider, alpha=alpha, enable_legend=enable_legend
-            ),
+            TrackGeometryPlotter(pandas_data_provider, alpha=alpha),
         )
         return PlotterPrototype(state, track_plotter)
 
@@ -270,12 +269,9 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
-        enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
-            TrackStartEndPointPlotter(
-                pandas_data_provider, enable_legend=enable_legend
-            ),
+            TrackStartEndPointPlotter(pandas_data_provider),
         )
         return PlotterPrototype(state, track_plotter)
 
@@ -285,7 +281,6 @@ class ApplicationStarter:
         section_state: SectionState,
         pandas_track_provider: PandasDataFrameProvider,
         event_repository: EventRepository,
-        enable_legend: bool,
     ) -> Plotter:
         track_intersecting_sections = TracksIntersectingSelectedSections(
             section_state, event_repository
@@ -293,158 +288,7 @@ class ApplicationStarter:
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=track_intersecting_sections
         )
-        return self._create_track_geometry_plotter(
-            state, filter_by_id, alpha=1, enable_legend=enable_legend
-        )
-
-    def _create_track_highlight_geometry_plotter_not_intersecting(
-        self,
-        state: TrackViewState,
-        section_state: SectionState,
-        pandas_track_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
-        event_repository: EventRepository,
-        enable_legend: bool,
-    ) -> Plotter:
-        track_not_intersecting_sections = TracksNotIntersectingSelectedSections(
-            section_state, track_repository, event_repository
-        )
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=track_not_intersecting_sections
-        )
-        return self._create_track_geometry_plotter(
-            state, filter_by_id, alpha=1, enable_legend=enable_legend
-        )
-
-    def _create_start_end_point_tracks_intersecting_sections_plotter(
-        self,
-        state: TrackViewState,
-        section_state: SectionState,
-        pandas_track_provider: PandasDataFrameProvider,
-        event_repository: EventRepository,
-        enable_legend: bool,
-    ) -> Plotter:
-        track_intersecting_sections = TracksIntersectingSelectedSections(
-            section_state, event_repository
-        )
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=track_intersecting_sections
-        )
-
-        return self._create_track_start_end_point_plotter(
-            state, filter_by_id, enable_legend=enable_legend
-        )
-
-    def _create_start_end_point_tracks_not_intersecting_sections_plotter(
-        self,
-        state: TrackViewState,
-        section_state: SectionState,
-        pandas_track_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
-        event_repository: EventRepository,
-        enable_legend: bool,
-    ) -> Plotter:
-        track_not_intersecting_sections = TracksNotIntersectingSelectedSections(
-            section_state, track_repository, event_repository
-        )
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=track_not_intersecting_sections
-        )
-
-        return self._create_track_start_end_point_plotter(
-            state, filter_by_id, enable_legend=enable_legend
-        )
-
-    def _create_layers(
-        self,
-        datastore: Datastore,
-        track_view_state: TrackViewState,
-        section_state: SectionState,
-        pandas_data_provider: PandasDataFrameProvider,
-    ) -> Sequence[PlottingLayer]:
-        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
-
-        track_geometry_plotter = self._create_track_geometry_plotter(
-            track_view_state, pandas_data_provider, alpha=0.2, enable_legend=True
-        )
-        highlight_tracks_intersecting_sections = (
-            self._create_track_highlight_geometry_plotter(
-                track_view_state,
-                section_state,
-                pandas_data_provider,
-                datastore._event_repository,
-                enable_legend=False,
-            )
-        )
-        highlight_tracks_not_intersecting_sections = (
-            self._create_track_highlight_geometry_plotter_not_intersecting(
-                track_view_state,
-                section_state,
-                pandas_data_provider,
-                datastore._track_repository,
-                datastore._event_repository,
-                enable_legend=False,
-            )
-        )
-        start_end_points_tracks_intersecting_sections = (
-            self._create_start_end_point_tracks_intersecting_sections_plotter(
-                track_view_state,
-                section_state,
-                pandas_data_provider,
-                datastore._event_repository,
-                enable_legend=False,
-            )
-        )
-        start_end_points_tracks_not_intersecting_sections = (
-            self._create_start_end_point_tracks_not_intersecting_sections_plotter(
-                track_view_state,
-                section_state,
-                pandas_data_provider,
-                datastore._track_repository,
-                datastore._event_repository,
-                enable_legend=False,
-            )
-        )
-        track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            track_view_state, pandas_data_provider, enable_legend=False
-        )
-        background = PlottingLayer("Background", background_image_plotter, enabled=True)
-        all_tracks_layer = PlottingLayer(
-            "Show all tracks", track_geometry_plotter, enabled=True
-        )
-        highlight_tracks_intersecting_sections_layer = PlottingLayer(
-            "Highlight tracks intersecting sections",
-            highlight_tracks_intersecting_sections,
-            enabled=True,
-        )
-        highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
-            "Highlight tracks not intersecting sections",
-            highlight_tracks_not_intersecting_sections,
-            enabled=True,
-        )
-        start_end_points_tracks_intersecting_sections_layer = PlottingLayer(
-            "Show start and end point of tracks intersecting sections",
-            start_end_points_tracks_intersecting_sections,
-            enabled=True,
-        )
-        start_end_points_tracks_not_intersecting_sections_layer = PlottingLayer(
-            "Show start and end point of tracks not intersecting sections",
-            start_end_points_tracks_not_intersecting_sections,
-            enabled=True,
-        )
-        start_end_point_layer = PlottingLayer(
-            "Show start and end point", track_start_end_point_plotter, enabled=True
-        )
-
-        return [
-            background,
-            all_tracks_layer,
-            highlight_tracks_intersecting_sections_layer,
-            highlight_tracks_not_intersecting_sections_layer,
-            start_end_point_layer,
-            start_end_points_tracks_intersecting_sections_layer,
-            start_end_points_tracks_not_intersecting_sections_layer,
-        ]
+        return self._create_track_geometry_plotter(state, filter_by_id, alpha=1)
 
     def _create_section_state(self) -> SectionState:
         return SectionState()

@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from customtkinter import CTkFrame
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
-from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.domain.section import COORDINATES, Section
 
 
@@ -58,7 +57,7 @@ class GeometricCenterCalculator(SectionRefPointCalculator):
         return center_x, center_y
 
 
-class AbstractFrameFlows(AbstractFrame, WidgetPositionProvider, CTkFrame):
+class AbstractFrameFlows(AbstractFrame, CTkFrame):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass

@@ -1,6 +1,6 @@
 import tkinter
 import traceback
-from typing import Any, Sequence
+from typing import Any
 
 from customtkinter import (
     CTk,
@@ -11,9 +11,7 @@ from customtkinter import (
     set_default_color_theme,
 )
 
-from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
@@ -31,16 +29,13 @@ from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
 
-class ModifiedCTk(AbstractMainWindow, CTk):
+class ModifiedCTk(CTk):
     def __init__(
         self,
-        viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self.protocol("WM_DELETE_WINDOW", self._ask_to_close)
-        self._viewmodel: ViewModel = viewmodel
-        self.introduce_to_viewmodel()
 
     def _ask_to_close(self) -> None:
         infobox = InfoBox(
@@ -53,16 +48,11 @@ class ModifiedCTk(AbstractMainWindow, CTk):
             return
         self.quit()
 
-    def introduce_to_viewmodel(self) -> None:
-        self._viewmodel.set_window(self)
-
-    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
-        x, y = get_widget_position(self, offset=offset)
-        return x, y
-
     def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
         traceback.print_exception(val)
-        InfoBox(message=str(val), title="Error", initial_position=self.get_position())
+        InfoBox(
+            message=str(val), title="Error", initial_position=get_widget_position(self)
+        )
 
 
 class TabviewInputFiles(CTkTabview):
@@ -95,9 +85,7 @@ class TabviewInputFiles(CTkTabview):
 
 
 class FrameContent(CTkFrame):
-    def __init__(
-        self, master: Any, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
-    ) -> None:
+    def __init__(self, master: Any, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(master, **kwargs)
         self._viewmodel = viewmodel
         self.ctkscrollableframe = CTkScrollableFrame(
@@ -107,7 +95,7 @@ class FrameContent(CTkFrame):
 
         self._frame_track_plotting = FrameTrackPlotting(
             master=self.ctkscrollableframe,
-            layers=layers,
+            viewmodel=self._viewmodel,
         )
         self._frame_filter = FrameFilter(
             master=self.ctkscrollableframe, viewmodel=self._viewmodel
@@ -156,11 +144,10 @@ class OTAnalyticsGui:
     def __init__(
         self,
         view_model: ViewModel,
-        layers: Sequence[Layer],
+        app: CTk = ModifiedCTk(),
     ) -> None:
         self._viewmodel = view_model
-        self._app: ModifiedCTk = ModifiedCTk(viewmodel=view_model)
-        self._layers = layers
+        self._app: CTk = app
 
     def start(self) -> None:
         self._show_gui()
@@ -182,9 +169,7 @@ class OTAnalyticsGui:
         self._app.grid_columnconfigure(1, weight=1)
         self._app.grid_rowconfigure(0, weight=1)
         self._navigation = FrameNavigation(master=self._app, viewmodel=self._viewmodel)
-        self._content = FrameContent(
-            master=self._app, viewmodel=self._viewmodel, layers=self._layers
-        )
+        self._content = FrameContent(master=self._app, viewmodel=self._viewmodel)
 
     def _place_widgets(self) -> None:
         self._navigation.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)

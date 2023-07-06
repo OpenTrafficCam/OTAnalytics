@@ -66,12 +66,6 @@ class Flow:
     def is_using(self, section: SectionId) -> bool:
         return (self.start == section) or (self.end == section)
 
-    def __hash__(self) -> int:
-        return hash(self.id)
-
-    def __eq__(self, other: object) -> bool:
-        return self.id == other.id if isinstance(other, Flow) else False
-
 
 class FlowListObserver(ABC):
     """

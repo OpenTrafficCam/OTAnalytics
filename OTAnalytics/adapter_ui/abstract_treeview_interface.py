@@ -1,9 +1,7 @@
 from abc import abstractmethod
 
-from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 
-
-class AbstractTreeviewInterface(WidgetPositionProvider):
+class AbstractTreeviewInterface:
     # TODO: add property viewmodel
 
     @abstractmethod
@@ -20,4 +18,8 @@ class AbstractTreeviewInterface(WidgetPositionProvider):
 
     @abstractmethod
     def update_selected_items(self, item_ids: list[str]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_position(self) -> tuple[int, int]:
         raise NotImplementedError
