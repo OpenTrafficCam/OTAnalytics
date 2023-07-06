@@ -6,6 +6,7 @@ import pytest
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    FlowState,
     ObservableOptionalProperty,
     ObservableProperty,
     Plotter,
@@ -156,7 +157,10 @@ class TestTrackImageUpdater:
         track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
         track.id = track_id
-        updater = TrackImageUpdater(datastore, track_view_state, section_state, plotter)
+        flow_state = FlowState()
+        updater = TrackImageUpdater(
+            datastore, track_view_state, section_state, flow_state, plotter
+        )
         tracks: list[TrackId] = [track_id]
 
         updater.notify_tracks(tracks)
