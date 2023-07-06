@@ -14,5 +14,5 @@ echo "$DIR"
 cd "$DIR" || exit
 
 source "$DIR"/venv/bin/activate
-python3.10 -m OTAnalytics
+python3.11 -m OTAnalytics
 deactivate

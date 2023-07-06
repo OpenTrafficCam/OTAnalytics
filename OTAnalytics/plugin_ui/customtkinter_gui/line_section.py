@@ -23,10 +23,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     RIGHT_BUTTON_UP,
     RIGHT_KEY,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import (
-    coordinate_is_on_widget,
-    get_widget_position,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import coordinate_is_on_widget
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB,
     KNOB_CORE,
@@ -605,7 +602,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         self._create_section()
 
     def _get_metadata(self) -> dict:
-        toplevel_position = get_widget_position(widget=self._canvas)
+        toplevel_position = self._canvas.get_position()
         return self._viewmodel.get_section_metadata(
             title="Add section", initial_position=toplevel_position
         )
