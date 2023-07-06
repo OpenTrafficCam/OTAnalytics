@@ -16,7 +16,7 @@ from OTAnalytics.application.analysis.intersect import (
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.domain.event import SceneEventBuilder
-from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
@@ -107,6 +107,7 @@ class TestOTAnalyticsCli:
     EVENT_LIST_PARSER: str = "event_list_parser"
     INTERSECT: str = "intersect"
     SCENE_EVENT_DETECTION: str = "scene_event_detection"
+    PROGRESSBAR: str = "progressbar"
 
     @pytest.fixture
     def mock_cli_dependencies(self) -> dict[str, Any]:
@@ -116,6 +117,7 @@ class TestOTAnalyticsCli:
             self.EVENT_LIST_PARSER: Mock(spec=EventListParser),
             self.INTERSECT: Mock(spec=RunIntersect),
             self.SCENE_EVENT_DETECTION: Mock(spec=RunSceneEventDetection),
+            self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
         }
 
     @pytest.fixture
@@ -128,11 +130,12 @@ class TestOTAnalyticsCli:
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.INTERSECT: RunIntersect(
                 ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
-                MultiprocessingIntersectParallelization(Mock(spec=ProgressbarBuilder)),
+                MultiprocessingIntersectParallelization(NoProgressbarBuilder()),
             ),
             self.SCENE_EVENT_DETECTION: RunSceneEventDetection(
                 SceneActionDetector(SceneEventBuilder())
             ),
+            self.PROGRESSBAR: NoProgressbarBuilder(),
         }
 
     def test_init(self, mock_cli_dependencies: dict[str, Any]) -> None:

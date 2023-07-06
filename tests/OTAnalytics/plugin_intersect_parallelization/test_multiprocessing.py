@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.progress import NoProgressbarBuilder, ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -21,10 +21,8 @@ class TestMultiprocessingIntersectParallelization:
 
         mock_intersect = Mock()
         tracks = [Mock(spec=Track), Mock(spec=Track)]
-        progressbar = Mock(spec=ProgressbarBuilder)
-        progressbar.return_value = tracks
 
-        intersect = MultiprocessingIntersectParallelization(progressbar)
+        intersect = MultiprocessingIntersectParallelization(NoProgressbarBuilder())
         result = intersect.execute(mock_intersect, tracks, sections)
 
         assert result == [event_1, event_2]

@@ -296,6 +296,7 @@ class TestDatastore:
         )
         some_file = Path("some.file.ottrk")
         other_file = Path("other.file.ottrk")
+        progressbar.return_value = [some_file, other_file]
 
         store.load_track_files([some_file, other_file])
 

@@ -38,3 +38,8 @@ class ProgressbarBuilder(ABC):
             Progressbar: a new Progressbar instance
         """
         raise NotImplementedError
+
+
+class NoProgressbarBuilder(ProgressbarBuilder):
+    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterator:
+        return iter(sequence)
