@@ -418,7 +418,7 @@ class Datastore:
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._section_repository.get(section_id)
 
-    def get_all_flows(self) -> Iterable[Flow]:
+    def get_all_flows(self) -> list[Flow]:
         return self._flow_repository.get_all()
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
