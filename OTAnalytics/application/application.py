@@ -202,31 +202,26 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
         return intersecting_ids
 
 
-class TracksNotIntersectingSelectedSections(TrackIdProvider):
-    """Returns track ids that are not intersecting the currently selected sections.
+class TracksNotIntersectingSelection(TrackIdProvider):
+    """Returns track ids that are not intersecting the current selection sections.
 
     Args:
-        tracks_intersecting_selected_sections (TracksIntersectingSelectedSections):
-            tracks intersecting the currently selected sections
+        track_id_provider (TrackIdProvider): tracks intersecting the current selection
         track_repository (EventRepository): the track repository
     """
 
     def __init__(
         self,
-        tracks_intersecting_selected_sections: TracksIntersectingSelectedSections,
+        track_id_provider: TrackIdProvider,
         track_repository: TrackRepository,
     ) -> None:
-        self._tracks_intersecting_selected_sections = (
-            tracks_intersecting_selected_sections
-        )
+        self._track_id_provider = track_id_provider
         self._track_repository = track_repository
 
     def get_ids(self) -> Iterable[TrackId]:
         all_track_ids = {track.id for track in self._track_repository.get_all()}
-        tracks_intersecting_selected_sections = set(
-            self._tracks_intersecting_selected_sections.get_ids()
-        )
-        return all_track_ids - tracks_intersecting_selected_sections
+        assigned_tracks = set(self._track_id_provider.get_ids())
+        return all_track_ids - assigned_tracks
 
 
 class TracksAssignedToSelectedFlows(TrackIdProvider):
@@ -263,29 +258,6 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
             if assignment.assignment.id in self._flow_state.selected_flows.get():
                 ids.add(TrackId(assignment.road_user))
         return ids
-
-
-class TracksNotAssignedToSelectedFlows(TrackIdProvider):
-    def __init__(
-        self,
-        track_repository: TrackRepository,
-        tracks_assigned_to_flows: TracksAssignedToSelectedFlows,
-    ) -> None:
-        """Returns track ids that are not assigned to the currently selected flows.
-
-        Args:
-            track_repository (TrackRepository): the track repository.
-            tracks_assigned_to_flows (TracksAssignedToSelectedFlows): the tracks
-                currently assigned to flows.
-        """
-        self._tracks_assigned_to_flows = tracks_assigned_to_flows
-        self._track_repository = track_repository
-
-    def get_ids(self) -> Iterable[TrackId]:
-        all_tracks = {track.id for track in self._track_repository.get_all()}
-        tracks_assigned_to_flows = set(self._tracks_assigned_to_flows.get_ids())
-
-        return all_tracks - tracks_assigned_to_flows
 
 
 class OTAnalyticsApplication:

@@ -12,8 +12,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
     TracksAssignedToSelectedFlows,
     TracksIntersectingSelectedSections,
-    TracksNotAssignedToSelectedFlows,
-    TracksNotIntersectingSelectedSections,
+    TracksNotIntersectingSelection,
 )
 from OTAnalytics.application.datastore import (
     Datastore,
@@ -309,7 +308,7 @@ class ApplicationStarter:
     def _create_track_highlight_geometry_plotter_not_intersecting(
         self,
         state: TrackViewState,
-        tracks_not_intersecting_sections: TracksNotIntersectingSelectedSections,
+        tracks_not_intersecting_sections: TracksNotIntersectingSelection,
         pandas_track_provider: PandasDataFrameProvider,
         enable_legend: bool,
     ) -> Plotter:
@@ -338,7 +337,7 @@ class ApplicationStarter:
     def _create_start_end_point_tracks_not_intersecting_sections_plotter(
         self,
         state: TrackViewState,
-        tracks_not_intersecting_sections: TracksNotIntersectingSelectedSections,
+        tracks_not_intersecting_sections: TracksNotIntersectingSelection,
         pandas_track_provider: PandasDataFrameProvider,
         enable_legend: bool,
     ) -> Plotter:
@@ -372,8 +371,8 @@ class ApplicationStarter:
         track_repository: TrackRepository,
         enable_legend: bool,
     ) -> Plotter:
-        tracks_not_assigned_to_flow = TracksNotAssignedToSelectedFlows(
-            track_repository, tracks_assigned_to_flow
+        tracks_not_assigned_to_flow = TracksNotIntersectingSelection(
+            tracks_assigned_to_flow, track_repository
         )
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=tracks_not_assigned_to_flow
@@ -399,7 +398,7 @@ class ApplicationStarter:
         tracks_intersecting_sections = TracksIntersectingSelectedSections(
             section_state, datastore._event_repository
         )
-        tracks_not_intersecting_sections = TracksNotIntersectingSelectedSections(
+        tracks_not_intersecting_sections = TracksNotIntersectingSelection(
             tracks_intersecting_sections, datastore._track_repository
         )
 
