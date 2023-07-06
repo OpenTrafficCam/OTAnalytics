@@ -367,9 +367,9 @@ class ApplicationStarter:
     def _create_highlight_tracks_not_assigned_to_flow(
         self,
         state: TrackViewState,
-        track_repository: TrackRepository,
-        tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
         pandas_track_provider: PandasDataFrameProvider,
+        tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
+        track_repository: TrackRepository,
         enable_legend: bool,
     ) -> Plotter:
         tracks_not_assigned_to_flow = TracksNotAssignedToSelectedFlows(
@@ -455,9 +455,9 @@ class ApplicationStarter:
         highlight_tracks_not_assigned_to_flow = (
             self._create_highlight_tracks_not_assigned_to_flow(
                 track_view_state,
-                datastore._track_repository,
-                tracks_assigned_to_flow,
                 pandas_data_provider,
+                tracks_assigned_to_flow,
+                datastore._track_repository,
                 enable_legend=False,
             )
         )
