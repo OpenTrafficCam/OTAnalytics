@@ -26,7 +26,7 @@ class ProgressbarBuilder(ABC):
     """
 
     @abstractmethod
-    def __call__(self, sequence: Sequence, description: str, unit: str) -> Progressbar:
+    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterator:
         """Acts as the build method providing new Progressbar instances.
 
         Args:
