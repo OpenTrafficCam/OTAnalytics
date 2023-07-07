@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import numpy
 import pandas
@@ -12,7 +12,12 @@ from pandas import DataFrame
 from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import Plotter, TrackViewState
+from OTAnalytics.application.state import (
+    ObservableOptionalProperty,
+    ObservableProperty,
+    Plotter,
+    TrackViewState,
+)
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.track import (
@@ -85,6 +90,36 @@ CLASS_ORDER = [
     CLASS_BUS,
     CLASS_TRAIN,
 ]
+
+
+class CachedPlotter(Plotter):
+    def __init__(
+        self,
+        other: Plotter,
+        subjects: list[ObservableProperty | ObservableOptionalProperty],
+    ) -> None:
+        self._other = other
+        self._cache: Optional[TrackImage] = None
+
+        for subject in subjects:
+            subject.register(self.invalidate_cache)
+
+    def plot(self) -> Optional[TrackImage]:
+        if self._cache is None:
+            self._cache = super().plot()
+
+        return self._cache
+
+    def invalidate_cache(self, _: Any) -> None:
+        self._cache = None
+
+
+class DummyObservableWrapper(ObservableOptionalProperty[Any], TrackListObserver):
+    def __init__(self, default: Any | None = None) -> None:
+        super().__init__(default)
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self._subject.notify(None)
 
 
 class TrackPlotter(ABC):
