@@ -283,6 +283,32 @@ class SectionState(SectionListObserver):
             self.selected_sections.set([])
 
 
+class FlowState(FlowListObserver):
+    """
+    This state represents the currently selected flows.
+    """
+
+    def __init__(self) -> None:
+        self.selected_flows: ObservableProperty[list[FlowId]] = ObservableProperty[
+            list
+        ]([])
+
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        """
+        Notify the state about changes in the flow list.
+
+        Args:
+            flows (list[FlowId]): newly added flows
+
+        Raises:
+            IndexError: if the list of flows is empty
+        """
+        if flows:
+            self.selected_flows.set([flows[0]])
+        else:
+            self.selected_flows.set([])
+
+
 class TrackImageUpdater(TrackListObserver, SectionListObserver):
     """
     This class listens to track changes in the repository and updates the background
@@ -294,17 +320,20 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         datastore: Datastore,
         track_view_state: TrackViewState,
         section_state: SectionState,
+        flow_state: FlowState,
         plotter: Plotter,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._section_state = section_state
+        self._flow_state = flow_state
         self._plotter = plotter
         self._track_view_state.selected_videos.register(self.notify_video)
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
         self._section_state.selected_sections.register(self._notify_section_selection)
+        self._flow_state.selected_flows.register(self._notify_flow_changed)
 
     def notify_video(self, video: list[Video]) -> None:
         """
@@ -365,6 +394,9 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
     def notify_sections(self, sections: list[SectionId]) -> None:
         self._update()
 
+    def _notify_flow_changed(self, _: list[FlowId]) -> None:
+        self._update()
+
     def notify_layers(self, _: bool) -> None:
         """Will update the image
 
@@ -387,32 +419,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
             track_id (TrackId): track id used to get the video image
         """
         self._track_view_state.background_image.set(self._plotter.plot())
-
-
-class FlowState(FlowListObserver):
-    """
-    This state represents the currently selected flows.
-    """
-
-    def __init__(self) -> None:
-        self.selected_flows: ObservableProperty[list[FlowId]] = ObservableProperty[
-            list
-        ]([])
-
-    def notify_flows(self, flows: list[FlowId]) -> None:
-        """
-        Notify the state about changes in the flow list.
-
-        Args:
-            flows (list[FlowId]): newly added flows
-
-        Raises:
-            IndexError: if the list of flows is empty
-        """
-        if flows:
-            self.selected_flows.set([flows[0]])
-        else:
-            self.selected_flows.set([])
 
 
 class TracksMetadata(TrackListObserver):

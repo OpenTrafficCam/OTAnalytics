@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from OTAnalytics.application.analysis import RunSceneEventDetection
+from OTAnalytics.application.analysis.intersect import RunSceneEventDetection
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.track import Track
