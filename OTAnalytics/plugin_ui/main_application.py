@@ -47,6 +47,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CachedPandasTrackProvider,
     MatplotlibTrackPlotter,
     PandasTrackProvider,
     PlotterPrototype,
@@ -197,7 +198,7 @@ class ApplicationStarter:
         state = TrackViewState()
         background_image_plotter = TrackBackgroundPlotter(state, datastore)
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        pandas_data_provider = PandasTrackProvider(
+        pandas_data_provider = CachedPandasTrackProvider(
             datastore, state, dataframe_filter_builder
         )
         track_geometry_plotter = self._create_track_geometry_plotter(
