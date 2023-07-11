@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
+from OTAnalytics.application.our_custom_group_exception import OurCustomGroupException
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import (
@@ -104,7 +105,7 @@ class VideoParser(ABC):
     @abstractmethod
     def convert(
         self,
-        video: Iterable[Video],
+        videos: Iterable[Video],
         relative_to: Path = Path("."),
     ) -> dict[str, list[dict]]:
         pass
@@ -288,8 +289,25 @@ class Datastore:
         self._video_repository.clear()
 
     def load_video_files(self, files: list[Path]) -> None:
-        videos = [self._video_parser.parse(file) for file in files]
+        raised_exceptions: list[Exception] = []
+        videos = []
+        for file in files:
+            try:
+                videos.append(self._video_parser.parse(file))
+            except Exception as cause:
+                raised_exceptions.append(cause)
+        if raised_exceptions:
+            raise OurCustomGroupException(raised_exceptions)
         self._video_repository.add_all(videos)
+
+    def remove_videos(self, videos: list[Video]) -> None:
+        """
+        Remove videos from the repository.
+
+        Args:
+            videos (Video): videos to remove
+        """
+        self._video_repository.remove(videos)
 
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         """
@@ -310,6 +328,7 @@ class Datastore:
         tracks = self._track_parser.parse(file)
         track_ids = [track.id for track in tracks]
         track_ids, videos = self._track_video_parser.parse(file, track_ids)
+        self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 
@@ -320,8 +339,14 @@ class Datastore:
         Args:
             file (Path): file in ottrk format
         """
+        raised_exceptions: list[Exception] = []
         for file in files:
-            self.load_track_file(file)
+            try:
+                self.load_track_file(file)
+            except Exception as cause:
+                raised_exceptions.append(cause)
+        if raised_exceptions:
+            raise OurCustomGroupException(raised_exceptions)
 
     def get_all_tracks(self) -> list[Track]:
         """
@@ -370,7 +395,7 @@ class Datastore:
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._section_repository.get(section_id)
 
-    def get_all_flows(self) -> Iterable[Flow]:
+    def get_all_flows(self) -> list[Flow]:
         return self._flow_repository.get_all()
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
@@ -416,7 +441,7 @@ class Datastore:
         """
         return self._flow_repository.is_flow_using_section(section)
 
-    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+    def flows_using_section(self, section: SectionId) -> list[Flow]:
         """
         Returns a list of flows using the section as start or end.
 
@@ -506,6 +531,9 @@ class Datastore:
 
     def get_video_for(self, track_id: TrackId) -> Optional[Video]:
         return self._track_to_video_repository.get_video_for(track_id)
+
+    def get_all_videos(self) -> list[Video]:
+        return self._video_repository.get_all()
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """

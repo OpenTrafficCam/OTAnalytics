@@ -27,19 +27,14 @@ class Flow:
 
     Args:
         id (FlowId): unique id of the flow
+        name (str): unique name of the flow
         start (Section): section to start the flow at
         end (Section): section to end the flow at
-        distance (float): distance between start and end
+        distance (Optional[float]): distance between start and end
 
     Raises:
         ValueError: if distance is negative
     """
-
-    id: FlowId
-    name: str
-    start: SectionId
-    end: SectionId
-    distance: float
 
     def __init__(
         self,
@@ -47,9 +42,9 @@ class Flow:
         name: str,
         start: SectionId,
         end: SectionId,
-        distance: float,
+        distance: Optional[float] = None,
     ) -> None:
-        if distance < 0:
+        if distance and distance < 0:
             raise ValueError(
                 f"Distance must be equal or greater then 0, but is {distance}"
             )
@@ -57,7 +52,7 @@ class Flow:
         self.name = name
         self.start: SectionId = start
         self.end: SectionId = end
-        self.distance: float = distance
+        self.distance: Optional[float] = distance
 
     def to_dict(self) -> dict:
         return {
@@ -70,6 +65,12 @@ class Flow:
 
     def is_using(self, section: SectionId) -> bool:
         return (self.start == section) or (self.end == section)
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __eq__(self, other: object) -> bool:
+        return self.id == other.id if isinstance(other, Flow) else False
 
 
 class FlowListObserver(ABC):
@@ -191,7 +192,7 @@ class FlowRepository:
         """
         return any(flow.is_using(section) for flow in self._flows.values())
 
-    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+    def flows_using_section(self, section: SectionId) -> list[Flow]:
         """
         Returns a list of flows using the section as start or end.
 
@@ -201,9 +202,7 @@ class FlowRepository:
         Returns:
             list[FlowId]: flows using the section
         """
-        return list(
-            {flow.id for flow in self._flows.values() if flow.is_using(section)}
-        )
+        return list({flow for flow in self._flows.values() if flow.is_using(section)})
 
     def add_all(self, flows: Iterable[Flow]) -> None:
         for flow in flows:
@@ -213,10 +212,11 @@ class FlowRepository:
     def remove(self, flow_id: FlowId) -> None:
         if flow_id in self._flows:
             del self._flows[flow_id]
-        self._repository_content_observers.notify([flow_id])
+        self._repository_content_observers.notify([])
 
     def update(self, flow: Flow) -> None:
         self._flows[flow.id] = flow
+        self._flow_content_observers.notify(flow.id)
 
     def get(self, flow_id: FlowId) -> Optional[Flow]:
         return self._flows.get(flow_id)

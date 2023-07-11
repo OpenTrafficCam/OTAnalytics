@@ -2,15 +2,14 @@ import tkinter
 from tkinter import E, StringVar, W
 from typing import Any, Optional
 
-from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkOptionMenu, CTkToplevel
+from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
-    PADX,
-    PADY,
-    STICKY,
-    tk_events,
+from OTAnalytics.application.application import CancelAddFlow
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
+    FrameContent,
+    ToplevelTemplate,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
 FLOW_ID = "Id"
@@ -20,51 +19,44 @@ END_SECTION = "End section"
 DISTANCE = "Distance"
 
 
-class ToplevelFlows(CTkToplevel):
+class TooFewSectionsForFlowException(Exception):
+    pass
+
+
+class SectionSeveralTimesInFlowException(Exception):
+    pass
+
+
+class NotExistingSectionException(Exception):
+    pass
+
+
+class InvalidFlowNameException(Exception):
+    pass
+
+
+class FrameConfigureFlow(FrameContent):
     def __init__(
         self,
-        title: str,
-        initial_position: tuple[int, int],
         section_ids: list[IdResource],
-        input_values: dict | None = {},
+        input_values: dict | None = None,
+        show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.title(title)
         self._section_ids = section_ids
         self._section_name_to_id = self._create_section_name_to_id(section_ids)
         self._section_id_to_name = self._create_section_id_to_name(section_ids)
         self._current_name = StringVar()
-        self.input_values: dict = self.__create_input_values(input_values)
-        self.protocol("WM_DELETE_WINDOW", self.close)
-        self._initial_position = initial_position
+        self._input_values: dict = self.__create_input_values(input_values)
+        self._show_distance = show_distance
         self._last_autofilled_name: str = ""
         self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
-        self._set_initial_position()
-        self._set_focus()
-        self._set_close_on_return_key()
 
-    def _create_section_name_to_id(self, sections: list[IdResource]) -> dict[str, str]:
-        return {resource.name: resource.id for resource in sections}
-
-    def _create_section_id_to_name(self, sections: list[IdResource]) -> dict[str, str]:
-        return {resource.id: resource.name for resource in sections}
-
-    def __set_initial_values(self) -> None:
-        self._current_name.set(self.input_values.get(FLOW_NAME, ""))
-
-    def __create_input_values(self, input_values: Optional[dict]) -> dict:
-        if input_values:
-            return input_values
-        return {
-            FLOW_ID: "",
-            FLOW_NAME: "",
-            START_SECTION: "",
-            END_SECTION: "",
-            DISTANCE: 0,
-        }
+    def set_focus(self) -> None:
+        self.after(0, lambda: self.entry_distance.focus_set())
 
     def _get_widgets(self) -> None:
         self.label_section_start = CTkLabel(master=self, text="First section:")
@@ -96,23 +88,8 @@ class ToplevelFlows(CTkToplevel):
             validate="key",
             validatecommand=(self.register(self._is_float_above_zero), "%P"),
         )
-        self.entry_distance.insert(0, self.input_values[DISTANCE])
-
-        self.button_ok = CTkButton(master=self, text="Ok", command=self.close)
-
-    def _section_names(self) -> list[str]:
-        return [resource.name for resource in self._section_ids]
-
-    def _get_end_section_name(self) -> str:
-        _id = self.input_values[END_SECTION]
-        return self._get_section_name_for_id(_id)
-
-    def _get_section_name_for_id(self, name: str) -> str:
-        return self._section_id_to_name.get(name, "")
-
-    def _get_start_section_name(self) -> str:
-        _id = self.input_values[START_SECTION]
-        return self._get_section_name_for_id(_id)
+        if current_distance := self._input_values[DISTANCE]:
+            self.entry_distance.insert(index=0, string=current_distance)
 
     def _place_widgets(self) -> None:
         self.label_section_start.grid(row=0, column=0, padx=PADX, pady=PADY, sticky="E")
@@ -123,23 +100,32 @@ class ToplevelFlows(CTkToplevel):
         self.dropdown_section_end.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=W)
         self.label_name.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.E)
         self.entry_name.grid(row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.W)
-        self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
-        self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
-        self.button_ok.grid(
-            row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
+        if self._show_distance:
+            self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
+            self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
 
-    def _set_initial_position(self) -> None:
-        x, y = self._initial_position
-        self.geometry(f"+{x+10}+{y+10}")
+    def _create_section_name_to_id(self, sections: list[IdResource]) -> dict[str, str]:
+        return {resource.name: resource.id for resource in sections}
 
-    def _set_focus(self) -> None:
-        self.after(0, lambda: self.lift())
-        self.after(0, lambda: self.entry_name.focus_set())
+    def _create_section_id_to_name(self, sections: list[IdResource]) -> dict[str, str]:
+        return {resource.id: resource.name for resource in sections}
 
-    def _set_close_on_return_key(self) -> None:
-        self.entry_distance.bind(tk_events.RETURN_KEY, self.close)
-        self.entry_distance.bind(tk_events.KEYPAD_RETURN_KEY, self.close)
+    def __set_initial_values(self) -> None:
+        self._current_name.set(self._input_values.get(FLOW_NAME, ""))
+
+    def __create_input_values(self, input_values: Optional[dict]) -> dict:
+        if input_values is not None:
+            return input_values
+        return {
+            FLOW_ID: "",
+            FLOW_NAME: "",
+            START_SECTION: "",
+            END_SECTION: "",
+            DISTANCE: None,
+        }
+
+    def _section_names(self) -> list[str]:
+        return [resource.name for resource in self._section_ids]
 
     def _autofill_name(self, event: Any) -> None:
         if self._last_autofilled_name == self.entry_name.get():
@@ -152,15 +138,16 @@ class ToplevelFlows(CTkToplevel):
             self.entry_name.insert(0, auto_name)
             self._last_autofilled_name = auto_name
 
-    def close(self, event: Any = None) -> None:
-        if not self._sections_are_valid():
-            return
-        self.input_values[FLOW_NAME] = self._current_name.get()
-        self.input_values[START_SECTION] = self._get_start_section_id()
-        self.input_values[END_SECTION] = self._get_end_section_id()
-        self.input_values[DISTANCE] = self.entry_distance.get()
-        self.destroy()
-        self.update()
+    def _get_end_section_name(self) -> str:
+        _id = self._input_values[END_SECTION]
+        return self._get_section_name_for_id(_id)
+
+    def _get_section_name_for_id(self, name: str) -> str:
+        return self._section_id_to_name.get(name, "")
+
+    def _get_start_section_name(self) -> str:
+        _id = self._input_values[START_SECTION]
+        return self._get_section_name_for_id(_id)
 
     def _get_end_section_id(self) -> str:
         name = self.dropdown_section_end.get()
@@ -175,44 +162,77 @@ class ToplevelFlows(CTkToplevel):
 
     def _is_float_above_zero(self, entry_value: Any) -> bool:
         try:
-            float_value = float(entry_value)
+            float_value = self.__parse_distance(entry_value)
         except Exception:
             return False
-        return float_value >= 0
+        return float_value >= 0 if float_value else True
 
-    def _sections_are_valid(self) -> bool:
+    def __parse_distance(self, entry_value: Any) -> Optional[float]:
+        return float(entry_value) if entry_value else None
+
+    def _check_sections(self) -> None:
         section_start = self._get_start_section_id()
         section_end = self._get_end_section_id()
         sections = [section_start, section_end]
-        position = (self.winfo_x(), self.winfo_y())
         if "" in [section_start, section_end]:
-            InfoBox(
-                message="Please choose both a start and an end section!",
-                initial_position=position,
+            raise TooFewSectionsForFlowException(
+                "Please choose both a start and an end section!"
             )
-            return False
         elif section_start == section_end:
-            InfoBox(
-                message="Start and end section have to be different!",
-                initial_position=position,
+            raise SectionSeveralTimesInFlowException(
+                "Start and end section have to be different!"
             )
-            return False
         else:
             for section in sections:
                 if section not in [resource.id for resource in self._section_ids]:
-                    InfoBox(
-                        message="Start and end section have to be valid sections!",
-                        initial_position=position,
+                    raise NotExistingSectionException(
+                        f"{section} is not an existing section"
                     )
-                    return False
+
+    def _check_flow_name(self) -> None:
         if self._current_name.get() == "":
-            InfoBox(
-                message="Please choose a flow name!",
-                initial_position=position,
-            )
-            return False
-        return True
+            raise InvalidFlowNameException("Please choose a flow name!")
+
+    def get_input_values(self) -> dict:
+        self._check_sections()
+        self._check_flow_name()
+        self._input_values[FLOW_NAME] = self._current_name.get()
+        self._input_values[START_SECTION] = self._get_start_section_id()
+        self._input_values[END_SECTION] = self._get_end_section_id()
+        self._input_values[DISTANCE] = self.__parse_distance(self.entry_distance.get())
+        return self._input_values
+
+
+class ToplevelFlows(ToplevelTemplate):
+    def __init__(
+        self,
+        section_ids: list[IdResource],
+        input_values: dict | None = None,
+        show_distance: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        self._input_values = input_values
+        self._section_ids = section_ids
+        self._show_distance = show_distance
+        super().__init__(**kwargs)
+
+    def _create_frame_content(self, master: Any) -> FrameContent:
+        return FrameConfigureFlow(
+            master=master,
+            section_ids=self._section_ids,
+            input_values=self._input_values,
+            show_distance=self._show_distance,
+        )
+
+    def _on_ok(self, event: Any = None) -> None:
+        self._input_values = self._frame_content.get_input_values()
+        self._close()
 
     def get_data(self) -> dict:
         self.wait_window()
-        return self.input_values
+        if self._canceled:
+            raise CancelAddFlow()
+        if self._input_values is None:
+            raise ValueError("input values is None, but should be a dict")
+        print(self._input_values)
+        return self._input_values

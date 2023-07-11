@@ -2,6 +2,7 @@ import tkinter
 from abc import ABC, abstractmethod
 from datetime import datetime
 from tkinter import END, IntVar
+from tkinter.ttk import Treeview
 from typing import Any, Callable, Optional
 
 from customtkinter import (
@@ -20,6 +21,8 @@ from OTAnalytics.adapter_ui.default_values import (
     DATE_FORMAT_PLACEHOLDER,
     DATETIME_FORMAT,
 )
+from OTAnalytics.adapter_ui.dto import DateRangeDto
+from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
@@ -28,6 +31,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STICKY,
     tk_events,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ANCHOR_WEST,
@@ -70,11 +74,28 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
             button_default_color=COLOR_GRAY,
             viewmodel=self._viewmodel,
         )
+        self.date_range_switcher = DateRangeSwitcher(
+            master=self, viewmodel=self._viewmodel, enabled=False
+        )
+        self.filter_by_classification_button = FilterTracksbyClassificationButton(
+            master=self,
+            name="Filter by Classification",
+            button_width=60,
+            button_default_state=STATE_DISABLED,
+            button_default_color=COLOR_GRAY,
+            viewmodel=self._viewmodel,
+        )
 
     def _place_widgets(self) -> None:
         self.label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST)
         self.filter_by_date_button.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, padx=(PADX, 0), pady=PADY, sticky=STICKY
+        )
+        self.date_range_switcher.grid(
+            row=1, column=1, padx=(0, PADX), pady=PADY, sticky=STICKY
+        )
+        self.filter_by_classification_button.grid(
+            row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _introduce_to_viewmodel(self) -> None:
@@ -86,11 +107,28 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
     def set_inactive_color_on_filter_by_date_button(self) -> None:
         self.filter_by_date_button.reset_color()
 
+    def set_active_color_on_filter_by_class_button(self) -> None:
+        self.filter_by_classification_button.set_color(COLOR_ORANGE)
+
+    def set_inactive_color_on_filter_by_class_button(self) -> None:
+        self.filter_by_classification_button.reset_color()
+
     def enable_filter_by_date_button(self) -> None:
         self.filter_by_date_button.enable_button()
+        self.date_range_switcher.enable()
 
     def disable_filter_by_date_button(self) -> None:
         self.filter_by_date_button.disable_button()
+        self.date_range_switcher.disable()
+
+    def enable_filter_by_class_button(self) -> None:
+        self.filter_by_classification_button.enable_button()
+
+    def disable_filter_by_class_button(self) -> None:
+        self.filter_by_classification_button.disable_button()
+
+    def update_date_range(self, date_range: DateRangeDto) -> None:
+        self.date_range_switcher.update_date_range(date_range)
 
 
 class FilterButton(ABC, CTkFrame):
@@ -204,7 +242,7 @@ class FilterTracksByDateFilterButton(FilterButton):
         self.button.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
-class FilterTracksByDatePopup(CTkToplevel):
+class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -326,9 +364,6 @@ class FilterTracksByDatePopup(CTkToplevel):
             last_detection_occurrence = self._viewmodel.get_last_detection_occurrence()
             self.to_date_row.set_datetime(last_detection_occurrence)
 
-    def _get_position(self) -> tuple[int, int]:
-        return self.winfo_rootx(), self.winfo_rooty()
-
     def _on_apply_button_clicked(self) -> None:
         try:
             date_range = DateRange(self.get_start_date(), self.get_end_date())
@@ -337,11 +372,15 @@ class FilterTracksByDatePopup(CTkToplevel):
             print("Filter tracks by date applied.")
             self._close()
         except InvalidDatetimeFormatError as e:
-            InfoBox(message=str(e), initial_position=self._get_position())
+            InfoBox(message=str(e), initial_position=self.get_position())
 
     def _on_reset_button_clicked(self) -> None:
         self._viewmodel.reset_filter_tracks_by_date()
         self._close()
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
 
 
 class DateRow(CTkFrame):
@@ -560,6 +599,216 @@ class DateRow(CTkFrame):
 
     def trace_add(self, callback: Callable[[str, str, str], object]) -> None:
         self._hour_var.trace_add("write", callback=callback)
+
+
+class FilterTracksbyClassificationButton(FilterButton):
+    def __init__(
+        self,
+        name: str,
+        button_width: int,
+        button_default_state: str,
+        button_default_color: str,
+        viewmodel: ViewModel,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            name,
+            button_width,
+            button_default_state,
+            button_default_color,
+            viewmodel,
+            **kwargs,
+        )
+
+    def _show_popup(self) -> None:
+        FilterTracksByClassPopup(
+            viewmodel=self._viewmodel,
+            title="Filter tracks by classification",
+        )
+
+    def _enable_filter(self) -> None:
+        self._viewmodel.enable_filter_track_by_class()
+
+    def _disable_filter(self) -> None:
+        self._viewmodel.disable_filter_track_by_class()
+
+    def enable_button(self) -> None:
+        self.button.configure(state=STATE_NORMAL)
+
+    def disable_button(self) -> None:
+        self.button.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
+
+
+class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
+    def __init__(
+        self,
+        viewmodel: ViewModel,
+        title: str,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._viewmodel = viewmodel
+
+        self.title(title)
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
+        self._get_widgets()
+        self._place_widgets()
+        self._bind_events()
+        self._set_focus()
+
+    def _get_widgets(self) -> None:
+        self.label = CTkLabel(master=self, text="Select classes")
+        self.treeview_classes = self._create_class_list()
+
+        self._button_frame = CTkFrame(
+            master=self, fg_color=get_default_toplevel_fg_color()
+        )
+        self.apply_button = CTkButton(
+            master=self._button_frame,
+            text="Apply",
+            command=self._on_apply_button_clicked,
+            width=60,
+        )
+        self.reset_button = CTkButton(
+            master=self._button_frame,
+            text="Reset",
+            command=self._on_reset_button_clicked,
+            width=60,
+        )
+
+    def _place_widgets(self) -> None:
+        self.label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST)
+        self.treeview_classes.grid(
+            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST
+        )
+
+        self._button_frame.grid(
+            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST
+        )
+
+        self.apply_button.grid(row=0, column=0, sticky=STICKY_WEST)
+        self.reset_button.grid(row=0, column=1, padx=(PADX, 0), sticky=STICKY_WEST)
+
+    def _create_class_list(self) -> Treeview:
+        classes = self._viewmodel.get_classes()
+        selected_classes = self._viewmodel.get_class_filter_selection()
+
+        treeview_classes = Treeview(master=self, show="tree", selectmode="none")
+        treeview_classes["columns"] = "Classes"
+        treeview_classes.column(column="#0", width=0, stretch=False)
+        treeview_classes.column(column="Classes", anchor="w", width=150, minwidth=40)
+        treeview_classes["displaycolumns"] = "Classes"
+        for classification in classes:
+            treeview_classes.insert(
+                parent="",
+                index="end",
+                iid=classification,
+                text="",
+                values=[classification],
+            )
+        if selected_classes is None:
+            treeview_classes.selection_set(classes)
+        else:
+            treeview_classes.selection_set(selected_classes)
+        return treeview_classes
+
+    def _bind_events(self) -> None:
+        self.bind(tk_events.ESCAPE_KEY, self._close)
+        self.treeview_classes.bind(tk_events.LEFT_BUTTON_UP, self._on_class_clicked)
+        self.treeview_classes.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
+
+    def _on_class_clicked(self, event: Any) -> None:
+        current_selection: str = self.treeview_classes.focus()
+        self.treeview_classes.selection_toggle(current_selection)
+
+    def _on_deselect(self, event: Any) -> None:
+        self.treeview_classes.selection_set([])
+
+    def _set_focus(self) -> None:
+        self.after(0, lambda: self.lift())
+
+    def _close(self, _: Any = None) -> None:
+        self.destroy()
+        self.update()
+
+    def _on_apply_button_clicked(self) -> None:
+        self._viewmodel.apply_filter_tracks_by_class(
+            list(self.treeview_classes.selection())
+        )
+        print("Filter tracks by classification applied.")
+        self._close()
+
+    def _on_reset_button_clicked(self) -> None:
+        self._viewmodel.reset_filter_tracks_by_class()
+        self._close()
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
+
+
+class DateRangeSwitcher(CTkFrame):
+    def __init__(self, viewmodel: ViewModel, enabled: bool, **kwargs: Any):
+        super().__init__(**kwargs)
+        self._viewmodel = viewmodel
+        self._current_date_range = tkinter.StringVar()
+        self._current_date_range.set("")
+
+        self._get_widgets()
+        self._place_widgets()
+
+        if enabled:
+            self.enable()
+        else:
+            self.disable()
+
+    def _get_widgets(self) -> None:
+        self.label_date_range = CTkLabel(
+            master=self, textvariable=self._current_date_range
+        )
+        self.button_prev_range = self._create_switch_button(
+            text="<", callback=self._switch_to_previous_date_range
+        )
+        self.button_next_range = self._create_switch_button(
+            text=">", callback=self._switch_to_next_date_range
+        )
+
+    def _create_switch_button(
+        self, text: str, callback: Callable[[], None]
+    ) -> CTkButton:
+        return CTkButton(master=self, text=text, command=callback, width=40)
+
+    def _place_widgets(self) -> None:
+        self.button_prev_range.grid(row=0, column=0, sticky=STICKY)
+        self.label_date_range.grid(row=0, column=1, sticky=STICKY)
+        self.button_next_range.grid(row=0, column=2, sticky=STICKY)
+
+    def update_date_range(self, date_range: DateRangeDto) -> None:
+        start_date = date_range["start_date"]
+        end_date = date_range["end_date"]
+
+        if start_date == "" and end_date == "":
+            self._current_date_range.set("")
+        else:
+            self._current_date_range.set(f"{start_date} - {end_date}")
+
+    def _switch_to_previous_date_range(self) -> None:
+        self._viewmodel.switch_to_prev_date_range()
+
+    def _switch_to_next_date_range(self) -> None:
+        self._viewmodel.switch_to_next_date_range()
+
+    def enable(self) -> None:
+        self.button_prev_range.configure(
+            state=STATE_NORMAL, fg_color=ThemeManager.theme["CTkButton"]["fg_color"]
+        )
+        self.button_next_range.configure(
+            state=STATE_NORMAL, fg_color=ThemeManager.theme["CTkButton"]["fg_color"]
+        )
+
+    def disable(self) -> None:
+        self.button_prev_range.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
+        self.button_next_range.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
 class ColonLabel(CTkLabel):

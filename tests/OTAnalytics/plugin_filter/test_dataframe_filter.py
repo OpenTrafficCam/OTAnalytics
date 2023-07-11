@@ -73,18 +73,18 @@ class TestDataFramePredicates:
                 Series([False, False, False, False, False]),
             ),
             (
-                DataFrameHasClassifications(CLASSIFICATION, ["car", "truck"]),
+                DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 Series([True, True, True, True, True]),
             ),
             (
-                DataFrameHasClassifications(CLASSIFICATION, ["bicycle", "truck"]),
+                DataFrameHasClassifications(CLASSIFICATION, {"bicycle", "truck"}),
                 Series([False, False, False, False, False]),
             ),
             (
                 DataFrameStartsAtOrAfterDate(
                     OCCURRENCE, datetime(2000, 1, 1)
                 ).conjunct_with(
-                    DataFrameHasClassifications(CLASSIFICATION, ["car", "truck"]),
+                    DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 ),
                 Series([True, True, True, True, True]),
             ),
@@ -92,7 +92,7 @@ class TestDataFramePredicates:
                 DataFrameStartsAtOrAfterDate(
                     OCCURRENCE, datetime(2000, 1, 11)
                 ).conjunct_with(
-                    DataFrameHasClassifications(CLASSIFICATION, ["car", "truck"]),
+                    DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 ),
                 Series([False, False, False, False, False]),
             ),
@@ -112,7 +112,7 @@ class TestDataFrameFilter:
         start_date = datetime(2000, 1, 1)
         starts_at_or_after_date = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
         has_classifications = DataFrameHasClassifications(
-            CLASSIFICATION, ["car", "truck"]
+            CLASSIFICATION, {"car", "truck"}
         )
         has_class_and_within_date = starts_at_or_after_date.conjunct_with(
             has_classifications
@@ -160,7 +160,7 @@ class TestDataFrameFilterBuilder:
         assert dataframe_filter._predicate._end_date == end_date
 
     def test_add_has_classifications_predicate(self) -> None:
-        classifications = ["car", "truck"]
+        classifications = {"car", "truck"}
 
         builder = DataFrameFilterBuilder()
         builder.set_classification_column(CLASSIFICATION)
@@ -174,7 +174,7 @@ class TestDataFrameFilterBuilder:
         assert dataframe_filter._predicate._classifications == classifications
 
     def test_add_has_classifcations_predicate_raise_error(self) -> None:
-        classifications = ["car", "truck"]
+        classifications = {"car", "truck"}
         builder = DataFrameFilterBuilder()
 
         with pytest.raises(FilterBuildError):
@@ -196,7 +196,7 @@ class TestDataFrameFilterBuilder:
 
     def test_add_multiple_predicates(self) -> None:
         end_date = datetime(2000, 1, 3)
-        classifications = ["car", "truck"]
+        classifications = {"car", "truck"}
 
         builder = DataFrameFilterBuilder()
         builder.set_occurrence_column(OCCURRENCE)
@@ -228,7 +228,7 @@ class TestDataFrameFilterBuilder:
         assert type(track_filter) == NoOpDataFrameFilter
 
     def test_reset(self) -> None:
-        classifications = ["car", "truck"]
+        classifications = {"car", "truck"}
 
         builder = DataFrameFilterBuilder()
         builder.set_classification_column(CLASSIFICATION)

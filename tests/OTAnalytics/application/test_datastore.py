@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Any, Sequence
-from unittest.mock import Mock, call
+from unittest.mock import MagicMock, Mock, call
 
 import pytest
 from numpy import array, int32
@@ -29,7 +29,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.domain.video import Video, VideoReader, VideoRepository
+from OTAnalytics.domain.video import SimpleVideo, Video, VideoReader, VideoRepository
 
 
 class MockVideoReader(VideoReader):
@@ -50,20 +50,20 @@ class MockVideoReader(VideoReader):
         return MockImage()
 
 
-class TestVideo:
+class TestSimpleVideo:
     video_reader = MockVideoReader()
 
     def test_raise_error_if_file_not_exists(self) -> None:
         with pytest.raises(ValueError):
-            Video(video_reader=self.video_reader, path=Path("foo/bar.mp4"))
+            SimpleVideo(video_reader=self.video_reader, path=Path("foo/bar.mp4"))
 
     def test_init_with_valid_args(self, cyclist_video: Path) -> None:
-        video = Video(video_reader=self.video_reader, path=cyclist_video)
+        video = SimpleVideo(video_reader=self.video_reader, path=cyclist_video)
         assert video.path == cyclist_video
         assert video.video_reader == self.video_reader
 
     def test_get_frame_return_correct_image(self, cyclist_video: Path) -> None:
-        video = Video(video_reader=self.video_reader, path=cyclist_video)
+        video = SimpleVideo(video_reader=self.video_reader, path=cyclist_video)
         assert video.get_frame(0).as_image() == Image.fromarray(
             array([[1, 0], [0, 1]], int32)
         )
@@ -203,9 +203,17 @@ class TestDatastore:
         some_track = Mock()
         some_track_id = TrackId(1)
         some_track.id = some_track_id
-        some_video = Video(video_reader=Mock(), path=Path(""))
+        some_video = SimpleVideo(video_reader=Mock(), path=Path(""))
         track_parser.parse.return_value = [some_track]
         track_video_parser.parse.return_value = [some_track_id], [some_video]
+
+        order = MagicMock()
+        order.track_parser = track_parser
+        order.track_video_parser = track_video_parser
+        order.video_repository = video_repository
+        order.track_repository = track_repository
+        order.track_to_video_repository = track_to_video_repository
+
         store = Datastore(
             track_repository=track_repository,
             track_parser=track_parser,
@@ -224,11 +232,13 @@ class TestDatastore:
 
         store.load_track_file(some_file)
 
-        track_parser.parse.assert_called_with(some_file)
-        track_video_parser.parse.assert_called_with(some_file, [some_track_id])
-        track_repository.add_all.assert_called_with([some_track])
-
-        track_to_video_repository.add.called_with(some_track_id, some_video)
+        assert order.mock_calls == [
+            call.track_parser.parse(some_file),
+            call.track_video_parser.parse(some_file, [some_track_id]),
+            call.video_repository.add_all([some_video]),
+            call.track_to_video_repository.add_all([some_track_id], [some_video]),
+            call.track_repository.add_all([some_track]),
+        ]
 
     def test_load_track_files(
         self,
@@ -248,11 +258,11 @@ class TestDatastore:
         some_track = Mock()
         some_track_id = TrackId(1)
         some_track.id = some_track_id
-        some_video = Video(video_reader=Mock(), path=Path(""))
+        some_video = SimpleVideo(video_reader=Mock(), path=Path(""))
         other_track = Mock()
         other_track_id = TrackId(2)
         other_track.id = other_track_id
-        other_video = Video(video_reader=Mock(), path=Path(""))
+        other_video = SimpleVideo(video_reader=Mock(), path=Path(""))
         track_parser.parse.side_effect = [[some_track], [other_track]]
         track_video_parser.parse.side_effect = [
             [[some_track_id], [some_video]],

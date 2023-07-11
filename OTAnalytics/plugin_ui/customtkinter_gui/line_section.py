@@ -9,7 +9,7 @@ from OTAnalytics.adapter_ui.abstract_frame_flows import (
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate
-from OTAnalytics.domain.section import NAME, RELATIVE_OFFSET_COORDINATES, Section
+from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     DELETE_KEYS,
@@ -17,12 +17,13 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     LEFT_BUTTON_UP,
     LEFT_KEY,
     MOTION,
+    MOTION_WHILE_LEFT_BUTTON_DOWN,
     PLUS_KEYS,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
     RIGHT_KEY,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import coordinate_is_on_widget
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB,
     KNOB_CORE,
@@ -296,19 +297,26 @@ class SectionGeometryEditor(CanvasObserver):
             elif event_type == ESCAPE_KEY:
                 self.detach_from(self._canvas.event_handler)
                 self._abort()
+                self._viewmodel.cancel_action()
         elif event_type == LEFT_KEY:
             self._shift_selected_knob_backward()
         elif event_type == RIGHT_KEY:
             self._shift_selected_knob_forward()
-        elif event_type == MOTION:
+        elif event_type in [
+            MOTION,
+            MOTION_WHILE_LEFT_BUTTON_DOWN,
+        ] and coordinate_is_on_widget(coordinate, self._canvas):
             self._move_knob(coordinate)
-        elif event_type == LEFT_BUTTON_UP:
+        elif event_type == LEFT_BUTTON_UP and coordinate_is_on_widget(
+            coordinate, self._canvas
+        ):
             self._update_knob(coordinate)
             self._deselect_knob()
         elif event_type == DELETE_KEYS:
             self._delete_selected_knob()
         elif event_type == ESCAPE_KEY:
             self._deselect_knob()
+            self._viewmodel.cancel_action()
 
     def _hover_knob(self, coordinate: tuple[int, int]) -> None:
         closest_knob_index = self._get_closest_knob_index(coordinate=coordinate)
@@ -560,9 +568,14 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             key (str | None): Key character that has been pressed while mouse was on
                 canvas.
         """
-        if event_type == LEFT_BUTTON_UP:
+        if event_type == LEFT_BUTTON_UP and coordinate_is_on_widget(
+            coordinate, self._canvas
+        ):
             self.geometry_builder.add_coordinate(coordinate)
-        elif event_type == MOTION:
+        elif event_type in [
+            MOTION,
+            MOTION_WHILE_LEFT_BUTTON_DOWN,
+        ] and coordinate_is_on_widget(coordinate, self._canvas):
             self.geometry_builder.add_temporary_coordinate(coordinate)
         elif self.geometry_builder.number_of_coordinates() >= 2 and (
             event_type in {RIGHT_BUTTON_UP, RETURN_KEY}
@@ -572,6 +585,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         elif event_type == ESCAPE_KEY:
             self.detach_from(self._canvas.event_handler)
             self.geometry_builder.abort()
+            self._viewmodel.cancel_action()
 
     def finish_building(
         self,
@@ -585,20 +599,15 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             end (tuple[int, int]): Tuple of the sections end coordinates
         """
         self._coordinates = coordinates
-        if (
-            NAME not in self._metadata
-            or RELATIVE_OFFSET_COORDINATES not in self._metadata
-        ):
-            self._get_metadata()
-        if not self._metadata[NAME]:
-            return
         self._create_section()
 
-    def _get_metadata(self) -> None:
-        toplevel_position = get_widget_position(widget=self._canvas)
-        self._metadata = self._viewmodel.get_section_metadata(
+    def _get_metadata(self) -> dict:
+        toplevel_position = self._canvas.get_position()
+        return self._viewmodel.get_section_metadata(
             title="Add section", initial_position=toplevel_position
         )
 
     def _create_section(self) -> None:
-        self._viewmodel.set_new_section(self._metadata, self._coordinates)
+        self._viewmodel.add_new_section(
+            self._coordinates, get_metadata=self._get_metadata
+        )

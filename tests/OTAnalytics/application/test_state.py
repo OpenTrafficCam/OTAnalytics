@@ -6,6 +6,7 @@ import pytest
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    FlowState,
     ObservableOptionalProperty,
     ObservableProperty,
     Plotter,
@@ -66,9 +67,9 @@ class TestTrackState:
 
 class TestObservableProperty:
     def test_notify_observer(self) -> None:
-        first_filter_element = FilterElement(DateRange(None, None), [])
+        first_filter_element = FilterElement(DateRange(None, None), set())
         changed_filter_element = FilterElement(
-            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), ["car", "truck"]
+            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), {"car", "truck"}
         )
         observer = Mock(spec=Callable[[FilterElement], None])
         state = ObservableProperty[FilterElement](first_filter_element)
@@ -83,7 +84,7 @@ class TestObservableProperty:
 
     def test_update_filter_element_on_on_notify_filter_element(self) -> None:
         filter_element = FilterElement(
-            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), ["car", "truck"]
+            DateRange(datetime(2000, 1, 1), datetime(2000, 1, 3)), {"car", "truck"}
         )
         state = TrackViewState()
 
@@ -132,7 +133,7 @@ class TestOptionalObservableProperty:
 
         state.notify_sections([first, second])
 
-        assert state.selected_section.get() == first
+        assert state.selected_sections.get() == [first]
 
     def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
         first = SectionId("north")
@@ -141,12 +142,13 @@ class TestOptionalObservableProperty:
         state.notify_sections([first])
         state.notify_sections([])
 
-        assert state.selected_section.get() is None
+        assert state.selected_sections.get() == []
 
 
 class TestTrackImageUpdater:
     def test_update_image(self) -> None:
         plotter = Mock(spec=Plotter)
+        section_state = SectionState()
         background_image = Mock(spec=TrackImage)
         plotter.plot.return_value = background_image
         track_id = TrackId(1)
@@ -155,7 +157,10 @@ class TestTrackImageUpdater:
         track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
         track.id = track_id
-        updater = TrackImageUpdater(datastore, track_view_state, plotter)
+        flow_state = FlowState()
+        updater = TrackImageUpdater(
+            datastore, track_view_state, section_state, flow_state, plotter
+        )
         tracks: list[TrackId] = [track_id]
 
         updater.notify_tracks(tracks)
@@ -170,19 +175,32 @@ class TestTracksMetadata:
     def first_detection(self) -> Mock:
         first_detection = Mock(spec=Detection).return_value
         first_detection.occurrence = datetime(2000, 1, 1, 7, 0, 0, 0)
+        first_detection.classification = "car"
         return first_detection
 
     @pytest.fixture
     def second_detection(self) -> Mock:
         second_detection = Mock(spec=Detection).return_value
         second_detection.occurrence = datetime(2000, 2, 1, 0, 0, 0, 0)
+        second_detection.classification = "truck"
         return second_detection
 
     @pytest.fixture
     def third_detection(self) -> Mock:
         third_detection = Mock(spec=Detection).return_value
         third_detection.occurrence = datetime(2000, 2, 5, 0, 0, 0, 0)
+        third_detection.classification = "car"
         return third_detection
+
+    @pytest.fixture
+    def track(
+        self, first_detection: Mock, second_detection: Mock, third_detection: Mock
+    ) -> Mock:
+        track = Mock(spec=Track).return_value
+        track.id = TrackId(1)
+        track.classification = "car"
+        track.detections = [first_detection, second_detection, third_detection]
+        return track
 
     @patch("OTAnalytics.application.state.TracksMetadata._get_all_track_detections")
     def test_update_detection_occurrences(
@@ -204,7 +222,7 @@ class TestTracksMetadata:
         assert tracks_metadata.first_detection_occurrence is None
         assert tracks_metadata.last_detection_occurrence is None
 
-        tracks_metadata.notify_tracks([])
+        tracks_metadata._update_detection_occurrences()
         assert tracks_metadata.first_detection_occurrence == first_detection.occurrence
         assert tracks_metadata.last_detection_occurrence == third_detection.occurrence
 
@@ -223,3 +241,24 @@ class TestTracksMetadata:
 
         assert detections == [first_detection, second_detection]
         track_repository.get_all.assert_called_once()
+
+    def test_update_classifications(self, track: Mock) -> None:
+        mock_track_repository = Mock(spec=TrackRepository)
+        mock_track_repository.get_for.return_value = track
+
+        tracks_metadata = TracksMetadata(mock_track_repository)
+
+        assert tracks_metadata.classifications == set()
+
+        tracks_metadata._update_classifications([track.id])
+
+        assert tracks_metadata.classifications == {"car"}
+        mock_track_repository.get_for.assert_any_call(track.id)
+        assert mock_track_repository.get_for.call_count == 1
+
+        track.detections[0].classification = "bicycle"
+        tracks_metadata._update_classifications([track.id])
+
+        assert tracks_metadata.classifications == {"car"}
+        mock_track_repository.get_for.assert_any_call(track.id)
+        assert mock_track_repository.get_for.call_count == 2
