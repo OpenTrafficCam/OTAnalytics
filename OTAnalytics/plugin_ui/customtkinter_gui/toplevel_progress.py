@@ -1,10 +1,14 @@
-from tkinter import Widget
-from typing import Any, Iterator, Optional, Sequence
+from typing import Any, Iterator, Sequence
 
 from customtkinter import CTkLabel, CTkProgressBar, CTkToplevel
 
+from OTAnalytics.adapter_ui.abstract_progressbar_popup import (
+    AbstractPopupProgressbar,
+    ProgressbarPopupBuilder,
+)
+from OTAnalytics.application.progress import NotifyableProgressbar, SimpleCounter
 from OTAnalytics.domain.progress import (
-    Progressbar,
+    Counter,
     ProgressbarBuilder,
     ProgressbarBuildError,
 )
@@ -16,21 +20,22 @@ class InvalidRelativeProgressError(Exception):
     pass
 
 
-class PopupProgressbar(Progressbar, CTkToplevel):
+class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
     def __init__(
         self,
-        sequence: Sequence,
+        counter: Counter,
         unit: str,
+        total: int,
         initial_position: tuple[int, int],
         initial_message: str,
         initial_progress: float = 0.0,
         title: str = "",
         **kwargs: Any,
     ) -> None:
-        self.__sequence = sequence
-        self.__unit = unit
-        self.__current_progress = 0
-        self.__current_iterator = iter(sequence)
+        self._unit = unit
+        self._total = total
+        self._current_progress = counter
+        self._close = False
 
         super().__init__(**kwargs)
         self.title(title)
@@ -41,8 +46,8 @@ class PopupProgressbar(Progressbar, CTkToplevel):
         self._set_focus()
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self.overrideredirect(True)  # TODO: Test on Windows
-        self.update()
         self._set_initial_position(initial_position)
+        self.update_progress()
 
     def _set_initial_position(self, initial_position: tuple[int, int]) -> None:
         x, y = initial_position
@@ -54,18 +59,25 @@ class PopupProgressbar(Progressbar, CTkToplevel):
         self.after(0, lambda: self.lift())
 
     def _get_widgets(self) -> None:
-        self._label_message = CTkLabel(master=self, text=self._initial_message)
+        self._label_description = CTkLabel(master=self, text=self._initial_message)
+        self._label_message = CTkLabel(master=self, text="")
         self._progressbar = CTkProgressBar(master=self, height=15)
         self._progressbar.set(self._initial_progress)
 
     def _place_widgets(self) -> None:
+        self._label_description.pack(padx=PADX, pady=PADY)
         self._label_message.pack(padx=PADX, pady=PADY)
         self._progressbar.pack(padx=PADX, pady=PADY)
 
-    def proceed_to(self, percent: float, message: str | None = None) -> None:
-        if percent < 0 or percent > 1:
-            raise InvalidRelativeProgressError
-        elif percent == 1:
+    def _update_progress(self) -> None:
+        percent = self._current_progress.get_value() / self._total
+        print(percent)
+        message = (
+            f"{self._current_progress.get_value()} of " f"{self._total} {self._unit}"
+        )
+        if percent >= 1:
+            print("closed")
+            self._close = True
             self.destroy()
         else:
             self._label_message.configure(text=message)
@@ -75,52 +87,82 @@ class PopupProgressbar(Progressbar, CTkToplevel):
     def _on_cancel(self) -> None:
         pass
 
-    def __iter__(self) -> Iterator:
-        self.__current_progress = 0
-        self.__current_iterator = iter(self.__sequence)
-        return self
 
-    def __next__(self) -> Any:
-        try:
-            next_element = next(self.__current_iterator)
-            self.__update_progress()
-            return next_element
-        except StopIteration:
-            self.__update_progress()
-            raise StopIteration
-
-    def __update_progress(self) -> None:
-        len_sequence = len(self.__sequence)
-        progress_in_percent = self.__current_progress / len_sequence
-        self.proceed_to(
-            progress_in_percent,
-            message=f"{self.__current_progress} of {len_sequence} "
-            f"{self.__unit} processed.",
-        )
-        self.__current_progress += 1
+class PullingProgressbarPopup(ProgressbarPopupTemplate):
+    def update_progress(self) -> None:
+        self._update_progress()
 
 
-class PopupProgressbarBuilder(ProgressbarBuilder):
-    def __init__(self) -> None:
-        self._master: Optional[Widget] = None
+class PollingProgressbarPopup(ProgressbarPopupTemplate):
+    def update_progress(self) -> None:
+        self._update_progress()
+        if not self._close:
+            print("Not closed yet")
+            self.master.after(500, self.update_progress)
 
-    def add_widget(self, widget: Widget) -> None:
-        self._master = widget
 
-    def __call__(self, sequence: Sequence, description: str, unit: str) -> Progressbar:
+class PullingProgressbarPopupBuilder(ProgressbarPopupBuilder):
+    def build(self) -> AbstractPopupProgressbar:
         if not self._master:
             raise ProgressbarBuildError(
                 f"Missing master widget in {ProgressbarBuilder.__name__}"
             )
 
-        initial_position = self._get_position(self._master)
-        return PopupProgressbar(
-            master=self._master,
-            sequence=sequence,
-            unit=unit,
+        if not self._counter:
+            raise ProgressbarBuildError(
+                f"Missing counter in {ProgressbarBuilder.__name__}"
+            )
+        if not self._total:
+            raise ProgressbarBuildError(
+                f"Missing total in {ProgressbarBuilder.__name__}"
+            )
+
+        initial_position = get_widget_position(self._master)
+        return PullingProgressbarPopup(
+            counter=self._counter,
+            unit=self._unit,
+            total=self._total,
             initial_position=initial_position,
-            initial_message=description,
+            initial_message=self._description,
         )
 
-    def _get_position(self, widget: Widget) -> tuple[int, int]:
-        return get_widget_position(widget)
+
+class PollingProgressbarPopupBuilder(ProgressbarPopupBuilder):
+    def build(self) -> PollingProgressbarPopup:
+        if not self._master:
+            raise ProgressbarBuildError(
+                f"Missing master widget in {ProgressbarBuilder.__name__}"
+            )
+
+        if not self._counter:
+            raise ProgressbarBuildError(
+                f"Missing counter in {ProgressbarBuilder.__name__}"
+            )
+        if not self._total:
+            raise ProgressbarBuildError(
+                f"Missing total in {ProgressbarBuilder.__name__}"
+            )
+
+        initial_position = get_widget_position(self._master)
+        return PollingProgressbarPopup(
+            counter=self._counter,
+            unit=self._unit,
+            total=self._total,
+            initial_position=initial_position,
+            initial_message=self._description,
+        )
+
+
+class PullingProgressbarBuilder(ProgressbarBuilder):
+    def __init__(self, popup_builder: ProgressbarPopupBuilder) -> None:
+        self._popup_builder = popup_builder
+
+    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterator:
+        counter = SimpleCounter()
+        self._popup_builder.add_counter(counter)
+        self._popup_builder.add_description(description)
+        self._popup_builder.add_unit(unit)
+        self._popup_builder.add_total(len(sequence))
+        popup = self._popup_builder.build()
+        progressbar = NotifyableProgressbar(sequence, counter, popup.update_progress)
+        return progressbar

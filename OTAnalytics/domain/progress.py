@@ -6,6 +6,20 @@ class ProgressbarBuildError(Exception):
     pass
 
 
+class Counter(ABC):
+    @abstractmethod
+    def increment(self, value: int) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_value(self) -> int:
+        raise NotImplementedError
+
+
 class Progressbar(ABC, Iterator):
     """Interface defining a Progressbar which implements the iterator interface."""
 
