@@ -112,7 +112,7 @@ def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
 
 
-def ask_save_file(
+def ask_for_save_file_path(
     title: str, file_types: list[tuple[str, str]], defaultextension: str
 ) -> Path:
     """
@@ -337,7 +337,7 @@ class DummyViewModel(
         title = "Save config file as"
         file_types = [("config file", "*.otconfig")]
         defaultextension = ".otconfig"
-        file: Path = ask_save_file(title, file_types, defaultextension)
+        file: Path = ask_for_save_file_path(title, file_types, defaultextension)
         if not file:
             return
         print(f"Config file to save: {file}")
