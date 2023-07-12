@@ -508,7 +508,7 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_sections(self) -> None:
-        sections_file = asksaveasfilename(
+        sections_file = ask_for_save_file_path(
             title="Save sections file as",
             filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
             defaultextension=f".{OTFLOW}",
