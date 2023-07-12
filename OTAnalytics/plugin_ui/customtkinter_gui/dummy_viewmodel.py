@@ -113,7 +113,7 @@ def flow_id(from_section: str, to_section: str) -> str:
 
 
 def ask_for_save_file_path(
-    title: str, file_types: list[tuple[str, str]], defaultextension: str
+    title: str, filetypes: list[tuple[str, str]], defaultextension: str
 ) -> Path:
     """
     Ask for a filename and ensure the file contains a file extension. If no extension
@@ -128,7 +128,7 @@ def ask_for_save_file_path(
         Path: path object representing an output path
     """
     filename = asksaveasfilename(
-        title=title, filetypes=file_types, defaultextension=defaultextension
+        title=title, filetypes=filetypes, defaultextension=defaultextension
     )
     return ensure_file_extension_is_present(filename, defaultextension)
 
