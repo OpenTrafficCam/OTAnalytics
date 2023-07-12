@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
 
 
 class WidgetPositionProvider(ABC):
@@ -8,7 +7,7 @@ class WidgetPositionProvider(ABC):
         raise NotImplementedError
 
 
-def ensure_file_extension_is_present(file: str, defaultextension: str) -> Path:
+def ensure_file_extension_is_present(file: str, defaultextension: str) -> str:
     """
     Ensure that the file contains a file extension. If no extension is appended, the
     defaultextension will be used.
@@ -21,7 +20,7 @@ def ensure_file_extension_is_present(file: str, defaultextension: str) -> Path:
         Path: path object with file extension
     """
     if file.endswith(defaultextension):
-        return Path(file)
+        return file
     if defaultextension.startswith("."):
-        return Path(file + defaultextension)
-    return Path(f"{file}.{defaultextension}")
+        return file + defaultextension
+    return f"{file}.{defaultextension}"
