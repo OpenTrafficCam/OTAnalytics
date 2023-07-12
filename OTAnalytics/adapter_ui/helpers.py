@@ -24,4 +24,4 @@ def ensure_file_extension_is_present(file: str, defaultextension: str) -> Path:
         return Path(file)
     if defaultextension.startswith("."):
         return Path(file + defaultextension)
-    return Path(file + "." + defaultextension)
+    return Path(f"{file}.{defaultextension}")
