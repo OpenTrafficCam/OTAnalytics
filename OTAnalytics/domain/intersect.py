@@ -14,29 +14,6 @@ from OTAnalytics.domain.section import Area, LineSection, Section
 from OTAnalytics.domain.track import Detection, Track
 
 
-class IntersectParallelizationStrategy(ABC):
-    @abstractmethod
-    def execute(
-        self,
-        intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],
-        tracks: Iterable[Track],
-        sections: Iterable[Section],
-    ) -> list[Event]:
-        """Executes the intersection of tracks with sections with the implemented
-        parallelization strategy.
-
-        Args:
-            intersect (Callable[[Track, Iterable[Section]], Iterable[Event]]): the
-                function to be executed on an iterable of tracks and sections.
-            tracks (Iterable[Track]): the tracks to be processed.
-            sections (Iterable[Section]): the sections to be processed.
-
-        Returns:
-            Iterable[Event]: the generated events.
-        """
-        pass
-
-
 class IntersectImplementation(ABC):
     @abstractmethod
     def line_intersects_line(self, line_1: Line, line_2: Line) -> bool:
@@ -119,6 +96,37 @@ class IntersectImplementation(ABC):
         Returns:
             list[bool]: the boolean mask holding information whether a point is within
                 a polygon or not
+        """
+        pass
+
+
+class IntersectParallelizationStrategy(ABC):
+    @abstractmethod
+    def execute(
+        self,
+        intersect: Callable[
+            [Track, Iterable[Section], IntersectImplementation, Callable[[int], None]],
+            Iterable[Event],
+        ],
+        tracks: Iterable[Track],
+        sections: Iterable[Section],
+        intersect_implementation: IntersectImplementation,
+        update_progress: Callable[[int], None],
+    ) -> list[Event]:
+        """Executes the intersection of tracks with sections with the implemented
+        parallelization strategy.
+
+        Args:
+            intersect (Callable[[Track, Iterable[Section]], Iterable[Event]]): the
+                function to be executed on an iterable of tracks and sections.
+            tracks (Iterable[Track]): the tracks to be processed.
+            sections (Iterable[Section]): the sections to be processed.
+            intersect_implementation (IntersectImplementation): the intersect
+                implementation.
+            update_progress (Callable[[int], None]): callable to update the progress.
+
+        Returns:
+            Iterable[Event]: the generated events.
         """
         pass
 

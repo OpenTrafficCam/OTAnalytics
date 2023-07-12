@@ -24,6 +24,9 @@ class TqdmProgressBar(Progressbar):
     def __next__(self) -> Any:
         return next(self.__current_iterator)
 
+    def update(self, by: int) -> None:
+        self.__current_iterator.update(by)
+
 
 class TqdmBuilder(ProgressbarBuilder):
     def __call__(self, sequence: Sequence, description: str, unit: str) -> Progressbar:

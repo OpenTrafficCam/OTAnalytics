@@ -116,7 +116,6 @@ class TestIntersectTracksWithSections:
         datastore.get_all_sections.assert_called_once()
 
         assert intersect.run.call_args_list == [call([track], [section])]
-        assert datastore.add_events.call_args_list == [call([event])]
 
 
 class TestTracksIntersectingSelectedSections:

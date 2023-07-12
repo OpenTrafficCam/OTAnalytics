@@ -171,8 +171,7 @@ class IntersectTracksWithSections:
         if not sections:
             return
         tracks = self._datastore.get_all_tracks()
-        events = self._intersect.run(tracks, sections)
-        self._datastore.add_events(events)
+        self._intersect.run(tracks, sections)
 
 
 class TracksIntersectingSelectedSections(TrackIdProvider):
@@ -548,9 +547,8 @@ class OTAnalyticsApplication:
         """
         tracks = self._datastore.get_all_tracks()
         sections = self._datastore.get_all_sections()
-        events = self._intersect.run(tracks, sections)
         self._clear_event_repository.clear()
-        self._datastore.add_events(events)
+        self._intersect.run(tracks, sections)
 
         scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
         self._datastore.add_events(scene_events)

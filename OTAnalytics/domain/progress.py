@@ -7,16 +7,29 @@ class ProgressbarBuildError(Exception):
 
 
 class Counter(ABC):
+    """Counter interface."""
+
     @abstractmethod
     def increment(self, value: int) -> None:
+        """Increment the counter by passed value.
+
+        Args:
+            value (int): the value to increment the counter by.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def reset(self) -> None:
+        """Resets the counter to zero."""
         raise NotImplementedError
 
     @abstractmethod
     def get_value(self) -> int:
+        """Get current counter value.
+
+        Returns:
+            int: the current value.
+        """
         raise NotImplementedError
 
 
@@ -29,6 +42,15 @@ class Progressbar(ABC, Iterator):
 
     @abstractmethod
     def __next__(self) -> Any:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update(self, value: int) -> None:
+        """Update the progressbar by passed value.
+
+        Args:
+            value (int): value to update the progressbar by.
+        """
         raise NotImplementedError
 
 
