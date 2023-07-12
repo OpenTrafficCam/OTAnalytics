@@ -4,6 +4,8 @@ from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
 from typing import Iterable, Optional
 
+from adapter_ui.helpers import ensure_file_extension_is_present
+
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
@@ -108,6 +110,27 @@ class MissingInjectedInstanceError(Exception):
 
 def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
+
+
+def ask_save_file(
+    title: str, file_types: list[tuple[str, str]], defaultextension: str
+) -> Path:
+    """
+    Ask for a filename and ensure the file contains a file extension. If no extension
+    is present, the default extension will be appended.
+
+    Args:
+        title (str): title for the file chooser
+        file_types (list[tuple[str, str]]): supported file types to choose from
+        defaultextension (str): default extension used if none is present
+
+    Returns:
+        Path: path object representing an output path
+    """
+    filename = asksaveasfilename(
+        title=title, filetypes=file_types, defaultextension=defaultextension
+    )
+    return ensure_file_extension_is_present(filename, defaultextension)
 
 
 class DummyViewModel(
@@ -311,16 +334,15 @@ class DummyViewModel(
         self._application._datastore.project = Project(name=name, start_date=start_date)
 
     def save_configuration(self) -> None:
-        file = asksaveasfilename(
-            title="Save config file as", filetypes=[("config file", "*.otconfig")]
-        )
+        title = "Save config file as"
+        file_types = [("config file", "*.otconfig")]
+        defaultextension = ".otconfig"
+        file: Path = ask_save_file(title, file_types, defaultextension)
         if not file:
             return
         print(f"Config file to save: {file}")
         try:
-            self._application.save_configuration(
-                Path(file),
-            )
+            self._application.save_configuration(file)
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
