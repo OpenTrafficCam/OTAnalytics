@@ -315,7 +315,10 @@ class DummyViewModel(
         title = "Save config file as"
         file_types = [("config file", "*.otconfig")]
         defaultextension = ".otconfig"
-        file: Path = ask_for_save_file_path(title, file_types, defaultextension)
+        initialfile = "config.otconfig"
+        file: Path = ask_for_save_file_path(
+            title, file_types, defaultextension, initialfile=initialfile
+        )
         if not file:
             return
         print(f"Config file to save: {file}")
@@ -490,6 +493,7 @@ class DummyViewModel(
             title="Save sections file as",
             filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
             defaultextension=f".{OTFLOW}",
+            initialfile=f"flows.{OTFLOW}",
         )
         if not sections_file:
             return

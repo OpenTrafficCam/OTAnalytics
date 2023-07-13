@@ -51,6 +51,7 @@ class FrameAnalysis(CTkFrame):
             title="Save event list file as",
             filetypes=[("events file", "*.otevents")],
             defaultextension=".otevents",
+            initialfile="events.otevents",
         )
         if not file:
             return
