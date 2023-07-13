@@ -104,7 +104,10 @@ def coordinate_is_on_widget(
 
 
 def ask_for_save_file_path(
-    title: str, filetypes: list[tuple[str, str]], defaultextension: str
+    title: str,
+    filetypes: list[tuple[str, str]],
+    defaultextension: str,
+    **kwargs: Any,
 ) -> Path:
     """
     Ask for a filename and ensure the file contains a file extension. If no extension
@@ -116,7 +119,9 @@ def ask_for_save_file_path(
     Returns:
         Path: path object representing an output path
     """
-    filename_with_extension = ask_for_save_file_name(title, filetypes, defaultextension)
+    filename_with_extension = ask_for_save_file_name(
+        title, filetypes, defaultextension, **kwargs
+    )
     return Path(filename_with_extension)
 
 

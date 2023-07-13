@@ -102,7 +102,7 @@ class ToplevelExportCounts(ToplevelTemplate):
 
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
-        export_extension = f"*.{self._export_formats[export_format]}"
+        export_extension = self._export_formats[export_format]
         export_file = ask_for_save_file_name(
             title="Save counts as",
             filetypes=[(export_format, export_extension)],

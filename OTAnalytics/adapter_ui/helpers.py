@@ -7,6 +7,10 @@ class WidgetPositionProvider(ABC):
         raise NotImplementedError
 
 
+def remove_wildcard_from(file_extension: str) -> str:
+    return file_extension[1:] if file_extension.startswith("*") else file_extension
+
+
 def ensure_file_extension_is_present(file: str, defaultextension: str) -> str:
     """
     Ensure that the file contains a file extension. If no extension is appended, the
@@ -19,8 +23,9 @@ def ensure_file_extension_is_present(file: str, defaultextension: str) -> str:
     Returns:
         Path: path object with file extension
     """
-    if file.endswith(defaultextension):
+    file_extension = remove_wildcard_from(defaultextension)
+    if file.endswith(file_extension):
         return file
-    if defaultextension.startswith("."):
-        return file + defaultextension
-    return f"{file}.{defaultextension}"
+    if file_extension.startswith("."):
+        return file + file_extension
+    return f"{file}.{file_extension}"
