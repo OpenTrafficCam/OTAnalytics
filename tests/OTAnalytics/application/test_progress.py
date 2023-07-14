@@ -1,6 +1,10 @@
 from unittest.mock import Mock, call
 
-from OTAnalytics.application.progress import NotifyableProgressbar, SimpleCounter
+from OTAnalytics.application.progress import (
+    AutoIncrementingProgressbar,
+    ManualIncrementingProgressbar,
+    SimpleCounter,
+)
 from OTAnalytics.domain.progress import Counter
 
 
@@ -14,13 +18,25 @@ class TestSimpleCounter:
         assert counter.get_value() == 0
 
 
-class TestNotifyableProgressbar:
+class TestAutoIncrementingProgressbar:
     def test(self) -> None:
         numbers = [1, 2, 3]
         counter = Mock(spec=Counter)
         notify = Mock()
-        progressbar = NotifyableProgressbar(numbers, counter, notify)
+        progressbar = AutoIncrementingProgressbar(numbers, counter, notify)
         result = [elem for elem in progressbar]
         assert result == numbers
-        counter.increment.call_args = [call(1), call(1), call(1)]
-        assert notify.call_count == len(numbers) + 1
+        assert counter.increment.call_args_list == [call(1), call(1), call(1)]
+        assert notify.call_count == len(numbers)
+
+
+class TestManualIncrementingProgressbar:
+    def test(self) -> None:
+        numbers = [1, 2, 3]
+        counter = Mock(spec=Counter)
+        notify = Mock()
+        progressbar = ManualIncrementingProgressbar(numbers, counter, notify)
+        result = [elem for elem in progressbar]
+        assert result == numbers
+        counter.assert_not_called()
+        assert notify.call_count == len(numbers)

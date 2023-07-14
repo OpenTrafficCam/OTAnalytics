@@ -1,9 +1,9 @@
 from multiprocessing.managers import ValueProxy
 from threading import Lock
-from typing import Iterator, Sequence
+from typing import Sequence
 
 from OTAnalytics.adapter_ui.abstract_progressbar_popup import ProgressbarPopupBuilder
-from OTAnalytics.application.progress import NotifyableProgressbar
+from OTAnalytics.application.progress import ManualIncrementingProgressbar
 from OTAnalytics.domain.progress import Counter, ProgressbarBuilder
 
 
@@ -35,9 +35,11 @@ class ProcessSafePollingProgressbarBuilder(ProgressbarBuilder):
         self._counter_value = counter_value
         self._lock = lock
 
-    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterator:
+    def __call__(
+        self, sequence: Sequence, description: str, unit: str
+    ) -> ManualIncrementingProgressbar:
         counter = ProcessSafeCounter(self._counter_value, self._lock)
-        progressbar = NotifyableProgressbar(sequence, counter, None)
+        progressbar = ManualIncrementingProgressbar(sequence, counter, None)
         self._popup_builder.add_counter(counter)
         self._popup_builder.add_description(description)
         self._popup_builder.add_unit(unit)

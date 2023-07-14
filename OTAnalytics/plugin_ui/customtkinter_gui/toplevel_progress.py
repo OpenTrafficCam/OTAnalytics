@@ -1,4 +1,4 @@
-from typing import Any, Iterator, Sequence
+from typing import Any, Sequence
 
 from customtkinter import CTkLabel, CTkProgressBar, CTkToplevel
 
@@ -6,7 +6,7 @@ from OTAnalytics.adapter_ui.abstract_progressbar_popup import (
     AbstractPopupProgressbar,
     ProgressbarPopupBuilder,
 )
-from OTAnalytics.application.progress import NotifyableProgressbar, SimpleCounter
+from OTAnalytics.application.progress import AutoIncrementingProgressbar, SimpleCounter
 from OTAnalytics.domain.progress import (
     Counter,
     ProgressbarBuilder,
@@ -71,7 +71,7 @@ class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
 
     def _update_progress(self) -> None:
         percent = self._current_progress.get_value() / self._total
-        print(percent)
+        # print(percent)
         message = (
             f"{self._current_progress.get_value()} of " f"{self._total} {self._unit}"
         )
@@ -98,7 +98,7 @@ class PollingProgressbarPopup(ProgressbarPopupTemplate):
         self._update_progress()
         if not self._close:
             print("Not closed yet")
-            self.master.after(500, self.update_progress)
+            self.master.after(1000, self.update_progress)
 
 
 class PullingProgressbarPopupBuilder(ProgressbarPopupBuilder):
@@ -157,12 +157,16 @@ class PullingProgressbarBuilder(ProgressbarBuilder):
     def __init__(self, popup_builder: ProgressbarPopupBuilder) -> None:
         self._popup_builder = popup_builder
 
-    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterator:
+    def __call__(
+        self, sequence: Sequence, description: str, unit: str
+    ) -> AutoIncrementingProgressbar:
         counter = SimpleCounter()
         self._popup_builder.add_counter(counter)
         self._popup_builder.add_description(description)
         self._popup_builder.add_unit(unit)
         self._popup_builder.add_total(len(sequence))
         popup = self._popup_builder.build()
-        progressbar = NotifyableProgressbar(sequence, counter, popup.update_progress)
+        progressbar = AutoIncrementingProgressbar(
+            sequence, counter, popup.update_progress
+        )
         return progressbar
