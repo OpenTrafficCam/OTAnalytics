@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, Sequence
+from typing import Iterable, Iterator, Sequence
 
 
 class ProgressbarBuildError(Exception):
@@ -33,24 +33,11 @@ class Counter(ABC):
         raise NotImplementedError
 
 
-class Progressbar(ABC, Iterator):
-    """Interface defining a Progressbar which implements the iterator interface."""
+class Progressbar(ABC, Iterable):
+    """Interface defining a Progressbar which implements the iterable interface."""
 
     @abstractmethod
     def __iter__(self) -> Iterator:
-        return self
-
-    @abstractmethod
-    def __next__(self) -> Any:
-        raise NotImplementedError
-
-    @abstractmethod
-    def update(self, value: int) -> None:
-        """Update the progressbar by passed value.
-
-        Args:
-            value (int): value to update the progressbar by.
-        """
         raise NotImplementedError
 
 
@@ -62,7 +49,7 @@ class ProgressbarBuilder(ABC):
     """
 
     @abstractmethod
-    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterator:
+    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterable:
         """Acts as the build method providing new Progressbar instances.
 
         Args:
@@ -77,5 +64,5 @@ class ProgressbarBuilder(ABC):
 
 
 class NoProgressbarBuilder(ProgressbarBuilder):
-    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterator:
+    def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterable:
         return iter(sequence)
