@@ -106,7 +106,6 @@ class TestOTAnalyticsCli:
     FLOW_PARSER: str = "flow_parser"
     EVENT_LIST_PARSER: str = "event_list_parser"
     INTERSECT: str = "intersect"
-    INTERSECT_PARALLELIZER: str = "intersect_parallelizer"
     EVENT_REPOSITORY: str = "event_repository"
     SCENE_EVENT_DETECTION: str = "scene_event_detection"
     PROGRESSBAR: str = "progressbar"
@@ -136,8 +135,6 @@ class TestOTAnalyticsCli:
             self.INTERSECT: RunIntersect(
                 ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
                 MultiprocessingIntersectParallelization(),
-                NoProgressbarBuilder(),
-                event_repository.add_all,
             ),
             self.SCENE_EVENT_DETECTION: RunSceneEventDetection(
                 SceneActionDetector(SceneEventBuilder())

@@ -1,4 +1,3 @@
-from multiprocessing import Manager
 from typing import Sequence
 
 from OTAnalytics.adapter_intersect.intersect import (
@@ -43,7 +42,7 @@ from OTAnalytics.application.state import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
-from OTAnalytics.domain.progress import NoProgressbarBuilder, ProgressbarBuilder
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
@@ -63,9 +62,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
     OttrkVideoParser,
     SimpleVideoParser,
-)
-from OTAnalytics.plugin_progress.multiprocessing_progress import (
-    ProcessSafePollingProgressbarBuilder,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
@@ -112,22 +108,13 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
         from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
-            PollingProgressbarPopupBuilder,
             PullingProgressbarBuilder,
             PullingProgressbarPopupBuilder,
         )
 
-        manager = Manager()
-        counter_value = manager.Value("i", 0)
-        lock = manager.Lock()
-
         pulling_progressbar_popup_builder = PullingProgressbarPopupBuilder()
         pulling_progressbar_builder = PullingProgressbarBuilder(
             pulling_progressbar_popup_builder
-        )
-        polling_progressbar_popup_builder = PollingProgressbarPopupBuilder()
-        polling_progressbar_builder = ProcessSafePollingProgressbarBuilder(
-            polling_progressbar_popup_builder, counter_value, lock
         )
 
         track_repository = self._create_track_repository()
@@ -159,9 +146,7 @@ class ApplicationStarter:
         )
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
-        intersect = self._create_intersect(
-            datastore._event_repository, polling_progressbar_builder
-        )
+        intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         tracks_metadata = self._create_tracks_metadata(track_repository)
         action_state = self._create_action_state()
@@ -197,7 +182,6 @@ class ApplicationStarter:
             layer.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         pulling_progressbar_popup_builder.add_widget(main_window)
-        polling_progressbar_popup_builder.add_widget(main_window)
         OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
@@ -205,7 +189,7 @@ class ApplicationStarter:
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
-        intersect = self._create_intersect(event_repository, NoProgressbarBuilder())
+        intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         OTAnalyticsCli(
             cli_args,
@@ -562,16 +546,12 @@ class ApplicationStarter:
 
     def _create_intersect(
         self,
-        event_repository: EventRepository,
-        progressbar: ProgressbarBuilder,
     ) -> RunIntersect:
         return RunIntersect(
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
             ),
             intersect_parallelizer=MultiprocessingIntersectParallelization(),
-            progressbar=progressbar,
-            add_events=event_repository.add_all,
         )
 
     def _create_scene_event_detection(self) -> RunSceneEventDetection:

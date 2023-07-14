@@ -105,13 +105,11 @@ class IntersectParallelizationStrategy(ABC):
     def execute(
         self,
         intersect: Callable[
-            [Track, Iterable[Section], IntersectImplementation, Callable[[int], None]],
+            [Track, Iterable[Section]],
             Iterable[Event],
         ],
         tracks: Iterable[Track],
         sections: Iterable[Section],
-        intersect_implementation: IntersectImplementation,
-        update_progress: Callable[[int], None],
     ) -> list[Event]:
         """Executes the intersection of tracks with sections with the implemented
         parallelization strategy.
@@ -121,9 +119,6 @@ class IntersectParallelizationStrategy(ABC):
                 function to be executed on an iterable of tracks and sections.
             tracks (Iterable[Track]): the tracks to be processed.
             sections (Iterable[Section]): the sections to be processed.
-            intersect_implementation (IntersectImplementation): the intersect
-                implementation.
-            update_progress (Callable[[int], None]): callable to update the progress.
 
         Returns:
             Iterable[Event]: the generated events.
