@@ -307,7 +307,7 @@ class DummyViewModel(
         project = self._application._datastore.project
         self._frame_project.update(name=project.name, start_date=project.start_date)
 
-    def update_project(self, name: str, start_date: datetime) -> None:
+    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
         self._application._datastore.project = Project(name=name, start_date=start_date)
 
     def save_configuration(self) -> None:

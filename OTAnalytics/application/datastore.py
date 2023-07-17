@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
@@ -249,7 +248,7 @@ class Datastore:
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
         self._config_parser = config_parser
-        self.project = Project(name="", start_date=datetime.now())
+        self.project = Project(name="", start_date=None)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._video_repository.register_videos_observer(observer)
