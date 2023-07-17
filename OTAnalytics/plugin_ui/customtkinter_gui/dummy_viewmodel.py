@@ -52,7 +52,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
     CanvasElementDeleter,
@@ -329,6 +329,18 @@ class DummyViewModel(
             position = self._treeview_sections.get_position()
             InfoBox(
                 message="No sections to save, please add new sections first",
+                initial_position=position,
+            )
+            return
+        except DifferentDrivesException as cause:
+            if self._treeview_sections is None:
+                raise MissingInjectedInstanceError(
+                    type(self._treeview_sections).__name__
+                ) from cause
+            position = self._treeview_sections.get_position()
+            InfoBox(
+                message="Configuration and video files are located on "
+                "different drives.",
                 initial_position=position,
             )
             return
