@@ -19,7 +19,9 @@ from OTAnalytics.adapter_ui.view_model import (
     MissingCoordinate,
     ViewModel,
 )
-from OTAnalytics.application.analysis.traffic_counting import CountingSpecificationDto
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,

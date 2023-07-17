@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Iterable, Optional
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+    ExportCounts,
+    ExportFormat,
+)
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import SectionId
@@ -612,17 +617,6 @@ class RoadUserAssigner:
         return max(candidate_flows, key=lambda current: current.duration())
 
 
-@dataclass(frozen=True)
-class CountingSpecificationDto:
-    """
-    Data transfer object to represent the counting.
-    """
-
-    interval_in_minutes: int
-    format: str
-    output_file: str
-
-
 class TaggerFactory(ABC):
     """
     Factory interface to create a Tagger based on the given CountingSpecificationDto.
@@ -706,12 +700,6 @@ class Exporter(ABC):
         raise NotImplementedError
 
 
-@dataclass(frozen=True)
-class ExportFormat:
-    name: str
-    file_extension: str
-
-
 class ExporterFactory(ABC):
     """
     Factory to create the exporter for the given CountingSpecificationDto.
@@ -739,7 +727,7 @@ class ExporterFactory(ABC):
         raise NotImplementedError
 
 
-class ExportTrafficCounting:
+class ExportTrafficCounting(ExportCounts):
     """
     Use case to export traffic countings.
     """
