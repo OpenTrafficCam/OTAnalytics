@@ -12,7 +12,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Count,
     CountableAssignments,
     CountByFlow,
-    CountingSpecificationDto,
     EventPair,
     Exporter,
     ExporterFactory,
@@ -28,6 +27,9 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Tagger,
     TaggerFactory,
     TimeslotTagger,
+)
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
 )
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository

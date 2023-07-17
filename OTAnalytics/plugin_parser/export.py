@@ -5,9 +5,11 @@ from pandas import DataFrame
 
 from OTAnalytics.application.analysis.traffic_counting import (
     Count,
-    CountingSpecificationDto,
     Exporter,
     ExporterFactory,
+)
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
     ExportFormat,
 )
 
