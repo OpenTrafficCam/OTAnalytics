@@ -27,8 +27,7 @@ class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
         unit: str,
         total: int,
         initial_position: tuple[int, int],
-        initial_message: str,
-        initial_progress: float = 0.0,
+        description: str,
         title: str = "",
         **kwargs: Any,
     ) -> None:
@@ -39,8 +38,7 @@ class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
 
         super().__init__(**kwargs)
         self.title(title)
-        self._initial_message = initial_message
-        self._initial_progress = initial_progress
+        self._description = description
         self._get_widgets()
         self._place_widgets()
         self._set_focus()
@@ -59,28 +57,26 @@ class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
         self.after(0, lambda: self.lift())
 
     def _get_widgets(self) -> None:
-        self._label_description = CTkLabel(master=self, text=self._initial_message)
-        self._label_message = CTkLabel(master=self, text="")
+        self._label_description = CTkLabel(master=self, text=self._description)
+        self._progressbar_message = CTkLabel(master=self, text="")
         self._progressbar = CTkProgressBar(master=self, height=15)
-        self._progressbar.set(self._initial_progress)
+        self._progressbar.set(self._current_progress.get_value())
 
     def _place_widgets(self) -> None:
         self._label_description.pack(padx=PADX, pady=PADY)
-        self._label_message.pack(padx=PADX, pady=PADY)
+        self._progressbar_message.pack(padx=PADX, pady=PADY)
         self._progressbar.pack(padx=PADX, pady=PADY)
 
     def _update_progress(self) -> None:
         percent = self._current_progress.get_value() / self._total
-        # print(percent)
         message = (
             f"{self._current_progress.get_value()} of " f"{self._total} {self._unit}"
         )
         if percent >= 1:
-            print("closed")
             self._close = True
             self.destroy()
         else:
-            self._label_message.configure(text=message)
+            self._progressbar_message.configure(text=message)
             self._progressbar.set(value=percent)
             self.update()
 
@@ -123,7 +119,7 @@ class PullingProgressbarPopupBuilder(ProgressbarPopupBuilder):
             unit=self._unit,
             total=self._total,
             initial_position=initial_position,
-            initial_message=self._description,
+            description=self._description,
         )
 
 
@@ -149,7 +145,7 @@ class PollingProgressbarPopupBuilder(ProgressbarPopupBuilder):
             unit=self._unit,
             total=self._total,
             initial_position=initial_position,
-            initial_message=self._description,
+            description=self._description,
         )
 
 
