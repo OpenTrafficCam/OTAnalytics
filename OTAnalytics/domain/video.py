@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from os import path
+from os.path import normcase, splitdrive
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -38,6 +39,10 @@ class Video(ABC):
         relative_to: Path,
     ) -> dict:
         pass
+
+
+class DifferentDrivesException(Exception):
+    pass
 
 
 @dataclass
@@ -79,6 +84,14 @@ class SimpleVideo(Video):
         return {PATH: self.__build_relative_path(relative_to)}
 
     def __build_relative_path(self, relative_to: Path) -> str:
+        self_drive, _ = splitdrive(self.path)
+        other_drive, _ = splitdrive(relative_to)
+        if normcase(self_drive) != normcase(other_drive):
+            raise DifferentDrivesException(
+                "Video and config files are stored on different drives. "
+                f"Video file is stored on {self_drive}."
+                f"Configuration is stored on {other_drive}"
+            )
         return path.relpath(self.path, relative_to)
 
 

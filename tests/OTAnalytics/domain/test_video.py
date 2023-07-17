@@ -1,10 +1,11 @@
 from pathlib import Path
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 
 import pytest
 
 from OTAnalytics.domain.video import (
     PATH,
+    DifferentDrivesException,
     SimpleVideo,
     VideoListObserver,
     VideoReader,
@@ -33,6 +34,20 @@ class TestVideo:
         result = video.to_dict(config_path)
 
         assert result[PATH] == expected_video_path
+
+    def test_resolve_relative_paths_on_different_drives(
+        self, video_reader: Mock
+    ) -> None:
+        video_path = Mock(spec=Path)
+        config_path = Mock(spec=Path)
+        video = SimpleVideo(path=video_path, video_reader=video_reader)
+
+        with patch(
+            "OTAnalytics.domain.video.splitdrive",
+            side_effect=[("C:", "rest"), ("D:", "rest")],
+        ):
+            with pytest.raises(DifferentDrivesException):
+                video.to_dict(config_path)
 
 
 class TestVideoRepository:
