@@ -112,10 +112,12 @@ def ask_for_save_file_path(
     """
     Ask for a filename and ensure the file contains a file extension. If no extension
     is present, the default extension will be appended.
+
     Args:
         title (str): title for the file chooser
         file_types (list[tuple[str, str]]): supported file types to choose from
         defaultextension (str): default extension used if none is present
+
     Returns:
         Path: path object representing an output path
     """
@@ -134,10 +136,12 @@ def ask_for_save_file_name(
     """
     Ask for a filename and ensure the file contains a file extension. If no extension
     is present, the default extension will be appended.
+
     Args:
         title (str): title for the file chooser
         file_types (list[tuple[str, str]]): supported file types to choose from
         defaultextension (str): default extension used if none is present
+
     Returns:
         str: file name with extension
     """
