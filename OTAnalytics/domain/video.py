@@ -38,6 +38,19 @@ class Video(ABC):
         self,
         relative_to: Path,
     ) -> dict:
+        """Convert the video object to a dictionary containing the path of the video
+        relative to the given path.
+
+        Args:
+            relative_to (Path): target to build relative paths to
+
+        Returns:
+            dict: path of the dictionary relative to the given path
+
+        Throws:
+            DifferentDrivesException: if config and videos files are located on
+            different drives
+        """
         pass
 
 
