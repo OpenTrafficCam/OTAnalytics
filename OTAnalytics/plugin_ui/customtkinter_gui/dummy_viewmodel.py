@@ -1,6 +1,7 @@
 import contextlib
 from datetime import datetime
 from pathlib import Path
+from time import sleep
 from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Optional
 
@@ -63,7 +64,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     SectionGeometryEditor,
     SectionPainter,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
     DEFAULT_SECTION_STYLE,
@@ -87,7 +88,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     START_SECTION,
     ToplevelFlows,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import ToplevelProgress
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
@@ -223,14 +223,28 @@ class DummyViewModel(
         )
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self._intersect_tracks_with_sections()
+
+    def _intersect_tracks_with_sections(self) -> None:
+        if self._window is None:
+            raise MissingInjectedInstanceError(type(self._window).__name__)
+
+        start_msg_popup = MinimalInfoBox(
+            message="Create events...",
+            initial_position=self._window.get_position(),
+        )
         self._application.intersect_tracks_with_sections()
+
+        start_msg_popup.update_message(message="Creating events completed")
+        sleep(1)
+        start_msg_popup.close()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
-        self._application.intersect_tracks_with_sections()
+        self._intersect_tracks_with_sections()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
@@ -977,7 +991,17 @@ class DummyViewModel(
         self._finish_action()
 
     def create_events(self) -> None:
+        if self._window is None:
+            raise MissingInjectedInstanceError(type(self._window).__name__)
+
+        start_msg_popup = MinimalInfoBox(
+            message="Create events...",
+            initial_position=self._window.get_position(),
+        )
         self._application.create_events()
+        start_msg_popup.update_message(message="Creating events completed")
+        sleep(1)
+        start_msg_popup.close()
 
     def save_events(self, file: str) -> None:
         print(f"Eventlist file to save: {file}")
@@ -1165,20 +1189,3 @@ class DummyViewModel(
             self._application.export_counts(export_specification)
         except CancelExportCounts:
             print("User canceled configuration of export")
-
-    def _temporary_showcase_toplevel_progress(self) -> None:
-        # TODO: @randyseng delete this method after instantiating in other places
-        from time import sleep
-
-        if self._window is not None:
-            position = self._window.get_position()
-            goal = 100
-            progressbar = ToplevelProgress(
-                initial_message=f"0 of {goal} videos loaded",
-                initial_position=position,
-            )
-            for i in range(goal):
-                sleep(0.02)
-                progressbar.proceed_to(
-                    (i + 1) / goal, message=f"{i} of {goal} videos loaded"
-                )

@@ -9,6 +9,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.filter import FilterBuilder
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.track import (
     TRACK_ID,
     Detection,
@@ -71,7 +72,9 @@ class TestPandasTrackProvider:
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
 
-        provider = PandasTrackProvider(datastore, track_view_state, filter_builder)
+        provider = PandasTrackProvider(
+            datastore, track_view_state, filter_builder, NoProgressbarBuilder()
+        )
         result = provider.get_data()
 
         datastore.get_all_tracks.assert_called_once()
@@ -114,7 +117,7 @@ class TestCachedPandasTrackProvider:
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
         provider = CachedPandasTrackProvider(
-            datastore, track_view_state, filter_builder
+            datastore, track_view_state, filter_builder, NoProgressbarBuilder()
         )
 
         assert provider._cache_df.empty
