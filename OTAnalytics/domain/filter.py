@@ -90,6 +90,8 @@ class FilterBuilder(ABC, Generic[T, S]):
     def get_result(self) -> Filter[T, S]:
         """Returns the built filter.
 
+        The filter builder will be reset after returning the result.
+
         Returns:
             Filter: the filter
         """
