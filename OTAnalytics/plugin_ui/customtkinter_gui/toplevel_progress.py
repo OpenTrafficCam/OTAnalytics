@@ -162,7 +162,4 @@ class PullingProgressbarBuilder(ProgressbarBuilder):
         self._popup_builder.add_unit(unit)
         self._popup_builder.add_total(len(sequence))
         popup = self._popup_builder.build()
-        progressbar = AutoIncrementingProgressbar(
-            sequence, counter, popup.update_progress
-        )
-        return progressbar
+        return AutoIncrementingProgressbar(sequence, counter, popup.update_progress)
