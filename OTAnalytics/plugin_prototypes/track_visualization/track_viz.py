@@ -294,8 +294,8 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         return self._cache_df
 
     def __do_convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
-        """Internal method to convert the given tracks
-            to dataframe format without caching.
+        """Internal method to convert the given tracks to dataframe format without
+        caching.
 
         Args:
             tracks (Iterable[Track]): the tracks to be converted.
@@ -307,6 +307,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """Take notice of some change in the track repository.
+
         Remove cached tracks matching any given id.
         Add tracks of ids not yet present in cache.
         Clear cache if no ids are given.
@@ -351,8 +352,9 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         self, track_ids: list[TrackId]
     ) -> DataFrame | None:
         """Filter cached tracks.
+
         Only keep those not matching the ids in the given list of track_ids.
-        Return None if the current cache is empty.
+        Return `None` if the current cache is empty.
 
         Args:
             track_ids (list[TrackId]): ids of tracks to be removed from cache.
