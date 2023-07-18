@@ -1,7 +1,7 @@
 import contextlib
 from datetime import datetime
 from pathlib import Path
-from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
+from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
@@ -19,7 +19,9 @@ from OTAnalytics.adapter_ui.view_model import (
     MissingCoordinate,
     ViewModel,
 )
-from OTAnalytics.application.analysis.traffic_counting import CountingSpecificationDto
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,
@@ -53,6 +55,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
     CanvasElementDeleter,
@@ -311,16 +314,18 @@ class DummyViewModel(
         self._application._datastore.project = Project(name=name, start_date=start_date)
 
     def save_configuration(self) -> None:
-        file = asksaveasfilename(
-            title="Save config file as", filetypes=[("config file", "*.otconfig")]
+        title = "Save config file as"
+        file_types = [("config file", "*.otconfig")]
+        defaultextension = ".otconfig"
+        initialfile = "config.otconfig"
+        file: Path = ask_for_save_file_path(
+            title, file_types, defaultextension, initialfile=initialfile
         )
         if not file:
             return
         print(f"Config file to save: {file}")
         try:
-            self._application.save_configuration(
-                Path(file),
-            )
+            self._application.save_configuration(file)
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
@@ -486,10 +491,11 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_sections(self) -> None:
-        sections_file = asksaveasfilename(
+        sections_file = ask_for_save_file_path(
             title="Save sections file as",
             filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
             defaultextension=f".{OTFLOW}",
+            initialfile=f"flows.{OTFLOW}",
         )
         if not sections_file:
             return
