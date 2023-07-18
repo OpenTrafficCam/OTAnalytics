@@ -668,9 +668,9 @@ def fib_iter(num: int) -> int:
 
 
 @profile(
-    repeat=1000, profiler_kwargs=dict(warmup=10), writer_kwargs=dict(write_console=True)
+    repeat=100, profiler_kwargs=dict(warmup=10), writer_kwargs=dict(write_console=True)
 )
-def fib_rec_wrap(num: int) -> int:
+def fib_rec_wrap(num: int) -> int:  # profiling recursive method requires wrapper
     return fib_rec(num)
 
 
@@ -679,6 +679,8 @@ def fib_rec(num: int) -> int:
 
 
 if __name__ == "__main__":
+    fib_rec_wrap(4)
+    fib_iter(4)
     ProfilePlotter(log=True, column="cumtime", type="all", call_depth=20).update_plots(
         "profiles", recursive=True
     )
