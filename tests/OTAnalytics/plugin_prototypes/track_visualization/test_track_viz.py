@@ -118,7 +118,7 @@ class TestCachedPandasTrackProvider:
 
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
-        filter_builder = Mock(FilterBuilder)
+        filter_builder = Mock(spec=FilterBuilder)
         provider = CachedPandasTrackProvider(
             datastore, track_view_state, filter_builder, NoProgressbarBuilder()
         )
