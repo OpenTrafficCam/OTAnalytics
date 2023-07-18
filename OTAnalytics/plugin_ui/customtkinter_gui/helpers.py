@@ -1,4 +1,9 @@
+from pathlib import Path
 from tkinter import Widget
+from tkinter.filedialog import asksaveasfilename
+from typing import Any
+
+from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
 
 
 class InvalidReferenceError(Exception):
@@ -96,3 +101,54 @@ def coordinate_is_on_widget(
     top_in = y >= 0
     bottom_in = y <= widget_heigt
     return False not in [left_in, right_in, top_in, bottom_in]
+
+
+def ask_for_save_file_path(
+    title: str,
+    filetypes: list[tuple[str, str]],
+    defaultextension: str,
+    **kwargs: Any,
+) -> Path:
+    """
+    Ask for a filename and ensure the file contains a file extension. If no extension
+    is present, the default extension will be appended.
+
+    Args:
+        title (str): title for the file chooser
+        file_types (list[tuple[str, str]]): supported file types to choose from
+        defaultextension (str): default extension used if none is present
+
+    Returns:
+        Path: path object representing an output path
+    """
+    filename_with_extension = ask_for_save_file_name(
+        title, filetypes, defaultextension, **kwargs
+    )
+    return Path(filename_with_extension)
+
+
+def ask_for_save_file_name(
+    title: str,
+    filetypes: list[tuple[str, str]],
+    defaultextension: str,
+    **kwargs: Any,
+) -> str:
+    """
+    Ask for a filename and ensure the file contains a file extension. If no extension
+    is present, the default extension will be appended.
+
+    Args:
+        title (str): title for the file chooser
+        file_types (list[tuple[str, str]]): supported file types to choose from
+        defaultextension (str): default extension used if none is present
+
+    Returns:
+        str: file name with extension
+    """
+    filename = asksaveasfilename(
+        title=title,
+        filetypes=filetypes,
+        defaultextension=defaultextension,
+        **kwargs,
+    )
+    return ensure_file_extension_is_present(filename, defaultextension)

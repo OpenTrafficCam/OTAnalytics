@@ -7,12 +7,15 @@ from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
 )
-from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
+from OTAnalytics.application.analysis.traffic_counting import (
+    ExportTrafficCounting,
+    RoadUserAssigner,
+    SimpleTaggerFactory,
+)
+from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import (
+    IntersectTracksWithSections,
     OTAnalyticsApplication,
-    TracksAssignedToSelectedFlows,
-    TracksIntersectingSelectedSections,
-    TracksNotIntersectingSelection,
 )
 from OTAnalytics.application.datastore import (
     Datastore,
@@ -39,6 +42,12 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.application.use_cases.highlight_intersections import (
+    SimpleIntersectTracksWithSections,
+    TracksAssignedToSelectedFlows,
+    TracksIntersectingSelectedSections,
+    TracksNotIntersectingSelection,
+)
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
@@ -53,6 +62,7 @@ from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
+from OTAnalytics.plugin_parser.export import SimpleExporterFactory
 from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     OtConfigParser,
@@ -104,7 +114,11 @@ class ApplicationStarter:
         from OTAnalytics.plugin_ui.customtkinter_gui.gui import OTAnalyticsGui
 
         track_repository = self._create_track_repository()
-        datastore = self._create_datastore(track_repository)
+        flow_repository = self._create_flow_repository()
+        event_repository = self._create_event_repository()
+        datastore = self._create_datastore(
+            track_repository, flow_repository, event_repository
+        )
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
@@ -137,7 +151,12 @@ class ApplicationStarter:
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
-
+        intersect_tracks_with_sections = self._create_intersect_tracks_with_sections(
+            datastore
+        )
+        export_counts = self._create_export_counts(
+            event_repository, flow_repository, track_repository
+        )
         application = OTAnalyticsApplication(
             datastore=datastore,
             track_state=track_state,
@@ -149,6 +168,8 @@ class ApplicationStarter:
             tracks_metadata=tracks_metadata,
             action_state=action_state,
             filter_element_setting_restorer=filter_element_settings_restorer,
+            intersect_tracks_with_sections=intersect_tracks_with_sections,
+            export_counts=export_counts,
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
@@ -181,7 +202,12 @@ class ApplicationStarter:
             scene_event_detection=scene_event_detection,
         ).start()
 
-    def _create_datastore(self, track_repository: TrackRepository) -> Datastore:
+    def _create_datastore(
+        self,
+        track_repository: TrackRepository,
+        flow_repository: FlowRepository,
+        event_repository: EventRepository,
+    ) -> Datastore:
         """
         Build all required objects and inject them where necessary
 
@@ -191,8 +217,6 @@ class ApplicationStarter:
         track_parser = self._create_track_parser(track_repository)
         section_repository = self._create_section_repository()
         flow_parser = self._create_flow_parser()
-        flow_repository = self._create_flow_repository()
-        event_repository = self._create_event_repository()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
         video_repository = VideoRepository()
@@ -516,6 +540,12 @@ class ApplicationStarter:
     def _create_flow_state(self) -> FlowState:
         return FlowState()
 
+    def _create_intersect_tracks_with_sections(
+        self, datastore: Datastore
+    ) -> IntersectTracksWithSections:
+        intersect = self._create_intersect()
+        return SimpleIntersectTracksWithSections(intersect, datastore)
+
     def _create_intersect(self) -> RunIntersect:
         return RunIntersect(
             intersect_implementation=ShapelyIntersectImplementationAdapter(
@@ -540,3 +570,17 @@ class ApplicationStarter:
 
     def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
         return FilterElementSettingRestorer()
+
+    def _create_export_counts(
+        self,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        track_repository: TrackRepository,
+    ) -> ExportCounts:
+        return ExportTrafficCounting(
+            event_repository,
+            flow_repository,
+            RoadUserAssigner(),
+            SimpleTaggerFactory(track_repository),
+            SimpleExporterFactory(),
+        )
