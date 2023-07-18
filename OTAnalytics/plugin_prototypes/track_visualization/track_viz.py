@@ -160,6 +160,80 @@ class FilterById(PandasDataFrameProvider):
         return data.loc[data[track.TRACK_ID].isin(ids)]
 
 
+class FilterByClassification(PandasDataFrameProvider):
+    def __init__(
+        self,
+        other: PandasDataFrameProvider,
+        track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
+    ) -> None:
+        self._other = other
+        self._track_view_state = track_view_state
+        self._filter_builder = filter_builder
+
+    def get_data(self) -> DataFrame:
+        tracks_df = self._other.get_data()
+        if tracks_df.empty:
+            return tracks_df
+        return self._filter(tracks_df)
+
+    def _filter(
+        self,
+        track_df: DataFrame,
+    ) -> DataFrame:
+        """
+        Filter tracks by classifications.
+
+        Args:
+            track_df (DataFrame): dataframe of tracks.
+
+        Returns:
+            DataFrame: filtered by classifications.
+        """
+        self._filter_builder.set_classification_column(track.CLASSIFICATION)
+        filter_element = self._track_view_state.filter_element.get()
+        dataframe_filter = filter_element.build_filter(self._filter_builder)
+
+        return next(iter(dataframe_filter.apply([track_df])))
+
+
+class FilterByOccurrence(PandasDataFrameProvider):
+    def __init__(
+        self,
+        other: PandasDataFrameProvider,
+        track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
+    ) -> None:
+        self._other = other
+        self._track_view_state = track_view_state
+        self._filter_builder = filter_builder
+
+    def get_data(self) -> DataFrame:
+        tracks_df = self._other.get_data()
+        if tracks_df.empty:
+            return tracks_df
+        return self._filter(tracks_df)
+
+    def _filter(
+        self,
+        track_df: DataFrame,
+    ) -> DataFrame:
+        """
+        Filter tracks by occurrence.
+
+        Args:
+            track_df (DataFrame): dataframe of tracks.
+
+        Returns:
+            DataFrame: filtered by occurrence.
+        """
+        self._filter_builder.set_occurrence_column(track.OCCURRENCE)
+        filter_element = self._track_view_state.filter_element.get()
+        dataframe_filter = filter_element.build_filter(self._filter_builder)
+
+        return next(iter(dataframe_filter.apply([track_df])))
+
+
 class PandasTrackProvider(PandasDataFrameProvider):
     """Provides tracks as pandas DataFrame."""
 
@@ -178,22 +252,17 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if not tracks:
             return DataFrame()
 
-        data = self._convert_tracks(tracks)
-
-        if data.empty:
-            return data
-
-        return self._filter_tracks(data)
+        return self._convert_tracks(tracks)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
         Convert tracks into a dataframe.
 
         Args:
-            tracks (Iterable[Track]): tracks to convert
+            tracks (Iterable[Track]): tracks to convert.
 
         Returns:
-            DataFrame: tracks as dataframe
+            DataFrame: tracks as dataframe.
         """
         prepared: list[dict] = []
         for current_track in tracks:
@@ -206,27 +275,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if (track.TRACK_ID in converted.columns) and (track.FRAME in converted.columns):
             return converted.sort_values([track.TRACK_ID, track.FRAME])
         return converted
-
-    def _filter_tracks(
-        self,
-        track_df: DataFrame,
-    ) -> DataFrame:
-        """
-        Filter tracks by classes, time and number of images.
-
-        Args:
-            filter_classes (Iterable[str]): classes to show
-            track_df (DataFrame): dataframe of tracks
-
-        Returns:
-            DataFrame: filtered by classes, time and number of images
-        """
-        self._filter_builder.set_classification_column(track.CLASSIFICATION)
-        self._filter_builder.set_occurrence_column(track.OCCURRENCE)
-        filter_element = self._track_view_state.filter_element.get()
-        dataframe_filter = filter_element.build_filter(self._filter_builder)
-
-        return next(iter(dataframe_filter.apply([track_df])))
 
 
 class PandasTracksOffsetProvider(PandasDataFrameProvider):
