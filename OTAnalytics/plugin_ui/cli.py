@@ -3,14 +3,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from tqdm import tqdm
-
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
 )
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
 
@@ -101,8 +101,10 @@ class OTAnalyticsCli:
         track_parser: TrackParser,
         flow_parser: FlowParser,
         event_list_parser: EventListParser,
+        event_repository: EventRepository,
         intersect: RunIntersect,
         scene_event_detection: RunSceneEventDetection,
+        progressbar: ProgressbarBuilder,
     ) -> None:
         self._validate_cli_args(cli_args)
         self.cli_args = cli_args
@@ -110,8 +112,10 @@ class OTAnalyticsCli:
         self._track_parser = track_parser
         self._flow_parser = flow_parser
         self._event_list_parser = event_list_parser
+        self._event_repository = event_repository
         self._intersect = intersect
         self._scene_event_detection = scene_event_detection
+        self._progressbar = progressbar
 
     def start(self) -> None:
         """Start analysis."""
@@ -137,13 +141,22 @@ class OTAnalyticsCli:
         Args:
             ottrk_files (list[Path]): the ottrk files to be analyzed
         """
-        for ottrk_file in tqdm(ottrk_files, desc="Analyzed files", unit=" files"):
+        messages: list[str] = []
+        for ottrk_file in self._progressbar(
+            list(ottrk_files), "Analyzed files", "files"
+        ):
+            self._event_repository.clear()
             save_path = self._determine_eventlist_save_path(ottrk_file)
             tracks = self._parse_tracks(ottrk_file)
-            events = self._intersect.run(tracks, sections)
-            events.extend(self._scene_event_detection.run(tracks))
-            self._event_list_parser.serialize(events, sections, save_path)
-            print(f"Analysis finished. Event list saved at '{save_path}'")
+            self._intersect.run(tracks, sections)
+            self._event_repository.add_all(self._scene_event_detection.run(tracks))
+            self._event_list_parser.serialize(
+                self._event_repository.get_all(), sections, save_path
+            )
+            messages.append(f"Analysis finished. Event list saved at '{save_path}'")
+
+        for msg in messages:
+            print(msg)
 
     @staticmethod
     def _determine_eventlist_save_path(track_file: Path) -> Path:

@@ -15,7 +15,8 @@ from OTAnalytics.application.analysis.intersect import (
 )
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.domain.event import SceneEventBuilder
+from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
+from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
@@ -105,7 +106,9 @@ class TestOTAnalyticsCli:
     FLOW_PARSER: str = "flow_parser"
     EVENT_LIST_PARSER: str = "event_list_parser"
     INTERSECT: str = "intersect"
+    EVENT_REPOSITORY: str = "event_repository"
     SCENE_EVENT_DETECTION: str = "scene_event_detection"
+    PROGRESSBAR: str = "progressbar"
 
     @pytest.fixture
     def mock_cli_dependencies(self) -> dict[str, Any]:
@@ -113,18 +116,22 @@ class TestOTAnalyticsCli:
             self.TRACK_PARSER: Mock(spec=TrackParser),
             self.FLOW_PARSER: Mock(spec=FlowParser),
             self.EVENT_LIST_PARSER: Mock(spec=EventListParser),
+            self.EVENT_REPOSITORY: Mock(spec=EventRepository),
             self.INTERSECT: Mock(spec=RunIntersect),
             self.SCENE_EVENT_DETECTION: Mock(spec=RunSceneEventDetection),
+            self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
         }
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
+        event_repository = EventRepository()
         return {
             self.TRACK_PARSER: OttrkParser(
                 CalculateTrackClassificationByMaxConfidence(), TrackRepository()
             ),
             self.FLOW_PARSER: OtFlowParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
+            self.EVENT_REPOSITORY: event_repository,
             self.INTERSECT: RunIntersect(
                 ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
                 MultiprocessingIntersectParallelization(),
@@ -132,6 +139,7 @@ class TestOTAnalyticsCli:
             self.SCENE_EVENT_DETECTION: RunSceneEventDetection(
                 SceneActionDetector(SceneEventBuilder())
             ),
+            self.PROGRESSBAR: NoProgressbarBuilder(),
         }
 
     def test_init(self, mock_cli_dependencies: dict[str, Any]) -> None:

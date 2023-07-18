@@ -51,6 +51,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
@@ -72,6 +73,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkVideoParser,
     SimpleVideoParser,
 )
+from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
     FilterById,
@@ -111,13 +113,28 @@ class ApplicationStarter:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
             DummyViewModel,
         )
-        from OTAnalytics.plugin_ui.customtkinter_gui.gui import OTAnalyticsGui
+        from OTAnalytics.plugin_ui.customtkinter_gui.gui import (
+            ModifiedCTk,
+            OTAnalyticsGui,
+        )
+        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
+            PullingProgressbarBuilder,
+            PullingProgressbarPopupBuilder,
+        )
+
+        pulling_progressbar_popup_builder = PullingProgressbarPopupBuilder()
+        pulling_progressbar_builder = PullingProgressbarBuilder(
+            pulling_progressbar_popup_builder
+        )
 
         track_repository = self._create_track_repository()
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
         datastore = self._create_datastore(
-            track_repository, flow_repository, event_repository
+            track_repository,
+            flow_repository,
+            event_repository,
+            pulling_progressbar_builder,
         )
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
@@ -126,7 +143,7 @@ class ApplicationStarter:
         road_user_assigner = RoadUserAssigner()
 
         pandas_data_provider = self._create_pandas_data_provider(
-            datastore, track_view_state
+            datastore, track_view_state, pulling_progressbar_builder
         )
         layers = self._create_layers(
             datastore,
@@ -185,12 +202,15 @@ class ApplicationStarter:
         )
         for layer in layers:
             layer.register(image_updater.notify_layers)
-        OTAnalyticsGui(dummy_viewmodel, layers).start()
+        main_window = ModifiedCTk(dummy_viewmodel)
+        pulling_progressbar_popup_builder.add_widget(main_window)
+        OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_parser = self._create_track_parser(self._create_track_repository())
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
+        event_repository = self._create_event_repository()
         intersect = self._create_intersect()
         scene_event_detection = self._create_scene_event_detection()
         OTAnalyticsCli(
@@ -198,8 +218,10 @@ class ApplicationStarter:
             track_parser=track_parser,
             flow_parser=flow_parser,
             event_list_parser=event_list_parser,
+            event_repository=event_repository,
             intersect=intersect,
             scene_event_detection=scene_event_detection,
+            progressbar=TqdmBuilder(),
         ).start()
 
     def _create_datastore(
@@ -207,12 +229,14 @@ class ApplicationStarter:
         track_repository: TrackRepository,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
+        progressbar_builder: ProgressbarBuilder,
     ) -> Datastore:
         """
         Build all required objects and inject them where necessary
 
         Args:
             track_repository (TrackRepository): the track repository to inject
+            progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
         track_parser = self._create_track_parser(track_repository)
         section_repository = self._create_section_repository()
@@ -238,6 +262,7 @@ class ApplicationStarter:
             video_repository,
             video_parser,
             track_video_parser,
+            progressbar_builder,
             config_parser=config_parser,
         )
 
@@ -271,12 +296,15 @@ class ApplicationStarter:
         return TrackViewState()
 
     def _create_pandas_data_provider(
-        self, datastore: Datastore, track_view_state: TrackViewState
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+        progressbar: ProgressbarBuilder,
     ) -> PandasDataFrameProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
         return PandasTracksOffsetProvider(
             CachedPandasTrackProvider(
-                datastore, track_view_state, dataframe_filter_builder
+                datastore, track_view_state, dataframe_filter_builder, progressbar
             ),
             track_view_state=track_view_state,
         )
@@ -546,7 +574,9 @@ class ApplicationStarter:
         intersect = self._create_intersect()
         return SimpleIntersectTracksWithSections(intersect, datastore)
 
-    def _create_intersect(self) -> RunIntersect:
+    def _create_intersect(
+        self,
+    ) -> RunIntersect:
         return RunIntersect(
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
