@@ -43,7 +43,7 @@ class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
         self._place_widgets()
         self._set_focus()
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.overrideredirect(True)  # TODO: Test on Windows
+        self.tk.call("wm", "overrideredirect", self._w, True)
         self._set_initial_position(initial_position)
         self.update_progress()
 
