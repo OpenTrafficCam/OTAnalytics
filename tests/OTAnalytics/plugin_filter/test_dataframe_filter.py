@@ -5,7 +5,6 @@ from unittest.mock import Mock
 import pytest
 from pandas import DataFrame, Series
 
-from OTAnalytics.domain.filter import FilterBuildError
 from OTAnalytics.domain.track import (
     CLASSIFICATION,
     FRAME,
@@ -173,26 +172,29 @@ class TestDataFrameFilterBuilder:
         assert type(dataframe_filter._predicate) == DataFrameHasClassifications
         assert dataframe_filter._predicate._classifications == classifications
 
-    def test_add_has_classifcations_predicate_raise_error(self) -> None:
+    def test_add_has_classifications_predicate_column_not_set(self) -> None:
         classifications = {"car", "truck"}
         builder = DataFrameFilterBuilder()
-
-        with pytest.raises(FilterBuildError):
-            builder.add_has_classifications_predicate(classifications)
+        builder.add_has_classifications_predicate(classifications)
+        builder.build()
+        dataframe_filter = builder.get_result()
+        assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
     def test_add_starts_at_or_after_date_predicate_raise_error(self) -> None:
         start_date = datetime(2000, 1, 1)
         builder = DataFrameFilterBuilder()
-
-        with pytest.raises(FilterBuildError):
-            builder.add_starts_at_or_after_date_predicate(start_date)
+        builder.add_starts_at_or_after_date_predicate(start_date)
+        builder.build()
+        dataframe_filter = builder.get_result()
+        assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
     def test_add_ends_before_or_date_predicate_raise_error(self) -> None:
         end_date = datetime(2000, 1, 1)
         builder = DataFrameFilterBuilder()
-
-        with pytest.raises(FilterBuildError):
-            builder.add_ends_before_or_at_date_predicate(end_date)
+        builder.add_ends_before_or_at_date_predicate(end_date)
+        builder.build()
+        dataframe_filter = builder.get_result()
+        assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
     def test_add_multiple_predicates(self) -> None:
         end_date = datetime(2000, 1, 3)
