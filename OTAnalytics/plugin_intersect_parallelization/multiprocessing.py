@@ -21,7 +21,10 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
         with Pool(processes=cpu_count()) as pool:
             events = pool.starmap(
                 intersect,
-                zip(tracks, itertools.repeat(sections)),
+                zip(
+                    tracks,
+                    itertools.repeat(sections),
+                ),
             )
         return self._flatten_events(events)
 
