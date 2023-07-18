@@ -19,9 +19,8 @@ from pstats import SortKey, Stats
 from time import perf_counter
 from typing import Any, Callable, Iterator
 
-import matplotlib.pyplot as plt
-import networkx as nx
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 from plotly.offline import plot
 
@@ -30,17 +29,27 @@ SEP = ";"
 
 def profile(
     repeat: int = 5,
-    warmup: int = 0,
     output: str = "profiles/{M}/{N}/{D}/profile_{N}_{D}_{T}.csv",
-    write_console: bool = False,
-    result: int | str = -1,
-    plot: str | None = "sankey",
+    profiler_kwargs: dict[str, Any] = dict(warmup=0, result=-1),
+    writer_kwargs: dict[str, Any] = dict(write_console=False),
+    plotter_kwargs: dict[str, Any] = dict(type="sankey", call_depth=10),
 ) -> Callable[[Callable], Callable]:
     """profile decorates an annotated function to profile their execution time.
 
     Pythons internal cProfile is used to measure execution times, function calls, etc.
     The measurement of the annotated function can be repeated multiple times.
-    Moreover, warmup executions before measurement can be used for cache warmup.
+    Moreover, additional profiler arguments can be passed in form a dict including:
+    -   warmup executions before measurement can be used for cache warmup.
+    -   the result (index) of which execution should be returned,
+        or "path" for the result csv file path.
+
+    Profile csv writer arguments can be passed in form of a dit including:
+
+    Profile plotter arguments can be passed in form of a dit including:
+    -   the kind of plots to produce can be specified:
+        "pie" or "sankey", a combination of the three with a "|" seperator,
+        "all" or None are available.
+
 
     All measurements are exported in csv format at the specified location
     using the provided file name template:
@@ -51,33 +60,25 @@ def profile(
     E.g. the template 'profiles/{M}/{N}/{D}/profile_{N}_{D}_{T}.csv' may result in
     'profiles/profile_my_func_12-08-1979_12-42-07.csv'.
 
-    Finally the kind of plots to produce can be specified:
-    "pie", "graph", "sankey", a combination of the three with a "|" seperator,
-    "all" or None are available.
-
     Args:
         repeat (int, optional): the number of measured executions.
             Defaults to 5.
-        warmup (int, optional): the number of unmeasured warmup executions.
-            Defaults to 0.
         output (str, optional): the output file template.
             Defaults to "profiles/{M}/{N}/{T}/profile_{N}_{D}_{T}.csv".
-        write_console (bool, optional): whether stats should be printed on console.
-            Defaults to False.
-        result (int | str): indicates what the wrapped function should return.
-            Either the index (int) of which execution's result should be returned
-            or "path" to return the path of the profiling result file.
-            Defaults to -1.
-        plot (str | None, optional): the kind of plots to produce.
-            "pie", "graph", "sankey", a combination of the three with a
-            "|" seperator, "all" or None are supported.
-            Defaults to "all".
+        profiler_kwargs (dict[str, Any], optional): additional profiler args.
+            Defaults to 0 warmup runs, and returning the last result.
+        writer_kwargs (dict[str, Any], optional): additional writer args.
+            Defaults to no console output.
+        plotter_kwargs (dict[str, Any], optional): additional plotter args.
+            Defaults to plotting sankey diagrams with a cell tree depth of 10.
 
     Returns:
         Callable[[Callable], Callable]: the profiling decorator to annotate a function
     """
-    writer = ProfileWriter(output, repeat, write_console)
-    return Profiler(writer, repeat, warmup, result, plot).as_decorator
+
+    writer = ProfileWriter(output, repeat, **writer_kwargs)
+    plotter = ProfilePlotter(**plotter_kwargs)
+    return Profiler(repeat, writer, plotter, **profiler_kwargs).as_decorator
 
 
 class ProfileWriter:
@@ -86,20 +87,22 @@ class ProfileWriter:
     Args:
         output (str): the output file template where the csv result is saved
         runs (int): the number of executions that were measured
-        write_console (bool): whether stats should be printed to the console
+        write_console (bool, optional): whether stats should be printed to the console.
+            Defaults to False.
     """
 
-    def __init__(self, output: str, runs: int, write_console: bool) -> None:
+    def __init__(self, output: str, runs: int, write_console: bool = False) -> None:
         """Creates a new ProfileWriter.
 
         Args:
             output (str): the output file template where the csv result is saved
             runs (int): the number of executions that were measured
-            write_console (bool): whether stats should be printed to the console
+            write_console (bool, optional): whether to print stats to the console.
+                Defaults to False.
         """
-        self.output = output
-        self.runs = runs
-        self.write_console = write_console
+        self._output = output
+        self._runs = runs
+        self._write_console = write_console
 
     def write(self, profile: Profile, func_name: str, module_name: str) -> str:
         """Converts the measured stats to csv format
@@ -113,38 +116,40 @@ class ProfileWriter:
         Returns:
             str: path of the saved file
         """
-        calls = self.stats_to_rows(
-            profile,
-            stat_printer=lambda stats: stats.print_callers(),
-            line_parser=self.parse_caller,
-        )
-        caller_map = {callee: caller for caller, callee in calls}
+        caller_map = self.create_caller_map(profile)
+        csv = self.create_csv(profile, caller_map)
 
+        path = self.create_file_name(func_name, module_name)
+        self.write_to_file(csv, path)
+
+        self.dump_stats(profile, path)
+        return path
+
+    def dump_stats(self, profile: Profile, path: str) -> None:
+        """Saves dump of the given profiles stats."""
+        dump_path = splitext(path)[0] + ".dump"
+        profile.dump_stats(dump_path)
+
+    def create_csv(self, profile: Profile, caller_map: dict[str, str]) -> str:
+        """Extract profile time measurements from profile.
+        Infer call hierarchy defined by caller_map.
+        """
         rows = self.stats_to_rows(
             profile,
             stat_printer=lambda stats: stats.print_stats(),
             line_parser=lambda line: self.parse_measures(line, caller_map),
         )
         csv = self.rows_to_csv([self.header()] + rows)
+        return csv
 
-        path = self.create_file_name(func_name, module_name)
-        self.write_to_file(csv, path)
-
-        dump_path = self.to_dump_path(path)
-        profile.dump_stats(dump_path)
-        return path
-
-    def to_dump_path(self, path: str) -> str:
-        """Creates a path for the stats dump derived from the given path.
-            Replaces the file extension by ".dump".
-
-        Args:
-            path (str): the path to be converted to a dump path
-
-        Returns:
-            str: the derived dump path
-        """
-        return splitext(path)[0] + ".dump"
+    def create_caller_map(self, profile: Profile) -> dict[str, str]:
+        calls = self.stats_to_rows(
+            profile,
+            stat_printer=lambda stats: stats.print_callers(),
+            line_parser=self.parse_caller,
+        )
+        caller_map = {callee: caller for caller, callee in calls}
+        return caller_map
 
     def stats_to_rows(
         self,
@@ -175,7 +180,7 @@ class ProfileWriter:
             Stats(profile, stream=stats).strip_dirs().sort_stats(SortKey.CUMULATIVE)
         )
 
-        if self.write_console:
+        if self._write_console:
             print(stats.getvalue())
 
         # remove text preceding first column header
@@ -221,7 +226,14 @@ class ProfileWriter:
             )
 
         callee = function.strip()
-        return [ncalls, self.runs, tottime, cumtime, callee, caller_map.get(callee, "")]
+        return [
+            ncalls,
+            self._runs,
+            tottime,
+            cumtime,
+            callee,
+            caller_map.get(callee, ""),
+        ]
 
     def parse_caller(self, line: str) -> list[str] | None:
         """Parses caller stats and extracts the calling function
@@ -279,7 +291,7 @@ class ProfileWriter:
         """
         now = datetime.now()
 
-        path = self.output
+        path = self._output
         path = path.replace("{T}", now.strftime("%H-%M-%S"))
         path = path.replace("{D}", now.strftime("%d-%m-%Y"))
         path = path.replace("{M}", module_name)
@@ -288,129 +300,64 @@ class ProfileWriter:
         return path
 
 
-class Profiler:
-    """Profiler is a class to execute profiling on a given function.
-
-    Args:
-        writer (ProfileWriter): the ProfileWriter to be used
-            for writing measurements to files.
-        repeat (int): the number of measured executions.
-        warmup (int): the number of unmeasured warmup executions.
-        result (int | str): indicates what the wrapped function should return.
-            Either the index (int) of which execution's result should be returned
-            or "path" to return the path of the profiling result file.
-            Defaults to "path".
-        plot (str | None, optional): the kind of plots to produce.
-            "pie", "graph", "sankey", a combination of the three with a
-            "|" seperator, "all" or None are supported.
-            Defaults to "all".
-    """
-
-    def __init__(
-        self,
-        writer: ProfileWriter,
-        repeat: int,
-        warmup: int,
-        result: int | str = "path",
-        plot: str | None = "all",
-    ) -> None:
-        """Creates a new Profiler.
-
-        Args:
-            writer (ProfileWriter): the ProfileWriter to be used
-                for writing measurements to files.
-            repeat (int): the number of measured executions.
-            warmup (int): the number of unmeasured warmup executions.
-            result (int | str): indicates what the wrapped function should return.
-                Either the index (int) of which execution's result should be returned
-                or "path" to return the path of the profiling result file.
-                Defaults to "path".
-            plot (str | None, optional): the kind of plots to produce.
-                "pie", "graph", "sankey", a combination of the three with a
-                "|" seperator, "all" or None are supported.
-                Defaults to "all".
-        """
-        self.writer = writer
-        self.repeat = repeat
-        self.warmup = warmup
-        self.result = result
-        self.plot = plot
-
-    def run(self, execution: Callable) -> tuple[list, Profile]:
-        """Runs the warmup and profiling executions of the given function.
-
-        Args:
-            execution (Callable): the function to be profiled
-
-        Returns:
-            tuple[list, Profile]: the list of execution results
-                and the generated Profile
-        """
-        results = []
-
-        for _ in range(self.warmup):
-            results.append(execution())
-
-        profile = Profile()
-        for i in range(self.repeat):
-            start = perf_counter()
-            profile.enable()
-            res = execution()
-            profile.disable()
-            end = perf_counter()
-
-            print(f"Run {i} took {end-start}")
-
-            results.append(res)
-
-        return results, profile
-
-    def as_decorator(self, func: Callable) -> Callable:
-        """Converts the Profiler to a decorator by creating
-        a wrapper for the given function which executes the profiling.
-
-        Args:
-            func (Callable): the function to be profiled.
-
-        Returns:
-            Callable: a wrapper for the given function
-        """
-
-        @functools.wraps(func)
-        def profiling_wrapper(*args: Any, **kwargs: Any) -> Any:
-            results, profile = self.run(lambda: func(*args, **kwargs))
-            path = self.writer.write(profile, func.__name__, str(func.__qualname__))
-
-            ProfilePlotter().create_plot(path, func.__name__, kind=self.plot)
-
-            match self.result:
-                case "path":
-                    return path
-                case int(self.result):
-                    return results[self.result]
-
-        return profiling_wrapper
-
-
 class ProfilePlotter:
     """The ProfilePlotter class provides the means to plot
     the time measurements and call structure of a function's profile.
     It currently supports three representations: graph, pie and sankey.
     """
 
-    def __init__(self) -> None:
-        self.plotters = {
+    def __init__(
+        self,
+        column: str = "cumtime",
+        type: str = "sanky",
+        call_depth: int = 10,
+        min_fraction: float = 0,
+        log: bool = False,
+    ) -> None:
+        """Initialize plotter with a column to evaluate,
+        a plot type and plot customization options.
+
+        Args:
+            column (str, optional): the column to be evaluated. Defaults to "cumtime".
+            type (str, optional): the plot type can be "pie" and "sankey".
+                Defaults to "sanky".
+            call_depth (int, optional): limits visualization to those functions
+                the given with maximum depth in cal tree. Defaults to 10.
+            min_fraction (float, optional): filters those functions with at least the
+                given fraction of the maximum value recorded in the given column.
+                Defaults to 0, indication no filtering.
+            log: toggle logs of plotter on console.
+        """
+        self._column = column
+        self._type = type
+        self._plotters = self.collect_plotters(type)
+        self._call_depth = call_depth
+        self._min_fraction = min_fraction
+        self._log = log
+
+    def all_plotters(
+        self,
+    ) -> dict[str, Callable[[pd.DataFrame, str], tuple[go.Figure, str]]]:
+        return {
             "pie": self.as_pie,
-            "graph": self.as_graph,
             "sankey": self.as_sankey,
+            "treemap": self.as_treemap,
         }
 
-    def update_plots(
-        self, path: str, kind: str | None = "pie", recursive: bool = True
-    ) -> None:
+    def collect_plotters(
+        self, type: str
+    ) -> list[Callable[[pd.DataFrame, str], tuple[go.Figure, str]]]:
+        all = self.all_plotters()
+        return (
+            list(all.values())
+            if type == "all"
+            else [all.get(k, self.as_pie) for k in set(type.split("|"))]
+        )
+
+    def update_plots(self, path: str, recursive: bool = True) -> None:
         for f in self.collect_csv(path, recursive):
             name = f.split("\\")[-1]
-            self.create_plot(file=f, name=name, kind=kind)
+            self.create_plot(file=f, name=name)
 
     def collect_csv(self, path: str, recursive: bool = True) -> Iterator[str]:
         for dirpath, _, filenames in walk(path):
@@ -423,72 +370,52 @@ class ProfilePlotter:
         self,
         file: str,
         name: str,
-        kind: str | None = "pie",
-        depth: int = 9,
-        min_fract: float = 0.05,
     ) -> None:
         """Creates plots of the given kind for the profile in the given file.
 
         Args:
             file (str): path to the file containing the profile results.
             name (str): name of the profiled function
-            kind (str | None, optional): defines the kind(s) of plots to create.
-                Supported kinds are "pie", "graph" and "sankey"
-                or a concatenation of these with "|" as separator: e.g. "pie|sankey".
-                If None or "" are given, no plots re produced.
-                Defaults to "pie".
-            depth (int): defines depth of function call tree to be plotted.
-                Defaults to 15.
-            min_fract (int): defines minimum fraction of maximum cumtime
-                for measurements o be plotted. Defaults to 15.
         """
-        if kind is None or kind == "":
+        if self._type is None or self._type == "":
             return None
 
-        data = self.prepare_data(file, depth, min_fract)
+        if self._log:
+            print(f"Create {self._type} plot(s) for {file}")
 
-        plot_funcs = (
-            self.plotters.values()
-            if kind == "all"
-            else [self.plotters.get(k, self.as_pie) for k in set(kind.split("|"))]
-        )
+        data = self.prepare_data(file)
 
-        for plotter in plot_funcs:
+        for plotter in self._plotters:
             fig, extension = plotter(data, name)
             path = file.replace(".csv", extension)
             self.save(fig, path)
 
-    def save(self, fig: go.Figure | None, output: str) -> None:
+    def save(self, fig: go.Figure, output: str) -> None:
         """Saves the created figure at the given output path.
-            Uses the plotly save mechanism if a plotly Figure is given.
-            Uses the global matplotlib save mechanism, if None is given.
 
         Args:
-            fig (go.Figure | None): the plotly figure to save
-                or None if the global matplotlib figure should be saved.
+            fig (go.Figure): the plotly figure to save
             output (str): path to the result file for storing the figures
         """
-        if fig is None:
-            plt.savefig(output, format="PNG")
-        else:
-            config = {
-                "displaylogo": False,
-                "scrollZoom": True,
-            }
-            plot(fig, filename=output, auto_open=False, config=config)
+        config = {
+            "displaylogo": False,
+            "scrollZoom": True,
+        }
+        plot(fig, filename=output, auto_open=False, config=config)
 
     def prepare_data(
-        self, file: str, call_depth: int = 15, min_fract: float = 0.01
+        self, file: str, call_depth: int = 30, min_fract: float = 0.01
     ) -> pd.DataFrame:
         """Reads the data from the given profile csv file and creates a dataframe.
+        The data is filtered, according to the ProfilePlotter's properties.
+
+        The following filters are available:
+        -   call_depth: filter daa of function calls
+            with a maximum depth in call hierarchy.
+        -   min_fraction: threshold as minimum share of maximum measured time
 
         Args:
             file (str): path to the profile csv file to be read
-            call_depth (int): depth in function call hierarchy
-                up to which profile measurements should be returned.
-                If less than 0, all measurements are returned.
-            min_fract (float): filter measurements with
-                less than the given fraction of the maximum "cumtime".
 
         Returns:
             pd.DataFrame: DataFrame containing the  measurements of the profile
@@ -496,57 +423,29 @@ class ProfilePlotter:
         df = pd.read_csv(file, sep=SEP)
         df["called_by"] = df["called_by"].fillna("")
 
-        if call_depth > 0:
+        df = self.filter_call_depth(df)
+        # df = self.filter_by_share(df)
+
+        return df
+
+    def filter_by_share(self, df: pd.DataFrame) -> pd.DataFrame:
+        if self._min_fraction <= 0:
+            return df
+
+        df = df[df[self._column] >= df[self._column].max() * self._min_fraction]
+        return df
+
+    def filter_call_depth(self, df: pd.DataFrame) -> pd.DataFrame:
+        if self._call_depth > 0:
             visited = [""]
-            for _ in range(call_depth):
+            for _ in range(self._call_depth):
                 called = df[df["called_by"].isin(visited)]["function"]
                 visited += [c for c in called if c not in visited]
 
         df = df[df["called_by"].isin(visited) | df["function"].isin(visited)]
-
-        df = df[df["cumtime"] >= df["cumtime"].max() * 0.01]
         return df
 
-    def as_graph(
-        self, data: pd.DataFrame, name: str, attr: str = "cumtime"
-    ) -> tuple[None, str]:
-        """Creates a graph plot from the profile data.
-
-        Args:
-            data (pd.DataFrame): the profile data to be plotted.
-                Requires a "funtion", "called_by" column
-                as well as the specified attr(ibute) column.
-            name (str): name of the profiled function
-            attr (str, optional): The attribute column to be evaluated.
-                Defaults to "cumtime".
-
-        Returns:
-            tuple[None, str]: No figure is returned as matplotlib uses a global store.
-                The graph file extension is returned.
-        """
-        nodes = zip(data["function"], data[attr])
-        edges = zip(data["function"], data["called_by"])
-
-        G = nx.MultiDiGraph(seed=42)
-        [G.add_node(v, time=t) for v, t in nodes]
-        [G.add_edge(u, v) for v, u in edges if u != ""]
-        size = [(n[1]["time"] * 10) ** 2 for n in G.nodes().data()]
-        labels = {n[0]: f"{n[0]}:\n{n[1]['time']}" for n in G.nodes().data()}
-
-        nx.draw(
-            G,
-            labels=labels,
-            node_size=size,
-            with_labels=True,
-            cmap=plt.get_cmap("jet"),
-            node_color=size,
-        )
-
-        return None, "_graph.png"
-
-    def as_pie(
-        self, data: pd.DataFrame, name: str, attr: str = "cumtime"
-    ) -> tuple[go.Sunburst, str]:
+    def as_pie(self, data: pd.DataFrame, name: str) -> tuple[go.Figure, str]:
         """Creates a (sunburst)-pie plot from the profile data.
 
         Args:
@@ -554,17 +453,15 @@ class ProfilePlotter:
                 Requires a "funtion", "called_by" column
                 as well as the specified attr(ibute) column.
             name (str): name of the profiled function
-            attr (str, optional): The attribute column to be evaluated.
-                Defaults to "cumtime".
 
         Returns:
-            tuple[go.Sunburst, str]: Returns the sunburst representation of the data.
+            tuple[go.Figure, str]: Returns the sunburst representation of the data.
                 Also returns the file extension for pie plots.
         """
         ids = data["function"]
         labels = data["function"]
         parents = data["called_by"]
-        values = data[attr]
+        values = data[self._column]
 
         trace = go.Sunburst(
             ids=ids, labels=labels, parents=parents, values=values, branchvalues="total"
@@ -573,11 +470,38 @@ class ProfilePlotter:
 
         fig = go.Figure(data=[trace], layout=layout)
 
+        fig = px.sunburst(
+            data,
+            ids="function",
+            labels="function",
+            parents="called_by",
+            values=self._column,
+        )
+
+        fig = px.sunburst(data, path=["called_by", "function"], values=self._column)
+
         return fig, "_pie.html"
 
-    def as_sankey(
-        self, data: pd.DataFrame, name: str, attr: str = "cumtime"
-    ) -> tuple[go.Sankey, str]:
+    def as_treemap(self, data: pd.DataFrame, name: str) -> tuple[go.Figure, str]:
+        """Creates a treemap plot from the profile data.
+
+        Args:
+            data (pd.DataFrame): the profile data to be plotted.
+                Requires a "funtion", "called_by" column
+                as well as the specified attr(ibute) column.
+            name (str): name of the profiled function
+
+        Returns:
+            tuple[go.Figure, str]: Returns the sunburst representation of the data.
+                Also returns the file extension for pie plots.
+        """
+        fig = px.treemap(
+            data, path=["called_by", "function"], values=self._column, color="called_by"
+        )
+
+        return fig, "_tree.html"
+
+    def as_sankey(self, data: pd.DataFrame, name: str) -> tuple[go.Sankey, str]:
         """Creates a sankey plot from the profile data.
 
         Args:
@@ -585,8 +509,6 @@ class ProfilePlotter:
                 Requires a "funtion", "called_by" column
                 as well as the specified attr(ibute) column.
             name (str): name of the profiled function
-            attr (str, optional): The attribute column to be evaluated.
-                Defaults to "cumtime".
 
         Returns:
             tuple[go.Sankey, str]: Returns the sunburst representation of the data.
@@ -597,7 +519,7 @@ class ProfilePlotter:
             labels.remove("")
         id_map = {v: i for i, v in enumerate(labels)}
 
-        links = list(zip(data["function"], data["called_by"], data[attr]))
+        links = list(zip(data["function"], data["called_by"], data[self._column]))
         links = [
             (id_map[target], id_map[source], value)
             for target, source, value in links
@@ -626,9 +548,112 @@ class ProfilePlotter:
         return fig, "_sankey.html"
 
 
+class Profiler:
+    """Profiler is a class to execute profiling on a given function.
+
+    Args:
+        writer (ProfileWriter): the ProfileWriter to be used
+            for writing measurements to files.
+        repeat (int): the number of measured executions.
+        warmup (int): the number of unmeasured warmup executions.
+            Defaults to 0.
+        result (int | str): indicates what the wrapped function should return.
+            Either the index (int) of which execution's result should be returned
+            or "path" to return the path of the profiling result file.
+            Defaults to -1.
+    """
+
+    def __init__(
+        self,
+        repeat: int,
+        writer: ProfileWriter,
+        plotter: ProfilePlotter,
+        warmup: int = 0,
+        result: int | str = -1,
+    ) -> None:
+        """Creates a new Profiler.
+
+        Args:
+            repeat (int): the number of measured executions.
+            writer (ProfileWriter): the ProfileWriter to be used
+                for writing measurements to files.
+            plotter (ProfilePlotter): the plotter to be used for visualization.
+            warmup (int): the number of unmeasured warmup executions.
+                Defaults to 0.
+            result (int | str): indicates what the wrapped function should return.
+                Either the index (int) of which execution's result should be returned
+                or "path" to return the path of the profiling result file.
+                Defaults to -1.
+
+        """
+        self._repeat = repeat
+        self._writer = writer
+        self._plotter = plotter
+        self._warmup = warmup
+        self._result = result
+
+    def run(self, execution: Callable) -> tuple[list, Profile]:
+        """Runs the warmup and profiling executions of the given function.
+
+        Args:
+            execution (Callable): the function to be profiled
+
+        Returns:
+            tuple[list, Profile]: the list of execution results
+                and the generated Profile
+        """
+        results = []
+
+        for _ in range(self._warmup):
+            results.append(execution())
+
+        profile = Profile()
+        for i in range(self._repeat):
+            start = perf_counter()
+            profile.enable()
+            res = execution()
+            profile.disable()
+            end = perf_counter()
+
+            if self._writer._write_console:
+                print(f"Run {i} took {end-start}")
+
+            results.append(res)
+
+        return results, profile
+
+    def as_decorator(self, func: Callable) -> Callable:
+        """Converts the Profiler to a decorator by creating
+        a wrapper for the given function which executes the profiling.
+
+        Args:
+            func (Callable): the function to be profiled.
+
+        Returns:
+            Callable: a wrapper for the given function
+        """
+
+        @functools.wraps(func)
+        def profiling_wrapper(*args: Any, **kwargs: Any) -> Any:
+            results, profile = self.run(lambda: func(*args, **kwargs))
+
+            path = self._writer.write(profile, func.__name__, str(func.__qualname__))
+            self._plotter.create_plot(path, func.__name__)
+
+            match self._result:
+                case "path":
+                    return path
+                case int(self._result):
+                    return results[self._result]
+
+        return profiling_wrapper
+
+
 #  ##################################################
 # version1
-@profile(repeat=1000, warmup=10, write_console=True)
+@profile(
+    repeat=1000, profiler_kwargs=dict(warmup=10), writer_kwargs=dict(write_console=True)
+)
 def fib_iter(num: int) -> int:
     if num == 0:
         return 0
@@ -642,7 +667,9 @@ def fib_iter(num: int) -> int:
     return last
 
 
-@profile(repeat=1000, warmup=10, write_console=True)
+@profile(
+    repeat=1000, profiler_kwargs=dict(warmup=10), writer_kwargs=dict(write_console=True)
+)
 def fib_rec_wrap(num: int) -> int:
     return fib_rec(num)
 
@@ -652,4 +679,6 @@ def fib_rec(num: int) -> int:
 
 
 if __name__ == "__main__":
-    ProfilePlotter().update_plots("profiles", kind="sankey", recursive=True)
+    ProfilePlotter(log=True, column="cumtime", type="all", call_depth=20).update_plots(
+        "profiles", recursive=True
+    )
