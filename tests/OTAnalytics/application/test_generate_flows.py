@@ -1,3 +1,4 @@
+import itertools
 from unittest.mock import Mock, call
 
 import pytest
@@ -7,6 +8,7 @@ from OTAnalytics.application.generate_flows import (
     FlowGenerator,
     FlowIdGenerator,
     FlowNameGenerator,
+    FlowPredicate,
     GenerateFlows,
 )
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
@@ -73,11 +75,34 @@ class TestCrossProductFlowGenerator:
     def test_generate_crossproduct(
         self, sections: list[Section], expected_flows: list[Flow]
     ) -> None:
+        predicate = Mock(spec=FlowPredicate)
+        predicate.should_generate.return_value = True
+        self.__execute_test(sections, expected_flows, predicate)
+
+    @pytest.mark.parametrize("sections,expected_flows", create_test_cases())
+    def test_only_generate_first(
+        self, sections: list[Section], expected_flows: list[Flow]
+    ) -> None:
+        predicate = Mock(spec=FlowPredicate)
+        should_generate = [True]
+        should_generate.extend(itertools.repeat(False, len(expected_flows[1:])))
+        predicate.should_generate.side_effect = should_generate
+
+        self.__execute_test(sections, expected_flows[:1], predicate)
+
+    def __execute_test(
+        self,
+        sections: list[Section],
+        expected_flows: list[Flow],
+        predicate: FlowPredicate,
+    ) -> None:
         id_generator = Mock(spec=FlowIdGenerator)
         id_generator.generate_id.side_effect = [flow.id for flow in expected_flows]
         name_generator = Mock(spec=FlowNameGenerator)
-        name_generator.generate_name.return_value = "name"
-        generator = CrossProductFlowGenerator(id_generator, name_generator)
+        name_generator.generate_name.return_value = [
+            flow.name for flow in expected_flows
+        ]
+        generator = CrossProductFlowGenerator(id_generator, name_generator, predicate)
 
         flows = generator.generate(sections)
 

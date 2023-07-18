@@ -20,17 +20,27 @@ class FlowGenerator(ABC):
         raise NotImplementedError
 
 
+class FlowPredicate(ABC):
+    def should_generate(self, start: SectionId, end: SectionId) -> bool:
+        raise NotImplementedError
+
+
 class CrossProductFlowGenerator(FlowGenerator):
     def __init__(
-        self, id_generator: FlowIdGenerator, name_generator: FlowNameGenerator
+        self,
+        id_generator: FlowIdGenerator,
+        name_generator: FlowNameGenerator,
+        predicate: FlowPredicate,
     ) -> None:
         self._id_generator = id_generator
         self._name_generator = name_generator
+        self._predicate = predicate
 
     def generate(self, sections: list[Section]) -> list[Flow]:
         return [
             self.__create_flow(start, end)
             for start, end in itertools.product(sections, sections)
+            if self._predicate.should_generate(start.id, end.id)
         ]
 
     def __create_flow(self, start: Section, end: Section) -> Flow:
