@@ -102,7 +102,7 @@ class TestCachedPandasTrackProvider:
     def set_up_provider(
         self, init_tracks: list[Track], query_tracks: list[Track]
     ) -> CachedPandasTrackProvider:
-        """Create cached track provider with moc´ked datastore.
+        """Create cached track provider with mocked datastore.
 
         Mocked datastore uses given query_tracks for track repository id queries.
         Initializes provider cache with given init_tracks.
