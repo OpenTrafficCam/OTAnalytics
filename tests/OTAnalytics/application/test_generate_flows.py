@@ -1,4 +1,4 @@
-import itertools
+from itertools import chain, repeat
 from unittest.mock import Mock, call
 
 import pytest
@@ -84,8 +84,7 @@ class TestCrossProductFlowGenerator:
         self, sections: list[Section], expected_flows: list[Flow]
     ) -> None:
         predicate = Mock(spec=FlowPredicate)
-        should_generate = [True]
-        should_generate.extend(itertools.repeat(False, len(expected_flows[1:])))
+        should_generate = chain([True], repeat(False))
         predicate.should_generate.side_effect = should_generate
 
         self.__execute_test(sections, expected_flows[:1], predicate)
