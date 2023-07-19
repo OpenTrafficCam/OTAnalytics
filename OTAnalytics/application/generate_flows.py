@@ -21,8 +21,13 @@ class FlowGenerator(ABC):
 
 
 class FlowPredicate(ABC):
-    def should_generate(self, start: SectionId, end: SectionId) -> bool:
+    def __call__(self, start: SectionId, end: SectionId) -> bool:
         raise NotImplementedError
+
+
+class FilterSameSection(FlowPredicate):
+    def __call__(self, start: SectionId, end: SectionId) -> bool:
+        return start != end
 
 
 class CrossProductFlowGenerator(FlowGenerator):
@@ -40,7 +45,7 @@ class CrossProductFlowGenerator(FlowGenerator):
         return [
             self.__create_flow(start, end)
             for start, end in itertools.product(sections, sections)
-            if self._predicate.should_generate(start.id, end.id)
+            if self._predicate(start.id, end.id)
         ]
 
     def __create_flow(self, start: Section, end: Section) -> Flow:

@@ -5,6 +5,7 @@ import pytest
 
 from OTAnalytics.application.generate_flows import (
     CrossProductFlowGenerator,
+    FilterSameSection,
     FlowGenerator,
     FlowIdGenerator,
     FlowNameGenerator,
@@ -13,6 +14,17 @@ from OTAnalytics.application.generate_flows import (
 )
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+
+
+class TestFilterSameSection:
+    def test_filter_sections_with_same_id(self) -> None:
+        south_id = SectionId("south")
+        north_id = SectionId("north")
+
+        predicate = FilterSameSection()
+
+        assert not predicate(south_id, south_id)
+        assert predicate(south_id, north_id)
 
 
 def create_test_cases() -> list[tuple[list[Section], list[Flow]]]:
@@ -76,7 +88,7 @@ class TestCrossProductFlowGenerator:
         self, sections: list[Section], expected_flows: list[Flow]
     ) -> None:
         predicate = Mock(spec=FlowPredicate)
-        predicate.should_generate.return_value = True
+        predicate.return_value = True
         self.__execute_test(sections, expected_flows, predicate)
 
     @pytest.mark.parametrize("sections,expected_flows", create_test_cases())
@@ -85,7 +97,7 @@ class TestCrossProductFlowGenerator:
     ) -> None:
         predicate = Mock(spec=FlowPredicate)
         should_generate = chain([True], repeat(False))
-        predicate.should_generate.side_effect = should_generate
+        predicate.side_effect = should_generate
 
         self.__execute_test(sections, expected_flows[:1], predicate)
 
