@@ -6,7 +6,18 @@ from OTAnalytics.domain.section import Section, SectionId, SectionRepository
 
 
 class FlowIdGenerator(ABC):
+    """Generate an id for a flow consisting of the given start and end sections"""
+
     def __call__(self, start: SectionId, end: SectionId) -> FlowId:
+        """Generate an id for a flow using the given sections.
+
+        Args:
+            start (Section): section where the flow starts
+            end (Section): section where the flow ends
+
+        Returns:
+            FlowId: id of the flow
+        """
         raise NotImplementedError
 
 
@@ -19,10 +30,30 @@ class RepositoryFlowIdGenerator(FlowIdGenerator):
 
 
 class FlowNameGenerator(ABC):
+    """Generate a name for a flow consisting of the given start and end sections"""
+
     def generate_from_section(self, start: Section, end: Section) -> str:
+        """Generate a name for a flow using the given sections.
+
+        Args:
+            start (Section): section where the flow starts
+            end (Section): section where the flow ends
+
+        Returns:
+            str: name of the flow
+        """
         raise NotImplementedError
 
     def generate_from_string(self, start: str, end: str) -> str:
+        """Generate a name for a flow using the given sections.
+
+        Args:
+            start (str): section where the flow starts
+            end (str): section where the flow ends
+
+        Returns:
+            str: name of the flow
+        """
         raise NotImplementedError
 
 
@@ -35,21 +66,29 @@ class ArrowFlowNameGenerator(FlowNameGenerator):
 
 
 class FlowGenerator(ABC):
+    """Generate flows using the given sections"""
+
     def __call__(self, sections: list[Section]) -> list[Flow]:
         raise NotImplementedError
 
 
 class FlowPredicate(ABC):
+    """Predicate to select if a flow should be generated for a pair of sections."""
+
     def __call__(self, start: SectionId, end: SectionId) -> bool:
         raise NotImplementedError
 
 
 class FilterSameSection(FlowPredicate):
+    """Do not generate flows if start and end are equal."""
+
     def __call__(self, start: SectionId, end: SectionId) -> bool:
         return start != end
 
 
 class CrossProductFlowGenerator(FlowGenerator):
+    """Generate flows for all combinations of sections."""
+
     def __init__(
         self,
         id_generator: FlowIdGenerator,
@@ -74,6 +113,12 @@ class CrossProductFlowGenerator(FlowGenerator):
 
 
 class GenerateFlows:
+    """
+    Use case to generate flows. The flow generator will be used to generate the flows
+    using all sections from the section repository. The resulting flows will be stored
+    in the flow repository.
+    """
+
     def __init__(
         self,
         section_repository: SectionRepository,
@@ -85,6 +130,10 @@ class GenerateFlows:
         self._flow_generator = flow_generator
 
     def generate(self) -> None:
+        """
+        Use all sections from the section repository to generate flows using the flow
+        generator. Store the resulting flows in the flow repository.
+        """
         sections = self._section_repository.get_all()
         flows = self._flow_generator(sections)
         self._flow_repository.add_all(flows)
