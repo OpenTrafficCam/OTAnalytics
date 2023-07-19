@@ -10,9 +10,28 @@ class FlowIdGenerator(ABC):
         raise NotImplementedError
 
 
+class RepositoryFlowIdGenerator(FlowIdGenerator):
+    def __init__(self, flow_repository: FlowRepository) -> None:
+        self._flow_repository = flow_repository
+
+    def __call__(self, start: SectionId, end: SectionId) -> FlowId:
+        return self._flow_repository.get_id()
+
+
 class FlowNameGenerator(ABC):
-    def __call__(self, start: SectionId, end: SectionId) -> str:
+    def generate_from_section(self, start: Section, end: Section) -> str:
         raise NotImplementedError
+
+    def generate_from_string(self, start: str, end: str) -> str:
+        raise NotImplementedError
+
+
+class ArrowFlowNameGenerator(FlowNameGenerator):
+    def generate_from_section(self, start: Section, end: Section) -> str:
+        return self.generate_from_string(start.name, end.name)
+
+    def generate_from_string(self, start: str, end: str) -> str:
+        return f"{start} --> {end}"
 
 
 class FlowGenerator(ABC):
@@ -41,7 +60,7 @@ class CrossProductFlowGenerator(FlowGenerator):
         self._name_generator = name_generator
         self._predicate = predicate
 
-    def generate(self, sections: list[Section]) -> list[Flow]:
+    def __call__(self, sections: list[Section]) -> list[Flow]:
         return [
             self.__create_flow(start, end)
             for start, end in itertools.product(sections, sections)
@@ -50,7 +69,7 @@ class CrossProductFlowGenerator(FlowGenerator):
 
     def __create_flow(self, start: Section, end: Section) -> Flow:
         flow_id = self._id_generator(start.id, end.id)
-        name = self._name_generator(start.id, end.id)
+        name = self._name_generator.generate_from_section(start, end)
         return Flow(id=flow_id, name=name, start=start.id, end=end.id, distance=0)
 
 

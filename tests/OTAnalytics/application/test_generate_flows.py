@@ -110,10 +110,12 @@ class TestCrossProductFlowGenerator:
         id_generator = Mock(spec=FlowIdGenerator)
         id_generator.side_effect = [flow.id for flow in expected_flows]
         name_generator = Mock(spec=FlowNameGenerator)
-        name_generator.return_value = [flow.name for flow in expected_flows]
+        name_generator.generate_from_section.return_value = [
+            flow.name for flow in expected_flows
+        ]
         generator = CrossProductFlowGenerator(id_generator, name_generator, predicate)
 
-        flows = generator.generate(sections)
+        flows = generator(sections)
 
         assert all(
             (current.start == expected.start) and (current.end == expected.end)
@@ -123,8 +125,10 @@ class TestCrossProductFlowGenerator:
         assert id_generator.call_args_list == [
             call(flow.start, flow.end) for flow in expected_flows
         ]
-        assert name_generator.call_args_list == [
-            call(flow.start, flow.end) for flow in expected_flows
+        sections_by_id = {section.id: section for section in sections}
+        assert name_generator.generate_from_section.call_args_list == [
+            call(sections_by_id[flow.start], sections_by_id[flow.end])
+            for flow in expected_flows
         ]
 
 
