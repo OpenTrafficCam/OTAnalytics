@@ -14,6 +14,7 @@ from OTAnalytics.domain.flow import (
     FlowListObserver,
     FlowRepository,
 )
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
@@ -235,6 +236,7 @@ class Datastore:
         video_repository: VideoRepository,
         video_parser: VideoParser,
         track_video_parser: TrackVideoParser,
+        progressbar: ProgressbarBuilder,
         config_parser: ConfigParser,
     ) -> None:
         self._track_parser = track_parser
@@ -248,6 +250,7 @@ class Datastore:
         self._event_repository = event_repository
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
+        self._progressbar = progressbar
         self._config_parser = config_parser
         self.project = Project(name="", start_date=datetime.now())
 
@@ -340,7 +343,9 @@ class Datastore:
             file (Path): file in ottrk format
         """
         raised_exceptions: list[Exception] = []
-        for file in files:
+        for file in self._progressbar(
+            files, unit="files", description="Processed ottrk files: "
+        ):
             try:
                 self.load_track_file(file)
             except Exception as cause:
@@ -395,7 +400,7 @@ class Datastore:
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._section_repository.get(section_id)
 
-    def get_all_flows(self) -> Iterable[Flow]:
+    def get_all_flows(self) -> list[Flow]:
         return self._flow_repository.get_all()
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:

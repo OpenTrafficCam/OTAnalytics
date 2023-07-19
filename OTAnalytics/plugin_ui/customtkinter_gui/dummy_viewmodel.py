@@ -1,7 +1,8 @@
 import contextlib
 from datetime import datetime
 from pathlib import Path
-from tkinter.filedialog import askopenfilename, askopenfilenames, asksaveasfilename
+from time import sleep
+from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
@@ -19,6 +20,9 @@ from OTAnalytics.adapter_ui.view_model import (
     MissingCoordinate,
     ViewModel,
 )
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,
@@ -27,6 +31,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
+from OTAnalytics.application.generate_flows import FlowNameGenerator
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
@@ -52,6 +57,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
     CanvasElementDeleter,
@@ -59,7 +65,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     SectionGeometryEditor,
     SectionPainter,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
     DEFAULT_SECTION_STYLE,
@@ -69,6 +75,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
     CancelExportCounts,
@@ -82,7 +89,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     START_SECTION,
     ToplevelFlows,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import ToplevelProgress
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
@@ -119,9 +125,11 @@ class DummyViewModel(
         self,
         application: OTAnalyticsApplication,
         flow_parser: FlowParser,
+        name_generator: FlowNameGenerator,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
+        self._name_generator = name_generator
         self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
@@ -218,14 +226,28 @@ class DummyViewModel(
         )
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self._intersect_tracks_with_sections()
+
+    def _intersect_tracks_with_sections(self) -> None:
+        if self._window is None:
+            raise MissingInjectedInstanceError(type(self._window).__name__)
+
+        start_msg_popup = MinimalInfoBox(
+            message="Create events...",
+            initial_position=self._window.get_position(),
+        )
         self._application.intersect_tracks_with_sections()
+
+        start_msg_popup.update_message(message="Creating events completed")
+        sleep(1)
+        start_msg_popup.close()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
-        self._application.intersect_tracks_with_sections()
+        self._intersect_tracks_with_sections()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
@@ -309,16 +331,18 @@ class DummyViewModel(
         self._application._datastore.project = Project(name=name, start_date=start_date)
 
     def save_configuration(self) -> None:
-        file = asksaveasfilename(
-            title="Save config file as", filetypes=[("config file", "*.otconfig")]
+        title = "Save config file as"
+        file_types = [("config file", "*.otconfig")]
+        defaultextension = ".otconfig"
+        initialfile = "config.otconfig"
+        file: Path = ask_for_save_file_path(
+            title, file_types, defaultextension, initialfile=initialfile
         )
         if not file:
             return
         print(f"Config file to save: {file}")
         try:
-            self._application.save_configuration(
-                Path(file),
-            )
+            self._application.save_configuration(file)
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
@@ -484,10 +508,11 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_sections(self) -> None:
-        sections_file = asksaveasfilename(
+        sections_file = ask_for_save_file_path(
             title="Save sections file as",
             filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
             defaultextension=f".{OTFLOW}",
+            initialfile=f"flows.{OTFLOW}",
         )
         if not sections_file:
             return
@@ -894,12 +919,16 @@ class DummyViewModel(
             title=title,
             initial_position=position,
             section_ids=section_ids,
+            name_generator=self._name_generator,
             input_values=input_values,
             show_distance=self._show_distance(),
         ).get_data()
 
     def _show_distance(self) -> bool:
         return True
+
+    def generate_flows(self) -> None:
+        self._application.generate_flows()
 
     def __to_id_resource(self, section: Section) -> IdResource:
         return IdResource(id=section.id.serialize(), name=section.name)
@@ -968,8 +997,18 @@ class DummyViewModel(
             InfoBox(message="Please select a flow to remove", initial_position=position)
         self._finish_action()
 
-    def start_analysis(self) -> None:
-        self._application.start_analysis()
+    def create_events(self) -> None:
+        if self._window is None:
+            raise MissingInjectedInstanceError(type(self._window).__name__)
+
+        start_msg_popup = MinimalInfoBox(
+            message="Create events...",
+            initial_position=self._window.get_position(),
+        )
+        self._application.create_events()
+        start_msg_popup.update_message(message="Creating events completed")
+        sleep(1)
+        start_msg_popup.close()
 
     def save_events(self, file: str) -> None:
         print(f"Eventlist file to save: {file}")
@@ -1123,37 +1162,37 @@ class DummyViewModel(
         self._frame_filter.disable_filter_by_class_button()
 
     def export_counts(self) -> None:
-        # TODO: @briemla replace with actual wiring
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: "Format 1"}
+        if len(self._application.get_all_flows()) == 0:
+            InfoBox(
+                message=(
+                    "Counting needs at least one flow.\n"
+                    "There is no flow configurated.\n"
+                    "Please create a flow."
+                ),
+                initial_position=self._window.get_position()
+                if self._window
+                else (0, 0),
+            )
+            return
         export_formats: dict = {
-            "Format 1": "csv",
-            "Format 2": "xlsx",
-            "Format 3": "xlsx",
+            format.name: format.file_extension
+            for format in self._application.get_supported_export_formats()
         }
+        default_format = next(iter(export_formats.keys()))
+        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
         try:
-            input_values: dict = ToplevelExportCounts(
+            export_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
             ).get_data()
-            print(input_values)
+            print(export_values)
+            export_specification = CountingSpecificationDto(
+                interval_in_minutes=export_values[INTERVAL],
+                format=export_values[EXPORT_FORMAT],
+                output_file=export_values[EXPORT_FILE],
+            )
+            self._application.export_counts(export_specification)
         except CancelExportCounts:
             print("User canceled configuration of export")
-
-    def _temporary_showcase_toplevel_progress(self) -> None:
-        # TODO: @randyseng delete this method after instantiating in other places
-        from time import sleep
-
-        if self._window is not None:
-            position = self._window.get_position()
-            goal = 100
-            progressbar = ToplevelProgress(
-                initial_message=f"0 of {goal} videos loaded",
-                initial_position=position,
-            )
-            for i in range(goal):
-                sleep(0.02)
-                progressbar.proceed_to(
-                    (i + 1) / goal, message=f"{i} of {goal} videos loaded"
-                )
