@@ -57,7 +57,10 @@ from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
-    EventListExporterStrategies,
+    AVAILABLE_EVENTLIST_EXPORTERS,
+    OTC_EXCEL_FORMAT_NAME,
+    EventListExporter,
+    ExporterNotFoundError,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
@@ -1016,28 +1019,39 @@ class DummyViewModel(
         self._application.save_events(Path(file))
 
     def export_events(self) -> None:
-        strategies = EventListExporterStrategies()
-        default_values: dict = {
-            EXPORT_FORMAT: strategies.AVAILABLE_EXPORTERS[0].get_name()
-        }
-        export_formats = {
-            exporter.get_name(): exporter.get_extension()
-            for exporter in strategies.AVAILABLE_EXPORTERS
+        default_values: dict[str, str] = {EXPORT_FORMAT: OTC_EXCEL_FORMAT_NAME}
+        export_format_extensions: dict[str, str] = {
+            key: exporter.get_extension()
+            for key, exporter in AVAILABLE_EVENTLIST_EXPORTERS.items()
         }
         try:
-            input_values: dict = ToplevelExportEvents(
-                title="Export counts",
-                initial_position=(50, 50),
-                input_values=default_values,
-                export_formats=export_formats,
-            ).get_data()
-            file = input_values[toplevel_export_events.EXPORT_FILE]
-            export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
-            event_list_exporter = strategies.get_exporter_by_name(export_format)
+            event_list_exporter, file = self._configure_event_exporter(
+                default_values, export_format_extensions
+            )
             self._application.export_events(Path(file), event_list_exporter)
-            print(f"Exporting eventlist using {export_format} to {file}")
+            print(
+                f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
+            )
         except CancelExportEvents:
             print("User canceled configuration of export")
+
+    def _configure_event_exporter(
+        self, default_values: dict[str, str], export_format_extensions: dict[str, str]
+    ) -> tuple[EventListExporter, Path]:
+        input_values = ToplevelExportEvents(
+            title="Export counts",
+            initial_position=(50, 50),
+            input_values=default_values,
+            export_format_extensions=export_format_extensions,
+        ).get_data()
+        file = input_values[toplevel_export_events.EXPORT_FILE]
+        export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
+        event_list_exporter = AVAILABLE_EVENTLIST_EXPORTERS.get(export_format, None)
+        if event_list_exporter is None:
+            raise ExporterNotFoundError(
+                f"{event_list_exporter} is not a valid export format"
+            )
+        return event_list_exporter, file
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         offset = geometry.RelativeOffsetCoordinate(offset_x, offset_y)

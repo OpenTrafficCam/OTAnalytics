@@ -26,20 +26,20 @@ class FileSelectionCancelledException(Exception):
 class FrameConfigureExportEvents(FrameContent):
     def __init__(
         self,
-        export_formats: dict[str, str],
+        export_format_extensions: dict[str, str],
         input_values: dict,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self._input_values = input_values
-        self._export_formats = export_formats
+        self._export_format_extensions = export_format_extensions
         self._get_widgets()
         self._place_widgets()
 
     def _get_widgets(self) -> None:
         self.label_format = CTkLabel(master=self, text="Format")
         self.optionmenu_format = CTkOptionMenu(
-            master=self, values=list(self._export_formats.keys())
+            master=self, values=list(self._export_format_extensions.keys())
         )
         self.optionmenu_format.set(self._input_values[EXPORT_FORMAT])
 
@@ -70,24 +70,24 @@ class FrameConfigureExportEvents(FrameContent):
 class ToplevelExportEvents(ToplevelTemplate):
     def __init__(
         self,
-        export_formats: dict[str, str],
+        export_format_extensions: dict[str, str],
         input_values: dict,
         **kwargs: Any,
     ) -> None:
         self._input_values = input_values
-        self._export_formats = export_formats
+        self._export_format_extensions = export_format_extensions
         super().__init__(**kwargs)
 
     def _create_frame_content(self, master: Any) -> FrameContent:
         return FrameConfigureExportEvents(
             master=master,
-            export_formats=self._export_formats,
+            export_format_extensions=self._export_format_extensions,
             input_values=self._input_values,
         )
 
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
-        export_extension = f"*.{self._export_formats[export_format]}"
+        export_extension = f"*.{self._export_format_extensions[export_format]}"
         export_file = asksaveasfilename(
             title="Save counts as",
             filetypes=[(export_format, export_extension)],

@@ -1,4 +1,3 @@
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
@@ -150,19 +149,7 @@ class ExporterNotFoundError(Exception):
     pass
 
 
-@dataclass
-class EventListExporterStrategies:
-    AVAILABLE_EXPORTERS: list[EventListExporter] = field(
-        default_factory=lambda: [
-            EventListExcelExporter(),
-            EventListCSVExporter(),
-            # EventListPrinter(),
-            # EventListDataFramePrinter(),
-        ]
-    )
-
-    def get_exporter_by_name(self, name: str) -> EventListExporter:
-        for exporter in self.AVAILABLE_EXPORTERS:
-            if exporter.get_name() == name:
-                return exporter
-        raise ExporterNotFoundError(f"Exporter {name} not found in available exporters")
+AVAILABLE_EVENTLIST_EXPORTERS: dict[str, EventListExporter] = {
+    OTC_EXCEL_FORMAT_NAME: EventListExcelExporter(),
+    OTC_CSV_FORMAT_NAME: EventListCSVExporter(),
+}
