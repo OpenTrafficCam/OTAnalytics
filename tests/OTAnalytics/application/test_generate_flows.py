@@ -108,11 +108,9 @@ class TestCrossProductFlowGenerator:
         predicate: FlowPredicate,
     ) -> None:
         id_generator = Mock(spec=FlowIdGenerator)
-        id_generator.generate_id.side_effect = [flow.id for flow in expected_flows]
+        id_generator.side_effect = [flow.id for flow in expected_flows]
         name_generator = Mock(spec=FlowNameGenerator)
-        name_generator.generate_name.return_value = [
-            flow.name for flow in expected_flows
-        ]
+        name_generator.return_value = [flow.name for flow in expected_flows]
         generator = CrossProductFlowGenerator(id_generator, name_generator, predicate)
 
         flows = generator.generate(sections)
@@ -122,10 +120,10 @@ class TestCrossProductFlowGenerator:
             for current, expected in zip(flows, expected_flows)
         )
 
-        assert id_generator.generate_id.call_args_list == [
+        assert id_generator.call_args_list == [
             call(flow.start, flow.end) for flow in expected_flows
         ]
-        assert name_generator.generate_name.call_args_list == [
+        assert name_generator.call_args_list == [
             call(flow.start, flow.end) for flow in expected_flows
         ]
 
@@ -137,12 +135,12 @@ class TestGenerateFlows:
         section_repository = Mock(spec=SectionRepository)
         section_repository.get_all.return_value = sections
         flow_generator = Mock(spec=FlowGenerator)
-        flow_generator.generate.return_value = created_flows
+        flow_generator.return_value = created_flows
         flow_repository = Mock(spec=FlowRepository)
         generator = GenerateFlows(section_repository, flow_repository, flow_generator)
 
         generator.generate()
 
         section_repository.get_all.assert_called_once()
-        flow_generator.generate.assert_called_with(sections)
+        flow_generator.assert_called_with(sections)
         flow_repository.add_all.assert_called_with(created_flows)

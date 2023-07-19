@@ -6,17 +6,17 @@ from OTAnalytics.domain.section import Section, SectionId, SectionRepository
 
 
 class FlowIdGenerator(ABC):
-    def generate_id(self, start: SectionId, end: SectionId) -> FlowId:
+    def __call__(self, start: SectionId, end: SectionId) -> FlowId:
         raise NotImplementedError
 
 
 class FlowNameGenerator(ABC):
-    def generate_name(self, start: SectionId, end: SectionId) -> str:
+    def __call__(self, start: SectionId, end: SectionId) -> str:
         raise NotImplementedError
 
 
 class FlowGenerator(ABC):
-    def generate(self, sections: list[Section]) -> list[Flow]:
+    def __call__(self, sections: list[Section]) -> list[Flow]:
         raise NotImplementedError
 
 
@@ -49,8 +49,8 @@ class CrossProductFlowGenerator(FlowGenerator):
         ]
 
     def __create_flow(self, start: Section, end: Section) -> Flow:
-        flow_id = self._id_generator.generate_id(start.id, end.id)
-        name = self._name_generator.generate_name(start.id, end.id)
+        flow_id = self._id_generator(start.id, end.id)
+        name = self._name_generator(start.id, end.id)
         return Flow(id=flow_id, name=name, start=start.id, end=end.id, distance=0)
 
 
@@ -67,5 +67,5 @@ class GenerateFlows:
 
     def generate(self) -> None:
         sections = self._section_repository.get_all()
-        flows = self._flow_generator.generate(sections)
+        flows = self._flow_generator(sections)
         self._flow_repository.add_all(flows)
