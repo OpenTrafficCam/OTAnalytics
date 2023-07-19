@@ -677,6 +677,12 @@ class DummyViewModel(
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
         return geometry.Coordinate(coordinate[0], coordinate[1])
 
+    def _is_area_section(self, section: Section | None) -> bool:
+        return isinstance(section, Area)
+
+    def _is_line_section(self, section: Section | None) -> bool:
+        return isinstance(section, LineSection)
+
     def edit_section_geometry(self) -> None:
         if len(selected_section_ids := self.get_selected_section_ids()) != 1:
             raise MultipleSectionsSelected(
@@ -698,7 +704,7 @@ class DummyViewModel(
                     edited_section_style=EDITED_SECTION_STYLE,
                     pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
                     selected_knob_style=SELECTED_KNOB_STYLE,
-                    is_area_section=isinstance(current_section, Area),
+                    is_area_section=self._is_area_section(current_section),
                 )
 
     def edit_section_metadata(self) -> None:
@@ -833,7 +839,9 @@ class DummyViewModel(
                 id=section[ID],
                 coordinates=section[COORDINATES],
                 section_style=style,
-                is_area_section=isinstance(section, Area),
+                is_area_section=self._is_area_section(
+                    self._application.get_section_for(SectionId(section[ID]))
+                ),
             )
 
     def _draw_arrow_for_selected_flows(self) -> None:
@@ -860,9 +868,9 @@ class DummyViewModel(
     def _get_section_refpt_calculator(
         self, section: Section
     ) -> SectionRefPointCalculator:
-        if isinstance(section, LineSection):
+        if self._is_line_section(section):
             return InnerSegmentsCenterCalculator()
-        elif isinstance(section, Area):
+        elif self._is_area_section(section):
             return GeometricCenterCalculator()
         else:
             raise ValueError("section has to be a LineSection or an Area, but isnt")
