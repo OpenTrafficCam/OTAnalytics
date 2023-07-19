@@ -1,10 +1,10 @@
-from tkinter.filedialog import asksaveasfilename
 from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkLabel
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 
 
 class FrameAnalysis(CTkFrame):
@@ -53,10 +53,11 @@ class FrameAnalysis(CTkFrame):
         self._viewmodel.create_events()
 
     def _save_eventlist(self) -> None:
-        file = asksaveasfilename(
+        file = ask_for_save_file_name(
             title="Save event list file as",
             filetypes=[("events file", "*.otevents")],
             defaultextension=".otevents",
+            initialfile="events.otevents",
         )
         if not file:
             return
