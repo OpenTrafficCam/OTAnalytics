@@ -603,8 +603,8 @@ class DummyViewModel(
             EventType.SECTION_ENTER.serialize()
         ]
         section: Section | None = None
-        if not is_area_section:
-            section = LineSection(
+        if is_area_section:
+            section = Area(
                 id=self._application.get_section_id(),
                 name=metadata[NAME],
                 relative_offset_coordinates={
@@ -618,7 +618,7 @@ class DummyViewModel(
                 ],
             )
         else:
-            section = Area(
+            section = LineSection(
                 id=self._application.get_section_id(),
                 name=metadata[NAME],
                 relative_offset_coordinates={
