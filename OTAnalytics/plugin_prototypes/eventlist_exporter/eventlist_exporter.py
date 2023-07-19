@@ -33,6 +33,7 @@ class EventListDataFrameBuilder:
         return self._df
 
     def _convert_occurence_to_seconds_since_epoch(self) -> None:
+        # TODO: Use OTAnalytics´ builtin timestamp methods
         epoch = pd.Timestamp("1970-01-01")
         occurence = pd.to_datetime(self._df[OCCURRENCE])
         self._df[f"{OCCURRENCE}_sec"] = (occurence - epoch).dt.total_seconds()
