@@ -15,6 +15,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track import (
     PilImage,
     Track,
@@ -242,10 +243,12 @@ class PandasTrackProvider(PandasDataFrameProvider):
         datastore: Datastore,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
+        progressbar: ProgressbarBuilder,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._filter_builder = filter_builder
+        self._progressbar = progressbar
 
     def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
@@ -265,7 +268,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
             DataFrame: tracks as dataframe.
         """
         prepared: list[dict] = []
-        for current_track in tracks:
+        for current_track in self._progressbar(
+            list(tracks), "Tracks to be converted to DataFrame", "tracks"
+        ):
             for detection in current_track.detections:
                 detection_dict = detection.to_dict()
                 detection_dict[track.CLASSIFICATION] = current_track.classification
@@ -309,8 +314,9 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         datastore: Datastore,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
+        progressbar: ProgressbarBuilder,
     ) -> None:
-        super().__init__(datastore, track_view_state, filter_builder)
+        super().__init__(datastore, track_view_state, filter_builder, progressbar)
         datastore.register_tracks_observer(self)
         self._cache_df: DataFrame = DataFrame()
 
