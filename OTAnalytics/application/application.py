@@ -1,3 +1,4 @@
+from abc import ABC
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
@@ -6,12 +7,10 @@ from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
 )
-from OTAnalytics.application.analysis.traffic_counting import (
+from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
+    ExportCounts,
     ExportFormat,
-    ExportTrafficCounting,
-    RoadUserAssigner,
-    SimpleTaggerFactory,
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
@@ -40,16 +39,9 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepository,
 )
-from OTAnalytics.domain.track import (
-    TrackId,
-    TrackIdProvider,
-    TrackImage,
-    TrackListObserver,
-    TrackRepository,
-)
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_parser.export import SimpleExporterFactory
 
 
 class SectionAlreadyExists(Exception):
@@ -149,91 +141,9 @@ class ClearEventRepository(SectionListObserver, TrackListObserver):
         self.clear()
 
 
-class IntersectTracksWithSections:
-    """Intersect tracks with sections and add all intersection events in the repository.
-
-    Args:
-        intersect (RunIntersect): intersector to intersect tracks with sections
-        datastore (Datastore): the datastore containing tracks, sections and events
-    """
-
-    def __init__(
-        self,
-        intersect: RunIntersect,
-        datastore: Datastore,
-    ) -> None:
-        self._intersect = intersect
-        self._datastore = datastore
-
+class IntersectTracksWithSections(ABC):
     def run(self) -> None:
-        """Runs the intersection of tracks with sections in the repository."""
-        sections = self._datastore.get_all_sections()
-        if not sections:
-            return
-        tracks = self._datastore.get_all_tracks()
-        events = self._intersect.run(tracks, sections)
-        self._datastore.add_events(events)
-
-
-class TracksIntersectingSelectedSections(TrackIdProvider):
-    """Returns track ids intersecting selected sections.
-
-    Args:
-        section_state (SectionState): the section state
-        event_repository (EventRepository): the event repository
-    """
-
-    def __init__(
-        self,
-        section_state: SectionState,
-        event_repository: EventRepository,
-    ) -> None:
-        self._section_state = section_state
-        self._event_repository = event_repository
-
-    def get_ids(self) -> Iterable[TrackId]:
-        intersecting_ids: set[TrackId] = set()
-
-        currently_selected_sections = self._section_state.selected_sections.get()
-        for section_id in currently_selected_sections:
-            for event in self._event_repository.get_all():
-                if event.section_id == section_id:
-                    intersecting_ids.add(TrackId(event.road_user_id))
-        return intersecting_ids
-
-
-class TracksNotIntersectingSelectedSections(TrackIdProvider):
-    """Returns track ids that are not intersecting the currently selected sections.
-
-    Args:
-        section_state (SectionState): the section state
-        section_repository (SectionRepository): the section repository
-        event_repository (EventRepository): the event repository
-    """
-
-    def __init__(
-        self,
-        section_state: SectionState,
-        track_repository: TrackRepository,
-        event_repository: EventRepository,
-    ) -> None:
-        self._section_state = section_state
-        self._track_repository = track_repository
-        self._event_repository = event_repository
-
-    def get_ids(self) -> Iterable[TrackId]:
-        selected_sections = self._section_state.selected_sections.get()
-        all_track_ids = {track.id for track in self._track_repository.get_all()}
-        intersecting_selected_sections: set[TrackId] = self._get_ids(selected_sections)
-        return all_track_ids - intersecting_selected_sections
-
-    def _get_ids(self, sections: list[SectionId]) -> set[TrackId]:
-        track_ids: set[TrackId] = set()
-        for section_id in sections:
-            for event in self._event_repository.get_all():
-                if event.section_id == section_id:
-                    track_ids.add(TrackId(event.road_user_id))
-        return track_ids
+        raise NotImplementedError
 
 
 class OTAnalyticsApplication:
@@ -253,6 +163,8 @@ class OTAnalyticsApplication:
         tracks_metadata: TracksMetadata,
         action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
+        intersect_tracks_with_sections: IntersectTracksWithSections,
+        export_counts: ExportCounts,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -266,22 +178,11 @@ class OTAnalyticsApplication:
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
         self._add_flow = AddFlow(self._datastore._flow_repository)
-        self._intersect_tracks_with_sections = IntersectTracksWithSections(
-            self._intersect, self._datastore
-        )
+        self._intersect_tracks_with_sections = intersect_tracks_with_sections
         self._clear_event_repository = ClearEventRepository(
             self._datastore._event_repository
         )
-        self._export_counts = self.__create_export_traffic_counting()
-
-    def __create_export_traffic_counting(self) -> ExportTrafficCounting:
-        return ExportTrafficCounting(
-            self._datastore._event_repository,
-            self._datastore._flow_repository,
-            RoadUserAssigner(),
-            SimpleTaggerFactory(self._datastore._track_repository),
-            SimpleExporterFactory(),
-        )
+        self._export_counts = export_counts
 
     def connect_observers(self) -> None:
         """

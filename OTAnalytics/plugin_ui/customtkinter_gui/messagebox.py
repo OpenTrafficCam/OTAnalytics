@@ -73,3 +73,64 @@ class InfoBox(CTkToplevel):
     def _on_cancel(self, event: Any = None) -> None:
         self.canceled = True
         self.close(event)
+
+
+class MinimalInfoBox(CTkToplevel):
+    """InfoBox popup without title bar."""
+
+    def __init__(
+        self,
+        message: str,
+        initial_position: tuple[int, int],
+        title: str = "Information",
+        show_cancel: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.title(title)
+        self.message = message
+        self.canceled = False
+        self._initial_position = initial_position
+        self._show_cancel = show_cancel
+        self._get_widgets()
+        self._place_widgets()
+        self._set_initial_position()
+        self._set_focus()
+        # Not using self.overrideredirect to remove title bar here since
+        # unknown behaviour of that method errors when trying to
+        # draw as second Section
+        self.tk.call("wm", "overrideredirect", self._w, True)
+
+    def _get_widgets(self) -> None:
+        self._label_message = CTkLabel(master=self, text=self.message)
+        self.button_cancel = CTkButton(
+            master=self, text="Cancel", command=self._on_cancel
+        )
+
+    def _place_widgets(self) -> None:
+        self._label_message.grid(
+            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        if self._show_cancel:
+            self.button_cancel.grid(
+                row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            )
+
+    def _set_focus(self) -> None:
+        self.attributes("-topmost", 1)
+
+    def _set_initial_position(self) -> None:
+        x, y = self._initial_position
+        self.geometry(f"+{x}+{y}")
+
+    def close(self, event: Any = None) -> None:
+        self.destroy()
+        self.update()
+
+    def _on_cancel(self, event: Any = None) -> None:
+        self.canceled = True
+        self.close(event)
+
+    def update_message(self, message: str) -> None:
+        self._label_message.configure(text=message)
+        self.update()
