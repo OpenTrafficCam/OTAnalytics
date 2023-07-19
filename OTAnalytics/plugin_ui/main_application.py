@@ -25,6 +25,14 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.generate_flows import (
+    ArrowFlowNameGenerator,
+    CrossProductFlowGenerator,
+    FilterSameSection,
+    FlowIdGenerator,
+    GenerateFlows,
+    RepositoryFlowIdGenerator,
+)
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -128,10 +136,12 @@ class ApplicationStarter:
         )
 
         track_repository = self._create_track_repository()
+        section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
         datastore = self._create_datastore(
             track_repository,
+            section_repository,
             flow_repository,
             event_repository,
             pulling_progressbar_builder,
@@ -168,6 +178,9 @@ class ApplicationStarter:
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
+        generate_flows = self._create_flow_generator(
+            section_repository, flow_repository
+        )
         intersect_tracks_with_sections = self._create_intersect_tracks_with_sections(
             datastore
         )
@@ -185,12 +198,14 @@ class ApplicationStarter:
             tracks_metadata=tracks_metadata,
             action_state=action_state,
             filter_element_setting_restorer=filter_element_settings_restorer,
+            generate_flows=generate_flows,
             intersect_tracks_with_sections=intersect_tracks_with_sections,
             export_counts=export_counts,
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
-        dummy_viewmodel = DummyViewModel(application, flow_parser)
+        name_generator = ArrowFlowNameGenerator()
+        dummy_viewmodel = DummyViewModel(application, flow_parser, name_generator)
         dummy_viewmodel.register_observers()
         application.connect_observers()
         datastore.register_tracks_observer(selected_video_updater)
@@ -227,6 +242,7 @@ class ApplicationStarter:
     def _create_datastore(
         self,
         track_repository: TrackRepository,
+        section_repository: SectionRepository,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         progressbar_builder: ProgressbarBuilder,
@@ -239,7 +255,6 @@ class ApplicationStarter:
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
         track_parser = self._create_track_parser(track_repository)
-        section_repository = self._create_section_repository()
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
@@ -567,6 +582,22 @@ class ApplicationStarter:
 
     def _create_flow_state(self) -> FlowState:
         return FlowState()
+
+    def _create_flow_generator(
+        self, section_repository: SectionRepository, flow_repository: FlowRepository
+    ) -> GenerateFlows:
+        id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(flow_repository)
+        name_generator = ArrowFlowNameGenerator()
+        flow_generator = CrossProductFlowGenerator(
+            id_generator=id_generator,
+            name_generator=name_generator,
+            predicate=FilterSameSection(),
+        )
+        return GenerateFlows(
+            section_repository=section_repository,
+            flow_repository=flow_repository,
+            flow_generator=flow_generator,
+        )
 
     def _create_intersect_tracks_with_sections(
         self, datastore: Datastore
