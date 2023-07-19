@@ -588,7 +588,7 @@ class DummyViewModel(
             raise MissingCoordinate("Second coordinate is missing")
         with contextlib.suppress(CancelAddSection):
             section = self.__create_section(coordinates, is_area_section, get_metadata)
-            print(f"New line_section created: {section.id}")
+            print(f"New section created: {section.id}")
             self._update_selected_sections([section.id])
         self._finish_action()
 
