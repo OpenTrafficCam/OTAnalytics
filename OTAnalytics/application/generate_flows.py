@@ -22,6 +22,8 @@ class FlowIdGenerator(ABC):
 
 
 class RepositoryFlowIdGenerator(FlowIdGenerator):
+    """Uses the flow repository to generate an id."""
+
     def __init__(self, flow_repository: FlowRepository) -> None:
         self._flow_repository = flow_repository
 
@@ -58,6 +60,8 @@ class FlowNameGenerator(ABC):
 
 
 class ArrowFlowNameGenerator(FlowNameGenerator):
+    """Concatenates the start and end with an arrow: -->"""
+
     def generate_from_section(self, start: Section, end: Section) -> str:
         return self.generate_from_string(start.name, end.name)
 
