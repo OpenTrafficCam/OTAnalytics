@@ -44,6 +44,9 @@ class FrameFlows(AbstractFrameFlows):
         self.button_add = CTkButton(
             master=self, text="Add", command=self._viewmodel.add_flow
         )
+        self.button_generate = CTkButton(
+            master=self, text="Generate", command=self._viewmodel.generate_flows
+        )
         self.button_edit = CTkButton(
             master=self,
             text="Properties",
@@ -61,8 +64,9 @@ class FrameFlows(AbstractFrameFlows):
             row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_add.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.button_edit.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.button_remove.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_generate.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_edit.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_remove.grid(row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY)
 
     def action_buttons(self) -> list[CTkButton]:
         return self._action_buttons

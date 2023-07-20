@@ -25,6 +25,14 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.generate_flows import (
+    ArrowFlowNameGenerator,
+    CrossProductFlowGenerator,
+    FilterSameSection,
+    FlowIdGenerator,
+    GenerateFlows,
+    RepositoryFlowIdGenerator,
+)
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -79,7 +87,9 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
+    FilterByClassification,
     FilterById,
+    FilterByOccurrence,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
     PandasTracksOffsetProvider,
@@ -131,10 +141,12 @@ class ApplicationStarter:
         )
 
         track_repository = self._create_track_repository()
+        section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
         datastore = self._create_datastore(
             track_repository,
+            section_repository,
             flow_repository,
             event_repository,
             pulling_progressbar_builder,
@@ -171,6 +183,9 @@ class ApplicationStarter:
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
+        generate_flows = self._create_flow_generator(
+            section_repository, flow_repository
+        )
         intersect_tracks_with_sections = self._create_intersect_tracks_with_sections(
             datastore
         )
@@ -188,14 +203,17 @@ class ApplicationStarter:
             tracks_metadata=tracks_metadata,
             action_state=action_state,
             filter_element_setting_restorer=filter_element_settings_restorer,
+            generate_flows=generate_flows,
             intersect_tracks_with_sections=intersect_tracks_with_sections,
             export_counts=export_counts,
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
+        name_generator = ArrowFlowNameGenerator()
         dummy_viewmodel = DummyViewModel(
             application,
             flow_parser,
+            name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
         )
         dummy_viewmodel.register_observers()
@@ -234,6 +252,7 @@ class ApplicationStarter:
     def _create_datastore(
         self,
         track_repository: TrackRepository,
+        section_repository: SectionRepository,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         progressbar_builder: ProgressbarBuilder,
@@ -246,7 +265,6 @@ class ApplicationStarter:
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
         track_parser = self._create_track_parser(track_repository)
-        section_repository = self._create_section_repository()
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
@@ -450,9 +468,25 @@ class ApplicationStarter:
         road_user_assigner: RoadUserAssigner,
     ) -> Sequence[PlottingLayer]:
         background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
-
+        data_provider_all_filters = FilterByClassification(
+            FilterByOccurrence(
+                pandas_data_provider,
+                track_view_state,
+                self._create_dataframe_filter_builder(),
+            ),
+            track_view_state,
+            self._create_dataframe_filter_builder(),
+        )
+        data_provider_class_filter = FilterByClassification(
+            pandas_data_provider,
+            track_view_state,
+            self._create_dataframe_filter_builder(),
+        )
         track_geometry_plotter = self._create_track_geometry_plotter(
-            track_view_state, pandas_data_provider, alpha=0.2, enable_legend=True
+            track_view_state,
+            data_provider_all_filters,
+            alpha=0.2,
+            enable_legend=True,
         )
         tracks_intersecting_sections = TracksIntersectingSelectedSections(
             section_state, datastore._event_repository
@@ -465,7 +499,7 @@ class ApplicationStarter:
             self._create_track_highlight_geometry_plotter(
                 track_view_state,
                 tracks_intersecting_sections,
-                pandas_data_provider,
+                data_provider_all_filters,
                 enable_legend=False,
             )
         )
@@ -473,7 +507,7 @@ class ApplicationStarter:
             self._create_track_highlight_geometry_plotter_not_intersecting(
                 track_view_state,
                 tracks_not_intersecting_sections,
-                pandas_data_provider,
+                data_provider_all_filters,
                 enable_legend=False,
             )
         )
@@ -481,7 +515,7 @@ class ApplicationStarter:
             self._create_start_end_point_tracks_intersecting_sections_plotter(
                 track_view_state,
                 tracks_intersecting_sections,
-                pandas_data_provider,
+                data_provider_class_filter,
                 enable_legend=False,
             )
         )
@@ -489,12 +523,12 @@ class ApplicationStarter:
             self._create_start_end_point_tracks_not_intersecting_sections_plotter(
                 track_view_state,
                 tracks_not_intersecting_sections,
-                pandas_data_provider,
+                data_provider_class_filter,
                 enable_legend=False,
             )
         )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            track_view_state, pandas_data_provider, enable_legend=False
+            track_view_state, data_provider_class_filter, enable_legend=False
         )
         tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
             road_user_assigner,
@@ -505,7 +539,7 @@ class ApplicationStarter:
         highlight_tracks_assigned_to_flow = (
             self._create_highlight_tracks_assigned_to_flow(
                 track_view_state,
-                pandas_data_provider,
+                data_provider_all_filters,
                 tracks_assigned_to_flow,
                 enable_legend=False,
             )
@@ -513,7 +547,7 @@ class ApplicationStarter:
         highlight_tracks_not_assigned_to_flow = (
             self._create_highlight_tracks_not_assigned_to_flow(
                 track_view_state,
-                pandas_data_provider,
+                data_provider_all_filters,
                 tracks_assigned_to_flow,
                 datastore._track_repository,
                 enable_legend=False,
@@ -574,6 +608,22 @@ class ApplicationStarter:
 
     def _create_flow_state(self) -> FlowState:
         return FlowState()
+
+    def _create_flow_generator(
+        self, section_repository: SectionRepository, flow_repository: FlowRepository
+    ) -> GenerateFlows:
+        id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(flow_repository)
+        name_generator = ArrowFlowNameGenerator()
+        flow_generator = CrossProductFlowGenerator(
+            id_generator=id_generator,
+            name_generator=name_generator,
+            predicate=FilterSameSection(),
+        )
+        return GenerateFlows(
+            section_repository=section_repository,
+            flow_repository=flow_repository,
+            flow_generator=flow_generator,
+        )
 
     def _create_intersect_tracks_with_sections(
         self, datastore: Datastore
