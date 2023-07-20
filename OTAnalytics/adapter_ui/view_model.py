@@ -128,7 +128,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def add_section(self) -> None:
+    def add_line_section(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_area_section(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -153,7 +157,10 @@ class ViewModel(ABC):
 
     @abstractmethod
     def add_new_section(
-        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+        self,
+        coordinates: list[tuple[int, int]],
+        is_area_section: bool,
+        get_metadata: MetadataProvider,
     ) -> None:
         raise NotImplementedError
 
@@ -182,6 +189,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def generate_flows(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def edit_flow(self) -> None:
         raise NotImplementedError
 
@@ -196,6 +207,10 @@ class ViewModel(ABC):
     @abstractmethod
     def save_events(self, file: str) -> None:
         pass
+
+    @abstractmethod
+    def export_events(self) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def update_show_tracks_state(self, value: bool) -> None:

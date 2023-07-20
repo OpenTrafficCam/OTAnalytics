@@ -3,13 +3,7 @@ from typing import Iterable, Optional
 
 from pandas import DataFrame, Series
 
-from OTAnalytics.domain.filter import (
-    Conjunction,
-    Filter,
-    FilterBuilder,
-    FilterBuildError,
-    Predicate,
-)
+from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
 
 
 class DataFrameConjunction(Conjunction[DataFrame, Series]):
@@ -139,10 +133,7 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, Series]):
 
     def add_has_classifications_predicate(self, classifications: set[str]) -> None:
         if self._classification_column is None:
-            raise FilterBuildError(
-                f"Unable to build '{DataFrameHasClassifications.__name__}' predicate. "
-                "Builder property 'classification_column' is not set."
-            )
+            return
 
         self._extend_complex_predicate(
             DataFrameHasClassifications(self._classification_column, classifications)
@@ -150,10 +141,7 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, Series]):
 
     def add_starts_at_or_after_date_predicate(self, start_date: datetime) -> None:
         if self._occurrence_column is None:
-            raise FilterBuildError(
-                f"Unable to build '{DataFrameStartsAtOrAfterDate.__name__}' predicate. "
-                "Builder property 'occurrence_column' is not set."
-            )
+            return
 
         self._extend_complex_predicate(
             DataFrameStartsAtOrAfterDate(self._occurrence_column, start_date)
@@ -161,10 +149,7 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, Series]):
 
     def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
         if self._occurrence_column is None:
-            raise FilterBuildError(
-                f"Unable to build '{DataFrameEndsBeforeOrAtDate.__name__}' predicate. "
-                "Builder property 'occurrence_column' is not set."
-            )
+            return
 
         self._extend_complex_predicate(
             DataFrameEndsBeforeOrAtDate(self._occurrence_column, end_date)

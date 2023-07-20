@@ -8,7 +8,12 @@ from typing import Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_flows import (
+    AbstractFrameFlows,
+    GeometricCenterCalculator,
+    InnerSegmentsCenterCalculator,
+    SectionRefPointCalculator,
+)
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
@@ -31,6 +36,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
+from OTAnalytics.application.generate_flows import FlowNameGenerator
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
@@ -47,6 +53,7 @@ from OTAnalytics.domain.section import (
     ID,
     NAME,
     RELATIVE_OFFSET_COORDINATES,
+    Area,
     LineSection,
     MissingSection,
     Section,
@@ -56,6 +63,11 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
+    EventListExporter,
+    ExporterNotFoundError,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -79,6 +91,10 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     INTERVAL,
     CancelExportCounts,
     ToplevelExportCounts,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_events import (
+    CancelExportEvents,
+    ToplevelExportEvents,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
@@ -124,9 +140,13 @@ class DummyViewModel(
         self,
         application: OTAnalyticsApplication,
         flow_parser: FlowParser,
+        name_generator: FlowNameGenerator,
+        event_list_export_formats: dict,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
+        self._name_generator = name_generator
+        self._event_list_export_formats = event_list_export_formats
         self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
@@ -531,12 +551,24 @@ class DummyViewModel(
     def cancel_action(self) -> None:
         self._finish_action()
 
-    def add_section(self) -> None:
+    def add_line_section(self) -> None:
         self.set_selected_section_ids([])
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         self._start_action()
         SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
+
+    def add_area_section(self) -> None:
+        self.set_selected_section_ids([])
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
+        self._start_action()
+        SectionBuilder(
+            viewmodel=self,
+            canvas=self._canvas,
+            is_area_section=True,
+            style=EDITED_SECTION_STYLE,
+        )
 
     def get_section_metadata(
         self,
@@ -559,38 +591,64 @@ class DummyViewModel(
         return self._application.is_section_name_valid(section_name)
 
     def add_new_section(
-        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+        self,
+        coordinates: list[tuple[int, int]],
+        is_area_section: bool,
+        get_metadata: MetadataProvider,
     ) -> None:
         if not coordinates:
             raise MissingCoordinate("First coordinate is missing")
         elif len(coordinates) == 1:
             raise MissingCoordinate("Second coordinate is missing")
         with contextlib.suppress(CancelAddSection):
-            line_section = self.__create_section(coordinates, get_metadata)
-            print(f"New line_section created: {line_section.id}")
-            self._update_selected_sections([line_section.id])
+            section = self.__create_section(coordinates, is_area_section, get_metadata)
+            print(f"New section created: {section.id}")
+            self._update_selected_sections([section.id])
         self._finish_action()
 
     def __create_section(
-        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+        self,
+        coordinates: list[tuple[int, int]],
+        is_area_section: bool,
+        get_metadata: MetadataProvider,
     ) -> Section:
         metadata = self.__get_metadata(get_metadata)
         relative_offset_coordinates_enter = metadata[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
         ]
-        line_section = LineSection(
-            id=self._application.get_section_id(),
-            name=metadata[NAME],
-            relative_offset_coordinates={
-                EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
-                    **relative_offset_coordinates_enter
-                )
-            },
-            plugin_data={},
-            coordinates=[self._to_coordinate(coordinate) for coordinate in coordinates],
-        )
-        self._application.add_section(line_section)
-        return line_section
+        section: Section | None = None
+        if is_area_section:
+            section = Area(
+                id=self._application.get_section_id(),
+                name=metadata[NAME],
+                relative_offset_coordinates={
+                    EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
+                        **relative_offset_coordinates_enter
+                    )
+                },
+                plugin_data={},
+                coordinates=[
+                    self._to_coordinate(coordinate) for coordinate in coordinates
+                ],
+            )
+        else:
+            section = LineSection(
+                id=self._application.get_section_id(),
+                name=metadata[NAME],
+                relative_offset_coordinates={
+                    EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
+                        **relative_offset_coordinates_enter
+                    )
+                },
+                plugin_data={},
+                coordinates=[
+                    self._to_coordinate(coordinate) for coordinate in coordinates
+                ],
+            )
+        if section is None:
+            raise TypeError("section has to be LineSection or Area, but is None")
+        self._application.add_section(section)
+        return section
 
     def __get_metadata(self, get_metadata: MetadataProvider) -> dict:
         metadata = get_metadata()
@@ -633,6 +691,12 @@ class DummyViewModel(
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
         return geometry.Coordinate(coordinate[0], coordinate[1])
 
+    def _is_area_section(self, section: Section | None) -> bool:
+        return isinstance(section, Area)
+
+    def _is_line_section(self, section: Section | None) -> bool:
+        return isinstance(section, LineSection)
+
     def edit_section_geometry(self) -> None:
         if len(selected_section_ids := self.get_selected_section_ids()) != 1:
             raise MultipleSectionsSelected(
@@ -654,6 +718,7 @@ class DummyViewModel(
                     edited_section_style=EDITED_SECTION_STYLE,
                     pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
                     selected_knob_style=SELECTED_KNOB_STYLE,
+                    is_area_section=self._is_area_section(current_section),
                 )
 
     def edit_section_metadata(self) -> None:
@@ -788,6 +853,9 @@ class DummyViewModel(
                 id=section[ID],
                 coordinates=section[COORDINATES],
                 section_style=style,
+                is_area_section=self._is_area_section(
+                    self._application.get_section_for(SectionId(section[ID]))
+                ),
             )
 
     def _draw_arrow_for_selected_flows(self) -> None:
@@ -796,12 +864,30 @@ class DummyViewModel(
         for flow in self._get_selected_flows():
             if start_section := self._application.get_section_for(flow.start):
                 if end_section := self._application.get_section_for(flow.end):
+                    start_refpt_calculator = self._get_section_refpt_calculator(
+                        start_section
+                    )
+                    end_refpt_calculator = self._get_section_refpt_calculator(
+                        end_section
+                    )
                     ArrowPainter(self._canvas).draw(
                         start_section=start_section,
                         end_section=end_section,
+                        start_refpt_calculator=start_refpt_calculator,
+                        end_refpt_calculator=end_refpt_calculator,
                         tags=[LINE_SECTION],
                         arrow_style=ARROW_STYLE,
                     )
+
+    def _get_section_refpt_calculator(
+        self, section: Section
+    ) -> SectionRefPointCalculator:
+        if self._is_line_section(section):
+            return InnerSegmentsCenterCalculator()
+        elif self._is_area_section(section):
+            return GeometricCenterCalculator()
+        else:
+            raise ValueError("section has to be a LineSection or an Area, but isnt")
 
     def _get_selected_flows(self) -> list[Flow]:
         flows: list[Flow] = []
@@ -916,12 +1002,16 @@ class DummyViewModel(
             title=title,
             initial_position=position,
             section_ids=section_ids,
+            name_generator=self._name_generator,
             input_values=input_values,
             show_distance=self._show_distance(),
         ).get_data()
 
     def _show_distance(self) -> bool:
         return True
+
+    def generate_flows(self) -> None:
+        self._application.generate_flows()
 
     def __to_id_resource(self, section: Section) -> IdResource:
         return IdResource(id=section.id.serialize(), name=section.name)
@@ -1006,6 +1096,48 @@ class DummyViewModel(
     def save_events(self, file: str) -> None:
         print(f"Eventlist file to save: {file}")
         self._application.save_events(Path(file))
+
+    def export_events(self) -> None:
+        default_values: dict[str, str] = {
+            EXPORT_FORMAT: self.__get_default_export_format()
+        }
+        export_format_extensions: dict[str, str] = {
+            key: exporter.get_extension()
+            for key, exporter in self._event_list_export_formats.items()
+        }
+        try:
+            event_list_exporter, file = self._configure_event_exporter(
+                default_values, export_format_extensions
+            )
+            self._application.export_events(Path(file), event_list_exporter)
+            print(
+                f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
+            )
+        except CancelExportEvents:
+            print("User canceled configuration of export")
+
+    def __get_default_export_format(self) -> str:
+        if self._event_list_export_formats:
+            return next(iter(self._event_list_export_formats.keys()))
+        return ""
+
+    def _configure_event_exporter(
+        self, default_values: dict[str, str], export_format_extensions: dict[str, str]
+    ) -> tuple[EventListExporter, Path]:
+        input_values = ToplevelExportEvents(
+            title="Export counts",
+            initial_position=(50, 50),
+            input_values=default_values,
+            export_format_extensions=export_format_extensions,
+        ).get_data()
+        file = input_values[toplevel_export_events.EXPORT_FILE]
+        export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
+        event_list_exporter = self._event_list_export_formats.get(export_format, None)
+        if event_list_exporter is None:
+            raise ExporterNotFoundError(
+                f"{event_list_exporter} is not a valid export format"
+            )
+        return event_list_exporter, file
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         offset = geometry.RelativeOffsetCoordinate(offset_x, offset_y)

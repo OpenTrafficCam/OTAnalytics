@@ -12,7 +12,8 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportCounts,
     ExportFormat,
 )
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.datastore import Datastore, EventListExporter
+from OTAnalytics.application.generate_flows import GenerateFlows
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -163,6 +164,7 @@ class OTAnalyticsApplication:
         tracks_metadata: TracksMetadata,
         action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
+        generate_flows: GenerateFlows,
         intersect_tracks_with_sections: IntersectTracksWithSections,
         export_counts: ExportCounts,
     ) -> None:
@@ -178,6 +180,7 @@ class OTAnalyticsApplication:
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
         self._add_flow = AddFlow(self._datastore._flow_repository)
+        self._generate_flows = generate_flows
         self._intersect_tracks_with_sections = intersect_tracks_with_sections
         self._clear_event_repository = ClearEventRepository(
             self._datastore._event_repository
@@ -265,6 +268,9 @@ class OTAnalyticsApplication:
 
     def add_flow(self, flow: Flow) -> None:
         self._add_flow.add(flow)
+
+    def generate_flows(self) -> None:
+        self._generate_flows.generate()
 
     def remove_flow(self, flow_id: FlowId) -> None:
         self._datastore.remove_flow(flow_id)
@@ -443,6 +449,16 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def export_events(self, file: Path, event_list_exporter: EventListExporter) -> None:
+        """
+        Export the event repository into other formats (like CSV or Excel)
+
+        Args:
+            file (Path): File to export the events to
+            event_list_exporter (EventListExporter): Exporter building the format
+        """
+        self._datastore.export_event_list_file(file, event_list_exporter)
 
     def get_supported_export_formats(self) -> Iterable[ExportFormat]:
         """
