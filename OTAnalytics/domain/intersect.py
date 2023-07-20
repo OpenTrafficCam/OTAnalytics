@@ -3,7 +3,6 @@ from typing import Callable, Iterable, Optional
 
 from OTAnalytics.domain.event import Event, EventBuilder, EventType
 from OTAnalytics.domain.geometry import (
-    ClosedLineError,
     Coordinate,
     DirectionVector2D,
     Line,
@@ -321,13 +320,11 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
         offset = self._extract_offset_from_section(
             self._line_section, EventType.SECTION_ENTER
         )
-        try:
-            if not self._track_line_intersects_section(
-                track, line_section_as_geometry, offset
-            ):
-                return events
-        except ClosedLineError:
-            pass
+
+        if not self._track_line_intersects_section(
+            track, line_section_as_geometry, offset
+        ):
+            return events
 
         for current_detection, next_detection in zip(
             track.detections[0:-1], track.detections[1:]

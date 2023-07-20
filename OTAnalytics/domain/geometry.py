@@ -8,10 +8,6 @@ X1: str = "x1"
 X2: str = "x2"
 
 
-class ClosedLineError(ValueError):
-    pass
-
-
 @dataclass(frozen=True)
 class Coordinate(DataclassValidation):
     x: float
@@ -49,9 +45,6 @@ class Line(DataclassValidation):
                     f"greater equal 2, but is {len(self.coordinates)}"
                 )
             )
-
-        if self.coordinates[0] == self.coordinates[-1]:
-            raise ClosedLineError(("Coordinates define a closed line"))
 
 
 @dataclass(frozen=True)

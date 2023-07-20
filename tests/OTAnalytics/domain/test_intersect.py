@@ -43,8 +43,12 @@ def detection() -> Detection:
 
 @pytest.fixture
 def track(track_builder: TrackBuilder) -> Track:
-    track_builder.add_track_id(1)
-    track_builder.add_detection_class("car")
+    classification = "car"
+    track_id = 1
+
+    track_builder.add_track_class(classification)
+    track_builder.add_detection_class(classification)
+    track_builder.add_track_id(track_id)
     track_builder.add_wh_bbox(15.3, 30.5)
 
     track_builder.add_frame(1)
@@ -72,6 +76,106 @@ def track(track_builder: TrackBuilder) -> Track:
     track_builder.add_xy_bbox(25.0, 5.0)
     track_builder.append_detection()
     return track_builder.build_track()
+
+
+@pytest.fixture
+def closed_track(track_builder: TrackBuilder) -> Track:
+    classification = "car"
+    track_id = 2
+
+    track_builder.add_track_class(classification)
+    track_builder.add_detection_class(classification)
+    track_builder.add_track_id(track_id)
+
+    track_builder.add_frame(1)
+    track_builder.add_second(1)
+    track_builder.add_xy_bbox(1, 1)
+    track_builder.append_detection()
+
+    track_builder.add_frame(2)
+    track_builder.add_second(2)
+    track_builder.add_xy_bbox(2, 1)
+    track_builder.append_detection()
+
+    track_builder.add_frame(3)
+    track_builder.add_second(3)
+    track_builder.add_xy_bbox(2, 2)
+    track_builder.append_detection()
+
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.add_xy_bbox(1, 2)
+    track_builder.append_detection()
+
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.add_xy_bbox(1, 1)
+    track_builder.append_detection()
+    return track_builder.build_track()
+
+
+@pytest.fixture
+def test_case_track_line_section(
+    track: Track, event_builder: EventBuilder
+) -> tuple[Track, LineSection, list[Event]]:
+    section = LineSection(
+        id=SectionId("N"),
+        name="N",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+        },
+        plugin_data={},
+        coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
+    )
+
+    event_builder.add_road_user_id(track.id.id)
+    event_builder.add_road_user_type(track.classification)
+    event_builder.add_section_id(section.id.id)
+    event_builder.add_event_type(EventType.SECTION_ENTER.value)
+
+    event_builder.add_frame_number(2)
+    event_builder.add_second(1)
+    event_builder.add_direction_vector(10, 0)
+    event_builder.add_event_coordinate(10.0, 5.0)
+    event_builder.append_section_event()
+
+    expected_events = event_builder.build_events()
+    return (track, section, expected_events)
+
+
+@pytest.fixture
+def test_case_closed_track_line_section(
+    closed_track: Track, event_builder: EventBuilder
+) -> tuple[Track, LineSection, list[Event]]:
+    section = LineSection(
+        id=SectionId("N"),
+        name="N",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+        },
+        plugin_data={},
+        coordinates=[Coordinate(0, 1.5), Coordinate(3, 1.5)],
+    )
+
+    event_builder.add_road_user_id(closed_track.id.id)
+    event_builder.add_road_user_type(closed_track.classification)
+    event_builder.add_section_id(section.id.id)
+    event_builder.add_event_type(EventType.SECTION_ENTER.value)
+
+    event_builder.add_second(3)
+    event_builder.add_frame_number(3)
+    event_builder.add_direction_vector(0, 1)
+    event_builder.add_event_coordinate(2, 2)
+    event_builder.append_section_event()
+
+    event_builder.add_second(5)
+    event_builder.add_frame_number(5)
+    event_builder.add_direction_vector(0, -1)
+    event_builder.add_event_coordinate(1, 1)
+    event_builder.append_section_event()
+
+    expected_events = event_builder.build_events()
+    return (closed_track, section, expected_events)
 
 
 class TestIntersector:
@@ -188,22 +292,34 @@ class TestIntersectBySplittingTrackLine:
 
 
 class TestIntersectBySmallTrackComponents:
-    def test_intersect(self, track: Track) -> None:
+    @pytest.mark.parametrize(
+        "test_case,intersect_side_effect",
+        [
+            (
+                "test_case_track_line_section",
+                [True, True, False, False, False, False, False],
+            ),
+            ("test_case_closed_track_line_section", [True, False, True, False, True]),
+        ],
+    )
+    def test_intersect(
+        self,
+        test_case: str,
+        intersect_side_effect: list[bool],
+        request: pytest.FixtureRequest,
+    ) -> None:
+        track: Track
+        expected_events: list[Event]
+        track, section, expected_events = request.getfixturevalue(test_case)
+
         # Setup mock intersection implementation
         mock_implementation = Mock(spec=IntersectImplementation)
-        mock_implementation.line_intersects_line.side_effect = [
-            True,
-            True,
-            False,
-            False,
-            False,
-            False,
-        ]
+        mock_implementation.line_intersects_line.side_effect = intersect_side_effect
 
         # Setup event builder
-        event_builder = SectionEventBuilder()
-        event_builder.add_section_id(SectionId("N"))
-        event_builder.add_event_type(EventType.SECTION_ENTER)
+        section_event_builder = SectionEventBuilder()
+        section_event_builder.add_section_id(SectionId("N"))
+        section_event_builder.add_event_type(EventType.SECTION_ENTER)
 
         line_section = LineSection(
             id=SectionId("N"),
@@ -216,22 +332,8 @@ class TestIntersectBySmallTrackComponents:
         )
 
         intersector = IntersectBySmallTrackComponents(mock_implementation, line_section)
-        result_events = intersector.intersect(track, event_builder)
-        assert result_events is not None
-
-        result_event = result_events[0]
-        expected_detection = track.detections[1]
-        assert len(result_events) == 1
-        assert result_event.road_user_id == expected_detection.track_id.id
-        assert result_event.road_user_type == expected_detection.classification
-        assert result_event.hostname == "myhostname"
-        assert result_event.occurrence == expected_detection.occurrence
-        assert result_event.frame_number == expected_detection.frame
-        assert result_event.section_id == line_section.id
-        assert result_event.event_type == EventType.SECTION_ENTER
-        assert result_event.direction_vector.x1 == 10
-        assert result_event.direction_vector.x2 == 0
-        assert result_event.event_coordinate == ImageCoordinate(10, 5)
+        result_events = intersector.intersect(track, section_event_builder)
+        assert result_events == expected_events
 
     def test_intersect_track_offset_applied_to_event_coordinate(
         self, track: Track
@@ -820,3 +922,54 @@ class TestIntersectAreaByTrackPoints:
         assert first.event_type == second.event_type
         assert first.direction_vector == second.direction_vector
         assert first.video_name == second.video_name
+
+    def test_intersect_closed_track(
+        self, closed_track: Track, event_builder: EventBuilder
+    ) -> None:
+        mock_implementation = Mock()
+        mock_implementation.are_coordinates_within_polygon.return_value = [
+            False,
+            False,
+            True,
+            True,
+            False,
+        ]
+        area = Area(
+            id=SectionId("N"),
+            name="N",
+            coordinates=[
+                Coordinate(0, 1.5),
+                Coordinate(3, 1.5),
+                Coordinate(3, 2.5),
+                Coordinate(0, 2.5),
+                Coordinate(0, 1.5),
+            ],
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0),
+                EventType.SECTION_LEAVE: RelativeOffsetCoordinate(0, 0),
+            },
+            plugin_data={},
+        )
+
+        section_event_builder = SectionEventBuilder()
+        section_event_builder.add_section_id(area.id)
+
+        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        result_events = intersector.intersect(closed_track, section_event_builder)
+
+        event_builder.add_road_user_id(closed_track.id.id)
+        event_builder.add_second(3)
+        event_builder.add_frame_number(3)
+        event_builder.add_event_coordinate(2, 2)
+        event_builder.add_event_type("section-enter")
+        event_builder.add_direction_vector(0, 1)
+        event_builder.append_section_event()
+
+        event_builder.add_second(5)
+        event_builder.add_frame_number(5)
+        event_builder.add_event_coordinate(1, 1)
+        event_builder.add_event_type("section-leave")
+        event_builder.add_direction_vector(0, -1)
+        event_builder.append_section_event()
+        expected_events = event_builder.build_events()
+        assert result_events == expected_events
