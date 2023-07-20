@@ -189,6 +189,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def generate_flows(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def edit_flow(self) -> None:
         raise NotImplementedError
 

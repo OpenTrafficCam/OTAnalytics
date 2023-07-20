@@ -36,6 +36,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
+from OTAnalytics.application.generate_flows import FlowNameGenerator
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
@@ -130,9 +131,11 @@ class DummyViewModel(
         self,
         application: OTAnalyticsApplication,
         flow_parser: FlowParser,
+        name_generator: FlowNameGenerator,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
+        self._name_generator = name_generator
         self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
@@ -988,12 +991,16 @@ class DummyViewModel(
             title=title,
             initial_position=position,
             section_ids=section_ids,
+            name_generator=self._name_generator,
             input_values=input_values,
             show_distance=self._show_distance(),
         ).get_data()
 
     def _show_distance(self) -> bool:
         return True
+
+    def generate_flows(self) -> None:
+        self._application.generate_flows()
 
     def __to_id_resource(self, section: Section) -> IdResource:
         return IdResource(id=section.id.serialize(), name=section.name)
