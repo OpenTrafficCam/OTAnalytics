@@ -21,6 +21,7 @@ class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treevi
         self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
         self.bind(tk_events.LEFT_BUTTON_UP, self._on_single_select)
         self.bind(tk_events.MULTI_SELECT_SINGLE, self._on_single_multi_select)
+        self.bind(tk_events.LEFT_BUTTON_DOUBLE, self._on_double_click)
         self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
@@ -64,6 +65,10 @@ class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treevi
         current_selection = self.focus()
         self.selection_toggle(current_selection)
         self._notify_viewmodel_about_selected_item_ids(self.get_current_selection())
+
+    @abstractmethod
+    def _on_double_click(self, event: Any) -> None:
+        raise NotImplementedError
 
     def get_current_selection(self) -> list[str]:
         return list(self.selection())
