@@ -1,10 +1,10 @@
 import contextlib
-from tkinter.filedialog import asksaveasfilename
 from typing import Any
 
 from customtkinter import CTkLabel, CTkOptionMenu
 
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
     FrameContent,
     ToplevelTemplate,
@@ -88,7 +88,7 @@ class ToplevelExportEvents(ToplevelTemplate):
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
         export_extension = f"*.{self._export_format_extensions[export_format]}"
-        export_file = asksaveasfilename(
+        export_file = ask_for_save_file_name(
             title="Save counts as",
             filetypes=[(export_format, export_extension)],
             defaultextension=export_extension,
