@@ -42,79 +42,36 @@ def detection() -> Detection:
 
 
 @pytest.fixture
-def track() -> Track:
-    track_id = TrackId(1)
+def track(track_builder: TrackBuilder) -> Track:
+    track_builder.add_track_id(1)
+    track_builder.add_detection_class("car")
+    track_builder.add_wh_bbox(15.3, 30.5)
 
-    detection_1 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=0.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=1,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
-    )
-    detection_2 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=10.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=2,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
-    )
-    detection_3 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=15.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=3,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 2),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
-    )
-    detection_4 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=20.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=4,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 3),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
-    )
-    detection_5 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=25.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=5,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
-    )
-    return Track(
-        track_id,
-        "car",
-        [detection_1, detection_2, detection_3, detection_4, detection_5],
-    )
+    track_builder.add_frame(1)
+    track_builder.add_second(0)
+    track_builder.add_xy_bbox(0.0, 5.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(2)
+    track_builder.add_second(1)
+    track_builder.add_xy_bbox(10.0, 5.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(3)
+    track_builder.add_second(2)
+    track_builder.add_xy_bbox(15.0, 5.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(5)
+    track_builder.add_second(3)
+    track_builder.add_xy_bbox(20.0, 5.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(5)
+    track_builder.add_second(4)
+    track_builder.add_xy_bbox(25.0, 5.0)
+    track_builder.append_detection()
+    return track_builder.build_track()
 
 
 class TestIntersector:

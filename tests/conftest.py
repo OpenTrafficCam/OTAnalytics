@@ -116,12 +116,19 @@ class TrackBuilder:
         self.occurrence_second = second
         self.occurrence_microsecond = microsecond
 
+    def add_second(self, second: int) -> None:
+        self.occurrence_second = second
+
     def add_microsecond(self, microsecond: int) -> None:
         self.occurrence_microsecond = microsecond
 
     def add_xy_bbox(self, x: float, y: float) -> None:
         self.x = x
         self.y = y
+
+    def add_wh_bbox(self, w: float, h: float) -> None:
+        self.w = w
+        self.h = h
 
     def get_metadata(self) -> dict:
         return {
