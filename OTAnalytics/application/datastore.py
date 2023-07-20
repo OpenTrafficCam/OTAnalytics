@@ -218,6 +218,29 @@ class NoSectionsToSave(Exception):
     pass
 
 
+class EventListExporter(ABC):
+    """
+    Export the events (and sections) from their repostories to external file formats
+    like CSV or Excel.
+    Theese formats are not meant to be imported again, cause during export,
+    information will be lost.
+    """
+
+    @abstractmethod
+    def export(
+        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_extension(self) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_name(self) -> str:
+        raise NotImplementedError
+
+
 class Datastore:
     """
     Central element to hold data in the application.
@@ -431,6 +454,22 @@ class Datastore:
         self._event_list_parser.serialize(
             self._event_repository.get_all(),
             self._section_repository.get_all(),
+            file=file,
+        )
+
+    def export_event_list_file(
+        self, file: Path, event_list_exporter: EventListExporter
+    ) -> None:
+        """
+        Export events from the event list to other formats (like CSV or Excel).
+
+        Args:
+            file (Path): File to export events to
+            event_list_exporter (EventListExporter): Exporter building the format
+        """
+        event_list_exporter.export(
+            events=self._event_repository.get_all(),
+            sections=self._section_repository.get_all(),
             file=file,
         )
 

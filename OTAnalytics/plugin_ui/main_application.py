@@ -82,9 +82,14 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
+from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
+    AVAILABLE_EVENTLIST_EXPORTERS,
+)
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
+    FilterByClassification,
     FilterById,
+    FilterByOccurrence,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
     PandasTracksOffsetProvider,
@@ -205,7 +210,12 @@ class ApplicationStarter:
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
         name_generator = ArrowFlowNameGenerator()
-        dummy_viewmodel = DummyViewModel(application, flow_parser, name_generator)
+        dummy_viewmodel = DummyViewModel(
+            application,
+            flow_parser,
+            name_generator,
+            event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
+        )
         dummy_viewmodel.register_observers()
         application.connect_observers()
         datastore.register_tracks_observer(selected_video_updater)
@@ -458,9 +468,25 @@ class ApplicationStarter:
         road_user_assigner: RoadUserAssigner,
     ) -> Sequence[PlottingLayer]:
         background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
-
+        data_provider_all_filters = FilterByClassification(
+            FilterByOccurrence(
+                pandas_data_provider,
+                track_view_state,
+                self._create_dataframe_filter_builder(),
+            ),
+            track_view_state,
+            self._create_dataframe_filter_builder(),
+        )
+        data_provider_class_filter = FilterByClassification(
+            pandas_data_provider,
+            track_view_state,
+            self._create_dataframe_filter_builder(),
+        )
         track_geometry_plotter = self._create_track_geometry_plotter(
-            track_view_state, pandas_data_provider, alpha=0.2, enable_legend=True
+            track_view_state,
+            data_provider_all_filters,
+            alpha=0.2,
+            enable_legend=True,
         )
         tracks_intersecting_sections = TracksIntersectingSelectedSections(
             section_state, datastore._event_repository
@@ -473,7 +499,7 @@ class ApplicationStarter:
             self._create_track_highlight_geometry_plotter(
                 track_view_state,
                 tracks_intersecting_sections,
-                pandas_data_provider,
+                data_provider_all_filters,
                 enable_legend=False,
             )
         )
@@ -481,7 +507,7 @@ class ApplicationStarter:
             self._create_track_highlight_geometry_plotter_not_intersecting(
                 track_view_state,
                 tracks_not_intersecting_sections,
-                pandas_data_provider,
+                data_provider_all_filters,
                 enable_legend=False,
             )
         )
@@ -489,7 +515,7 @@ class ApplicationStarter:
             self._create_start_end_point_tracks_intersecting_sections_plotter(
                 track_view_state,
                 tracks_intersecting_sections,
-                pandas_data_provider,
+                data_provider_class_filter,
                 enable_legend=False,
             )
         )
@@ -497,12 +523,12 @@ class ApplicationStarter:
             self._create_start_end_point_tracks_not_intersecting_sections_plotter(
                 track_view_state,
                 tracks_not_intersecting_sections,
-                pandas_data_provider,
+                data_provider_class_filter,
                 enable_legend=False,
             )
         )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            track_view_state, pandas_data_provider, enable_legend=False
+            track_view_state, data_provider_class_filter, enable_legend=False
         )
         tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
             road_user_assigner,
@@ -513,7 +539,7 @@ class ApplicationStarter:
         highlight_tracks_assigned_to_flow = (
             self._create_highlight_tracks_assigned_to_flow(
                 track_view_state,
-                pandas_data_provider,
+                data_provider_all_filters,
                 tracks_assigned_to_flow,
                 enable_legend=False,
             )
@@ -521,7 +547,7 @@ class ApplicationStarter:
         highlight_tracks_not_assigned_to_flow = (
             self._create_highlight_tracks_not_assigned_to_flow(
                 track_view_state,
-                pandas_data_provider,
+                data_provider_all_filters,
                 tracks_assigned_to_flow,
                 datastore._track_repository,
                 enable_legend=False,
