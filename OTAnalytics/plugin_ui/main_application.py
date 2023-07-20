@@ -74,6 +74,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
+from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
+    AVAILABLE_EVENTLIST_EXPORTERS,
+)
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
     FilterById,
@@ -190,7 +193,11 @@ class ApplicationStarter:
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
-        dummy_viewmodel = DummyViewModel(application, flow_parser)
+        dummy_viewmodel = DummyViewModel(
+            application,
+            flow_parser,
+            event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
+        )
         dummy_viewmodel.register_observers()
         application.connect_observers()
         datastore.register_tracks_observer(selected_video_updater)

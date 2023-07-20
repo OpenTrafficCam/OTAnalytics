@@ -57,8 +57,6 @@ from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
-    AVAILABLE_EVENTLIST_EXPORTERS,
-    OTC_EXCEL_FORMAT_NAME,
     EventListExporter,
     ExporterNotFoundError,
 )
@@ -135,9 +133,11 @@ class DummyViewModel(
         self,
         application: OTAnalyticsApplication,
         flow_parser: FlowParser,
+        event_list_export_formats: dict,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
+        self._event_list_export_formats = event_list_export_formats
         self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
@@ -1019,10 +1019,12 @@ class DummyViewModel(
         self._application.save_events(Path(file))
 
     def export_events(self) -> None:
-        default_values: dict[str, str] = {EXPORT_FORMAT: OTC_EXCEL_FORMAT_NAME}
+        default_values: dict[str, str] = {
+            EXPORT_FORMAT: self.__get_default_export_format()
+        }
         export_format_extensions: dict[str, str] = {
             key: exporter.get_extension()
-            for key, exporter in AVAILABLE_EVENTLIST_EXPORTERS.items()
+            for key, exporter in self._event_list_export_formats.items()
         }
         try:
             event_list_exporter, file = self._configure_event_exporter(
@@ -1035,6 +1037,11 @@ class DummyViewModel(
         except CancelExportEvents:
             print("User canceled configuration of export")
 
+    def __get_default_export_format(self) -> str:
+        if self._event_list_export_formats:
+            return next(iter(self._event_list_export_formats.keys()))
+        return ""
+
     def _configure_event_exporter(
         self, default_values: dict[str, str], export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
@@ -1046,7 +1053,7 @@ class DummyViewModel(
         ).get_data()
         file = input_values[toplevel_export_events.EXPORT_FILE]
         export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
-        event_list_exporter = AVAILABLE_EVENTLIST_EXPORTERS.get(export_format, None)
+        event_list_exporter = self._event_list_export_formats.get(export_format, None)
         if event_list_exporter is None:
             raise ExporterNotFoundError(
                 f"{event_list_exporter} is not a valid export format"
