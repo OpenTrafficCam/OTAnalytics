@@ -63,6 +63,11 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
+    EventListExporter,
+    ExporterNotFoundError,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -86,6 +91,10 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     INTERVAL,
     CancelExportCounts,
     ToplevelExportCounts,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_events import (
+    CancelExportEvents,
+    ToplevelExportEvents,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
@@ -132,10 +141,12 @@ class DummyViewModel(
         application: OTAnalyticsApplication,
         flow_parser: FlowParser,
         name_generator: FlowNameGenerator,
+        event_list_export_formats: dict,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
+        self._event_list_export_formats = event_list_export_formats
         self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
@@ -1085,6 +1096,48 @@ class DummyViewModel(
     def save_events(self, file: str) -> None:
         print(f"Eventlist file to save: {file}")
         self._application.save_events(Path(file))
+
+    def export_events(self) -> None:
+        default_values: dict[str, str] = {
+            EXPORT_FORMAT: self.__get_default_export_format()
+        }
+        export_format_extensions: dict[str, str] = {
+            key: exporter.get_extension()
+            for key, exporter in self._event_list_export_formats.items()
+        }
+        try:
+            event_list_exporter, file = self._configure_event_exporter(
+                default_values, export_format_extensions
+            )
+            self._application.export_events(Path(file), event_list_exporter)
+            print(
+                f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
+            )
+        except CancelExportEvents:
+            print("User canceled configuration of export")
+
+    def __get_default_export_format(self) -> str:
+        if self._event_list_export_formats:
+            return next(iter(self._event_list_export_formats.keys()))
+        return ""
+
+    def _configure_event_exporter(
+        self, default_values: dict[str, str], export_format_extensions: dict[str, str]
+    ) -> tuple[EventListExporter, Path]:
+        input_values = ToplevelExportEvents(
+            title="Export counts",
+            initial_position=(50, 50),
+            input_values=default_values,
+            export_format_extensions=export_format_extensions,
+        ).get_data()
+        file = input_values[toplevel_export_events.EXPORT_FILE]
+        export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
+        event_list_exporter = self._event_list_export_formats.get(export_format, None)
+        if event_list_exporter is None:
+            raise ExporterNotFoundError(
+                f"{event_list_exporter} is not a valid export format"
+            )
+        return event_list_exporter, file
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         offset = geometry.RelativeOffsetCoordinate(offset_x, offset_y)
