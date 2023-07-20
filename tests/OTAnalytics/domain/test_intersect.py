@@ -184,7 +184,7 @@ class TestIntersectBySplittingTrackLine:
         assert result_event.video_name == expected_detection.input_file_path.name
 
     def test_intersect_track_offset_applied_to_event_coordinate(
-        self, detection: Detection, track: Track
+        self, track: Track
     ) -> None:
         # Setup mock intersection implementation
         mock_implementation = Mock(spec=IntersectImplementation)
@@ -231,7 +231,7 @@ class TestIntersectBySplittingTrackLine:
 
 
 class TestIntersectBySmallTrackComponents:
-    def test_intersect(self, detection: Detection, track: Track) -> None:
+    def test_intersect(self, track: Track) -> None:
         # Setup mock intersection implementation
         mock_implementation = Mock(spec=IntersectImplementation)
         mock_implementation.line_intersects_line.side_effect = [
