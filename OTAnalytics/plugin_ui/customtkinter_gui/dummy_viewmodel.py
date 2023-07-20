@@ -8,7 +8,12 @@ from typing import Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
+from OTAnalytics.adapter_ui.abstract_frame_flows import (
+    AbstractFrameFlows,
+    GeometricCenterCalculator,
+    InnerSegmentsCenterCalculator,
+    SectionRefPointCalculator,
+)
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
@@ -48,6 +53,7 @@ from OTAnalytics.domain.section import (
     ID,
     NAME,
     RELATIVE_OFFSET_COORDINATES,
+    Area,
     LineSection,
     MissingSection,
     Section,
@@ -534,12 +540,24 @@ class DummyViewModel(
     def cancel_action(self) -> None:
         self._finish_action()
 
-    def add_section(self) -> None:
+    def add_line_section(self) -> None:
         self.set_selected_section_ids([])
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         self._start_action()
         SectionBuilder(viewmodel=self, canvas=self._canvas, style=EDITED_SECTION_STYLE)
+
+    def add_area_section(self) -> None:
+        self.set_selected_section_ids([])
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
+        self._start_action()
+        SectionBuilder(
+            viewmodel=self,
+            canvas=self._canvas,
+            is_area_section=True,
+            style=EDITED_SECTION_STYLE,
+        )
 
     def get_section_metadata(
         self,
@@ -562,38 +580,64 @@ class DummyViewModel(
         return self._application.is_section_name_valid(section_name)
 
     def add_new_section(
-        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+        self,
+        coordinates: list[tuple[int, int]],
+        is_area_section: bool,
+        get_metadata: MetadataProvider,
     ) -> None:
         if not coordinates:
             raise MissingCoordinate("First coordinate is missing")
         elif len(coordinates) == 1:
             raise MissingCoordinate("Second coordinate is missing")
         with contextlib.suppress(CancelAddSection):
-            line_section = self.__create_section(coordinates, get_metadata)
-            print(f"New line_section created: {line_section.id}")
-            self._update_selected_sections([line_section.id])
+            section = self.__create_section(coordinates, is_area_section, get_metadata)
+            print(f"New section created: {section.id}")
+            self._update_selected_sections([section.id])
         self._finish_action()
 
     def __create_section(
-        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+        self,
+        coordinates: list[tuple[int, int]],
+        is_area_section: bool,
+        get_metadata: MetadataProvider,
     ) -> Section:
         metadata = self.__get_metadata(get_metadata)
         relative_offset_coordinates_enter = metadata[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
         ]
-        line_section = LineSection(
-            id=self._application.get_section_id(),
-            name=metadata[NAME],
-            relative_offset_coordinates={
-                EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
-                    **relative_offset_coordinates_enter
-                )
-            },
-            plugin_data={},
-            coordinates=[self._to_coordinate(coordinate) for coordinate in coordinates],
-        )
-        self._application.add_section(line_section)
-        return line_section
+        section: Section | None = None
+        if is_area_section:
+            section = Area(
+                id=self._application.get_section_id(),
+                name=metadata[NAME],
+                relative_offset_coordinates={
+                    EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
+                        **relative_offset_coordinates_enter
+                    )
+                },
+                plugin_data={},
+                coordinates=[
+                    self._to_coordinate(coordinate) for coordinate in coordinates
+                ],
+            )
+        else:
+            section = LineSection(
+                id=self._application.get_section_id(),
+                name=metadata[NAME],
+                relative_offset_coordinates={
+                    EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
+                        **relative_offset_coordinates_enter
+                    )
+                },
+                plugin_data={},
+                coordinates=[
+                    self._to_coordinate(coordinate) for coordinate in coordinates
+                ],
+            )
+        if section is None:
+            raise TypeError("section has to be LineSection or Area, but is None")
+        self._application.add_section(section)
+        return section
 
     def __get_metadata(self, get_metadata: MetadataProvider) -> dict:
         metadata = get_metadata()
@@ -636,6 +680,12 @@ class DummyViewModel(
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
         return geometry.Coordinate(coordinate[0], coordinate[1])
 
+    def _is_area_section(self, section: Section | None) -> bool:
+        return isinstance(section, Area)
+
+    def _is_line_section(self, section: Section | None) -> bool:
+        return isinstance(section, LineSection)
+
     def edit_section_geometry(self) -> None:
         if len(selected_section_ids := self.get_selected_section_ids()) != 1:
             raise MultipleSectionsSelected(
@@ -657,6 +707,7 @@ class DummyViewModel(
                     edited_section_style=EDITED_SECTION_STYLE,
                     pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
                     selected_knob_style=SELECTED_KNOB_STYLE,
+                    is_area_section=self._is_area_section(current_section),
                 )
 
     def edit_section_metadata(self) -> None:
@@ -791,6 +842,9 @@ class DummyViewModel(
                 id=section[ID],
                 coordinates=section[COORDINATES],
                 section_style=style,
+                is_area_section=self._is_area_section(
+                    self._application.get_section_for(SectionId(section[ID]))
+                ),
             )
 
     def _draw_arrow_for_selected_flows(self) -> None:
@@ -799,12 +853,30 @@ class DummyViewModel(
         for flow in self._get_selected_flows():
             if start_section := self._application.get_section_for(flow.start):
                 if end_section := self._application.get_section_for(flow.end):
+                    start_refpt_calculator = self._get_section_refpt_calculator(
+                        start_section
+                    )
+                    end_refpt_calculator = self._get_section_refpt_calculator(
+                        end_section
+                    )
                     ArrowPainter(self._canvas).draw(
                         start_section=start_section,
                         end_section=end_section,
+                        start_refpt_calculator=start_refpt_calculator,
+                        end_refpt_calculator=end_refpt_calculator,
                         tags=[LINE_SECTION],
                         arrow_style=ARROW_STYLE,
                     )
+
+    def _get_section_refpt_calculator(
+        self, section: Section
+    ) -> SectionRefPointCalculator:
+        if self._is_line_section(section):
+            return InnerSegmentsCenterCalculator()
+        elif self._is_area_section(section):
+            return GeometricCenterCalculator()
+        else:
+            raise ValueError("section has to be a LineSection or an Area, but isnt")
 
     def _get_selected_flows(self) -> list[Flow]:
         flows: list[Flow] = []
