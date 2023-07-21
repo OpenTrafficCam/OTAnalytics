@@ -46,9 +46,6 @@ class Line(DataclassValidation):
                 )
             )
 
-        if self.coordinates[0] == self.coordinates[-1]:
-            raise ValueError(("Coordinates define a closed line"))
-
 
 @dataclass(frozen=True)
 class Polygon(DataclassValidation):

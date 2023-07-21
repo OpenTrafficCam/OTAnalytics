@@ -12,7 +12,7 @@ from OTAnalytics.domain.geometry import (
 
 
 class TestLine:
-    def test_instantiate_closed_line_raises_value_error(self) -> None:
+    def test_instantiate_closed_line(self) -> None:
         coordinates = [
             Coordinate(0, 0),
             Coordinate(1, 0),
@@ -20,8 +20,8 @@ class TestLine:
             Coordinate(0, 0),
         ]
 
-        with pytest.raises(ValueError):
-            Line(coordinates)
+        line = Line(coordinates)
+        assert line.coordinates == coordinates
 
     def test_instantiate_line_with_one_coordinate_raises_value_error(self) -> None:
         coordinates = [Coordinate(0, 0)]
