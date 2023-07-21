@@ -62,7 +62,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     EventListExporter,
     ExporterNotFoundError,
@@ -361,16 +361,25 @@ class DummyViewModel(
         try:
             self._application.save_configuration(file)
         except NoSectionsToSave as cause:
-            if self._treeview_sections is None:
-                raise MissingInjectedInstanceError(
-                    type(self._treeview_sections).__name__
-                ) from cause
-            position = self._treeview_sections.get_position()
-            InfoBox(
-                message="No sections to save, please add new sections first",
-                initial_position=position,
-            )
+            message = "No sections to save, please add new sections first"
+            self.__show_error(cause, message)
             return
+        except DifferentDrivesException as cause:
+            message = "Configuration and video files are located on different drives."
+            self.__show_error(cause, message)
+            return
+
+    def __show_error(self, cause: Exception, message: str) -> None:
+        if self._treeview_sections is None:
+            raise MissingInjectedInstanceError(
+                type(self._treeview_sections).__name__
+            ) from cause
+        position = self._treeview_sections.get_position()
+
+        InfoBox(
+            message=message,
+            initial_position=position,
+        )
 
     def load_configuration(self) -> None:
         if self._treeview_sections is None:
