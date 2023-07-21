@@ -721,7 +721,7 @@ class DummyViewModel(
                     is_area_section=self._is_area_section(current_section),
                 )
 
-    def edit_section_metadata(self) -> None:
+    def edit_selected_section_metadata(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
 
@@ -1031,7 +1031,7 @@ class DummyViewModel(
         self.set_selected_flow_ids([flow_id.serialize()])
         self.refresh_items_on_canvas()
 
-    def edit_flow(self) -> None:
+    def edit_selected_flow(self) -> None:
         self._start_action()
         with contextlib.suppress(CancelAddFlow):
             if flows := self._get_selected_flows():

@@ -169,7 +169,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def edit_section_metadata(self) -> None:
+    def edit_selected_section_metadata(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -193,7 +193,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def edit_flow(self) -> None:
+    def edit_selected_flow(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

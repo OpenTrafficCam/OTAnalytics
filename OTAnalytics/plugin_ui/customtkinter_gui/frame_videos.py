@@ -82,6 +82,9 @@ class TreeviewVideos(TreeviewTemplate):
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         self._viewmodel.set_selected_videos(ids)
 
+    def _on_double_click(self, event: Any) -> None:
+        pass
+
     def update_items(self) -> None:
         self.delete(*self.get_children())
         item_ids = [
