@@ -22,6 +22,17 @@ from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser, OttrkParser
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
 
+DEFAULT_HOSTNAME = "myhostname"
+DEFAULT_VIDEO_NAME = f"{DEFAULT_HOSTNAME}_file.otdet"
+DEFAULT_INPUT_FILE_PATH = f"path/to/{DEFAULT_VIDEO_NAME}"
+DEFAULT_OCCURRENCE_YEAR: int = 2020
+DEFAULT_OCCURRENCE_MONTH: int = 1
+DEFAULT_OCCURRENCE_DAY: int = 1
+DEFAULT_OCCURRENCE_HOUR: int = 0
+DEFAULT_OCCURRENCE_MINUTE: int = 0
+DEFAULT_OCCURRENCE_SECOND: int = 0
+DEFAULT_OCCURRENCE_MICROSECOND: int = 0
+
 
 @dataclass
 class TrackBuilder:
@@ -35,14 +46,14 @@ class TrackBuilder:
     w: float = 10
     h: float = 10
     frame: int = 1
-    occurrence_year: int = 2020
-    occurrence_month: int = 1
-    occurrence_day: int = 1
-    occurrence_hour: int = 0
-    occurrence_minute: int = 0
-    occurrence_second: int = 0
-    occurrence_microsecond: int = 0
-    input_file_path: str = "path/to/myhostname_file.otdet"
+    occurrence_year: int = DEFAULT_OCCURRENCE_YEAR
+    occurrence_month: int = DEFAULT_OCCURRENCE_MONTH
+    occurrence_day: int = DEFAULT_OCCURRENCE_DAY
+    occurrence_hour: int = DEFAULT_OCCURRENCE_HOUR
+    occurrence_minute: int = DEFAULT_OCCURRENCE_MINUTE
+    occurrence_second: int = DEFAULT_OCCURRENCE_SECOND
+    occurrence_microsecond: int = DEFAULT_OCCURRENCE_MICROSECOND
+    input_file_path: str = DEFAULT_INPUT_FILE_PATH
     interpolated_detection: bool = False
 
     def __post_init__(self) -> None:
@@ -116,12 +127,19 @@ class TrackBuilder:
         self.occurrence_second = second
         self.occurrence_microsecond = microsecond
 
+    def add_second(self, second: int) -> None:
+        self.occurrence_second = second
+
     def add_microsecond(self, microsecond: int) -> None:
         self.occurrence_microsecond = microsecond
 
     def add_xy_bbox(self, x: float, y: float) -> None:
         self.x = x
         self.y = y
+
+    def add_wh_bbox(self, w: float, h: float) -> None:
+        self.w = w
+        self.h = h
 
     def get_metadata(self) -> dict:
         return {
@@ -226,14 +244,14 @@ class TrackBuilder:
 class EventBuilder:
     road_user_id: int = 1
     road_user_type: str = "car"
-    hostname: str = "myhostname"
-    occurrence_year: int = 2020
-    occurrence_month: int = 1
-    occurrence_day: int = 1
-    occurrence_hour: int = 0
-    occurrence_minute: int = 0
-    occurrence_second: int = 0
-    occurrence_microsecond: int = 0
+    hostname: str = DEFAULT_HOSTNAME
+    occurrence_year: int = DEFAULT_OCCURRENCE_YEAR
+    occurrence_month: int = DEFAULT_OCCURRENCE_MONTH
+    occurrence_day: int = DEFAULT_OCCURRENCE_DAY
+    occurrence_hour: int = DEFAULT_OCCURRENCE_HOUR
+    occurrence_minute: int = DEFAULT_OCCURRENCE_MINUTE
+    occurrence_second: int = DEFAULT_OCCURRENCE_SECOND
+    occurrence_microsecond: int = DEFAULT_OCCURRENCE_MICROSECOND
     frame_number: int = 1
     section_id: str = "N"
     event_coordinate_x: float = 0.0
@@ -241,7 +259,7 @@ class EventBuilder:
     event_type: str = "section-enter"
     direction_vector_x: float = 0.0
     direction_vector_y: float = 0.0
-    video_name: str = "myhostname_file.otdet"
+    video_name: str = DEFAULT_VIDEO_NAME
 
     def __post_init__(self) -> None:
         self._events: list[Event] = []
@@ -278,6 +296,9 @@ class EventBuilder:
     def append_section_event(self) -> None:
         self._events.append(self.build_section_event())
 
+    def add_second(self, second: int) -> None:
+        self.occurrence_second = second
+
     def add_microsecond(self, microsecond: int) -> None:
         self.occurrence_microsecond = microsecond
 
@@ -294,6 +315,15 @@ class EventBuilder:
     def add_direction_vector(self, x: float, y: float) -> None:
         self.direction_vector_x = x
         self.direction_vector_y = y
+
+    def add_road_user_id(self, id: int) -> None:
+        self.road_user_id = id
+
+    def add_road_user_type(self, type: str) -> None:
+        self.road_user_type = type
+
+    def add_section_id(self, id: str) -> None:
+        self.section_id = id
 
 
 @pytest.fixture(scope="module")
