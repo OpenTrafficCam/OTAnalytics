@@ -56,7 +56,7 @@ class FrameSections(AbstractFrameSections):
         self.button_edit_metadata = CTkButton(
             master=self,
             text="Properties",
-            command=self._viewmodel.edit_section_metadata,
+            command=self._viewmodel.edit_selected_section_metadata,
         )
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_sections
@@ -130,6 +130,9 @@ class TreeviewSections(TreeviewTemplate, Treeview):
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         self._viewmodel.set_selected_section_ids(ids)
+
+    def _on_double_click(self, event: Any) -> None:
+        self._viewmodel.edit_selected_section_metadata()
 
     def update_items(self) -> None:
         self.delete(*self.get_children())

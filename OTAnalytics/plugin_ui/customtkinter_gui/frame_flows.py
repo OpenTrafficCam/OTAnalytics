@@ -50,7 +50,7 @@ class FrameFlows(AbstractFrameFlows):
         self.button_edit = CTkButton(
             master=self,
             text="Properties",
-            command=self._viewmodel.edit_flow,
+            command=self._viewmodel.edit_selected_flow,
         )
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_flows
@@ -107,6 +107,9 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         self._viewmodel.set_selected_flow_ids(ids)
+
+    def _on_double_click(self, event: Any) -> None:
+        self._viewmodel.edit_selected_flow()
 
     def update_items(self) -> None:
         self.delete(*self.get_children())

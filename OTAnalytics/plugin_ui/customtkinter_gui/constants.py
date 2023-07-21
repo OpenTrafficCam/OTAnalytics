@@ -44,6 +44,7 @@ class TkEvents:
     )
     LEFT_BUTTON_DOWN: ClassVar[str] = "<Button-1>"
     LEFT_BUTTON_UP: ClassVar[str] = "<ButtonRelease-1>"
+    LEFT_BUTTON_DOUBLE: ClassVar[str] = "<Double-1>"
     MOUSE_MOTION: ClassVar[str] = "<Motion>"
     MOUSE_MOTION_WHILE_LEFT_BUTTON_DOWN: ClassVar[str] = "<B1-Motion>"
     MOUSE_ENTERS_WIDGET: ClassVar[str] = "<Enter>"
