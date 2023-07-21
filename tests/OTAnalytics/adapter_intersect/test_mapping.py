@@ -1,3 +1,4 @@
+import pytest
 from shapely import LineString, Point
 from shapely import Polygon as ShapelyPolygon
 
@@ -6,12 +7,25 @@ from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 
 
 class TestShapelyMappers:
-    def test_map_to_shapely_line_string(self) -> None:
-        first_coordinate = Coordinate(0, 0)
-        second_coordinate = Coordinate(1, 0)
-        line = Line([first_coordinate, second_coordinate])
-        expected = LineString([[0, 0], [1, 0]])
-
+    @pytest.mark.parametrize(
+        "line,expected",
+        [
+            (Line([Coordinate(0, 0), Coordinate(1, 0)]), LineString([[0, 0], [1, 0]])),
+            (
+                Line(
+                    [
+                        Coordinate(0, 0),
+                        Coordinate(1, 0),
+                        Coordinate(1, 1),
+                        Coordinate(0, 1),
+                        Coordinate(0, 0),
+                    ]
+                ),
+                LineString([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]),
+            ),
+        ],
+    )
+    def test_map_to_shapely_line_string(self, line: Line, expected: LineString) -> None:
         result = ShapelyMapper.map_to_shapely_line_string(line)
 
         assert result == expected
@@ -38,10 +52,25 @@ class TestShapelyMappers:
 
         assert result == expected
 
-    def test_map_to_domain_line(self) -> None:
-        line_string = LineString([[0, 0], [1, 0]])
-        expected = Line([Coordinate(0, 0), Coordinate(1, 0)])
-
-        result = ShapelyMapper.map_to_domain_line(line_string)
+    @pytest.mark.parametrize(
+        "line,expected",
+        [
+            (LineString([[0, 0], [1, 0]]), Line([Coordinate(0, 0), Coordinate(1, 0)])),
+            (
+                LineString([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]),
+                Line(
+                    [
+                        Coordinate(0, 0),
+                        Coordinate(1, 0),
+                        Coordinate(1, 1),
+                        Coordinate(0, 1),
+                        Coordinate(0, 0),
+                    ]
+                ),
+            ),
+        ],
+    )
+    def test_map_to_domain_line(self, line: LineString, expected: Line) -> None:
+        result = ShapelyMapper.map_to_domain_line(line)
 
         assert result == expected

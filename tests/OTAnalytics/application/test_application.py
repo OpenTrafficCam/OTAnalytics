@@ -5,9 +5,11 @@ import pytest
 from OTAnalytics.application.application import (
     AddFlow,
     AddSection,
+    ClearEventRepository,
     FlowAlreadyExists,
     SectionAlreadyExists,
 )
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
 
@@ -70,3 +72,11 @@ class TestAddFlow:
 
         with pytest.raises(FlowAlreadyExists):
             use_case.add(other_flow)
+
+
+class TestClearEventRepository:
+    def test_clear(self) -> None:
+        repository = Mock(spec=EventRepository)
+        clear_event_repository = ClearEventRepository(repository)
+        clear_event_repository.clear()
+        repository.clear.assert_called_once()

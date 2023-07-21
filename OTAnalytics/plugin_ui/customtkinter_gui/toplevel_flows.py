@@ -5,9 +5,12 @@ from typing import Any, Optional
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
 from OTAnalytics.application.application import CancelAddFlow
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import ToplevelTemplate
+from OTAnalytics.application.generate_flows import FlowNameGenerator
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
+    FrameContent,
+    ToplevelTemplate,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
 
 FLOW_ID = "Id"
@@ -17,48 +20,46 @@ END_SECTION = "End section"
 DISTANCE = "Distance"
 
 
-class ToplevelFlows(ToplevelTemplate):
+class TooFewSectionsForFlowException(Exception):
+    pass
+
+
+class SectionSeveralTimesInFlowException(Exception):
+    pass
+
+
+class NotExistingSectionException(Exception):
+    pass
+
+
+class InvalidFlowNameException(Exception):
+    pass
+
+
+class FrameConfigureFlow(FrameContent):
     def __init__(
         self,
-        title: str,
         section_ids: list[IdResource],
-        input_values: dict | None = {},
+        name_generator: FlowNameGenerator,
+        input_values: dict | None = None,
         show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.title(title)
         self._section_ids = section_ids
+        self._name_generator = name_generator
         self._section_name_to_id = self._create_section_name_to_id(section_ids)
         self._section_id_to_name = self._create_section_id_to_name(section_ids)
         self._current_name = StringVar()
-        self.input_values: dict = self.__create_input_values(input_values)
+        self._input_values: dict = self.__create_input_values(input_values)
         self._show_distance = show_distance
-        self._canceled = False
         self._last_autofilled_name: str = ""
         self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
 
-    def _create_section_name_to_id(self, sections: list[IdResource]) -> dict[str, str]:
-        return {resource.name: resource.id for resource in sections}
-
-    def _create_section_id_to_name(self, sections: list[IdResource]) -> dict[str, str]:
-        return {resource.id: resource.name for resource in sections}
-
-    def __set_initial_values(self) -> None:
-        self._current_name.set(self.input_values.get(FLOW_NAME, ""))
-
-    def __create_input_values(self, input_values: Optional[dict]) -> dict:
-        if input_values:
-            return input_values
-        return {
-            FLOW_ID: "",
-            FLOW_NAME: "",
-            START_SECTION: "",
-            END_SECTION: "",
-            DISTANCE: None,
-        }
+    def set_focus(self) -> None:
+        self.after(0, lambda: self.entry_distance.focus_set())
 
     def _get_widgets(self) -> None:
         self.label_section_start = CTkLabel(master=self, text="First section:")
@@ -90,22 +91,8 @@ class ToplevelFlows(ToplevelTemplate):
             validate="key",
             validatecommand=(self.register(self._is_float_above_zero), "%P"),
         )
-        if current_distance := self.input_values[DISTANCE]:
+        if current_distance := self._input_values[DISTANCE]:
             self.entry_distance.insert(index=0, string=current_distance)
-
-    def _section_names(self) -> list[str]:
-        return [resource.name for resource in self._section_ids]
-
-    def _get_end_section_name(self) -> str:
-        _id = self.input_values[END_SECTION]
-        return self._get_section_name_for_id(_id)
-
-    def _get_section_name_for_id(self, name: str) -> str:
-        return self._section_id_to_name.get(name, "")
-
-    def _get_start_section_name(self) -> str:
-        _id = self.input_values[START_SECTION]
-        return self._get_section_name_for_id(_id)
 
     def _place_widgets(self) -> None:
         self.label_section_start.grid(row=0, column=0, padx=PADX, pady=PADY, sticky="E")
@@ -119,43 +106,51 @@ class ToplevelFlows(ToplevelTemplate):
         if self._show_distance:
             self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
             self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
-            self.frame_ok_cancel.grid(
-                row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-            )
-        else:
-            self.frame_ok_cancel.grid(
-                row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-            )
 
-    def _set_focus(self) -> None:
-        self.after(0, lambda: self.lift())
-        self.after(0, lambda: self.entry_distance.focus_set())
+    def _create_section_name_to_id(self, sections: list[IdResource]) -> dict[str, str]:
+        return {resource.name: resource.id for resource in sections}
+
+    def _create_section_id_to_name(self, sections: list[IdResource]) -> dict[str, str]:
+        return {resource.id: resource.name for resource in sections}
+
+    def __set_initial_values(self) -> None:
+        self._current_name.set(self._input_values.get(FLOW_NAME, ""))
+
+    def __create_input_values(self, input_values: Optional[dict]) -> dict:
+        if input_values is not None:
+            return input_values
+        return {
+            FLOW_ID: "",
+            FLOW_NAME: "",
+            START_SECTION: "",
+            END_SECTION: "",
+            DISTANCE: None,
+        }
+
+    def _section_names(self) -> list[str]:
+        return [resource.name for resource in self._section_ids]
 
     def _autofill_name(self, event: Any) -> None:
         if self._last_autofilled_name == self.entry_name.get():
             self.entry_name.delete(0, tkinter.END)
-            auto_name = (
-                self.dropdown_section_start.get()
-                + " --> "
-                + self.dropdown_section_end.get()
+            start_section = self.dropdown_section_start.get()
+            end_section = self.dropdown_section_end.get()
+            auto_name = self._name_generator.generate_from_string(
+                start_section, end_section
             )
             self.entry_name.insert(0, auto_name)
             self._last_autofilled_name = auto_name
 
-    def _on_ok(self, event: Any = None) -> None:
-        if not self._sections_are_valid():
-            return
-        self.input_values[FLOW_NAME] = self._current_name.get()
-        self.input_values[START_SECTION] = self._get_start_section_id()
-        self.input_values[END_SECTION] = self._get_end_section_id()
-        self.input_values[DISTANCE] = self.__parse_distance(self.entry_distance.get())
-        self.destroy()
-        self.update()
+    def _get_end_section_name(self) -> str:
+        _id = self._input_values[END_SECTION]
+        return self._get_section_name_for_id(_id)
 
-    def _on_cancel(self, event: Any = None) -> None:
-        self._canceled = True
-        self.destroy()
-        self.update()
+    def _get_section_name_for_id(self, name: str) -> str:
+        return self._section_id_to_name.get(name, "")
+
+    def _get_start_section_name(self) -> str:
+        _id = self._input_values[START_SECTION]
+        return self._get_section_name_for_id(_id)
 
     def _get_end_section_id(self) -> str:
         name = self.dropdown_section_end.get()
@@ -178,41 +173,72 @@ class ToplevelFlows(ToplevelTemplate):
     def __parse_distance(self, entry_value: Any) -> Optional[float]:
         return float(entry_value) if entry_value else None
 
-    def _sections_are_valid(self) -> bool:
+    def _check_sections(self) -> None:
         section_start = self._get_start_section_id()
         section_end = self._get_end_section_id()
         sections = [section_start, section_end]
-        position = (self.winfo_x(), self.winfo_y())
         if "" in [section_start, section_end]:
-            InfoBox(
-                message="Please choose both a start and an end section!",
-                initial_position=position,
+            raise TooFewSectionsForFlowException(
+                "Please choose both a start and an end section!"
             )
-            return False
         elif section_start == section_end:
-            InfoBox(
-                message="Start and end section have to be different!",
-                initial_position=position,
+            raise SectionSeveralTimesInFlowException(
+                "Start and end section have to be different!"
             )
-            return False
         else:
             for section in sections:
                 if section not in [resource.id for resource in self._section_ids]:
-                    InfoBox(
-                        message="Start and end section have to be valid sections!",
-                        initial_position=position,
+                    raise NotExistingSectionException(
+                        f"{section} is not an existing section"
                     )
-                    return False
+
+    def _check_flow_name(self) -> None:
         if self._current_name.get() == "":
-            InfoBox(
-                message="Please choose a flow name!",
-                initial_position=position,
-            )
-            return False
-        return True
+            raise InvalidFlowNameException("Please choose a flow name!")
+
+    def get_input_values(self) -> dict:
+        self._check_sections()
+        self._check_flow_name()
+        self._input_values[FLOW_NAME] = self._current_name.get()
+        self._input_values[START_SECTION] = self._get_start_section_id()
+        self._input_values[END_SECTION] = self._get_end_section_id()
+        self._input_values[DISTANCE] = self.__parse_distance(self.entry_distance.get())
+        return self._input_values
+
+
+class ToplevelFlows(ToplevelTemplate):
+    def __init__(
+        self,
+        section_ids: list[IdResource],
+        name_generator: FlowNameGenerator,
+        input_values: dict | None = None,
+        show_distance: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        self._input_values = input_values
+        self._section_ids = section_ids
+        self._name_generator = name_generator
+        self._show_distance = show_distance
+        super().__init__(**kwargs)
+
+    def _create_frame_content(self, master: Any) -> FrameContent:
+        return FrameConfigureFlow(
+            master=master,
+            section_ids=self._section_ids,
+            name_generator=self._name_generator,
+            input_values=self._input_values,
+            show_distance=self._show_distance,
+        )
+
+    def _on_ok(self, event: Any = None) -> None:
+        self._input_values = self._frame_content.get_input_values()
+        self._close()
 
     def get_data(self) -> dict:
         self.wait_window()
         if self._canceled:
             raise CancelAddFlow()
-        return self.input_values
+        if self._input_values is None:
+            raise ValueError("input values is None, but should be a dict")
+        print(self._input_values)
+        return self._input_values

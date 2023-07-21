@@ -1,20 +1,32 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 from unittest.mock import Mock, patch
 
 import pytest
 from pandas import DataFrame
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import TrackViewState
-from OTAnalytics.domain.filter import FilterBuilder
+from OTAnalytics.application.state import ObservableProperty, TrackViewState
+from OTAnalytics.domain import track
+from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import Detection, Track, TrackId, TrackImage
+from OTAnalytics.domain.progress import NoProgressbarBuilder
+from OTAnalytics.domain.track import (
+    TRACK_ID,
+    Detection,
+    Track,
+    TrackId,
+    TrackIdProvider,
+    TrackImage,
+)
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
+    FilterByClassification,
+    FilterById,
+    FilterByOccurrence,
     MatplotlibPlotterImplementation,
     MatplotlibTrackPlotter,
+    PandasDataFrameProvider,
     PandasTrackProvider,
     PlotterPrototype,
     TrackBackgroundPlotter,
@@ -62,17 +74,16 @@ class TestPandasTrackProvider:
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
 
-        provider = PandasTrackProvider(datastore, track_view_state, filter_builder)
+        provider = PandasTrackProvider(
+            datastore, track_view_state, filter_builder, NoProgressbarBuilder()
+        )
         result = provider.get_data()
 
         datastore.get_all_tracks.assert_called_once()
-        assert result is None
+        assert result.empty
 
 
 class TestCachedPandasTrackProvider:
-    #    @patch(
-    #        "OTAnalytics.plugin_prototypes.track_visualization.track_viz.PandasTrackProvider._convert_tracks"
-    #    )
     def test_get_data_reset_cache(
         self,
     ) -> None:
@@ -91,16 +102,16 @@ class TestCachedPandasTrackProvider:
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
         provider = CachedPandasTrackProvider(
-            datastore, track_view_state, filter_builder
+            datastore, track_view_state, filter_builder, NoProgressbarBuilder()
         )
 
-        assert provider._cache_df is None
+        assert provider._cache_df.empty
         result = provider._convert_tracks(tracks)
         assert result is not None
         assert result is provider._cache_df
 
         provider.notify_tracks([])
-        assert provider._cache_df is None
+        assert provider._cache_df.empty
 
 
 class TestBackgroundPlotter:
@@ -136,7 +147,6 @@ class TestTrackGeometryPlotter:
     @pytest.mark.parametrize(
         "data_frame,call_count",
         [
-            (None, 0),
             (DataFrame(), 0),
             (
                 DataFrame.from_dict(
@@ -155,7 +165,7 @@ class TestTrackGeometryPlotter:
     def test_plot(
         self,
         mock_plot_dataframe: Mock,
-        data_frame: Optional[DataFrame],
+        data_frame: DataFrame,
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)
@@ -163,7 +173,7 @@ class TestTrackGeometryPlotter:
 
         data_provider.get_data.return_value = data_frame
 
-        plotter = TrackGeometryPlotter(data_provider)
+        plotter = TrackGeometryPlotter(data_provider, enable_legend=False)
 
         plotter.plot(axes)
         assert mock_plot_dataframe.call_count == call_count
@@ -173,7 +183,6 @@ class TestStartEndPointPlotter:
     @pytest.mark.parametrize(
         "data_frame,call_count",
         [
-            (None, 0),
             (DataFrame(), 0),
             (
                 DataFrame.from_dict(
@@ -192,7 +201,7 @@ class TestStartEndPointPlotter:
     def test_plot(
         self,
         mock_plot_dataframe: Mock,
-        data_frame: Optional[DataFrame],
+        data_frame: DataFrame,
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)
@@ -200,7 +209,106 @@ class TestStartEndPointPlotter:
 
         data_provider.get_data.return_value = data_frame
 
-        plotter = TrackStartEndPointPlotter(data_provider)
+        plotter = TrackStartEndPointPlotter(data_provider, enable_legend=False)
 
         plotter.plot(axes)
         assert mock_plot_dataframe.call_count == call_count
+
+
+class TestDataFrameProviderFilter:
+    @pytest.fixture
+    def filter_input(self) -> DataFrame:
+        d = {TRACK_ID: [1, 2]}
+        return DataFrame(data=d)
+
+    @pytest.fixture
+    def filter_result(self) -> Mock:
+        return Mock(spec=DataFrame)
+
+    @pytest.fixture
+    def data_provider(self, filter_input: DataFrame) -> Mock:
+        provider = Mock(spec=PandasDataFrameProvider)
+        provider.get_data.return_value = filter_input
+        return provider
+
+    @pytest.fixture
+    def filter_imp(self, filter_result: Mock) -> Mock:
+        _filter = Mock(spec=Filter)
+        _filter.apply.return_value = [filter_result]
+        return _filter
+
+    @pytest.fixture
+    def filter_element(self, filter_imp: Mock) -> Mock:
+        filter_element = Mock(spec=FilterElement)
+        filter_element.build_filter.return_value = filter_imp
+        return filter_element
+
+    @pytest.fixture
+    def observable_filter_element(self, filter_element: Mock) -> Mock:
+        observable_property = Mock(spec=ObservableProperty)
+        observable_property.get.return_value = filter_element
+        return observable_property
+
+    @pytest.fixture
+    def track_view_state(self, observable_filter_element: Mock) -> Mock:
+        track_view_state = Mock(spec=TrackViewState)
+        track_view_state.filter_element = observable_filter_element
+        return track_view_state
+
+    def test_filter_by_id(self, data_provider: Mock) -> None:
+        id_filter = Mock(spec=TrackIdProvider)
+        track_id = Mock(spec=TrackId)
+        track_id.id = 1
+
+        id_filter.get_ids.return_value = [track_id]
+
+        filter_by_id = FilterById(data_provider, id_filter)
+        result = filter_by_id.get_data()
+
+        assert result.equals(DataFrame(data={TRACK_ID: [1]}))
+        data_provider.get_data.assert_called_once()
+        id_filter.get_ids.assert_called_once()
+
+    def test_filter_by_classification(
+        self,
+        filter_input: DataFrame,
+        data_provider: Mock,
+        track_view_state: Mock,
+        observable_filter_element: Mock,
+        filter_element: Mock,
+        filter_imp: Mock,
+        filter_result: Mock,
+    ) -> None:
+        filter_builder = Mock(Spec=FilterBuilder)
+        df_filter = FilterByClassification(
+            data_provider, track_view_state, filter_builder
+        )
+        result = df_filter.get_data()
+        result == filter_result
+
+        filter_builder.set_classification_column.assert_called_once_with(
+            track.CLASSIFICATION
+        )
+        observable_filter_element.get.assert_called_once()
+        filter_element.build_filter.assert_called_once_with(filter_builder)
+        filter_imp.apply.assert_called_once_with([filter_input])
+
+    def test_filter_by_occurrence(
+        self,
+        filter_input: DataFrame,
+        data_provider: Mock,
+        track_view_state: Mock,
+        observable_filter_element: Mock,
+        filter_element: Mock,
+        filter_imp: Mock,
+        filter_result: Mock,
+    ) -> None:
+        filter_builder = Mock(Spec=FilterBuilder)
+        df_filter = FilterByOccurrence(data_provider, track_view_state, filter_builder)
+        result = df_filter.get_data()
+        result == filter_result
+
+        filter_builder.set_occurrence_column.assert_called_once_with(track.OCCURRENCE)
+        observable_filter_element.get.assert_called_once()
+        filter_element.build_filter.assert_called_once_with(filter_builder)
+        filter_imp.apply.assert_called_once_with([filter_input])

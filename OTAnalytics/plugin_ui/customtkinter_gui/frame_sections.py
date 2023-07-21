@@ -1,7 +1,7 @@
 import tkinter
 from tkinter import Listbox
 from tkinter.ttk import Treeview
-from typing import Any, Optional
+from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
@@ -9,6 +9,7 @@ from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     IdResource,
     TreeviewTemplate,
@@ -41,24 +42,28 @@ class FrameSections(AbstractFrameSections):
             master=self._frame_tree, command=self.treeview.yview
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
-        self.button_add = CTkButton(
-            master=self, text="Add", command=self._viewmodel.add_section
+        self.button_add_line = CTkButton(
+            master=self, text="Add line", command=self._viewmodel.add_line_section
+        )
+        self.button_add_area = CTkButton(
+            master=self, text="Add area", command=self._viewmodel.add_area_section
         )
         self.button_edit_geometry = CTkButton(
             master=self,
-            text="Edit geometry",
+            text="Edit",
             command=self._viewmodel.edit_section_geometry,
         )
         self.button_edit_metadata = CTkButton(
             master=self,
-            text="Edit metadata",
-            command=self._viewmodel.edit_section_metadata,
+            text="Properties",
+            command=self._viewmodel.edit_selected_section_metadata,
         )
         self.button_remove = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_section
+            master=self, text="Remove", command=self._viewmodel.remove_sections
         )
         self._action_buttons = [
-            self.button_add,
+            self.button_add_line,
+            self.button_add_area,
             self.button_edit_geometry,
             self.button_edit_metadata,
             self.button_remove,
@@ -70,17 +75,40 @@ class FrameSections(AbstractFrameSections):
         self._frame_tree.grid(
             row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_add.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_add_line.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_add_area.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_edit_geometry.grid(
-            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self.button_edit_metadata.grid(
             row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_remove.grid(row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_edit_metadata.grid(
+            row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.button_remove.grid(row=5, column=0, padx=PADX, pady=PADY, sticky=STICKY)
 
     def action_buttons(self) -> list[CTkButton]:
         return self._action_buttons
+
+    def enable_edit_geometry_button(self) -> None:
+        self._enable_button(self.button_edit_geometry)
+
+    def disable_edit_geometry_button(self) -> None:
+        self._disable_button(self.button_edit_geometry)
+
+    def enable_edit_metadata_button(self) -> None:
+        self._enable_button(self.button_edit_metadata)
+
+    def disable_edit_metadata_button(self) -> None:
+        self._disable_button(self.button_edit_metadata)
+
+    def enable_remove_button(self) -> None:
+        self._enable_button(self.button_remove)
+
+    def disable_remove_button(self) -> None:
+        self._disable_button(self.button_remove)
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
 
 
 class TreeviewSections(TreeviewTemplate, Treeview):
@@ -100,10 +128,11 @@ class TreeviewSections(TreeviewTemplate, Treeview):
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)
 
-    def _notify_viewmodel_about_selected_item_id(
-        self, line_section_id: Optional[str]
-    ) -> None:
-        self._viewmodel.set_selected_section_id(line_section_id)
+    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
+        self._viewmodel.set_selected_section_ids(ids)
+
+    def _on_double_click(self, event: Any) -> None:
+        self._viewmodel.edit_selected_section_metadata()
 
     def update_items(self) -> None:
         self.delete(*self.get_children())
