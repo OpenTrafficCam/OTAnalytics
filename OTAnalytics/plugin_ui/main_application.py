@@ -53,6 +53,7 @@ from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
+from OTAnalytics.plugin_parser.export import SimpleExporterFactory
 from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     OtConfigParser,
@@ -149,6 +150,7 @@ class ApplicationStarter:
             tracks_metadata=tracks_metadata,
             action_state=action_state,
             filter_element_setting_restorer=filter_element_settings_restorer,
+            exporter_factory=SimpleExporterFactory(),
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser

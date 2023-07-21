@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.intersect import (
 )
 from OTAnalytics.application.analysis.traffic_counting import (
     CountingSpecificationDto,
+    ExporterFactory,
     ExportFormat,
     ExportTrafficCounting,
     RoadUserAssigner,
@@ -49,7 +50,6 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_parser.export import SimpleExporterFactory
 
 
 class SectionAlreadyExists(Exception):
@@ -277,6 +277,7 @@ class OTAnalyticsApplication:
         tracks_metadata: TracksMetadata,
         action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
+        exporter_factory: ExporterFactory,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -296,15 +297,17 @@ class OTAnalyticsApplication:
         self._clear_event_repository = ClearEventRepository(
             self._datastore._event_repository
         )
-        self._export_counts = self.__create_export_traffic_counting()
+        self._export_counts = self.__create_export_traffic_counting(exporter_factory)
 
-    def __create_export_traffic_counting(self) -> ExportTrafficCounting:
+    def __create_export_traffic_counting(
+        self, exporter_factory: ExporterFactory
+    ) -> ExportTrafficCounting:
         return ExportTrafficCounting(
             self._datastore._event_repository,
             self._datastore._flow_repository,
             RoadUserAssigner(),
             SimpleTaggerFactory(self._datastore._track_repository),
-            SimpleExporterFactory(),
+            exporter_factory,
         )
 
     def connect_observers(self) -> None:
