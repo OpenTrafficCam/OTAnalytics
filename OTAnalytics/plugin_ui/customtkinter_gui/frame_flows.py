@@ -55,7 +55,12 @@ class FrameFlows(AbstractFrameFlows):
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_flows
         )
-        self._action_buttons = [self.button_add, self.button_edit, self.button_remove]
+        self._action_buttons = [
+            self.button_add,
+            self.button_generate,
+            self.button_edit,
+            self.button_remove,
+        ]
 
     def _place_widgets(self) -> None:
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
