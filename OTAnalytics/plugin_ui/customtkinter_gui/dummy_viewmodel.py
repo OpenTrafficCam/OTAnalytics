@@ -518,6 +518,8 @@ class DummyViewModel(
             return
         print(f"Sections file to load: {sections_file}")
         self._application.add_sections_of_file(sections_file=Path(sections_file))
+        self.set_selected_section_ids([])
+        self.set_selected_flow_ids([])
         self.refresh_items_on_canvas()
 
     def save_sections(self) -> None:
