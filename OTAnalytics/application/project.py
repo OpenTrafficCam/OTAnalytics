@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
 
-from application.datastore import Datastore
+from OTAnalytics.application.datastore import Datastore
 
 NAME: str = "name"
 START_DATE: str = "start_date"
