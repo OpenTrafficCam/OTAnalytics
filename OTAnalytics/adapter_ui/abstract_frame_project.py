@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from datetime import datetime
+from typing import Optional
 
 
 class AbstractFrameProject:
@@ -8,5 +9,5 @@ class AbstractFrameProject:
         pass
 
     @abstractmethod
-    def update(self, name: str, start_date: datetime) -> None:
+    def update(self, name: str, start_date: Optional[datetime]) -> None:
         pass

@@ -3,7 +3,7 @@ from typing import Iterable
 
 import pandas as pd
 
-from OTAnalytics.application.datastore import EventListExporter
+from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import (
     DIRECTION_VECTOR,
     EVENT_COORDINATE,
@@ -144,10 +144,6 @@ class EventListDataFramePrinter(EventListExporter):
 
     def get_name(self) -> str:
         return "print Dataframe to console"
-
-
-class ExporterNotFoundError(Exception):
-    pass
 
 
 AVAILABLE_EVENTLIST_EXPORTERS: dict[str, EventListExporter] = {
