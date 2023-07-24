@@ -6,6 +6,7 @@ from typing import Iterable, Optional, Sequence, Tuple
 
 from OTAnalytics.application.our_custom_group_exception import OurCustomGroupException
 from OTAnalytics.application.project import Project
+from OTAnalytics.application.use_cases.event_list_export import EventListExporter
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import (
     Flow,
@@ -216,29 +217,6 @@ class ConfigParser(ABC):
 
 class NoSectionsToSave(Exception):
     pass
-
-
-class EventListExporter(ABC):
-    """
-    Export the events (and sections) from their repostories to external file formats
-    like CSV or Excel.
-    Theese formats are not meant to be imported again, cause during export,
-    information will be lost.
-    """
-
-    @abstractmethod
-    def export(
-        self, events: Iterable[Event], sections: Iterable[Section], file: Path
-    ) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_extension(self) -> str:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_name(self) -> str:
-        raise NotImplementedError
 
 
 class Datastore:
