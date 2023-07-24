@@ -872,7 +872,7 @@ class OtConfigParser(ConfigParser):
             flows (Iterable[Flow]): flows to store
             file (Path): output file
 
-        Throws:
+        Raises:
             StartDateMissing: if start date is not configured
         """
         parent_folder = file.parent
