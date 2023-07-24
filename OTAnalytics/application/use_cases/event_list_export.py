@@ -12,9 +12,9 @@ class ExporterNotFoundError(Exception):
 
 class EventListExporter(ABC):
     """
-    Export the events (and sections) from their repostories to external file formats
+    Export the events (and sections) from their repositories to external file formats
     like CSV or Excel.
-    Theese formats are not meant to be imported again, cause during export,
+    These formats are not meant to be imported again, cause during export,
     information will be lost.
     """
 
