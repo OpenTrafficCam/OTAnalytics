@@ -362,7 +362,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """Take notice of some change in the track repository.
 
-        Remove cached tracks matching any given id.
+        Update cached tracks matching any given id.
         Add tracks of ids not yet present in cache.
         Clear cache if no ids are given.
 
@@ -390,16 +390,10 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
                 self._cache_df = self._sort_tracks(df)
 
     def _fetch_new_track_data(self, track_ids: list[TrackId]) -> list[Track]:
-        existing_tracks: list[int] = []
-
-        if not self._cache_df.empty:
-            existing_tracks = self._cache_df[track.TRACK_ID].unique().tolist()
-
         return [
-            t
+            track
             for t_id in track_ids
-            if t_id.id not in existing_tracks
-            and (t := self._datastore._track_repository.get_for(t_id)) is not None
+            if (track := self._datastore._track_repository.get_for(t_id))
         ]
 
     def _cache_without_existing_tracks(self, track_ids: list[TrackId]) -> DataFrame:

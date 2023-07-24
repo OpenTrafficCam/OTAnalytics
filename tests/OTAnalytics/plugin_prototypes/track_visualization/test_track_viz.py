@@ -181,26 +181,19 @@ class TestCachedPandasTrackProvider:
         provider.notify_tracks([self.track_2.id, self.track_1.id])
         self.check_expected_ids(provider, [self.track_2, self.track_1])
 
-    def test_notify_update_delete(self) -> None:
+    def test_notify_update_existing(self) -> None:
         self.create_tracks()
-        provider = self.set_up_provider([self.track_1, self.track_2], [])
+        provider = self.set_up_provider([self.track_1, self.track_2], [self.track_1])
 
         provider.notify_tracks([self.track_1.id])
-        self.check_expected_ids(provider, [self.track_2])
-
-    def test_notify_update_delete_all(self) -> None:
-        self.create_tracks()
-        provider = self.set_up_provider([self.track_1, self.track_2], [])
-
-        provider.notify_tracks([self.track_1.id, self.track_2.id])
-        self.check_expected_ids(provider, [])
+        self.check_expected_ids(provider, [self.track_1, self.track_2])
 
     def test_notify_update_mixed(self) -> None:
         self.create_tracks()
-        provider = self.set_up_provider([self.track_2], [self.track_1])
+        provider = self.set_up_provider([self.track_2], [self.track_1, self.track_2])
 
         provider.notify_tracks([self.track_1.id, self.track_2.id])
-        self.check_expected_ids(provider, [self.track_1])
+        self.check_expected_ids(provider, [self.track_1, self.track_2])
 
 
 class TestBackgroundPlotter:
