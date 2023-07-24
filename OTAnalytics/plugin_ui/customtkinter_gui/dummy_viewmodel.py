@@ -260,9 +260,6 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
-        self._treeview_sections.update_selected_items(
-            item_ids=[section.serialize() for section in sections]
-        )
         self._intersect_tracks_with_sections()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
@@ -270,9 +267,6 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self.refresh_items_on_canvas()
         self._treeview_flows.update_items()
-        self._treeview_flows.update_selected_items(
-            item_ids=[flow.serialize() for flow in flows]
-        )
 
     def _notify_action_running_state(self, running: bool) -> None:
         if not self._frame_flows:
