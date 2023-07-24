@@ -7,11 +7,12 @@ from pandas import DataFrame
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import ObservableProperty, TrackViewState
-from OTAnalytics.domain import track
 from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.track import (
+    CLASSIFICATION,
+    OCCURRENCE,
     TRACK_ID,
     Detection,
     Track,
@@ -374,9 +375,7 @@ class TestDataFrameProviderFilter:
         result = df_filter.get_data()
         result == filter_result
 
-        filter_builder.set_classification_column.assert_called_once_with(
-            track.CLASSIFICATION
-        )
+        filter_builder.set_classification_column.assert_called_once_with(CLASSIFICATION)
         observable_filter_element.get.assert_called_once()
         filter_element.build_filter.assert_called_once_with(filter_builder)
         filter_imp.apply.assert_called_once_with([filter_input])
@@ -396,7 +395,7 @@ class TestDataFrameProviderFilter:
         result = df_filter.get_data()
         result == filter_result
 
-        filter_builder.set_occurrence_column.assert_called_once_with(track.OCCURRENCE)
+        filter_builder.set_occurrence_column.assert_called_once_with(OCCURRENCE)
         observable_filter_element.get.assert_called_once()
         filter_element.build_filter.assert_called_once_with(filter_builder)
         filter_imp.apply.assert_called_once_with([filter_input])
