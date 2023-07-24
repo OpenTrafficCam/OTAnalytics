@@ -253,9 +253,6 @@ class DummyViewModel(
             initial_position=self._window.get_position(),
         )
         self._application.intersect_tracks_with_sections()
-
-        start_msg_popup.update_message(message="Creating events completed")
-        sleep(1)
         start_msg_popup.close()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
