@@ -126,7 +126,6 @@ class TestCachedPandasTrackProvider:
 
         assert provider._cache_df.empty
         result = provider._convert_tracks(init_tracks)
-        assert result is not None
         assert result is provider._cache_df
         self.check_expected_ids(provider, init_tracks)
 
