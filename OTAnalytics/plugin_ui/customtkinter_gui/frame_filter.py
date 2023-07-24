@@ -599,6 +599,8 @@ class DateRow(CTkFrame):
 
     def trace_add(self, callback: Callable[[str, str, str], object]) -> None:
         self._hour_var.trace_add("write", callback=callback)
+        self._minute_var.trace_add("write", callback=callback)
+        self._second_var.trace_add("write", callback=callback)
 
 
 class FilterTracksbyClassificationButton(FilterButton):

@@ -72,7 +72,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def update_project(self, name: str, start_date: datetime) -> None:
+    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
         pass
 
     @abstractmethod
