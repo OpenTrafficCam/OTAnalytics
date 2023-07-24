@@ -22,6 +22,9 @@ RIGHT_KEY = "right"
 PLUS_KEYS = "+"
 MINUS_KEYS = "-"
 
+STATE_DISABLED = "disabled"
+STATE_NORMAL = "normal"
+
 
 @dataclass
 class TkEvents:
@@ -41,6 +44,7 @@ class TkEvents:
     )
     LEFT_BUTTON_DOWN: ClassVar[str] = "<Button-1>"
     LEFT_BUTTON_UP: ClassVar[str] = "<ButtonRelease-1>"
+    LEFT_BUTTON_DOUBLE: ClassVar[str] = "<Double-1>"
     MOUSE_MOTION: ClassVar[str] = "<Motion>"
     MOUSE_MOTION_WHILE_LEFT_BUTTON_DOWN: ClassVar[str] = "<B1-Motion>"
     MOUSE_ENTERS_WIDGET: ClassVar[str] = "<Enter>"
@@ -57,6 +61,9 @@ class TkEvents:
     DELETE_KEY: ClassVar[str] = "<Delete>"
     BACKSPACE_KEY: ClassVar[str] = "<BackSpace>"
     ESCAPE_KEY: ClassVar[str] = "<Escape>"
+    MULTI_SELECT_SINGLE: ClassVar[str] = (
+        "<Command-ButtonRelease-1>" if ON_MAC else "<Control-ButtonRelease-1>"
+    )
 
 
 tk_events = TkEvents()

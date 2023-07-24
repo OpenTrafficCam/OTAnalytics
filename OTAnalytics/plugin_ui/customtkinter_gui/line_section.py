@@ -3,10 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.adapter_ui.abstract_frame_flows import (
-    InnerSegmentsCenterCalculator,
-    SectionRefPointCalculator,
-)
+from OTAnalytics.adapter_ui.abstract_frame_flows import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import Section
@@ -17,12 +14,13 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     LEFT_BUTTON_UP,
     LEFT_KEY,
     MOTION,
+    MOTION_WHILE_LEFT_BUTTON_DOWN,
     PLUS_KEYS,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
     RIGHT_KEY,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import coordinate_is_on_widget
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     KNOB,
     KNOB_CORE,
@@ -56,12 +54,13 @@ class ArrowPainter:
         self,
         start_section: Section,
         end_section: Section,
+        start_refpt_calculator: SectionRefPointCalculator,
+        end_refpt_calculator: SectionRefPointCalculator,
         arrow_style: dict | None = None,
-        refpt_calculator: SectionRefPointCalculator = InnerSegmentsCenterCalculator(),
         tags: list[str] | None = None,
     ) -> None:
-        start_x, start_y = refpt_calculator.get_reference_point(start_section)
-        end_x, end_y = refpt_calculator.get_reference_point(end_section)
+        start_x, start_y = start_refpt_calculator.get_reference_point(start_section)
+        end_x, end_y = end_refpt_calculator.get_reference_point(end_section)
         self._canvas.create_line(
             start_x,
             start_y,
@@ -82,6 +81,7 @@ class SectionPainter:
         id: str,
         coordinates: list[tuple[int, int]],
         section_style: dict,
+        is_area_section: bool = False,
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,
         text: str | None = None,
@@ -94,6 +94,9 @@ class SectionPainter:
                 Shall be unique among all sections on the canvas.
             coordinates (list[tuple[int, int]]): Knob coordinates that define a section.
             section_style (dict): Dict of style options for tkinter canvas items.
+            area_section (bool): True, if the section is an area section.
+                False if the seciton is a line section.
+                Defaults to False.
             highlighted_knob_index (int | None, optional): Index of a knob coordinate
                 that should be highlighted with a unique style.
                 Defaults to None.
@@ -110,6 +113,7 @@ class SectionPainter:
         self._draw_geometries(
             coordinates,
             section_style,
+            is_area_section,
             highlighted_knob_index,
             highlighted_knob_style,
             tkinter_tags,
@@ -123,6 +127,7 @@ class SectionPainter:
         self,
         coordinates: list[tuple[int, int]],
         section_style: dict,
+        is_area_section: bool,
         highlighted_knob_index: int | None,
         highlighted_knob_style: dict | None,
         tkinter_tags: tuple[str, ...],
@@ -147,6 +152,9 @@ class SectionPainter:
             if knob_style is not None:
                 self._draw_knob(tkinter_tags, index, coordinate, knob_style)
             start = coordinate
+
+        if is_area_section and len(coordinates) > 2:
+            self._extend_to_polygon(coordinates, section_style, tkinter_tags)
 
     def _draw_knob(
         self,
@@ -191,6 +199,23 @@ class SectionPainter:
             tags=tags,
         )
 
+    def _extend_to_polygon(
+        self,
+        coordinates: list[tuple[int, int]],
+        section_style: dict,
+        tkinter_tags: tuple[str, ...],
+    ) -> None:
+        start = coordinates[-1]
+        end = coordinates[0]
+        self._canvas.create_line(
+            start[0],
+            start[1],
+            end[0],
+            end[1],
+            tags=tkinter_tags + (LINE,),
+            **section_style[LINE],
+        )
+
     def _draw_text(
         self,
         text: str,
@@ -215,6 +240,23 @@ class CanvasElementDeleter:
         self._canvas.delete(tag_or_id)
 
 
+def add_last_coordinate(
+    is_area_section: bool, coordinates: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    """
+    For area sections, the first and last coordinate are equal. Therefore, this
+    method addds the first coordinate as the last one, if the section is an area.
+
+    Args:
+        is_area_section (bool): should coordinates form an area
+        coordinates (list[tuple[int, int]]): coordinates to form a line or an area
+
+    Returns:
+        list[tuple[int, int]]: coordinates to forma a line or an area
+    """
+    return coordinates + [coordinates[0]] if is_area_section else coordinates
+
+
 class SectionGeometryEditor(CanvasObserver):
     def __init__(
         self,
@@ -225,10 +267,12 @@ class SectionGeometryEditor(CanvasObserver):
         pre_edit_section_style: dict,
         selected_knob_style: dict,
         hovered_knob_style: dict | None = None,
+        is_area_section: bool = False,
     ) -> None:
         self._viewmodel = viewmodel
         self._canvas = canvas
         self._section = section
+        self._is_area_section = is_area_section
         self._edited_section_style = edited_section_style
         self._pre_edit_section_style = pre_edit_section_style
         self._hovered_knob_style = hovered_knob_style
@@ -252,19 +296,37 @@ class SectionGeometryEditor(CanvasObserver):
             id=self._pre_edit_id,
             coordinates=self._temporary_coordinates,
             section_style=self._pre_edit_section_style,
+            is_area_section=self._is_area_section,
         )
         self.painter.draw(
             id=self._temporary_id,
             coordinates=self._temporary_coordinates,
             section_style=self._edited_section_style,
+            is_area_section=self._is_area_section,
         )
 
     def _get_coordinates(self) -> None:
-        self._coordinates = [
+        coordinates = [
             (int(coordinate.x), int(coordinate.y))
             for coordinate in self._section.get_coordinates()
         ]
+        self._coordinates = self.drop_last_coordinate(coordinates)
         self._temporary_coordinates = self._coordinates.copy()
+
+    def drop_last_coordinate(
+        self, coordinates: list[tuple[int, int]]
+    ) -> list[tuple[int, int]]:
+        """
+        If the section is an area section, the first and the last coordinates are same.
+        To visualize an area section, the last coordinate has to be removed.
+
+        Args:
+            coordinates (list[tuple[int, int]]): coordinates to visualize
+
+        Returns:
+            list[tuple[int, int]]: coordinates to visualize
+        """
+        return coordinates[:-1] if self._is_area_section else coordinates
 
     def _get_name(self) -> None:
         self._name = self._section.id.id
@@ -301,9 +363,14 @@ class SectionGeometryEditor(CanvasObserver):
             self._shift_selected_knob_backward()
         elif event_type == RIGHT_KEY:
             self._shift_selected_knob_forward()
-        elif event_type == MOTION:
+        elif event_type in [
+            MOTION,
+            MOTION_WHILE_LEFT_BUTTON_DOWN,
+        ] and coordinate_is_on_widget(coordinate, self._canvas):
             self._move_knob(coordinate)
-        elif event_type == LEFT_BUTTON_UP:
+        elif event_type == LEFT_BUTTON_UP and coordinate_is_on_widget(
+            coordinate, self._canvas
+        ):
             self._update_knob(coordinate)
             self._deselect_knob()
         elif event_type == DELETE_KEYS:
@@ -359,10 +426,16 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _shift_selected_knob_forward(self) -> None:
         i = self._selected_knob_index
-        if i is None or i >= len(self._temporary_coordinates) - 1:
+        if i is None or i > len(self._temporary_coordinates) - 1:
             return
-        self._swap_temporary_coordinates(index=i, index_other=i + 1)
-        self._selected_knob_index = i + 1
+        elif i == len(self._temporary_coordinates) - 1:
+            if not self._is_area_section:
+                return
+            self._swap_temporary_coordinates(index=i, index_other=0)
+            self._selected_knob_index = 0
+        else:
+            self._swap_temporary_coordinates(index=i, index_other=i + 1)
+            self._selected_knob_index = i + 1
         self._redraw_temporary_section(
             highlighted_knob_index=self._selected_knob_index,
             highlighted_knob_style=self._selected_knob_style,
@@ -370,10 +443,18 @@ class SectionGeometryEditor(CanvasObserver):
 
     def _shift_selected_knob_backward(self) -> None:
         i = self._selected_knob_index
-        if i is None or i == 0:
+        if i is None or i < 0:
             return
-        self._swap_temporary_coordinates(index=i, index_other=i - 1)
-        self._selected_knob_index = i - 1
+        elif i == 0:
+            if not self._is_area_section:
+                return
+            self._swap_temporary_coordinates(
+                index=i, index_other=len(self._temporary_coordinates) - 1
+            )
+            self._selected_knob_index = len(self._temporary_coordinates) - 1
+        else:
+            self._swap_temporary_coordinates(index=i, index_other=i - 1)
+            self._selected_knob_index = i - 1
         self._redraw_temporary_section(
             highlighted_knob_index=self._selected_knob_index,
             highlighted_knob_style=self._selected_knob_style,
@@ -456,6 +537,7 @@ class SectionGeometryEditor(CanvasObserver):
             section_style=self._edited_section_style,
             highlighted_knob_index=highlighted_knob_index,
             highlighted_knob_style=highlighted_knob_style,
+            is_area_section=self._is_area_section,
         )
 
     def _finish(self) -> None:
@@ -467,7 +549,8 @@ class SectionGeometryEditor(CanvasObserver):
         return Coordinate(coordinate[0], coordinate[1])
 
     def _update_section(self) -> None:
-        self._viewmodel.update_section_coordinates(self._metadata, self._coordinates)
+        coordinates = add_last_coordinate(self._is_area_section, self._coordinates)
+        self._viewmodel.update_section_coordinates(self._metadata, coordinates)
 
     def _abort(self) -> None:
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
@@ -479,9 +562,11 @@ class SectionGeometryBuilder:
         self,
         observer: SectionGeometryBuilderObserver,
         canvas: AbstractCanvas,
+        is_area_section: bool,
         style: dict,
     ) -> None:
         self._observer = observer
+        self._is_area_section = is_area_section
         self._style = style
 
         self.painter = SectionPainter(canvas=canvas)
@@ -496,6 +581,7 @@ class SectionGeometryBuilder:
             id=self._temporary_id,
             coordinates=self._coordinates + [coordinate],
             section_style=self._style,
+            is_area_section=self._is_area_section,
         )
 
     def number_of_coordinates(self) -> int:
@@ -510,6 +596,7 @@ class SectionGeometryBuilder:
             id=self._temporary_id,
             coordinates=self._coordinates,
             section_style=self._style,
+            is_area_section=self._is_area_section,
         )
         self._observer.finish_building(self._coordinates)
         self.deleter.delete(tag_or_id=TEMPORARY_SECTION_ID)
@@ -524,16 +611,19 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         viewmodel: ViewModel,
         canvas: AbstractCanvas,
         style: dict,
+        is_area_section: bool = False,
         section: Optional[Section] = None,
     ) -> None:
         self._viewmodel = viewmodel
         self._canvas = canvas
         self._style = style
+        self._is_area_section = is_area_section
         self.attach_to(self._canvas.event_handler)
         self.geometry_builder = SectionGeometryBuilder(
             observer=self,
             canvas=self._canvas,
             style=self._style,
+            is_area_section=self._is_area_section,
         )
         self._id: Optional[str] = None
         self._name: Optional[str] = None
@@ -562,9 +652,14 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
             key (str | None): Key character that has been pressed while mouse was on
                 canvas.
         """
-        if event_type == LEFT_BUTTON_UP:
+        if event_type == LEFT_BUTTON_UP and coordinate_is_on_widget(
+            coordinate, self._canvas
+        ):
             self.geometry_builder.add_coordinate(coordinate)
-        elif event_type == MOTION:
+        elif event_type in [
+            MOTION,
+            MOTION_WHILE_LEFT_BUTTON_DOWN,
+        ] and coordinate_is_on_widget(coordinate, self._canvas):
             self.geometry_builder.add_temporary_coordinate(coordinate)
         elif self.geometry_builder.number_of_coordinates() >= 2 and (
             event_type in {RIGHT_BUTTON_UP, RETURN_KEY}
@@ -591,12 +686,15 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         self._create_section()
 
     def _get_metadata(self) -> dict:
-        toplevel_position = get_widget_position(widget=self._canvas)
+        toplevel_position = self._canvas.get_position()
         return self._viewmodel.get_section_metadata(
             title="Add section", initial_position=toplevel_position
         )
 
     def _create_section(self) -> None:
+        coordinates = add_last_coordinate(self._is_area_section, self._coordinates)
         self._viewmodel.add_new_section(
-            self._coordinates, get_metadata=self._get_metadata
+            coordinates=coordinates,
+            is_area_section=self._is_area_section,
+            get_metadata=self._get_metadata,
         )

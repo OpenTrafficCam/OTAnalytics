@@ -755,8 +755,8 @@ class OttrkVideoParser(TrackVideoParser):
         content = _parse_bz2(file)
         metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
         video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
-        video_file_path = self._video_parser.parse(file.parent / video_file)
-        return track_ids, [video_file_path] * len(track_ids)
+        video = self._video_parser.parse(file.parent / video_file)
+        return track_ids, [video] * len(track_ids)
 
 
 class OtEventListParser(EventListParser):

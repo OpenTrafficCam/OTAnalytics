@@ -1,9 +1,19 @@
+from abc import ABC
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-from OTAnalytics.application.analysis import RunIntersect, RunSceneEventDetection
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.analysis.intersect import (
+    RunIntersect,
+    RunSceneEventDetection,
+)
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+    ExportCounts,
+    ExportFormat,
+)
+from OTAnalytics.application.datastore import Datastore, EventListExporter
+from OTAnalytics.application.generate_flows import GenerateFlows
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -13,6 +23,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
 from OTAnalytics.domain.flow import (
     Flow,
@@ -29,8 +40,9 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepository,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.video import Video, VideoListObserver
 
 
 class SectionAlreadyExists(Exception):
@@ -46,6 +58,14 @@ class CancelAddFlow(Exception):
 
 
 class FlowAlreadyExists(Exception):
+    pass
+
+
+class MultipleSectionsSelected(Exception):
+    pass
+
+
+class MultipleFlowsSelected(Exception):
     pass
 
 
@@ -99,6 +119,34 @@ class AddFlow:
         )
 
 
+class ClearEventRepository(SectionListObserver, TrackListObserver):
+    """Clears the event repository also on section state changes.
+
+    Args:
+        event_repository (EventRepository): the event repository
+    """
+
+    def __init__(self, event_repository: EventRepository) -> None:
+        self._event_repository = event_repository
+
+    def clear(self) -> None:
+        self._event_repository.clear()
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        self.clear()
+
+    def notify_tracks(self, tracks: list[TrackId]) -> None:
+        self.clear()
+
+    def on_section_changed(self, section_id: SectionId) -> None:
+        self.clear()
+
+
+class IntersectTracksWithSections(ABC):
+    def run(self) -> None:
+        raise NotImplementedError
+
+
 class OTAnalyticsApplication:
     """
     Entrypoint for calls from the UI.
@@ -116,6 +164,9 @@ class OTAnalyticsApplication:
         tracks_metadata: TracksMetadata,
         action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
+        generate_flows: GenerateFlows,
+        intersect_tracks_with_sections: IntersectTracksWithSections,
+        export_counts: ExportCounts,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -129,6 +180,12 @@ class OTAnalyticsApplication:
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
         self._add_flow = AddFlow(self._datastore._flow_repository)
+        self._generate_flows = generate_flows
+        self._intersect_tracks_with_sections = intersect_tracks_with_sections
+        self._clear_event_repository = ClearEventRepository(
+            self._datastore._event_repository
+        )
+        self._export_counts = export_counts
 
     def connect_observers(self) -> None:
         """
@@ -137,6 +194,16 @@ class OTAnalyticsApplication:
         self._datastore.register_tracks_observer(self.track_state)
         self._datastore.register_tracks_observer(self._tracks_metadata)
         self._datastore.register_sections_observer(self.section_state)
+
+    def connect_clear_event_repository_observer(self) -> None:
+        self._datastore.register_sections_observer(self._clear_event_repository)
+        self._datastore.register_section_changed_observer(
+            self._clear_event_repository.on_section_changed
+        )
+        self._datastore.register_tracks_observer(self._clear_event_repository)
+
+    def register_video_observer(self, observer: VideoListObserver) -> None:
+        self._datastore.register_video_observer(observer)
 
     def register_sections_observer(self, observer: SectionListObserver) -> None:
         self._datastore.register_sections_observer(observer)
@@ -161,18 +228,21 @@ class OTAnalyticsApplication:
     def add_videos(self, files: list[Path]) -> None:
         self._datastore.load_video_files(files)
 
-    def remove_video(self) -> None:
+    def remove_videos(self) -> None:
         """
-        Remove the currently selected video from the repository.
+        Remove the currently selected videos from the repository.
         """
-        if video := self.track_view_state.selected_video.get():
-            self._datastore.remove_video(video)
+        if videos := self.track_view_state.selected_videos.get():
+            self._datastore.remove_videos(videos)
             if videos := self._datastore.get_all_videos():
-                self.track_view_state.selected_video.set(videos[0])
+                self.track_view_state.selected_videos.set([videos[0]])
             else:
-                self.track_view_state.selected_video.set(None)
+                self.track_view_state.selected_videos.set([])
 
-    def get_all_flows(self) -> Iterable[Flow]:
+    def get_all_videos(self) -> list[Video]:
+        return self._datastore.get_all_videos()
+
+    def get_all_flows(self) -> list[Flow]:
         return self._datastore.get_all_flows()
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
@@ -199,11 +269,26 @@ class OTAnalyticsApplication:
     def add_flow(self, flow: Flow) -> None:
         self._add_flow.add(flow)
 
+    def generate_flows(self) -> None:
+        self._generate_flows.generate()
+
     def remove_flow(self, flow_id: FlowId) -> None:
         self._datastore.remove_flow(flow_id)
 
     def update_flow(self, flow: Flow) -> None:
         self._datastore.update_flow(flow)
+
+    def save_configuration(self, file: Path) -> None:
+        self._datastore._config_parser.serialize(
+            project=self._datastore.project,
+            video_files=self.get_all_videos(),
+            sections=self.get_all_sections(),
+            flows=self.get_all_flows(),
+            file=file,
+        )
+
+    def load_configuration(self, file: Path) -> None:
+        self._datastore.load_configuration_file(file)
 
     def add_tracks_of_file(self, track_file: Path) -> None:
         """
@@ -248,7 +333,7 @@ class OTAnalyticsApplication:
         """
         return self._datastore.is_flow_using_section(section)
 
-    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+    def flows_using_section(self, section: SectionId) -> list[Flow]:
         """
         Returns a list of flows using the section as start or end.
 
@@ -339,7 +424,7 @@ class OTAnalyticsApplication:
         """
         return self._datastore.get_image_of_track(track_id)
 
-    def start_analysis(self) -> None:
+    def create_events(self) -> None:
         """
         Intersect all tracks with all sections and write the events into the event
         repository
@@ -347,10 +432,14 @@ class OTAnalyticsApplication:
         tracks = self._datastore.get_all_tracks()
         sections = self._datastore.get_all_sections()
         events = self._intersect.run(tracks, sections)
+        self._clear_event_repository.clear()
         self._datastore.add_events(events)
 
         scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
         self._datastore.add_events(scene_events)
+
+    def intersect_tracks_with_sections(self) -> None:
+        self._intersect_tracks_with_sections.run()
 
     def save_events(self, file: Path) -> None:
         """
@@ -360,6 +449,34 @@ class OTAnalyticsApplication:
             file (Path): file to save the events to
         """
         self._datastore.save_event_list_file(file)
+
+    def export_events(self, file: Path, event_list_exporter: EventListExporter) -> None:
+        """
+        Export the event repository into other formats (like CSV or Excel)
+
+        Args:
+            file (Path): File to export the events to
+            event_list_exporter (EventListExporter): Exporter building the format
+        """
+        self._datastore.export_event_list_file(file, event_list_exporter)
+
+    def get_supported_export_formats(self) -> Iterable[ExportFormat]:
+        """
+        Returns an iterable of the supported export formats.
+
+        Returns:
+            Iterable[ExportFormat]: supported export formats
+        """
+        return self._export_counts.get_supported_formats()
+
+    def export_counts(self, specification: CountingSpecificationDto) -> None:
+        """
+        Export the traffic countings based on the currently available events and flows.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the export
+        """
+        self._export_counts.export(specification)
 
     def change_track_offset_to_section_offset(
         self, event_type: EventType = EventType.SECTION_ENTER
@@ -372,28 +489,28 @@ class OTAnalyticsApplication:
             event_type (EventType, optional): event type of the offset at the section.
             Defaults to EventType.SECTION_ENTER.
         """
-        if section_id := self.section_state.selected_section.get():
-            if section := self._datastore.get_section_for(section_id):
+        if len(section_id := self.section_state.selected_sections.get()) == 1:
+            if section := self._datastore.get_section_for(section_id[0]):
                 if offset := section.relative_offset_coordinates.get(event_type):
                     self.track_view_state.track_offset.set(offset)
 
-    def set_selected_section(self, id: Optional[str]) -> None:
+    def set_selected_section(self, ids: list[str]) -> None:
         """Set the current selected section in the UI.
 
         Args:
             id (Optional[str]): the id of the currently selected section
         """
-        section_id = SectionId(id) if id else None
-        self.section_state.selected_section.set(section_id)
+        section_ids = [SectionId(id) for id in ids]
+        self.section_state.selected_sections.set(section_ids)
 
-    def set_selected_flow(self, id: Optional[str]) -> None:
+    def set_selected_flows(self, ids: list[str]) -> None:
         """Set the current selected flow in the UI.
 
         Args:
             id (Optional[str]): the id of the currently selected flow
         """
-        flow_id = FlowId(id) if id else None
-        self.flow_state.selected_flow.set(flow_id)
+        flow_ids = [FlowId(id) for id in ids]
+        self.flow_state.selected_flows.set(flow_ids)
 
     def get_current_track_offset(self) -> Optional[RelativeOffsetCoordinate]:
         """Get the current track offset.

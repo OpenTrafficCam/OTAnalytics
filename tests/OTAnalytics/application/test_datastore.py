@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Any, Sequence
-from unittest.mock import Mock, call
+from unittest.mock import MagicMock, Mock, call
 
 import pytest
 from numpy import array, int32
@@ -21,6 +21,7 @@ from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import (
     LineSection,
     Section,
@@ -129,6 +130,11 @@ def config_parser() -> Mock:
     return Mock(spec=ConfigParser)
 
 
+@pytest.fixture
+def progressbar() -> Mock:
+    return Mock(spec=ProgressbarBuilder)
+
+
 class TestDatastore:
     def test_load_config_file(
         self,
@@ -143,6 +149,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        progressbar: Mock,
         config_parser: Mock,
     ) -> None:
         store = Datastore(
@@ -157,6 +164,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            progressbar=progressbar,
             config_parser=config_parser,
         )
         project: Project = Mock(spec=Project)
@@ -198,6 +206,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        progressbar: Mock,
         config_parser: Mock,
     ) -> None:
         some_track = Mock()
@@ -206,6 +215,14 @@ class TestDatastore:
         some_video = SimpleVideo(video_reader=Mock(), path=Path(""))
         track_parser.parse.return_value = [some_track]
         track_video_parser.parse.return_value = [some_track_id], [some_video]
+
+        order = MagicMock()
+        order.track_parser = track_parser
+        order.track_video_parser = track_video_parser
+        order.video_repository = video_repository
+        order.track_repository = track_repository
+        order.track_to_video_repository = track_to_video_repository
+
         store = Datastore(
             track_repository=track_repository,
             track_parser=track_parser,
@@ -218,17 +235,20 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            progressbar=progressbar,
             config_parser=config_parser,
         )
         some_file = Path("some.file.ottrk")
 
         store.load_track_file(some_file)
 
-        track_parser.parse.assert_called_with(some_file)
-        track_video_parser.parse.assert_called_with(some_file, [some_track_id])
-        track_repository.add_all.assert_called_with([some_track])
-
-        track_to_video_repository.add.called_with(some_track_id, some_video)
+        assert order.mock_calls == [
+            call.track_parser.parse(some_file),
+            call.track_video_parser.parse(some_file, [some_track_id]),
+            call.video_repository.add_all([some_video]),
+            call.track_to_video_repository.add_all([some_track_id], [some_video]),
+            call.track_repository.add_all([some_track]),
+        ]
 
     def test_load_track_files(
         self,
@@ -243,6 +263,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        progressbar: Mock,
         config_parser: Mock,
     ) -> None:
         some_track = Mock()
@@ -270,10 +291,12 @@ class TestDatastore:
             video_repository=video_repository,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            progressbar=progressbar,
             config_parser=config_parser,
         )
         some_file = Path("some.file.ottrk")
         other_file = Path("other.file.ottrk")
+        progressbar.return_value = [some_file, other_file]
 
         store.load_track_files([some_file, other_file])
 
@@ -301,6 +324,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        progressbar: Mock,
         config_parser: Mock,
     ) -> None:
         track_parser.parse.return_value = []
@@ -317,6 +341,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            progressbar=progressbar,
             config_parser=config_parser,
         )
         some_file = Mock()
@@ -349,6 +374,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        progressbar: Mock,
         config_parser: Mock,
     ) -> None:
         track_parser.parse.return_value = []
@@ -365,6 +391,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            progressbar=progressbar,
             config_parser=config_parser,
         )
         some_file = Mock()
@@ -386,6 +413,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        progressbar: Mock,
         config_parser: Mock,
     ) -> None:
         store = Datastore(
@@ -400,6 +428,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            progressbar=progressbar,
             config_parser=config_parser,
         )
         section_id = SectionId("my section")
@@ -427,6 +456,7 @@ class TestDatastore:
         event_list_parser: Mock,
         video_repository: Mock,
         track_to_video_repository: Mock,
+        progressbar: Mock,
         config_parser: Mock,
     ) -> None:
         store = Datastore(
@@ -441,6 +471,7 @@ class TestDatastore:
             video_parser=video_parser,
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
+            progressbar=progressbar,
             config_parser=config_parser,
         )
         section_id = SectionId("my section")

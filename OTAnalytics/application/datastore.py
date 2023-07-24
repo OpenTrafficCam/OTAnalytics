@@ -14,6 +14,7 @@ from OTAnalytics.domain.flow import (
     FlowListObserver,
     FlowRepository,
 )
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
@@ -217,6 +218,29 @@ class NoSectionsToSave(Exception):
     pass
 
 
+class EventListExporter(ABC):
+    """
+    Export the events (and sections) from their repostories to external file formats
+    like CSV or Excel.
+    Theese formats are not meant to be imported again, cause during export,
+    information will be lost.
+    """
+
+    @abstractmethod
+    def export(
+        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_extension(self) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_name(self) -> str:
+        raise NotImplementedError
+
+
 class Datastore:
     """
     Central element to hold data in the application.
@@ -235,6 +259,7 @@ class Datastore:
         video_repository: VideoRepository,
         video_parser: VideoParser,
         track_video_parser: TrackVideoParser,
+        progressbar: ProgressbarBuilder,
         config_parser: ConfigParser,
     ) -> None:
         self._track_parser = track_parser
@@ -248,6 +273,7 @@ class Datastore:
         self._event_repository = event_repository
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
+        self._progressbar = progressbar
         self._config_parser = config_parser
         self.project = Project(name="", start_date=datetime.now())
 
@@ -289,25 +315,25 @@ class Datastore:
         self._video_repository.clear()
 
     def load_video_files(self, files: list[Path]) -> None:
-        exception_messages = []
+        raised_exceptions: list[Exception] = []
         videos = []
         for file in files:
             try:
                 videos.append(self._video_parser.parse(file))
-            except Exception as e:
-                exception_messages.append(str(e) + "\n")
-        if exception_messages:
-            raise OurCustomGroupException("\n".join(exception_messages))
+            except Exception as cause:
+                raised_exceptions.append(cause)
+        if raised_exceptions:
+            raise OurCustomGroupException(raised_exceptions)
         self._video_repository.add_all(videos)
 
-    def remove_video(self, video: Video) -> None:
+    def remove_videos(self, videos: list[Video]) -> None:
         """
-        Remove a video from the repository.
+        Remove videos from the repository.
 
         Args:
-            video (Video): video to remove
+            videos (Video): videos to remove
         """
-        self._video_repository.remove(video)
+        self._video_repository.remove(videos)
 
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         """
@@ -328,6 +354,7 @@ class Datastore:
         tracks = self._track_parser.parse(file)
         track_ids = [track.id for track in tracks]
         track_ids, videos = self._track_video_parser.parse(file, track_ids)
+        self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
 
@@ -338,14 +365,16 @@ class Datastore:
         Args:
             file (Path): file in ottrk format
         """
-        exception_messages = []
-        for file in files:
+        raised_exceptions: list[Exception] = []
+        for file in self._progressbar(
+            files, unit="files", description="Processed ottrk files: "
+        ):
             try:
                 self.load_track_file(file)
-            except Exception as e:
-                exception_messages.append(str(e) + "\n")
-        if exception_messages:
-            raise OurCustomGroupException("\n".join(exception_messages))
+            except Exception as cause:
+                raised_exceptions.append(cause)
+        if raised_exceptions:
+            raise OurCustomGroupException(raised_exceptions)
 
     def get_all_tracks(self) -> list[Track]:
         """
@@ -394,7 +423,7 @@ class Datastore:
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
         return self._section_repository.get(section_id)
 
-    def get_all_flows(self) -> Iterable[Flow]:
+    def get_all_flows(self) -> list[Flow]:
         return self._flow_repository.get_all()
 
     def get_flow_for(self, flow_id: FlowId) -> Optional[Flow]:
@@ -428,6 +457,22 @@ class Datastore:
             file=file,
         )
 
+    def export_event_list_file(
+        self, file: Path, event_list_exporter: EventListExporter
+    ) -> None:
+        """
+        Export events from the event list to other formats (like CSV or Excel).
+
+        Args:
+            file (Path): File to export events to
+            event_list_exporter (EventListExporter): Exporter building the format
+        """
+        event_list_exporter.export(
+            events=self._event_repository.get_all(),
+            sections=self._section_repository.get_all(),
+            file=file,
+        )
+
     def is_flow_using_section(self, section: SectionId) -> bool:
         """
         Checks if the section id is used by flows.
@@ -440,7 +485,7 @@ class Datastore:
         """
         return self._flow_repository.is_flow_using_section(section)
 
-    def flows_using_section(self, section: SectionId) -> list[FlowId]:
+    def flows_using_section(self, section: SectionId) -> list[Flow]:
         """
         Returns a list of flows using the section as start or end.
 

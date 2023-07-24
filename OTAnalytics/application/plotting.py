@@ -1,12 +1,72 @@
-from typing import Optional
+from abc import abstractmethod
+from typing import Callable, Optional, Sequence
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import Plotter, TrackViewState
+from OTAnalytics.application.state import ObservableProperty, Plotter, TrackViewState
 from OTAnalytics.domain.track import TrackImage
 
 
+class Layer:
+    @abstractmethod
+    def get_name(self) -> str:
+        """Get the name of the layer.
+
+        Returns:
+            str: the name.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_enabled(self, enabled: bool) -> None:
+        """Disable or enable the layer.
+
+        Args:
+            enabled (bool): `True` to enable. `False` to disable.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_enabled(self) -> bool:
+        """Returns wether layer is enabled."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def register(self, observer: Callable[[bool], None]) -> None:
+        """Register observer to layer to get notifications on layer enabled state
+        changes.
+        """
+        raise NotImplementedError
+
+
+class PlottingLayer(Plotter, Layer):
+    def __init__(self, name: str, other: Plotter, enabled: bool) -> None:
+        self._name = name
+        self._other = other
+        self._enabled: ObservableProperty[bool] = ObservableProperty[bool](enabled)
+
+    def plot(self) -> Optional[TrackImage]:
+        """Plots layer if enabled.
+
+        Returns:
+            Optional[TrackImage]: the image that the layer has been plotted onto.
+        """
+        return self._other.plot() if self._enabled.get() else None
+
+    def get_name(self) -> str:
+        return self._name
+
+    def set_enabled(self, enabled: bool) -> None:
+        self._enabled.set(enabled)
+
+    def is_enabled(self) -> bool:
+        return self._enabled.get()
+
+    def register(self, observer: Callable[[bool], None]) -> None:
+        self._enabled.register(observer)
+
+
 class LayeredPlotter(Plotter):
-    def __init__(self, layers: list[Plotter]) -> None:
+    def __init__(self, layers: Sequence[PlottingLayer]) -> None:
         self._layers = layers
         self._current_image: Optional[TrackImage] = None
 
@@ -32,6 +92,7 @@ class TrackBackgroundPlotter(Plotter):
         self._datastore = datastore
 
     def plot(self) -> Optional[TrackImage]:
-        if video := self._track_view_state.selected_video.get():
-            return video.get_frame(0)
+        if videos := self._track_view_state.selected_videos.get():
+            if len(videos) > 0:
+                return videos[0].get_frame(0)
         return None

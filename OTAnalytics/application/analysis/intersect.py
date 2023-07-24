@@ -32,7 +32,9 @@ class RunIntersect:
         )
 
     def _run_on_single_track(
-        self, track: Track, sections: Iterable[Section]
+        self,
+        track: Track,
+        sections: Iterable[Section],
     ) -> list[Event]:
         events: list[Event] = []
         for _section in sections:
@@ -46,8 +48,6 @@ class RunIntersect:
                     intersector=line_section_intersector,
                     section_event_builder=section_event_builder,
                 )
-                _events = section_action_detector._detect(section=_section, track=track)
-                events.extend(_events)
             if isinstance(_section, Area):
                 area_section_intersector = IntersectAreaByTrackPoints(
                     implementation=self._intersect_implementation,
@@ -58,9 +58,9 @@ class RunIntersect:
                     intersector=area_section_intersector,
                     section_event_builder=section_event_builder,
                 )
-                _events = section_action_detector._detect(section=_section, track=track)
-                events.extend(_events)
-
+            events.extend(
+                section_action_detector._detect(section=_section, track=track)
+            )
         return events
 
 
