@@ -14,6 +14,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.generate_flows import GenerateFlows
+from OTAnalytics.application.project import ProjectUpdater
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -187,6 +188,7 @@ class OTAnalyticsApplication:
             self._datastore._event_repository
         )
         self._export_counts = export_counts
+        self._project_updater = ProjectUpdater(datastore)
 
     def connect_observers(self) -> None:
         """
@@ -278,6 +280,9 @@ class OTAnalyticsApplication:
 
     def update_flow(self, flow: Flow) -> None:
         self._datastore.update_flow(flow)
+
+    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
+        self._project_updater(name, start_date)
 
     def save_configuration(self, file: Path) -> None:
         self._datastore._config_parser.serialize(
