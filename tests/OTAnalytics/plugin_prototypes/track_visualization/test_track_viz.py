@@ -86,10 +86,15 @@ class TestPandasTrackProvider:
 
 
 class TestCachedPandasTrackProvider:
-    def create_tracks(self) -> None:
-        """Create two dummy tracks with ids 1 and 2, each 5 detections."""
-        self.track_1 = self.set_up_track(1)
-        self.track_2 = self.set_up_track(2)
+    @pytest.fixture
+    def track_1(self) -> Track:
+        """Create dummy track with id 1 and 5 detections."""
+        return self.set_up_track(1)
+
+    @pytest.fixture
+    def track_2(self) -> Track:
+        """Create dummy track with id 2 and 5 detections."""
+        return self.set_up_track(2)
 
     def set_up_track(self, id: int) -> Track:
         """Create a dummy track with the given id and 5 car detections."""
@@ -148,51 +153,47 @@ class TestCachedPandasTrackProvider:
             for track in expected_tracks:
                 assert track.id.id in cached_ids
 
-    def test_notify_tracks_clear_cache(self) -> None:
+    def test_notify_tracks_clear_cache(self, track_1: Track) -> None:
         """Test clearing cache."""
-        self.create_tracks()
-        provider = self.set_up_provider([self.track_1], [])
+        provider = self.set_up_provider([track_1], [])
 
         provider.notify_tracks([])
         self.check_expected_ids(provider, [])
 
-    def test_notify_update_add(self) -> None:
+    def test_notify_update_add(self, track_1: Track, track_2: Track) -> None:
         """Test adding track to non empty cache."""
-        self.create_tracks()
-        provider = self.set_up_provider([self.track_1], [self.track_2])
+        provider = self.set_up_provider([track_1], [track_2])
 
-        provider.notify_tracks([self.track_2.id])
-        self.check_expected_ids(provider, [self.track_1, self.track_2])
+        provider.notify_tracks([track_2.id])
+        self.check_expected_ids(provider, [track_1, track_2])
 
-    def test_notify_update_add_first(self) -> None:
+    def test_notify_update_add_first(self, track_2: Track) -> None:
         """Test adding first track to cache."""
-        self.create_tracks()
-        provider = self.set_up_provider([], [self.track_2])
+        provider = self.set_up_provider([], [track_2])
 
-        provider.notify_tracks([self.track_2.id])
-        self.check_expected_ids(provider, [self.track_2])
+        provider.notify_tracks([track_2.id])
+        self.check_expected_ids(provider, [track_2])
 
-    def test_notify_update_add_multiple_first(self) -> None:
+    def test_notify_update_add_multiple_first(
+        self, track_2: Track, track_1: Track
+    ) -> None:
         """Test adding first tracks to cache."""
-        self.create_tracks()
-        provider = self.set_up_provider([], [self.track_2, self.track_1])
+        provider = self.set_up_provider([], [track_2, track_1])
 
-        provider.notify_tracks([self.track_2.id, self.track_1.id])
-        self.check_expected_ids(provider, [self.track_2, self.track_1])
+        provider.notify_tracks([track_2.id, track_1.id])
+        self.check_expected_ids(provider, [track_2, track_1])
 
-    def test_notify_update_existing(self) -> None:
-        self.create_tracks()
-        provider = self.set_up_provider([self.track_1, self.track_2], [self.track_1])
+    def test_notify_update_existing(self, track_1: Track, track_2: Track) -> None:
+        provider = self.set_up_provider([track_1, track_2], [track_1])
 
-        provider.notify_tracks([self.track_1.id])
-        self.check_expected_ids(provider, [self.track_1, self.track_2])
+        provider.notify_tracks([track_1.id])
+        self.check_expected_ids(provider, [track_1, track_2])
 
-    def test_notify_update_mixed(self) -> None:
-        self.create_tracks()
-        provider = self.set_up_provider([self.track_2], [self.track_1, self.track_2])
+    def test_notify_update_mixed(self, track_1: Track, track_2: Track) -> None:
+        provider = self.set_up_provider([track_2], [track_1, track_2])
 
-        provider.notify_tracks([self.track_1.id, self.track_2.id])
-        self.check_expected_ids(provider, [self.track_1, self.track_2])
+        provider.notify_tracks([track_1.id, track_2.id])
+        self.check_expected_ids(provider, [track_1, track_2])
 
 
 class TestBackgroundPlotter:
