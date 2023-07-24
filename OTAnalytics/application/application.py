@@ -14,7 +14,6 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.generate_flows import GenerateFlows
-from OTAnalytics.application.project import ProjectUpdater
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -24,6 +23,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
