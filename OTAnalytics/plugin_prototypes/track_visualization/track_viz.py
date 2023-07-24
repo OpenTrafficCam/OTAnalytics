@@ -382,10 +382,10 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
                 )
 
                 # concat remaining tracks and new tracks
-                if filtered_cache is not None:
-                    df = pandas.concat([filtered_cache, new_df])
-                else:
+                if filtered_cache.empty:
                     df = new_df
+                else:
+                    df = pandas.concat([filtered_cache, new_df])
 
                 self._cache_df = self._sort_tracks(df)
 
@@ -402,9 +402,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
             and (t := self._datastore._track_repository.get_for(t_id)) is not None
         ]
 
-    def _cache_without_existing_tracks(
-        self, track_ids: list[TrackId]
-    ) -> DataFrame | None:
+    def _cache_without_existing_tracks(self, track_ids: list[TrackId]) -> DataFrame:
         """Filter cached tracks.
 
         Only keep those not matching the ids in the given list of track_ids.
@@ -414,10 +412,10 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
             track_ids (list[TrackId]): ids of tracks to be removed from cache.
 
         Returns:
-            DataFrame | None: filtered cache or None if it is already empty.
+            DataFrame : filtered cache.
         """
         if self._cache_df.empty:
-            return None
+            return self._cache_df
 
         track_id_nums = [t.id for t in track_ids]
         df = self._cache_df
