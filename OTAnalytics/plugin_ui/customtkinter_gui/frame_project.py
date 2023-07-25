@@ -1,7 +1,7 @@
 import contextlib
 import tkinter
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from customtkinter import CTkEntry, CTkFrame, CTkLabel, ThemeManager
 
@@ -60,16 +60,14 @@ class FrameProject(AbstractFrameProject, CTkFrame):
 
     def _update_project(self, name: str, other: str, mode: str) -> None:
         with contextlib.suppress(InvalidDatetimeFormatError):
-            current = self._start_date_row.get_datetime()
-            self._start_date = current if current else datetime.now()
             self._viewmodel.update_project(
-                name=self._project_name.get(), start_date=self._start_date
+                name=self._project_name.get(),
+                start_date=self._start_date_row.get_datetime(),
             )
 
-    def update(self, name: str, start_date: datetime) -> None:
+    def update(self, name: str, start_date: Optional[datetime]) -> None:
         self._project_name.set(name)
-        self._start_date = start_date
-        self._start_date_row.set_datetime(self._start_date)
+        self._start_date_row.set_datetime(start_date)
 
 
 def get_default_toplevel_fg_color() -> str:

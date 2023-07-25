@@ -37,7 +37,10 @@ from OTAnalytics.application.application import (
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.generate_flows import FlowNameGenerator
-from OTAnalytics.application.project import Project
+from OTAnalytics.application.use_cases.export_events import (
+    EventListExporter,
+    ExporterNotFoundError,
+)
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -63,10 +66,6 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
-    EventListExporter,
-    ExporterNotFoundError,
-)
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
@@ -341,8 +340,8 @@ class DummyViewModel(
         project = self._application._datastore.project
         self._frame_project.update(name=project.name, start_date=project.start_date)
 
-    def update_project(self, name: str, start_date: datetime) -> None:
-        self._application._datastore.project = Project(name=name, start_date=start_date)
+    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
+        self._application.update_project(name, start_date)
 
     def save_configuration(self) -> None:
         title = "Save config file as"

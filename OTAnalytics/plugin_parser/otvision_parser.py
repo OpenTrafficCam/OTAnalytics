@@ -862,6 +862,19 @@ class OtConfigParser(ConfigParser):
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
+        """Serializes the project with the given videos, sections and flows into the
+        file.
+
+        Args:
+            project (Project): description of the project
+            video_files (Iterable[Video]): video files to reference
+            sections (Iterable[Section]): sections to store
+            flows (Iterable[Flow]): flows to store
+            file (Path): output file
+
+        Raises:
+            StartDateMissing: if start date is not configured
+        """
         parent_folder = file.parent
         project_content = project.to_dict()
         video_content = self._video_parser.convert(
