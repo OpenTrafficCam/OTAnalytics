@@ -40,13 +40,17 @@ class Video(ABC):
     ) -> dict:
         """Convert the video object to a dictionary containing the path of the video
         relative to the given path.
+
         Args:
             relative_to (Path): target to build relative paths to
-        Returns:
-            dict: path of the dictionary relative to the given path
-        Throws:
+
+        Raises:
             DifferentDrivesException: if config and videos files are located on
             different drives
+
+        Returns:
+            dict: path of the dictionary relative to the given path
+
         """
         pass
 
@@ -58,9 +62,11 @@ class DifferentDrivesException(Exception):
 @dataclass
 class SimpleVideo(Video):
     """Represents a video file.
+
     Args:
         video_reader (VideoReader): A video reader used to get frames.
         path (Path): the video file path.
+
     Raises:
         ValueError: if video file path does not exist.
     """
@@ -80,8 +86,10 @@ class SimpleVideo(Video):
 
     def get_frame(self, index: int) -> TrackImage:
         """Returns the frame of the video at `index`.
+
         Args:
             index (int): the index of the frame to get.
+
         Returns:
             TrackImage: the frame.
         """
@@ -114,6 +122,7 @@ class VideoListObserver(ABC):
     def notify_videos(self, videos: list[Video]) -> None:
         """
         Notifies that the given videos have been added.
+
         Args:
             tracks (list[Video]): list of added videos
         """
@@ -131,6 +140,7 @@ class VideoListSubject:
     def register(self, observer: VideoListObserver) -> None:
         """
         Listen to events.
+
         Args:
             observer (VideoListObserver): listener to add
         """
@@ -139,6 +149,7 @@ class VideoListSubject:
     def notify(self, videos: list[Video]) -> None:
         """
         Notifies observers about the list of videos.
+
         Args:
             videos (list[Video]): list of added videos
         """
@@ -153,6 +164,7 @@ class VideoRepository:
     def register_videos_observer(self, observer: VideoListObserver) -> None:
         """
         Listen to changes of the repository.
+
         Args:
             observer (VideoListObserver): listener to be notifed about changes
         """
