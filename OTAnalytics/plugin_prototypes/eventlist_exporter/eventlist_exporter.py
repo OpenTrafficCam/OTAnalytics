@@ -3,7 +3,7 @@ from typing import Iterable
 
 import pandas as pd
 
-from OTAnalytics.application.use_cases.event_list_export import EventListExporter
+from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import (
     DIRECTION_VECTOR,
     EVENT_COORDINATE,

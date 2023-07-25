@@ -37,8 +37,7 @@ from OTAnalytics.application.application import (
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.generate_flows import FlowNameGenerator
-from OTAnalytics.application.project import Project
-from OTAnalytics.application.use_cases.event_list_export import (
+from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
 )
@@ -341,8 +340,8 @@ class DummyViewModel(
         project = self._application._datastore.project
         self._frame_project.update(name=project.name, start_date=project.start_date)
 
-    def update_project(self, name: str, start_date: datetime) -> None:
-        self._application._datastore.project = Project(name=name, start_date=start_date)
+    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
+        self._application.update_project(name, start_date)
 
     def save_configuration(self) -> None:
         title = "Save config file as"
