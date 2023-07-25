@@ -411,8 +411,9 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
             return self._cache_df
 
         track_id_nums = [t.id for t in track_ids]
-        df = self._cache_df
-        return df[~df[track.TRACK_ID].isin(track_id_nums)]
+        return self._cache_df.drop(
+            self._cache_df.index[self._cache_df[track.TRACK_ID].isin(track_id_nums)]
+        )
 
 
 class MatplotlibPlotterImplementation(ABC):
