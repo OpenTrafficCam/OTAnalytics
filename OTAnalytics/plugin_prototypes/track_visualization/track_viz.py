@@ -400,7 +400,6 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         """Filter cached tracks.
 
         Only keep those not matching the ids in the given list of track_ids.
-        Return `None` if the current cache is empty.
 
         Args:
             track_ids (list[TrackId]): ids of tracks to be removed from cache.
