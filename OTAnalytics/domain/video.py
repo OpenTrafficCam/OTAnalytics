@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from os import path
+from os.path import normcase, splitdrive
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -37,15 +38,35 @@ class Video(ABC):
         self,
         relative_to: Path,
     ) -> dict:
+        """Convert the video object to a dictionary containing the path of the video
+        relative to the given path.
+
+        Args:
+            relative_to (Path): target to build relative paths to
+
+        Raises:
+            DifferentDrivesException: if config and videos files are located on
+            different drives
+
+        Returns:
+            dict: path of the dictionary relative to the given path
+
+        """
         pass
+
+
+class DifferentDrivesException(Exception):
+    pass
 
 
 @dataclass
 class SimpleVideo(Video):
     """Represents a video file.
+
     Args:
         video_reader (VideoReader): A video reader used to get frames.
         path (Path): the video file path.
+
     Raises:
         ValueError: if video file path does not exist.
     """
@@ -65,8 +86,10 @@ class SimpleVideo(Video):
 
     def get_frame(self, index: int) -> TrackImage:
         """Returns the frame of the video at `index`.
+
         Args:
             index (int): the index of the frame to get.
+
         Returns:
             TrackImage: the frame.
         """
@@ -79,6 +102,14 @@ class SimpleVideo(Video):
         return {PATH: self.__build_relative_path(relative_to)}
 
     def __build_relative_path(self, relative_to: Path) -> str:
+        self_drive, _ = splitdrive(self.path)
+        other_drive, _ = splitdrive(relative_to)
+        if normcase(self_drive) != normcase(other_drive):
+            raise DifferentDrivesException(
+                "Video and config files are stored on different drives. "
+                f"Video file is stored on {self_drive}."
+                f"Configuration is stored on {other_drive}"
+            )
         return path.relpath(self.path, relative_to)
 
 
@@ -91,6 +122,7 @@ class VideoListObserver(ABC):
     def notify_videos(self, videos: list[Video]) -> None:
         """
         Notifies that the given videos have been added.
+
         Args:
             tracks (list[Video]): list of added videos
         """
@@ -108,6 +140,7 @@ class VideoListSubject:
     def register(self, observer: VideoListObserver) -> None:
         """
         Listen to events.
+
         Args:
             observer (VideoListObserver): listener to add
         """
@@ -116,6 +149,7 @@ class VideoListSubject:
     def notify(self, videos: list[Video]) -> None:
         """
         Notifies observers about the list of videos.
+
         Args:
             videos (list[Video]): list of added videos
         """
@@ -130,6 +164,7 @@ class VideoRepository:
     def register_videos_observer(self, observer: VideoListObserver) -> None:
         """
         Listen to changes of the repository.
+
         Args:
             observer (VideoListObserver): listener to be notifed about changes
         """
