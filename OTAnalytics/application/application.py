@@ -22,6 +22,7 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.application.use_cases.config import SaveConfiguration
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
@@ -189,6 +190,9 @@ class OTAnalyticsApplication:
         )
         self._export_counts = export_counts
         self._project_updater = ProjectUpdater(datastore)
+        self._save_configuration = SaveConfiguration(
+            datastore, config_parser=datastore._config_parser
+        )
 
     def connect_observers(self) -> None:
         """
@@ -285,13 +289,7 @@ class OTAnalyticsApplication:
         self._project_updater(name, start_date)
 
     def save_configuration(self, file: Path) -> None:
-        self._datastore._config_parser.serialize(
-            project=self._datastore.project,
-            video_files=self.get_all_videos(),
-            sections=self.get_all_sections(),
-            flows=self.get_all_flows(),
-            file=file,
-        )
+        self._save_configuration(file)
 
     def load_configuration(self, file: Path) -> None:
         self._datastore.load_configuration_file(file)
