@@ -37,6 +37,7 @@ from OTAnalytics.application.application import (
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.generate_flows import FlowNameGenerator
+from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
@@ -362,6 +363,10 @@ class DummyViewModel(
             return
         except DifferentDrivesException as cause:
             message = "Configuration and video files are located on different drives."
+            self.__show_error(cause, message)
+            return
+        except MissingDate as cause:
+            message = "Start date is missing or invalid. Please add a valid start date."
             self.__show_error(cause, message)
             return
 
