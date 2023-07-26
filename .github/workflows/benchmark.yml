@@ -20,7 +20,7 @@ jobs:
       - name: Run benchmark
         run: |
           pip install -r requirements.txt
-          pytest bench.py --benchmark-json output.json
+          pytest /tests/benchmark/bench.py --benchmark-json output.json
 
       - name: Store benchmark result - separate results repo
         uses: benchmark-action/github-action-benchmark@v1
