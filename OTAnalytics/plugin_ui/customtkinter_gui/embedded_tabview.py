@@ -2,6 +2,8 @@ from typing import Any
 
 from customtkinter import CTkTabview
 
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADY
+
 
 class EmbeddedTabview(CTkTabview):
     def __init__(
@@ -10,6 +12,14 @@ class EmbeddedTabview(CTkTabview):
     ) -> None:
         super().__init__(border_width=0, **kwargs)
         self._override_fg_color()
+        self._override_padding_above()
+
+    def _override_padding_above(self) -> None:
+        """
+        Overrides the minimum size of the dummy row above the tabview to prevent
+        padding.
+        """
+        self.grid_rowconfigure(0, weight=0, minsize=0)
 
     def _override_fg_color(self) -> None:
         """
@@ -30,4 +40,16 @@ class EmbeddedTabview(CTkTabview):
             sticky="nsew",
             padx=self._apply_widget_scaling(self._border_width),
             pady=self._apply_widget_scaling(self._border_width),
+        )
+
+    def _set_grid_segmented_button(self) -> None:
+        """needs to be called for changes in corner_radius"""
+        self._segmented_button.grid(
+            row=1,
+            rowspan=2,
+            column=0,
+            columnspan=1,
+            padx=self._apply_widget_scaling(self._corner_radius),
+            pady=PADY,
+            sticky="ns",
         )
