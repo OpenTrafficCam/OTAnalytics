@@ -57,7 +57,7 @@ class InvalidDatetimeFormatError(Exception):
     pass
 
 
-class FrameFilter(AbstractFrameFilter, CTkFrame):
+class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
