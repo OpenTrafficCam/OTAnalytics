@@ -31,6 +31,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STICKY,
     tk_events,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
@@ -383,7 +384,7 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
         return x, y
 
 
-class DateRow(CTkFrame):
+class DateRow(EmbeddedCTkFrame):
     def __init__(
         self,
         viewmodel: ViewModel,
