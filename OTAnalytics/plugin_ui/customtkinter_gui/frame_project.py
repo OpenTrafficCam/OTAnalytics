@@ -59,8 +59,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         self._viewmodel.set_frame_project(self)
 
     def _get_widgets(self) -> None:
-        self._label = CTkLabel(master=self, text="Project")
-        self._label_name = CTkLabel(master=self, text="Project Name")
+        self._label_name = CTkLabel(master=self, text="Name")
         self._entry_name = CTkEntry(
             master=self,
             textvariable=self._project_name,
@@ -74,12 +73,11 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         )
 
     def _place_widgets(self) -> None:
-        self._label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.columnconfigure(0, weight=0)
+        self.columnconfigure(1, weight=1)
         self._label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self._entry_name.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self._start_date_row.grid(
-            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST
-        )
+        self._entry_name.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self._start_date_row.grid(row=1, column=0, columnspan=2, sticky=STICKY_WEST)
 
     def _wire_callbacks(self) -> None:
         self._project_name.trace_add("write", callback=self._update_project)
