@@ -46,8 +46,6 @@ class TabviewProject(CustomCTkTabview):
 class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
         self._viewmodel = viewmodel
         self._project_name = tkinter.StringVar()
         self._get_widgets()
@@ -73,8 +71,9 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         )
 
     def _place_widgets(self) -> None:
-        self.columnconfigure(0, weight=0)
-        self.columnconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
         self._label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_name.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self._start_date_row.grid(row=1, column=0, columnspan=2, sticky=STICKY_WEST)
