@@ -170,10 +170,11 @@ class ApplicationStarter:
         )
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
-        track_view_state.selected_videos.register(properties_updater.notify_videos)
         image_updater = TrackImageUpdater(
             datastore, track_view_state, section_state, flow_state, plotter
         )
+        track_view_state.selected_videos.register(properties_updater.notify_videos)
+        track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
         intersect = self._create_intersect()

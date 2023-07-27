@@ -351,7 +351,7 @@ class Datastore:
             except Exception as cause:
                 raised_exceptions.append(cause)
         if raised_exceptions:
-            raise OurCustomGroupException(raised_exceptions)
+            raise ExceptionGroup("load track files", raised_exceptions)
 
     def get_all_tracks(self) -> list[Track]:
         """
