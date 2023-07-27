@@ -27,6 +27,17 @@ class CTkTabviewWithoutTopPadding(CTkTabview):
         super().__init__(border_width=0, **kwargs)
         self._configure_grid()
 
+    def disable_segmented_button(self) -> None:
+        segmented_button_fg_color = self._segmented_button.cget("fg_color")
+        self.configure(segmented_button_selected_color=segmented_button_fg_color)
+        self.configure(
+            segmented_button_unselected_hover_color=segmented_button_fg_color
+        )
+        self.configure(segmented_button_selected_hover_color=segmented_button_fg_color)
+        text_color = self._segmented_button.cget("text_color")
+        self.configure(text_color_disabled=text_color)
+        self._segmented_button.configure(state="disabled")
+
     # def _override_padding_above(self) -> None:
     #     """
     #     Overrides the minimum size of the dummy row above the tabview to prevent
