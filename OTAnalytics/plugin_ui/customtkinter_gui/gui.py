@@ -15,7 +15,7 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import TabviewAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
     TabviewConfiguration,
@@ -141,11 +141,11 @@ class FrameNavigation(CTkFrame):
         self._tabview_configuration = TabviewConfiguration(
             master=self, width=50, viewmodel=self._viewmodel
         )
-        self._frame_analysis = FrameAnalysis(master=self, viewmodel=self._viewmodel)
+        self._frame_analysis = TabviewAnalysis(master=self, viewmodel=self._viewmodel)
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure((1, 2), weight=1)
-        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure((0, 3), weight=0)
         self._frame_project.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._tabview_input_files.grid(row=1, column=0, pady=PADY, sticky=STICKY)
         self._tabview_configuration.grid(row=2, column=0, pady=PADY, sticky=STICKY)
