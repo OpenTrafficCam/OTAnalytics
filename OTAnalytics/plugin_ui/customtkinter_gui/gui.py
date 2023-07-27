@@ -2,13 +2,7 @@ import tkinter
 import traceback
 from typing import Any, Sequence
 
-from customtkinter import (
-    CTk,
-    CTkFrame,
-    CTkScrollableFrame,
-    set_appearance_mode,
-    set_default_color_theme,
-)
+from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_theme
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -101,29 +95,29 @@ class FrameContent(CTkFrame):
     def __init__(
         self, master: Any, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
     ) -> None:
-        super().__init__(master, **kwargs)
+        super().__init__(master=master, **kwargs)
         self._viewmodel = viewmodel
-        self.ctkscrollableframe = CTkScrollableFrame(
+        self.ctkscrollableframe = EmbeddedCTkScrollableFrame(
             master=self, orientation="horizontal"
         )
-        self.ctkscrollableframe.pack(fill=tkinter.BOTH, expand=True)
+        # self.ctkscrollableframe.pack(fill=tkinter.BOTH, expand=True)
 
         self._frame_track_plotting = FrameTrackPlotting(
-            master=self.ctkscrollableframe,
+            master=self,
             layers=layers,
         )
-        self._frame_filter = FrameFilter(
-            master=self.ctkscrollableframe, viewmodel=self._viewmodel
-        )
+        self._frame_filter = FrameFilter(master=self, viewmodel=self._viewmodel)
         self._frame_canvas = FrameCanvas(
-            master=self.ctkscrollableframe,
+            master=self,
             viewmodel=self._viewmodel,
         )
+        self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure((0, 1), weight=1)
-        self._frame_track_plotting.grid(row=0, column=0, pady=PADY, sticky=STICKY)
-        self._frame_filter.grid(row=0, column=1, pady=PADY, sticky=STICKY)
-        self._frame_canvas.grid(row=1, column=0, columnspan=2, pady=PADY, sticky=STICKY)
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
+        self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
+        self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
 
 
 class FrameNavigation(EmbeddedCTkScrollableFrame):
@@ -197,4 +191,4 @@ class OTAnalyticsGui:
         self._app.grid_columnconfigure(1, weight=1)
         self._app.grid_rowconfigure(0, weight=1)
         self._navigation.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self._content.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self._content.grid(row=0, column=1, padx=PADX, pady=PADY + 13, sticky=STICKY)
