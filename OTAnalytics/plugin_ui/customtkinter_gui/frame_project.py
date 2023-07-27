@@ -42,7 +42,6 @@ class FrameProject(AbstractFrameProject, CTkFrame):
             master=self,
             viewmodel=self._viewmodel,
             name="Start date",
-            fg_color=get_default_toplevel_fg_color(),
             place_validation_below=True,
         )
 
