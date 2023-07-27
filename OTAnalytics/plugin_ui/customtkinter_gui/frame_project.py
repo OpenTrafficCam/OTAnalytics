@@ -3,11 +3,15 @@ import tkinter
 from datetime import datetime
 from typing import Any, Optional
 
-from customtkinter import CTkEntry, CTkFrame, CTkLabel, ThemeManager
+from customtkinter import CTkEntry, CTkLabel, ThemeManager
 
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
+    CustomCTkTabview,
+    EmbeddedCTkFrame,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import (
     DateRow,
     InvalidDatetimeFormatError,
@@ -15,7 +19,31 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import (
 from OTAnalytics.plugin_ui.customtkinter_gui.style import STICKY_WEST
 
 
-class FrameProject(AbstractFrameProject, CTkFrame):
+class TabviewProject(CustomCTkTabview):
+    def __init__(
+        self,
+        viewmodel: ViewModel,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._viewmodel = viewmodel
+        self.PROJECT: str = "Project"
+        self._get_widgets()
+        self._place_widgets()
+        self.disable_segmented_button()
+
+    def _get_widgets(self) -> None:
+        self.add(self.PROJECT)
+        self.frame_project = FrameProject(
+            master=self.tab(self.PROJECT), viewmodel=self._viewmodel
+        )
+
+    def _place_widgets(self) -> None:
+        self.frame_project.pack(fill=tkinter.BOTH, expand=True)
+        self.set(self.PROJECT)
+
+
+class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.grid_rowconfigure(1, weight=1)

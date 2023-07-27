@@ -21,7 +21,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
     TabviewConfiguration,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import FrameProject
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import TabviewProject
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
@@ -131,7 +131,7 @@ class FrameNavigation(CTkFrame):
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        self._frame_project = FrameProject(
+        self._frame_project = TabviewProject(
             master=self,
             viewmodel=self._viewmodel,
         )
