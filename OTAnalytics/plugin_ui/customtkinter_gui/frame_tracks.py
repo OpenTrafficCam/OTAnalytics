@@ -20,9 +20,9 @@ class TracksFrame(AbstractFrameTracks):
         self._viewmodel.set_tracks_frame(self)
 
     def _get_widgets(self) -> None:
-        self.label = CTkLabel(master=self, text="Tracks")
+        # self.label = CTkLabel(master=self, text="Tracks")
         self.button_load_tracks = CTkButton(
-            master=self, text="Load tracks", command=self._viewmodel.load_tracks
+            master=self, text="Load", command=self._viewmodel.load_tracks
         )
         self._offset_x = DoubleVar()
         self._offset_y = DoubleVar()
@@ -55,21 +55,10 @@ class TracksFrame(AbstractFrameTracks):
         if current_track_offset := self._viewmodel.get_track_offset():
             self.update_offset(*current_track_offset)
 
-    def _validate_offset(self, value: str) -> bool:
-        try:
-            as_number = float(value)
-            return 0 <= as_number <= 1
-        except ValueError:
-            return False
-
-    def update_offset(self, new_offset_x: float, new_offset_y: float) -> None:
-        self._offset_x.set(new_offset_x)
-        self._offset_y.set(new_offset_y)
-
     def _place_widgets(self) -> None:
-        self.label.grid(
-            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
+        # self.label.grid(
+        #     row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        # )
         self.button_load_tracks.grid(
             row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
@@ -86,6 +75,17 @@ class TracksFrame(AbstractFrameTracks):
         self.button_change_to_section_offset.grid(
             row=6, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def _validate_offset(self, value: str) -> bool:
+        try:
+            as_number = float(value)
+            return 0 <= as_number <= 1
+        except ValueError:
+            return False
+
+    def update_offset(self, new_offset_x: float, new_offset_y: float) -> None:
+        self._offset_x.set(new_offset_x)
+        self._offset_y.set(new_offset_y)
 
     def _on_change_offset(self) -> None:
         self._viewmodel.set_track_offset(self._offset_x.get(), self._offset_y.get())
