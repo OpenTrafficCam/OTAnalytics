@@ -37,7 +37,7 @@ class FrameConfiguration(CTkFrame):
 
     def _place_widgets(self) -> None:
         self.label.grid(row=0, column=0, columnspan=2, pady=PADY, sticky=tkinter.NSEW)
-        self.tabview.grid(row=1, column=0, columnspan=2, pady=PADY, sticky=tkinter.NSEW)
+        self.tabview.grid(row=1, column=0, columnspan=2, sticky=tkinter.NSEW)
         self.button_add.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.NSEW)
         self.button_save.grid(
             row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.NSEW
