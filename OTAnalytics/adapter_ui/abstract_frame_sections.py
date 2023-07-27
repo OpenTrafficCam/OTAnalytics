@@ -1,12 +1,11 @@
+import tkinter
 from abc import abstractmethod
-
-from customtkinter import CTkFrame
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 
 
-class AbstractFrameSections(AbstractFrame, WidgetPositionProvider, CTkFrame):
+class AbstractFrameSections(AbstractFrame, WidgetPositionProvider, tkinter.Frame):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         raise NotImplementedError
