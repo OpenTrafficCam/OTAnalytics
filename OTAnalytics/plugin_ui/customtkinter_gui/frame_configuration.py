@@ -4,9 +4,7 @@ from typing import Any
 from customtkinter import CTkFrame
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
-    CTkTabviewWithoutTopPadding,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_flows import FrameFlows
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import FrameSections
 
@@ -35,7 +33,7 @@ class FrameConfiguration(CTkFrame):
         self.tabview.grid(row=1, column=0, columnspan=2, sticky=tkinter.NSEW)
 
 
-class TabviewConfiguration(CTkTabviewWithoutTopPadding):
+class TabviewConfiguration(CustomCTkTabview):
     def __init__(
         self,
         viewmodel: ViewModel,

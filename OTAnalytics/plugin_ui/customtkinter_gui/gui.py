@@ -14,9 +14,7 @@ from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
-    CTkTabviewWithoutTopPadding,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
@@ -67,7 +65,7 @@ class ModifiedCTk(AbstractMainWindow, CTk):
         InfoBox(message=str(val), title="Error", initial_position=self.get_position())
 
 
-class TabviewInputFiles(CTkTabviewWithoutTopPadding):
+class TabviewInputFiles(CustomCTkTabview):
     def __init__(
         self,
         viewmodel: ViewModel,

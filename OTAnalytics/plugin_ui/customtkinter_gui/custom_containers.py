@@ -19,7 +19,7 @@ class EmbeddedCTkFrame(CTkFrame):
         )
 
 
-class CTkTabviewWithoutTopPadding(CTkTabview):
+class CustomCTkTabview(CTkTabview):
     def __init__(
         self,
         **kwargs: Any,
