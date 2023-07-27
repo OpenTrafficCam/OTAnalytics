@@ -73,17 +73,19 @@ class FrameSections(AbstractFrameSections):
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
         self._treeview_scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
         self._frame_tree.grid(
-            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=0, columnspan=3, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_add_line.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.button_add_area.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_add_area.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_edit_geometry.grid(
-            row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_edit_metadata.grid(
-            row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_remove.grid(row=5, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_remove.grid(
+            row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
 
     def action_buttons(self) -> list[CTkButton]:
         return self._action_buttons

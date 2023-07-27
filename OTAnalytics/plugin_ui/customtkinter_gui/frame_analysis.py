@@ -34,7 +34,9 @@ class FrameAnalysis(CTkFrame):
         )
 
     def _place_widgets(self) -> None:
-        self._label_title.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self._label_title.grid(
+            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self._button_create_events.grid(
             row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
@@ -42,10 +44,10 @@ class FrameAnalysis(CTkFrame):
             row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_export_eventlist.grid(
-            row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_export_counts.grid(
-            row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _create_events(self) -> None:
