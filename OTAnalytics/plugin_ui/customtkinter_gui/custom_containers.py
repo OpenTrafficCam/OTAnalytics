@@ -1,11 +1,25 @@
 from typing import Any
 
-from customtkinter import CTkFrame, CTkTabview
+from customtkinter import CTkFrame, CTkScrollableFrame, CTkTabview
 
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADY
 
 
 class EmbeddedCTkFrame(CTkFrame):
+    def __init__(
+        self,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            border_width=0,
+            corner_radius=0,
+            fg_color="transparent",
+            bg_color="transparent",
+            **kwargs,
+        )
+
+
+class EmbeddedCTkScrollableFrame(CTkScrollableFrame):
     def __init__(
         self,
         **kwargs: Any,

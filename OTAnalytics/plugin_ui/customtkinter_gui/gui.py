@@ -14,7 +14,10 @@ from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
+    CustomCTkTabview,
+    EmbeddedCTkScrollableFrame,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import TabviewAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
@@ -123,9 +126,9 @@ class FrameContent(CTkFrame):
         self._frame_canvas.grid(row=1, column=0, columnspan=2, pady=PADY, sticky=STICKY)
 
 
-class FrameNavigation(CTkFrame):
+class FrameNavigation(EmbeddedCTkScrollableFrame):
     def __init__(self, master: Any, viewmodel: ViewModel, **kwargs: Any) -> None:
-        super().__init__(master, **kwargs)
+        super().__init__(master=master, **kwargs)
         self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
@@ -182,7 +185,8 @@ class OTAnalyticsGui:
         self._navigation = FrameNavigation(
             master=self._app,
             viewmodel=self._viewmodel,
-            fg_color=self._app.cget("fg_color"),
+            width=336,
+            # fg_color=self._app.cget("fg_color"),
         )
         self._content = FrameContent(
             master=self._app, viewmodel=self._viewmodel, layers=self._layers
