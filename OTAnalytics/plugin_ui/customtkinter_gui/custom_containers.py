@@ -11,7 +11,11 @@ class EmbeddedCTkFrame(CTkFrame):
         **kwargs: Any,
     ) -> None:
         super().__init__(
-            border_width=0, corner_radius=0, fg_color="transparent", **kwargs
+            border_width=0,
+            corner_radius=0,
+            fg_color="transparent",
+            bg_color="transparent",
+            **kwargs,
         )
 
 
