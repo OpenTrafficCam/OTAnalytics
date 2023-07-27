@@ -1,9 +1,9 @@
-import tkinter
 from abc import ABC, abstractmethod
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.domain.section import COORDINATES, Section
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 
 
 class SectionRefPointCalculator(ABC):
@@ -57,7 +57,7 @@ class GeometricCenterCalculator(SectionRefPointCalculator):
         return center_x, center_y
 
 
-class AbstractFrameFlows(AbstractFrame, WidgetPositionProvider, tkinter.Frame):
+class AbstractFrameFlows(AbstractFrame, WidgetPositionProvider, EmbeddedCTkFrame):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass

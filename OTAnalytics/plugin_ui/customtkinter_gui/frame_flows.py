@@ -55,6 +55,12 @@ class FrameFlows(AbstractFrameFlows):
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_flows
         )
+        self.button_load = CTkButton(
+            master=self, text="Load", width=50, command=self._viewmodel.load_sections
+        )
+        self.button_save = CTkButton(
+            master=self, text="Save", width=50, command=self._viewmodel.save_sections
+        )
         self._action_buttons = [
             self.button_add,
             self.button_generate,
@@ -76,6 +82,8 @@ class FrameFlows(AbstractFrameFlows):
         self.button_remove.grid(
             row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self.button_load.grid(row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_save.grid(row=4, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def action_buttons(self) -> list[CTkButton]:
         return self._action_buttons

@@ -1,11 +1,55 @@
 from typing import Any
 
-from customtkinter import CTkTabview
+from customtkinter import CTkFrame, CTkTabview
 
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADY
 
 
-class EmbeddedTabview(CTkTabview):
+class EmbeddedCTkFrame(CTkFrame):
+    def __init__(
+        self,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            border_width=0, corner_radius=0, fg_color="transparent", **kwargs
+        )
+
+
+class CTkTabviewWithoutTopPadding(CTkTabview):
+    def __init__(
+        self,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(border_width=0, **kwargs)
+        self._configure_grid()
+
+    # def _override_padding_above(self) -> None:
+    #     """
+    #     Overrides the minimum size of the dummy row above the tabview to prevent
+    #     padding.
+    #     """
+    #     self.grid_rowconfigure(0, weight=0, minsize=0)
+
+    def _configure_grid(self) -> None:
+        """create 3 x 4 grid system"""
+
+        self.grid_rowconfigure(0, weight=0, minsize=0)
+        self.grid_rowconfigure(
+            1, weight=0, minsize=self._apply_widget_scaling(self._top_button_overhang)
+        )
+        self.grid_rowconfigure(
+            2,
+            weight=0,
+            minsize=self._apply_widget_scaling(
+                self._button_height - self._top_button_overhang
+            ),
+        )
+        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(4, weight=0, minsize=7)
+        self.grid_columnconfigure(0, weight=1)
+
+
+class CTkEmbeddedTabview(CTkTabview):
     def __init__(
         self,
         **kwargs: Any,

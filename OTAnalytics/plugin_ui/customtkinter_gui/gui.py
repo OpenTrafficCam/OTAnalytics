@@ -18,7 +18,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
-    FrameConfiguration,
+    TabviewConfiguration,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import FrameProject
@@ -138,8 +138,8 @@ class FrameNavigation(CTkFrame):
         self._tabview_input_files = TabviewInputFiles(
             master=self, viewmodel=self._viewmodel
         )
-        self._tabview_configuration = FrameConfiguration(
-            master=self, viewmodel=self._viewmodel
+        self._tabview_configuration = TabviewConfiguration(
+            master=self, width=50, viewmodel=self._viewmodel
         )
         self._frame_analysis = FrameAnalysis(master=self, viewmodel=self._viewmodel)
 
@@ -179,14 +179,18 @@ class OTAnalyticsGui:
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
-        self._app.grid_columnconfigure(0, minsize=350, weight=0)
-        self._app.grid_columnconfigure(1, weight=1)
-        self._app.grid_rowconfigure(0, weight=1)
-        self._navigation = FrameNavigation(master=self._app, viewmodel=self._viewmodel)
+        self._navigation = FrameNavigation(
+            master=self._app,
+            viewmodel=self._viewmodel,
+            fg_color=self._app.cget("fg_color"),
+        )
         self._content = FrameContent(
             master=self._app, viewmodel=self._viewmodel, layers=self._layers
         )
 
     def _place_widgets(self) -> None:
+        self._app.grid_columnconfigure(0, minsize=300, weight=0)
+        self._app.grid_columnconfigure(1, weight=1)
+        self._app.grid_rowconfigure(0, weight=1)
         self._navigation.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self._content.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
