@@ -299,7 +299,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._section_state = section_state
         self._flow_state = flow_state
         self._plotter = plotter
-        self._track_view_state.selected_videos.register(self.notify_video)
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
