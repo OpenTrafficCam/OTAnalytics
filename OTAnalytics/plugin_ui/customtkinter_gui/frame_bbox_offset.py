@@ -58,6 +58,10 @@ class FrameBboxOffset(CTkFrame):
         self.label_x_value.configure(text=self._relative_offset_coordinates["x"])
         self.label_y_value.configure(text=self._relative_offset_coordinates["y"])
 
+    def set_relative_offset_coordintes(self, x: float, y: float) -> None:
+        self.slider_x.set(x)
+        self.slider_y.set(y)
+
     def get_relative_offset_coordintes(self) -> dict:
         x = round(self.slider_x.get(), 2)
         y = round(self.slider_y.get(), 2)
