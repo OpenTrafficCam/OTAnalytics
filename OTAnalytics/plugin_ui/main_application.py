@@ -67,7 +67,8 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.intersect import SimpleRunIntersect
+from OTAnalytics.plugin_intersect.shapely_intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -634,7 +635,7 @@ class ApplicationStarter:
     def _create_intersect(
         self,
     ) -> RunIntersect:
-        return RunIntersect(
+        return SimpleRunIntersect(
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
             ),

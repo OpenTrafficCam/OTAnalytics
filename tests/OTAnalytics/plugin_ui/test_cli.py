@@ -21,7 +21,8 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
 )
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.intersect import SimpleRunIntersect
+from OTAnalytics.plugin_intersect.shapely_intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -132,7 +133,7 @@ class TestOTAnalyticsCli:
             self.FLOW_PARSER: OtFlowParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.EVENT_REPOSITORY: event_repository,
-            self.INTERSECT: RunIntersect(
+            self.INTERSECT: SimpleRunIntersect(
                 ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
                 MultiprocessingIntersectParallelization(),
             ),

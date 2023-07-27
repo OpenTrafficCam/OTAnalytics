@@ -16,14 +16,14 @@ from OTAnalytics.domain.geometry import (
     Polygon,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import (
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
+from OTAnalytics.domain.track import Track
+from OTAnalytics.plugin_intersect.intersect import (
     IntersectAreaByTrackPoints,
     IntersectBySmallTrackComponents,
     IntersectBySplittingTrackLine,
 )
-from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
-from OTAnalytics.domain.track import Track
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.shapely_intersect import ShapelyIntersector
 
 FRAME_WIDTH = 800
 FRAME_HEIGHT = 600

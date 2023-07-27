@@ -1,180 +1,290 @@
-from typing import Optional
+from typing import Iterable
 
-from numpy import ndarray
-from shapely import GeometryCollection, LineString, Point, Polygon, contains_xy, prepare
-from shapely.ops import snap, split
+from OTAnalytics.application.analysis.intersect import RunIntersect
+from OTAnalytics.application.eventlist import SectionActionDetector
+from OTAnalytics.domain.event import Event, EventBuilder, EventType, SectionEventBuilder
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    Line,
+    Polygon,
+    RelativeOffsetCoordinate,
+)
+from OTAnalytics.domain.intersect import (
+    AreaIntersector,
+    IntersectImplementation,
+    IntersectParallelizationStrategy,
+    LineSectionIntersector,
+)
+from OTAnalytics.domain.section import Area, LineSection, Section
+from OTAnalytics.domain.track import Track
 
 
-class ShapelyIntersector:
-    """Provides shapely geometry operations."""
+class IntersectBySmallTrackComponents(LineSectionIntersector):
+    """
+    Implements the intersection strategy by splitting up the track in its smallest
+    components and intersecting each of them with the section.
 
-    def line_intersects_line(self, line_1: LineString, line_2: LineString) -> bool:
-        """Checks if a line intersects with another line.
+    The smallest component of a track is to generate a Line with the coordinates of
+    two neighboring detections in the track.
 
-        Args:
-            line_1 (LineString): the first line
-            line_2 (LineString): the second line
+    Args:
+        implementation (IntersectorImplementation): the intersection implementation
+        line (LineSection): the line to intersect with
+    """
 
-        Returns:
-            bool: `True` if they intersect. Otherwise `False`.
-        """
-        return line_1.intersects(line_2)
+    def __init__(
+        self, implementation: IntersectImplementation, line_section: LineSection
+    ) -> None:
+        super().__init__(implementation, line_section)
 
-    def line_intersects_polygon(self, line: LineString, polygon: Polygon) -> bool:
-        """Checks if a line intersects with a polygon.
+    def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
+        events: list[Event] = []
 
-        Args:
-            line (LineString): the line
-            polygon (Polygon): the polygon
+        line_section_as_geometry = Line(self._line_section.get_coordinates())
 
-        Returns:
-            bool:  `True` if they intersect. Otherwise `False`.
-        """
-        return line.intersects(polygon)
+        event_builder.add_road_user_type(track.classification)
+        offset = self._extract_offset_from_section(
+            self._line_section, EventType.SECTION_ENTER
+        )
 
-    def intersection_line_with_line(
-        self, line_1: LineString, line_2: LineString
-    ) -> Optional[list[Point]]:
-        """Calculates the intersection points of to lines if they exist.
+        if not self._track_line_intersects_section(
+            track, line_section_as_geometry, offset
+        ):
+            return events
 
-        Args:
-            line_1 (LineString): the first line to intersect with
-            line_2 (LineString): the second line to intersect with
-
-        Returns:
-            Optional[list[Point]]: the intersection points if they intersect.
-                Otherwise `None`.
-        """
-        intersection = line_1.intersection(line_2)
-        if not intersection.is_empty:
-            try:
-                intersection_points: list[Point] = []
-
-                for intersection_point in intersection.geoms:
-                    intersection_points.append(intersection_point)
-                return intersection_points
-            except AttributeError:
-                return [intersection]
-        return None
-
-    def split_line_with_line(
-        self, line: LineString, splitter: LineString
-    ) -> GeometryCollection:
-        """Use a LineString to split another LineString.
-
-        If `line` intersects `splitter` then line_1 will be splitted at the
-        intersection points.
-        I.e. Let line_1 = [p_1, p_2, ..., p_n], n a natural number and p_x
-        the intersection point.
-
-        Then `line` will be splitted as follows:
-        [[p_1, p_2, ..., p_x], [p_x, p_(x+1), ..., p_n].
-
-        Args:
-            line (LineString): the line to be splitted
-            splitter (LineString): the line used for splitting
-
-        Returns:
-            GeometryCollection: the splitted lines if they `line` and `splitter`
-                intersect. Otherwise the collection contains a single element that is
-                the original `line`.
-        """
-        return self._complex_split(line, splitter)
-
-    def distance_point_point(self, p1: Point, p2: Point) -> float:
-        """Calculates the distance between two points.
-
-        Args:
-            p1 (Point): the first point to calculate the distance for
-            p2 (Point): the second point to calculate the distance for
-
-        Returns:
-            float: _description_
-        """
-        return p1.distance(p2)
-
-    def are_points_within_polygon(
-        self, points: list[tuple[float, float]], polygon: Polygon
-    ) -> list[bool]:
-        """Checks if the points are within the polygon.
-
-        A point is within a polygon if it is enclosed by it. Meaning that a point
-        sitting on the boundary of a polygon is treated as not being within it.
-
-        Args:
-            points (list[tuple[float, float]]): the points
-            polygon (Polygon): the polygon
-
-        Returns:
-            list[bool]: the boolean mask holding the information whether a point is
-                within a the polygon or not
-        """
-        prepare(polygon)
-        mask: ndarray = contains_xy(polygon, points)
-        return mask.tolist()
-
-    def _complex_split(
-        self, geom: LineString, splitter: LineString | Polygon
-    ) -> GeometryCollection:
-        """Split a complex linestring by another geometry without splitting at
-        self-intersection points.
-
-        Split a complex linestring using shapely.
-
-        Inspired by https://github.com/Toblerity/Shapely/issues/1068
-
-        Parameters
-        ----------
-        geom : LineString
-            An optionally complex LineString.
-        splitter : Geometry
-            A geometry to split by.
-
-        Warnings
-        --------
-        A known vulnerability is where the splitter intersects the complex
-        linestring at one of the self-intersecting points of the linestring.
-        In this case, only the first path through the self-intersection
-        will be split.
-
-        Examples
-        --------
-        >>> complex_line_string = LineString([(0, 0), (1, 1), (1, 0), (0, 1)])
-        >>> splitter = LineString([(0, 0.5), (0.5, 1)])
-        >>> complex_split(complex_line_string, splitter).wkt
-        'GEOMETRYCOLLECTION (
-            LINESTRING (0 0, 1 1, 1 0, 0.25 0.75), LINESTRING (0.25 0.75, 0 1)
-        )'
-
-        Return
-        ------
-        GeometryCollection
-            A collection of the geometries resulting from the split.
-        """
-        if geom.is_simple:
-            return split(geom, splitter)
-
-        if isinstance(splitter, Polygon):
-            splitter = splitter.exterior
-
-        # Ensure that intersection exists and is zero dimensional.
-        relate_str = geom.relate(splitter)
-        if relate_str[0] == "1":
-            raise ValueError(
-                "Cannot split LineString by a geometry which intersects a "
-                "continuous portion of the LineString."
+        for current_detection, next_detection in zip(
+            track.detections[0:-1], track.detections[1:]
+        ):
+            current_detection_coordinate = self._select_coordinate_in_detection(
+                current_detection, offset
             )
-        if not (relate_str[0] == "0" or relate_str[1] == "0"):
-            return GeometryCollection((geom,))
+            next_detection_coordinate = self._select_coordinate_in_detection(
+                next_detection, offset
+            )
+            detection_as_geometry = Line(
+                [current_detection_coordinate, next_detection_coordinate]
+            )
+            intersects = self.implementation.line_intersects_line(
+                line_section_as_geometry, detection_as_geometry
+            )
+            if intersects:
+                event_builder.add_direction_vector(
+                    self._calculate_direction_vector(
+                        current_detection_coordinate, next_detection_coordinate
+                    )
+                )
+                event_builder.add_event_coordinate(
+                    next_detection_coordinate.x, next_detection_coordinate.y
+                )
+                events.append(event_builder.create_event(next_detection))
+        return events
 
-        intersection_points = geom.intersection(splitter)
-        # This only inserts the point at the first pass of a self-intersection if
-        # the point falls on a self-intersection.
-        snapped_geom = snap(
-            geom, intersection_points, tolerance=1.0e-12
-        )  # may want to make tolerance a parameter.
-        # A solution to the warning in the docstring is to roll your own split method
-        # here. The current one in shapely returns early when a point is found to be
-        # part of a segment. But if the point was at a self-intersection it could be
-        # part of multiple segments.
-        return split(snapped_geom, intersection_points)
+    def _track_line_intersects_section(
+        self, track: Track, line_section: Line, offset: RelativeOffsetCoordinate
+    ) -> bool:
+        """Whether a track line defined by all its detections intersects the section"""
+        track_as_geometry = Line(
+            [
+                self._select_coordinate_in_detection(detection, offset)
+                for detection in track.detections
+            ]
+        )
+
+        return self.implementation.line_intersects_line(line_section, track_as_geometry)
+
+
+class IntersectAreaByTrackPoints(AreaIntersector):
+    def __init__(self, implementation: IntersectImplementation, area: Area) -> None:
+        super().__init__(implementation, area)
+
+    def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
+        """Intersect area with a detection.
+
+        Returns:
+            bool: `True` if area intersects detection. Otherwise `False`.
+        """
+        area_as_polygon = Polygon(self._area.coordinates)
+        offset = self._extract_offset_from_section(self._area, EventType.SECTION_ENTER)
+
+        track_coordinates: list[Coordinate] = [
+            self._select_coordinate_in_detection(detection, offset)
+            for detection in track.detections
+        ]
+        section_entered_mask = self.implementation.are_coordinates_within_polygon(
+            track_coordinates, area_as_polygon
+        )
+        events: list[Event] = []
+
+        event_builder.add_road_user_type(track.classification)
+        track_starts_inside_area = section_entered_mask[0]
+
+        if track_starts_inside_area:
+            first_detection = track.detections[0]
+            first_detection_coordinate = track_coordinates[0]
+            second_detection_coordinate = track_coordinates[1]
+
+            event_builder.add_event_type(EventType.SECTION_ENTER)
+            event_builder.add_road_user_type(first_detection.classification)
+            event_builder.add_direction_vector(
+                self._calculate_direction_vector(
+                    first_detection_coordinate, second_detection_coordinate
+                )
+            )
+            event_builder.add_event_coordinate(
+                first_detection_coordinate.x, first_detection_coordinate.y
+            )
+            event = event_builder.create_event(first_detection)
+            events.append(event)
+
+        section_currently_entered = track_starts_inside_area
+
+        for current_index, current_detection in enumerate(
+            track.detections[1:], start=1
+        ):
+            entered = section_entered_mask[current_index]
+            if section_currently_entered == entered:
+                continue
+            current_detection_coordinate = track_coordinates[current_index]
+            prev_detection_coordinate = track_coordinates[current_index - 1]
+
+            event_builder.add_direction_vector(
+                self._calculate_direction_vector(
+                    prev_detection_coordinate, current_detection_coordinate
+                )
+            )
+
+            current_coordinate = track_coordinates[current_index]
+            event_builder.add_event_coordinate(
+                current_coordinate.x, current_coordinate.y
+            )
+
+            if entered:
+                event_builder.add_event_type(EventType.SECTION_ENTER)
+            else:
+                event_builder.add_event_type(EventType.SECTION_LEAVE)
+
+            event = event_builder.create_event(current_detection)
+            events.append(event)
+            section_currently_entered = entered
+
+        return events
+
+
+class SimpleRunIntersect(RunIntersect):
+    """
+    This class defines the use case to intersect the given tracks with the given
+    sections
+    """
+
+    def __init__(
+        self,
+        intersect_implementation: IntersectImplementation,
+        intersect_parallelizer: IntersectParallelizationStrategy,
+    ) -> None:
+        self._intersect_implementation = intersect_implementation
+        self._intersect_parallelizer = intersect_parallelizer
+
+    def run(self, tracks: Iterable[Track], sections: Iterable[Section]) -> list[Event]:
+        return self._intersect_parallelizer.execute(
+            self._run_on_single_track, tracks, sections
+        )
+
+    def _run_on_single_track(
+        self,
+        track: Track,
+        sections: Iterable[Section],
+    ) -> list[Event]:
+        events: list[Event] = []
+        for _section in sections:
+            if isinstance(_section, LineSection):
+                line_section_intersector = IntersectBySmallTrackComponents(
+                    implementation=self._intersect_implementation,
+                    line_section=_section,
+                )
+                section_event_builder = SectionEventBuilder()
+                section_action_detector = SectionActionDetector(
+                    intersector=line_section_intersector,
+                    section_event_builder=section_event_builder,
+                )
+            if isinstance(_section, Area):
+                area_section_intersector = IntersectAreaByTrackPoints(
+                    implementation=self._intersect_implementation,
+                    area=_section,
+                )
+                section_event_builder = SectionEventBuilder()
+                section_action_detector = SectionActionDetector(
+                    intersector=area_section_intersector,
+                    section_event_builder=section_event_builder,
+                )
+            events.extend(
+                section_action_detector._detect(section=_section, track=track)
+            )
+        return events
+
+
+class IntersectBySplittingTrackLine(LineSectionIntersector):
+    """
+    Implements the intersection strategy by splitting a track with the section.
+
+    Args:
+        implementation (IntersectorImplementation): the intersection implementation
+        line (LineSection): the line to intersect with
+    """
+
+    def __init__(
+        self, implementation: IntersectImplementation, line_section: LineSection
+    ) -> None:
+        super().__init__(implementation, line_section)
+
+    def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
+        line_section_as_geometry = Line(self._line_section.get_coordinates())
+        if event_builder.event_type is None:
+            raise ValueError("Event type not set in section builder")
+
+        offset = self._line_section.relative_offset_coordinates[
+            event_builder.event_type
+        ]
+
+        track_as_geometry = Line(
+            [
+                self._select_coordinate_in_detection(detection, offset)
+                for detection in track.detections
+            ]
+        )
+
+        splitted_lines = self.implementation.split_line_with_line(
+            track_as_geometry, line_section_as_geometry
+        )
+        event_builder.add_road_user_type(track.classification)
+
+        events: list[Event] = []
+
+        if splitted_lines:
+            current_idx = len(splitted_lines[0].coordinates)
+            for n, splitted_line in enumerate(splitted_lines[1:], start=1):
+                # Subtract by 2n to account for intersection points
+                detection_index = current_idx - 2 * n + 1
+                selected_detection = track.detections[detection_index]
+
+                selected_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index
+                ]
+                previous_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index - 1
+                ]
+                event_builder.add_direction_vector(
+                    self._calculate_direction_vector(
+                        previous_detection_coordinate, selected_detection_coordinate
+                    )
+                )
+
+                selected_detection_coordinate = track_as_geometry.coordinates[
+                    detection_index
+                ]
+                event_builder.add_event_coordinate(
+                    selected_detection_coordinate.x, selected_detection_coordinate.y
+                )
+
+                events.append(event_builder.create_event(selected_detection))
+                current_idx += len(splitted_line.coordinates)
+        return events

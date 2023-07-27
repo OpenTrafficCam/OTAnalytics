@@ -19,10 +19,7 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import (
-    IntersectBySplittingTrackLine,
-    IntersectImplementation,
-)
+from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -41,6 +38,7 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_intersect.intersect import IntersectBySplittingTrackLine
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,

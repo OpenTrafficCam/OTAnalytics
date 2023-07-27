@@ -3,7 +3,7 @@ from typing import Optional
 from OTAnalytics.adapter_intersect.mapping import ShapelyMapper
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 from OTAnalytics.domain.intersect import IntersectImplementation
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.shapely_intersect import ShapelyIntersector
 
 
 class ShapelyIntersectImplementationAdapter(IntersectImplementation):
