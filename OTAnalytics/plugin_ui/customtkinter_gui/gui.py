@@ -136,7 +136,7 @@ class FrameNavigation(EmbeddedCTkScrollableFrame):
             master=self, viewmodel=self._viewmodel
         )
         self._tabview_configuration = TabviewConfiguration(
-            master=self, width=50, viewmodel=self._viewmodel
+            master=self, viewmodel=self._viewmodel
         )
         self._frame_analysis = TabviewAnalysis(master=self, viewmodel=self._viewmodel)
 
