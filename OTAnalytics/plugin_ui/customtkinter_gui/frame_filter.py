@@ -271,18 +271,14 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
             master=self,
             viewmodel=self._viewmodel,
             name="From",
-            fg_color=get_default_toplevel_fg_color(),
         )
         self.to_date_row = DateRow(
             master=self,
             viewmodel=self._viewmodel,
             name="To",
-            fg_color=get_default_toplevel_fg_color(),
         )
         self._get_detection_info_label()
-        self._button_frame = CTkFrame(
-            master=self, fg_color=get_default_toplevel_fg_color()
-        )
+        self._button_frame = EmbeddedCTkFrame(master=self)
         self.apply_button = CTkButton(
             master=self._button_frame,
             text="Apply",
