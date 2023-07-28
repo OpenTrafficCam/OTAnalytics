@@ -39,9 +39,21 @@ class CustomCTkTabview(CTkTabview):
         **kwargs: Any,
     ) -> None:
         super().__init__(border_width=0, **kwargs)
+        self.set_fg_color_as_segmented_button_color()
         self._configure_grid()
 
+    def set_fg_color_as_segmented_button_color(self) -> None:
+        """
+        Sets the color of the segmented button to the same color as the whole Tabview.
+        """
+        self.configure(segmented_button_fg_color=self.cget("fg_color"))
+
     def disable_segmented_button(self) -> None:
+        """
+        Disables the segmented button. No response will be shown if user hovers it.
+        Should be used when CustomCTkTabview is used as a Frame with segmented button
+        as header.
+        """
         segmented_button_fg_color = self._segmented_button.cget("fg_color")
         self.configure(segmented_button_selected_color=segmented_button_fg_color)
         self.configure(
