@@ -123,33 +123,45 @@ class FrameContent(CTkFrame):
         self._frame_canvas.grid(row=1, column=0, columnspan=2, pady=PADY, sticky=STICKY)
 
 
-class FrameNavigation(CTkFrame):
+class FrameNavigation(CTkTabview):
     def __init__(self, master: Any, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(master, **kwargs)
         self._viewmodel = viewmodel
+        self.PROJECT = "Project"
+        self.INPUT = "Input"
+        self.CONFIGURATION = "Configuration"
+        self.ANALYSIS = "Analysis"
         self._get_widgets()
         self._place_widgets()
 
     def _get_widgets(self) -> None:
+        self.add(self.PROJECT)
         self._frame_project = FrameProject(
-            master=self,
+            master=self.tab(self.PROJECT),
             viewmodel=self._viewmodel,
         )
+
+        self.add(self.INPUT)
         self._tabview_input_files = TabviewInputFiles(
-            master=self, viewmodel=self._viewmodel
+            master=self.tab(self.INPUT), viewmodel=self._viewmodel
         )
+
+        self.add(self.CONFIGURATION)
         self._tabview_configuration = FrameConfiguration(
-            master=self, viewmodel=self._viewmodel
+            master=self.tab(self.CONFIGURATION), viewmodel=self._viewmodel
         )
-        self._frame_analysis = FrameAnalysis(master=self, viewmodel=self._viewmodel)
+
+        self.add(self.ANALYSIS)
+        self._frame_analysis = FrameAnalysis(
+            master=self.tab(self.ANALYSIS), viewmodel=self._viewmodel
+        )
 
     def _place_widgets(self) -> None:
-        self.grid_rowconfigure((1, 2), weight=1)
-        self.grid_columnconfigure(0, weight=0)
-        self._frame_project.grid(row=0, column=0, pady=PADY, sticky=STICKY)
-        self._tabview_input_files.grid(row=1, column=0, pady=PADY, sticky=STICKY)
-        self._tabview_configuration.grid(row=2, column=0, pady=PADY, sticky=STICKY)
-        self._frame_analysis.grid(row=3, column=0, pady=PADY, sticky=STICKY)
+        self._frame_project.pack(fill=tkinter.BOTH, expand=True)
+        self._tabview_input_files.pack(fill=tkinter.BOTH, expand=True)
+        self._tabview_configuration.pack(fill=tkinter.BOTH, expand=True)
+        self._frame_analysis.pack(fill=tkinter.BOTH, expand=True)
+        self.set(self.PROJECT)
 
 
 class OTAnalyticsGui:
