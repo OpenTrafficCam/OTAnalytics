@@ -1,0 +1,37 @@
+base_files:
+  - "LICENSE"
+  - "README.md"
+  - "requirements.txt"
+configurations:
+  - package_path: OTAnalytics
+    files:
+      - "install.cmd"
+      - "start_gui.cmd"
+    suffix: "win"
+    output_file_name: otanalytics
+    additional_requirements:
+      - ""
+  - package_path: OTAnalytics
+    files:
+      - "install.sh"
+      - "start_gui.sh"
+    suffix: "linux"
+    output_file_name: otanalytics
+    additional_requirements:
+      - ""
+  - package_path: OTAnalytics
+    files:
+      - source: "install.sh"
+        destination: "install.command"
+      - source: "start_gui.sh"
+        destination: "start_gui.command"
+    suffix: "macOS"
+    output_file_name: otanalytics
+    additional_requirements:
+      - ""
+
+
+
+
+
+
