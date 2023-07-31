@@ -1,0 +1,34 @@
+name: Create release
+
+on:
+  push:
+    branches:
+      - OP2453-Create-github-action-for-build-otc
+
+jobs:
+  create_distributions:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: True
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Check-out Build repository
+        uses: actions/checkout@v2
+        with:
+          repository: platomo/platomo-build
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: zipper
+
+      - name: Run Build
+        run:  |
+              pip install -r requirements-dev.txt
+              python ./zipper/build.py 
