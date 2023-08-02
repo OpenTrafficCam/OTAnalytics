@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
@@ -76,11 +77,19 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def save_configuration(self) -> None:
+    def load_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def load_configuration(self) -> None:
+    def _load_otconfig(self, otconfig_file: Path) -> None:
+        pass
+
+    @abstractmethod
+    def save_otconfig(self) -> None:
+        pass
+
+    @abstractmethod
+    def _save_otconfig(self, otconfig_file: Path) -> None:
         pass
 
     @abstractmethod
@@ -116,11 +125,19 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def load_sections(self) -> None:
+    def load_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def save_sections(self) -> None:
+    def _load_otflow(self, otflow_file: Path) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_configuration(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _save_otflow(self, otflow_file: Path) -> None:
         raise NotImplementedError
 
     @abstractmethod
