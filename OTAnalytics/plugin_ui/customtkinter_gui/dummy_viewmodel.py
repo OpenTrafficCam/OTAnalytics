@@ -360,7 +360,7 @@ class DummyViewModel(
     def _save_otconfig(self, otconfig_file: Path) -> None:
         print(f"Config file to save: {otconfig_file}")
         try:
-            self._application.save_configuration(otconfig_file)
+            self._application.save_otconfig(otconfig_file)
         except NoSectionsToSave as cause:
             message = "No sections to save, please add new sections first"
             self.__show_error(cause, message)
@@ -419,7 +419,7 @@ class DummyViewModel(
         if proceed.canceled:
             return
         print(f"{OTCONFIG} file to load: {otconfig_file}")
-        self._application.load_configuration(file=Path(otconfig_file))
+        self._application.load_otconfig(file=Path(otconfig_file))
         self._show_current_project()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
@@ -558,7 +558,7 @@ class DummyViewModel(
 
     def _load_otflow(self, otflow_file: Path) -> None:
         print(f"otflow file to load: {otflow_file}")
-        self._application.add_sections_of_file(sections_file=Path(otflow_file))
+        self._application.load_otflow(sections_file=Path(otflow_file))
         self.set_selected_section_ids([])
         self.set_selected_flow_ids([])
         self.refresh_items_on_canvas()
@@ -585,7 +585,7 @@ class DummyViewModel(
     def _save_otflow(self, otflow_file: Path) -> None:
         print(f"Sections file to save: {otflow_file}")
         try:
-            self._application.save_flows(Path(otflow_file))
+            self._application.save_otflow(Path(otflow_file))
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(
