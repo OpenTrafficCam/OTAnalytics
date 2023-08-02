@@ -82,12 +82,37 @@ class FlowPredicate(ABC):
     def __call__(self, start: SectionId, end: SectionId) -> bool:
         raise NotImplementedError
 
+    def andThen(self, other: "FlowPredicate") -> "FlowPredicate":
+        return AndPredicate(self, other)
+
+
+class AndPredicate(FlowPredicate):
+    def __init__(self, first: FlowPredicate, second: FlowPredicate) -> None:
+        self.first = first
+        self.second = second
+
+    def __call__(self, start: SectionId, end: SectionId) -> bool:
+        return self.first(start, end) and self.second(start, end)
+
 
 class FilterSameSection(FlowPredicate):
     """Do not generate flows if start and end are equal."""
 
     def __call__(self, start: SectionId, end: SectionId) -> bool:
         return start != end
+
+
+class FilterExisting(FlowPredicate):
+    """Do not generate flow if a flow with the same start and end section already
+    exists.
+    """
+
+    def __init__(self, flow_repository: FlowRepository) -> None:
+        self._flow_repository = flow_repository
+
+    def __call__(self, start: SectionId, end: SectionId) -> bool:
+        flows = self._flow_repository.get_all()
+        return not any((flow.start == start) and (flow.end == end) for flow in flows)
 
 
 class CrossProductFlowGenerator(FlowGenerator):
