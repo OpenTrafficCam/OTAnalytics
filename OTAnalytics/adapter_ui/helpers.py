@@ -23,6 +23,8 @@ def ensure_file_extension_is_present(file: str, defaultextension: str) -> str:
     Returns:
         Path: path object with file extension
     """
+    if not file:
+        return ""
     file_extension = remove_wildcard_from(defaultextension)
     if file.endswith(file_extension):
         return file
