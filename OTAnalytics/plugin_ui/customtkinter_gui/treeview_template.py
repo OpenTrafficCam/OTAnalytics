@@ -57,9 +57,13 @@ class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treevi
         self._notify_viewmodel_about_selected_item_ids([])
 
     def _on_single_select(self, event: Any) -> None:
-        current_selection = self.focus()
+        current_selection = self.__get_current_selection()
         self.selection_set(current_selection)
-        self._notify_viewmodel_about_selected_item_ids([current_selection])
+        self._notify_viewmodel_about_selected_item_ids(current_selection)
+
+    def __get_current_selection(self) -> list[str]:
+        current_selection = self.focus()
+        return [current_selection] if current_selection else []
 
     def _on_single_multi_select(self, event: Any) -> None:
         current_selection = self.focus()
