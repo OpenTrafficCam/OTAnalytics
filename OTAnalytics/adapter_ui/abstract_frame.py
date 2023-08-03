@@ -7,6 +7,20 @@ STATE_NORMAL = "normal"
 
 
 class AbstractFrame(ABC):
+    @abstractmethod
+    def set_enabled_add_buttons(self, enabled: bool) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_enabled_change_single_item_buttons(self, enabled: bool) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_enabled_change_multiple_items_buttons(self, enabled: bool) -> None:
+        raise NotImplementedError
+
+
+class AbstractCTkFrame(AbstractFrame):
     def set_enabled_add_buttons(self, enabled: bool) -> None:
         self._set_enabled_buttons(self.add_buttons(), enabled)
 

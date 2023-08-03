@@ -6,6 +6,7 @@ from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_flows import (
@@ -150,8 +151,8 @@ class DummyViewModel(
         self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
-        self._frame_sections: Optional[AbstractFrameSections] = None
-        self._frame_flows: Optional[AbstractFrameFlows] = None
+        self._frame_sections: Optional[AbstractFrame] = None
+        self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
