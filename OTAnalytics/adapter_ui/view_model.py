@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Callable, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
@@ -13,12 +14,6 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
-from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_flows import (
-    AbstractFrameFlows,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_sections import (
-    AbstractFrameSections,
-)
 
 DISTANCES: str = "distances"
 
@@ -52,7 +47,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+    def set_sections_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod
@@ -60,7 +55,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+    def set_flows_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod

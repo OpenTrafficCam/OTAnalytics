@@ -7,9 +7,7 @@ from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.section import Section
-from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_sections import (
-    AbstractFrameSections,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
@@ -18,7 +16,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
 )
 
 
-class FrameSections(AbstractFrameSections):
+class FrameSections(AbstractCTkFrame):
     def __init__(
         self,
         viewmodel: ViewModel,
