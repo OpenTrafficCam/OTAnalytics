@@ -5,9 +5,7 @@ from typing import Callable, Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
-from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -15,6 +13,12 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_flows import (
+    AbstractFrameFlows,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_sections import (
+    AbstractFrameSections,
+)
 
 DISTANCES: str = "distances"
 

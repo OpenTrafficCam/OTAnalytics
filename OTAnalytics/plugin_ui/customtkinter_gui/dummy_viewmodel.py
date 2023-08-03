@@ -9,18 +9,16 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import (
-    AbstractFrameFlows,
-    GeometricCenterCalculator,
-    InnerSegmentsCenterCalculator,
-    SectionRefPointCalculator,
-)
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
-from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
+from OTAnalytics.adapter_ui.flow_adapter import (
+    GeometricCenterCalculator,
+    InnerSegmentsCenterCalculator,
+    SectionRefPointCalculator,
+)
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
     MissingCoordinate,
@@ -69,6 +67,12 @@ from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_flows import (
+    AbstractFrameFlows,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_sections import (
+    AbstractFrameSections,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
