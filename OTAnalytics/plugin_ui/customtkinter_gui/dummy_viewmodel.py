@@ -67,12 +67,6 @@ from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
-from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_flows import (
-    AbstractFrameFlows,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame_sections import (
-    AbstractFrameSections,
-)
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -118,6 +112,8 @@ LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
 OTFLOW = "otflow"
+MISSING_SECTION_FRAME_MESSAGE = "sections frame"
+MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 
 
 class MissingInjectedInstanceError(Exception):
@@ -204,7 +200,7 @@ class DummyViewModel(
 
     def _update_enabled_section_buttons(self) -> None:
         if self._frame_sections is None:
-            raise MissingInjectedInstanceError(AbstractFrameSections.__name__)
+            raise MissingInjectedInstanceError(MISSING_SECTION_FRAME_MESSAGE)
         action_running = self._application.action_state.action_running.get()
         videos_exist = len(self._application.get_all_videos()) > 0
         selected_section_ids = self.get_selected_section_ids()
@@ -225,7 +221,7 @@ class DummyViewModel(
 
     def _update_enabled_flow_buttons(self) -> None:
         if self._frame_flows is None:
-            raise MissingInjectedInstanceError(AbstractFrameFlows.__name__)
+            raise MissingInjectedInstanceError(MISSING_FLOW_FRAME_MESSAGE)
         action_running = self._application.action_state.action_running.get()
         sections_exist = len(self._application.get_all_sections()) > 1
         selected_flow_ids = self.get_selected_flow_ids()
@@ -450,11 +446,11 @@ class DummyViewModel(
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
 
-    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+    def set_sections_frame(self, frame: AbstractFrame) -> None:
         self._frame_sections = frame
         self._update_enabled_section_buttons()
 
-    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+    def set_flows_frame(self, frame: AbstractFrame) -> None:
         self._frame_flows = frame
         self._update_enabled_flow_buttons()
 
