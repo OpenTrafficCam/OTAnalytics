@@ -222,7 +222,7 @@ class DummyViewModel(
         if self._frame_flows is None:
             raise MissingInjectedInstanceError(AbstractFrameFlows.__name__)
         action_running = self._application.action_state.action_running.get()
-        sections_exist = len(self._application.get_all_sections()) > 0
+        sections_exist = len(self._application.get_all_sections()) > 1
         selected_flow_ids = self.get_selected_flow_ids()
         single_flow_selected = len(selected_flow_ids) == 1
         any_flow_selected = len(selected_flow_ids) > 0
