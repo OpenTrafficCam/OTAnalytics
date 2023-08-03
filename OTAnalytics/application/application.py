@@ -226,7 +226,7 @@ class OTAnalyticsApplication:
     def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
         self._datastore.register_flow_changed_observer(observer)
 
-    def get_all_sections(self) -> Iterable[Section]:
+    def get_all_sections(self) -> list[Section]:
         return self._datastore.get_all_sections()
 
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
