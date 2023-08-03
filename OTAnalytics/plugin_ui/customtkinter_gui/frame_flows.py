@@ -55,12 +55,19 @@ class FrameFlows(AbstractFrameFlows):
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_flows
         )
-        self._action_buttons = [
+        self._add_buttons = [
             self.button_add,
             self.button_generate,
+        ]
+        self._single_item_buttons = [
             self.button_edit,
+        ]
+        self._multiple_items_buttons = [
             self.button_remove,
         ]
+        self.set_enabled_add_buttons(False)
+        self.set_enabled_change_single_item_buttons(False)
+        self.set_enabled_change_multiple_items_buttons(False)
 
     def _place_widgets(self) -> None:
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
@@ -73,20 +80,14 @@ class FrameFlows(AbstractFrameFlows):
         self.button_edit.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_remove.grid(row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY)
 
-    def action_buttons(self) -> list[CTkButton]:
-        return self._action_buttons
+    def add_buttons(self) -> list[CTkButton]:
+        return self._add_buttons
 
-    def enable_remove_button(self) -> None:
-        self._enable_button(self.button_remove)
+    def single_item_buttons(self) -> list[CTkButton]:
+        return self._single_item_buttons
 
-    def disable_remove_button(self) -> None:
-        self._disable_button(self.button_remove)
-
-    def enable_edit_button(self) -> None:
-        self._enable_button(self.button_edit)
-
-    def disable_edit_button(self) -> None:
-        self._disable_button(self.button_edit)
+    def multiple_items_buttons(self) -> list[CTkButton]:
+        return self._multiple_items_buttons
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
         x, y = get_widget_position(self, offset=offset)

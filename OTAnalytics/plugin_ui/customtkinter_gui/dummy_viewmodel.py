@@ -190,14 +190,52 @@ class DummyViewModel(
     def notify_videos(self, videos: list[Video]) -> None:
         if self._treeview_videos is None:
             raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
+        self._treeview_videos.update_items()
+        self._update_enabled_buttons()
+
+    def _update_enabled_buttons(self) -> None:
+        self._update_enabled_section_buttons()
+        self._update_enabled_flow_buttons()
+
+    def _update_enabled_section_buttons(self) -> None:
         if self._frame_sections is None:
             raise MissingInjectedInstanceError(AbstractFrameSections.__name__)
+        action_running = self._application.action_state.action_running.get()
+        videos_exist = len(self._application.get_all_videos()) > 0
+        selected_section_ids = self.get_selected_section_ids()
+        single_section_selected = len(selected_section_ids) == 1
+        any_section_selected = len(selected_section_ids) > 0
+
+        add_section_enabled = (not action_running) and videos_exist
+        single_section_enabled = add_section_enabled and single_section_selected
+        multiple_sections_enabled = add_section_enabled and any_section_selected
+
+        self._frame_sections.set_enabled_add_buttons(videos_exist)
+        self._frame_sections.set_enabled_change_single_item_buttons(
+            single_section_enabled
+        )
+        self._frame_sections.set_enabled_change_multiple_items_buttons(
+            multiple_sections_enabled
+        )
+
+    def _update_enabled_flow_buttons(self) -> None:
         if self._frame_flows is None:
             raise MissingInjectedInstanceError(AbstractFrameFlows.__name__)
-        self._treeview_videos.update_items()
-        enabled = len(self._application.get_all_videos()) > 0
-        self._frame_sections.set_enabled(enabled)
-        self._frame_flows.set_enabled(enabled)
+        action_running = self._application.action_state.action_running.get()
+        sections_exist = len(self._application.get_all_sections()) > 0
+        selected_flow_ids = self.get_selected_flow_ids()
+        single_flow_selected = len(selected_flow_ids) == 1
+        any_flow_selected = len(selected_flow_ids) > 0
+
+        add_flow_enabled = (not action_running) and sections_exist
+        single_flow_enabled = add_flow_enabled and single_flow_selected
+        multiple_flows_enabled = add_flow_enabled and any_flow_selected
+
+        self._frame_flows.set_enabled_add_buttons(sections_exist)
+        self._frame_flows.set_enabled_change_single_item_buttons(single_flow_enabled)
+        self._frame_flows.set_enabled_change_multiple_items_buttons(
+            multiple_flows_enabled
+        )
 
     def _on_section_changed(self, section_id: SectionId) -> None:
         self.notify_sections([section_id])
@@ -262,6 +300,7 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
         self._intersect_tracks_with_sections()
+        self._update_enabled_buttons()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
@@ -270,12 +309,7 @@ class DummyViewModel(
         self._treeview_flows.update_items()
 
     def _notify_action_running_state(self, running: bool) -> None:
-        if not self._frame_flows:
-            raise MissingInjectedInstanceError(type(self._frame_flows).__name__)
-        if not self._frame_sections:
-            raise MissingInjectedInstanceError(type(self._frame_sections).__name__)
-        self._frame_flows.set_enabled(not running)
-        self._frame_sections.set_enabled(not running)
+        self._update_enabled_buttons()
 
     def register_observers(self) -> None:
         self._application._datastore.register_video_observer(self)
@@ -413,11 +447,11 @@ class DummyViewModel(
 
     def set_sections_frame(self, frame: AbstractFrameSections) -> None:
         self._frame_sections = frame
-        self._frame_sections.set_enabled(False)
+        self._update_enabled_section_buttons()
 
     def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
         self._frame_flows = frame
-        self._frame_flows.set_enabled(False)
+        self._update_enabled_flow_buttons()
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
@@ -435,50 +469,29 @@ class DummyViewModel(
         self._treeview_flows = treeview
 
     def _update_selected_sections(self, section_ids: list[SectionId]) -> None:
+        self._update_selected_section_items()
+        self._update_enabled_buttons()
+
+    def _update_selected_section_items(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-
-        if self._frame_sections is None:
-            raise MissingInjectedInstanceError(type(self._frame_sections).__name__)
 
         new_section_ids = self.get_selected_section_ids()
 
         self._treeview_sections.update_selected_items(new_section_ids)
         self.refresh_items_on_canvas()
 
-        if len(new_section_ids) == 1:
-            self._frame_sections.enable_edit_geometry_button()
-            self._frame_sections.enable_edit_metadata_button()
-        else:
-            self._frame_sections.disable_edit_geometry_button()
-            self._frame_sections.disable_edit_metadata_button()
-
-        if new_section_ids:
-            self._frame_sections.enable_remove_button()
-        else:
-            self._frame_sections.disable_remove_button()
-
     def _update_selected_flows(self, flow_ids: list[FlowId]) -> None:
+        self._update_selected_flow_items()
+        self._update_enabled_buttons()
+
+    def _update_selected_flow_items(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-
-        if self._frame_flows is None:
-            raise MissingInjectedInstanceError(type(self._frame_flows).__name__)
-
         new_selected_flow_ids = self.get_selected_flow_ids()
 
         self._treeview_flows.update_selected_items(new_selected_flow_ids)
         self.refresh_items_on_canvas()
-
-        if len(new_selected_flow_ids) == 1:
-            self._frame_flows.enable_edit_button()
-        else:
-            self._frame_flows.disable_edit_button()
-
-        if new_selected_flow_ids:
-            self._frame_flows.enable_remove_button()
-        else:
-            self._frame_flows.disable_remove_button()
 
     def set_selected_flow_ids(self, ids: list[str]) -> None:
         if self._application.action_state.action_running.get():
