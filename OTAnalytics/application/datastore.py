@@ -275,7 +275,7 @@ class Datastore:
         """
         self._section_repository.register_sections_observer(observer)
 
-    def load_configuration_file(self, file: Path) -> None:
+    def load_otconfig(self, file: Path) -> None:
         self.clear_repositories()
         config = self._config_parser.parse(file)
         self.project = config.project
@@ -366,7 +366,7 @@ class Datastore:
         """Delete all tracks in repository."""
         self._track_repository.delete_all()
 
-    def load_flow_file(self, file: Path) -> None:
+    def load_otflow(self, file: Path) -> None:
         """
         Load sections and flows from the given files and store them in the repositories.
 
