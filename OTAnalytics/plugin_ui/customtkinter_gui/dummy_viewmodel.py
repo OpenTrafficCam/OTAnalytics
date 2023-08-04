@@ -391,6 +391,21 @@ class DummyViewModel(
             initial_position=position,
         )
 
+    def load_otconfig(self) -> None:
+        otconfig_file = Path(
+            askopenfilename(
+                title="Load sections file",
+                filetypes=[
+                    (f"{OTFLOW} file", f"*.{OTFLOW}"),
+                    (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                ],
+                defaultextension=f".{OTFLOW}",
+            )
+        )
+        if not otconfig_file:
+            return
+        self._load_otconfig(otconfig_file)
+
     def _load_otconfig(self, otconfig_file: Path) -> None:
         proceed = InfoBox(
             message=(
@@ -524,7 +539,7 @@ class DummyViewModel(
         # INFO: Current behavior: Overwrites existing sections
         configuration_file = Path(
             askopenfilename(
-                title="Load configuration file",
+                title="Load sections file",
                 filetypes=[
                     (f"{OTFLOW} file", f"*.{OTFLOW}"),
                     (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
