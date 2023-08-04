@@ -113,6 +113,7 @@ LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
 OTFLOW = "otflow"
+OTCONFIG = "otconfig"
 
 
 class MissingInjectedInstanceError(Exception):
@@ -344,19 +345,22 @@ class DummyViewModel(
     def update_project(self, name: str, start_date: Optional[datetime]) -> None:
         self._application.update_project(name, start_date)
 
-    def save_configuration(self) -> None:
-        title = "Save config file as"
-        file_types = [("config file", "*.otconfig")]
-        defaultextension = ".otconfig"
-        initialfile = "config.otconfig"
-        file: Path = ask_for_save_file_path(
+    def save_otconfig(self) -> None:
+        title = "Save configuration as"
+        file_types = [(f"{OTCONFIG} file", f"*.{OTCONFIG}")]
+        defaultextension = f".{OTCONFIG}"
+        initialfile = f"config.{OTCONFIG}"
+        otconfig_file: Path = ask_for_save_file_path(
             title, file_types, defaultextension, initialfile=initialfile
         )
-        if not file:
+        if not otconfig_file:
             return
-        print(f"Config file to save: {file}")
+        self._save_otconfig(otconfig_file)
+
+    def _save_otconfig(self, otconfig_file: Path) -> None:
+        print(f"Config file to save: {otconfig_file}")
         try:
-            self._application.save_configuration(file)
+            self._application.save_otconfig(otconfig_file)
         except NoSectionsToSave as cause:
             message = "No sections to save, please add new sections first"
             self.__show_error(cause, message)
@@ -370,6 +374,11 @@ class DummyViewModel(
             self.__show_error(cause, message)
             return
 
+    def _get_window_position(self) -> tuple[int, int]:
+        if self._window is None:
+            raise MissingInjectedInstanceError(type(self._window).__name__)
+        return self._window.get_position()
+
     def __show_error(self, cause: Exception, message: str) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(
@@ -382,30 +391,35 @@ class DummyViewModel(
             initial_position=position,
         )
 
-    def load_configuration(self) -> None:
-        if self._treeview_sections is None:
-            raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-        position = self._treeview_sections.get_position()
+    def load_otconfig(self) -> None:
+        otconfig_file = Path(
+            askopenfilename(
+                title="Load sections file",
+                filetypes=[
+                    (f"{OTFLOW} file", f"*.{OTFLOW}"),
+                    (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                ],
+                defaultextension=f".{OTFLOW}",
+            )
+        )
+        if not otconfig_file:
+            return
+        self._load_otconfig(otconfig_file)
+
+    def _load_otconfig(self, otconfig_file: Path) -> None:
         proceed = InfoBox(
             message=(
                 "This will load a stored configuration from file. \n"
                 "All configured sections, flows and videos will be removed before "
                 "loading."
             ),
-            initial_position=position,
+            initial_position=self._get_window_position(),
             show_cancel=True,
         )
         if proceed.canceled:
             return
-        configuration_file = askopenfilename(
-            title="Load config file",
-            filetypes=[("otconfig file", "*.otconfig")],
-            defaultextension=".otconfig",
-        )
-        if not configuration_file:
-            return
-        print(f"Config file to load: {configuration_file}")
-        self._application.load_configuration(file=Path(configuration_file))
+        print(f"{OTCONFIG} file to load: {otconfig_file}")
+        self._application.load_otconfig(file=Path(otconfig_file))
         self._show_current_project()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
@@ -521,33 +535,57 @@ class DummyViewModel(
         track_paths = [Path(file) for file in track_files]
         self._application.add_tracks_of_files(track_files=track_paths)
 
-    def load_sections(self) -> None:  # sourcery skip: avoid-builtin-shadow
+    def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
-        sections_file = askopenfilename(
-            title="Load sections file",
-            filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
-            defaultextension=f".{OTFLOW}",
+        configuration_file = Path(
+            askopenfilename(
+                title="Load sections file",
+                filetypes=[
+                    (f"{OTFLOW} file", f"*.{OTFLOW}"),
+                    (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                ],
+                defaultextension=f".{OTFLOW}",
+            )
         )
-        if not sections_file:
+        if not configuration_file.stem:
             return
-        print(f"Sections file to load: {sections_file}")
-        self._application.add_sections_of_file(sections_file=Path(sections_file))
+        elif configuration_file.suffix == f".{OTFLOW}":
+            self._load_otflow(configuration_file)
+        elif configuration_file.suffix == f".{OTCONFIG}":
+            self._load_otconfig(configuration_file)
+        else:
+            raise ValueError("Configuration file to load has unknown file extension")
+
+    def _load_otflow(self, otflow_file: Path) -> None:
+        print(f"otflow file to load: {otflow_file}")
+        self._application.load_otflow(sections_file=Path(otflow_file))
         self.set_selected_section_ids([])
         self.set_selected_flow_ids([])
         self.refresh_items_on_canvas()
 
-    def save_sections(self) -> None:
-        sections_file = ask_for_save_file_path(
-            title="Save sections file as",
-            filetypes=[(f"{OTFLOW} file", f"*.{OTFLOW}")],
+    def save_configuration(self) -> None:
+        configuration_file = ask_for_save_file_path(
+            title="Save configuration as",
+            filetypes=[
+                (f"{OTFLOW} file", f"*.{OTFLOW}"),
+                (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+            ],
             defaultextension=f".{OTFLOW}",
             initialfile=f"flows.{OTFLOW}",
         )
-        if not sections_file:
+        if not configuration_file.stem:
             return
-        print(f"Sections file to save: {sections_file}")
+        elif configuration_file.suffix == f".{OTFLOW}":
+            self._save_otflow(configuration_file)
+        elif configuration_file.suffix == f".{OTCONFIG}":
+            self._save_otconfig(configuration_file)
+        else:
+            raise ValueError("Configuration file to save has unknown file extension")
+
+    def _save_otflow(self, otflow_file: Path) -> None:
+        print(f"Sections file to save: {otflow_file}")
         try:
-            self._application.save_flows(Path(sections_file))
+            self._application.save_otflow(Path(otflow_file))
         except NoSectionsToSave as cause:
             if self._treeview_sections is None:
                 raise MissingInjectedInstanceError(

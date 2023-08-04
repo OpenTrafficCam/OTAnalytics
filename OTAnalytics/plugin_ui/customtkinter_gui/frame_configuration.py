@@ -1,7 +1,7 @@
 import tkinter
 from typing import Any
 
-from customtkinter import CTkFrame
+from customtkinter import CTkButton, CTkFrame
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
@@ -26,6 +26,18 @@ class FrameConfiguration(CTkFrame):
         # self.label = CTkLabel(master=self, text="Configuration")
         self.tabview = TabviewConfiguration(
             master=self, width=50, viewmodel=self._viewmodel
+        )
+        self.button_add = CTkButton(
+            master=self,
+            text="Load",
+            width=50,
+            command=self._viewmodel.load_configuration,
+        )
+        self.button_save = CTkButton(
+            master=self,
+            text="Save",
+            width=50,
+            command=self._viewmodel.save_configuration,
         )
 
     def _place_widgets(self) -> None:

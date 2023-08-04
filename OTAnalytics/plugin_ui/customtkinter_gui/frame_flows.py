@@ -56,10 +56,16 @@ class FrameFlows(AbstractFrameFlows):
             master=self, text="Remove", command=self._viewmodel.remove_flows
         )
         self.button_load = CTkButton(
-            master=self, text="Load", width=50, command=self._viewmodel.load_sections
+            master=self,
+            text="Load",
+            width=50,
+            command=self._viewmodel.load_configuration,
         )
         self.button_save = CTkButton(
-            master=self, text="Save", width=50, command=self._viewmodel.save_sections
+            master=self,
+            text="Save",
+            width=50,
+            command=self._viewmodel.save_configuration,
         )
         self._action_buttons = [
             self.button_add,

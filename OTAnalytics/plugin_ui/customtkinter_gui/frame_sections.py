@@ -62,10 +62,16 @@ class FrameSections(AbstractFrameSections):
             master=self, text="Remove", command=self._viewmodel.remove_sections
         )
         self.button_load = CTkButton(
-            master=self, text="Load", width=50, command=self._viewmodel.load_sections
+            master=self,
+            text="Load",
+            width=50,
+            command=self._viewmodel.load_configuration,
         )
         self.button_save = CTkButton(
-            master=self, text="Save", width=50, command=self._viewmodel.save_sections
+            master=self,
+            text="Save",
+            width=50,
+            command=self._viewmodel.save_configuration,
         )
         self._action_buttons = [
             self.button_add_line,
