@@ -62,6 +62,7 @@ from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
         ),
         (
             "",
+            [],
             "*.file-extension",
             "",
         ),
