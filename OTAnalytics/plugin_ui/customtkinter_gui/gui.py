@@ -13,6 +13,7 @@ from customtkinter import (
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.helpers import get_all_messages_from_exception_group
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
@@ -60,9 +61,17 @@ class ModifiedCTk(AbstractMainWindow, CTk):
         x, y = get_widget_position(self, offset=offset)
         return x, y
 
-    def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
+    def report_callback_exception(
+        self, exc: BaseException | BaseExceptionGroup, val: Any, tb: Any
+    ) -> None:
         traceback.print_exception(val)
-        InfoBox(message=str(val), title="Error", initial_position=self.get_position())
+
+        if isinstance(val, BaseExceptionGroup):
+            messages = get_all_messages_from_exception_group(val)
+            message = "\n".join(messages)
+        else:
+            message = str(val)
+        InfoBox(message=message, title="Error", initial_position=self.get_position())
 
 
 class TabviewInputFiles(CTkTabview):
