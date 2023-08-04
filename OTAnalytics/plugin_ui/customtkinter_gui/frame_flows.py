@@ -27,6 +27,8 @@ class FrameFlows(AbstractCTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self._get_widgets()
         self._place_widgets()
+        self._set_button_state_categories()
+        self._set_initial_button_states()
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
@@ -55,19 +57,6 @@ class FrameFlows(AbstractCTkFrame):
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_flows
         )
-        self._add_buttons = [
-            self.button_add,
-            self.button_generate,
-        ]
-        self._single_item_buttons = [
-            self.button_edit,
-        ]
-        self._multiple_items_buttons = [
-            self.button_remove,
-        ]
-        self.set_enabled_add_buttons(False)
-        self.set_enabled_change_single_item_buttons(False)
-        self.set_enabled_change_multiple_items_buttons(False)
 
     def _place_widgets(self) -> None:
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
@@ -79,6 +68,23 @@ class FrameFlows(AbstractCTkFrame):
         self.button_generate.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_edit.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_remove.grid(row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+
+    def _set_button_state_categories(self) -> None:
+        self._add_buttons = [
+            self.button_add,
+            self.button_generate,
+        ]
+        self._single_item_buttons = [
+            self.button_edit,
+        ]
+        self._multiple_items_buttons = [
+            self.button_remove,
+        ]
+
+    def _set_initial_button_states(self) -> None:
+        self.set_enabled_add_buttons(False)
+        self.set_enabled_change_single_item_buttons(False)
+        self.set_enabled_change_multiple_items_buttons(False)
 
     def add_buttons(self) -> list[CTkButton]:
         return self._add_buttons
