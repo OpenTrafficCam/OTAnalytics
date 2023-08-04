@@ -1,14 +1,12 @@
 import tkinter
 from typing import Any, Sequence
 
-from customtkinter import CTkCheckBox, CTkLabel, ThemeManager
+from customtkinter import CTkCheckBox, CTkLabel
 
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.style import STICKY_WEST
-
-DEFAULT_COLOR = ThemeManager.theme["CTkFrame"]["fg_color"]
 
 
 class FrameTrackPlotting(EmbeddedCTkFrame):
