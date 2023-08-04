@@ -26,6 +26,8 @@ def ensure_file_extension_is_present(
     Returns:
         Path: path object with file extension
     """
+    if not file:
+        return ""
     file_extension = remove_wildcard_from(defaultextension)
     allowed_file_extensions = set(
         [remove_wildcard_from(ext) for ext in allowed_extensions]
