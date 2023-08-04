@@ -76,11 +76,11 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def save_configuration(self) -> None:
+    def load_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def load_configuration(self) -> None:
+    def save_otconfig(self) -> None:
         pass
 
     @abstractmethod
@@ -116,11 +116,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def load_sections(self) -> None:
+    def load_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def save_sections(self) -> None:
+    def save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
