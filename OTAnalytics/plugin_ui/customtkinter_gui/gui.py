@@ -97,10 +97,6 @@ class FrameContent(CTkFrame):
     ) -> None:
         super().__init__(master=master, **kwargs)
         self._viewmodel = viewmodel
-        self.ctkscrollableframe = EmbeddedCTkScrollableFrame(
-            master=self, orientation="horizontal"
-        )
-        # self.ctkscrollableframe.pack(fill=tkinter.BOTH, expand=True)
 
         self._frame_track_plotting = FrameTrackPlotting(
             master=self,
