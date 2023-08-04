@@ -20,20 +20,20 @@ class TabviewAnalysis(CustomCTkTabview):
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
-        self.Analysis: str = "Analysis"
+        self._title: str = "Analysis"
         self._get_widgets()
         self._place_widgets()
         self.disable_segmented_button()
 
     def _get_widgets(self) -> None:
-        self.add(self.Analysis)
+        self.add(self._title)
         self.frame_analysis = FrameAnalysis(
-            master=self.tab(self.Analysis), viewmodel=self._viewmodel
+            master=self.tab(self._title), viewmodel=self._viewmodel
         )
 
     def _place_widgets(self) -> None:
         self.frame_analysis.pack(fill=tkinter.BOTH, expand=True)
-        self.set(self.Analysis)
+        self.set(self._title)
 
 
 class FrameAnalysis(EmbeddedCTkFrame):
