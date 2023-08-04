@@ -81,15 +81,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def _load_otconfig(self, otconfig_file: Path) -> None:
-        pass
-
-    @abstractmethod
     def save_otconfig(self) -> None:
-        pass
-
-    @abstractmethod
-    def _save_otconfig(self, otconfig_file: Path) -> None:
         pass
 
     @abstractmethod
