@@ -27,20 +27,20 @@ class TabviewProject(CustomCTkTabview):
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
-        self.PROJECT: str = "Project"
+        self._title: str = "Project"
         self._get_widgets()
         self._place_widgets()
         self.disable_segmented_button()
 
     def _get_widgets(self) -> None:
-        self.add(self.PROJECT)
+        self.add(self._title)
         self.frame_project = FrameProject(
-            master=self.tab(self.PROJECT), viewmodel=self._viewmodel
+            master=self.tab(self._title), viewmodel=self._viewmodel
         )
 
     def _place_widgets(self) -> None:
         self.frame_project.pack(fill=tkinter.BOTH, expand=True)
-        self.set(self.PROJECT)
+        self.set(self._title)
 
 
 class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
