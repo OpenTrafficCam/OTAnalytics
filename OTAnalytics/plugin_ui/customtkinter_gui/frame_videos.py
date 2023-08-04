@@ -27,7 +27,6 @@ class FrameVideos(EmbeddedCTkFrame):
         pass
 
     def _get_widgets(self) -> None:
-        # self.label = CTkLabel(master=self, text="Videos")
         self._frame_tree = CTkFrame(master=self)
         self.treeview = TreeviewVideos(
             viewmodel=self._viewmodel, master=self._frame_tree
@@ -44,16 +43,13 @@ class FrameVideos(EmbeddedCTkFrame):
         )
 
     def _place_widgets(self) -> None:
-        # self.label.grid(
-        #     row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        # )
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
         self._treeview_scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
         self._frame_tree.grid(
-            row=1, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_add_videos.grid(
-            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_remove_videos.grid(
             row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY

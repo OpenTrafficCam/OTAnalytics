@@ -44,7 +44,6 @@ class FrameAnalysis(EmbeddedCTkFrame):
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        # self._label_title = CTkLabel(master=self, text="Analysis")
         self._button_create_events = CTkButton(
             master=self,
             text="Create events",
@@ -67,16 +66,16 @@ class FrameAnalysis(EmbeddedCTkFrame):
         #     row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         # )
         self._button_create_events.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._button_save_eventlist.grid(
-            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_export_eventlist.grid(
-            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_export_counts.grid(
-            row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _create_events(self) -> None:

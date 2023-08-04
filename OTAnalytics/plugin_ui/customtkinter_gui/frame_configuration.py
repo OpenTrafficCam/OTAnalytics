@@ -23,7 +23,6 @@ class FrameConfiguration(CTkFrame):
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        # self.label = CTkLabel(master=self, text="Configuration")
         self.tabview = TabviewConfiguration(
             master=self, width=50, viewmodel=self._viewmodel
         )
@@ -41,8 +40,7 @@ class FrameConfiguration(CTkFrame):
         )
 
     def _place_widgets(self) -> None:
-        # self.label.grid(row=0, column=0, columnspan=2, pady=PADY, sticky=tkinter.NSEW)
-        self.tabview.grid(row=1, column=0, columnspan=2, sticky=tkinter.NSEW)
+        self.tabview.grid(row=0, column=0, columnspan=2, sticky=tkinter.NSEW)
 
 
 class TabviewConfiguration(CustomCTkTabview):

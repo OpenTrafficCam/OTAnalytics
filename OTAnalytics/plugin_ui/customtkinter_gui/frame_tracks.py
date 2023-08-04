@@ -22,7 +22,6 @@ class TracksFrame(AbstractFrameTracks):
         self._viewmodel.set_tracks_frame(self)
 
     def _get_widgets(self) -> None:
-        # self.label = CTkLabel(master=self, text="Tracks")
         self.button_load_tracks = CTkButton(
             master=self, text="Load", command=self._viewmodel.load_tracks
         )
@@ -45,20 +44,17 @@ class TracksFrame(AbstractFrameTracks):
             self.update_offset(*current_track_offset)
 
     def _place_widgets(self) -> None:
-        # self.label.grid(
-        #     row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        # )
         self.button_load_tracks.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._frame_bbox_offset.grid(
-            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_update_offset.grid(
-            row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_change_to_section_offset.grid(
-            row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def update_offset(self, new_offset_x: float, new_offset_y: float) -> None:
