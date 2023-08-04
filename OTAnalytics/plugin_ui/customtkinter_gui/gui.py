@@ -176,7 +176,6 @@ class OTAnalyticsGui:
             master=self._app,
             viewmodel=self._viewmodel,
             width=336,
-            # fg_color=self._app.cget("fg_color"),
         )
         self._content = FrameContent(
             master=self._app, viewmodel=self._viewmodel, layers=self._layers
