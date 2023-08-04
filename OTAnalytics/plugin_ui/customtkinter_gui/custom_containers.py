@@ -64,13 +64,6 @@ class CustomCTkTabview(CTkTabview):
         self.configure(text_color_disabled=text_color)
         self._segmented_button.configure(state="disabled")
 
-    # def _override_padding_above(self) -> None:
-    #     """
-    #     Overrides the minimum size of the dummy row above the tabview to prevent
-    #     padding.
-    #     """
-    #     self.grid_rowconfigure(0, weight=0, minsize=0)
-
     def _configure_grid(self) -> None:
         """create 3 x 4 grid system"""
 
