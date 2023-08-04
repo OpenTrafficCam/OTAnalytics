@@ -224,16 +224,17 @@ class DummyViewModel(
         if self._frame_flows is None:
             raise MissingInjectedInstanceError(MISSING_FLOW_FRAME_MESSAGE)
         action_running = self._application.action_state.action_running.get()
-        sections_exist = len(self._application.get_all_sections()) > 1
+        two_sections_exist = len(self._application.get_all_sections()) > 1
+        flows_exist = len(self._application.get_all_flows()) > 0
         selected_flow_ids = self.get_selected_flow_ids()
         single_flow_selected = len(selected_flow_ids) == 1
         any_flow_selected = len(selected_flow_ids) > 0
 
-        add_flow_enabled = (not action_running) and sections_exist
-        single_flow_enabled = add_flow_enabled and single_flow_selected
-        multiple_flows_enabled = add_flow_enabled and any_flow_selected
+        add_flow_enabled = (not action_running) and two_sections_exist
+        single_flow_enabled = add_flow_enabled and single_flow_selected and flows_exist
+        multiple_flows_enabled = add_flow_enabled and any_flow_selected and flows_exist
 
-        self._frame_flows.set_enabled_add_buttons(sections_exist)
+        self._frame_flows.set_enabled_add_buttons(two_sections_exist)
         self._frame_flows.set_enabled_change_single_item_buttons(single_flow_enabled)
         self._frame_flows.set_enabled_change_multiple_items_buttons(
             multiple_flows_enabled
