@@ -7,7 +7,12 @@ from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import Layer
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    TABVIEW_SEGMENTED_BUTTON_ELEVATION,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkScrollableFrame,
@@ -186,4 +191,10 @@ class OTAnalyticsGui:
         self._app.grid_columnconfigure(1, weight=1)
         self._app.grid_rowconfigure(0, weight=1)
         self._navigation.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self._content.grid(row=0, column=1, padx=PADX, pady=PADY + 13, sticky=STICKY)
+        self._content.grid(
+            row=0,
+            column=1,
+            padx=PADX,
+            pady=PADY + TABVIEW_SEGMENTED_BUTTON_ELEVATION,
+            sticky=STICKY,
+        )
