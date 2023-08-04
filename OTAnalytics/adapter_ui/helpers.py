@@ -27,8 +27,11 @@ def ensure_file_extension_is_present(
         Path: path object with file extension
     """
     file_extension = remove_wildcard_from(defaultextension)
-    allowed_extensions = [remove_wildcard_from(ext) for ext in allowed_extensions]
-    for allowed_extension in allowed_extensions:
+    allowed_file_extensions = set(
+        [remove_wildcard_from(ext) for ext in allowed_extensions]
+    )
+    allowed_file_extensions.add(file_extension)
+    for allowed_extension in allowed_file_extensions:
         if file.endswith(allowed_extension):
             return file
     if file_extension.startswith("."):

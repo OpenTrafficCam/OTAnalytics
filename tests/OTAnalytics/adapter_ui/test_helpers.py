@@ -48,6 +48,12 @@ from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
             "*.file-extension",
             "path/to/some-file.file-extension",
         ),
+        (
+            "path/to/some-file.file-extension",
+            [],
+            "*.file-extension",
+            "path/to/some-file.file-extension",
+        ),
     ],
 )
 def test_ensure_file_extension_is_appended(
