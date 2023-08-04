@@ -11,11 +11,10 @@ def get_all_messages_from_exception_group(
 
     Args:
         exception_group (BaseExceptionGroup): The ExceptionGroup instance
-        messages (list[str] | None, optional): An initial list of messages.
-            Is only there for matters of recursion. Defaults to None.
 
     Returns:
-        list[str]: List of all messages of the ExceptionGroup and it leafs
+        list[str]: List of all messages of the ExceptionGroup and all of the Exceptions
+        and ExceptionGroups it contains
     """
 
     def _get_all_messages_from_exception_group(
