@@ -6,6 +6,7 @@ def get_all_messages_from_exception_group(
 ) -> list[str]:
     """Returns a list of messages of the ExceptionGroup itself and all of its
     sub-exceptions.
+
     If a sub-exception is an ExceptionGroup itself, the list will also contain its
     message and the messages of its sub-exceptions and so on...
 
@@ -19,25 +20,22 @@ def get_all_messages_from_exception_group(
 
     def _get_all_messages_from_exception_group(
         exception_group: BaseExceptionGroup,
-        messages: list[str] | None = None,
     ) -> list[str]:
-        if messages is None:
-            messages = []
+        messages = []
+
         PATTERN = re.compile(r" .((\d+)\s*sub-exception.*.)")
         if match := re.search(PATTERN, str(exception_group)):
-            exception_group_message = str(exception_group).replace(match[0], "")
+            messages.append(str(exception_group).replace(match[0], ""))
         else:
-            exception_group_message = str(exception_group)
-        messages.append(exception_group_message)
+            messages.append(str(exception_group))
+
         for sub_exception in exception_group.exceptions:
             if isinstance(sub_exception, BaseExceptionGroup):
-                messages = _get_all_messages_from_exception_group(
-                    sub_exception, messages
-                )
+                messages.extend(_get_all_messages_from_exception_group(sub_exception))
             else:
                 message = str(sub_exception)
                 message = re.sub("'", "", message)
                 messages.append(message)
         return messages
 
-    return _get_all_messages_from_exception_group(exception_group, None)
+    return _get_all_messages_from_exception_group(exception_group)
