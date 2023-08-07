@@ -46,8 +46,5 @@ class MoviepyVideoReader(VideoReader):
             raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
 
     def get_frame_number_for(self, video_path: Path, delta: timedelta) -> int:
-        try:
-            clip = VideoFileClip(str(video_path.absolute()))
-        except IOError as e:
-            raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
+        clip = self.__get_clip(video_path)
         return floor(clip.fps * delta.total_seconds())
