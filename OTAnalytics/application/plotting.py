@@ -1,9 +1,9 @@
 from abc import abstractmethod
 from typing import Callable, Optional, Sequence
 
-from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import ObservableProperty, Plotter, TrackViewState
+from OTAnalytics.application.state import ObservableProperty, Plotter
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.video import Video
 
 
 class Layer:
@@ -84,17 +84,23 @@ class LayeredPlotter(Plotter):
             self._current_image = image
 
 
+FrameProvider = Callable[[], int]
+VideoProvider = Callable[[], list[Video]]
+
+
 class TrackBackgroundPlotter(Plotter):
     """Plot video frame as background."""
 
-    def __init__(self, track_view_state: TrackViewState, datastore: Datastore) -> None:
-        self._track_view_state = track_view_state
-        self._datastore = datastore
+    def __init__(
+        self, video_provider: VideoProvider, frame_provider: FrameProvider
+    ) -> None:
+        self._video_provider = video_provider
+        self._frame_provider = frame_provider
 
     def plot(self) -> Optional[TrackImage]:
-        current_frame = self._track_view_state.frame.get()
-        frame_number = current_frame if current_frame else 1
-        if videos := self._track_view_state.selected_videos.get():
+        if videos := self._video_provider():
             if len(videos) > 0:
+                current_frame = self._frame_provider()
+                frame_number = current_frame or 1
                 return videos[0].get_frame(frame_number)
         return None
