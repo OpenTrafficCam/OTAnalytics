@@ -699,7 +699,7 @@ class TestCachedVideoParser:
 
         cached_parser = CachedVideoParser(video_parser)
 
-        parsed_video = cached_parser.parse(video_file)
+        parsed_video = cached_parser.parse(video_file, start_date=None)
 
         assert isinstance(parsed_video, CachedVideo)
         assert parsed_video.other == video
