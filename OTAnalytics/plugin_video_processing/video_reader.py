@@ -31,20 +31,20 @@ class MoviepyVideoReader(VideoReader):
         Returns:
             ndarray: the image as an multi-dimensional array.
         """
-        try:
-            clip = VideoFileClip(str(video_path.absolute()))
-        except IOError as e:
-            raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
+        clip = self.__get_clip(video_path)
         found = None
         max_frames = clip.fps * clip.duration
-        for frame_no, np_frame in enumerate(clip.iter_frames()):
-            if frame_no == (index % max_frames):
-                found = np_frame
-                break
-        clip.close()
-        if found is None:
+        if index >= max_frames:
             raise FrameDoesNotExistError(f"frame number '{index}' does not exist")
+        found = clip.get_frame(index / clip.fps)
+        clip.close()
         return PilImage(Image.fromarray(found))
+
+    def __get_clip(self, video_path: Path) -> VideoFileClip:
+        try:
+            return VideoFileClip(str(video_path.absolute()))
+        except IOError as e:
+            raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
 
     def get_frame_number_for(self, video_path: Path, delta: timedelta) -> int:
         try:
