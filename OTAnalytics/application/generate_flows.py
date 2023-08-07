@@ -82,7 +82,7 @@ class FlowPredicate(ABC):
     def __call__(self, start: SectionId, end: SectionId) -> bool:
         raise NotImplementedError
 
-    def andThen(self, other: "FlowPredicate") -> "FlowPredicate":
+    def and_then(self, other: "FlowPredicate") -> "FlowPredicate":
         return AndPredicate(self, other)
 
 

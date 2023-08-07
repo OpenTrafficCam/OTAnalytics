@@ -619,7 +619,7 @@ class ApplicationStarter:
         flow_generator = CrossProductFlowGenerator(
             id_generator=id_generator,
             name_generator=name_generator,
-            predicate=FilterSameSection().andThen(FilterExisting(flow_repository)),
+            predicate=FilterSameSection().and_then(FilterExisting(flow_repository)),
         )
         return GenerateFlows(
             section_repository=section_repository,
