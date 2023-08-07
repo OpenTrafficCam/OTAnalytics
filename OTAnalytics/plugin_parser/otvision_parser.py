@@ -669,8 +669,8 @@ class SimpleVideoParser(VideoParser):
     def __init__(self, video_reader: VideoReader) -> None:
         self._video_reader = video_reader
 
-    def parse(self, file: Path) -> Video:
-        return SimpleVideo(self._video_reader, file)
+    def parse(self, file: Path, start_date: Optional[datetime]) -> Video:
+        return SimpleVideo(self._video_reader, file, start_date)
 
     def parse_list(
         self,
@@ -687,7 +687,7 @@ class SimpleVideoParser(VideoParser):
         if PATH not in entry:
             raise MissingPath(entry)
         video_path = Path(base_folder, entry[PATH])
-        return self.parse(video_path)
+        return self.parse(video_path, None)
 
     def convert(
         self,
@@ -714,6 +714,9 @@ class CachedVideo(Video):
         self.cache[index] = new_frame
         return new_frame
 
+    def get_frame_number_for(self, date: datetime) -> int:
+        return self.other.get_frame_number_for(date)
+
     def to_dict(self, relative_to: Path) -> dict:
         return self.other.to_dict(relative_to)
 
@@ -722,8 +725,8 @@ class CachedVideoParser(VideoParser):
     def __init__(self, other: VideoParser) -> None:
         self._other = other
 
-    def parse(self, file: Path) -> Video:
-        other_video = self._other.parse(file)
+    def parse(self, file: Path, start_date: Optional[datetime]) -> Video:
+        other_video = self._other.parse(file, start_date)
         return self.__create_cached_video(other_video)
 
     def __create_cached_video(self, other_video: Video) -> Video:
@@ -755,8 +758,13 @@ class OttrkVideoParser(TrackVideoParser):
         content = _parse_bz2(file)
         metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
         video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
-        video = self._video_parser.parse(file.parent / video_file)
+        start_date = self.__parse_recorded_start_date(metadata)
+        video = self._video_parser.parse(file.parent / video_file, start_date)
         return track_ids, [video] * len(track_ids)
+
+    def __parse_recorded_start_date(self, metadata: dict) -> datetime:
+        start_date = metadata[ottrk_format.RECORDED_START_DATE]
+        return datetime.fromtimestamp(start_date)
 
 
 class OtEventListParser(EventListParser):

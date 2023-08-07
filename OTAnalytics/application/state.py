@@ -184,6 +184,7 @@ class TrackViewState:
         self.selected_videos: ObservableProperty[list[Video]] = ObservableProperty[
             list[Video]
         ](default=[])
+        self.frame = ObservableProperty[int](1)
 
 
 class TrackPropertiesUpdater:
@@ -301,6 +302,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._plotter = plotter
         self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
+        self._track_view_state.frame.register(self._notify_frame)
         self._track_view_state.filter_element.register(self._notify_filter_element)
         self._section_state.selected_sections.register(self._notify_section_selection)
         self._flow_state.selected_flows.register(self._notify_flow_changed)
@@ -333,6 +335,15 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._update()
 
     def _notify_track_offset(self, offset: Optional[RelativeOffsetCoordinate]) -> None:
+        """
+        Will update the image according to changes of the track offset property.
+
+        Args:
+            offset (Optional[RelativeOffsetCoordinate]): current value
+        """
+        self._update()
+
+    def _notify_frame(self, frame: Optional[int]) -> None:
         """
         Will update the image according to changes of the track offset property.
 

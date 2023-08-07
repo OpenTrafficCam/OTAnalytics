@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
@@ -92,7 +93,7 @@ class EventListParser(ABC):
 
 class VideoParser(ABC):
     @abstractmethod
-    def parse(self, file: Path) -> Video:
+    def parse(self, file: Path, start_date: Optional[datetime]) -> Video:
         pass
 
     @abstractmethod
@@ -296,7 +297,7 @@ class Datastore:
         videos = []
         for file in files:
             try:
-                videos.append(self._video_parser.parse(file))
+                videos.append(self._video_parser.parse(file, None))
             except Exception as cause:
                 raised_exceptions.append(cause)
         if raised_exceptions:
@@ -556,7 +557,11 @@ class Datastore:
     def get_all_videos(self) -> list[Video]:
         return self._video_repository.get_all()
 
-    def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
+    def get_image_of_track(
+        self,
+        track_id: TrackId,
+        frame: int = 0,
+    ) -> Optional[TrackImage]:
         """
         Retrieve an image for the given track.
 
@@ -567,4 +572,6 @@ class Datastore:
             Optional[TrackImage]: an image of the track if the track is available and
             the image can be loaded
         """
-        return video.get_frame(0) if (video := self.get_video_for(track_id)) else None
+        return (
+            video.get_frame(frame) if (video := self.get_video_for(track_id)) else None
+        )

@@ -57,7 +57,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksNotIntersectingSelection,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
-from OTAnalytics.domain.filter import FilterElementSettingRestorer
+from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
@@ -94,6 +94,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PandasDataFrameProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
+    TrackBoundingBoxPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
@@ -157,7 +158,7 @@ class ApplicationStarter:
         flow_state = self._create_flow_state()
         road_user_assigner = RoadUserAssigner()
 
-        pandas_data_provider = self._create_pandas_data_provider(
+        cached_track_provider = self._create_cached_pandas_track_provider(
             datastore, track_view_state, pulling_progressbar_builder
         )
         layers = self._create_layers(
@@ -165,7 +166,7 @@ class ApplicationStarter:
             track_view_state,
             flow_state,
             section_state,
-            pandas_data_provider,
+            cached_track_provider,
             road_user_assigner,
         )
         plotter = LayeredPlotter(layers=layers)
@@ -173,6 +174,8 @@ class ApplicationStarter:
         image_updater = TrackImageUpdater(
             datastore, track_view_state, section_state, flow_state, plotter
         )
+        frame_updater = FrameUpdater(track_view_state)
+        track_view_state.filter_element.register(frame_updater.notify_filter_element)
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
@@ -321,18 +324,25 @@ class ApplicationStarter:
     def _create_track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_pandas_data_provider(
+    def _create_pandas_track_offset_data_provider(
+        self,
+        track_view_state: TrackViewState,
+        data_provider: PandasDataFrameProvider,
+    ) -> PandasDataFrameProvider:
+        return PandasTracksOffsetProvider(
+            data_provider,
+            track_view_state=track_view_state,
+        )
+
+    def _create_cached_pandas_track_provider(
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
         progressbar: ProgressbarBuilder,
     ) -> PandasDataFrameProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        return PandasTracksOffsetProvider(
-            CachedPandasTrackProvider(
-                datastore, track_view_state, dataframe_filter_builder, progressbar
-            ),
-            track_view_state=track_view_state,
+        return CachedPandasTrackProvider(
+            datastore, track_view_state, dataframe_filter_builder, progressbar
         )
 
     def _create_track_geometry_plotter(
@@ -346,6 +356,17 @@ class ApplicationStarter:
             TrackGeometryPlotter(
                 pandas_data_provider, alpha=alpha, enable_legend=enable_legend
             ),
+        )
+        return PlotterPrototype(state, track_plotter)
+
+    def _create_track_bounding_box_plotter(
+        self,
+        state: TrackViewState,
+        pandas_data_provider: PandasDataFrameProvider,
+        alpha: float,
+    ) -> Plotter:
+        track_plotter = MatplotlibTrackPlotter(
+            TrackBoundingBoxPlotter(pandas_data_provider, state, alpha=alpha),
         )
         return PlotterPrototype(state, track_plotter)
 
@@ -465,21 +486,24 @@ class ApplicationStarter:
         track_view_state: TrackViewState,
         flow_state: FlowState,
         section_state: SectionState,
-        pandas_data_provider: PandasDataFrameProvider,
+        track_data_provider: PandasDataFrameProvider,
         road_user_assigner: RoadUserAssigner,
     ) -> Sequence[PlottingLayer]:
-        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
-        data_provider_all_filters = FilterByClassification(
-            FilterByOccurrence(
-                pandas_data_provider,
-                track_view_state,
-                self._create_dataframe_filter_builder(),
-            ),
+        track_bounding_box_plotter = self._create_track_bounding_box_plotter(
             track_view_state,
-            self._create_dataframe_filter_builder(),
+            self.__create_all_filters_provider(track_view_state, track_data_provider),
+            alpha=0.5,
+        )
+        track_offset_data_provider = self._create_pandas_track_offset_data_provider(
+            track_view_state,
+            track_data_provider,
+        )
+        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
+        data_provider_all_filters = self.__create_all_filters_provider(
+            track_view_state, track_offset_data_provider
         )
         data_provider_class_filter = FilterByClassification(
-            pandas_data_provider,
+            track_offset_data_provider,
             track_view_state,
             self._create_dataframe_filter_builder(),
         )
@@ -558,6 +582,11 @@ class ApplicationStarter:
         all_tracks_layer = PlottingLayer(
             "Show all tracks", track_geometry_plotter, enabled=True
         )
+        bounding_box_layer = PlottingLayer(
+            "Show bounding boxes of current frame",
+            track_bounding_box_plotter,
+            enabled=True,
+        )
         highlight_tracks_intersecting_sections_layer = PlottingLayer(
             "Highlight tracks intersecting sections",
             highlight_tracks_intersecting_sections,
@@ -595,6 +624,7 @@ class ApplicationStarter:
         return [
             background,
             all_tracks_layer,
+            bounding_box_layer,
             highlight_tracks_intersecting_sections_layer,
             highlight_tracks_not_intersecting_sections_layer,
             start_end_point_layer,
@@ -603,6 +633,19 @@ class ApplicationStarter:
             highlight_tracks_assigned_to_flow_layer,
             highlight_tracks_not_assigned_to_flow_layer,
         ]
+
+    def __create_all_filters_provider(
+        self, track_view_state: TrackViewState, data_provider: PandasDataFrameProvider
+    ) -> PandasDataFrameProvider:
+        return FilterByClassification(
+            FilterByOccurrence(
+                data_provider,
+                track_view_state,
+                self._create_dataframe_filter_builder(),
+            ),
+            track_view_state,
+            self._create_dataframe_filter_builder(),
+        )
 
     def _create_section_state(self) -> SectionState:
         return SectionState()
@@ -672,3 +715,14 @@ class ApplicationStarter:
             SimpleTaggerFactory(track_repository),
             SimpleExporterFactory(),
         )
+
+
+class FrameUpdater:
+    def __init__(self, state: TrackViewState) -> None:
+        self._state = state
+
+    def notify_filter_element(self, filter_element: FilterElement) -> None:
+        end_date = filter_element.date_range.end_date
+        video = self._state.selected_videos.get()[0]
+        frame_number = video.get_frame_number_for(end_date) if end_date else 0
+        self._state.frame.set(frame_number)

@@ -273,6 +273,9 @@ class TrackImage:
         """
         pass
 
+    def save(self, name: str) -> None:
+        self.as_image().save(name)
+
 
 @dataclass(frozen=True)
 class PilImage(TrackImage):

@@ -1210,6 +1210,12 @@ class DummyViewModel(
     def change_track_offset_to_section_offset(self) -> None:
         return self._application.change_track_offset_to_section_offset()
 
+    def next_frame(self) -> None:
+        self._application.next_frame()
+
+    def previous_frame(self) -> None:
+        self._application.previous_frame()
+
     def validate_date(self, date: str) -> bool:
         return validate_date(date, DATE_FORMAT)
 

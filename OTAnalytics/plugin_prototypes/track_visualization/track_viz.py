@@ -7,6 +7,7 @@ import seaborn
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
@@ -17,12 +18,16 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track import (
+    H,
     PilImage,
     Track,
     TrackId,
     TrackIdProvider,
     TrackImage,
     TrackListObserver,
+    W,
+    X,
+    Y,
 )
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
@@ -100,18 +105,6 @@ class TrackPlotter(ABC):
         height: int,
     ) -> TrackImage:
         pass
-
-
-class TrackBackgroundPlotter(Plotter):
-    """Plot video frame as background."""
-
-    def __init__(self, datastore: Datastore) -> None:
-        self._datastore = datastore
-
-    def plot(self) -> Optional[TrackImage]:
-        if track := next(iter(self._datastore.get_all_tracks()), None):
-            return self._datastore.get_image_of_track(track.id)
-        return None
 
 
 class PlotterPrototype(Plotter):
@@ -516,6 +509,56 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             ax=axes,
             palette=COLOR_PALETTE,
         )
+
+
+class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
+    """Plot geometry of tracks."""
+
+    def __init__(
+        self,
+        data_provider: PandasDataFrameProvider,
+        track_view_state: TrackViewState,
+        alpha: float = 0.5,
+    ) -> None:
+        self._data_provider = data_provider
+        self._track_view_state = track_view_state
+        self._alpha = alpha
+
+    def plot(self, axes: Axes) -> None:
+        data = self._data_provider.get_data()
+        if not data.empty:
+            self._plot_dataframe(data, axes)
+
+    def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
+        """
+        Plot given tracks on the given axes with the given transparency (alpha)
+
+        Args:
+            track_df (DataFrame): tracks to plot
+            alpha (float): transparency of the lines
+            axes (Axes): axes to plot on
+        """
+        boxes_frame = track_df[track_df[track.FRAME] == self.__current_frame()]
+        for index, row in boxes_frame.iterrows():
+            x = row[X]
+            y = row[Y]
+            width = row[W]
+            height = row[H]
+            classification = row[track.CLASSIFICATION]
+            axes.add_patch(
+                Rectangle(
+                    xy=(x, y),
+                    width=width,
+                    height=height,
+                    fc="none",
+                    color=COLOR_PALETTE[classification],
+                    linewidth=0.5,
+                    alpha=0.5,
+                )
+            )
+
+    def __current_frame(self) -> int:
+        return self._track_view_state.frame.get()
 
 
 class MatplotlibTrackPlotter(TrackPlotter):

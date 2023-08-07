@@ -307,3 +307,11 @@ class ViewModel(ABC):
     @abstractmethod
     def export_counts(self) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def next_frame(self) -> None:
+        pass
+
+    @abstractmethod
+    def previous_frame(self) -> None:
+        pass

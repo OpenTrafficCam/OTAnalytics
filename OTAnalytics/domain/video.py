@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from os import path
 from os.path import normcase, splitdrive
 from pathlib import Path
@@ -23,6 +24,10 @@ class VideoReader(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_frame_number_for(self, video_path: Path, date: timedelta) -> int:
+        raise NotImplementedError
+
 
 class Video(ABC):
     @abstractmethod
@@ -32,6 +37,10 @@ class Video(ABC):
     @abstractmethod
     def get_frame(self, index: int) -> TrackImage:
         pass
+
+    @abstractmethod
+    def get_frame_number_for(self, date: datetime) -> int:
+        raise NotImplementedError
 
     @abstractmethod
     def to_dict(
@@ -73,6 +82,7 @@ class SimpleVideo(Video):
 
     video_reader: VideoReader
     path: Path
+    start_date: Optional[datetime]
 
     def __post_init__(self) -> None:
         self.check_path_exists()
@@ -94,6 +104,14 @@ class SimpleVideo(Video):
             TrackImage: the frame.
         """
         return self.video_reader.get_frame(self.path, index)
+
+    def get_frame_number_for(self, date: datetime) -> int:
+        if not self.start_date:
+            return 0
+        time_in_video = date - self.start_date
+        if time_in_video < timedelta(0):
+            return 0
+        return self.video_reader.get_frame_number_for(self.path, time_in_video)
 
     def to_dict(
         self,
