@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Sequence
 from unittest.mock import MagicMock, Mock, call
@@ -32,6 +33,8 @@ from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import SimpleVideo, Video, VideoReader, VideoRepository
 
+START_DATE = datetime(2023, 1, 1)
+
 
 class MockVideoReader(VideoReader):
     def get_frame(self, video: Path, index: int) -> TrackImage:
@@ -50,21 +53,32 @@ class MockVideoReader(VideoReader):
 
         return MockImage()
 
+    def get_frame_number_for(self, video_path: Path, date: timedelta) -> int:
+        return 0
+
 
 class TestSimpleVideo:
     video_reader = MockVideoReader()
 
     def test_raise_error_if_file_not_exists(self) -> None:
         with pytest.raises(ValueError):
-            SimpleVideo(video_reader=self.video_reader, path=Path("foo/bar.mp4"))
+            SimpleVideo(
+                video_reader=self.video_reader,
+                path=Path("foo/bar.mp4"),
+                start_date=START_DATE,
+            )
 
     def test_init_with_valid_args(self, cyclist_video: Path) -> None:
-        video = SimpleVideo(video_reader=self.video_reader, path=cyclist_video)
+        video = SimpleVideo(
+            video_reader=self.video_reader, path=cyclist_video, start_date=START_DATE
+        )
         assert video.path == cyclist_video
         assert video.video_reader == self.video_reader
 
     def test_get_frame_return_correct_image(self, cyclist_video: Path) -> None:
-        video = SimpleVideo(video_reader=self.video_reader, path=cyclist_video)
+        video = SimpleVideo(
+            video_reader=self.video_reader, path=cyclist_video, start_date=START_DATE
+        )
         assert video.get_frame(0).as_image() == Image.fromarray(
             array([[1, 0], [0, 1]], int32)
         )
@@ -212,7 +226,9 @@ class TestDatastore:
         some_track = Mock()
         some_track_id = TrackId(1)
         some_track.id = some_track_id
-        some_video = SimpleVideo(video_reader=Mock(), path=Path(""))
+        some_video = SimpleVideo(
+            video_reader=Mock(), path=Path(""), start_date=START_DATE
+        )
         track_parser.parse.return_value = [some_track]
         track_video_parser.parse.return_value = [some_track_id], [some_video]
 
@@ -269,11 +285,15 @@ class TestDatastore:
         some_track = Mock()
         some_track_id = TrackId(1)
         some_track.id = some_track_id
-        some_video = SimpleVideo(video_reader=Mock(), path=Path(""))
+        some_video = SimpleVideo(
+            video_reader=Mock(), path=Path(""), start_date=START_DATE
+        )
         other_track = Mock()
         other_track_id = TrackId(2)
         other_track.id = other_track_id
-        other_video = SimpleVideo(video_reader=Mock(), path=Path(""))
+        other_video = SimpleVideo(
+            video_reader=Mock(), path=Path(""), start_date=START_DATE
+        )
         track_parser.parse.side_effect = [[some_track], [other_track]]
         track_video_parser.parse.side_effect = [
             [[some_track_id], [some_video]],
