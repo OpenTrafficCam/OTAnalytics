@@ -1,5 +1,5 @@
 import itertools
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
@@ -79,6 +79,7 @@ class FlowGenerator(ABC):
 class FlowPredicate(ABC):
     """Predicate to select if a flow should be generated for a pair of sections."""
 
+    @abstractmethod
     def __call__(self, start: SectionId, end: SectionId) -> bool:
         raise NotImplementedError
 
