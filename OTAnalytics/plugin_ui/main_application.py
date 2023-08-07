@@ -498,7 +498,9 @@ class ApplicationStarter:
             track_view_state,
             track_data_provider,
         )
-        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
+        background_image_plotter = TrackBackgroundPlotter(
+            track_view_state.selected_videos.get, track_view_state.frame.get
+        )
         data_provider_all_filters = self.__create_all_filters_provider(
             track_view_state, track_offset_data_provider
         )
