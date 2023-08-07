@@ -34,9 +34,8 @@ class MoviepyVideoReader(VideoReader):
         clip = self.__get_clip(video_path)
         found = None
         max_frames = clip.fps * clip.duration
-        if index >= max_frames:
-            raise FrameDoesNotExistError(f"frame number '{index}' does not exist")
-        found = clip.get_frame(index / clip.fps)
+        frame_to_load = min(index, max_frames)
+        found = clip.get_frame(frame_to_load / clip.fps)
         clip.close()
         return PilImage(Image.fromarray(found))
 
