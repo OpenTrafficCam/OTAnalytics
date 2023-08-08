@@ -13,7 +13,7 @@ from customtkinter import (
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.helpers import gather_exception_messages
+from OTAnalytics.application.exception import gather_exception_messages
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis

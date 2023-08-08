@@ -1,6 +1,6 @@
 import pytest
 
-from OTAnalytics.application.helpers import gather_exception_messages
+from OTAnalytics.application.exception import gather_exception_messages
 
 VALUE_ERROR_MESSAGE: str = "I am a ValueError"
 VALUE_ERROR: Exception = ValueError(VALUE_ERROR_MESSAGE)
