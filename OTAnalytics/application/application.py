@@ -23,10 +23,10 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.application.use_cases.config import SaveConfiguration
+from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
 from OTAnalytics.domain.flow import (
     Flow,
@@ -43,7 +43,7 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepository,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
+from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
@@ -120,29 +120,6 @@ class AddFlow:
             stored_flow.name != flow_name
             for stored_flow in self._flow_repository.get_all()
         )
-
-
-class ClearEventRepository(SectionListObserver, TrackListObserver):
-    """Clears the event repository also on section state changes.
-
-    Args:
-        event_repository (EventRepository): the event repository
-    """
-
-    def __init__(self, event_repository: EventRepository) -> None:
-        self._event_repository = event_repository
-
-    def clear(self) -> None:
-        self._event_repository.clear()
-
-    def notify_sections(self, sections: list[SectionId]) -> None:
-        self.clear()
-
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
-        self.clear()
-
-    def on_section_changed(self, section_id: SectionId) -> None:
-        self.clear()
 
 
 class IntersectTracksWithSections(ABC):
