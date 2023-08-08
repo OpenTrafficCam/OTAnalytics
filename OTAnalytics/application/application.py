@@ -25,6 +25,7 @@ from OTAnalytics.application.state import (
 from OTAnalytics.application.use_cases.config import SaveConfiguration
 from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
 from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
@@ -41,15 +42,10 @@ from OTAnalytics.domain.section import (
     SectionChangedObserver,
     SectionId,
     SectionListObserver,
-    SectionRepository,
 )
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-
-
-class SectionAlreadyExists(Exception):
-    pass
 
 
 class CancelAddSection(Exception):
@@ -70,31 +66,6 @@ class MultipleSectionsSelected(Exception):
 
 class MultipleFlowsSelected(Exception):
     pass
-
-
-class AddSection:
-    """
-    Add a single section to the repository.
-    """
-
-    def __init__(self, section_repository: SectionRepository) -> None:
-        self._section_repository = section_repository
-
-    def add(self, section: Section) -> None:
-        if not self.is_section_name_valid(section.name):
-            raise SectionAlreadyExists(
-                f"A section with the name {section.name} already exists. "
-                "Choose another name."
-            )
-        self._section_repository.add(section)
-
-    def is_section_name_valid(self, section_name: str) -> bool:
-        if not section_name:
-            return False
-        return all(
-            stored_section.name != section_name
-            for stored_section in self._section_repository.get_all()
-        )
 
 
 class AddFlow:
