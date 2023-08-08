@@ -394,7 +394,7 @@ class Datastore:
         else:
             raise NoSectionsToSave()
 
-    def get_all_sections(self) -> Iterable[Section]:
+    def get_all_sections(self) -> list[Section]:
         return self._section_repository.get_all()
 
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
