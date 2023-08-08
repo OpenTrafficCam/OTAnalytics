@@ -221,6 +221,19 @@ class GroupedCount(Count):
 
 
 @dataclass(frozen=True)
+class FillEmptyCount(Count):
+    """
+    Fill counts with zeros if empty.
+    """
+
+    other: Count
+    flows: list[Flow]
+
+    def to_dict(self) -> dict[Tag, int]:
+        return self.other.to_dict()
+
+
+@dataclass(frozen=True)
 class RoadUserAssignment:
     """
     Assignment of a road user to a flow.
