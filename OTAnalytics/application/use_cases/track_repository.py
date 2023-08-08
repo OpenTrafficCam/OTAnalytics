@@ -1,3 +1,5 @@
+from typing import Iterable
+
 from OTAnalytics.domain.track import Track, TrackRepository
 
 
@@ -25,7 +27,7 @@ class AddAllTracks:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self, tracks: list[Track]) -> None:
+    def __call__(self, tracks: Iterable[Track]) -> None:
         self._track_repository.add_all(tracks)
 
 

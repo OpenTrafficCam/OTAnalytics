@@ -1,12 +1,7 @@
-from abc import ABC
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-from OTAnalytics.application.analysis.intersect import (
-    RunIntersect,
-    RunSceneEventDetection,
-)
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     ExportCounts,
@@ -23,6 +18,10 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.application.use_cases.config import SaveConfiguration
+from OTAnalytics.application.use_cases.create_events import (
+    CreateEvents,
+    CreateIntersectionEvents,
+)
 from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
@@ -59,11 +58,6 @@ class MultipleFlowsSelected(Exception):
     pass
 
 
-class IntersectTracksWithSections(ABC):
-    def run(self) -> None:
-        raise NotImplementedError
-
-
 class OTAnalyticsApplication:
     """
     Entrypoint for calls from the UI.
@@ -76,29 +70,26 @@ class OTAnalyticsApplication:
         track_view_state: TrackViewState,
         section_state: SectionState,
         flow_state: FlowState,
-        intersect: RunIntersect,
-        scene_event_detection: RunSceneEventDetection,
         tracks_metadata: TracksMetadata,
         action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
         generate_flows: GenerateFlows,
-        intersect_tracks_with_sections: IntersectTracksWithSections,
+        create_intersection_events: CreateIntersectionEvents,
         export_counts: ExportCounts,
+        create_events: CreateEvents,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self.flow_state: FlowState = flow_state
-        self._intersect = intersect
-        self._scene_event_detection = scene_event_detection
         self._tracks_metadata = tracks_metadata
         self.action_state = action_state
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
         self._add_flow = AddFlow(self._datastore._flow_repository)
         self._generate_flows = generate_flows
-        self._intersect_tracks_with_sections = intersect_tracks_with_sections
+        self._create_intersection_events = create_intersection_events
         self._clear_event_repository = ClearEventRepository(
             self._datastore._event_repository
         )
@@ -107,6 +98,7 @@ class OTAnalyticsApplication:
         self._save_configuration = SaveConfiguration(
             datastore, config_parser=datastore._config_parser
         )
+        self._create_events = create_events
 
     def connect_observers(self) -> None:
         """
@@ -347,17 +339,10 @@ class OTAnalyticsApplication:
         Intersect all tracks with all sections and write the events into the event
         repository
         """
-        tracks = self._datastore.get_all_tracks()
-        sections = self._datastore.get_all_sections()
-        events = self._intersect.run(tracks, sections)
-        self._clear_event_repository.clear()
-        self._datastore.add_events(events)
-
-        scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
-        self._datastore.add_events(scene_events)
+        self._create_events()
 
     def intersect_tracks_with_sections(self) -> None:
-        self._intersect_tracks_with_sections.run()
+        self._create_intersection_events()
 
     def save_events(self, file: Path) -> None:
         """

@@ -357,7 +357,7 @@ class TrackRepository:
         """
         self._tracks[track.id] = track
 
-    def add_all(self, tracks: list[Track]) -> None:
+    def add_all(self, tracks: Iterable[Track]) -> None:
         """
         Add multiple tracks to the repository and notify only once about it.
 
@@ -367,7 +367,7 @@ class TrackRepository:
         if tracks:
             self.__add_all(tracks)
 
-    def __add_all(self, tracks: list[Track]) -> None:
+    def __add_all(self, tracks: Iterable[Track]) -> None:
         """Internal method to add all tracks to the repository and notify only once
         about it.
 
