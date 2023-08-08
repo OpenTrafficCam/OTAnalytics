@@ -1,15 +1,17 @@
-from typing import Iterable, Optional
+from functools import lru_cache
+from typing import Optional
 
 from numpy import ndarray
 from shapely import GeometryCollection, LineString, Point, Polygon, contains_xy, prepare
 from shapely.ops import snap, split
 
-from OTAnalytics.domain.track import TrackId, TrackListObserver, TrackRepository
+from OTAnalytics.application.config import GEOMETRY_CACHE_SIZE
 
 
 class ShapelyIntersector:
     """Provides shapely geometry operations."""
 
+    @lru_cache(maxsize=GEOMETRY_CACHE_SIZE)
     def line_intersects_line(self, line_1: LineString, line_2: LineString) -> bool:
         """Checks if a line intersects with another line.
 
@@ -180,26 +182,3 @@ class ShapelyIntersector:
         # part of a segment. But if the point was at a self-intersection it could be
         # part of multiple segments.
         return split(snapped_geom, intersection_points)
-
-
-class ShapelyGeometryCache(TrackListObserver):
-    def __init__(self, track_repository: TrackRepository) -> None:
-        super().__init__()
-        self._cache: dict[TrackId, LineString] = dict()
-        self._track_repository = track_repository
-
-    def add(self, track_id: TrackId) -> None:
-        if not (track := self._track_repository.get_for(track_id)):
-            return
-        geometry = [
-            LineString([[first.x, first.y], [second.x, second.y]])
-            for first, second in zip(track.detections[0:-1], track.detections[1:])
-        ]
-        self._cache[track_id] = geometry
-
-    def add_all(self, track_ids: Iterable[TrackId]) -> None:
-        for track_id in track_ids:
-            self.add(track_id)
-
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
-        self.add_all(tracks)
