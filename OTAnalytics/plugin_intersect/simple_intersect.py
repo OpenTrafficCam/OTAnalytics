@@ -16,15 +16,15 @@ from OTAnalytics.domain.intersect import (
     LineSectionIntersector,
 )
 from OTAnalytics.domain.section import Area, LineSection, Section
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import Track, TrackRepository
 
 
-class IntersectBySmallTrackComponents(LineSectionIntersector):
+class SimpleIntersectBySmallestTrackSegments(LineSectionIntersector):
     """
     Implements the intersection strategy by splitting up the track in its smallest
-    components and intersecting each of them with the section.
+    segments and intersecting each of them with the section.
 
-    The smallest component of a track is to generate a Line with the coordinates of
+    The smallest segment of a track is to generate a Line with the coordinates of
     two neighboring detections in the track.
 
     Args:
@@ -89,11 +89,10 @@ class IntersectBySmallTrackComponents(LineSectionIntersector):
                 for detection in track.detections
             ]
         )
-
         return self.implementation.line_intersects_line(line_section, track_as_geometry)
 
 
-class IntersectAreaByTrackPoints(AreaIntersector):
+class SimpleIntersectAreaByTrackPoints(AreaIntersector):
     def __init__(self, implementation: IntersectImplementation, area: Area) -> None:
         super().__init__(implementation, area)
 
@@ -180,13 +179,15 @@ class SimpleRunIntersect(RunIntersect):
         self,
         intersect_implementation: IntersectImplementation,
         intersect_parallelizer: IntersectParallelizationStrategy,
+        track_repository: TrackRepository,
     ) -> None:
         self._intersect_implementation = intersect_implementation
         self._intersect_parallelizer = intersect_parallelizer
+        self._track_repository = track_repository
 
-    def run(self, tracks: Iterable[Track], sections: Iterable[Section]) -> list[Event]:
+    def __call__(self, sections: Iterable[Section]) -> list[Event]:
         return self._intersect_parallelizer.execute(
-            self._run_on_single_track, tracks, sections
+            self._run_on_single_track, self._track_repository.get_all(), sections
         )
 
     def _run_on_single_track(
@@ -197,7 +198,7 @@ class SimpleRunIntersect(RunIntersect):
         events: list[Event] = []
         for _section in sections:
             if isinstance(_section, LineSection):
-                line_section_intersector = IntersectBySmallTrackComponents(
+                line_section_intersector = SimpleIntersectBySmallestTrackSegments(
                     implementation=self._intersect_implementation,
                     line_section=_section,
                 )
@@ -207,7 +208,7 @@ class SimpleRunIntersect(RunIntersect):
                     section_event_builder=section_event_builder,
                 )
             if isinstance(_section, Area):
-                area_section_intersector = IntersectAreaByTrackPoints(
+                area_section_intersector = SimpleIntersectAreaByTrackPoints(
                     implementation=self._intersect_implementation,
                     area=_section,
                 )
@@ -222,7 +223,7 @@ class SimpleRunIntersect(RunIntersect):
         return events
 
 
-class IntersectBySplittingTrackLine(LineSectionIntersector):
+class SimpleIntersectBySplittingTrackLine(LineSectionIntersector):
     """
     Implements the intersection strategy by splitting a track with the section.
 
