@@ -1,6 +1,6 @@
 import pytest
 
-from OTAnalytics.application.helpers import get_all_messages_from_exception_group
+from OTAnalytics.application.helpers import gather_exception_messages
 
 VALUE_ERROR_MESSAGE: str = "I am a ValueError"
 VALUE_ERROR: Exception = ValueError(VALUE_ERROR_MESSAGE)
@@ -100,6 +100,6 @@ def test_pass_get_all_messages_from_exception_group(
     exception_group: BaseExceptionGroup,
     expected_result: list[str],
 ) -> None:
-    actual_result = get_all_messages_from_exception_group(exception_group)
+    actual_result = gather_exception_messages(exception_group)
 
     assert actual_result == expected_result

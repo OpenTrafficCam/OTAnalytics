@@ -3,29 +3,29 @@ import re
 PATTERN = re.compile(r" .((\d+)\s*sub-exception.*.)")
 
 
-def get_all_messages_from_exception_group(
-    exception_group: BaseExceptionGroup,
+def gather_exception_messages(
+    exception: BaseException | BaseExceptionGroup,
 ) -> list[str]:
-    """Returns a list of messages of the ExceptionGroup itself and all of its
-    sub-exceptions.
+    """Gathers all exception messages within an ExceptionGroup or a single
+    BaseException.
 
     If a sub-exception is an ExceptionGroup itself, the list will also contain its
     message and the messages of its sub-exceptions and so on...
 
     Args:
-        exception_group (BaseExceptionGroup): The ExceptionGroup instance
+        exception_group (BaseException | BaseExceptionGroup): The exception instance.
 
     Returns:
-        list[str]: List of all messages of the ExceptionGroup and all of the Exceptions
-        and ExceptionGroups it contains
+        list[str]: all exception messages of a single BaseException or ExceptionGroup
+        and ExceptionGroups it contains.
     """
     messages = []
 
-    if isinstance(exception_group, BaseExceptionGroup):
-        messages.append(re.sub(PATTERN, "", str(exception_group)))
-        for sub_exception in exception_group.exceptions:
-            messages.extend(get_all_messages_from_exception_group(sub_exception))
+    if isinstance(exception, BaseExceptionGroup):
+        messages.append(re.sub(PATTERN, "", str(exception)))
+        for sub_exception in exception.exceptions:
+            messages.extend(gather_exception_messages(sub_exception))
     else:
-        messages.append(str(exception_group).replace("'", ""))
+        messages.append(str(exception).replace("'", ""))
 
     return messages
