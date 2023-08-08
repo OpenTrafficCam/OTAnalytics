@@ -103,13 +103,13 @@ class FrameSections(AbstractCTkFrame):
         self.set_enabled_change_single_item_buttons(False)
         self.set_enabled_change_multiple_items_buttons(False)
 
-    def add_buttons(self) -> list[CTkButton]:
+    def get_add_buttons(self) -> list[CTkButton]:
         return self._add_buttons
 
-    def single_item_buttons(self) -> list[CTkButton]:
+    def get_single_item_buttons(self) -> list[CTkButton]:
         return self._single_item_buttons
 
-    def multiple_items_buttons(self) -> list[CTkButton]:
+    def get_multiple_items_buttons(self) -> list[CTkButton]:
         return self._multiple_items_buttons
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
