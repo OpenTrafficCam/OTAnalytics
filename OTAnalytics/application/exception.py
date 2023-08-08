@@ -1,6 +1,6 @@
 import re
 
-PATTERN = re.compile(r" .((\d+)\s*sub-exception.*.)")
+MESSAGE_SUFFIX_PATTERN = re.compile(r" .((\d+)\s*sub-exception.*.)")
 
 
 def gather_exception_messages(
@@ -22,7 +22,7 @@ def gather_exception_messages(
     messages = []
 
     if isinstance(exception, BaseExceptionGroup):
-        messages.append(re.sub(PATTERN, "", str(exception)))
+        messages.append(re.sub(MESSAGE_SUFFIX_PATTERN, "", str(exception)))
         for sub_exception in exception.exceptions:
             messages.extend(gather_exception_messages(sub_exception))
     else:
