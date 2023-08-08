@@ -25,14 +25,6 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.generate_flows import (
-    ArrowFlowNameGenerator,
-    CrossProductFlowGenerator,
-    FilterSameSection,
-    FlowIdGenerator,
-    GenerateFlows,
-    RepositoryFlowIdGenerator,
-)
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -49,6 +41,14 @@ from OTAnalytics.application.state import (
     TracksMetadata,
     TrackState,
     TrackViewState,
+)
+from OTAnalytics.application.use_cases.generate_flows import (
+    ArrowFlowNameGenerator,
+    CrossProductFlowGenerator,
+    FilterSameSection,
+    FlowIdGenerator,
+    GenerateFlows,
+    RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
     SimpleIntersectTracksWithSections,
