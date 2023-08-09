@@ -30,6 +30,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Tagger,
     TaggerFactory,
     TimeslotTagger,
+    create_export_specification,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -624,12 +625,15 @@ class TestTrafficCounting:
         exporter_factory.create_exporter.return_value = exporter
         start = datetime(2023, 1, 1, 0, 0, 0)
         end = datetime(2023, 1, 1, 0, 15, 0)
-        specification = CountingSpecificationDto(
+        counting_specification = CountingSpecificationDto(
             interval_in_minutes=15,
             start=start,
             end=end,
             format="csv",
             output_file="counts.csv",
+        )
+        export_specification = create_export_specification(
+            flows, counting_specification
         )
         use_case = ExportTrafficCounting(
             event_repository,
@@ -639,13 +643,13 @@ class TestTrafficCounting:
             exporter_factory,
         )
 
-        use_case.export(specification)
+        use_case.export(counting_specification)
 
         event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
         road_user_assigner.assign.assert_called_once()
-        tagger_factory.create_tagger.assert_called_once_with(specification)
+        tagger_factory.create_tagger.assert_called_once_with(counting_specification)
         assignments.tag.assert_called_once_with(tagger)
         tagged_assignments.count.assert_called_once_with(flows)
-        exporter_factory.create_exporter.assert_called_once_with(specification)
+        exporter_factory.create_exporter.assert_called_once_with(export_specification)
         exporter.export.assert_called_once_with(counts)

@@ -158,6 +158,26 @@ class SingleTag(Tag):
         return {self.level: self.id}
 
 
+def create_flow_tag(flow: Flow) -> Tag:
+    return SingleTag(level=LEVEL_FLOW, id=flow.name)
+
+
+def create_mode_tag(tag: str) -> Tag:
+    return SingleTag(level=LEVEL_CLASSIFICATION, id=tag)
+
+
+def create_timeslot_tag(start_of_time_slot: datetime, interval: timedelta) -> Tag:
+    end_of_time_slot = start_of_time_slot + interval
+    serialized_start = start_of_time_slot.strftime("%H:%M")
+    serialized_end = end_of_time_slot.strftime("%H:%M")
+    return MultiTag(
+        [
+            SingleTag(level=LEVEL_START_TIME, id=serialized_start),
+            SingleTag(level=LEVEL_END_TIME, id=serialized_end),
+        ]
+    )
+
+
 @dataclass(frozen=True)
 class Count(ABC):
     """
@@ -191,10 +211,7 @@ class CountByFlow(Count):
         Returns:
             dict[Tag, int]: serializable counts
         """
-        return {
-            SingleTag(level=LEVEL_FLOW, id=flow.name): value
-            for flow, value in self.result.items()
-        }
+        return {create_flow_tag(flow): value for flow, value in self.result.items()}
 
 
 @dataclass(frozen=True)
@@ -293,7 +310,7 @@ class ModeTagger(Tagger):
         """
         track = self._track_repository.get_for(TrackId(assignment.road_user))
         tag = track.classification if track else UNCLASSIFIED
-        return SingleTag(level=LEVEL_CLASSIFICATION, id=tag)
+        return create_mode_tag(tag)
 
 
 class TimeslotTagger(Tagger):
@@ -305,15 +322,7 @@ class TimeslotTagger(Tagger):
         interval_seconds = self._interval.total_seconds()
         result = int(original_time / interval_seconds) * interval_seconds
         start_of_time_slot = datetime.fromtimestamp(result)
-        end_of_time_slot = start_of_time_slot + self._interval
-        serialized_start = start_of_time_slot.strftime("%H:%M")
-        serialized_end = end_of_time_slot.strftime("%H:%M")
-        return MultiTag(
-            [
-                SingleTag(level=LEVEL_START_TIME, id=serialized_start),
-                SingleTag(level=LEVEL_END_TIME, id=serialized_end),
-            ]
-        )
+        return create_timeslot_tag(start_of_time_slot, self._interval)
 
 
 class CountableAssignments:
@@ -750,6 +759,13 @@ class ExporterFactory(ABC):
         raise NotImplementedError
 
 
+def create_export_specification(
+    flows: list[Flow], counting_specification: CountingSpecificationDto
+) -> ExportSpecificationDto:
+    flow_names = [flow.name for flow in flows]
+    return ExportSpecificationDto(counting_specification, flow_names)
+
+
 class ExportTrafficCounting(ExportCounts):
     """
     Use case to export traffic countings.
@@ -782,7 +798,7 @@ class ExportTrafficCounting(ExportCounts):
         tagger = self._tagger_factory.create_tagger(specification)
         tagged_assignments = assigned_flows.tag(tagger)
         counts = tagged_assignments.count(flows)
-        export_specification = self.__create_export_specification(flows, specification)
+        export_specification = create_export_specification(flows, specification)
         exporter = self._exporter_factory.create_exporter(export_specification)
         exporter.export(counts)
 
@@ -794,9 +810,3 @@ class ExportTrafficCounting(ExportCounts):
             Iterable[ExportFormat]: supported export formats
         """
         return self._exporter_factory.get_supported_formats()
-
-    def __create_export_specification(
-        self, flows: list[Flow], counting_specification: CountingSpecificationDto
-    ) -> ExportSpecificationDto:
-        flow_names = [flow.name for flow in flows]
-        return ExportSpecificationDto(counting_specification, flow_names)
