@@ -28,10 +28,16 @@ class FrameConfiguration(CTkFrame):
             master=self, width=50, viewmodel=self._viewmodel
         )
         self.button_add = CTkButton(
-            master=self, text="Load", width=50, command=self._viewmodel.load_sections
+            master=self,
+            text="Load",
+            width=50,
+            command=self._viewmodel.load_configuration,
         )
         self.button_save = CTkButton(
-            master=self, text="Save", width=50, command=self._viewmodel.save_sections
+            master=self,
+            text="Save",
+            width=50,
+            command=self._viewmodel.save_configuration,
         )
 
     def _place_widgets(self) -> None:

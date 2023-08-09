@@ -151,4 +151,10 @@ def ask_for_save_file_name(
         defaultextension=defaultextension,
         **kwargs,
     )
-    return ensure_file_extension_is_present(filename, defaultextension)
+    if filename:
+        allowed_extensions = [filetype[1] for filetype in filetypes]
+        return ensure_file_extension_is_present(
+            filename, allowed_extensions, defaultextension
+        )
+    else:
+        return filename
