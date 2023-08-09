@@ -1,5 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Iterable
 
 
@@ -16,6 +17,8 @@ class CountingSpecificationDto:
     """
 
     interval_in_minutes: int
+    start: datetime
+    end: datetime
     format: str
     output_file: str
 

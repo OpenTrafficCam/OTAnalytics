@@ -622,8 +622,12 @@ class TestTrafficCounting:
         assignments.tag.return_value = tagged_assignments
         tagged_assignments.count.return_value = counts
         exporter_factory.create_exporter.return_value = exporter
+        start = datetime(2023, 1, 1, 0, 0, 0)
+        end = datetime(2023, 1, 1, 0, 15, 0)
         specification = CountingSpecificationDto(
             interval_in_minutes=15,
+            start=start,
+            end=end,
             format="csv",
             output_file="counts.csv",
         )

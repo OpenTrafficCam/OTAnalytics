@@ -11,6 +11,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
 )
 
 INTERVAL = "interval"
+START = "start"
+END = "end"
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
 INITIAL_FILE_STEM = "counts"

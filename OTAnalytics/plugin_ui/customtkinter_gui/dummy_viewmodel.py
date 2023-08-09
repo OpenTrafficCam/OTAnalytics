@@ -86,9 +86,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    END,
     EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
+    START,
     CancelExportCounts,
     ToplevelExportCounts,
 )
@@ -1354,7 +1356,14 @@ class DummyViewModel(
             for format in self._application.get_supported_export_formats()
         }
         default_format = next(iter(export_formats.keys()))
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
+        start = self._application._tracks_metadata.first_detection_occurrence
+        end = self._application._tracks_metadata.last_detection_occurrence
+        default_values: dict = {
+            INTERVAL: 15,
+            START: start,
+            END: end,
+            EXPORT_FORMAT: default_format,
+        }
         try:
             export_values: dict = ToplevelExportCounts(
                 title="Export counts",
@@ -1365,6 +1374,8 @@ class DummyViewModel(
             print(export_values)
             export_specification = CountingSpecificationDto(
                 interval_in_minutes=export_values[INTERVAL],
+                start=export_values[START],
+                end=export_values[END],
                 format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
             )
