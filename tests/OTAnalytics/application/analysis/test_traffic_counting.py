@@ -74,7 +74,10 @@ class TestCountDecorator:
         other = Mock(spec=Count)
         other.to_dict.return_value = other_dict
         decorator = CountDecorator(other)
-        assert decorator.to_dict() is other_dict
+
+        actual = decorator.to_dict()
+
+        assert actual is other_dict
         other.to_dict.assert_called_once()
 
 
