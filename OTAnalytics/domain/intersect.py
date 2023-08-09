@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Iterable, Optional
+from typing import Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.domain.event import Event, EventBuilder, EventType
 from OTAnalytics.domain.geometry import (
@@ -104,10 +104,7 @@ class IntersectParallelizationStrategy(ABC):
     @abstractmethod
     def execute(
         self,
-        intersect: Callable[
-            [Track, Iterable[Section]],
-            Iterable[Event],
-        ],
+        intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],
         tracks: Iterable[Track],
         sections: Iterable[Section],
     ) -> list[Event]:
@@ -126,7 +123,10 @@ class IntersectParallelizationStrategy(ABC):
         pass
 
 
-class Intersector(ABC):
+T = TypeVar("T")
+
+
+class Intersector(ABC, Generic[T]):
     """
     Defines an interface to implement a family of algorithms to intersect tracks
     with sections.
@@ -140,11 +140,11 @@ class Intersector(ABC):
         self.implementation = implementation
 
     @abstractmethod
-    def intersect(self, track: Track, event_builder: EventBuilder) -> list[Event]:
+    def intersect(self, track: T, event_builder: EventBuilder) -> list[Event]:
         """Intersect tracks with sections and generate events if they intersect.
 
         Args:
-            track (Track): the track
+            track (T): the track
             event_builder (EventBuilder): builder to generate events
 
         Returns:
@@ -207,7 +207,7 @@ class Intersector(ABC):
         return result
 
 
-class LineSectionIntersector(Intersector):
+class LineSectionIntersector(Intersector[T]):
     """Determines whether a line section intersects with a track.
 
     Args:
@@ -225,7 +225,7 @@ class LineSectionIntersector(Intersector):
         self._line_section = line_section
 
 
-class AreaIntersector(Intersector):
+class AreaIntersector(Intersector[T]):
     """Determines whether an area intersects with a track.
 
     Args:

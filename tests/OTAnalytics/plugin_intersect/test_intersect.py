@@ -14,10 +14,10 @@ from OTAnalytics.domain.geometry import (
 from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.section import Area, LineSection, SectionId
 from OTAnalytics.domain.track import Track
-from OTAnalytics.plugin_intersect.intersect import (
-    IntersectAreaByTrackPoints,
-    IntersectBySmallTrackComponents,
-    IntersectBySplittingTrackLine,
+from OTAnalytics.plugin_intersect.simple_intersect import (
+    SimpleIntersectAreaByTrackPoints,
+    SimpleIntersectBySmallestTrackSegments,
+    SimpleIntersectBySplittingTrackLine,
 )
 from tests.conftest import EventBuilder, TrackBuilder
 
@@ -184,7 +184,9 @@ class TestIntersectBySplittingTrackLine:
             coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
         )
 
-        intersector = IntersectBySplittingTrackLine(mock_implementation, line_section)
+        intersector = SimpleIntersectBySplittingTrackLine(
+            mock_implementation, line_section
+        )
         result_events = intersector.intersect(track, event_builder)
         assert result_events is not None
 
@@ -229,7 +231,9 @@ class TestIntersectBySplittingTrackLine:
             coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
         )
 
-        intersector = IntersectBySplittingTrackLine(mock_implementation, line_section)
+        intersector = SimpleIntersectBySplittingTrackLine(
+            mock_implementation, line_section
+        )
         result_events = intersector.intersect(track, event_builder)
         assert result_events is not None
 
@@ -290,7 +294,9 @@ class TestIntersectBySmallTrackComponents:
             coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
         )
 
-        intersector = IntersectBySmallTrackComponents(mock_implementation, line_section)
+        intersector = SimpleIntersectBySmallestTrackSegments(
+            mock_implementation, line_section
+        )
         result_events = intersector.intersect(track, section_event_builder)
         assert result_events == expected_events
 
@@ -323,7 +329,9 @@ class TestIntersectBySmallTrackComponents:
             coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
         )
 
-        intersector = IntersectBySmallTrackComponents(mock_implementation, line_section)
+        intersector = SimpleIntersectBySmallestTrackSegments(
+            mock_implementation, line_section
+        )
         result_events = intersector.intersect(track, event_builder)
 
         assert result_events is not None
@@ -352,7 +360,7 @@ class TestIntersectBySmallTrackComponents:
         # Setup mock intersection implementation
         intersect_implementation = Mock()
         line_section = Mock()
-        intersector = IntersectBySmallTrackComponents(
+        intersector = SimpleIntersectBySmallestTrackSegments(
             intersect_implementation, line_section
         )
 
@@ -433,7 +441,7 @@ class TestIntersectAreaByTrackPoints:
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
 
-        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        intersector = SimpleIntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
 
         event_builder.add_microsecond(1)
@@ -497,7 +505,7 @@ class TestIntersectAreaByTrackPoints:
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
 
-        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        intersector = SimpleIntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
 
         event_builder.add_microsecond(1)
@@ -563,7 +571,7 @@ class TestIntersectAreaByTrackPoints:
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
 
-        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        intersector = SimpleIntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
 
         event_builder.add_microsecond(1)
@@ -616,7 +624,7 @@ class TestIntersectAreaByTrackPoints:
         event_builder = SectionEventBuilder()
         event_builder.add_section_id(area.id)
 
-        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        intersector = SimpleIntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, event_builder)
         expected_events = [
             Event(
@@ -677,7 +685,7 @@ class TestIntersectAreaByTrackPoints:
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
 
-        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        intersector = SimpleIntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
 
         event_builder.add_microsecond(1)
@@ -757,7 +765,7 @@ class TestIntersectAreaByTrackPoints:
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
 
-        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        intersector = SimpleIntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
 
         event_builder.add_microsecond(1)
@@ -849,7 +857,7 @@ class TestIntersectAreaByTrackPoints:
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
 
-        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        intersector = SimpleIntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(track, section_event_builder)
 
         event_builder.add_microsecond(1)
@@ -913,7 +921,7 @@ class TestIntersectAreaByTrackPoints:
         section_event_builder = SectionEventBuilder()
         section_event_builder.add_section_id(area.id)
 
-        intersector = IntersectAreaByTrackPoints(mock_implementation, area)
+        intersector = SimpleIntersectAreaByTrackPoints(mock_implementation, area)
         result_events = intersector.intersect(closed_track, section_event_builder)
 
         event_builder.add_road_user_id(closed_track.id.id)

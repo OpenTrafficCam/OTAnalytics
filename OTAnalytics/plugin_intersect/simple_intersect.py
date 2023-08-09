@@ -19,7 +19,7 @@ from OTAnalytics.domain.section import Area, LineSection, Section
 from OTAnalytics.domain.track import Track, TrackRepository
 
 
-class SimpleIntersectBySmallestTrackSegments(LineSectionIntersector):
+class SimpleIntersectBySmallestTrackSegments(LineSectionIntersector[Track]):
     """
     Implements the intersection strategy by splitting up the track in its smallest
     segments and intersecting each of them with the section.
@@ -92,7 +92,7 @@ class SimpleIntersectBySmallestTrackSegments(LineSectionIntersector):
         return self.implementation.line_intersects_line(line_section, track_as_geometry)
 
 
-class SimpleIntersectAreaByTrackPoints(AreaIntersector):
+class SimpleIntersectAreaByTrackPoints(AreaIntersector[Track]):
     def __init__(self, implementation: IntersectImplementation, area: Area) -> None:
         super().__init__(implementation, area)
 
@@ -169,7 +169,7 @@ class SimpleIntersectAreaByTrackPoints(AreaIntersector):
         return events
 
 
-class SimpleIntersectBySplittingTrackLine(LineSectionIntersector):
+class SimpleIntersectBySplittingTrackLine(LineSectionIntersector[Track]):
     """
     Implements the intersection strategy by splitting a track with the section.
 

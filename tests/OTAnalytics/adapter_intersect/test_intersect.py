@@ -18,12 +18,12 @@ from OTAnalytics.domain.geometry import (
 )
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track
-from OTAnalytics.plugin_intersect.intersect import (
-    IntersectAreaByTrackPoints,
-    IntersectBySmallTrackComponents,
-    IntersectBySplittingTrackLine,
-)
 from OTAnalytics.plugin_intersect.shapely_intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.simple_intersect import (
+    SimpleIntersectAreaByTrackPoints,
+    SimpleIntersectBySmallestTrackSegments,
+    SimpleIntersectBySplittingTrackLine,
+)
 
 FRAME_WIDTH = 800
 FRAME_HEIGHT = 600
@@ -87,7 +87,7 @@ class TestDetectSectionActivity:
             coordinates=[Coordinate(103, 194), Coordinate(366, 129)],
         )
 
-        line_section_intersector = IntersectBySmallTrackComponents(
+        line_section_intersector = SimpleIntersectBySmallestTrackSegments(
             implementation=shapely_intersection_adapter, line_section=line_section
         )
 
@@ -118,7 +118,7 @@ class TestDetectSectionActivity:
             coordinates=[Coordinate(103, 194), Coordinate(366, 129)],
         )
 
-        line_section_intersector = IntersectBySplittingTrackLine(
+        line_section_intersector = SimpleIntersectBySplittingTrackLine(
             implementation=shapely_intersection_adapter, line_section=line_section
         )
 
@@ -156,7 +156,7 @@ class TestDetectSectionActivity:
             coordinates=coordinates,
         )
 
-        area_intersector = IntersectAreaByTrackPoints(
+        area_intersector = SimpleIntersectAreaByTrackPoints(
             shapely_intersection_adapter, area_section
         )
         section_action_detector = SectionActionDetector(
