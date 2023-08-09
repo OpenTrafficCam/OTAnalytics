@@ -22,7 +22,9 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    DEFAULT_COLOR_PALETTE,
     CachedPandasTrackProvider,
+    ColorPaletteProvider,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
@@ -194,6 +196,51 @@ class TestCachedPandasTrackProvider:
 
         provider.notify_tracks([track_1.id, track_2.id])
         self.check_expected_ids(provider, [track_1, track_2])
+
+
+class TestColorPaletteProvider:
+    @pytest.mark.parametrize(
+        "new_classifications,existing_classifications,default_palette",
+        [
+            ({"Class 1", "Class 2", "Class 3"}, set(), {}),
+            (
+                {"Class 1", "Class 2", "Class 3"},
+                set(DEFAULT_COLOR_PALETTE.keys()),
+                DEFAULT_COLOR_PALETTE,
+            ),
+            (
+                {"Class 1", "Class 2", "Class 3"},
+                {"Existing class 1", "Existing class 2"},
+                {
+                    "Existing class 1": "red",
+                    "Existing class 2": "blue",
+                    "Not used class": "pink",
+                },
+            ),
+        ],
+    )
+    def test_update_with_filled_default_palette(
+        self,
+        new_classifications: set[str],
+        existing_classifications: set[str],
+        default_palette: dict[str, str],
+    ) -> None:
+        total_classifications = existing_classifications | new_classifications
+        color_palette_provider = ColorPaletteProvider(default_palette)
+        color_palette_provider.update(total_classifications)
+        palette = color_palette_provider.get()
+        for classification in new_classifications:
+            assert self._is_hex_color(palette[classification])
+        for classification in existing_classifications:
+            assert palette[classification] == default_palette[classification]
+        for classification in palette.keys():
+            assert classification in total_classifications
+
+    def _is_hex_color(self, value: str) -> bool:
+        import re
+
+        hex_color_pattern = re.compile(r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")
+        return bool(hex_color_pattern.match(value))
 
 
 class TestBackgroundPlotter:
