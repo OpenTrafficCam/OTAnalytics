@@ -14,7 +14,15 @@ from OTAnalytics.domain.section import Section, SectionId, SectionRepository
 def section_north() -> Mock:
     section = Mock(spec=Section)
     section.name = "North"
-    section.id = "1"
+    section.id = SectionId("1")
+    return section
+
+
+@pytest.fixture
+def section_south() -> Mock:
+    section = Mock(spec=Section)
+    section.name = "South"
+    section.id = SectionId("2")
     return section
 
 
@@ -50,13 +58,12 @@ class TestAddSection:
     def test_add_section_with_same_names(
         self,
         section_north: Mock,
+        section_south: Mock,
         section_repository: Mock,
     ) -> None:
-        other_section = Mock(spec=Section)
-        other_section.id = SectionId("other")
-        other_section.name = section_north.name
+        section_south.name = section_north.name
 
         use_case = AddSection(section_repository)
 
         with pytest.raises(SectionAlreadyExists):
-            use_case.add(other_section)
+            use_case.add(section_south)
