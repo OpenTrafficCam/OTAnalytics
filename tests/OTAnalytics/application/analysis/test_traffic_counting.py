@@ -6,6 +6,7 @@ import pytest
 from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
     LEVEL_END_TIME,
+    LEVEL_FLOW,
     LEVEL_START_TIME,
     UNCLASSIFIED,
     CombinedTagger,
@@ -49,6 +50,21 @@ def track(track_builder: TrackBuilder) -> Track:
     track_builder.append_detection()
     track_builder.append_detection()
     return track_builder.build_track()
+
+
+class TestCountByFlow:
+    def test_to_dict(self) -> None:
+        value = 2
+        flow_name = "Flow"
+        flow = Mock(spec=Flow)
+        flow.name = flow_name
+        result: dict[Flow, int] = {flow: value}
+        count = CountByFlow(result)
+
+        actual = count.to_dict()
+
+        expected = {SingleTag(LEVEL_FLOW, id=flow_name): value}
+        assert actual == expected
 
 
 def create_event(
