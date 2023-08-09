@@ -351,9 +351,6 @@ class CountableAssignments:
         """
         Count users per flow.
 
-        Args:
-            user_to_flow (dict[int, FlowId]): assigment of users to flows
-
         Returns:
             dict[FlowId, int]: count per flow
         """
