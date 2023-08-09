@@ -378,10 +378,6 @@ class TrackRepository:
             self.__add(track)
         self.observers.notify([track.id for track in tracks])
 
-    def delete_all(self) -> None:
-        """Delete all tracks."""
-        self._tracks = {}
-
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
         Retrieve a track for the given id.
