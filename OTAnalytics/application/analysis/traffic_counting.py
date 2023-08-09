@@ -229,16 +229,17 @@ class GroupedCount(Count):
 
 
 @dataclass(frozen=True)
-class FillEmptyCount(Count):
+class FillEmptyCount(CountDecorator):
     """
     Fill counts with zeros if empty.
     """
 
-    other: Count
-    flows: list[Flow]
+    tags: list[Tag]
 
     def to_dict(self) -> dict[Tag, int]:
-        return self.other.to_dict()
+        empty = {tag: 0 for tag in self.tags}
+        other_result = super().to_dict()
+        return empty | other_result
 
 
 @dataclass(frozen=True)

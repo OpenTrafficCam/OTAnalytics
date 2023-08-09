@@ -18,6 +18,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Exporter,
     ExporterFactory,
     ExportTrafficCounting,
+    FillEmptyCount,
     ModeTagger,
     MultiTag,
     RoadUserAssigner,
@@ -78,6 +79,23 @@ class TestCountDecorator:
         actual = decorator.to_dict()
 
         assert actual is other_dict
+        other.to_dict.assert_called_once()
+
+
+class TestFillEmptyCount:
+    def test_fill_empty_tags(self) -> None:
+        flow_name = "Flow"
+        other_dict: dict[Tag, int] = {}
+        other = Mock(spec=Count)
+        other.to_dict.return_value = other_dict
+        flow_tag = SingleTag(LEVEL_FLOW, id=flow_name)
+        tags: list[Tag] = [flow_tag]
+        filled_dict = {flow_tag: 0}
+        count = FillEmptyCount(other, tags)
+
+        actual = count.to_dict()
+
+        assert actual == filled_dict
         other.to_dict.assert_called_once()
 
 
