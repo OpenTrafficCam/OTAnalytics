@@ -1370,6 +1370,7 @@ class DummyViewModel(
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
+                viewmodel=self,
             ).get_data()
             print(export_values)
             export_specification = CountingSpecificationDto(
