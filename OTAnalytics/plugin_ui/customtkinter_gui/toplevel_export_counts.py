@@ -46,7 +46,7 @@ class FrameConfigureExportCounts(FrameContent):
             validate="key",
             validatecommand=(self.register(self._is_int_above_zero), "%P"),
         )
-        self.entry_interval.insert(0, str(self._input_values["interval"]))
+        self.entry_interval.insert(0, str(self._input_values[INTERVAL]))
         self.label_interval_unit = CTkLabel(master=self, text="min")
         self.label_format = CTkLabel(master=self, text="Format")
         self.optionmenu_format = CTkOptionMenu(
@@ -69,8 +69,8 @@ class FrameConfigureExportCounts(FrameContent):
         self.after(0, lambda: self.entry_interval.focus_set())
 
     def _parse_input_values(self) -> None:
-        self._input_values["interval"] = int(self.entry_interval.get())
-        self._input_values["export_format"] = self.optionmenu_format.get()
+        self._input_values[INTERVAL] = int(self.entry_interval.get())
+        self._input_values[EXPORT_FORMAT] = self.optionmenu_format.get()
 
     def get_input_values(self) -> dict:
         self._parse_input_values()
