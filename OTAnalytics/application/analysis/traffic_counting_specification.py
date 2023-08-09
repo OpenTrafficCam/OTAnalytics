@@ -23,6 +23,24 @@ class CountingSpecificationDto:
     output_file: str
 
 
+@dataclass(frozen=True)
+class ExportSpecificationDto:
+    """
+    Data transfer object to represent the counting.
+    """
+
+    counting_specification: CountingSpecificationDto
+    flow_names: list[str]
+
+    @property
+    def format(self) -> str:
+        return self.counting_specification.format
+
+    @property
+    def output_file(self) -> str:
+        return self.counting_specification.output_file
+
+
 class ExportCounts(ABC):
     def export(self, specification: CountingSpecificationDto) -> None:
         raise NotImplementedError

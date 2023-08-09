@@ -9,8 +9,8 @@ from OTAnalytics.application.analysis.traffic_counting import (
     ExporterFactory,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
-    CountingSpecificationDto,
     ExportFormat,
+    ExportSpecificationDto,
 )
 
 
@@ -55,5 +55,5 @@ class SimpleExporterFactory(ExporterFactory):
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         return self._formats.keys()
 
-    def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
+    def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         return self._factories[specification.format](specification.output_file)

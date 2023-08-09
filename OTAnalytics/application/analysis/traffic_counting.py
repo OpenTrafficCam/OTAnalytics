@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     ExportCounts,
     ExportFormat,
+    ExportSpecificationDto,
 )
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
@@ -736,7 +737,7 @@ class ExporterFactory(ABC):
         """
         raise NotImplementedError
 
-    def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
+    def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         """
         Create the exporter for the given CountingSpecificationDto.
 
@@ -781,7 +782,8 @@ class ExportTrafficCounting(ExportCounts):
         tagger = self._tagger_factory.create_tagger(specification)
         tagged_assignments = assigned_flows.tag(tagger)
         counts = tagged_assignments.count(flows)
-        exporter = self._exporter_factory.create_exporter(specification)
+        export_specification = self.__create_export_specification(flows, specification)
+        exporter = self._exporter_factory.create_exporter(export_specification)
         exporter.export(counts)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
@@ -792,3 +794,9 @@ class ExportTrafficCounting(ExportCounts):
             Iterable[ExportFormat]: supported export formats
         """
         return self._exporter_factory.get_supported_formats()
+
+    def __create_export_specification(
+        self, flows: list[Flow], counting_specification: CountingSpecificationDto
+    ) -> ExportSpecificationDto:
+        flow_names = [flow.name for flow in flows]
+        return ExportSpecificationDto(counting_specification, flow_names)
