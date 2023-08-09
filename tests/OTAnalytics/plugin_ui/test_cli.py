@@ -158,7 +158,7 @@ class TestOTAnalyticsCli:
                     ShapelyIntersector(), ShapelyMapper()
                 ),
                 MultiprocessingIntersectParallelization(),
-                track_repository,
+                get_all_tracks,
             ),
             section_repository,
             add_events,

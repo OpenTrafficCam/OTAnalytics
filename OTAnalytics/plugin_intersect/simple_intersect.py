@@ -1,7 +1,9 @@
+from functools import partial
 from typing import Iterable
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.eventlist import SectionActionDetector
+from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event, EventBuilder, EventType, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
@@ -16,7 +18,7 @@ from OTAnalytics.domain.intersect import (
     LineSectionIntersector,
 )
 from OTAnalytics.domain.section import Area, LineSection, Section
-from OTAnalytics.domain.track import Track, TrackRepository
+from OTAnalytics.domain.track import Track
 
 
 class SimpleIntersectBySmallestTrackSegments(LineSectionIntersector[Track]):
@@ -247,45 +249,49 @@ class SimpleRunIntersect(RunIntersect):
         self,
         intersect_implementation: IntersectImplementation,
         intersect_parallelizer: IntersectParallelizationStrategy,
-        track_repository: TrackRepository,
+        get_all_tracks: GetAllTracks,
     ) -> None:
         self._intersect_implementation = intersect_implementation
         self._intersect_parallelizer = intersect_parallelizer
-        self._track_repository = track_repository
+        self._get_all_tracks = get_all_tracks
 
     def __call__(self, sections: Iterable[Section]) -> list[Event]:
         return self._intersect_parallelizer.execute(
-            self._run_on_single_track, self._track_repository.get_all(), sections
+            partial(
+                _run_intersect_on_single_track,
+                intersect_implementation=self._intersect_implementation,
+            ),
+            self._get_all_tracks(),
+            sections,
         )
 
-    def _run_on_single_track(
-        self,
-        track: Track,
-        sections: Iterable[Section],
-    ) -> list[Event]:
-        events: list[Event] = []
-        for _section in sections:
-            if isinstance(_section, LineSection):
-                line_section_intersector = SimpleIntersectBySmallestTrackSegments(
-                    implementation=self._intersect_implementation,
-                    line_section=_section,
-                )
-                section_event_builder = SectionEventBuilder()
-                section_action_detector = SectionActionDetector(
-                    intersector=line_section_intersector,
-                    section_event_builder=section_event_builder,
-                )
-            if isinstance(_section, Area):
-                area_section_intersector = SimpleIntersectAreaByTrackPoints(
-                    implementation=self._intersect_implementation,
-                    area=_section,
-                )
-                section_event_builder = SectionEventBuilder()
-                section_action_detector = SectionActionDetector(
-                    intersector=area_section_intersector,
-                    section_event_builder=section_event_builder,
-                )
-            events.extend(
-                section_action_detector._detect(section=_section, track=track)
+
+def _run_intersect_on_single_track(
+    track: Track,
+    sections: Iterable[Section],
+    intersect_implementation: IntersectImplementation,
+) -> list[Event]:
+    events: list[Event] = []
+    for _section in sections:
+        if isinstance(_section, LineSection):
+            line_section_intersector = SimpleIntersectBySmallestTrackSegments(
+                implementation=intersect_implementation,
+                line_section=_section,
             )
-        return events
+            section_event_builder = SectionEventBuilder()
+            section_action_detector = SectionActionDetector(
+                intersector=line_section_intersector,
+                section_event_builder=section_event_builder,
+            )
+        if isinstance(_section, Area):
+            area_section_intersector = SimpleIntersectAreaByTrackPoints(
+                implementation=intersect_implementation,
+                area=_section,
+            )
+            section_event_builder = SectionEventBuilder()
+            section_action_detector = SectionActionDetector(
+                intersector=area_section_intersector,
+                section_event_builder=section_event_builder,
+            )
+        events.extend(section_action_detector._detect(section=_section, track=track))
+    return events

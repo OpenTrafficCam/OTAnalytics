@@ -197,11 +197,12 @@ class ApplicationStarter:
             section_repository, flow_repository
         )
         add_events = AddEvents(event_repository)
+        get_all_tracks = GetAllTracks(track_repository)
         create_events = self._create_use_case_create_events(
-            track_repository, section_repository, event_repository, add_events
+            section_repository, event_repository, get_all_tracks, add_events
         )
         intersect_tracks_with_sections = self._create_intersect_tracks_with_sections(
-            track_repository, section_repository, add_events
+            section_repository, get_all_tracks, add_events
         )
         export_counts = self._create_export_counts(
             event_repository, flow_repository, track_repository
@@ -253,8 +254,9 @@ class ApplicationStarter:
         event_repository = self._create_event_repository()
         add_section = AddSection(section_repository)
         add_events = AddEvents(event_repository)
+        get_all_tracks = GetAllTracks(track_repository)
         create_events = self._create_use_case_create_events(
-            track_repository, section_repository, event_repository, add_events
+            section_repository, event_repository, get_all_tracks, add_events
         )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
@@ -649,20 +651,20 @@ class ApplicationStarter:
 
     def _create_intersect_tracks_with_sections(
         self,
-        track_repository: TrackRepository,
         section_repository: SectionRepository,
+        get_all_tracks: GetAllTracks,
         add_events: AddEvents,
     ) -> CreateIntersectionEvents:
-        intersect = self._create_intersect(track_repository)
+        intersect = self._create_intersect(get_all_tracks)
         return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
 
-    def _create_intersect(self, track_repository: TrackRepository) -> RunIntersect:
+    def _create_intersect(self, get_all_tracks: GetAllTracks) -> RunIntersect:
         return SimpleRunIntersect(
             intersect_implementation=ShapelyIntersectImplementationAdapter(
                 ShapelyIntersector()
             ),
             intersect_parallelizer=MultiprocessingIntersectParallelization(),
-            track_repository=track_repository,
+            get_all_tracks=get_all_tracks,
         )
 
     def _create_tracks_metadata(
@@ -695,17 +697,16 @@ class ApplicationStarter:
 
     def _create_use_case_create_events(
         self,
-        track_repository: TrackRepository,
         section_repository: SectionRepository,
         event_repository: EventRepository,
+        get_all_tracks: GetAllTracks,
         add_events: AddEvents,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(track_repository)
+        run_intersect = self._create_intersect(get_all_tracks)
         clear_event_repository = ClearEventRepository(event_repository)
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_repository, add_events
         )
-        get_all_tracks = GetAllTracks(track_repository)
         scene_action_detector = SceneActionDetector(SceneEventBuilder())
         create_scene_events = SimpleCreateSceneEvents(
             get_all_tracks, scene_action_detector, add_events
