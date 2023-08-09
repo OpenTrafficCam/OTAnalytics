@@ -197,6 +197,14 @@ class CountByFlow(Count):
 
 
 @dataclass(frozen=True)
+class CountDecorator(Count):
+    other: Count
+
+    def to_dict(self) -> dict[Tag, int]:
+        return self.other.to_dict()
+
+
+@dataclass(frozen=True)
 class GroupedCount(Count):
     """
     Group various Count objects by Tag.

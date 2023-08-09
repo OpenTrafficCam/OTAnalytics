@@ -13,6 +13,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Count,
     CountableAssignments,
     CountByFlow,
+    CountDecorator,
     EventPair,
     Exporter,
     ExporterFactory,
@@ -65,6 +66,16 @@ class TestCountByFlow:
 
         expected = {SingleTag(LEVEL_FLOW, id=flow_name): value}
         assert actual == expected
+
+
+class TestCountDecorator:
+    def test_to_dict(self) -> None:
+        other_dict: dict[Tag, int] = {}
+        other = Mock(spec=Count)
+        other.to_dict.return_value = other_dict
+        decorator = CountDecorator(other)
+        assert decorator.to_dict() is other_dict
+        other.to_dict.assert_called_once()
 
 
 def create_event(
