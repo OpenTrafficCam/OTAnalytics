@@ -47,7 +47,7 @@ class TestPlotterPrototype:
         plotted_tracks = Mock(spec=TrackImage)
         track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
-        track_plotter = Mock(sepc=TrackPlotter)
+        track_plotter = Mock(spec=TrackPlotter)
         track.id = track_id
         track_plotter.plot.return_value = plotted_tracks
         plotter = PlotterPrototype(track_view_state, track_plotter)
@@ -298,11 +298,15 @@ class TestTrackGeometryPlotter:
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)
+        color_palette_provider = Mock(spec=ColorPaletteProvider)
         axes = Mock()
 
         data_provider.get_data.return_value = data_frame
+        color_palette_provider.get.return_value = {"Class 1": "green", "Class 2": "red"}
 
-        plotter = TrackGeometryPlotter(data_provider, enable_legend=False)
+        plotter = TrackGeometryPlotter(
+            data_provider, color_palette_provider, enable_legend=False
+        )
 
         plotter.plot(axes)
         assert mock_plot_dataframe.call_count == call_count
@@ -334,11 +338,15 @@ class TestStartEndPointPlotter:
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)
+        data_provider.get_data.return_value = data_frame
         axes = Mock()
 
-        data_provider.get_data.return_value = data_frame
+        color_palette_provider = Mock(spec=ColorPaletteProvider)
+        color_palette_provider.get.return_value = {"Class 1": "green", "Class 2": "red"}
 
-        plotter = TrackStartEndPointPlotter(data_provider, enable_legend=False)
+        plotter = TrackStartEndPointPlotter(
+            data_provider, color_palette_provider, enable_legend=False
+        )
 
         plotter.plot(axes)
         assert mock_plot_dataframe.call_count == call_count

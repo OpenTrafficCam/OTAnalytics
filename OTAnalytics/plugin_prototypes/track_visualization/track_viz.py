@@ -463,10 +463,12 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
         self._enable_legend = enable_legend
         self._alpha = alpha
 
@@ -495,7 +497,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             sort=False,
             alpha=self._alpha,
             ax=axes,
-            palette=DEFAULT_COLOR_PALETTE,
+            palette=self._color_palette_provider.get(),
             hue_order=CLASS_ORDER,
             legend=self._enable_legend,
         )
@@ -507,10 +509,12 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
         self._enable_legend = enable_legend
         self._alpha = alpha
 
@@ -547,7 +551,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             legend=self._enable_legend,
             s=15,
             ax=axes,
-            palette=DEFAULT_COLOR_PALETTE,
+            palette=self._color_palette_provider.get(),
         )
 
 
