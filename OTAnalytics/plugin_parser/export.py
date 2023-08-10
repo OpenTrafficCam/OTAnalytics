@@ -7,6 +7,8 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Count,
     Exporter,
     ExporterFactory,
+    FillEmptyCount,
+    Tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
@@ -57,3 +59,29 @@ class SimpleExporterFactory(ExporterFactory):
 
     def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         return self._factories[specification.format](specification.output_file)
+
+
+class FillZerosExporter(Exporter):
+    def __init__(self, other: Exporter, specification: ExportSpecificationDto) -> None:
+        self._other = other
+        self._specification = specification
+
+    def export(self, counts: Count) -> None:
+        tags = self.__create_tags()
+        self._other.export(FillEmptyCount(counts, tags))
+
+    def __create_tags(self) -> list[Tag]:
+        return []
+
+
+class FillZerosExporterFactory(ExporterFactory):
+    def __init__(self, other: ExporterFactory) -> None:
+        self.other = other
+
+    def get_supported_formats(self) -> Iterable[ExportFormat]:
+        return self.other.get_supported_formats()
+
+    def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
+        return FillZerosExporter(
+            self.other.create_exporter(specification), specification
+        )
