@@ -328,6 +328,8 @@ class OttrkParser(TrackParser):
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
             all_detections = existing_detections + detections
+            if len(all_detections) > 1200:
+                continue
             sort_dets_by_occurrence = sorted(
                 all_detections, key=lambda det: det.occurrence
             )
