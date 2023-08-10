@@ -16,10 +16,10 @@ class CountingSpecificationDto:
     Data transfer object to represent the counting.
     """
 
-    interval_in_minutes: int
     start: datetime
     end: datetime
-    format: str
+    interval_in_minutes: int
+    output_format: str
     output_file: str
 
 
@@ -34,7 +34,7 @@ class ExportSpecificationDto:
 
     @property
     def format(self) -> str:
-        return self.counting_specification.format
+        return self.counting_specification.output_format
 
     @property
     def output_file(self) -> str:

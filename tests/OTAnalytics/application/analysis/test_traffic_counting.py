@@ -629,7 +629,7 @@ class TestTrafficCounting:
             interval_in_minutes=15,
             start=start,
             end=end,
-            format="csv",
+            output_format="csv",
             output_file="counts.csv",
         )
         export_specification = create_export_specification(

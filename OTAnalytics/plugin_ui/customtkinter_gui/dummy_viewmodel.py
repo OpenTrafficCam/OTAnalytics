@@ -1377,7 +1377,7 @@ class DummyViewModel(
                 interval_in_minutes=export_values[INTERVAL],
                 start=export_values[START],
                 end=export_values[END],
-                format=export_values[EXPORT_FORMAT],
+                output_format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
             )
             self._application.export_counts(export_specification)
