@@ -59,7 +59,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
+    def set_frame_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         pass
 
     @abstractmethod

@@ -459,8 +459,8 @@ class DummyViewModel(
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
-        self._frame_canvas = tracks_canvas
+    def set_frame_canvas(self, frame_canvas: AbstractFrameCanvas) -> None:
+        self._frame_canvas = frame_canvas
 
     def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
         self._frame_filter = filter_frame
