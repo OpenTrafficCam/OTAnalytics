@@ -212,10 +212,6 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update_show_tracks_state(self, value: bool) -> None:
-        pass
-
-    @abstractmethod
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         pass
 
