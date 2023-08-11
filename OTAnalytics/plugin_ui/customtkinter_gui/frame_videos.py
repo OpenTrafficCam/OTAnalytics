@@ -1,18 +1,19 @@
 import tkinter
 from typing import Any
 
-from customtkinter import CTkButton, CTkFrame, CTkLabel, CTkScrollbar
+from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     IdResource,
     TreeviewTemplate,
 )
 
 
-class FrameVideos(CTkFrame):
+class FrameVideos(EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.grid_rowconfigure(1, weight=1)
@@ -26,7 +27,6 @@ class FrameVideos(CTkFrame):
         pass
 
     def _get_widgets(self) -> None:
-        self.label = CTkLabel(master=self, text="Videos")
         self._frame_tree = CTkFrame(master=self)
         self.treeview = TreeviewVideos(
             viewmodel=self._viewmodel, master=self._frame_tree
@@ -36,26 +36,23 @@ class FrameVideos(CTkFrame):
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
         self.button_add_videos = CTkButton(
-            master=self, text="Add", command=self._viewmodel.add_video
+            master=self, text="Load", command=self._viewmodel.add_video
         )
         self.button_remove_videos = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_videos
         )
 
     def _place_widgets(self) -> None:
-        self.label.grid(
-            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        )
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
         self._treeview_scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
         self._frame_tree.grid(
-            row=1, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_add_videos.grid(
-            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_remove_videos.grid(
-            row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
 
 
