@@ -5,6 +5,7 @@ from OTAnalytics.application.config import ON_MAC
 
 PADX = 10
 PADY = 5
+TABVIEW_SEGMENTED_BUTTON_ELEVATION = 13
 STICKY = "NESW"
 
 LEFT_BUTTON_DOWN = "left_mousebutton_down"
