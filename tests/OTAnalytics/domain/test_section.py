@@ -5,10 +5,8 @@ import pytest
 from OTAnalytics.domain.event import EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate, X, Y
 from OTAnalytics.domain.section import (
-    AREA,
     COORDINATES,
     ID,
-    LINE,
     NAME,
     PLUGIN_DATA,
     RELATIVE_OFFSET_COORDINATES,
@@ -21,6 +19,7 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionListSubject,
     SectionRepository,
+    SectionType,
 )
 
 
@@ -141,7 +140,7 @@ class TestLineSection:
         section_dict = section.to_dict()
 
         assert section_dict == {
-            TYPE: LINE,
+            TYPE: SectionType.LINE.value,
             ID: section_id.id,
             NAME: section.name,
             RELATIVE_OFFSET_COORDINATES: {
@@ -297,7 +296,7 @@ class TestAreaSection:
         section_dict = section.to_dict()
 
         assert section_dict == {
-            TYPE: AREA,
+            TYPE: SectionType.AREA.value,
             ID: section_id.id,
             NAME: section.name,
             RELATIVE_OFFSET_COORDINATES: {

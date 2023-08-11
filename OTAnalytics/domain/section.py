@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Callable, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
@@ -16,6 +17,11 @@ AREA: str = "area"
 COORDINATES: str = "coordinates"
 RELATIVE_OFFSET_COORDINATES: str = "relative_offset_coordinates"
 PLUGIN_DATA: str = "plugin_data"
+
+
+class SectionType(Enum):
+    AREA = AREA
+    LINE = LINE
 
 
 @dataclass(frozen=True)
@@ -99,7 +105,7 @@ class Section(DataclassValidation):
         Returns:
             list[Coordinate]: all coordinates of this section
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def update_coordinates(self, coordinates: list[Coordinate]) -> None:
@@ -109,7 +115,7 @@ class Section(DataclassValidation):
         Args:
             coordinates (list[Coordinate]): new coordinates of the section
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def to_dict(self) -> dict:
@@ -120,6 +126,17 @@ class Section(DataclassValidation):
         Returns:
             dict: serialized section
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_type(self) -> SectionType:
+        """Get type of this section.
+
+        Returns:
+            SectionType: this sections type.
+
+        """
+        raise NotImplementedError
 
     def get_offset(self, event_type: EventType) -> RelativeOffsetCoordinate | None:
         """Get this sections relative offset coordinate for event type if defined.
@@ -214,11 +231,20 @@ class LineSection(Section):
         return {
             ID: self.id.serialize(),
             NAME: self.name,
-            TYPE: LINE,
+            TYPE: self.get_type().value,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
             PLUGIN_DATA: self.plugin_data,
         }
+
+    def get_type(self) -> SectionType:
+        """Get this sections type.
+
+        Returns:
+            SectionType: this sections type.
+
+        """
+        return SectionType.LINE
 
 
 @dataclass(frozen=True)
@@ -274,13 +300,16 @@ class Area(Section):
         e.g. serialization.
         """
         return {
-            TYPE: AREA,
+            TYPE: self.get_type().value,
             ID: self.id.serialize(),
             NAME: self.name,
             RELATIVE_OFFSET_COORDINATES: self._serialize_relative_offset_coordinates(),
             COORDINATES: [coordinate.to_dict() for coordinate in self.coordinates],
             PLUGIN_DATA: self.plugin_data,
         }
+
+    def get_type(self) -> SectionType:
+        return SectionType.AREA
 
 
 class MissingSection(Exception):
