@@ -102,8 +102,6 @@ class FrameSections(AbstractCTkFrame):
         self._add_buttons = [
             self.button_add_line,
             self.button_add_area,
-            self.button_load,
-            self.button_save,
         ]
         self._single_item_buttons = [
             self.button_edit_geometry,

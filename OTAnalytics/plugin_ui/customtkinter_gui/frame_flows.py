@@ -69,12 +69,6 @@ class FrameFlows(AbstractCTkFrame):
             width=50,
             command=self._viewmodel.save_configuration,
         )
-        self._action_buttons = [
-            self.button_add,
-            self.button_generate,
-            self.button_edit,
-            self.button_remove,
-        ]
 
     def _place_widgets(self) -> None:
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
@@ -97,8 +91,6 @@ class FrameFlows(AbstractCTkFrame):
         self._add_buttons = [
             self.button_add,
             self.button_generate,
-            self.button_load,
-            self.button_save,
         ]
         self._single_item_buttons = [
             self.button_edit,
