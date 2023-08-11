@@ -290,9 +290,11 @@ class OttrkParser(TrackParser):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_length_limit: int,
         format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
     ) -> None:
         super().__init__(track_classification_calculator, track_repository)
+        self._track_length_limit = track_length_limit
         self._format_fixer = format_fixer
         self._path_cache: dict[str, Path] = {}
 
@@ -328,7 +330,7 @@ class OttrkParser(TrackParser):
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
             all_detections = existing_detections + detections
-            if len(all_detections) > 1200:
+            if len(all_detections) > self._track_length_limit:
                 continue
             sort_dets_by_occurrence = sorted(
                 all_detections, key=lambda det: det.occurrence
