@@ -1,4 +1,6 @@
-from OTAnalytics.domain.section import Section, SectionRepository
+from typing import Iterable
+
+from OTAnalytics.domain.section import Section, SectionId, SectionRepository
 
 
 class SectionAlreadyExists(Exception):
@@ -13,6 +15,32 @@ class GetAllSections:
 
     def __call__(self) -> list[Section]:
         return self._section_repository.get_all()
+
+
+class GetSectionsById:
+    """Get sections by their id.
+
+    Args:
+        section_repository (SectionRepository): the section repository.
+    """
+
+    def __init__(self, section_repository: SectionRepository) -> None:
+        self._section_repository = section_repository
+
+    def __call__(self, ids: Iterable[SectionId]) -> set[Section]:
+        """Get sections by their id.
+
+        Args:
+            ids (Iterable[SectionId]): the ids to get sections from the repository.
+
+        Returns:
+            set[Section]: sections matching the ids. Otherwise, empty set.
+        """
+        return {
+            section
+            for section_id in ids
+            if (section := self._section_repository.get(section_id)) is not None
+        }
 
 
 class AddSection:
