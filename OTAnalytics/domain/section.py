@@ -138,7 +138,7 @@ class Section(DataclassValidation):
         """
         raise NotImplementedError
 
-    def get_offset(self, event_type: EventType) -> RelativeOffsetCoordinate | None:
+    def get_offset(self, event_type: EventType) -> RelativeOffsetCoordinate:
         """Get this sections relative offset coordinate for event type if defined.
 
         Args:
@@ -148,7 +148,9 @@ class Section(DataclassValidation):
             RelativeOffsetCoordinate | None: the offset. Otherwise, None.
 
         """
-        return self.relative_offset_coordinates.get(event_type, None)
+        return self.relative_offset_coordinates.get(
+            event_type, RelativeOffsetCoordinate(0, 0)
+        )
 
     def _serialize_relative_offset_coordinates(self) -> dict[str, dict]:
         """Serializes this class' `relative_offset_coordinates` value to a dict.

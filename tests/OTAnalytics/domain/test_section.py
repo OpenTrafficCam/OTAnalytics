@@ -50,7 +50,7 @@ class TestSection:
             id=SectionId(id),
             name=id,
             relative_offset_coordinates={
-                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)
             },
             plugin_data=plugin_data,
             coordinates=coordinates,
@@ -59,8 +59,10 @@ class TestSection:
     def test_get_offset(self, section_north: Section) -> None:
         assert section_north.get_offset(
             EventType.SECTION_ENTER
+        ) == RelativeOffsetCoordinate(0.5, 0.5)
+        assert section_north.get_offset(
+            EventType.ENTER_SCENE
         ) == RelativeOffsetCoordinate(0, 0)
-        assert section_north.get_offset(EventType.ENTER_SCENE) is None
 
 
 class TestLineSection:
