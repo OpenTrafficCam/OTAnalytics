@@ -5,9 +5,9 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
-from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.section import Section
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
@@ -16,7 +16,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
 )
 
 
-class FrameSections(AbstractFrameSections):
+class FrameSections(AbstractCTkFrame):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -28,6 +28,8 @@ class FrameSections(AbstractFrameSections):
         self.grid_columnconfigure(0, weight=1)
         self._get_widgets()
         self._place_widgets()
+        self._set_button_state_categories()
+        self._set_initial_button_states()
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
@@ -59,7 +61,9 @@ class FrameSections(AbstractFrameSections):
             command=self._viewmodel.edit_selected_section_metadata,
         )
         self.button_remove = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_sections
+            master=self,
+            text="Remove",
+            command=self._viewmodel.remove_sections,
         )
         self.button_load = CTkButton(
             master=self,
@@ -73,13 +77,6 @@ class FrameSections(AbstractFrameSections):
             width=50,
             command=self._viewmodel.save_configuration,
         )
-        self._action_buttons = [
-            self.button_add_line,
-            self.button_add_area,
-            self.button_edit_geometry,
-            self.button_edit_metadata,
-            self.button_remove,
-        ]
 
     def _place_widgets(self) -> None:
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
@@ -101,26 +98,34 @@ class FrameSections(AbstractFrameSections):
         self.button_load.grid(row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self.button_save.grid(row=4, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
-    def action_buttons(self) -> list[CTkButton]:
-        return self._action_buttons
+    def _set_button_state_categories(self) -> None:
+        self._add_buttons = [
+            self.button_add_line,
+            self.button_add_area,
+            self.button_load,
+            self.button_save,
+        ]
+        self._single_item_buttons = [
+            self.button_edit_geometry,
+            self.button_edit_metadata,
+        ]
+        self._multiple_items_buttons = [
+            self.button_remove,
+        ]
 
-    def enable_edit_geometry_button(self) -> None:
-        self._enable_button(self.button_edit_geometry)
+    def _set_initial_button_states(self) -> None:
+        self.set_enabled_add_buttons(False)
+        self.set_enabled_change_single_item_buttons(False)
+        self.set_enabled_change_multiple_items_buttons(False)
 
-    def disable_edit_geometry_button(self) -> None:
-        self._disable_button(self.button_edit_geometry)
+    def get_add_buttons(self) -> list[CTkButton]:
+        return self._add_buttons
 
-    def enable_edit_metadata_button(self) -> None:
-        self._enable_button(self.button_edit_metadata)
+    def get_single_item_buttons(self) -> list[CTkButton]:
+        return self._single_item_buttons
 
-    def disable_edit_metadata_button(self) -> None:
-        self._disable_button(self.button_edit_metadata)
-
-    def enable_remove_button(self) -> None:
-        self._enable_button(self.button_remove)
-
-    def disable_remove_button(self) -> None:
-        self._disable_button(self.button_remove)
+    def get_multiple_items_buttons(self) -> list[CTkButton]:
+        return self._multiple_items_buttons
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
         x, y = get_widget_position(self, offset=offset)
