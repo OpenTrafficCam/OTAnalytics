@@ -52,7 +52,7 @@ class FrameVideos(EmbeddedCTkFrame):
             row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_remove_videos.grid(
-            row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
 
 
