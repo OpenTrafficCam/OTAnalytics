@@ -19,6 +19,7 @@ class CountingSpecificationDto:
     start: datetime
     end: datetime
     interval_in_minutes: int
+    modes: list[str]
     output_format: str
     output_file: str
 

@@ -89,6 +89,8 @@ class FrameConfigureExportCounts(FrameContent):
         self.after(0, lambda: self.entry_interval.focus_set())
 
     def _parse_input_values(self) -> None:
+        self._input_values[START] = self.start_date.get_datetime()
+        self._input_values[END] = self.end_date.get_datetime()
         self._input_values[INTERVAL] = int(self.entry_interval.get())
         self._input_values[EXPORT_FORMAT] = self.optionmenu_format.get()
 

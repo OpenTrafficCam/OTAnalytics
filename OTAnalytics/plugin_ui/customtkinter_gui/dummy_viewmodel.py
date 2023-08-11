@@ -1358,6 +1358,7 @@ class DummyViewModel(
         default_format = next(iter(export_formats.keys()))
         start = self._application._tracks_metadata.first_detection_occurrence
         end = self._application._tracks_metadata.last_detection_occurrence
+        modes = list(self._application._tracks_metadata.classifications)
         default_values: dict = {
             INTERVAL: 15,
             START: start,
@@ -1377,6 +1378,7 @@ class DummyViewModel(
                 interval_in_minutes=export_values[INTERVAL],
                 start=export_values[START],
                 end=export_values[END],
+                modes=modes,
                 output_format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
             )

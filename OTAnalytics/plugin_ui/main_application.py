@@ -71,7 +71,10 @@ from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
-from OTAnalytics.plugin_parser.export import SimpleExporterFactory
+from OTAnalytics.plugin_parser.export import (
+    FillZerosExporterFactory,
+    SimpleExporterFactory,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     OtConfigParser,
@@ -670,5 +673,5 @@ class ApplicationStarter:
             flow_repository,
             RoadUserAssigner(),
             SimpleTaggerFactory(track_repository),
-            SimpleExporterFactory(),
+            FillZerosExporterFactory(SimpleExporterFactory()),
         )

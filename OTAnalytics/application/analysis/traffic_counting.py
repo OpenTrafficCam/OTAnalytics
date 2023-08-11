@@ -67,7 +67,7 @@ class Tag(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def contained_tags(self) -> list["Tag"]:
+    def contained_tags(self) -> set["Tag"]:
         """
         List all tags this tag consists of.
         """
@@ -87,7 +87,7 @@ class Tag(ABC):
 
 @dataclass(frozen=True)
 class MultiTag(Tag):
-    tags: list[Tag]
+    tags: set[Tag]
 
     def combine(self, other: Tag) -> Tag:
         """
@@ -99,10 +99,10 @@ class MultiTag(Tag):
         Returns:
             Tag: combined tag
         """
-        combined_tags: list[Tag] = self.contained_tags() + other.contained_tags()
+        combined_tags: set[Tag] = self.contained_tags().union(other.contained_tags())
         return MultiTag(tags=combined_tags)
 
-    def contained_tags(self) -> list[Tag]:
+    def contained_tags(self) -> set[Tag]:
         """
         List all tags this tag consists of.
         """
@@ -140,13 +140,13 @@ class SingleTag(Tag):
         Returns:
             Tag: combined tag
         """
-        return MultiTag(self.contained_tags() + other.contained_tags())
+        return MultiTag(self.contained_tags().union(other.contained_tags()))
 
-    def contained_tags(self) -> list[Tag]:
+    def contained_tags(self) -> set[Tag]:
         """
         List all tags this tag consists of.
         """
-        return [self]
+        return {self}
 
     def as_dict(self) -> dict[str, str]:
         """
@@ -158,8 +158,8 @@ class SingleTag(Tag):
         return {self.level: self.id}
 
 
-def create_flow_tag(flow: Flow) -> Tag:
-    return SingleTag(level=LEVEL_FLOW, id=flow.name)
+def create_flow_tag(flow_name: str) -> Tag:
+    return SingleTag(level=LEVEL_FLOW, id=flow_name)
 
 
 def create_mode_tag(tag: str) -> Tag:
@@ -171,10 +171,10 @@ def create_timeslot_tag(start_of_time_slot: datetime, interval: timedelta) -> Ta
     serialized_start = start_of_time_slot.strftime("%H:%M")
     serialized_end = end_of_time_slot.strftime("%H:%M")
     return MultiTag(
-        [
+        {
             SingleTag(level=LEVEL_START_TIME, id=serialized_start),
             SingleTag(level=LEVEL_END_TIME, id=serialized_end),
-        ]
+        }
     )
 
 
@@ -211,7 +211,9 @@ class CountByFlow(Count):
         Returns:
             dict[Tag, int]: serializable counts
         """
-        return {create_flow_tag(flow): value for flow, value in self.result.items()}
+        return {
+            create_flow_tag(flow.name): value for flow, value in self.result.items()
+        }
 
 
 @dataclass(frozen=True)
@@ -444,7 +446,7 @@ class RoadUserAssignments:
             by (Tagger): tagger to determine the tag
 
         Returns:
-            TaggedAssignments: group of RoadUserAssignments splitted by tag
+            TaggedAssignments: group of RoadUserAssignments split by tag
         """
         tagged: dict[Tag, list[RoadUserAssignment]] = defaultdict(list)
         for assignment in self._assignments:

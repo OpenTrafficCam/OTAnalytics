@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -9,6 +10,9 @@ from OTAnalytics.application.analysis.traffic_counting import (
     ExporterFactory,
     FillEmptyCount,
     Tag,
+    create_flow_tag,
+    create_mode_tag,
+    create_timeslot_tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
@@ -61,17 +65,41 @@ class SimpleExporterFactory(ExporterFactory):
         return self._factories[specification.format](specification.output_file)
 
 
-class FillZerosExporter(Exporter):
-    def __init__(self, other: Exporter, specification: ExportSpecificationDto) -> None:
-        self._other = other
+class TagExploder:
+    def __init__(self, specification: ExportSpecificationDto):
         self._specification = specification
 
-    def export(self, counts: Count) -> None:
-        tags = self.__create_tags()
-        self._other.export(FillEmptyCount(counts, tags))
+    def explode(self) -> list[Tag]:
+        tags = []
+        maximum = (
+            self._specification.counting_specification.end
+            - self._specification.counting_specification.start
+        )
+        duration = int(maximum.total_seconds())
+        interval = self._specification.counting_specification.interval_in_minutes * 60
+        for flow in self._specification.flow_names:
+            for mode in self._specification.counting_specification.modes:
+                for delta in range(0, duration, interval):
+                    offset = timedelta(seconds=delta)
+                    start = self._specification.counting_specification.start + offset
+                    interval_time = timedelta(seconds=interval)
+                    tag = (
+                        create_flow_tag(flow)
+                        .combine(create_mode_tag(mode))
+                        .combine(create_timeslot_tag(start, interval_time))
+                    )
+                    tags.append(tag)
+        return tags
 
-    def __create_tags(self) -> list[Tag]:
-        return []
+
+class FillZerosExporter(Exporter):
+    def __init__(self, other: Exporter, tag_exploder: TagExploder) -> None:
+        self._other = other
+        self._tag_exploder = tag_exploder
+
+    def export(self, counts: Count) -> None:
+        tags = self._tag_exploder.explode()
+        self._other.export(FillEmptyCount(counts, tags))
 
 
 class FillZerosExporterFactory(ExporterFactory):
@@ -83,5 +111,6 @@ class FillZerosExporterFactory(ExporterFactory):
 
     def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         return FillZerosExporter(
-            self.other.create_exporter(specification), specification
+            self.other.create_exporter(specification),
+            TagExploder(specification),
         )
