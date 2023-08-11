@@ -53,7 +53,7 @@ class TestGetSectionsById:
         get_sections_by_id = GetSectionsById(section_repository)
         sections = get_sections_by_id([section_north.id, section_south.id])
 
-        assert sections == {section_north}
+        assert sections == [section_north]
         assert section_repository.get.call_args_list == [
             call(section_north.id),
             call(section_south.id),

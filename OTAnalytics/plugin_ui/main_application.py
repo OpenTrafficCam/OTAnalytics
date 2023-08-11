@@ -3,7 +3,10 @@ from typing import Sequence
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
-from OTAnalytics.application.analysis.intersect import RunIntersect
+from OTAnalytics.application.analysis.intersect import (
+    RunIntersect,
+    TracksIntersectingSections,
+)
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     RoadUserAssigner,
@@ -60,7 +63,10 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelection,
 )
-from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.section_repository import (
+    AddSection,
+    GetSectionsById,
+)
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -69,6 +75,7 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
+from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
@@ -78,7 +85,10 @@ from OTAnalytics.domain.track import (
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely_intersect import ShapelyIntersector
-from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
+from OTAnalytics.plugin_intersect.simple_intersect import (
+    SimpleRunIntersect,
+    SimpleTracksIntersectingSections,
+)
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -402,9 +412,12 @@ class ApplicationStarter:
     def _create_tracks_intersecting_selected_sections(
         self,
         section_state: SectionState,
-        event_repository: EventRepository,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_sections_by_id: GetSectionsById,
     ) -> TracksIntersectingSelectedSections:
-        return TracksIntersectingSelectedSections(section_state, event_repository)
+        return TracksIntersectingSelectedSections(
+            section_state, tracks_intersecting_sections, get_sections_by_id
+        )
 
     def _create_track_highlight_geometry_plotter_not_intersecting(
         self,
@@ -512,17 +525,25 @@ class ApplicationStarter:
             alpha=0.2,
             enable_legend=True,
         )
-        tracks_intersecting_sections = TracksIntersectingSelectedSections(
-            section_state, datastore._event_repository
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            GetAllTracks(datastore._track_repository),
+            ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
+        )
+        tracks_intersecting_selected_sections = (
+            self._create_tracks_intersecting_selected_sections(
+                section_state,
+                tracks_intersecting_sections,
+                GetSectionsById(datastore._section_repository),
+            )
         )
         tracks_not_intersecting_sections = TracksNotIntersectingSelection(
-            tracks_intersecting_sections, datastore._track_repository
+            tracks_intersecting_selected_sections, datastore._track_repository
         )
 
         highlight_tracks_intersecting_sections = (
             self._create_track_highlight_geometry_plotter(
                 track_view_state,
-                tracks_intersecting_sections,
+                tracks_intersecting_selected_sections,
                 data_provider_all_filters,
                 enable_legend=False,
             )
@@ -538,7 +559,7 @@ class ApplicationStarter:
         start_end_points_tracks_intersecting_sections = (
             self._create_start_end_point_tracks_intersecting_sections_plotter(
                 track_view_state,
-                tracks_intersecting_sections,
+                tracks_intersecting_selected_sections,
                 data_provider_class_filter,
                 enable_legend=False,
             )
@@ -713,4 +734,13 @@ class ApplicationStarter:
         )
         return CreateEvents(
             clear_event_repository, create_intersection_events, create_scene_events
+        )
+
+    def _create_tracks_intersecting_sections(
+        self,
+        get_all_tracks: GetAllTracks,
+        intersect_implementation: IntersectImplementation,
+    ) -> TracksIntersectingSections:
+        return SimpleTracksIntersectingSections(
+            get_all_tracks, intersect_implementation
         )

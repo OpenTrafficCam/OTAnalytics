@@ -27,7 +27,7 @@ class GetSectionsById:
     def __init__(self, section_repository: SectionRepository) -> None:
         self._section_repository = section_repository
 
-    def __call__(self, ids: Iterable[SectionId]) -> set[Section]:
+    def __call__(self, ids: Iterable[SectionId]) -> list[Section]:
         """Get sections by their id.
 
         Args:
@@ -36,11 +36,11 @@ class GetSectionsById:
         Returns:
             set[Section]: sections matching the ids. Otherwise, empty set.
         """
-        return {
+        return [
             section
             for section_id in ids
             if (section := self._section_repository.get(section_id)) is not None
-        }
+        ]
 
 
 class AddSection:
