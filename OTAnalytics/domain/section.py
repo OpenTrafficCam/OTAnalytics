@@ -73,7 +73,7 @@ class SectionListSubject:
         Notifies observers about the list of sections.
 
         Args:
-            tracks (list[SectionId]): list of added sections
+            sections (list[SectionId]): list of added sections
         """
         [observer.notify_sections(sections) for observer in self.observers]
 
@@ -182,17 +182,19 @@ class LineSection(Section):
     A section that is defined by a line.
 
     Raises:
+        ValueError: number of coordinates defining this section must be greater equal
+            two.
         ValueError: if start and end point coordinates are the same and therefore
-        define a point.
+            define a point.
 
     Args:
-        id (str): the section id
+        id (str): the section id.
+        name (str): the section name.
         relative_offset_coordinates (list[RelativeOffsetCoordinate]): used to determine
-            which coordinates of a track to build the geometry to intersect
+            which coordinates of a track to build the geometry to intersect.
         plugin_data (dict[str,any]): data that plugins or prototypes can use which are
             not modelled in the domain layer yet
-        start (Coordinate): the start coordinate
-        end (Coordinate): the end coordinate
+        coordinates (list[Coordinate]): the coordinates defining the section geometry.
     """
 
     coordinates: list[Coordinate]
