@@ -120,7 +120,18 @@ class Section(DataclassValidation):
         Returns:
             dict: serialized section
         """
-        pass
+
+    def get_offset(self, event_type: EventType) -> RelativeOffsetCoordinate | None:
+        """Get this sections relative offset coordinate for event type if defined.
+
+        Args:
+            event_type (EventType): the event type.
+
+        Returns:
+            RelativeOffsetCoordinate | None: the offset. Otherwise, None.
+
+        """
+        return self.relative_offset_coordinates.get(event_type, None)
 
     def _serialize_relative_offset_coordinates(self) -> dict[str, dict]:
         """Serializes this class' `relative_offset_coordinates` value to a dict.

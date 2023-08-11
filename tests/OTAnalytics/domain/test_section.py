@@ -36,6 +36,34 @@ class TestSectionListSubject:
         observer.notify_sections.assert_called_with(changed_tracks)
 
 
+class TestSection:
+    @pytest.fixture
+    def section_north(self) -> Section:
+        plugin_data: dict = {"key_1": "some data", "key_2": "some data"}
+        id = "North"
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        return Area(
+            id=SectionId(id),
+            name=id,
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)
+            },
+            plugin_data=plugin_data,
+            coordinates=coordinates,
+        )
+
+    def test_get_offset(self, section_north: Section) -> None:
+        assert section_north.get_offset(
+            EventType.SECTION_ENTER
+        ) == RelativeOffsetCoordinate(0, 0)
+        assert section_north.get_offset(EventType.ENTER_SCENE) is None
+
+
 class TestLineSection:
     def test_coordinates_define_point_raises_value_error(self) -> None:
         with pytest.raises(ValueError):
