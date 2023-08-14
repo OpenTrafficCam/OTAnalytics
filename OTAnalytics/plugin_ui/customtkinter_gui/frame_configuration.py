@@ -1,10 +1,10 @@
 import tkinter
 from typing import Any
 
-from customtkinter import CTkButton, CTkFrame, CTkLabel, CTkTabview
+from customtkinter import CTkButton, CTkFrame
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_flows import FrameFlows
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import FrameSections
 
@@ -23,7 +23,6 @@ class FrameConfiguration(CTkFrame):
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        self.label = CTkLabel(master=self, text="Configuration")
         self.tabview = TabviewConfiguration(
             master=self, width=50, viewmodel=self._viewmodel
         )
@@ -41,19 +40,10 @@ class FrameConfiguration(CTkFrame):
         )
 
     def _place_widgets(self) -> None:
-        self.label.grid(
-            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=tkinter.NSEW
-        )
-        self.tabview.grid(
-            row=1, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=tkinter.NSEW
-        )
-        self.button_add.grid(row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.NSEW)
-        self.button_save.grid(
-            row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.NSEW
-        )
+        self.tabview.grid(row=0, column=0, columnspan=2, sticky=tkinter.NSEW)
 
 
-class TabviewConfiguration(CTkTabview):
+class TabviewConfiguration(CustomCTkTabview):
     def __init__(
         self,
         viewmodel: ViewModel,
