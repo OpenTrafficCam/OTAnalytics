@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, PropertyMock, call, patch
 
 import pytest
 
@@ -325,31 +325,44 @@ class TestTracksOverlapOccurrenceWindow:
         track_view_state.filter_element = observable_property
 
         start_detection = Mock(spec=Detection)
-        start_detection.occurrence = datetime(2020, 1, 1, 13)
+        start_time = datetime(2020, 1, 1, 13)
+        start_detection.occurrence = start_time
 
         end_detection = Mock(spec=Detection)
-        end_detection.occurrence = datetime(2020, 1, 1, 13, 30)
-
-        track_id = TrackId(1)
-        track = Mock(spec=Track)
-        track.id = track_id
-        track.detections = [start_detection, end_detection]
+        end_time = datetime(2020, 1, 1, 13, 30)
+        end_detection.occurrence = end_time
 
         with patch.object(
             TracksOverlapOccurrenceWindow, "_has_overlap", return_value=True
-        ) as mock_has_overlap:
+        ) as mock_has_overlap, patch(
+            "OTAnalytics.application.use_cases.highlight_intersections.Track.start",
+            new_callable=PropertyMock,
+            return_value=start_time,
+        ) as mock_start, patch(
+            "OTAnalytics.application.use_cases.highlight_intersections.Track.end",
+            new_callable=PropertyMock,
+            return_value=end_time,
+        ) as mock_end:
+            track_id = TrackId(1)
+            track = Mock(spec=Track)
+            track.id = track_id
+            track.start.return_value = start_detection
+            track.end.return_value = end_detection
+
             id_provider = TracksOverlapOccurrenceWindow(
                 track_repository, track_view_state
             )
             result_ids = id_provider._filter([track])
 
             assert result_ids == [track_id]
+            mock_start.assert_called_once()
+            mock_end.assert_called_once()
             if filter_start or filter_end:
                 mock_has_overlap.assert_called_once_with(
                     expected_has_overlap_filter_start,
                     expected_has_overlap_filter_end,
-                    start_detection.occurrence,
-                    end_detection.occurrence,
+                    track.start,
+                    track.end,
                 )
             else:
                 mock_has_overlap.assert_not_called()
