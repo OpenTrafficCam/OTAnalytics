@@ -164,8 +164,8 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
                     if self._has_overlap(
                         start_date_filter,
                         end_date_filter,
-                        track.detections[0].occurrence,
-                        track.detections[-1].occurrence,
+                        track.start,
+                        track.end,
                     )
                 ]
             case (None, datetime() as end_date_filter):
@@ -175,8 +175,8 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
                     if self._has_overlap(
                         datetime.min,
                         end_date_filter,
-                        track.detections[0].occurrence,
-                        track.detections[-1].occurrence,
+                        track.start,
+                        track.end,
                     )
                 ]
             case (datetime() as start_date_filter, None):
@@ -186,8 +186,8 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
                     if self._has_overlap(
                         start_date_filter,
                         datetime.max,
-                        track.detections[0].occurrence,
-                        track.detections[-1].occurrence,
+                        track.start,
+                        track.end,
                     )
                 ]
             case _:
