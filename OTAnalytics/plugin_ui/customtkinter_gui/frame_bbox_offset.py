@@ -34,16 +34,18 @@ class FrameBboxOffset(CTkFrame):
             from_=0,
             to=1,
             number_of_steps=10,
-            command=lambda value: self.label_x_value.configure(text=round(value, 1)),
+            command=self._on_slider_change,
         )
+        self.slider_x.bind("<ButtonRelease-1>", self._on_slider_release)
         self.slider_y = CTkSlider(
             master=self,
             width=110,
             from_=0,
             to=1,
             number_of_steps=10,
-            command=lambda value: self.label_y_value.configure(text=round(value, 1)),
+            command=self._on_slider_change,
         )
+        self.slider_y.bind("<ButtonRelease-1>", self._on_slider_release)
 
     def _place_widgets(self) -> None:
         self.label.grid(row=0, column=0, columnspan=2, padx=PADX, sticky="E")
@@ -70,3 +72,18 @@ class FrameBboxOffset(CTkFrame):
         x = round(self.slider_x.get(), 2)
         y = round(self.slider_y.get(), 2)
         return {geometry.X: x, geometry.Y: y}
+
+    def _on_slider_change(self, value: Any) -> None:
+        x, y = self._get_slider_values()
+        self.label_x_value.configure(text=round(x, 1))
+        self.label_y_value.configure(text=round(y, 1))
+
+    def _on_slider_release(self, value: Any) -> None:
+        x, y = self._get_slider_values()
+        if self._notify_change is not None:
+            self._notify_change(round(x, 2), round(y, 2))
+
+    def _get_slider_values(self) -> tuple[float, float]:
+        x = self.slider_x.get()
+        y = self.slider_y.get()
+        return x, y
