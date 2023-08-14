@@ -1,16 +1,15 @@
 import tkinter
 from typing import Any, Sequence
 
-from customtkinter import CTkCheckBox, CTkFrame, CTkLabel, ThemeManager
+from customtkinter import CTkCheckBox, CTkLabel
 
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.style import STICKY_WEST
 
-DEFAULT_COLOR = ThemeManager.theme["CTkFrame"]["fg_color"]
 
-
-class FrameTrackPlotting(CTkFrame):
+class FrameTrackPlotting(EmbeddedCTkFrame):
     def __init__(self, layers: Sequence[Layer], **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._layers = layers
@@ -25,18 +24,16 @@ class FrameTrackPlotting(CTkFrame):
             )
 
 
-class CheckBoxLayer(CTkFrame):
+class CheckBoxLayer(EmbeddedCTkFrame):
     def __init__(self, layer: Layer, **kwargs: Any) -> None:
-        super().__init__(fg_color=DEFAULT_COLOR, **kwargs)
+        super().__init__(**kwargs)
         self._enabled = tkinter.BooleanVar()
         self._layer = layer
         self._enabled.set(self._layer.is_enabled())
         self.get_widgets()
 
     def get_widgets(self) -> None:
-        self._label = CTkLabel(
-            master=self, text=self._layer.get_name(), bg_color=DEFAULT_COLOR
-        )
+        self._label = CTkLabel(master=self, text=self._layer.get_name())
         self._checkbox = CTkCheckBox(
             master=self,
             text="",
@@ -44,7 +41,6 @@ class CheckBoxLayer(CTkFrame):
             variable=self._enabled,
             onvalue=True,
             offvalue=False,
-            bg_color=DEFAULT_COLOR,
             width=5,
         )
         self._checkbox.grid(row=0, column=0, padx=0, pady=0, sticky=STICKY_WEST)

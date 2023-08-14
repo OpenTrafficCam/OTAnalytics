@@ -6,10 +6,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from OTAnalytics.adapter_intersect.intersect import (
-    ShapelyIntersectImplementationAdapter,
-)
-from OTAnalytics.adapter_intersect.mapping import ShapelyMapper
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.use_cases.create_events import (
@@ -34,7 +30,7 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
 )
-from OTAnalytics.plugin_intersect.shapely_intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
@@ -154,9 +150,7 @@ class TestOTAnalyticsCli:
         clear_event_repository = ClearEventRepository(event_repository)
         create_intersection_events = SimpleCreateIntersectionEvents(
             SimpleRunIntersect(
-                ShapelyIntersectImplementationAdapter(
-                    ShapelyIntersector(), ShapelyMapper()
-                ),
+                ShapelyIntersector(),
                 MultiprocessingIntersectParallelization(),
                 get_all_tracks,
             ),

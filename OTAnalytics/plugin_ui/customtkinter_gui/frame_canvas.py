@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from customtkinter import NW, CTkFrame
+from customtkinter import NW
 from PIL import Image, ImageTk
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
@@ -31,6 +31,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STICKY,
     tk_events,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
 
@@ -48,7 +49,7 @@ class DisplayableImage:
         return ImageTk.PhotoImage(image=self._image.as_image())
 
 
-class FrameCanvas(AbstractFrameCanvas, CTkFrame):
+class FrameCanvas(AbstractFrameCanvas, EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -57,7 +58,7 @@ class FrameCanvas(AbstractFrameCanvas, CTkFrame):
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        self._viewmodel.set_tracks_canvas(self)
+        self._viewmodel.set_frame_canvas(self)
 
     def _get_widgets(self) -> None:
         self.canvas_background = CanvasBackground(

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, Iterable, Optional, TypeVar
+from typing import Callable, Generic, Iterable, TypeVar
 
 from OTAnalytics.domain.event import Event, EventBuilder
 from OTAnalytics.domain.geometry import (
@@ -43,7 +43,7 @@ class IntersectImplementation(ABC):
         pass
 
     @abstractmethod
-    def split_line_with_line(self, line: Line, splitter: Line) -> Optional[list[Line]]:
+    def split_line_with_line(self, line: Line, splitter: Line) -> list[Line]:
         """Splits a line with the help of another line and returns a list of lines.
 
         If `line` intersects `splitter` then line_1 will be splitted at the
@@ -59,8 +59,7 @@ class IntersectImplementation(ABC):
             splitter (Line): the line used for the splitting.
 
         Returns:
-            Optional[list[Line]]: The splitted lines. Otherwise `None` if no
-                intersection exists.
+            Optional[list[Line]]: The splitted lines.
         """
         pass
 
