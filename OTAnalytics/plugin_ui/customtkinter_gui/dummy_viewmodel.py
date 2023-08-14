@@ -6,20 +6,19 @@ from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import (
-    AbstractFrameFlows,
-    GeometricCenterCalculator,
-    InnerSegmentsCenterCalculator,
-    SectionRefPointCalculator,
-)
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
-from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
+from OTAnalytics.adapter_ui.flow_adapter import (
+    GeometricCenterCalculator,
+    InnerSegmentsCenterCalculator,
+    SectionRefPointCalculator,
+)
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
     MissingCoordinate,
@@ -115,6 +114,8 @@ LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
 OTFLOW = "otflow"
+MISSING_SECTION_FRAME_MESSAGE = "sections frame"
+MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 OTCONFIG = "otconfig"
 
 
@@ -153,8 +154,8 @@ class DummyViewModel(
         self._window: Optional[AbstractMainWindow] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
-        self._frame_sections: Optional[AbstractFrameSections] = None
-        self._frame_flows: Optional[AbstractFrameFlows] = None
+        self._frame_sections: Optional[AbstractFrame] = None
+        self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
@@ -169,9 +170,6 @@ class DummyViewModel(
         self._application.register_flow_changed_observer(self._on_flow_changed)
         self._application.track_view_state.selected_videos.register(
             self._update_selected_videos
-        )
-        self._application.track_view_state.show_tracks.register(
-            self._on_show_tracks_state_updated
         )
         self._application.section_state.selected_sections.register(
             self._update_selected_sections
@@ -193,27 +191,59 @@ class DummyViewModel(
     def notify_videos(self, videos: list[Video]) -> None:
         if self._treeview_videos is None:
             raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
-        if self._frame_sections is None:
-            raise MissingInjectedInstanceError(AbstractFrameSections.__name__)
-        if self._frame_flows is None:
-            raise MissingInjectedInstanceError(AbstractFrameFlows.__name__)
         self._treeview_videos.update_items()
-        enabled = len(self._application.get_all_videos()) > 0
-        self._frame_sections.set_enabled(enabled)
-        self._frame_flows.set_enabled(enabled)
+        self._update_enabled_buttons()
+
+    def _update_enabled_buttons(self) -> None:
+        self._update_enabled_section_buttons()
+        self._update_enabled_flow_buttons()
+
+    def _update_enabled_section_buttons(self) -> None:
+        if self._frame_sections is None:
+            raise MissingInjectedInstanceError(MISSING_SECTION_FRAME_MESSAGE)
+        action_running = self._application.action_state.action_running.get()
+        videos_exist = len(self._application.get_all_videos()) > 0
+        selected_section_ids = self.get_selected_section_ids()
+        single_section_selected = len(selected_section_ids) == 1
+        any_section_selected = len(selected_section_ids) > 0
+
+        add_section_enabled = (not action_running) and videos_exist
+        single_section_enabled = add_section_enabled and single_section_selected
+        multiple_sections_enabled = add_section_enabled and any_section_selected
+
+        self._frame_sections.set_enabled_add_buttons(videos_exist)
+        self._frame_sections.set_enabled_change_single_item_buttons(
+            single_section_enabled
+        )
+        self._frame_sections.set_enabled_change_multiple_items_buttons(
+            multiple_sections_enabled
+        )
+
+    def _update_enabled_flow_buttons(self) -> None:
+        if self._frame_flows is None:
+            raise MissingInjectedInstanceError(MISSING_FLOW_FRAME_MESSAGE)
+        action_running = self._application.action_state.action_running.get()
+        two_sections_exist = len(self._application.get_all_sections()) > 1
+        flows_exist = len(self._application.get_all_flows()) > 0
+        selected_flow_ids = self.get_selected_flow_ids()
+        single_flow_selected = len(selected_flow_ids) == 1
+        any_flow_selected = len(selected_flow_ids) > 0
+
+        add_flow_enabled = (not action_running) and two_sections_exist
+        single_flow_enabled = add_flow_enabled and single_flow_selected and flows_exist
+        multiple_flows_enabled = add_flow_enabled and any_flow_selected and flows_exist
+
+        self._frame_flows.set_enabled_add_buttons(two_sections_exist)
+        self._frame_flows.set_enabled_change_single_item_buttons(single_flow_enabled)
+        self._frame_flows.set_enabled_change_multiple_items_buttons(
+            multiple_flows_enabled
+        )
 
     def _on_section_changed(self, section_id: SectionId) -> None:
         self.notify_sections([section_id])
 
     def _on_flow_changed(self, flow_id: FlowId) -> None:
         self.notify_flows([flow_id])
-
-    def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
-        if self._frame_canvas is None:
-            raise MissingInjectedInstanceError(AbstractFrameCanvas.__name__)
-
-        new_value = value or False
-        self._frame_canvas.update_show_tracks(new_value)
 
     def _on_background_updated(self, image: Optional[TrackImage]) -> None:
         if self._frame_canvas is None:
@@ -223,9 +253,6 @@ class DummyViewModel(
             self._frame_canvas.update_background(image)
         else:
             self._frame_canvas.clear_image()
-
-    def update_show_tracks_state(self, value: bool) -> None:
-        self._application.track_view_state.show_tracks.set(value)
 
     def _update_date_range(self, filter_element: FilterElement) -> None:
         if self._frame_filter is None:
@@ -257,6 +284,7 @@ class DummyViewModel(
             initial_position=self._window.get_position(),
         )
         self._application.intersect_tracks_with_sections()
+        start_msg_popup.update_message(message="Creating events completed")
         start_msg_popup.close()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
@@ -265,6 +293,7 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
         self._intersect_tracks_with_sections()
+        self._update_enabled_buttons()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         if self._treeview_flows is None:
@@ -273,12 +302,7 @@ class DummyViewModel(
         self._treeview_flows.update_items()
 
     def _notify_action_running_state(self, running: bool) -> None:
-        if not self._frame_flows:
-            raise MissingInjectedInstanceError(type(self._frame_flows).__name__)
-        if not self._frame_sections:
-            raise MissingInjectedInstanceError(type(self._frame_sections).__name__)
-        self._frame_flows.set_enabled(not running)
-        self._frame_sections.set_enabled(not running)
+        self._update_enabled_buttons()
 
     def register_observers(self) -> None:
         self._application._datastore.register_video_observer(self)
@@ -427,19 +451,19 @@ class DummyViewModel(
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
 
-    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+    def set_sections_frame(self, frame: AbstractFrame) -> None:
         self._frame_sections = frame
-        self._frame_sections.set_enabled(False)
+        self._update_enabled_section_buttons()
 
-    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+    def set_flows_frame(self, frame: AbstractFrame) -> None:
         self._frame_flows = frame
-        self._frame_flows.set_enabled(False)
+        self._update_enabled_flow_buttons()
 
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
-        self._frame_canvas = tracks_canvas
+    def set_frame_canvas(self, frame_canvas: AbstractFrameCanvas) -> None:
+        self._frame_canvas = frame_canvas
 
     def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
         self._frame_filter = filter_frame
@@ -451,50 +475,29 @@ class DummyViewModel(
         self._treeview_flows = treeview
 
     def _update_selected_sections(self, section_ids: list[SectionId]) -> None:
+        self._update_selected_section_items()
+        self._update_enabled_buttons()
+
+    def _update_selected_section_items(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
-
-        if self._frame_sections is None:
-            raise MissingInjectedInstanceError(type(self._frame_sections).__name__)
 
         new_section_ids = self.get_selected_section_ids()
 
         self._treeview_sections.update_selected_items(new_section_ids)
         self.refresh_items_on_canvas()
 
-        if len(new_section_ids) == 1:
-            self._frame_sections.enable_edit_geometry_button()
-            self._frame_sections.enable_edit_metadata_button()
-        else:
-            self._frame_sections.disable_edit_geometry_button()
-            self._frame_sections.disable_edit_metadata_button()
-
-        if new_section_ids:
-            self._frame_sections.enable_remove_button()
-        else:
-            self._frame_sections.disable_remove_button()
-
     def _update_selected_flows(self, flow_ids: list[FlowId]) -> None:
+        self._update_selected_flow_items()
+        self._update_enabled_buttons()
+
+    def _update_selected_flow_items(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-
-        if self._frame_flows is None:
-            raise MissingInjectedInstanceError(type(self._frame_flows).__name__)
-
         new_selected_flow_ids = self.get_selected_flow_ids()
 
         self._treeview_flows.update_selected_items(new_selected_flow_ids)
         self.refresh_items_on_canvas()
-
-        if len(new_selected_flow_ids) == 1:
-            self._frame_flows.enable_edit_button()
-        else:
-            self._frame_flows.disable_edit_button()
-
-        if new_selected_flow_ids:
-            self._frame_flows.enable_remove_button()
-        else:
-            self._frame_flows.disable_remove_button()
 
     def set_selected_flow_ids(self, ids: list[str]) -> None:
         if self._application.action_state.action_running.get():

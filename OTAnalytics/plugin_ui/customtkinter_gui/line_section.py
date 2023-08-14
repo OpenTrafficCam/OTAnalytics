@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
-from OTAnalytics.adapter_ui.abstract_frame_flows import SectionRefPointCalculator
+from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import Section

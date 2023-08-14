@@ -31,6 +31,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STICKY,
     tk_events,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
@@ -56,7 +57,7 @@ class InvalidDatetimeFormatError(Exception):
     pass
 
 
-class FrameFilter(AbstractFrameFilter, CTkFrame):
+class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -270,18 +271,14 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
             master=self,
             viewmodel=self._viewmodel,
             name="From",
-            fg_color=get_default_toplevel_fg_color(),
         )
         self.to_date_row = DateRow(
             master=self,
             viewmodel=self._viewmodel,
             name="To",
-            fg_color=get_default_toplevel_fg_color(),
         )
         self._get_detection_info_label()
-        self._button_frame = CTkFrame(
-            master=self, fg_color=get_default_toplevel_fg_color()
-        )
+        self._button_frame = EmbeddedCTkFrame(master=self)
         self.apply_button = CTkButton(
             master=self._button_frame,
             text="Apply",
@@ -383,7 +380,7 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
         return x, y
 
 
-class DateRow(CTkFrame):
+class DateRow(EmbeddedCTkFrame):
     def __init__(
         self,
         viewmodel: ViewModel,

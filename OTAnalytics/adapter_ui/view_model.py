@@ -3,11 +3,10 @@ from datetime import datetime
 from typing import Callable, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
-from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -48,7 +47,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+    def set_sections_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod
@@ -56,11 +55,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+    def set_flows_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
+    def set_frame_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         pass
 
     @abstractmethod
@@ -211,10 +210,6 @@ class ViewModel(ABC):
     @abstractmethod
     def export_events(self) -> None:
         raise NotImplementedError
-
-    @abstractmethod
-    def update_show_tracks_state(self, value: bool) -> None:
-        pass
 
     @abstractmethod
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:

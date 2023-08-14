@@ -141,7 +141,7 @@ class TestDataFrameFilterBuilder:
         builder.build()
         dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) == DataFrameStartsAtOrAfterDate
+        assert type(dataframe_filter._predicate) is DataFrameStartsAtOrAfterDate
         assert dataframe_filter._predicate._start_date == start_date
 
     def test_add_ends_before_or_at_date_predicate(self) -> None:
@@ -155,7 +155,7 @@ class TestDataFrameFilterBuilder:
 
         dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) == DataFrameEndsBeforeOrAtDate
+        assert type(dataframe_filter._predicate) is DataFrameEndsBeforeOrAtDate
         assert dataframe_filter._predicate._end_date == end_date
 
     def test_add_has_classifications_predicate(self) -> None:
@@ -169,7 +169,7 @@ class TestDataFrameFilterBuilder:
 
         dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) == DataFrameHasClassifications
+        assert type(dataframe_filter._predicate) is DataFrameHasClassifications
         assert dataframe_filter._predicate._classifications == classifications
 
     def test_add_has_classifications_predicate_column_not_set(self) -> None:
@@ -213,11 +213,11 @@ class TestDataFrameFilterBuilder:
         assert hasattr(dataframe_filter, "_predicate")
         assert (
             type(dataframe_filter._predicate._first_predicate)
-            == DataFrameEndsBeforeOrAtDate
+            is DataFrameEndsBeforeOrAtDate
         )
         assert (
             type(dataframe_filter._predicate._second_predicate)
-            == DataFrameHasClassifications
+            is DataFrameHasClassifications
         )
 
         assert dataframe_filter._predicate._first_predicate._end_date == end_date
@@ -227,7 +227,7 @@ class TestDataFrameFilterBuilder:
         builder.build()
         track_filter = builder.get_result()
 
-        assert type(track_filter) == NoOpDataFrameFilter
+        assert type(track_filter) is NoOpDataFrameFilter
 
     def test_reset(self) -> None:
         classifications = {"car", "truck"}

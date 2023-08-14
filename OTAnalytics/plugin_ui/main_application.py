@@ -45,6 +45,7 @@ from OTAnalytics.application.state import (
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
+    FilterExisting,
     FilterSameSection,
     FlowIdGenerator,
     GenerateFlows,
@@ -621,7 +622,7 @@ class ApplicationStarter:
         flow_generator = CrossProductFlowGenerator(
             id_generator=id_generator,
             name_generator=name_generator,
-            predicate=FilterSameSection(),
+            predicate=FilterSameSection().and_then(FilterExisting(flow_repository)),
         )
         return GenerateFlows(
             section_repository=section_repository,
