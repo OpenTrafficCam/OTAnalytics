@@ -29,6 +29,7 @@ class TracksFrame(AbstractFrameTracks):
             master=self,
             frame_heading="Offset",
             relative_offset_coordinates=RELATIVE_SECTION_OFFSET.to_dict(),
+            notify_change=self._viewmodel.set_track_offset,
         )
         self.button_update_offset = CTkButton(
             master=self,
