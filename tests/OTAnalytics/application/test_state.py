@@ -19,6 +19,7 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
     Detection,
@@ -155,7 +156,7 @@ class TestTrackImageUpdater:
         track = Mock(spec=Track)
         datastore = Mock(spec=Datastore)
         track_view_state = TrackViewState()
-        track_view_state.show_tracks.set(True)
+        track_view_state.track_offset.set(RelativeOffsetCoordinate(0.5, 0.7))
         track.id = track_id
         flow_state = FlowState()
         updater = TrackImageUpdater(
