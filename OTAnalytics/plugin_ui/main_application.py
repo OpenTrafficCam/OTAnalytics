@@ -209,8 +209,10 @@ class ApplicationStarter:
         create_events = self._create_use_case_create_events(
             section_repository, event_repository, get_all_tracks, add_events
         )
-        intersect_tracks_with_sections = self._create_intersect_tracks_with_sections(
-            section_repository, get_all_tracks, add_events
+        intersect_tracks_with_sections = (
+            self._create_use_case_create_intersection_events(
+                section_repository, get_all_tracks, add_events
+            )
         )
         export_counts = self._create_export_counts(
             event_repository, flow_repository, track_repository
@@ -668,7 +670,7 @@ class ApplicationStarter:
             flow_generator=flow_generator,
         )
 
-    def _create_intersect_tracks_with_sections(
+    def _create_use_case_create_intersection_events(
         self,
         section_repository: SectionRepository,
         get_all_tracks: GetAllTracks,
