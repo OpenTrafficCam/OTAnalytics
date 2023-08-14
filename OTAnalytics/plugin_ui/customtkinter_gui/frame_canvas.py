@@ -58,7 +58,7 @@ class FrameCanvas(AbstractFrameCanvas, EmbeddedCTkFrame):
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        self._viewmodel.set_tracks_canvas(self)
+        self._viewmodel.set_frame_canvas(self)
 
     def _get_widgets(self) -> None:
         self.canvas_background = CanvasBackground(
