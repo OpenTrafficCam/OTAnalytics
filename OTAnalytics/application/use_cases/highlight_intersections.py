@@ -197,6 +197,10 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
     def _has_overlap(
         start_1: datetime, end_1: datetime, start_2: datetime, end_2: datetime
     ) -> bool:
+        if not start_1 <= end_1:
+            raise ValueError("start_1 needs to be greater than end_1.")
+        if not start_2 <= end_2:
+            raise ValueError("end_1 needs to be greater than end_2.")
         latest_start = max(start_1, start_2)
         earliest_end = min(end_1, end_2)
 

@@ -234,6 +234,26 @@ class TestTracksOverlapOccurrenceWindow:
             == expected
         )
 
+    def test_has_overlap_wrong_order_of_arguments(self) -> None:
+        start_1 = datetime(2022, 1, 2)
+        start_2 = datetime(2022, 1, 1)
+        end_1 = datetime(2022, 1, 3)
+        end_2 = datetime(2022, 1, 4)
+        with pytest.raises(ValueError, match="start_1 needs to be greater than end_1."):
+            TracksOverlapOccurrenceWindow._has_overlap(
+                start_1,
+                start_2,
+                end_1,
+                end_2,
+            )
+        with pytest.raises(ValueError, match="end_1 needs to be greater than end_2."):
+            TracksOverlapOccurrenceWindow._has_overlap(
+                start_2,
+                start_1,
+                end_2,
+                end_1,
+            )
+
     def test_get_ids(self) -> None:
         track_repository = Mock(spec=TrackRepository)
         track_view_state = Mock(spec=TrackViewState)
