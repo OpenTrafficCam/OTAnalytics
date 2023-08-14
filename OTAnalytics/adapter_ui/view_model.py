@@ -59,7 +59,7 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
+    def set_frame_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         pass
 
     @abstractmethod
@@ -210,10 +210,6 @@ class ViewModel(ABC):
     @abstractmethod
     def export_events(self) -> None:
         raise NotImplementedError
-
-    @abstractmethod
-    def update_show_tracks_state(self, value: bool) -> None:
-        pass
 
     @abstractmethod
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:

@@ -169,9 +169,6 @@ class DummyViewModel(
         self._application.track_view_state.selected_videos.register(
             self._update_selected_videos
         )
-        self._application.track_view_state.show_tracks.register(
-            self._on_show_tracks_state_updated
-        )
         self._application.section_state.selected_sections.register(
             self._update_selected_sections
         )
@@ -246,13 +243,6 @@ class DummyViewModel(
     def _on_flow_changed(self, flow_id: FlowId) -> None:
         self.notify_flows([flow_id])
 
-    def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
-        if self._frame_canvas is None:
-            raise MissingInjectedInstanceError(AbstractFrameCanvas.__name__)
-
-        new_value = value or False
-        self._frame_canvas.update_show_tracks(new_value)
-
     def _on_background_updated(self, image: Optional[TrackImage]) -> None:
         if self._frame_canvas is None:
             raise MissingInjectedInstanceError(AbstractFrameCanvas.__name__)
@@ -261,9 +251,6 @@ class DummyViewModel(
             self._frame_canvas.update_background(image)
         else:
             self._frame_canvas.clear_image()
-
-    def update_show_tracks_state(self, value: bool) -> None:
-        self._application.track_view_state.show_tracks.set(value)
 
     def _update_date_range(self, filter_element: FilterElement) -> None:
         if self._frame_filter is None:
@@ -473,8 +460,8 @@ class DummyViewModel(
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
-        self._frame_canvas = tracks_canvas
+    def set_frame_canvas(self, frame_canvas: AbstractFrameCanvas) -> None:
+        self._frame_canvas = frame_canvas
 
     def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
         self._frame_filter = filter_frame
