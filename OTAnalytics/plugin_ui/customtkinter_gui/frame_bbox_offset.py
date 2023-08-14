@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 from customtkinter import CTkFrame, CTkLabel, CTkSlider
 
@@ -11,9 +11,11 @@ class FrameBboxOffset(CTkFrame):
         self,
         frame_heading: str,
         relative_offset_coordinates: dict,
+        notify_change: Callable[[float, float], None] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self._notify_change = notify_change
         self._relative_offset_coordinates = relative_offset_coordinates
         self._frame_heading = frame_heading
         self._get_widgets()
