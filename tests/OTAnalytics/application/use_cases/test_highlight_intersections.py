@@ -239,14 +239,18 @@ class TestTracksOverlapOccurrenceWindow:
         start_2 = datetime(2022, 1, 1)
         end_1 = datetime(2022, 1, 3)
         end_2 = datetime(2022, 1, 4)
-        with pytest.raises(ValueError, match="start_1 needs to be greater than end_1."):
+        with pytest.raises(
+            ValueError, match="start_1 needs to be lesser equal than end_1."
+        ):
             TracksOverlapOccurrenceWindow._has_overlap(
                 start_1,
                 start_2,
                 end_1,
                 end_2,
             )
-        with pytest.raises(ValueError, match="end_1 needs to be greater than end_2."):
+        with pytest.raises(
+            ValueError, match="start_2 needs to be lesser equal than end_2."
+        ):
             TracksOverlapOccurrenceWindow._has_overlap(
                 start_2,
                 start_1,
