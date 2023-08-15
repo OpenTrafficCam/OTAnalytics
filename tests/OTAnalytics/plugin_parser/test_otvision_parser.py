@@ -239,7 +239,7 @@ class TestOttrkParser:
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
         _write_bz2(ottrk_data, ottrk_file)
-        result_tracks = self.ottrk_parser.parse(ottrk_file)
+        result_tracks = self.ottrk_parser.parse(ottrk_file).as_list()
 
         expected_track = track_builder_setup_with_sample_data.build_track()
 

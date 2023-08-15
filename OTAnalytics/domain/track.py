@@ -325,62 +325,9 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
         return max(classifications, key=lambda x: classifications[x])
 
 
-class TrackRepository:
-    def __init__(self) -> None:
-        self._tracks: dict[TrackId, Track] = {}
-        self.observers = Subject[list[TrackId]]()
-
-    def register_tracks_observer(self, observer: TrackListObserver) -> None:
-        """
-        Listen to changes of the repository.
-
-        Args:
-            observer (TrackListObserver): listener to be notifed about changes
-        """
-        self.observers.register(observer.notify_tracks)
-
-    def add(self, track: Track) -> None:
-        """
-        Add a single track to the repository and notify the observers.
-
-        Args:
-            track (Track): track to be added
-        """
-        self.__add(track)
-        self.observers.notify([track.id])
-
-    def __add(self, track: Track) -> None:
-        """Internal method to add a track without notifying observers.
-
-        Args:
-            track (Track): the track to be added
-        """
-        self._tracks[track.id] = track
-
-    def add_all(self, tracks: list[Track]) -> None:
-        """
-        Add multiple tracks to the repository and notify only once about it.
-
-        Args:
-            tracks (Iterable[Track]): tracks to be added
-        """
-        if tracks:
-            self.__add_all(tracks)
-
-    def __add_all(self, tracks: list[Track]) -> None:
-        """Internal method to add all tracks to the repository and notify only once
-        about it.
-
-        Args:
-            tracks (list[Track]): tracks to be added
-        """
-        for track in tracks:
-            self.__add(track)
-        self.observers.notify([track.id for track in tracks])
-
-    def delete_all(self) -> None:
-        """Delete all tracks."""
-        self._tracks = {}
+class TrackDataset(ABC):
+    def add_all(self, other: "TrackDataset") -> "TrackDataset":
+        raise NotImplementedError
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
@@ -392,7 +339,7 @@ class TrackRepository:
         Returns:
             Optional[Track]: track if it exists
         """
-        return self._tracks.get(id)
+        raise NotImplementedError
 
     def get_all(self) -> list[Track]:
         """
@@ -401,13 +348,107 @@ class TrackRepository:
         Returns:
             list[Track]: all tracks within the repository
         """
+        raise NotImplementedError
+
+    def clear(self) -> "TrackDataset":
+        """
+        Return an empty version of the current TrackDataset.
+        """
+        raise NotImplementedError
+
+    def as_list(self) -> list[Track]:
+        raise NotImplementedError
+
+
+@dataclass
+class PythonTrackDataset(TrackDataset):
+    """Pure Python implementation of a TrackDataset."""
+
+    def __init__(self, values: Optional[dict[TrackId, Track]] = None) -> None:
+        if values is None:
+            values = {}
+        self._tracks = values
+
+    @staticmethod
+    def from_list(tracks: list[Track]) -> TrackDataset:
+        return PythonTrackDataset({track.id: track for track in tracks})
+
+    def add_all(self, other: "TrackDataset") -> "TrackDataset":
+        if isinstance(other, PythonTrackDataset):
+            return self.__merge(other._tracks)
+        new_tracks = {track.id: track for track in other.as_list()}
+        return self.__merge(new_tracks)
+
+    def __merge(self, new_tracks: dict[TrackId, Track]) -> TrackDataset:
+        merged = self._tracks | new_tracks
+        return PythonTrackDataset(merged)
+
+    def get_for(self, id: TrackId) -> Optional[Track]:
+        return self._tracks.get(id)
+
+    def clear(self) -> TrackDataset:
+        return PythonTrackDataset()
+
+    def as_list(self) -> list[Track]:
         return list(self._tracks.values())
+
+
+class TrackRepository:
+    def __init__(self, dataset: TrackDataset = PythonTrackDataset()) -> None:
+        self._dataset = dataset
+        self.observers = Subject[list[TrackId]]()
+
+    def register_tracks_observer(self, observer: TrackListObserver) -> None:
+        """
+        Listen to changes of the repository.
+
+        Args:
+            observer (TrackListObserver): listener to be notifed about changes
+        """
+        self.observers.register(observer.notify_tracks)
+
+    def add_all(self, tracks: TrackDataset) -> None:
+        """
+        Add multiple tracks to the repository and notify only once about it.
+
+        Args:
+            tracks (Iterable[Track]): tracks to be added
+        """
+        self._dataset = self._dataset.add_all(tracks)
+        new_tracks = [track.id for track in tracks.as_list()]
+        if new_tracks:
+            self.observers.notify(new_tracks)
+
+    def delete_all(self) -> None:
+        """Delete all tracks."""
+        self._dataset = PythonTrackDataset()
+
+    def get_for(self, id: TrackId) -> Optional[Track]:
+        """
+        Retrieve a track for the given id.
+
+        Args:
+            id (TrackId): id to search for
+
+        Returns:
+            Optional[Track]: track if it exists
+        """
+        return self._dataset.get_for(id)
+
+    def get_all(self) -> list[Track]:
+        """
+        Retrieve all tracks.
+
+        Returns:
+            list[Track]: all tracks within the repository
+        """
+        return self._dataset.as_list()
 
     def clear(self) -> None:
         """
         Clear the repository and inform the observers about the empty repository.
         """
-        self._tracks.clear()
+        self._dataset = self._dataset.clear()
         self.observers.notify([])
 
 

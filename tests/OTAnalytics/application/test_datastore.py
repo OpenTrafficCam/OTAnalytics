@@ -28,7 +28,12 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionRepository,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage, TrackRepository
+from OTAnalytics.domain.track import (
+    PythonTrackDataset,
+    TrackId,
+    TrackImage,
+    TrackRepository,
+)
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import SimpleVideo, Video, VideoReader, VideoRepository
 
@@ -213,7 +218,7 @@ class TestDatastore:
         some_track_id = TrackId(1)
         some_track.id = some_track_id
         some_video = SimpleVideo(video_reader=Mock(), path=Path(""))
-        track_parser.parse.return_value = [some_track]
+        track_parser.parse.return_value = PythonTrackDataset.from_list([some_track])
         track_video_parser.parse.return_value = [some_track_id], [some_video]
 
         order = MagicMock()
@@ -247,7 +252,7 @@ class TestDatastore:
             call.track_video_parser.parse(some_file, [some_track_id]),
             call.video_repository.add_all([some_video]),
             call.track_to_video_repository.add_all([some_track_id], [some_video]),
-            call.track_repository.add_all([some_track]),
+            call.track_repository.add_all(PythonTrackDataset.from_list([some_track])),
         ]
 
     def test_load_track_files(
@@ -274,7 +279,10 @@ class TestDatastore:
         other_track_id = TrackId(2)
         other_track.id = other_track_id
         other_video = SimpleVideo(video_reader=Mock(), path=Path(""))
-        track_parser.parse.side_effect = [[some_track], [other_track]]
+        track_parser.parse.side_effect = [
+            PythonTrackDataset.from_list([some_track]),
+            PythonTrackDataset.from_list([other_track]),
+        ]
         track_video_parser.parse.side_effect = [
             [[some_track_id], [some_video]],
             [[other_track_id], [other_video]],
@@ -302,8 +310,12 @@ class TestDatastore:
 
         track_parser.parse.assert_any_call(some_file)
         track_parser.parse.assert_any_call(other_file)
-        track_repository.add_all.assert_any_call([some_track])
-        track_repository.add_all.assert_any_call([other_track])
+        track_repository.add_all.assert_any_call(
+            PythonTrackDataset.from_list([some_track])
+        )
+        track_repository.add_all.assert_any_call(
+            PythonTrackDataset.from_list([other_track])
+        )
         track_video_parser.parse.assert_any_call(some_file, [some_track_id])
         track_video_parser.parse.assert_any_call(other_file, [other_track_id])
         assert track_to_video_repository.add_all.call_args_list == [

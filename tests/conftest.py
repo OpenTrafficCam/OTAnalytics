@@ -363,7 +363,7 @@ def tracks(ottrk_path: Path) -> list[Track]:
         CalculateTrackClassificationByMaxConfidence(),
         TrackRepository(),
     )
-    return ottrk_parser.parse(ottrk_path)
+    return ottrk_parser.parse(ottrk_path).as_list()
 
 
 @pytest.fixture(scope="module")

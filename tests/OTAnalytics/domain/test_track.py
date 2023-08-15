@@ -9,6 +9,7 @@ from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
     CalculateTrackClassificationByMaxConfidence,
     Detection,
+    PythonTrackDataset,
     Track,
     TrackId,
     TrackListObserver,
@@ -194,16 +195,67 @@ class TestCalculateTrackClassificationByMaxConfidence:
         assert detections[2].classification == "truck"
 
 
-class TestTrackRepository:
+class TestPythonTrackDataset:
     def test_add(self) -> None:
         track_id = TrackId(1)
         track = Mock()
+        track.id = track_id
+        dataset = PythonTrackDataset()
+
+        merged = dataset.add_all(PythonTrackDataset({track_id: track}))
+
+        assert track not in dataset.as_list()
+        assert track in merged.as_list()
+
+    def test_add_nothing(self) -> None:
+        dataset = PythonTrackDataset()
+
+        merged = dataset.add_all(PythonTrackDataset())
+
+        assert 0 == len(merged.as_list())
+
+    def test_add_all(self) -> None:
+        first_id = TrackId(1)
+        second_id = TrackId(2)
+        first_track = Mock()
+        first_track.id = first_id
+        second_track = Mock()
+        second_track.id = second_id
+        dataset = PythonTrackDataset()
+
+        merged = dataset.add_all(
+            PythonTrackDataset(
+                {first_track.id: first_track, second_track.id: second_track}
+            )
+        )
+
+        assert first_track in merged.as_list()
+        assert second_track in merged.as_list()
+        assert first_track not in dataset.as_list()
+        assert second_track not in dataset.as_list()
+
+    def test_get_by_id(self) -> None:
+        first_track = Mock()
+        first_track.id.return_value = TrackId(1)
+        second_track = Mock()
+        second_track.id.return_value = TrackId(2)
+        repository = PythonTrackDataset.from_list([first_track, second_track])
+
+        returned = repository.get_for(first_track.id)
+
+        assert returned == first_track
+
+
+class TestTrackRepository:
+    def test_add(self) -> None:
+        track_id = TrackId(1)
+        track = Mock(spec=Track)
         track.id = track_id
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add(track)
+        repository.add_all(PythonTrackDataset.from_list([track]))
 
         assert track in repository.get_all()
         observer.notify_tracks.assert_called_with([track_id])
@@ -213,7 +265,7 @@ class TestTrackRepository:
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add_all([])
+        repository.add_all(PythonTrackDataset())
 
         assert 0 == len(repository.get_all())
         observer.notify_tracks.assert_not_called()
@@ -229,7 +281,7 @@ class TestTrackRepository:
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add_all([first_track, second_track])
+        repository.add_all(PythonTrackDataset.from_list([first_track, second_track]))
 
         assert first_track in repository.get_all()
         assert second_track in repository.get_all()
@@ -240,7 +292,7 @@ class TestTrackRepository:
         first_track.id.return_value = TrackId(1)
         second_track = Mock()
         repository = TrackRepository()
-        repository.add_all([first_track, second_track])
+        repository.add_all(PythonTrackDataset.from_list([first_track, second_track]))
 
         returned = repository.get_for(first_track.id)
 
@@ -257,7 +309,7 @@ class TestTrackRepository:
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add_all([first_track, second_track])
+        repository.add_all(PythonTrackDataset.from_list([first_track, second_track]))
         repository.clear()
 
         assert not list(repository.get_all())

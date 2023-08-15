@@ -131,7 +131,7 @@ class OTAnalyticsCli:
         return self._flow_parser.parse(flow_file)
 
     def _parse_tracks(self, track_file: Path) -> Iterable[Track]:
-        return self._track_parser.parse(track_file)
+        return self._track_parser.parse(track_file).as_list()
 
     def _run_analysis(
         self, ottrk_files: set[Path], sections: Iterable[Section]

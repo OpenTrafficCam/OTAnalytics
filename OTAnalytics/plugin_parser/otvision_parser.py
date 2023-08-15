@@ -28,8 +28,10 @@ from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
     Detection,
+    PythonTrackDataset,
     Track,
     TrackClassificationCalculator,
+    TrackDataset,
     TrackId,
     TrackImage,
     TrackRepository,
@@ -296,7 +298,7 @@ class OttrkParser(TrackParser):
         self._format_fixer = format_fixer
         self._path_cache: dict[str, Path] = {}
 
-    def parse(self, ottrk_file: Path) -> list[Track]:
+    def parse(self, ottrk_file: Path) -> TrackDataset:
         """Parse ottrk file and convert its content to domain level objects namely
         `Track`s.
 
@@ -309,7 +311,7 @@ class OttrkParser(TrackParser):
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
-        return self._parse_tracks(dets_list)
+        return PythonTrackDataset.from_list(self._parse_tracks(dets_list))
 
     def _parse_tracks(self, dets: list[dict]) -> list[Track]:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
