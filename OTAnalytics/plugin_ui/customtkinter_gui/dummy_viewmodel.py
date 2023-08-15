@@ -271,7 +271,7 @@ class DummyViewModel(
         )
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
-        self._intersect_tracks_with_sections()
+        pass
 
     def _intersect_tracks_with_sections(self) -> None:
         if self._window is None:
@@ -290,7 +290,6 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
-        self._intersect_tracks_with_sections()
         self._update_enabled_buttons()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
