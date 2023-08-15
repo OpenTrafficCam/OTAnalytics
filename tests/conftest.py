@@ -6,6 +6,7 @@ from typing import Generator, Sequence, TypeVar
 
 import pytest
 
+from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
@@ -362,6 +363,7 @@ def tracks(ottrk_path: Path) -> list[Track]:
     ottrk_parser = OttrkParser(
         CalculateTrackClassificationByMaxConfidence(),
         TrackRepository(),
+        TRACK_LENGTH_LIMIT,
     )
     return ottrk_parser.parse(ottrk_path)
 
