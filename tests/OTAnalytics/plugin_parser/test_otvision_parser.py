@@ -283,9 +283,11 @@ class TestOttrkParser:
             dict
         ] = track_builder_setup_with_sample_data.build_serialized_detections()
 
-        result_sorted_input = self.ottrk_parser._parse_tracks(detections)
+        result_sorted_input = self.ottrk_parser._parse_tracks(detections).as_list()
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = self.ottrk_parser._parse_tracks(unsorted_detections)
+        result_unsorted_input = self.ottrk_parser._parse_tracks(
+            unsorted_detections
+        ).as_list()
 
         expected_sorted = [track_builder_setup_with_sample_data.build_track()]
 
@@ -317,7 +319,7 @@ class TestOttrkParser:
             existing_track.id, merged_classification, all_detections
         )
 
-        result_sorted_input = self.ottrk_parser._parse_tracks(detections)
+        result_sorted_input = self.ottrk_parser._parse_tracks(detections).as_list()
 
         expected_sorted = [merged_track]
 

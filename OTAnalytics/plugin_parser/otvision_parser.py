@@ -313,9 +313,9 @@ class OttrkParser(TrackParser):
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
-        return PythonTrackDataset.from_list(self._parse_tracks(dets_list))
+        return self._parse_tracks(dets_list)
 
-    def _parse_tracks(self, dets: list[dict]) -> list[Track]:
+    def _parse_tracks(self, dets: list[dict]) -> TrackDataset:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
 
         This method will also sort the detections belonging to a track by their
@@ -348,7 +348,7 @@ class OttrkParser(TrackParser):
                 # Skip tracks with less than 2 detections
                 print(build_error)
 
-        return tracks
+        return PythonTrackDataset.from_list(tracks)
 
     def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:
         """
