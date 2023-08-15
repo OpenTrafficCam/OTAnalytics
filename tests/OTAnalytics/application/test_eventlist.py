@@ -19,23 +19,29 @@ from OTAnalytics.domain.geometry import (
 )
 from OTAnalytics.domain.intersect import Intersector
 from OTAnalytics.domain.section import LineSection, SectionId
-from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.domain.track import (
+    Detection,
+    PythonDetection,
+    PythonTrack,
+    Track,
+    TrackId,
+)
 
 
 @pytest.fixture
 def detection() -> Detection:
-    return Detection(
-        classification="car",
-        confidence=0.5,
-        x=0.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=1,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
+    return PythonDetection(
+        _classification="car",
+        _confidence=0.5,
+        _x=0.0,
+        _y=5.0,
+        _w=15.3,
+        _h=30.5,
+        _frame=1,
+        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+        _input_file_path=Path("path/to/myhostname_something.otdet"),
+        _interpolated_detection=False,
+        _track_id=TrackId(1),
     )
 
 
@@ -43,73 +49,73 @@ def detection() -> Detection:
 def track() -> Track:
     track_id = TrackId(1)
 
-    detection_1 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=0.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=1,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
+    detection_1 = PythonDetection(
+        _classification="car",
+        _confidence=0.5,
+        _x=0.0,
+        _y=5.0,
+        _w=15.3,
+        _h=30.5,
+        _frame=1,
+        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+        _input_file_path=Path("path/to/myhostname_something.otdet"),
+        _interpolated_detection=False,
+        _track_id=TrackId(1),
     )
-    detection_2 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=10.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=2,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
+    detection_2 = PythonDetection(
+        _classification="car",
+        _confidence=0.5,
+        _x=10.0,
+        _y=5.0,
+        _w=15.3,
+        _h=30.5,
+        _frame=2,
+        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
+        _input_file_path=Path("path/to/myhostname_something.otdet"),
+        _interpolated_detection=False,
+        _track_id=TrackId(1),
     )
-    detection_3 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=15.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=3,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 2),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
+    detection_3 = PythonDetection(
+        _classification="car",
+        _confidence=0.5,
+        _x=15.0,
+        _y=5.0,
+        _w=15.3,
+        _h=30.5,
+        _frame=3,
+        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 2),
+        _input_file_path=Path("path/to/myhostname_something.otdet"),
+        _interpolated_detection=False,
+        _track_id=TrackId(1),
     )
-    detection_4 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=20.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=4,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 3),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
+    detection_4 = PythonDetection(
+        _classification="car",
+        _confidence=0.5,
+        _x=20.0,
+        _y=5.0,
+        _w=15.3,
+        _h=30.5,
+        _frame=4,
+        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 3),
+        _input_file_path=Path("path/to/myhostname_something.otdet"),
+        _interpolated_detection=False,
+        _track_id=TrackId(1),
     )
-    detection_5 = Detection(
-        classification="car",
-        confidence=0.5,
-        x=25.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=5,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
-        interpolated_detection=False,
-        track_id=TrackId(1),
+    detection_5 = PythonDetection(
+        _classification="car",
+        _confidence=0.5,
+        _x=25.0,
+        _y=5.0,
+        _w=15.3,
+        _h=30.5,
+        _frame=5,
+        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),
+        _input_file_path=Path("path/to/myhostname_something.otdet"),
+        _interpolated_detection=False,
+        _track_id=TrackId(1),
     )
 
-    return Track(
+    return PythonTrack(
         track_id,
         "car",
         [detection_1, detection_2, detection_3, detection_4, detection_5],

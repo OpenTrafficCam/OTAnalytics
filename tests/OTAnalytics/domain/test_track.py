@@ -9,6 +9,8 @@ from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
     CalculateTrackClassificationByMaxConfidence,
     Detection,
+    PythonDetection,
+    PythonTrack,
     PythonTrackDataset,
     Track,
     TrackId,
@@ -39,20 +41,20 @@ def valid_detection_dict() -> dict:
 
 @pytest.fixture
 def valid_detection(valid_detection_dict: dict) -> Detection:
-    return Detection(
-        classification=valid_detection_dict[ottrk_format.CLASS],
-        confidence=valid_detection_dict[ottrk_format.CONFIDENCE],
-        x=valid_detection_dict[ottrk_format.X],
-        y=valid_detection_dict[ottrk_format.Y],
-        w=valid_detection_dict[ottrk_format.W],
-        h=valid_detection_dict[ottrk_format.H],
-        frame=valid_detection_dict[ottrk_format.FRAME],
-        occurrence=valid_detection_dict[ottrk_format.OCCURRENCE],
-        input_file_path=valid_detection_dict[ottrk_format.INPUT_FILE_PATH],
-        interpolated_detection=valid_detection_dict[
+    return PythonDetection(
+        _classification=valid_detection_dict[ottrk_format.CLASS],
+        _confidence=valid_detection_dict[ottrk_format.CONFIDENCE],
+        _x=valid_detection_dict[ottrk_format.X],
+        _y=valid_detection_dict[ottrk_format.Y],
+        _w=valid_detection_dict[ottrk_format.W],
+        _h=valid_detection_dict[ottrk_format.H],
+        _frame=valid_detection_dict[ottrk_format.FRAME],
+        _occurrence=valid_detection_dict[ottrk_format.OCCURRENCE],
+        _input_file_path=valid_detection_dict[ottrk_format.INPUT_FILE_PATH],
+        _interpolated_detection=valid_detection_dict[
             ottrk_format.INTERPOLATED_DETECTION
         ],
-        track_id=valid_detection_dict[ottrk_format.TRACK_ID],
+        _track_id=valid_detection_dict[ottrk_format.TRACK_ID],
     )
 
 
@@ -93,18 +95,18 @@ class TestDetection:
         track_id: int,
     ) -> None:
         with pytest.raises(ValueError):
-            Detection(
-                classification="car",
-                confidence=confidence,
-                x=x,
-                y=y,
-                w=w,
-                h=h,
-                frame=frame,
-                occurrence=datetime(2022, 1, 1, 1, 0, 0),
-                input_file_path=Path("path/to/file.otdet"),
-                interpolated_detection=False,
-                track_id=TrackId(track_id),
+            PythonDetection(
+                _classification="car",
+                _confidence=confidence,
+                _x=x,
+                _y=y,
+                _w=w,
+                _h=h,
+                _frame=frame,
+                _occurrence=datetime(2022, 1, 1, 1, 0, 0),
+                _input_file_path=Path("path/to/file.otdet"),
+                _interpolated_detection=False,
+                _track_id=TrackId(track_id),
             )
 
     def test_instantiation_with_valid_args(
@@ -135,17 +137,19 @@ class TestTrack:
 
     def test_raise_error_on_empty_detections(self) -> None:
         with pytest.raises(BuildTrackWithLessThanNDetectionsError):
-            Track(id=TrackId(1), classification="car", detections=[])
+            PythonTrack(_id=TrackId(1), _classification="car", _detections=[])
 
     def test_error_on_single_detection(self, valid_detection: Detection) -> None:
         with pytest.raises(BuildTrackWithLessThanNDetectionsError):
-            Track(id=TrackId(5), classification="car", detections=[valid_detection])
+            PythonTrack(
+                _id=TrackId(5), _classification="car", _detections=[valid_detection]
+            )
 
     def test_instantiation_with_valid_args(self, valid_detection: Detection) -> None:
-        track = Track(
-            id=TrackId(5),
-            classification="car",
-            detections=[
+        track = PythonTrack(
+            _id=TrackId(5),
+            _classification="car",
+            _detections=[
                 valid_detection,
                 valid_detection,
                 valid_detection,
@@ -239,9 +243,9 @@ class TestPythonTrackDataset:
         first_track.id.return_value = TrackId(1)
         second_track = Mock()
         second_track.id.return_value = TrackId(2)
-        repository = PythonTrackDataset.from_list([first_track, second_track])
+        dataset = PythonTrackDataset.from_list([first_track, second_track])
 
-        returned = repository.get_for(first_track.id)
+        returned = dataset.get_for(first_track.id)
 
         assert returned == first_track
 

@@ -106,8 +106,80 @@ class BuildTrackWithLessThanNDetectionsError(TrackError):
         )
 
 
+class Detection(ABC):
+    @property
+    @abstractmethod
+    def classification(self) -> str:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def confidence(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def x(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def y(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def w(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def h(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def frame(self) -> int:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def occurrence(self) -> datetime:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def input_file_path(self) -> Path:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def interpolated_detection(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def track_id(self) -> TrackId:
+        raise NotImplementedError
+
+    def to_dict(self) -> dict:
+        return {
+            CLASSIFICATION: self.classification,
+            CONFIDENCE: self.confidence,
+            X: self.x,
+            Y: self.y,
+            W: self.w,
+            H: self.h,
+            FRAME: self.frame,
+            OCCURRENCE: self.occurrence,
+            INPUT_FILE_PATH: self.input_file_path,
+            INTERPOLATED_DETECTION: self.interpolated_detection,
+            TRACK_ID: self.track_id.id,
+        }
+
+
 @dataclass(frozen=True)
-class Detection(DataclassValidation):
+class PythonDetection(Detection, DataclassValidation):
     """Represents a detection belonging to a `Track`.
 
     The detection uses the xywh bounding box format.
@@ -138,17 +210,61 @@ class Detection(DataclassValidation):
         track_id (TrackId): the track id this detection belongs to.
     """
 
-    classification: str
-    confidence: float
-    x: float
-    y: float
-    w: float
-    h: float
-    frame: int
-    occurrence: datetime
-    input_file_path: Path
-    interpolated_detection: bool
-    track_id: TrackId
+    _classification: str
+    _confidence: float
+    _x: float
+    _y: float
+    _w: float
+    _h: float
+    _frame: int
+    _occurrence: datetime
+    _input_file_path: Path
+    _interpolated_detection: bool
+    _track_id: TrackId
+
+    @property
+    def classification(self) -> str:
+        return self._classification
+
+    @property
+    def confidence(self) -> float:
+        return self._confidence
+
+    @property
+    def x(self) -> float:
+        return self._x
+
+    @property
+    def y(self) -> float:
+        return self._y
+
+    @property
+    def w(self) -> float:
+        return self._w
+
+    @property
+    def h(self) -> float:
+        return self._h
+
+    @property
+    def frame(self) -> int:
+        return self._frame
+
+    @property
+    def occurrence(self) -> datetime:
+        return self._occurrence
+
+    @property
+    def input_file_path(self) -> Path:
+        return self._input_file_path
+
+    @property
+    def interpolated_detection(self) -> bool:
+        return self._interpolated_detection
+
+    @property
+    def track_id(self) -> TrackId:
+        return self._track_id
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()
@@ -173,25 +289,27 @@ class Detection(DataclassValidation):
         if self.frame < 1:
             raise ValueError("frame number must be greater equal 1")
 
-    def to_dict(self) -> dict:
-        return {
-            CLASSIFICATION: self.classification,
-            CONFIDENCE: self.confidence,
-            X: self.x,
-            Y: self.y,
-            W: self.w,
-            H: self.h,
-            FRAME: self.frame,
-            OCCURRENCE: self.occurrence,
-            INPUT_FILE_PATH: self.input_file_path,
-            INTERPOLATED_DETECTION: self.interpolated_detection,
-            TRACK_ID: self.track_id.id,
-        }
+
+class Track(ABC):
+    @property
+    @abstractmethod
+    def id(self) -> TrackId:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def classification(self) -> str:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def detections(self) -> list[Detection]:
+        raise NotImplementedError
 
 
 @dataclass(frozen=True)
-class Track(DataclassValidation):
-    """Represents the the track of an object as seen in the task of object tracking
+class PythonTrack(Track, DataclassValidation):
+    """Represents the track of an object as seen in the task of object tracking
     (computer vision).
 
 
@@ -204,20 +322,32 @@ class Track(DataclassValidation):
         ValueError: if an empty detections list has been passed.
     """
 
-    id: TrackId
-    classification: str
-    detections: list[Detection]
+    _id: TrackId
+    _classification: str
+    _detections: list[Detection]
+
+    @property
+    def id(self) -> TrackId:
+        return self._id
+
+    @property
+    def classification(self) -> str:
+        return self._classification
+
+    @property
+    def detections(self) -> list[Detection]:
+        return self._detections
 
     def _validate(self) -> None:
         self._validate_track_has_at_least_five_detections()
         self._validate_detections_sorted_by_occurrence()
 
     def _validate_track_has_at_least_five_detections(self) -> None:
-        if len(self.detections) < 5:
-            raise BuildTrackWithLessThanNDetectionsError(self.id)
+        if len(self._detections) < 5:
+            raise BuildTrackWithLessThanNDetectionsError(self._id)
 
     def _validate_detections_sorted_by_occurrence(self) -> None:
-        if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
+        if self._detections != sorted(self._detections, key=lambda det: det.occurrence):
             raise ValueError("detections must be sorted by occurence")
 
 
@@ -326,9 +456,11 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
 
 
 class TrackDataset(ABC):
+    @abstractmethod
     def add_all(self, other: "TrackDataset") -> "TrackDataset":
         raise NotImplementedError
 
+    @abstractmethod
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
         Retrieve a track for the given id.
@@ -341,21 +473,14 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
-    def get_all(self) -> list[Track]:
-        """
-        Retrieve all tracks.
-
-        Returns:
-            list[Track]: all tracks within the repository
-        """
-        raise NotImplementedError
-
+    @abstractmethod
     def clear(self) -> "TrackDataset":
         """
         Return an empty version of the current TrackDataset.
         """
         raise NotImplementedError
 
+    @abstractmethod
     def as_list(self) -> list[Track]:
         raise NotImplementedError
 

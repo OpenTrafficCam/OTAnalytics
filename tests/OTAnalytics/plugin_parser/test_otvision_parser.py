@@ -34,6 +34,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
+    PythonTrack,
     Track,
     TrackClassificationCalculator,
     TrackId,
@@ -312,7 +313,9 @@ class TestOttrkParser:
         classificator.calculate.return_value = merged_classification
         self._track_repository.get_for.return_value = existing_track
         all_detections = deserialized_detections + existing_track.detections
-        merged_track = Track(existing_track.id, merged_classification, all_detections)
+        merged_track = PythonTrack(
+            existing_track.id, merged_classification, all_detections
+        )
 
         result_sorted_input = self.ottrk_parser._parse_tracks(detections)
 

@@ -15,6 +15,8 @@ from OTAnalytics.domain.track import (
     OCCURRENCE,
     TRACK_ID,
     Detection,
+    PythonDetection,
+    PythonTrack,
     Track,
     TrackId,
     TrackIdProvider,
@@ -99,14 +101,24 @@ class TestCachedPandasTrackProvider:
     def set_up_track(self, id: int) -> Track:
         """Create a dummy track with the given id and 5 car detections."""
         t_id = TrackId(id)
-        detections = [
-            Detection("car", 0.99, 0, 1, 2, 7, 1, datetime.min, Path(""), False, t_id),
-            Detection("car", 0.99, 0, 2, 2, 7, 2, datetime.min, Path(""), False, t_id),
-            Detection("car", 0.99, 0, 3, 2, 7, 3, datetime.min, Path(""), False, t_id),
-            Detection("car", 0.99, 0, 4, 2, 7, 4, datetime.min, Path(""), False, t_id),
-            Detection("car", 0.99, 0, 5, 2, 7, 5, datetime.min, Path(""), False, t_id),
+        detections: list[Detection] = [
+            PythonDetection(
+                "car", 0.99, 0, 1, 2, 7, 1, datetime.min, Path(""), False, t_id
+            ),
+            PythonDetection(
+                "car", 0.99, 0, 2, 2, 7, 2, datetime.min, Path(""), False, t_id
+            ),
+            PythonDetection(
+                "car", 0.99, 0, 3, 2, 7, 3, datetime.min, Path(""), False, t_id
+            ),
+            PythonDetection(
+                "car", 0.99, 0, 4, 2, 7, 4, datetime.min, Path(""), False, t_id
+            ),
+            PythonDetection(
+                "car", 0.99, 0, 5, 2, 7, 5, datetime.min, Path(""), False, t_id
+            ),
         ]
-        return Track(t_id, "car", detections)
+        return PythonTrack(t_id, "car", detections)
 
     def set_up_provider(
         self, init_tracks: list[Track], query_tracks: list[Track]

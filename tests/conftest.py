@@ -12,6 +12,8 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
+    PythonDetection,
+    PythonTrack,
     Track,
     TrackId,
     TrackRepository,
@@ -60,7 +62,7 @@ class TrackBuilder:
         self._detections: list[Detection] = []
 
     def build_track(self) -> Track:
-        return Track(TrackId(self.track_id), self.track_class, self._detections)
+        return PythonTrack(TrackId(self.track_id), self.track_class, self._detections)
 
     def build_detections(self) -> list[Detection]:
         return self._detections
@@ -72,15 +74,15 @@ class TrackBuilder:
         self._detections.append(self.create_detection())
 
     def create_detection(self) -> Detection:
-        return Detection(
-            classification=self.detection_class,
-            confidence=self.confidence,
-            x=self.x,
-            y=self.y,
-            w=self.w,
-            h=self.h,
-            frame=self.frame,
-            occurrence=datetime(
+        return PythonDetection(
+            _classification=self.detection_class,
+            _confidence=self.confidence,
+            _x=self.x,
+            _y=self.y,
+            _w=self.w,
+            _h=self.h,
+            _frame=self.frame,
+            _occurrence=datetime(
                 self.occurrence_year,
                 self.occurrence_month,
                 self.occurrence_day,
@@ -89,9 +91,9 @@ class TrackBuilder:
                 self.occurrence_second,
                 self.occurrence_microsecond,
             ),
-            input_file_path=Path(self.input_file_path),
-            interpolated_detection=self.interpolated_detection,
-            track_id=TrackId(self.track_id),
+            _input_file_path=Path(self.input_file_path),
+            _interpolated_detection=self.interpolated_detection,
+            _track_id=TrackId(self.track_id),
         )
 
     def add_track_id(self, id: int) -> None:

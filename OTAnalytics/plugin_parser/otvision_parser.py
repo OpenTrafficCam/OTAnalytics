@@ -28,6 +28,8 @@ from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
     Detection,
+    PythonDetection,
+    PythonTrack,
     PythonTrackDataset,
     Track,
     TrackClassificationCalculator,
@@ -335,10 +337,10 @@ class OttrkParser(TrackParser):
             )
             classification = self._track_classification_calculator.calculate(detections)
             try:
-                current_track = Track(
-                    id=track_id,
-                    classification=classification,
-                    detections=sort_dets_by_occurrence,
+                current_track = PythonTrack(
+                    _id=track_id,
+                    _classification=classification,
+                    _detections=sort_dets_by_occurrence,
                 )
                 tracks.append(current_track)
             except BuildTrackWithLessThanNDetectionsError as build_error:
@@ -368,20 +370,20 @@ class OttrkParser(TrackParser):
         tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
             path = self.__get_path(det_dict)
-            det = Detection(
-                classification=det_dict[ottrk_format.CLASS],
-                confidence=det_dict[ottrk_format.CONFIDENCE],
-                x=det_dict[ottrk_format.X],
-                y=det_dict[ottrk_format.Y],
-                w=det_dict[ottrk_format.W],
-                h=det_dict[ottrk_format.H],
-                frame=det_dict[ottrk_format.FRAME],
-                occurrence=datetime.fromtimestamp(
+            det = PythonDetection(
+                _classification=det_dict[ottrk_format.CLASS],
+                _confidence=det_dict[ottrk_format.CONFIDENCE],
+                _x=det_dict[ottrk_format.X],
+                _y=det_dict[ottrk_format.Y],
+                _w=det_dict[ottrk_format.W],
+                _h=det_dict[ottrk_format.H],
+                _frame=det_dict[ottrk_format.FRAME],
+                _occurrence=datetime.fromtimestamp(
                     float(det_dict[ottrk_format.OCCURRENCE])
                 ),
-                input_file_path=path,
-                interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-                track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
+                _input_file_path=path,
+                _interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
+                _track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
             )
             if not tracks_dict.get(det.track_id):
                 tracks_dict[det.track_id] = []
