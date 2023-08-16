@@ -1,38 +1,16 @@
 from pandas import DataFrame, Series, concat
 
-from OTAnalytics.domain.track import Detection, PythonTrackDataset, Track, TrackId
+from OTAnalytics.domain.track import PythonTrackDataset, Track, TrackId
 from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,
 )
-from tests.conftest import TrackBuilder
-
-
-def assert_equal_detection_properties(
-    pandas_detection: Detection, python_detection: Detection
-) -> None:
-    assert python_detection.classification == pandas_detection.classification
-    assert python_detection.confidence == pandas_detection.confidence
-    assert python_detection.x == pandas_detection.x
-    assert python_detection.y == pandas_detection.y
-    assert python_detection.w == pandas_detection.w
-    assert python_detection.h == pandas_detection.h
-    assert python_detection.frame == pandas_detection.frame
-    assert python_detection.occurrence == pandas_detection.occurrence
-    assert python_detection.input_file_path == pandas_detection.input_file_path
-    assert (
-        python_detection.interpolated_detection
-        == pandas_detection.interpolated_detection
-    )
-    assert python_detection.track_id == pandas_detection.track_id
-
-
-def assert_equal_track_properties(pandas_track: Track, python_track: Track) -> None:
-    assert python_track.id == pandas_track.id
-    assert python_track.classification == pandas_track.classification
-    for python, pandas in zip(python_track.detections, pandas_track.detections):
-        assert_equal_detection_properties(pandas, python)
+from tests.conftest import (
+    TrackBuilder,
+    assert_equal_detection_properties,
+    assert_equal_track_properties,
+)
 
 
 class TestPandasDetection:
