@@ -1,5 +1,6 @@
 from typing import Sequence
 
+from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -329,7 +330,9 @@ class ApplicationStarter:
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
         return OttrkParser(
-            CalculateTrackClassificationByMaxConfidence(), track_repository
+            CalculateTrackClassificationByMaxConfidence(),
+            track_repository,
+            track_length_limit=TRACK_LENGTH_LIMIT,
         )
 
     def _create_section_repository(self) -> SectionRepository:
