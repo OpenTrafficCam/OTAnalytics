@@ -391,25 +391,27 @@ def event_builder() -> EventBuilder:
     return EventBuilder()
 
 
-def assert_equal_detection_properties(first: Detection, second: Detection) -> None:
-    assert second.classification == first.classification
-    assert second.confidence == first.confidence
-    assert second.x == first.x
-    assert second.y == first.y
-    assert second.w == first.w
-    assert second.h == first.h
-    assert second.frame == first.frame
-    assert second.occurrence == first.occurrence
-    assert second.input_file_path == first.input_file_path
-    assert second.interpolated_detection == first.interpolated_detection
-    assert second.track_id == first.track_id
+def assert_equal_detection_properties(actual: Detection, expected: Detection) -> None:
+    assert expected.classification == actual.classification
+    assert expected.confidence == actual.confidence
+    assert expected.x == actual.x
+    assert expected.y == actual.y
+    assert expected.w == actual.w
+    assert expected.h == actual.h
+    assert expected.frame == actual.frame
+    assert expected.occurrence == actual.occurrence
+    assert expected.input_file_path == actual.input_file_path
+    assert expected.interpolated_detection == actual.interpolated_detection
+    assert expected.track_id == actual.track_id
 
 
-def assert_equal_track_properties(first: Track, second: Track) -> None:
-    assert second.id == first.id
-    assert second.classification == first.classification
-    assert len(second.detections) == len(first.detections)
-    for first_detection, second_detection in zip(second.detections, first.detections):
+def assert_equal_track_properties(actual: Track, expected: Track) -> None:
+    assert expected.id == actual.id
+    assert expected.classification == actual.classification
+    assert len(expected.detections) == len(actual.detections)
+    for first_detection, second_detection in zip(
+        expected.detections, actual.detections
+    ):
         assert_equal_detection_properties(second_detection, first_detection)
 
 
