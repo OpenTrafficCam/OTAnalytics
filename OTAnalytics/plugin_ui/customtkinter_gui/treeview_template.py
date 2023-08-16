@@ -16,8 +16,8 @@ class IdResource:
 
 
 class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treeview):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(show="tree", selectmode="none", **kwargs)
+    def __init__(self, show: str = "tree", **kwargs: Any) -> None:
+        super().__init__(selectmode="none", **kwargs)
         self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
         self.bind(tk_events.LEFT_BUTTON_UP, self._on_single_select)
         self.bind(tk_events.MULTI_SELECT_SINGLE, self._on_single_multi_select)

@@ -192,6 +192,12 @@ class DummyViewModel(
         self._treeview_videos.update_items()
         self._update_enabled_buttons()
 
+    def notify_files(self) -> None:
+        if self._treeview_files is None:
+            raise MissingInjectedInstanceError(type(self._treeview_files).__name__)
+        self._treeview_files.update_items()
+        self._update_enabled_buttons()
+
     def _update_enabled_buttons(self) -> None:
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
@@ -345,6 +351,9 @@ class DummyViewModel(
     def set_treeview_videos(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_videos = treeview
 
+    def set_treeview_files(self, treeview: AbstractTreeviewInterface) -> None:
+        self._treeview_files = treeview
+
     def set_selected_videos(self, video_paths: list[str]) -> None:
         self._selected_videos = video_paths
         selected_videos: list[Video] = []
@@ -355,6 +364,13 @@ class DummyViewModel(
 
     def get_all_videos(self) -> list[Video]:
         return self._application.get_all_videos()
+
+    def get_all_track_files(self) -> set[Path]:
+        return {
+            detection.input_file_path
+            for track in self._application._datastore._track_repository.get_all()
+            for detection in track.detections
+        }
 
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
         self._frame_project = project_frame
@@ -537,6 +553,7 @@ class DummyViewModel(
         print(f"Tracks files to load: {track_files}")
         track_paths = [Path(file) for file in track_files]
         self._application.add_tracks_of_files(track_files=track_paths)
+        self.notify_files()
 
     def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
