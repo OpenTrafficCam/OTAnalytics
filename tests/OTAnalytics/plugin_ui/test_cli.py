@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.use_cases.create_events import (
@@ -167,7 +168,9 @@ class TestOTAnalyticsCli:
         )
         return {
             self.TRACK_PARSER: OttrkParser(
-                CalculateTrackClassificationByMaxConfidence(), track_repository
+                CalculateTrackClassificationByMaxConfidence(),
+                track_repository,
+                TRACK_LENGTH_LIMIT,
             ),
             self.FLOW_PARSER: OtFlowParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
