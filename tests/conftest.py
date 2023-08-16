@@ -19,7 +19,11 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat
-from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser, OttrkParser
+from OTAnalytics.plugin_parser.otvision_parser import (
+    OtFlowParser,
+    OttrkParser,
+    PythonDetectionParser,
+)
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -361,9 +365,12 @@ def cyclist_video(test_data_dir: Path) -> Path:
 
 @pytest.fixture(scope="module")
 def tracks(ottrk_path: Path) -> list[Track]:
+    track_repository = TrackRepository()
+    track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
     ottrk_parser = OttrkParser(
-        CalculateTrackClassificationByMaxConfidence(),
-        TrackRepository(),
+        track_classification_calculator,
+        track_repository,
+        PythonDetectionParser(track_classification_calculator, track_repository),
     )
     return ottrk_parser.parse(ottrk_path).as_list()
 

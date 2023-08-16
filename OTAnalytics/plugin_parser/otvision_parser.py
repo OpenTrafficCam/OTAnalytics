@@ -282,40 +282,23 @@ class OttrkFormatFixer:
         return content
 
 
-class OttrkParser(TrackParser):
-    """Parse an ottrk file and convert its contents to our domain objects namely
-    `Tracks`.
+class DetectionParser(ABC):
+    @abstractmethod
+    def parse_tracks(self, detections: list[dict]) -> TrackDataset:
+        raise NotImplementedError
 
-    Args:
-        TrackParser (TrackParser): extends TrackParser interface.
-    """
 
+class PythonDetectionParser(DetectionParser):
     def __init__(
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
-        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
-    ) -> None:
-        super().__init__(track_classification_calculator, track_repository)
-        self._format_fixer = format_fixer
+    ):
+        self._track_classification_calculator = track_classification_calculator
+        self._track_repository = track_repository
         self._path_cache: dict[str, Path] = {}
 
-    def parse(self, ottrk_file: Path) -> TrackDataset:
-        """Parse ottrk file and convert its content to domain level objects namely
-        `Track`s.
-
-        Args:
-            ottrk_file (Path): the file to
-
-        Returns:
-            list[Track]: the tracks.
-        """
-        ottrk_dict = _parse_bz2(ottrk_file)
-        fixed_ottrk = self._format_fixer.fix(ottrk_dict)
-        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
-        return self._parse_tracks(dets_list)
-
-    def _parse_tracks(self, dets: list[dict]) -> TrackDataset:
+    def parse_tracks(self, dets: list[dict]) -> TrackDataset:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
 
         This method will also sort the detections belonging to a track by their
@@ -398,6 +381,42 @@ class OttrkParser(TrackParser):
         path = Path(path_as_string)
         self._path_cache[path_as_string] = path
         return path
+
+
+class OttrkParser(TrackParser):
+    """Parse an ottrk file and convert its contents to our domain objects namely
+    `Tracks`.
+
+    Args:
+        TrackParser (TrackParser): extends TrackParser interface.
+    """
+
+    def __init__(
+        self,
+        track_classification_calculator: TrackClassificationCalculator,
+        track_repository: TrackRepository,
+        detection_parser: DetectionParser,
+        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
+    ) -> None:
+        self._track_classification_calculator = track_classification_calculator
+        self._track_repository = track_repository
+        self._detection_parser = detection_parser
+        self._format_fixer = format_fixer
+
+    def parse(self, ottrk_file: Path) -> TrackDataset:
+        """Parse ottrk file and convert its content to domain level objects namely
+        `Track`s.
+
+        Args:
+            ottrk_file (Path): the file to
+
+        Returns:
+            list[Track]: the tracks.
+        """
+        ottrk_dict = _parse_bz2(ottrk_file)
+        fixed_ottrk = self._format_fixer.fix(ottrk_dict)
+        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        return self._detection_parser.parse_tracks(dets_list)
 
 
 class UnknownSectionType(Exception):

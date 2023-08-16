@@ -29,6 +29,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtFlowParser,
     OttrkParser,
+    PythonDetectionParser,
 )
 from OTAnalytics.plugin_ui.cli import (
     EVENTLIST_FILE_TYPE,
@@ -125,9 +126,15 @@ class TestOTAnalyticsCli:
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
         event_repository = EventRepository()
+        track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
+        track_repository = TrackRepository()
         return {
             self.TRACK_PARSER: OttrkParser(
-                CalculateTrackClassificationByMaxConfidence(), TrackRepository()
+                track_classification_calculator,
+                track_repository,
+                PythonDetectionParser(
+                    track_classification_calculator, track_repository
+                ),
             ),
             self.FLOW_PARSER: OtFlowParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),

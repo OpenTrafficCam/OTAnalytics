@@ -24,7 +24,6 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import (
     Track,
-    TrackClassificationCalculator,
     TrackDataset,
     TrackId,
     TrackImage,
@@ -35,14 +34,6 @@ from OTAnalytics.domain.video import Video, VideoListObserver, VideoRepository
 
 
 class TrackParser(ABC):
-    def __init__(
-        self,
-        track_classification_calculator: TrackClassificationCalculator,
-        track_repository: TrackRepository,
-    ) -> None:
-        self._track_classification_calculator = track_classification_calculator
-        self._track_repository = track_repository
-
     @abstractmethod
     def parse(self, file: Path) -> TrackDataset:
         raise NotImplementedError
