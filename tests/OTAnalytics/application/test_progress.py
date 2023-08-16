@@ -1,3 +1,4 @@
+from typing import Generator
 from unittest.mock import Mock, call
 
 from OTAnalytics.application.progress import (
@@ -18,10 +19,18 @@ class TestSimpleCounter:
         assert counter.get_value() == 0
 
 
+def mock_counter() -> Generator:
+    current = 0
+    while True:
+        current = current + 1
+        yield current
+
+
 class TestAutoIncrementingProgressbar:
     def test(self) -> None:
         numbers = [1, 2, 3]
         counter = Mock(spec=Counter)
+        counter.get_value.side_effect = mock_counter()
         notify = Mock()
         progressbar = AutoIncrementingProgressbar(numbers, counter, notify)
         result = [elem for elem in progressbar]

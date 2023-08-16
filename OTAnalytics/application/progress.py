@@ -41,10 +41,8 @@ class AutoIncrementingProgressbar(Progressbar):
             try:
                 yield next(self._iterator)
                 self._counter.increment(1)
-                if (
-                    self._counter.get_value() == total_elements
-                    or self._counter.get_value() % step_size == 0
-                ):
+                counter_value = self._counter.get_value()
+                if counter_value == total_elements or counter_value % step_size == 0:
                     if self._notify:
                         self._notify()
             except StopIteration:
