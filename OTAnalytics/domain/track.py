@@ -136,6 +136,7 @@ class Detection(DataclassValidation):
         at the time of its creation.
         interpolated_detection (bool): whether this detection is interpolated.
         track_id (TrackId): the track id this detection belongs to.
+        video_name (str): name of video including filetype extension.
     """
 
     classification: str
@@ -149,6 +150,7 @@ class Detection(DataclassValidation):
     input_file_path: Path
     interpolated_detection: bool
     track_id: TrackId
+    video_name: str
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()

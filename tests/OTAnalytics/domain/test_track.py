@@ -33,6 +33,7 @@ def valid_detection_dict() -> dict:
         ottrk_format.INPUT_FILE_PATH: Path("path/to/file.otdet"),
         ottrk_format.INTERPOLATED_DETECTION: False,
         "track-id": TrackId(1),
+        "video_name": "file.mp4",
     }
 
 
@@ -52,6 +53,7 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
             ottrk_format.INTERPOLATED_DETECTION
         ],
         track_id=valid_detection_dict[ottrk_format.TRACK_ID],
+        video_name=valid_detection_dict["video_name"],
     )
 
 
@@ -104,6 +106,7 @@ class TestDetection:
                 input_file_path=Path("path/to/file.otdet"),
                 interpolated_detection=False,
                 track_id=TrackId(track_id),
+                video_name="file.mp4",
             )
 
     def test_instantiation_with_valid_args(

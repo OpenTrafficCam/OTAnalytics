@@ -38,6 +38,7 @@ def detection() -> Detection:
         input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId(1),
+        video_name="myhostname_something.mp4",
     )
 
 
@@ -670,7 +671,7 @@ class TestIntersectAreaByTrackPoints:
                 event_coordinate=ImageCoordinate(1.5, 1.5),
                 event_type=EventType.SECTION_ENTER,
                 direction_vector=DirectionVector2D(1, 0),
-                video_name="myhostname_file.otdet",
+                video_name="myhostname_file.mp4",
             )
         ]
         assert result_events == expected_events
