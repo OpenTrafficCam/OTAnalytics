@@ -10,7 +10,7 @@ from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
-    CalculateTrackClassificationByMaxConfidence,
+    ByMaxConfidence,
     Detection,
     PythonDetection,
     PythonTrack,
@@ -366,7 +366,7 @@ def cyclist_video(test_data_dir: Path) -> Path:
 @pytest.fixture(scope="module")
 def tracks(ottrk_path: Path) -> list[Track]:
     track_repository = TrackRepository()
-    track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
+    track_classification_calculator = ByMaxConfidence()
     ottrk_parser = OttrkParser(
         track_classification_calculator,
         track_repository,
@@ -408,5 +408,34 @@ def assert_equal_detection_properties(first: Detection, second: Detection) -> No
 def assert_equal_track_properties(first: Track, second: Track) -> None:
     assert second.id == first.id
     assert second.classification == first.classification
-    for python, pandas in zip(second.detections, first.detections):
-        assert_equal_detection_properties(pandas, python)
+    assert len(second.detections) == len(first.detections)
+    for first_detection, second_detection in zip(second.detections, first.detections):
+        assert_equal_detection_properties(second_detection, first_detection)
+
+
+def append_sample_data(
+    track_builder: TrackBuilder,
+    frame_offset: int = 0,
+    microsecond_offset: int = 0,
+) -> TrackBuilder:
+    track_builder.add_frame(frame_offset + 1)
+    track_builder.add_microsecond(microsecond_offset + 1)
+    track_builder.append_detection()
+
+    track_builder.add_frame(frame_offset + 2)
+    track_builder.add_microsecond(microsecond_offset + 2)
+    track_builder.append_detection()
+
+    track_builder.add_frame(frame_offset + 3)
+    track_builder.add_microsecond(microsecond_offset + 3)
+    track_builder.append_detection()
+
+    track_builder.add_frame(frame_offset + 4)
+    track_builder.add_microsecond(microsecond_offset + 4)
+    track_builder.append_detection()
+
+    track_builder.add_frame(frame_offset + 5)
+    track_builder.add_microsecond(microsecond_offset + 5)
+    track_builder.append_detection()
+
+    return track_builder

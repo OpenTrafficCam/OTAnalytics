@@ -17,10 +17,7 @@ from OTAnalytics.application.datastore import EventListParser, FlowParser, Track
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
-from OTAnalytics.domain.track import (
-    CalculateTrackClassificationByMaxConfidence,
-    TrackRepository,
-)
+from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
@@ -126,7 +123,7 @@ class TestOTAnalyticsCli:
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
         event_repository = EventRepository()
-        track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
+        track_classification_calculator = ByMaxConfidence()
         track_repository = TrackRepository()
         return {
             self.TRACK_PARSER: OttrkParser(

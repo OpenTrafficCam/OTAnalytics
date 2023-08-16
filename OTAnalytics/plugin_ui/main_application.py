@@ -62,10 +62,7 @@ from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import (
-    CalculateTrackClassificationByMaxConfidence,
-    TrackRepository,
-)
+from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
@@ -81,6 +78,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
+    PythonDetectionParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -298,8 +296,11 @@ class ApplicationStarter:
         return TrackRepository(PandasTrackDataset())
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
+        calculator = ByMaxConfidence()
         return OttrkParser(
-            CalculateTrackClassificationByMaxConfidence(), track_repository
+            calculator,
+            track_repository,
+            PythonDetectionParser(calculator, track_repository),
         )
 
     def _create_section_repository(self) -> SectionRepository:

@@ -441,7 +441,7 @@ class TrackClassificationCalculator(ABC):
         pass
 
 
-class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator):
+class ByMaxConfidence(TrackClassificationCalculator):
     """Determine a track's classification by its detections max confidence."""
 
     def calculate(self, detections: list[Detection]) -> str:
@@ -489,14 +489,22 @@ class TrackDataset(ABC):
 class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
-    def __init__(self, values: Optional[dict[TrackId, Track]] = None) -> None:
+    def __init__(
+        self,
+        values: Optional[dict[TrackId, Track]] = None,
+        calculator: TrackClassificationCalculator = ByMaxConfidence(),
+    ) -> None:
         if values is None:
             values = {}
         self._tracks = values
+        self._calculator = calculator
 
     @staticmethod
-    def from_list(tracks: list[Track]) -> TrackDataset:
-        return PythonTrackDataset({track.id: track for track in tracks})
+    def from_list(
+        tracks: list[Track],
+        calculator: TrackClassificationCalculator = ByMaxConfidence(),
+    ) -> TrackDataset:
+        return PythonTrackDataset({track.id: track for track in tracks}, calculator)
 
     def add_all(self, other: "TrackDataset") -> "TrackDataset":
         if isinstance(other, PythonTrackDataset):
@@ -504,9 +512,43 @@ class PythonTrackDataset(TrackDataset):
         new_tracks = {track.id: track for track in other.as_list()}
         return self.__merge(new_tracks)
 
-    def __merge(self, new_tracks: dict[TrackId, Track]) -> TrackDataset:
-        merged = self._tracks | new_tracks
+    def __merge(self, other: dict[TrackId, Track]) -> TrackDataset:
+        merged_tracks: dict[TrackId, Track] = {}
+        for track_id, other_track in other.items():
+            existing_detections = self._get_existing_detections(track_id)
+            all_detections = existing_detections + other_track.detections
+            sort_dets_by_occurrence = sorted(
+                all_detections, key=lambda det: det.occurrence
+            )
+            classification = self._calculator.calculate(all_detections)
+            try:
+                current_track = PythonTrack(
+                    _id=track_id,
+                    _classification=classification,
+                    _detections=sort_dets_by_occurrence,
+                )
+                merged_tracks[current_track.id] = current_track
+            except BuildTrackWithLessThanNDetectionsError as build_error:
+                # TODO: log error
+                # Skip tracks with less than 2 detections
+                print(build_error)
+        merged = self._tracks | merged_tracks
         return PythonTrackDataset(merged)
+
+    def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:
+        """
+        Returns the detections of an already existing track with the same id or
+        an empty list
+
+        Args:
+            track_id (TrackId): track id to search for
+
+        Returns:
+            list[Detection]: detections of the already existing track or an empty list
+        """
+        if existing_track := self._tracks.get(track_id):
+            return existing_track.detections
+        return []
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         return self._tracks.get(id)

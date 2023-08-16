@@ -32,8 +32,7 @@ from OTAnalytics.domain.section import (
     SectionId,
 )
 from OTAnalytics.domain.track import (
-    CalculateTrackClassificationByMaxConfidence,
-    Detection,
+    ByMaxConfidence,
     PythonTrack,
     Track,
     TrackClassificationCalculator,
@@ -60,6 +59,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
+    PandasDetectionParser,
     PythonDetectionParser,
     Version,
     Version_1_0_to_1_1,
@@ -69,40 +69,16 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     _write_bz2,
     _write_json,
 )
-from tests.conftest import TrackBuilder
+from tests.conftest import (
+    TrackBuilder,
+    append_sample_data,
+    assert_equal_track_properties,
+)
 
 
 @pytest.fixture
 def track_builder_setup_with_sample_data(track_builder: TrackBuilder) -> TrackBuilder:
     return append_sample_data(track_builder, frame_offset=0, microsecond_offset=0)
-
-
-def append_sample_data(
-    track_builder: TrackBuilder,
-    frame_offset: int = 0,
-    microsecond_offset: int = 0,
-) -> TrackBuilder:
-    track_builder.add_frame(frame_offset + 1)
-    track_builder.add_microsecond(microsecond_offset + 1)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 2)
-    track_builder.add_microsecond(microsecond_offset + 2)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 3)
-    track_builder.add_microsecond(microsecond_offset + 3)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 4)
-    track_builder.add_microsecond(microsecond_offset + 4)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 5)
-    track_builder.add_microsecond(microsecond_offset + 5)
-    track_builder.append_detection()
-
-    return track_builder
 
 
 @pytest.fixture
@@ -224,7 +200,7 @@ class TestOttrkFormatFixer:
 
 class TestOttrkParser:
     _track_repository = mocked_track_repository()
-    _track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
+    _track_classification_calculator = ByMaxConfidence()
     ottrk_parser: OttrkParser = OttrkParser(
         _track_classification_calculator,
         _track_repository,
@@ -265,7 +241,7 @@ class TestOttrkParser:
 
 class TestPythonDetectionParser:
     _track_repository = mocked_track_repository()
-    _track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
+    _track_classification_calculator = ByMaxConfidence()
     parser: PythonDetectionParser = PythonDetectionParser(
         _track_classification_calculator, _track_repository
     )
@@ -302,8 +278,10 @@ class TestPythonDetectionParser:
 
         expected_sorted = [track_builder_setup_with_sample_data.build_track()]
 
-        assert expected_sorted == result_sorted_input
-        assert expected_sorted == result_unsorted_input
+        for sorted, expected in zip(result_sorted_input, expected_sorted):
+            assert_equal_track_properties(sorted, expected)
+        for unsorted, expected in zip(result_unsorted_input, expected_sorted):
+            assert_equal_track_properties(unsorted, expected)
 
     def test_parse_tracks_merge_with_existing(
         self, track_builder_setup_with_sample_data: TrackBuilder
@@ -336,18 +314,31 @@ class TestPythonDetectionParser:
 
         assert expected_sorted == result_sorted_input
 
-    def assert_detection_equal(self, d1: Detection, d2: Detection) -> None:
-        assert d1.classification == d2.classification
-        assert d1.confidence == d2.confidence
-        assert d1.x == d2.x
-        assert d1.y == d2.y
-        assert d1.w == d2.w
-        assert d1.h == d2.h
-        assert d1.frame == d2.frame
-        assert d1.occurrence == d2.occurrence
-        assert d1.input_file_path == d2.input_file_path
-        assert d1.interpolated_detection == d2.interpolated_detection
-        assert d1.track_id == d2.track_id
+
+class TestPandasDetectionParser:
+    _track_repository = mocked_track_repository()
+    parser: PandasDetectionParser = PandasDetectionParser(
+        ByMaxConfidence(),
+        _track_repository,
+    )
+
+    def test_parse_tracks(
+        self, track_builder_setup_with_sample_data: TrackBuilder
+    ) -> None:
+        detections: list[
+            dict
+        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+
+        result_sorted_input = self.parser.parse_tracks(detections).as_list()
+        unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
+        result_unsorted_input = self.parser.parse_tracks(unsorted_detections).as_list()
+
+        expected_sorted = [track_builder_setup_with_sample_data.build_track()]
+
+        for sorted, expected in zip(result_sorted_input, expected_sorted):
+            assert_equal_track_properties(sorted, expected)
+        for unsorted, expected in zip(result_unsorted_input, expected_sorted):
+            assert_equal_track_properties(unsorted, expected)
 
 
 class TestOtFlowParser:

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Tuple
 
 import ujson
+from pandas import DataFrame
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
@@ -20,7 +21,7 @@ from OTAnalytics.application.datastore import (
     VideoParser,
 )
 from OTAnalytics.application.project import Project
-from OTAnalytics.domain import event, flow, geometry, section, video
+from OTAnalytics.domain import event, flow, geometry, section, track, video
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -39,6 +40,7 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
@@ -331,7 +333,9 @@ class PythonDetectionParser(DetectionParser):
                 # Skip tracks with less than 2 detections
                 print(build_error)
 
-        return PythonTrackDataset.from_list(tracks)
+        return PythonTrackDataset.from_list(
+            tracks, self._track_classification_calculator
+        )
 
     def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:
         """
@@ -381,6 +385,54 @@ class PythonDetectionParser(DetectionParser):
         path = Path(path_as_string)
         self._path_cache[path_as_string] = path
         return path
+
+
+class PandasDetectionParser(DetectionParser):
+    """Parse an ottrk file and convert its contents to our domain objects namely
+    `Tracks`.
+
+    Args:
+        TrackParser (TrackParser): extends TrackParser interface.
+    """
+
+    def __init__(
+        self,
+        track_classification_calculator: TrackClassificationCalculator,
+        track_repository: TrackRepository,
+        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
+    ) -> None:
+        self._track_classification_calculator = track_classification_calculator
+        self._track_repository = track_repository
+        self._format_fixer = format_fixer
+        self._path_cache: dict[str, Path] = {}
+
+    def parse_tracks(self, detections: list[dict]) -> TrackDataset:
+        return self._parse_as_dataframe(detections)
+
+    def _parse_as_dataframe(self, detections: list[dict]) -> TrackDataset:
+        data = DataFrame(detections)
+        data.rename(
+            columns={
+                ottrk_format.CLASS: track.CLASSIFICATION,
+                ottrk_format.CONFIDENCE: track.CONFIDENCE,
+                ottrk_format.X: track.X,
+                ottrk_format.Y: track.Y,
+                ottrk_format.W: track.W,
+                ottrk_format.H: track.H,
+                ottrk_format.FRAME: track.FRAME,
+                ottrk_format.OCCURRENCE: track.OCCURRENCE,
+                ottrk_format.INPUT_FILE_PATH: track.INPUT_FILE_PATH,
+                ottrk_format.INTERPOLATED_DETECTION: track.INTERPOLATED_DETECTION,
+                ottrk_format.TRACK_ID: track.TRACK_ID,
+            },
+            inplace=True,
+        )
+        data[track.OCCURRENCE] = (
+            data[track.OCCURRENCE].astype(float).apply(datetime.fromtimestamp)
+        )
+        data.sort_values(by=[track.TRACK_ID, track.OCCURRENCE], inplace=True)
+        # TODO add classification_calculator to dataset
+        return PandasTrackDataset(data)
 
 
 class OttrkParser(TrackParser):

@@ -7,19 +7,20 @@ import pytest
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
-    CalculateTrackClassificationByMaxConfidence,
+    ByMaxConfidence,
     Detection,
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
-    Track,
+    TrackClassificationCalculator,
+    TrackDataset,
     TrackId,
     TrackListObserver,
     TrackObserver,
     TrackRepository,
     TrackSubject,
 )
-from tests.conftest import TrackBuilder
+from tests.conftest import TrackBuilder, append_sample_data
 
 
 @pytest.fixture
@@ -192,7 +193,7 @@ class TestCalculateTrackClassificationByMaxConfidence:
         builder.append_detection()
 
         detections = builder.build_detections()
-        track_classification_calculator = CalculateTrackClassificationByMaxConfidence()
+        track_classification_calculator = ByMaxConfidence()
         result = track_classification_calculator.calculate(detections)
 
         assert result == "car"
@@ -200,16 +201,105 @@ class TestCalculateTrackClassificationByMaxConfidence:
 
 
 class TestPythonTrackDataset:
-    def test_add(self) -> None:
-        track_id = TrackId(1)
-        track = Mock()
-        track.id = track_id
-        dataset = PythonTrackDataset()
+    def test_add_all_to_empty(self) -> None:
+        builder = TrackBuilder()
+        builder.add_track_id(1)
+        append_sample_data(builder)
+        track_1 = builder.build_track()
+        builder = TrackBuilder()
+        builder.add_track_id(2)
+        append_sample_data(builder)
+        track_2 = builder.build_track()
+        calculator = Mock(spec=TrackClassificationCalculator)
+        calculator.calculate.return_value = track_1.classification
+        other_calculator = Mock(spec=TrackClassificationCalculator)
+        dataset = PythonTrackDataset(calculator=calculator)
+        other_tracks = PythonTrackDataset.from_list(
+            [track_1, track_2], calculator=other_calculator
+        )
 
-        merged = dataset.add_all(PythonTrackDataset({track_id: track}))
+        merged = dataset.add_all(other_tracks)
 
-        assert track not in dataset.as_list()
-        assert track in merged.as_list()
+        assert track_1 not in dataset.as_list()
+        assert track_1 in merged.as_list()
+        assert track_2 not in dataset.as_list()
+        assert track_2 in merged.as_list()
+        assert 2 == calculator.calculate.call_count
+        other_calculator.calculate.assert_not_called()
+
+    def test_add_all_to_existing(self) -> None:
+        builder = TrackBuilder()
+        builder.add_track_id(1)
+        append_sample_data(builder)
+        existing_track_1 = builder.build_track()
+        builder = TrackBuilder()
+        builder.add_track_id(2)
+        append_sample_data(builder)
+        existing_track_2 = builder.build_track()
+        builder = TrackBuilder()
+        builder.add_track_id(1)
+        append_sample_data(
+            builder,
+            frame_offset=0,
+            microsecond_offset=len(existing_track_1.detections),
+        )
+        additional_track_1 = builder.build_track()
+        all_detections = existing_track_1.detections + additional_track_1.detections
+        merged_track_1 = PythonTrack(
+            existing_track_1.id, existing_track_1.classification, all_detections
+        )
+        calculator = Mock(spec=TrackClassificationCalculator)
+        calculator.calculate.return_value = existing_track_1.classification
+        other_calculator = Mock(spec=TrackClassificationCalculator)
+        dataset = PythonTrackDataset.from_list(
+            [existing_track_1, existing_track_2], calculator
+        )
+        other_tracks = PythonTrackDataset.from_list(
+            [additional_track_1], other_calculator
+        )
+
+        merged = dataset.add_all(other_tracks)
+
+        assert existing_track_1 in dataset.as_list()
+        assert existing_track_1 not in merged.as_list()
+        assert merged_track_1 in merged.as_list()
+        assert existing_track_2 in dataset.as_list()
+        assert existing_track_2 in merged.as_list()
+        calculator.calculate.assert_called_with(all_detections)
+        other_calculator.calculate.assert_not_called()
+
+    def test_merge_with_existing(self) -> None:
+        merged_classification = "car"
+        classificator = Mock(spec=TrackClassificationCalculator)
+        classificator.calculate.return_value = merged_classification
+        builder = TrackBuilder()
+        builder.add_track_id(1)
+        append_sample_data(builder)
+        detections: list[dict] = builder.build_serialized_detections()
+        deserialized_detections = builder.build_detections()
+        existing_track = builder.build_track()
+        existing_trackset = PythonTrackDataset.from_list(
+            [existing_track], classificator
+        )
+        additional_track_builder = TrackBuilder()
+        append_sample_data(
+            additional_track_builder,
+            frame_offset=0,
+            microsecond_offset=len(detections),
+        )
+        additional_track = additional_track_builder.build_track()
+        additional_trackset = PythonTrackDataset.from_list([additional_track])
+        all_detections = deserialized_detections + additional_track.detections
+        expected_track = PythonTrack(
+            additional_track.id, merged_classification, all_detections
+        )
+        expected_trackset = PythonTrackDataset.from_list(
+            [expected_track], classificator
+        )
+
+        merged_track = existing_trackset.add_all(additional_trackset)
+
+        assert merged_track == expected_trackset
 
     def test_add_nothing(self) -> None:
         dataset = PythonTrackDataset()
@@ -217,26 +307,6 @@ class TestPythonTrackDataset:
         merged = dataset.add_all(PythonTrackDataset())
 
         assert 0 == len(merged.as_list())
-
-    def test_add_all(self) -> None:
-        first_id = TrackId(1)
-        second_id = TrackId(2)
-        first_track = Mock()
-        first_track.id = first_id
-        second_track = Mock()
-        second_track.id = second_id
-        dataset = PythonTrackDataset()
-
-        merged = dataset.add_all(
-            PythonTrackDataset(
-                {first_track.id: first_track, second_track.id: second_track}
-            )
-        )
-
-        assert first_track in merged.as_list()
-        assert second_track in merged.as_list()
-        assert first_track not in dataset.as_list()
-        assert second_track not in dataset.as_list()
 
     def test_get_by_id(self) -> None:
         first_track = Mock()
@@ -251,18 +321,29 @@ class TestPythonTrackDataset:
 
 
 class TestTrackRepository:
-    def test_add(self) -> None:
-        track_id = TrackId(1)
-        track = Mock(spec=Track)
-        track.id = track_id
+    def test_add_all(self) -> None:
+        first_id = TrackId(1)
+        second_id = TrackId(2)
+        first_track = Mock()
+        first_track.id = first_id
+        second_track = Mock()
+        second_track.id = second_id
+        merged_tracks = [first_track, second_track]
+        merged_dataset = Mock(spec=TrackDataset)
+        merged_dataset.as_list.return_value = merged_tracks
+        dataset = Mock(spec=TrackDataset)
+        dataset.add_all.return_value = merged_dataset
         observer = Mock(spec=TrackListObserver)
-        repository = TrackRepository()
+        repository = TrackRepository(dataset)
         repository.register_tracks_observer(observer)
+        new_tracks = PythonTrackDataset.from_list([first_track, second_track])
 
-        repository.add_all(PythonTrackDataset.from_list([track]))
+        repository.add_all(new_tracks)
+        all_tracks = repository.get_all()
 
-        assert track in repository.get_all()
-        observer.notify_tracks.assert_called_with([track_id])
+        assert all_tracks is merged_tracks
+        dataset.add_all.assert_called_with(new_tracks)
+        observer.notify_tracks.assert_called_with([first_id, second_id])
 
     def test_add_nothing(self) -> None:
         observer = Mock(spec=TrackListObserver)
@@ -274,33 +355,17 @@ class TestTrackRepository:
         assert 0 == len(repository.get_all())
         observer.notify_tracks.assert_not_called()
 
-    def test_add_all(self) -> None:
-        first_id = TrackId(1)
-        second_id = TrackId(2)
-        first_track = Mock()
-        first_track.id = first_id
-        second_track = Mock()
-        second_track.id = second_id
-        observer = Mock(spec=TrackListObserver)
-        repository = TrackRepository()
-        repository.register_tracks_observer(observer)
-
-        repository.add_all(PythonTrackDataset.from_list([first_track, second_track]))
-
-        assert first_track in repository.get_all()
-        assert second_track in repository.get_all()
-        observer.notify_tracks.assert_called_with([first_id, second_id])
-
     def test_get_by_id(self) -> None:
         first_track = Mock()
         first_track.id.return_value = TrackId(1)
-        second_track = Mock()
-        repository = TrackRepository()
-        repository.add_all(PythonTrackDataset.from_list([first_track, second_track]))
+        dataset = Mock(spec=TrackDataset)
+        dataset.get_for.return_value = first_track
+        repository = TrackRepository(dataset)
 
         returned = repository.get_for(first_track.id)
 
-        assert returned == first_track
+        assert first_track == returned
+        dataset.get_for.assert_called_with(first_track.id)
 
     def test_clear(self) -> None:
         first_id = TrackId(1)
@@ -309,15 +374,14 @@ class TestTrackRepository:
         first_track.id = first_id
         second_track = Mock()
         second_track.id = second_id
+        cleared_dataset = Mock(spec=TrackDataset)
+        dataset = Mock(spec=TrackDataset)
+        dataset.clear.return_value = cleared_dataset
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add_all(PythonTrackDataset.from_list([first_track, second_track]))
         repository.clear()
 
-        assert not list(repository.get_all())
-        assert observer.notify_tracks.call_args_list == [
-            call([first_id, second_id]),
-            call([]),
-        ]
+        assert not repository.get_all()
+        assert observer.notify_tracks.call_args_list == [call([])]
