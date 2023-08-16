@@ -1,6 +1,6 @@
 import tkinter
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from tkinter import END, IntVar
 from tkinter.ttk import Treeview
 from typing import Any, Callable, Optional
@@ -437,6 +437,7 @@ class DateRow(EmbeddedCTkFrame):
                 hour=int(self.hour),
                 minute=int(self.minute),
                 second=int(self.second),
+                tzinfo=timezone.utc,
             )
         except ValueError:
             raise InvalidDatetimeFormatError(f"{self._name} datetime is not valid.")

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -62,7 +62,9 @@ def create_event(
         road_user_id=track_id.id,
         road_user_type="car",
         hostname="my_hostname",
-        occurrence=datetime(2020, 1, 1, 0, minute, second=real_seconds),
+        occurrence=datetime(
+            2020, 1, 1, 0, minute, second=real_seconds, tzinfo=timezone.utc
+        ),
         frame_number=1,
         section_id=section,
         event_coordinate=ImageCoordinate(0, 0),

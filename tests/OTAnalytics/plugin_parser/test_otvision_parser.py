@@ -1,5 +1,5 @@
 import bz2
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 from unittest.mock import Mock, call
@@ -788,7 +788,9 @@ class TestOtConfigParser:
             video_parser=video_parser,
             flow_parser=flow_parser,
         )
-        project = Project(name="Test Project", start_date=datetime(2020, 1, 1))
+        project = Project(
+            name="Test Project", start_date=datetime(2020, 1, 1, tzinfo=timezone.utc)
+        )
         videos: Sequence[Video] = ()
         sections: Sequence[Section] = ()
         flows: Sequence[Flow] = ()
