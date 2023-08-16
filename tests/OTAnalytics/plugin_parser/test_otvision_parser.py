@@ -41,6 +41,7 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
@@ -318,8 +319,7 @@ class TestPythonDetectionParser:
 class TestPandasDetectionParser:
     _track_repository = mocked_track_repository()
     parser: PandasDetectionParser = PandasDetectionParser(
-        ByMaxConfidence(),
-        _track_repository,
+        PandasByMaxConfidence(),
     )
 
     def test_parse_tracks(

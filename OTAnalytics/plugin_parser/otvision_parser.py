@@ -40,7 +40,10 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
-from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasTrackClassificationCalculator,
+    PandasTrackDataset,
+)
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
@@ -397,14 +400,9 @@ class PandasDetectionParser(DetectionParser):
 
     def __init__(
         self,
-        track_classification_calculator: TrackClassificationCalculator,
-        track_repository: TrackRepository,
-        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
+        calculator: PandasTrackClassificationCalculator,
     ) -> None:
-        self._track_classification_calculator = track_classification_calculator
-        self._track_repository = track_repository
-        self._format_fixer = format_fixer
-        self._path_cache: dict[str, Path] = {}
+        self._calculator = calculator
 
     def parse_tracks(self, detections: list[dict]) -> TrackDataset:
         return self._parse_as_dataframe(detections)
@@ -431,8 +429,7 @@ class PandasDetectionParser(DetectionParser):
             data[track.OCCURRENCE].astype(float).apply(datetime.fromtimestamp)
         )
         data.sort_values(by=[track.TRACK_ID, track.OCCURRENCE], inplace=True)
-        # TODO add classification_calculator to dataset
-        return PandasTrackDataset(data)
+        return PandasTrackDataset.from_dataframe(data, self._calculator)
 
 
 class OttrkParser(TrackParser):

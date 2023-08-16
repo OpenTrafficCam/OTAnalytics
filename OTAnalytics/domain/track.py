@@ -10,6 +10,7 @@ from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.observer import Subject
 
 CLASSIFICATION: str = "classification"
+TRACK_CLASSIFICATION: str = "track_classification"
 CONFIDENCE: str = "confidence"
 X: str = "x"
 Y: str = "y"
@@ -438,7 +439,7 @@ class TrackClassificationCalculator(ABC):
         Returns:
             str: the track's class
         """
-        pass
+        raise NotImplementedError
 
 
 class ByMaxConfidence(TrackClassificationCalculator):

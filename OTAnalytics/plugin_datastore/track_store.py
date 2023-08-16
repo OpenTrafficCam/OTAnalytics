@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -72,26 +73,87 @@ class PandasTrack(Track):
 
     @property
     def classification(self) -> str:
-        return self._data[track.CLASSIFICATION].iloc[0]
+        return self._data[track.TRACK_CLASSIFICATION].iloc[0]
 
     @property
     def detections(self) -> list[Detection]:
         return [PandasDetection(row) for index, row in self._data.iterrows()]
 
 
+class PandasTrackClassificationCalculator(ABC):
+    """
+    Defines interface for calculation strategy to determine a track's classification.
+    """
+
+    @abstractmethod
+    def calculate(self, detections: DataFrame) -> Series:
+        """Determine a track's classification.
+
+        Args:
+            detections (Detection): the track's detections needed to determine the
+                classification
+
+        Returns:
+            str: the track's class
+        """
+        raise NotImplementedError
+
+
+class PandasByMaxConfidence(PandasTrackClassificationCalculator):
+    """Determine a track's classification by its detections max confidence."""
+
+    def calculate(self, detections: DataFrame) -> DataFrame:
+        if detections.empty:
+            return DataFrame()
+        classifications = (
+            detections.loc[:, [track.TRACK_ID, track.CLASSIFICATION, track.CONFIDENCE]]
+            .groupby(by=[track.TRACK_ID, track.CLASSIFICATION])
+            .sum()
+            .sort_values(track.CONFIDENCE)
+            .groupby(level=0)
+            .tail(1)
+        )
+        reset = classifications.reset_index()
+        renamed = reset.rename(
+            columns={track.CLASSIFICATION: track.TRACK_CLASSIFICATION}
+        )
+        return renamed.loc[:, [track.TRACK_ID, track.TRACK_CLASSIFICATION]]
+
+
+DEFAULT_CLASSIFICATOR = PandasByMaxConfidence()
+
+
 @dataclass
 class PandasTrackDataset(TrackDataset):
-    def __init__(self, dataset: DataFrame = DataFrame()):
+    def __init__(
+        self,
+        dataset: DataFrame = DataFrame(),
+        calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
+    ):
         self._dataset = dataset
+        self._calculator = calculator
 
     @staticmethod
-    def from_list(tracks: list[Track]) -> TrackDataset:
-        return PandasTrackDataset(_convert_tracks(tracks))
+    def from_list(
+        tracks: list[Track],
+        calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
+    ) -> TrackDataset:
+        return PandasTrackDataset.from_dataframe(_convert_tracks(tracks), calculator)
+
+    @staticmethod
+    def from_dataframe(
+        tracks: DataFrame,
+        calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
+    ) -> TrackDataset:
+        return PandasTrackDataset(_assign_track_classification(tracks, calculator))
 
     def add_all(self, other: TrackDataset) -> TrackDataset:
         new_tracks = _convert_tracks(other.as_list())
+        if self._dataset.empty:
+            return PandasTrackDataset(new_tracks, self._calculator)
         new_dataset = pandas.concat([self._dataset, new_tracks])
-        return PandasTrackDataset(new_dataset)
+        merged_dataset = _assign_track_classification(new_dataset, self._calculator)
+        return PandasTrackDataset(merged_dataset)
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         if self._dataset.empty:
@@ -112,6 +174,13 @@ class PandasTrackDataset(TrackDataset):
         return PandasTrack(track_frame)
 
 
+def _assign_track_classification(
+    data: DataFrame, calculator: PandasTrackClassificationCalculator
+) -> DataFrame:
+    classification_per_track = calculator.calculate(data)
+    return data.merge(classification_per_track, on=track.TRACK_ID)
+
+
 def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
     """
     Convert tracks into a dataframe.
@@ -125,9 +194,7 @@ def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
     prepared: list[dict] = []
     for current_track in list(tracks):
         for detection in current_track.detections:
-            detection_dict = detection.to_dict()
-            detection_dict[track.CLASSIFICATION] = current_track.classification
-            prepared.append(detection_dict)
+            prepared.append(detection.to_dict())
 
     return _sort_tracks(DataFrame(prepared))
 

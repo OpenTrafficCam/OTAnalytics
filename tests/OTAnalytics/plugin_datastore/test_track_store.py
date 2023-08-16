@@ -1,5 +1,6 @@
 from pandas import DataFrame, Series, concat
 
+from OTAnalytics.domain import track
 from OTAnalytics.domain.track import PythonTrackDataset, Track, TrackId
 from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
@@ -35,12 +36,35 @@ class TestPandasTrack:
         python_track = builder.build_track()
         detections = [detection.to_dict() for detection in python_track.detections]
         data = DataFrame(detections)
+        data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
         pandas_track = PandasTrack(data)
 
         assert_equal_track_properties(pandas_track, python_track)
 
 
 class TestPandasTrackDataset:
+    def test_use_track_classificator(self) -> None:
+        first_detection_class = "car"
+        track_class = "pedestrian"
+        builder = TrackBuilder()
+        builder.add_confidence(1.0)
+        builder.add_track_class(first_detection_class)
+        builder.add_detection_class(first_detection_class)
+        builder.append_detection()
+        builder.add_detection_class(track_class)
+        builder.append_detection()
+        builder.append_detection()
+        builder.append_detection()
+        builder.append_detection()
+        track = builder.build_track()
+
+        dataset = PandasTrackDataset.from_list([track])
+
+        added_track = dataset.get_for(track.id)
+
+        assert added_track is not None
+        assert added_track.classification == track_class
+
     def test_add(self) -> None:
         builder = TrackBuilder()
         builder.append_detection()
