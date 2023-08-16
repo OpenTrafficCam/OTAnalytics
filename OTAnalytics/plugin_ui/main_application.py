@@ -62,9 +62,12 @@ from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
+from OTAnalytics.domain.track import TrackRepository
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasByMaxConfidence,
+    PandasTrackDataset,
+)
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -78,7 +81,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
-    PythonDetectionParser,
+    PandasDetectionParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -233,7 +236,7 @@ class ApplicationStarter:
         OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
-        track_parser = self._create_track_parser(self._create_track_repository())
+        track_parser = self._create_track_parser()
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
@@ -265,7 +268,7 @@ class ApplicationStarter:
             track_repository (TrackRepository): the track repository to inject
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
-        track_parser = self._create_track_parser(track_repository)
+        track_parser = self._create_track_parser()
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
@@ -295,13 +298,10 @@ class ApplicationStarter:
     def _create_track_repository(self) -> TrackRepository:
         return TrackRepository(PandasTrackDataset())
 
-    def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
-        calculator = ByMaxConfidence()
-        return OttrkParser(
-            calculator,
-            track_repository,
-            PythonDetectionParser(calculator, track_repository),
-        )
+    def _create_track_parser(self) -> TrackParser:
+        calculator = PandasByMaxConfidence()
+        detection_parser = PandasDetectionParser(calculator)
+        return OttrkParser(detection_parser)
 
     def _create_section_repository(self) -> SectionRepository:
         return SectionRepository()

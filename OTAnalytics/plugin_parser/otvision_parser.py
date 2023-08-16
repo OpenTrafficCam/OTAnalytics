@@ -442,13 +442,9 @@ class OttrkParser(TrackParser):
 
     def __init__(
         self,
-        track_classification_calculator: TrackClassificationCalculator,
-        track_repository: TrackRepository,
         detection_parser: DetectionParser,
         format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
     ) -> None:
-        self._track_classification_calculator = track_classification_calculator
-        self._track_repository = track_repository
         self._detection_parser = detection_parser
         self._format_fixer = format_fixer
 

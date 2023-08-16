@@ -203,11 +203,7 @@ class TestOttrkParser:
     _track_repository = mocked_track_repository()
     _track_classification_calculator = ByMaxConfidence()
     ottrk_parser: OttrkParser = OttrkParser(
-        _track_classification_calculator,
-        _track_repository,
-        detection_parser=PythonDetectionParser(
-            _track_classification_calculator, _track_repository
-        ),
+        PythonDetectionParser(_track_classification_calculator, _track_repository),
     )
 
     def test_parse_whole_ottrk(self, ottrk_path: Path) -> None:

@@ -368,8 +368,6 @@ def tracks(ottrk_path: Path) -> list[Track]:
     track_repository = TrackRepository()
     track_classification_calculator = ByMaxConfidence()
     ottrk_parser = OttrkParser(
-        track_classification_calculator,
-        track_repository,
         PythonDetectionParser(track_classification_calculator, track_repository),
     )
     return ottrk_parser.parse(ottrk_path).as_list()

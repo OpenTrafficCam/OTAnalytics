@@ -127,8 +127,6 @@ class TestOTAnalyticsCli:
         track_repository = TrackRepository()
         return {
             self.TRACK_PARSER: OttrkParser(
-                track_classification_calculator,
-                track_repository,
                 PythonDetectionParser(
                     track_classification_calculator, track_repository
                 ),

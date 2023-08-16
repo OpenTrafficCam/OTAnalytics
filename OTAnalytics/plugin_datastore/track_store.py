@@ -149,8 +149,10 @@ class PandasTrackDataset(TrackDataset):
 
     def add_all(self, other: TrackDataset) -> TrackDataset:
         new_tracks = _convert_tracks(other.as_list())
+        if new_tracks.empty:
+            return self
         if self._dataset.empty:
-            return PandasTrackDataset(new_tracks, self._calculator)
+            return PandasTrackDataset.from_dataframe(new_tracks, self._calculator)
         new_dataset = pandas.concat([self._dataset, new_tracks])
         merged_dataset = _assign_track_classification(new_dataset, self._calculator)
         return PandasTrackDataset(merged_dataset)
