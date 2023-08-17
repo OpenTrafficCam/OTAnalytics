@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.intersect import (
     RunSceneEventDetection,
 )
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
+from OTAnalytics.application.logging import logger
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -163,7 +164,7 @@ class OTAnalyticsCli:
             messages.append(f"Analysis finished. Event list saved at '{save_path}'")
 
         for msg in messages:
-            print(msg)
+            logger().info(msg)
 
     @staticmethod
     def _determine_eventlist_save_path(track_file: Path) -> Path:
@@ -218,7 +219,9 @@ class OTAnalyticsCli:
                 continue
 
             if not ottrk_file.exists() or ottrk_file.suffix != f".{TRACK_FILE_TYPE}":
-                print(f"Ottrk file'{ottrk_file}' does not exist. Skipping file.")
+                logger().warning(
+                    f"Ottrk file'{ottrk_file}' does not exist. Skipping file."
+                )
                 continue
 
             ottrk_files.add(ottrk_file)
