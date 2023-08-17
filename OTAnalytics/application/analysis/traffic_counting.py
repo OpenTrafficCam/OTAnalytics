@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     ExportCounts,
     ExportFormat,
+    ExportSpecificationDto,
 )
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
@@ -66,7 +67,7 @@ class Tag(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def contained_tags(self) -> list["Tag"]:
+    def contained_tags(self) -> set["Tag"]:
         """
         List all tags this tag consists of.
         """
@@ -86,7 +87,7 @@ class Tag(ABC):
 
 @dataclass(frozen=True)
 class MultiTag(Tag):
-    tags: list[Tag]
+    tags: set[Tag]
 
     def combine(self, other: Tag) -> Tag:
         """
@@ -98,10 +99,10 @@ class MultiTag(Tag):
         Returns:
             Tag: combined tag
         """
-        combined_tags: list[Tag] = self.contained_tags() + other.contained_tags()
+        combined_tags: set[Tag] = self.contained_tags().union(other.contained_tags())
         return MultiTag(tags=combined_tags)
 
-    def contained_tags(self) -> list[Tag]:
+    def contained_tags(self) -> set[Tag]:
         """
         List all tags this tag consists of.
         """
@@ -139,13 +140,13 @@ class SingleTag(Tag):
         Returns:
             Tag: combined tag
         """
-        return MultiTag(self.contained_tags() + other.contained_tags())
+        return MultiTag(self.contained_tags().union(other.contained_tags()))
 
-    def contained_tags(self) -> list[Tag]:
+    def contained_tags(self) -> set[Tag]:
         """
         List all tags this tag consists of.
         """
-        return [self]
+        return {self}
 
     def as_dict(self) -> dict[str, str]:
         """
@@ -155,6 +156,26 @@ class SingleTag(Tag):
             dict[str, str]: dictionary of level and name of this tags
         """
         return {self.level: self.id}
+
+
+def create_flow_tag(flow_name: str) -> Tag:
+    return SingleTag(level=LEVEL_FLOW, id=flow_name)
+
+
+def create_mode_tag(tag: str) -> Tag:
+    return SingleTag(level=LEVEL_CLASSIFICATION, id=tag)
+
+
+def create_timeslot_tag(start_of_time_slot: datetime, interval: timedelta) -> Tag:
+    end_of_time_slot = start_of_time_slot + interval
+    serialized_start = start_of_time_slot.strftime("%H:%M")
+    serialized_end = end_of_time_slot.strftime("%H:%M")
+    return MultiTag(
+        {
+            SingleTag(level=LEVEL_START_TIME, id=serialized_start),
+            SingleTag(level=LEVEL_END_TIME, id=serialized_end),
+        }
+    )
 
 
 @dataclass(frozen=True)
@@ -191,9 +212,16 @@ class CountByFlow(Count):
             dict[Tag, int]: serializable counts
         """
         return {
-            SingleTag(level=LEVEL_FLOW, id=flow.name): value
-            for flow, value in self.result.items()
+            create_flow_tag(flow.name): value for flow, value in self.result.items()
         }
+
+
+@dataclass(frozen=True)
+class CountDecorator(Count):
+    other: Count
+
+    def to_dict(self) -> dict[Tag, int]:
+        return self.other.to_dict()
 
 
 @dataclass(frozen=True)
@@ -218,6 +246,20 @@ class GroupedCount(Count):
             for sub_tag, value in sub_dict.items():
                 result[tag.combine(sub_tag)] = value
         return result
+
+
+@dataclass(frozen=True)
+class FillEmptyCount(CountDecorator):
+    """
+    Fill counts with zeros if empty.
+    """
+
+    tags: list[Tag]
+
+    def to_dict(self) -> dict[Tag, int]:
+        empty = {tag: 0 for tag in self.tags}
+        other_result = super().to_dict()
+        return empty | other_result
 
 
 @dataclass(frozen=True)
@@ -270,7 +312,7 @@ class ModeTagger(Tagger):
         """
         track = self._track_repository.get_for(TrackId(assignment.road_user))
         tag = track.classification if track else UNCLASSIFIED
-        return SingleTag(level=LEVEL_CLASSIFICATION, id=tag)
+        return create_mode_tag(tag)
 
 
 class TimeslotTagger(Tagger):
@@ -282,15 +324,7 @@ class TimeslotTagger(Tagger):
         interval_seconds = self._interval.total_seconds()
         result = int(original_time / interval_seconds) * interval_seconds
         start_of_time_slot = datetime.fromtimestamp(result)
-        end_of_time_slot = start_of_time_slot + self._interval
-        serialized_start = start_of_time_slot.strftime("%H:%M")
-        serialized_end = end_of_time_slot.strftime("%H:%M")
-        return MultiTag(
-            [
-                SingleTag(level=LEVEL_START_TIME, id=serialized_start),
-                SingleTag(level=LEVEL_END_TIME, id=serialized_end),
-            ]
-        )
+        return create_timeslot_tag(start_of_time_slot, self._interval)
 
 
 class CountableAssignments:
@@ -318,9 +352,6 @@ class CountableAssignments:
     def __count_per_flow(self) -> dict[Flow, int]:
         """
         Count users per flow.
-
-        Args:
-            user_to_flow (dict[int, FlowId]): assigment of users to flows
 
         Returns:
             dict[FlowId, int]: count per flow
@@ -415,7 +446,7 @@ class RoadUserAssignments:
             by (Tagger): tagger to determine the tag
 
         Returns:
-            TaggedAssignments: group of RoadUserAssignments splitted by tag
+            TaggedAssignments: group of RoadUserAssignments split by tag
         """
         tagged: dict[Tag, list[RoadUserAssignment]] = defaultdict(list)
         for assignment in self._assignments:
@@ -714,7 +745,7 @@ class ExporterFactory(ABC):
         """
         raise NotImplementedError
 
-    def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
+    def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         """
         Create the exporter for the given CountingSpecificationDto.
 
@@ -725,6 +756,13 @@ class ExporterFactory(ABC):
             Exporter: Exporter to export counts
         """
         raise NotImplementedError
+
+
+def create_export_specification(
+    flows: list[Flow], counting_specification: CountingSpecificationDto
+) -> ExportSpecificationDto:
+    flow_names = [flow.name for flow in flows]
+    return ExportSpecificationDto(counting_specification, flow_names)
 
 
 class ExportTrafficCounting(ExportCounts):
@@ -759,7 +797,8 @@ class ExportTrafficCounting(ExportCounts):
         tagger = self._tagger_factory.create_tagger(specification)
         tagged_assignments = assigned_flows.tag(tagger)
         counts = tagged_assignments.count(flows)
-        exporter = self._exporter_factory.create_exporter(specification)
+        export_specification = create_export_specification(flows, specification)
+        exporter = self._exporter_factory.create_exporter(export_specification)
         exporter.export(counts)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:

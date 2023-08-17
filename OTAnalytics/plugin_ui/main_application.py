@@ -17,15 +17,6 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.generate_flows import (
-    ArrowFlowNameGenerator,
-    CrossProductFlowGenerator,
-    FilterExisting,
-    FilterSameSection,
-    FlowIdGenerator,
-    GenerateFlows,
-    RepositoryFlowIdGenerator,
-)
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -52,6 +43,15 @@ from OTAnalytics.application.use_cases.create_events import (
 from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearEventRepository,
+)
+from OTAnalytics.application.use_cases.generate_flows import (
+    ArrowFlowNameGenerator,
+    CrossProductFlowGenerator,
+    FilterExisting,
+    FilterSameSection,
+    FlowIdGenerator,
+    GenerateFlows,
+    RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToSelectedFlows,
@@ -81,7 +81,10 @@ from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
-from OTAnalytics.plugin_parser.export import SimpleExporterFactory
+from OTAnalytics.plugin_parser.export import (
+    FillZerosExporterFactory,
+    SimpleExporterFactory,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     OtConfigParser,
@@ -691,7 +694,7 @@ class ApplicationStarter:
             flow_repository,
             RoadUserAssigner(),
             SimpleTaggerFactory(track_repository),
-            SimpleExporterFactory(),
+            FillZerosExporterFactory(SimpleExporterFactory()),
         )
 
     def _create_use_case_create_events(
