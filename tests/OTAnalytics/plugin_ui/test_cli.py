@@ -98,7 +98,7 @@ class TestCliArgumentParser:
             parser = CliArgumentParser()
             args = parser.parse()
             assert args == CliArguments(
-                True, [track_file_1, track_file_2], sections_file
+                True, False, [track_file_1, track_file_2], sections_file
             )
 
 
@@ -147,7 +147,7 @@ class TestOTAnalyticsCli:
 
     def test_init(self, mock_cli_dependencies: dict[str, Any]) -> None:
         cli_args = CliArguments(
-            True, [f"track_file.{TRACK_FILE_TYPE}"], "sections_file.otflow"
+            True, False, [f"track_file.{TRACK_FILE_TYPE}"], "sections_file.otflow"
         )
         cli = OTAnalyticsCli(cli_args, **mock_cli_dependencies)
         assert cli.cli_args == cli_args
@@ -160,7 +160,7 @@ class TestOTAnalyticsCli:
         self, mock_cli_dependencies: dict[str, Any]
     ) -> None:
         cli_args = CliArguments(
-            True, track_files=[], sections_file="section_file.otflow"
+            True, False, track_files=[], sections_file="section_file.otflow"
         )
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli(cli_args, **mock_cli_dependencies)
@@ -169,18 +169,18 @@ class TestOTAnalyticsCli:
         self, mock_cli_dependencies: dict[str, Any]
     ) -> None:
         cli_args = CliArguments(
-            True, track_files=[f"ottrk_file.{TRACK_FILE_TYPE}"], sections_file=""
+            True, False, track_files=[f"ottrk_file.{TRACK_FILE_TYPE}"], sections_file=""
         )
         with pytest.raises(CliParseError, match=r"No otflow file passed.*"):
             OTAnalyticsCli(cli_args, **mock_cli_dependencies)
 
     def test_validate_cli_args_no_tracks(self) -> None:
-        cli_args = CliArguments(True, [], "section.otflow")
+        cli_args = CliArguments(True, False, [], "section.otflow")
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli._validate_cli_args(cli_args)
 
     def test_validate_cli_args_no_section(self) -> None:
-        cli_args = CliArguments(True, [f"track.{TRACK_FILE_TYPE}"], "")
+        cli_args = CliArguments(True, False, [f"track.{TRACK_FILE_TYPE}"], "")
         with pytest.raises(CliParseError, match=r"No otflow file passed.*"):
             OTAnalyticsCli._validate_cli_args(cli_args)
 
@@ -247,7 +247,7 @@ class TestOTAnalyticsCli:
     def test_start_with_no_video_in_folder(
         self, temp_ottrk: Path, temp_section: Path, cli_dependencies: dict[str, Any]
     ) -> None:
-        cli_args = CliArguments(True, [str(temp_ottrk)], str(temp_section))
+        cli_args = CliArguments(True, False, [str(temp_ottrk)], str(temp_section))
         cli = OTAnalyticsCli(cli_args, **cli_dependencies)
         cli.start()
 
