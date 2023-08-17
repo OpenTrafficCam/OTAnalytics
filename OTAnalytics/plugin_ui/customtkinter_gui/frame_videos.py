@@ -66,13 +66,12 @@ class TreeviewVideos(TreeviewTemplate):
         self._introduce_to_viewmodel()
         self.update_items()
 
-    def _define_columns(self) -> list[str]:
+    def _define_columns(self) -> None:
         columns = [COLUMN_VIDEO]
         self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
         self.column(column=COLUMN_VIDEO, anchor=tkinter.CENTER, width=150, minwidth=40)
         self["displaycolumns"] = columns
-        return columns
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_videos(self)

@@ -68,7 +68,7 @@ class TreeviewFiles(TreeviewTemplate):
         self._introduce_to_viewmodel()
         self.update_items()
 
-    def _define_columns(self) -> list[str]:
+    def _define_columns(self) -> None:
         columns = [COLUMN_FILE, COLUMN_TRACKS, COLUMN_VIDEO]
         self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
@@ -90,7 +90,6 @@ class TreeviewFiles(TreeviewTemplate):
         self["displaycolumns"] = columns
         for column in columns:
             self.heading(column=column, text=column)
-        return columns
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_files(self)

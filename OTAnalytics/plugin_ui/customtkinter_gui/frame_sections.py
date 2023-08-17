@@ -139,13 +139,12 @@ class TreeviewSections(TreeviewTemplate, Treeview):
         self._introduce_to_viewmodel()
         self.update_items()
 
-    def _define_columns(self) -> list[str]:
+    def _define_columns(self) -> None:
         columns = [COLUMN_SECTION]
         self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
         self.column(column=COLUMN_SECTION, anchor="center", width=150, minwidth=40)
         self["displaycolumns"] = columns
-        return columns
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)

@@ -31,14 +31,14 @@ class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treevi
         self.bind(tk_events.LEFT_BUTTON_UP, self._on_single_select)
         self.bind(tk_events.MULTI_SELECT_SINGLE, self._on_single_multi_select)
         self.bind(tk_events.LEFT_BUTTON_DOUBLE, self._on_double_click)
-        self._columns = self._define_columns()
+        self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
 
     # TODO: add property viewmodel
 
     @abstractmethod
-    def _define_columns(self) -> list[str]:
+    def _define_columns(self) -> None:
         raise NotImplementedError
 
     def update_selected_items(self, item_ids: list[str]) -> None:
@@ -56,7 +56,7 @@ class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treevi
 
     def add_items(self, item_ids: list[IdResource]) -> None:
         for id in item_ids:
-            cell_values = tuple(id.values[column] for column in self._columns)
+            cell_values = tuple(id.values[column] for column in self["columns"])
             self.insert(parent="", index="end", iid=id.id, text="", values=cell_values)
 
     def _on_deselect(self, event: Any) -> None:
