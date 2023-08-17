@@ -35,6 +35,7 @@ class InvalidSectionFileType(Exception):
 @dataclass(frozen=True)
 class CliArguments:
     start_cli: bool
+    debug: bool
     track_files: list[str]
     sections_file: str
 
@@ -76,6 +77,12 @@ class CliArgumentParser:
             help="Otflow file containing sections.",
             required=False,
         )
+        self._parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Set log level to DEBUG.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -84,7 +91,7 @@ class CliArgumentParser:
             CliArguments: _description_
         """
         args = self._parser.parse_args()
-        return CliArguments(args.cli, args.ottrks, args.otflow)
+        return CliArguments(args.cli, args.debug, args.ottrks, args.otflow)
 
 
 class OTAnalyticsCli:

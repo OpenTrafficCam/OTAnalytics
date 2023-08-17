@@ -1,3 +1,4 @@
+import logging
 from typing import Sequence
 
 from OTAnalytics.adapter_intersect.intersect import (
@@ -35,6 +36,7 @@ from OTAnalytics.application.generate_flows import (
     GenerateFlows,
     RepositoryFlowIdGenerator,
 )
+from OTAnalytics.application.logging import logger, set_log_level
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -112,12 +114,14 @@ class ApplicationStarter:
     def start(self) -> None:
         parser = self._build_cli_argument_parser()
         cli_args = parser.parse()
+        if cli_args.debug:
+            set_log_level(logging.DEBUG)
 
         if cli_args.start_cli:
             try:
                 self.start_cli(cli_args)
             except CliParseError as e:
-                print(e)
+                logger().exception(e, exc_info=True)
         else:
             self.start_gui()
 
