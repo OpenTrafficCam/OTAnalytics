@@ -1,4 +1,8 @@
 import platform
+from pathlib import Path
+
+LOG_DIR = Path(".logs").absolute()
+"""The log save directory."""
 
 OS: str = platform.system()
 """OS OTAnalyitcs is currently running on"""
