@@ -1,5 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Iterable
 
 
@@ -15,9 +16,30 @@ class CountingSpecificationDto:
     Data transfer object to represent the counting.
     """
 
+    start: datetime
+    end: datetime
     interval_in_minutes: int
-    format: str
+    modes: list[str]
+    output_format: str
     output_file: str
+
+
+@dataclass(frozen=True)
+class ExportSpecificationDto:
+    """
+    Data transfer object to represent the counting.
+    """
+
+    counting_specification: CountingSpecificationDto
+    flow_names: list[str]
+
+    @property
+    def format(self) -> str:
+        return self.counting_specification.output_format
+
+    @property
+    def output_file(self) -> str:
+        return self.counting_specification.output_file
 
 
 class ExportCounts(ABC):
