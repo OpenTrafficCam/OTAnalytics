@@ -486,6 +486,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
+        print(track_df["classification"].dtype)
         seaborn.lineplot(
             x="x",
             y="y",
@@ -498,7 +499,6 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             alpha=self._alpha,
             ax=axes,
             palette=self._color_palette_provider.get(),
-            hue_order=CLASS_ORDER,
             legend=self._enable_legend,
         )
 
