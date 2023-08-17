@@ -2,7 +2,7 @@ import tkinter
 from pathlib import Path
 from typing import Any
 
-from customtkinter import CTkFrame, CTkScrollbar
+from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
@@ -35,23 +35,24 @@ class FrameFiles(EmbeddedCTkFrame):
             master=self._frame_tree, command=self.treeview.yview
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
-        # self.button_add_videos = CTkButton(
-        #     master=self, text="Load", command=self._viewmodel.add_video
-        # )
-        # self.button_remove_videos = CTkButton(
-        #     master=self, text="Remove", command=self._viewmodel.remove_videos
+        self.button_add_files = CTkButton(
+            master=self, text="Load", command=self._viewmodel.load_tracks
+        )
+        # TODO: Add method to remove track files to ViewModel
+        # self.button_remove_files = CTkButton(
+        #     master=self, text="Remove", command=self._viewmodel.remove_tracks
         # )
 
     def _place_widgets(self) -> None:
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
         self._treeview_scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
         self._frame_tree.grid(
             row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
-        # self.button_add_videos.grid(
-        #     row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        # )
-        # self.button_remove_videos.grid(
+        self.button_add_files.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        # self.button_remove_files.grid(
         #     row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         # )
 
@@ -99,7 +100,7 @@ class TreeviewFiles(TreeviewTemplate):
         pass
 
     def _on_double_click(self, event: Any) -> None:
-        # TODO
+        # TODO: Change canvas to track file double clicked
         pass
 
     def update_items(self) -> None:
