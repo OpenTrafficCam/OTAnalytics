@@ -3,6 +3,7 @@ from typing import Sequence
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
+from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
@@ -25,15 +26,6 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.generate_flows import (
-    ArrowFlowNameGenerator,
-    CrossProductFlowGenerator,
-    FilterExisting,
-    FilterSameSection,
-    FlowIdGenerator,
-    GenerateFlows,
-    RepositoryFlowIdGenerator,
-)
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -50,6 +42,15 @@ from OTAnalytics.application.state import (
     TracksMetadata,
     TrackState,
     TrackViewState,
+)
+from OTAnalytics.application.use_cases.generate_flows import (
+    ArrowFlowNameGenerator,
+    CrossProductFlowGenerator,
+    FilterExisting,
+    FilterSameSection,
+    FlowIdGenerator,
+    GenerateFlows,
+    RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
     SimpleIntersectTracksWithSections,
@@ -72,7 +73,10 @@ from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
-from OTAnalytics.plugin_parser.export import SimpleExporterFactory
+from OTAnalytics.plugin_parser.export import (
+    FillZerosExporterFactory,
+    SimpleExporterFactory,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     OtConfigParser,
@@ -298,7 +302,9 @@ class ApplicationStarter:
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
         return OttrkParser(
-            CalculateTrackClassificationByMaxConfidence(), track_repository
+            CalculateTrackClassificationByMaxConfidence(),
+            track_repository,
+            track_length_limit=TRACK_LENGTH_LIMIT,
         )
 
     def _create_section_repository(self) -> SectionRepository:
@@ -671,5 +677,5 @@ class ApplicationStarter:
             flow_repository,
             RoadUserAssigner(),
             SimpleTaggerFactory(track_repository),
-            SimpleExporterFactory(),
+            FillZerosExporterFactory(SimpleExporterFactory()),
         )

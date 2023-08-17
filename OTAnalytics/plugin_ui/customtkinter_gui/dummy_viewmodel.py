@@ -35,12 +35,12 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
-from OTAnalytics.application.generate_flows import FlowNameGenerator
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
 )
+from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -86,9 +86,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    END,
     EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
+    START,
     CancelExportCounts,
     ToplevelExportCounts,
 )
@@ -1376,18 +1378,30 @@ class DummyViewModel(
             for format in self._application.get_supported_export_formats()
         }
         default_format = next(iter(export_formats.keys()))
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
+        start = self._application._tracks_metadata.first_detection_occurrence
+        end = self._application._tracks_metadata.last_detection_occurrence
+        modes = list(self._application._tracks_metadata.classifications)
+        default_values: dict = {
+            INTERVAL: 15,
+            START: start,
+            END: end,
+            EXPORT_FORMAT: default_format,
+        }
         try:
             export_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
+                viewmodel=self,
             ).get_data()
             print(export_values)
             export_specification = CountingSpecificationDto(
                 interval_in_minutes=export_values[INTERVAL],
-                format=export_values[EXPORT_FORMAT],
+                start=export_values[START],
+                end=export_values[END],
+                modes=modes,
+                output_format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
             )
             self._application.export_counts(export_specification)
