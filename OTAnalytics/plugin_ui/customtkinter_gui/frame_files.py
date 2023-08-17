@@ -73,7 +73,7 @@ class TreeviewFiles(TreeviewTemplate):
         columns = [COLUMN_FILE, COLUMN_TRACKS, COLUMN_VIDEO]
         self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
-        self.column(column=COLUMN_FILE, anchor=tkinter.W, width=150, minwidth=40)
+        self.column(column=COLUMN_FILE, anchor=tkinter.CENTER, width=150, minwidth=40)
         self.column(
             column=COLUMN_TRACKS,
             anchor=tkinter.CENTER,
