@@ -180,6 +180,9 @@ class PandasTrackDataset(TrackDataset):
         track_frame = self._dataset.loc[self._dataset[track.TRACK_ID] == track_id, :]
         return PandasTrack(track_frame)
 
+    def as_dataframe(self) -> DataFrame:
+        return self._dataset
+
 
 def _assign_track_classification(
     data: DataFrame, calculator: PandasTrackClassificationCalculator

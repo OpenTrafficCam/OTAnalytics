@@ -17,6 +17,7 @@ from OTAnalytics.domain.track import (
     Detection,
     PythonDetection,
     PythonTrack,
+    PythonTrackDataset,
     Track,
     TrackId,
     TrackIdProvider,
@@ -73,7 +74,7 @@ class TestPandasDataProvider:
 class TestPandasTrackProvider:
     def test_get_data_empty_track_repository(self) -> None:
         datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = []
+        datastore.get_all_tracks.return_value = PythonTrackDataset.from_list([])
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
@@ -216,7 +217,7 @@ class TestBackgroundPlotter:
         tracks = [track]
         expected_image = Mock()
         datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = tracks
+        datastore.get_all_tracks.return_value = PythonTrackDataset.from_list(tracks)
         datastore.get_image_of_track.return_value = expected_image
 
         background_plotter = TrackBackgroundPlotter(datastore)
@@ -229,7 +230,7 @@ class TestBackgroundPlotter:
 
     def test_plot_empty_track_repository_returns_none(self) -> None:
         mock_datastore = Mock(spec=Datastore)
-        mock_datastore.get_all_tracks.return_value = []
+        mock_datastore.get_all_tracks.return_value = PythonTrackDataset.from_list([])
         background_plotter = TrackBackgroundPlotter(mock_datastore)
         result = background_plotter.plot()
 
@@ -378,7 +379,8 @@ class TestDataFrameProviderFilter:
             data_provider, track_view_state, filter_builder
         )
         result = df_filter.get_data()
-        result == filter_result
+
+        assert result == filter_result
 
         filter_builder.set_classification_column.assert_called_once_with(CLASSIFICATION)
         observable_filter_element.get.assert_called_once()
@@ -398,7 +400,8 @@ class TestDataFrameProviderFilter:
         filter_builder = Mock(Spec=FilterBuilder)
         df_filter = FilterByOccurrence(data_provider, track_view_state, filter_builder)
         result = df_filter.get_data()
-        result == filter_result
+
+        assert result == filter_result
 
         filter_builder.set_occurrence_column.assert_called_once_with(OCCURRENCE)
         observable_filter_element.get.assert_called_once()

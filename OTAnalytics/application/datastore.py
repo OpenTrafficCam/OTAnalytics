@@ -23,7 +23,6 @@ from OTAnalytics.domain.section import (
     SectionRepository,
 )
 from OTAnalytics.domain.track import (
-    Track,
     TrackDataset,
     TrackId,
     TrackImage,
@@ -345,7 +344,7 @@ class Datastore:
         if raised_exceptions:
             raise ExceptionGroup("load track files", raised_exceptions)
 
-    def get_all_tracks(self) -> list[Track]:
+    def get_all_tracks(self) -> TrackDataset:
         """
         Retrieve all tracks of the repository as list.
 

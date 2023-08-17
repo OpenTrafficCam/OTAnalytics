@@ -24,6 +24,7 @@ from OTAnalytics.domain.track import (
     TrackImage,
     TrackListObserver,
 )
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
@@ -109,7 +110,7 @@ class TrackBackgroundPlotter(Plotter):
         self._datastore = datastore
 
     def plot(self) -> Optional[TrackImage]:
-        if track := next(iter(self._datastore.get_all_tracks()), None):
+        if track := next(iter(self._datastore.get_all_tracks().as_list()), None):
             return self._datastore.get_image_of_track(track.id)
         return None
 
@@ -252,10 +253,13 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
-        if not tracks:
+        if isinstance(tracks, PandasTrackDataset):
+            return tracks.as_dataframe()
+        track_list = tracks.as_list()
+        if not track_list:
             return DataFrame()
 
-        return self._convert_tracks(tracks)
+        return self._convert_tracks(track_list)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """

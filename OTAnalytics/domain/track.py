@@ -603,14 +603,14 @@ class TrackRepository:
         """
         return self._dataset.get_for(id)
 
-    def get_all(self) -> list[Track]:
+    def get_all(self) -> TrackDataset:
         """
         Retrieve all tracks.
 
         Returns:
             list[Track]: all tracks within the repository
         """
-        return self._dataset.as_list()
+        return self._dataset
 
     def clear(self) -> None:
         """

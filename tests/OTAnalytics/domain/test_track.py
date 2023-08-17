@@ -341,7 +341,7 @@ class TestTrackRepository:
         repository.add_all(new_tracks)
         all_tracks = repository.get_all()
 
-        assert all_tracks is merged_tracks
+        assert all_tracks.as_list() is merged_tracks
         dataset.add_all.assert_called_with(new_tracks)
         observer.notify_tracks.assert_called_with([first_id, second_id])
 
@@ -352,7 +352,7 @@ class TestTrackRepository:
 
         repository.add_all(PythonTrackDataset())
 
-        assert 0 == len(repository.get_all())
+        assert 0 == len(repository.get_all().as_list())
         observer.notify_tracks.assert_not_called()
 
     def test_get_by_id(self) -> None:
@@ -383,5 +383,5 @@ class TestTrackRepository:
 
         repository.clear()
 
-        assert not repository.get_all()
+        assert not repository.get_all().as_list()
         assert observer.notify_tracks.call_args_list == [call([])]

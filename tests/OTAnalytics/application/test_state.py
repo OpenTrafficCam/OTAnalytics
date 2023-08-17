@@ -22,6 +22,7 @@ from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
     Detection,
+    PythonTrackDataset,
     Track,
     TrackId,
     TrackImage,
@@ -234,7 +235,7 @@ class TestTracksMetadata:
         track = Mock(spec=Track).return_value
         track.detections = [first_detection, second_detection]
         track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = [track]
+        track_repository.get_all.return_value = PythonTrackDataset.from_list([track])
 
         tracks_metadata = TracksMetadata(track_repository)
         detections = tracks_metadata._get_all_track_detections()

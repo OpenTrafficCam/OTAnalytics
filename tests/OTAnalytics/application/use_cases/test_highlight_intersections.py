@@ -18,7 +18,13 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider, TrackRepository
+from OTAnalytics.domain.track import (
+    PythonTrackDataset,
+    Track,
+    TrackId,
+    TrackIdProvider,
+    TrackRepository,
+)
 
 
 class TestIntersectTracksWithSections:
@@ -28,7 +34,7 @@ class TestIntersectTracksWithSections:
         event = Mock(spec=Event)
 
         datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = [track]
+        datastore.get_all_tracks.return_value = PythonTrackDataset.from_list([track])
         datastore.get_all_sections.return_value = [section]
 
         intersect = Mock(spec=RunIntersect)
@@ -80,7 +86,9 @@ class TestTracksNotIntersectingSelection:
         second_track = Mock(spec=Track)
         second_track.id = second_track_id
         track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = [first_track, second_track]
+        track_repository.get_all.return_value = PythonTrackDataset.from_list(
+            [first_track, second_track]
+        )
 
         tracks_intersecting_sections = Mock(spec=TrackIdProvider)
         tracks_intersecting_sections.get_ids.return_value = {first_track_id}
@@ -102,7 +110,9 @@ class TestTracksNotIntersectingSelection:
         second_track = Mock(spec=Track)
         second_track.id = second_track_id
         track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = [first_track, second_track]
+        track_repository.get_all.return_value = PythonTrackDataset.from_list(
+            [first_track, second_track]
+        )
 
         tracks_intersecting_sections = Mock(spec=TrackIdProvider)
         tracks_intersecting_sections.get_ids.return_value = {}

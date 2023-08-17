@@ -433,13 +433,15 @@ class OTAnalyticsApplication:
         Intersect all tracks with all sections and write the events into the event
         repository
         """
-        tracks = self._datastore.get_all_tracks()
+        tracks = self._datastore.get_all_tracks().as_list()
         sections = self._datastore.get_all_sections()
         events = self._intersect.run(tracks, sections)
         self._clear_event_repository.clear()
         self._datastore.add_events(events)
 
-        scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
+        scene_events = self._scene_event_detection.run(
+            self._datastore.get_all_tracks().as_list()
+        )
         self._datastore.add_events(scene_events)
 
     def intersect_tracks_with_sections(self) -> None:

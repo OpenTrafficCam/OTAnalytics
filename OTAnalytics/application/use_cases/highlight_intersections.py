@@ -30,7 +30,7 @@ class SimpleIntersectTracksWithSections(IntersectTracksWithSections):
         sections = self._datastore.get_all_sections()
         if not sections:
             return
-        tracks = self._datastore.get_all_tracks()
+        tracks = self._datastore.get_all_tracks().as_list()
         events = self._intersect.run(tracks, sections)
         self._datastore.add_events(events)
 
@@ -77,7 +77,9 @@ class TracksNotIntersectingSelection(TrackIdProvider):
         self._track_repository = track_repository
 
     def get_ids(self) -> Iterable[TrackId]:
-        all_track_ids = {track.id for track in self._track_repository.get_all()}
+        all_track_ids = {
+            track.id for track in self._track_repository.get_all().as_list()
+        }
         assigned_tracks = set(self._track_id_provider.get_ids())
         return all_track_ids - assigned_tracks
 

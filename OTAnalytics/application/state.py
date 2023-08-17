@@ -221,7 +221,7 @@ class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
         self._track_view_state = track_view_state
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
-        all_tracks = self._datastore.get_all_tracks()
+        all_tracks = self._datastore.get_all_tracks().as_list()
         if tracks:
             if video := self._datastore.get_video_for(all_tracks[0].id):
                 self._track_view_state.selected_videos.set([video])
@@ -475,7 +475,7 @@ class TracksMetadata(TrackListObserver):
         """
         detections: list[Detection] = []
 
-        for track in self._track_repository.get_all():
+        for track in self._track_repository.get_all().as_list():
             detections.extend(track.detections)
 
         return detections

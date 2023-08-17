@@ -89,12 +89,12 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     AVAILABLE_EVENTLIST_EXPORTERS,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CachedPandasTrackProvider,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
+    PandasTrackProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
     TrackGeometryPlotter,
@@ -332,7 +332,7 @@ class ApplicationStarter:
     ) -> PandasDataFrameProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
         return PandasTracksOffsetProvider(
-            CachedPandasTrackProvider(
+            PandasTrackProvider(
                 datastore, track_view_state, dataframe_filter_builder, progressbar
             ),
             track_view_state=track_view_state,
