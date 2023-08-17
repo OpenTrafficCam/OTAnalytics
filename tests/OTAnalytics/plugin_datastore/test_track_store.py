@@ -1,4 +1,4 @@
-from pandas import DataFrame, Series, concat
+from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track import PythonTrackDataset, Track, TrackId
@@ -90,11 +90,9 @@ class TestPandasTrackDataset:
         assert 0 == len(merged.as_list())
 
     def test_add_all(self) -> None:
-        first_detections, first_track = self.__build_track(1)
-        second_detections, second_track = self.__build_track(2)
-        expected_dataset = PandasTrackDataset(
-            concat([DataFrame(first_detections), DataFrame(second_detections)])
-        )
+        first_track = self.__build_track(1)
+        second_track = self.__build_track(2)
+        expected_dataset = PandasTrackDataset.from_list([first_track, second_track])
         dataset = PandasTrackDataset()
         merged = dataset.add_all(
             PythonTrackDataset(
@@ -103,9 +101,23 @@ class TestPandasTrackDataset:
         )
 
         assert merged == expected_dataset
+        for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
+            assert_equal_track_properties(actual, expected)
         assert 0 == len(dataset.as_list())
 
-    def __build_track(self, track_id: int) -> tuple[list[dict], Track]:
+    def test_add_two_existing_pandas_datasets(self) -> None:
+        first_track = self.__build_track(1)
+        second_track = self.__build_track(2)
+        expected_dataset = PandasTrackDataset.from_list([first_track, second_track])
+        first = PandasTrackDataset.from_list([first_track])
+        second = PandasTrackDataset.from_list([second_track])
+        merged = first.add_all(second)
+
+        assert merged == expected_dataset
+        for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
+            assert_equal_track_properties(actual, expected)
+
+    def __build_track(self, track_id: int) -> Track:
         builder = TrackBuilder()
         builder.add_track_id(track_id)
         builder.append_detection()
@@ -113,13 +125,12 @@ class TestPandasTrackDataset:
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
-        first_track = builder.build_track()
-        detections = builder.build_serialized_detections()
-        return detections, first_track
+        track = builder.build_track()
+        return track
 
     def test_get_by_id(self) -> None:
-        first_detections, first_track = self.__build_track(1)
-        second_detections, second_track = self.__build_track(2)
+        first_track = self.__build_track(1)
+        second_track = self.__build_track(2)
         dataset = PandasTrackDataset.from_list([first_track, second_track])
 
         returned = dataset.get_for(first_track.id)
@@ -135,8 +146,8 @@ class TestPandasTrackDataset:
         assert returned is None
 
     def test_clear(self) -> None:
-        first_detections, first_track = self.__build_track(1)
-        second_detections, second_track = self.__build_track(2)
+        first_track = self.__build_track(1)
+        second_track = self.__build_track(2)
         dataset = PandasTrackDataset.from_list([first_track, second_track])
 
         empty_set = dataset.clear()

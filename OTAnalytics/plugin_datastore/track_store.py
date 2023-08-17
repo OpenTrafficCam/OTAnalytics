@@ -148,7 +148,7 @@ class PandasTrackDataset(TrackDataset):
         return PandasTrackDataset(_assign_track_classification(tracks, calculator))
 
     def add_all(self, other: TrackDataset) -> TrackDataset:
-        new_tracks = _convert_tracks(other.as_list())
+        new_tracks = self.__get_tracks(other)
         if new_tracks.empty:
             return self
         if self._dataset.empty:
@@ -156,6 +156,11 @@ class PandasTrackDataset(TrackDataset):
         new_dataset = pandas.concat([self._dataset, new_tracks])
         merged_dataset = _assign_track_classification(new_dataset, self._calculator)
         return PandasTrackDataset(merged_dataset)
+
+    def __get_tracks(self, other: TrackDataset) -> DataFrame:
+        if isinstance(other, PandasTrackDataset):
+            return other._dataset
+        return _convert_tracks(other.as_list())
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         if self._dataset.empty:
@@ -179,8 +184,15 @@ class PandasTrackDataset(TrackDataset):
 def _assign_track_classification(
     data: DataFrame, calculator: PandasTrackClassificationCalculator
 ) -> DataFrame:
-    classification_per_track = calculator.calculate(data)
-    return data.merge(classification_per_track, on=track.TRACK_ID)
+    dropped = _drop_track_classification(data)
+    classification_per_track = calculator.calculate(dropped)
+    return dropped.merge(classification_per_track, on=track.TRACK_ID)
+
+
+def _drop_track_classification(data: DataFrame) -> DataFrame:
+    if track.TRACK_CLASSIFICATION in data.columns:
+        return data.drop(columns=[track.TRACK_CLASSIFICATION])
+    return data
 
 
 def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
