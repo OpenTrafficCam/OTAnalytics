@@ -36,7 +36,7 @@ from OTAnalytics.application.generate_flows import (
     GenerateFlows,
     RepositoryFlowIdGenerator,
 )
-from OTAnalytics.application.logging import logger, set_log_level
+from OTAnalytics.application.logging import logger, setup_logger
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -114,8 +114,7 @@ class ApplicationStarter:
     def start(self) -> None:
         parser = self._build_cli_argument_parser()
         cli_args = parser.parse()
-        if cli_args.debug:
-            set_log_level(logging.DEBUG)
+        self._setup_logger(cli_args.debug)
 
         if cli_args.start_cli:
             try:
@@ -127,6 +126,12 @@ class ApplicationStarter:
 
     def _build_cli_argument_parser(self) -> CliArgumentParser:
         return CliArgumentParser()
+
+    def _setup_logger(self, debug: bool) -> None:
+        if debug:
+            setup_logger(logging.DEBUG)
+        else:
+            setup_logger(logging.INFO)
 
     def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (

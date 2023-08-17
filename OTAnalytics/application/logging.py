@@ -21,14 +21,11 @@ def logger() -> logging.Logger:
     return logging.getLogger(LOGGER_NAME)
 
 
-def set_log_level(log_level: int) -> None:
+def setup_logger(log_level: int = logging.INFO) -> None:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        format=LOG_FORMAT,
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler(sys.stdout)],
+    )
     logger().setLevel(log_level)
-
-
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-logging.basicConfig(
-    format=LOG_FORMAT,
-    datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.INFO,
-    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler(sys.stdout)],
-)
