@@ -55,7 +55,6 @@ class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treevi
         return x, y
 
     def add_items(self, item_ids: list[IdResource]) -> None:
-        # TODO: @martinbaerwolff 1update insert to new IdResource.values dict
         for id in item_ids:
             cell_values = tuple(id.values[column] for column in self._columns)
             self.insert(parent="", index="end", iid=id.id, text="", values=cell_values)
