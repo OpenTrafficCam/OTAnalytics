@@ -35,12 +35,12 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
-from OTAnalytics.application.generate_flows import FlowNameGenerator
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
 )
+from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -85,9 +85,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    END,
     EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
+    START,
     CancelExportCounts,
     ToplevelExportCounts,
 )
@@ -169,9 +171,6 @@ class DummyViewModel(
         self._application.track_view_state.selected_videos.register(
             self._update_selected_videos
         )
-        self._application.track_view_state.show_tracks.register(
-            self._on_show_tracks_state_updated
-        )
         self._application.section_state.selected_sections.register(
             self._update_selected_sections
         )
@@ -246,13 +245,6 @@ class DummyViewModel(
     def _on_flow_changed(self, flow_id: FlowId) -> None:
         self.notify_flows([flow_id])
 
-    def _on_show_tracks_state_updated(self, value: Optional[bool]) -> None:
-        if self._frame_canvas is None:
-            raise MissingInjectedInstanceError(AbstractFrameCanvas.__name__)
-
-        new_value = value or False
-        self._frame_canvas.update_show_tracks(new_value)
-
     def _on_background_updated(self, image: Optional[TrackImage]) -> None:
         if self._frame_canvas is None:
             raise MissingInjectedInstanceError(AbstractFrameCanvas.__name__)
@@ -261,9 +253,6 @@ class DummyViewModel(
             self._frame_canvas.update_background(image)
         else:
             self._frame_canvas.clear_image()
-
-    def update_show_tracks_state(self, value: bool) -> None:
-        self._application.track_view_state.show_tracks.set(value)
 
     def _update_date_range(self, filter_element: FilterElement) -> None:
         if self._frame_filter is None:
@@ -295,6 +284,7 @@ class DummyViewModel(
             initial_position=self._window.get_position(),
         )
         self._application.intersect_tracks_with_sections()
+        start_msg_popup.update_message(message="Creating events completed")
         start_msg_popup.close()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
@@ -472,8 +462,8 @@ class DummyViewModel(
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         self._canvas = canvas
 
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
-        self._frame_canvas = tracks_canvas
+    def set_frame_canvas(self, frame_canvas: AbstractFrameCanvas) -> None:
+        self._frame_canvas = frame_canvas
 
     def set_filter_frame(self, filter_frame: AbstractFrameFilter) -> None:
         self._frame_filter = filter_frame
@@ -1369,18 +1359,30 @@ class DummyViewModel(
             for format in self._application.get_supported_export_formats()
         }
         default_format = next(iter(export_formats.keys()))
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
+        start = self._application._tracks_metadata.first_detection_occurrence
+        end = self._application._tracks_metadata.last_detection_occurrence
+        modes = list(self._application._tracks_metadata.classifications)
+        default_values: dict = {
+            INTERVAL: 15,
+            START: start,
+            END: end,
+            EXPORT_FORMAT: default_format,
+        }
         try:
             export_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
+                viewmodel=self,
             ).get_data()
             print(export_values)
             export_specification = CountingSpecificationDto(
                 interval_in_minutes=export_values[INTERVAL],
-                format=export_values[EXPORT_FORMAT],
+                start=export_values[START],
+                end=export_values[END],
+                modes=modes,
+                output_format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
             )
             self._application.export_counts(export_specification)

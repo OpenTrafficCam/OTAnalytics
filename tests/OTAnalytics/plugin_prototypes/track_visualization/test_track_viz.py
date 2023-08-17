@@ -47,7 +47,8 @@ class TestPlotterPrototype:
         plotted_tracks = Mock(spec=TrackImage)
         track_view_state = TrackViewState()
         track_view_state.show_tracks.set(True)
-        track_plotter = Mock(spec=TrackPlotter)
+        track_view_state.track_offset.set(RelativeOffsetCoordinate(0.5, 0.7))
+        track_plotter = Mock(sepc=TrackPlotter)
         track.id = track_id
         track_plotter.plot.return_value = plotted_tracks
         plotter = PlotterPrototype(track_view_state, track_plotter)

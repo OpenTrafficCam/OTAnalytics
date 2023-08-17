@@ -9,6 +9,7 @@ import pytest
 from OTAnalytics.adapter_intersect.intersect import (
     ShapelyIntersectImplementationAdapter,
 )
+from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     RunSceneEventDetection,
@@ -127,7 +128,9 @@ class TestOTAnalyticsCli:
         event_repository = EventRepository()
         return {
             self.TRACK_PARSER: OttrkParser(
-                CalculateTrackClassificationByMaxConfidence(), TrackRepository()
+                CalculateTrackClassificationByMaxConfidence(),
+                TrackRepository(),
+                TRACK_LENGTH_LIMIT,
             ),
             self.FLOW_PARSER: OtFlowParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
