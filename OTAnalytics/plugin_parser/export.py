@@ -66,6 +66,13 @@ class SimpleExporterFactory(ExporterFactory):
 
 
 class TagExploder:
+    """
+    This class creates all combinations of tags for a given ExportSpecificationDto.
+    The resulting tags are a cross product of the the flows, the modes and the time
+    intervals. The list of tags can then be used as the maximum set of tags in the
+    export.
+    """
+
     def __init__(self, specification: ExportSpecificationDto):
         self._specification = specification
 
