@@ -67,6 +67,7 @@ from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import COLUMN_SECTION
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -1084,7 +1085,8 @@ class DummyViewModel(
         self._application.generate_flows()
 
     def __to_id_resource(self, section: Section) -> IdResource:
-        return IdResource(id=section.id.serialize(), name=section.name)
+        values = {COLUMN_SECTION: section.name}
+        return IdResource(id=section.id.serialize(), values=values)
 
     def __update_flow_data(self, flow_data: dict) -> None:
         flow_id = FlowId(flow_data.get(FLOW_ID, ""))

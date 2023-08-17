@@ -68,7 +68,7 @@ class TreeviewFiles(TreeviewTemplate):
         self._introduce_to_viewmodel()
         self.update_items()
 
-    def _define_columns(self) -> None:
+    def _define_columns(self) -> list[str]:
         columns = [COLUMN_FILE, COLUMN_TRACKS, COLUMN_VIDEO]
         self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
@@ -78,6 +78,7 @@ class TreeviewFiles(TreeviewTemplate):
         self["displaycolumns"] = columns
         for column in columns:
             self.heading(column=column, text=column)
+        return columns
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_files(self)
@@ -97,12 +98,22 @@ class TreeviewFiles(TreeviewTemplate):
         track_files_have_videos = []
         for file in track_files:
             if file.stem in [video.get_path().stem for video in videos]:
-                track_files_have_videos.append("Yes")
+                track_files_have_videos.append(True)
             else:
-                track_files_have_videos.append("No")
+                track_files_have_videos.append(False)
 
-        item_ids = [self.__to_id_resource(file) for file in track_files]
+        item_ids = [
+            self.__to_id_resource(file=file, video_loaded=video_loaded)
+            for file, video_loaded in zip(track_files, track_files_have_videos)
+        ]
         self.add_items(item_ids=item_ids)
 
-    def __to_id_resource(self, file: Path) -> IdResource:
-        return IdResource(id=str(file), name=file.stem)
+    def __to_id_resource(
+        self, file: Path, video_loaded: bool, tracks_loaded: bool = True
+    ) -> IdResource:
+        values = {
+            COLUMN_FILE: file.stem,
+            COLUMN_TRACKS: "x" if tracks_loaded else "",
+            COLUMN_VIDEO: "x" if video_loaded else "",
+        }
+        return IdResource(id=str(file), values=values)

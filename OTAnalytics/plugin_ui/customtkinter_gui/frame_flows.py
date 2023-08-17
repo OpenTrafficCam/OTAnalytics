@@ -118,19 +118,23 @@ class FrameFlows(AbstractCTkFrame):
         return x, y
 
 
+COLUMN_FLOW = "Flow"
+
+
 class TreeviewFlows(TreeviewTemplate, Treeview):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         self._viewmodel = viewmodel
         super().__init__(**kwargs)
-        self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
 
-    def _define_columns(self) -> None:
-        self["columns"] = "Flow"
+    def _define_columns(self) -> list[str]:
+        columns = [COLUMN_FLOW]
+        self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
-        self.column(column="Flow", anchor="center", width=150, minwidth=40)
-        self["displaycolumns"] = "Flow"
+        self.column(column=COLUMN_FLOW, anchor="center", width=150, minwidth=40)
+        self["displaycolumns"] = columns
+        return columns
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_flows(self)
@@ -149,4 +153,5 @@ class TreeviewFlows(TreeviewTemplate, Treeview):
         self.add_items(item_ids=sorted(item_ids))
 
     def __to_id_resource(self, flow: Flow) -> IdResource:
-        return IdResource(id=flow.id.id, name=flow.name)
+        values = {COLUMN_FLOW: flow.name}
+        return IdResource(id=flow.id.id, values=values)

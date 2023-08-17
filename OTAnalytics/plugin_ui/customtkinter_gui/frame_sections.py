@@ -15,6 +15,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     TreeviewTemplate,
 )
 
+COLUMN_SECTION = "Section"
+
 
 class FrameSections(AbstractCTkFrame):
     def __init__(
@@ -134,15 +136,16 @@ class TreeviewSections(TreeviewTemplate, Treeview):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         self._viewmodel = viewmodel
         super().__init__(**kwargs)
-        self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
 
-    def _define_columns(self) -> None:
-        self["columns"] = "Section"
+    def _define_columns(self) -> list[str]:
+        columns = [COLUMN_SECTION]
+        self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
-        self.column(column="Section", anchor="center", width=150, minwidth=40)
-        self["displaycolumns"] = "Section"
+        self.column(column=COLUMN_SECTION, anchor="center", width=150, minwidth=40)
+        self["displaycolumns"] = columns
+        return columns
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)
@@ -162,7 +165,8 @@ class TreeviewSections(TreeviewTemplate, Treeview):
         self.add_items(item_ids=sorted(item_ids))
 
     def __to_id_resource(self, section: Section) -> IdResource:
-        return IdResource(id=section.id.id, name=section.name)
+        values = {COLUMN_SECTION: section.name}
+        return IdResource(id=section.id.id, values=values)
 
 
 class ListboxSections(Listbox):

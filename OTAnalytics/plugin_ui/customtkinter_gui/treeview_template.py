@@ -11,8 +11,13 @@ from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
 @dataclass(frozen=True, order=True)
 class IdResource:
+    """
+    Represents a row in a treeview with an id and a dict of values to be shown.
+    The dicts keys represent the columns and the values represent the cell values.
+    """
+
     id: str
-    name: str
+    values: dict[str, str]
 
 
 class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treeview):
@@ -26,14 +31,14 @@ class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treevi
         self.bind(tk_events.LEFT_BUTTON_UP, self._on_single_select)
         self.bind(tk_events.MULTI_SELECT_SINGLE, self._on_single_multi_select)
         self.bind(tk_events.LEFT_BUTTON_DOUBLE, self._on_double_click)
-        self._define_columns()
+        self._columns = self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
 
     # TODO: add property viewmodel
 
     @abstractmethod
-    def _define_columns(self) -> None:
+    def _define_columns(self) -> list[str]:
         raise NotImplementedError
 
     def update_selected_items(self, item_ids: list[str]) -> None:
@@ -50,8 +55,10 @@ class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treevi
         return x, y
 
     def add_items(self, item_ids: list[IdResource]) -> None:
+        # TODO: @martinbaerwolff 1update insert to new IdResource.values dict
         for id in item_ids:
-            self.insert(parent="", index="end", iid=id.id, text="", values=[id.name])
+            cell_values = tuple(id.values[column] for column in self._columns)
+            self.insert(parent="", index="end", iid=id.id, text="", values=cell_values)
 
     def _on_deselect(self, event: Any) -> None:
         self._deselect_all()
