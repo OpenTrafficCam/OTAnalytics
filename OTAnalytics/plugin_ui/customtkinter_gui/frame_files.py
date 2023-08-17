@@ -64,8 +64,7 @@ COLUMN_VIDEO = "Video"
 class TreeviewFiles(TreeviewTemplate):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         self._viewmodel = viewmodel
-        super().__init__(**kwargs)
-        self._define_columns()
+        super().__init__(show="tree headings", **kwargs)
         self._introduce_to_viewmodel()
         self.update_items()
 

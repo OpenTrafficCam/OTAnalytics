@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from tkinter.ttk import Treeview
-from typing import Any
+from typing import Any, Literal
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
@@ -16,8 +16,12 @@ class IdResource:
 
 
 class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treeview):
-    def __init__(self, show: str = "tree", **kwargs: Any) -> None:
-        super().__init__(selectmode="none", **kwargs)
+    def __init__(
+        self,
+        show: Literal["tree", "headings", "tree headings", ""] = "tree",
+        **kwargs: Any
+    ) -> None:
+        super().__init__(selectmode="none", show=show, **kwargs)
         self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
         self.bind(tk_events.LEFT_BUTTON_UP, self._on_single_select)
         self.bind(tk_events.MULTI_SELECT_SINGLE, self._on_single_multi_select)
