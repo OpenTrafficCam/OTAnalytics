@@ -172,7 +172,6 @@ class TrackViewState:
 
     def __init__(self) -> None:
         self.background_image = ObservableOptionalProperty[TrackImage]()
-        self.show_tracks = ObservableOptionalProperty[bool]()
         self.track_offset = ObservableOptionalProperty[RelativeOffsetCoordinate](
             RelativeOffsetCoordinate(0.5, 0.5)
         )
@@ -300,7 +299,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._section_state = section_state
         self._flow_state = flow_state
         self._plotter = plotter
-        self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.frame.register(self._notify_frame)
         self._track_view_state.filter_element.register(self._notify_filter_element)
@@ -324,15 +322,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
             tracks (list[TrackId]): list of changed track ids
         """
         self._update_image()
-
-    def _notify_show_tracks(self, show_tracks: Optional[bool]) -> None:
-        """
-        Will update the image according to changes of the show tracks property.
-
-        Args:
-            show_tracks (Optional[bool]): current value
-        """
-        self._update()
 
     def _notify_track_offset(self, offset: Optional[RelativeOffsetCoordinate]) -> None:
         """

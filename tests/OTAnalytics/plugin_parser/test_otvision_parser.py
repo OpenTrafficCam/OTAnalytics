@@ -8,6 +8,7 @@ import pytest
 import ujson
 
 from OTAnalytics import version
+from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.application.project import Project
@@ -225,6 +226,7 @@ class TestOttrkParser:
     ottrk_parser: OttrkParser = OttrkParser(
         CalculateTrackClassificationByMaxConfidence(),
         _track_repository,
+        TRACK_LENGTH_LIMIT,
     )
 
     def test_parse_whole_ottrk(self, ottrk_path: Path) -> None:

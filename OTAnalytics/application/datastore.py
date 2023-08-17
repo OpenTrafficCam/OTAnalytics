@@ -4,7 +4,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
-from OTAnalytics.application.our_custom_group_exception import OurCustomGroupException
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import Event, EventRepository
@@ -301,7 +300,10 @@ class Datastore:
             except Exception as cause:
                 raised_exceptions.append(cause)
         if raised_exceptions:
-            raise OurCustomGroupException(raised_exceptions)
+            raise ExceptionGroup(
+                "Errors occured while loading the video files:",
+                raised_exceptions,
+            )
         self._video_repository.add_all(videos)
 
     def remove_videos(self, videos: list[Video]) -> None:
@@ -352,7 +354,9 @@ class Datastore:
             except Exception as cause:
                 raised_exceptions.append(cause)
         if raised_exceptions:
-            raise ExceptionGroup("load track files", raised_exceptions)
+            raise ExceptionGroup(
+                "Errors occured while loading the track files:", raised_exceptions
+            )
 
     def get_all_tracks(self) -> list[Track]:
         """
@@ -395,7 +399,7 @@ class Datastore:
         else:
             raise NoSectionsToSave()
 
-    def get_all_sections(self) -> Iterable[Section]:
+    def get_all_sections(self) -> list[Section]:
         return self._section_repository.get_all()
 
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
