@@ -1,5 +1,7 @@
 import platform
 
+GEOMETRY_CACHE_SIZE: int = 20000
+
 OS: str = platform.system()
 """OS OTAnalyitcs is currently running on"""
 

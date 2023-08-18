@@ -1,23 +1,14 @@
 from typing import Optional, Sequence
 
-from OTAnalytics.adapter_intersect.intersect import (
-    ShapelyIntersectImplementationAdapter,
-)
 from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
-from OTAnalytics.application.analysis.intersect import (
-    RunIntersect,
-    RunSceneEventDetection,
-)
+from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     RoadUserAssigner,
     SimpleTaggerFactory,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
-from OTAnalytics.application.application import (
-    IntersectTracksWithSections,
-    OTAnalyticsApplication,
-)
+from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -43,6 +34,16 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.application.use_cases.create_events import (
+    CreateEvents,
+    CreateIntersectionEvents,
+    SimpleCreateIntersectionEvents,
+    SimpleCreateSceneEvents,
+)
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearEventRepository,
+)
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -53,11 +54,16 @@ from OTAnalytics.application.use_cases.generate_flows import (
     RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
-    SimpleIntersectTracksWithSections,
     TracksAssignedToSelectedFlows,
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelection,
     TracksOverlapOccurrenceWindow,
+)
+from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
+    ClearAllTracks,
+    GetAllTracks,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
@@ -71,7 +77,9 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
+from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -184,8 +192,6 @@ class ApplicationStarter:
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
-        intersect = self._create_intersect()
-        scene_event_detection = self._create_scene_event_detection()
         tracks_metadata = self._create_tracks_metadata(track_repository)
         action_state = self._create_action_state()
         filter_element_settings_restorer = (
@@ -194,8 +200,13 @@ class ApplicationStarter:
         generate_flows = self._create_flow_generator(
             section_repository, flow_repository
         )
+        add_events = AddEvents(event_repository)
+        get_all_tracks = GetAllTracks(track_repository)
+        create_events = self._create_use_case_create_events(
+            section_repository, event_repository, get_all_tracks, add_events
+        )
         intersect_tracks_with_sections = self._create_intersect_tracks_with_sections(
-            datastore
+            section_repository, get_all_tracks, add_events
         )
         export_counts = self._create_export_counts(
             event_repository, flow_repository, track_repository
@@ -206,14 +217,13 @@ class ApplicationStarter:
             track_view_state=track_view_state,
             section_state=section_state,
             flow_state=flow_state,
-            intersect=intersect,
-            scene_event_detection=scene_event_detection,
             tracks_metadata=tracks_metadata,
             action_state=action_state,
             filter_element_setting_restorer=filter_element_settings_restorer,
             generate_flows=generate_flows,
-            intersect_tracks_with_sections=intersect_tracks_with_sections,
+            create_intersection_events=intersect_tracks_with_sections,
             export_counts=export_counts,
+            create_events=create_events,
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
@@ -240,20 +250,30 @@ class ApplicationStarter:
         OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
-        track_parser = self._create_track_parser(self._create_track_repository())
+        track_repository = self._create_track_repository()
+        section_repository = self._create_section_repository()
+        track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
-        intersect = self._create_intersect()
-        scene_event_detection = self._create_scene_event_detection()
+        add_section = AddSection(section_repository)
+        add_events = AddEvents(event_repository)
+        get_all_tracks = GetAllTracks(track_repository)
+        create_events = self._create_use_case_create_events(
+            section_repository, event_repository, get_all_tracks, add_events
+        )
+        add_all_tracks = AddAllTracks(track_repository)
+        clear_all_tracks = ClearAllTracks(track_repository)
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
             flow_parser=flow_parser,
             event_list_parser=event_list_parser,
             event_repository=event_repository,
-            intersect=intersect,
-            scene_event_detection=scene_event_detection,
+            add_section=add_section,
+            create_events=create_events,
+            add_all_tracks=add_all_tracks,
+            clear_all_tracks=clear_all_tracks,
             progressbar=TqdmBuilder(),
         ).start()
 
@@ -652,23 +672,20 @@ class ApplicationStarter:
         )
 
     def _create_intersect_tracks_with_sections(
-        self, datastore: Datastore
-    ) -> IntersectTracksWithSections:
-        intersect = self._create_intersect()
-        return SimpleIntersectTracksWithSections(intersect, datastore)
-
-    def _create_intersect(
         self,
-    ) -> RunIntersect:
-        return RunIntersect(
-            intersect_implementation=ShapelyIntersectImplementationAdapter(
-                ShapelyIntersector()
-            ),
-            intersect_parallelizer=MultiprocessingIntersectParallelization(),
-        )
+        section_repository: SectionRepository,
+        get_all_tracks: GetAllTracks,
+        add_events: AddEvents,
+    ) -> CreateIntersectionEvents:
+        intersect = self._create_intersect(get_all_tracks)
+        return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
 
-    def _create_scene_event_detection(self) -> RunSceneEventDetection:
-        return RunSceneEventDetection(SceneActionDetector(SceneEventBuilder()))
+    def _create_intersect(self, get_all_tracks: GetAllTracks) -> RunIntersect:
+        return SimpleRunIntersect(
+            intersect_implementation=ShapelyIntersector(ShapelyMapper()),
+            intersect_parallelizer=MultiprocessingIntersectParallelization(),
+            get_all_tracks=get_all_tracks,
+        )
 
     def _create_tracks_metadata(
         self, track_repository: TrackRepository
@@ -696,4 +713,24 @@ class ApplicationStarter:
             RoadUserAssigner(),
             SimpleTaggerFactory(track_repository),
             FillZerosExporterFactory(SimpleExporterFactory()),
+        )
+
+    def _create_use_case_create_events(
+        self,
+        section_repository: SectionRepository,
+        event_repository: EventRepository,
+        get_all_tracks: GetAllTracks,
+        add_events: AddEvents,
+    ) -> CreateEvents:
+        run_intersect = self._create_intersect(get_all_tracks)
+        clear_event_repository = ClearEventRepository(event_repository)
+        create_intersection_events = SimpleCreateIntersectionEvents(
+            run_intersect, section_repository, add_events
+        )
+        scene_action_detector = SceneActionDetector(SceneEventBuilder())
+        create_scene_events = SimpleCreateSceneEvents(
+            get_all_tracks, scene_action_detector, add_events
+        )
+        return CreateEvents(
+            clear_event_repository, create_intersection_events, create_scene_events
         )

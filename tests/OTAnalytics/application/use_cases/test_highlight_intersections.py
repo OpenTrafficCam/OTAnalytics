@@ -3,14 +3,12 @@ from unittest.mock import Mock, PropertyMock, call, patch
 
 import pytest
 
-from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.analysis.traffic_counting import (
     EventPair,
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
 )
-from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     FlowState,
     ObservableProperty,
@@ -18,7 +16,6 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
-    SimpleIntersectTracksWithSections,
     TracksAssignedToSelectedFlows,
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelection,
@@ -28,7 +25,7 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
-from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
     Detection,
     Track,
@@ -36,31 +33,6 @@ from OTAnalytics.domain.track import (
     TrackIdProvider,
     TrackRepository,
 )
-
-
-class TestIntersectTracksWithSections:
-    def test_run(self) -> None:
-        track = Mock(spec=Track)
-        section = Mock(spec=Section)
-        event = Mock(spec=Event)
-
-        datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = [track]
-        datastore.get_all_sections.return_value = [section]
-
-        intersect = Mock(spec=RunIntersect)
-        intersect.run.return_value = [event]
-
-        intersect_tracks_sections = SimpleIntersectTracksWithSections(
-            intersect, datastore
-        )
-        intersect_tracks_sections.run()
-
-        datastore.get_all_tracks.assert_called_once()
-        datastore.get_all_sections.assert_called_once()
-
-        assert intersect.run.call_args_list == [call([track], [section])]
-        assert datastore.add_events.call_args_list == [call([event])]
 
 
 class TestTracksIntersectingSelectedSections:
