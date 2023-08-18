@@ -637,7 +637,7 @@ class TestIntersectAreaByTrackPoints:
                 event_coordinate=ImageCoordinate(1.5, 1.5),
                 event_type=EventType.SECTION_ENTER,
                 direction_vector=DirectionVector2D(1, 0),
-                video_name="myhostname_file.otdet",
+                video_name="myhostname_file.mp4",
             )
         ]
         assert result_events == expected_events
