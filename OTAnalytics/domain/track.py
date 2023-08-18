@@ -220,6 +220,24 @@ class Track(DataclassValidation):
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
             raise ValueError("detections must be sorted by occurence")
 
+    @property
+    def start(self) -> datetime:
+        """Get start time of this track.
+
+        Returns:
+            datetime: the start time.
+        """
+        return self.detections[0].occurrence
+
+    @property
+    def end(self) -> datetime:
+        """Get end time of this track.
+
+        Returns:
+            datetime: the end time.
+        """
+        return self.detections[-1].occurrence
+
 
 @dataclass(frozen=True)
 class TrackImage:
