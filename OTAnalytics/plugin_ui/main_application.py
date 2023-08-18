@@ -1,4 +1,5 @@
-from typing import Sequence
+import logging
+from typing import Optional, Sequence
 
 from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.analysis.intersect import (
@@ -20,6 +21,7 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.logger import logger, setup_logger
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -60,6 +62,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToSelectedFlows,
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelection,
+    TracksOverlapOccurrenceWindow,
 )
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -78,6 +81,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
+    TrackIdProvider,
     TrackRepository,
 )
 from OTAnalytics.domain.video import VideoRepository
@@ -133,17 +137,24 @@ class ApplicationStarter:
     def start(self) -> None:
         parser = self._build_cli_argument_parser()
         cli_args = parser.parse()
+        self._setup_logger(cli_args.debug)
 
         if cli_args.start_cli:
             try:
                 self.start_cli(cli_args)
             except CliParseError as e:
-                print(e)
+                logger().exception(e, exc_info=True)
         else:
             self.start_gui()
 
     def _build_cli_argument_parser(self) -> CliArgumentParser:
         return CliArgumentParser()
+
+    def _setup_logger(self, debug: bool) -> None:
+        if debug:
+            setup_logger(logging.DEBUG)
+        else:
+            setup_logger(logging.INFO)
 
     def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
@@ -391,12 +402,21 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
+        track_repository: TrackRepository,
         enable_legend: bool,
+        id_filter: Optional[TrackIdProvider] = None,
     ) -> Plotter:
-        track_plotter = MatplotlibTrackPlotter(
-            TrackStartEndPointPlotter(
-                pandas_data_provider, enable_legend=enable_legend
+        data_provider = pandas_data_provider
+        data_provider = FilterById(
+            pandas_data_provider,
+            id_filter=TracksOverlapOccurrenceWindow(
+                other=id_filter,
+                track_repository=track_repository,
+                track_view_state=state,
             ),
+        )
+        track_plotter = MatplotlibTrackPlotter(
+            TrackStartEndPointPlotter(data_provider, enable_legend=enable_legend),
         )
         return PlotterPrototype(state, track_plotter)
 
@@ -443,14 +463,15 @@ class ApplicationStarter:
         state: TrackViewState,
         tracks_intersecting_sections: TracksIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
+        track_repository: TrackRepository,
         enable_legend: bool,
     ) -> Plotter:
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_intersecting_sections
-        )
-
         return self._create_track_start_end_point_plotter(
-            state, filter_by_id, enable_legend=enable_legend
+            state,
+            pandas_track_provider,
+            track_repository,
+            enable_legend=enable_legend,
+            id_filter=tracks_intersecting_sections,
         )
 
     def _create_start_end_point_tracks_not_intersecting_sections_plotter(
@@ -458,14 +479,15 @@ class ApplicationStarter:
         state: TrackViewState,
         tracks_not_intersecting_sections: TracksNotIntersectingSelection,
         pandas_track_provider: PandasDataFrameProvider,
+        track_repository: TrackRepository,
         enable_legend: bool,
     ) -> Plotter:
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_not_intersecting_sections
-        )
-
         return self._create_track_start_end_point_plotter(
-            state, filter_by_id, enable_legend=enable_legend
+            state,
+            pandas_track_provider,
+            track_repository,
+            enable_legend=enable_legend,
+            id_filter=tracks_not_intersecting_sections,
         )
 
     def _create_highlight_tracks_assigned_to_flow(
@@ -566,6 +588,7 @@ class ApplicationStarter:
                 track_view_state,
                 tracks_intersecting_selected_sections,
                 data_provider_class_filter,
+                datastore._track_repository,
                 enable_legend=False,
             )
         )
@@ -574,11 +597,15 @@ class ApplicationStarter:
                 track_view_state,
                 tracks_not_intersecting_sections,
                 data_provider_class_filter,
+                datastore._track_repository,
                 enable_legend=False,
             )
         )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            track_view_state, data_provider_class_filter, enable_legend=False
+            track_view_state,
+            data_provider_class_filter,
+            datastore._track_repository,
+            enable_legend=False,
         )
         tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
             road_user_assigner,
