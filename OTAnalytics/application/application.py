@@ -8,7 +8,6 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
 )
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.generate_flows import GenerateFlows
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -25,6 +24,7 @@ from OTAnalytics.application.use_cases.create_events import (
 from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
