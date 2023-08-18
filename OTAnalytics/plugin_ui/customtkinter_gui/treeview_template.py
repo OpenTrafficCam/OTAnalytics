@@ -4,7 +4,6 @@ from tkinter.ttk import Treeview
 from typing import Any, Literal
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
@@ -20,7 +19,7 @@ class IdResource:
     values: dict[str, str]
 
 
-class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treeview):
+class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
     def __init__(
         self,
         show: Literal["tree", "headings", "tree headings", ""] = "tree",

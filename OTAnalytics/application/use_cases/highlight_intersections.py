@@ -1,38 +1,10 @@
 from typing import Iterable
 
-from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
-from OTAnalytics.application.application import IntersectTracksWithSections
-from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import FlowState, SectionState
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.track import TrackId, TrackIdProvider, TrackRepository
-
-
-class SimpleIntersectTracksWithSections(IntersectTracksWithSections):
-    """Intersect tracks with sections and add all intersection events in the repository.
-    Args:
-        intersect (RunIntersect): intersector to intersect tracks with sections
-        datastore (Datastore): the datastore containing tracks, sections and events
-    """
-
-    def __init__(
-        self,
-        intersect: RunIntersect,
-        datastore: Datastore,
-    ) -> None:
-        self._intersect = intersect
-        self._datastore = datastore
-
-    def run(self) -> None:
-        """Runs the intersection of tracks with sections in the repository."""
-        sections = self._datastore.get_all_sections()
-        if not sections:
-            return
-        tracks = self._datastore.get_all_tracks()
-        events = self._intersect.run(tracks, sections)
-        self._datastore.add_events(events)
 
 
 class TracksIntersectingSelectedSections(TrackIdProvider):
