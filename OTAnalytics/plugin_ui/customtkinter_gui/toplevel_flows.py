@@ -5,7 +5,8 @@ from typing import Any, Optional
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
 from OTAnalytics.application.application import CancelAddFlow
-from OTAnalytics.application.generate_flows import FlowNameGenerator
+from OTAnalytics.application.logger import logger
+from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
     FrameContent,
@@ -240,5 +241,5 @@ class ToplevelFlows(ToplevelTemplate):
             raise CancelAddFlow()
         if self._input_values is None:
             raise ValueError("input values is None, but should be a dict")
-        print(self._input_values)
+        logger().debug(self._input_values)
         return self._input_values

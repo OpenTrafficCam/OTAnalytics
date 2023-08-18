@@ -35,12 +35,13 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
-from OTAnalytics.application.generate_flows import FlowNameGenerator
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
 )
+from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -85,9 +86,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    END,
     EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
+    START,
     CancelExportCounts,
     ToplevelExportCounts,
 )
@@ -335,7 +338,7 @@ class DummyViewModel(
         )
         if not track_files:
             return
-        print(f"Video files to load: {track_files}")
+        logger().info(f"Video files to load: {track_files}")
         paths = [Path(file) for file in track_files]
         self._application.add_videos(files=paths)
 
@@ -382,7 +385,7 @@ class DummyViewModel(
         self._save_otconfig(otconfig_file)
 
     def _save_otconfig(self, otconfig_file: Path) -> None:
-        print(f"Config file to save: {otconfig_file}")
+        logger().info(f"Config file to save: {otconfig_file}")
         try:
             self._application.save_otconfig(otconfig_file)
         except NoSectionsToSave as cause:
@@ -442,7 +445,7 @@ class DummyViewModel(
         )
         if proceed.canceled:
             return
-        print(f"{OTCONFIG} file to load: {otconfig_file}")
+        logger().info(f"{OTCONFIG} file to load: {otconfig_file}")
         self._application.load_otconfig(file=Path(otconfig_file))
         self._show_current_project()
 
@@ -505,7 +508,7 @@ class DummyViewModel(
             self._application.set_selected_section([])
         self._application.set_selected_flows(ids)
 
-        print(f"New flows selected in treeview: id={ids}")
+        logger().debug(f"New flows selected in treeview: id={ids}")
 
     def set_selected_section_ids(self, ids: list[str]) -> None:
         if self._application.action_state.action_running.get():
@@ -515,7 +518,7 @@ class DummyViewModel(
             self._application.set_selected_flows([])
         self._application.set_selected_section(ids)
 
-        print(f"New line sections selected in treeview: id={ids}")
+        logger().debug(f"New line sections selected in treeview: id={ids}")
 
     def get_selected_flow_ids(self) -> list[str]:
         return [
@@ -534,7 +537,7 @@ class DummyViewModel(
         )
         if not track_files:
             return
-        print(f"Tracks files to load: {track_files}")
+        logger().info(f"Tracks files to load: {track_files}")
         track_paths = [Path(file) for file in track_files]
         self._application.add_tracks_of_files(track_files=track_paths)
 
@@ -560,7 +563,7 @@ class DummyViewModel(
             raise ValueError("Configuration file to load has unknown file extension")
 
     def _load_otflow(self, otflow_file: Path) -> None:
-        print(f"otflow file to load: {otflow_file}")
+        logger().info(f"otflow file to load: {otflow_file}")
         self._application.load_otflow(sections_file=Path(otflow_file))
         self.set_selected_section_ids([])
         self.set_selected_flow_ids([])
@@ -586,7 +589,7 @@ class DummyViewModel(
             raise ValueError("Configuration file to save has unknown file extension")
 
     def _save_otflow(self, otflow_file: Path) -> None:
-        print(f"Sections file to save: {otflow_file}")
+        logger().info(f"Sections file to save: {otflow_file}")
         try:
             self._application.save_otflow(Path(otflow_file))
         except NoSectionsToSave as cause:
@@ -655,7 +658,7 @@ class DummyViewModel(
             raise MissingCoordinate("Second coordinate is missing")
         with contextlib.suppress(CancelAddSection):
             section = self.__create_section(coordinates, is_area_section, get_metadata)
-            print(f"New section created: {section.id}")
+            logger().info(f"New section created: {section.id}")
             self._update_selected_sections([section.id])
         self._finish_action()
 
@@ -737,7 +740,7 @@ class DummyViewModel(
             [self._to_coordinate(coordinate) for coordinate in coordinates]
         )
         self._application.update_section(section)
-        print(f"Update section: {section.id}")
+        logger().info(f"Update section: {section.id}")
         self._update_selected_sections([section.id])
         self._finish_action()
 
@@ -817,7 +820,7 @@ class DummyViewModel(
             data=updated_section_data,
         )
         self.refresh_items_on_canvas()
-        print(f"Updated line_section Metadata: {updated_section_data}")
+        logger().info(f"Updated line_section Metadata: {updated_section_data}")
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
         if self._treeview_sections is None:
@@ -978,7 +981,7 @@ class DummyViewModel(
         self._start_action()
         with contextlib.suppress(CancelAddFlow):
             flow = self.__create_flow()
-            print(f"Added new flow: {flow.id}")
+            logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
         self._finish_action()
 
@@ -1147,8 +1150,8 @@ class DummyViewModel(
         start_msg_popup.close()
 
     def save_events(self, file: str) -> None:
-        print(f"Eventlist file to save: {file}")
         self._application.save_events(Path(file))
+        logger().info(f"Eventlist file saved to '{file}'")
 
     def export_events(self) -> None:
         default_values: dict[str, str] = {
@@ -1163,11 +1166,11 @@ class DummyViewModel(
                 default_values, export_format_extensions
             )
             self._application.export_events(Path(file), event_list_exporter)
-            print(
+            logger().info(
                 f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
             )
         except CancelExportEvents:
-            print("User canceled configuration of export")
+            logger().info("User canceled configuration of export")
 
     def __get_default_export_format(self) -> str:
         if self._event_list_export_formats:
@@ -1363,20 +1366,32 @@ class DummyViewModel(
             for format in self._application.get_supported_export_formats()
         }
         default_format = next(iter(export_formats.keys()))
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
+        start = self._application._tracks_metadata.first_detection_occurrence
+        end = self._application._tracks_metadata.last_detection_occurrence
+        modes = list(self._application._tracks_metadata.classifications)
+        default_values: dict = {
+            INTERVAL: 15,
+            START: start,
+            END: end,
+            EXPORT_FORMAT: default_format,
+        }
         try:
             export_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
+                viewmodel=self,
             ).get_data()
-            print(export_values)
+            logger().debug(export_values)
             export_specification = CountingSpecificationDto(
                 interval_in_minutes=export_values[INTERVAL],
-                format=export_values[EXPORT_FORMAT],
+                start=export_values[START],
+                end=export_values[END],
+                modes=modes,
+                output_format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
             )
             self._application.export_counts(export_specification)
         except CancelExportCounts:
-            print("User canceled configuration of export")
+            logger().info("User canceled configuration of export")
