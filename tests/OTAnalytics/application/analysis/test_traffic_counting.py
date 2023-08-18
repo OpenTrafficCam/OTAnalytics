@@ -123,7 +123,7 @@ class TestFillEmptyCount:
 
         actual = count.to_dict()
 
-        assert dict(actual) == dict(filled_dict)
+        assert actual == filled_dict
         other.to_dict.assert_called_once()
 
 
