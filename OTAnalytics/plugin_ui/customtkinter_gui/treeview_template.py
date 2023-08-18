@@ -4,7 +4,6 @@ from tkinter.ttk import Treeview
 from typing import Any
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
@@ -15,7 +14,7 @@ class IdResource:
     name: str
 
 
-class TreeviewTemplate(AbstractTreeviewInterface, WidgetPositionProvider, Treeview):
+class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(show="tree", selectmode="none", **kwargs)
         self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)

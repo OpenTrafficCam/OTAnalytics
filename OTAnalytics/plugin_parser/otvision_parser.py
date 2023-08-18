@@ -19,6 +19,7 @@ from OTAnalytics.application.datastore import (
     TrackVideoParser,
     VideoParser,
 )
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.event import Event, EventType
@@ -347,9 +348,8 @@ class OttrkParser(TrackParser):
                 )
                 tracks.append(current_track)
             except BuildTrackWithLessThanNDetectionsError as build_error:
-                # TODO: log error
                 # Skip tracks with less than 2 detections
-                print(build_error)
+                logger().warning(build_error)
 
         return tracks
 

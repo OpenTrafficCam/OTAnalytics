@@ -165,6 +165,36 @@ class TestTrack:
             valid_detection,
         ]
 
+    def test_start_and_end_time(self) -> None:
+        start_time = datetime(2022, 1, 1, 13)
+        end_time = datetime(2022, 1, 1, 14)
+
+        start_detection = Mock(spec=Detection)
+        start_detection.occurrence = start_time
+        second_detection = Mock(spec=Detection)
+        second_detection.occurrence = datetime(2022, 1, 1, 13, 15)
+        third_detection = Mock(spec=Detection)
+        third_detection.occurrence = datetime(2022, 1, 1, 13, 30)
+        fourth_detection = Mock(spec=Detection)
+        fourth_detection.occurrence = datetime(2022, 1, 1, 13, 45)
+
+        end_detection = Mock(spec=Detection)
+        end_detection.occurrence = end_time
+        track = Track(
+            TrackId(1),
+            "car",
+            [
+                start_detection,
+                second_detection,
+                third_detection,
+                fourth_detection,
+                end_detection,
+            ],
+        )
+
+        assert track.start == start_time
+        assert track.end == end_time
+
 
 class TestCalculateTrackClassificationByMaxConfidence:
     def test_calculate(self) -> None:
