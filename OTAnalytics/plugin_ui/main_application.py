@@ -1,23 +1,15 @@
-from typing import Sequence
+import logging
+from typing import Optional, Sequence
 
-from OTAnalytics.adapter_intersect.intersect import (
-    ShapelyIntersectImplementationAdapter,
-)
 from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
-from OTAnalytics.application.analysis.intersect import (
-    RunIntersect,
-    RunSceneEventDetection,
-)
+from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     RoadUserAssigner,
     SimpleTaggerFactory,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
-from OTAnalytics.application.application import (
-    IntersectTracksWithSections,
-    OTAnalyticsApplication,
-)
+from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -26,6 +18,7 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.logger import logger, setup_logger
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -43,6 +36,16 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.application.use_cases.create_events import (
+    CreateEvents,
+    CreateIntersectionEvents,
+    SimpleCreateIntersectionEvents,
+    SimpleCreateSceneEvents,
+)
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearEventRepository,
+)
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -53,10 +56,16 @@ from OTAnalytics.application.use_cases.generate_flows import (
     RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
-    SimpleIntersectTracksWithSections,
     TracksAssignedToSelectedFlows,
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelection,
+    TracksOverlapOccurrenceWindow,
+)
+from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
+    ClearAllTracks,
+    GetAllTracks,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
@@ -65,11 +74,14 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
+    TrackIdProvider,
     TrackRepository,
 )
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
+from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -116,17 +128,24 @@ class ApplicationStarter:
     def start(self) -> None:
         parser = self._build_cli_argument_parser()
         cli_args = parser.parse()
+        self._setup_logger(cli_args.debug)
 
         if cli_args.start_cli:
             try:
                 self.start_cli(cli_args)
             except CliParseError as e:
-                print(e)
+                logger().exception(e, exc_info=True)
         else:
             self.start_gui()
 
     def _build_cli_argument_parser(self) -> CliArgumentParser:
         return CliArgumentParser()
+
+    def _setup_logger(self, debug: bool) -> None:
+        if debug:
+            setup_logger(logging.DEBUG)
+        else:
+            setup_logger(logging.INFO)
 
     def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
@@ -185,8 +204,6 @@ class ApplicationStarter:
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
-        intersect = self._create_intersect()
-        scene_event_detection = self._create_scene_event_detection()
         tracks_metadata = self._create_tracks_metadata(track_repository)
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
@@ -200,8 +217,13 @@ class ApplicationStarter:
         generate_flows = self._create_flow_generator(
             section_repository, flow_repository
         )
+        add_events = AddEvents(event_repository)
+        get_all_tracks = GetAllTracks(track_repository)
+        create_events = self._create_use_case_create_events(
+            section_repository, event_repository, get_all_tracks, add_events
+        )
         intersect_tracks_with_sections = self._create_intersect_tracks_with_sections(
-            datastore
+            section_repository, get_all_tracks, add_events
         )
         export_counts = self._create_export_counts(
             event_repository, flow_repository, track_repository
@@ -212,14 +234,13 @@ class ApplicationStarter:
             track_view_state=track_view_state,
             section_state=section_state,
             flow_state=flow_state,
-            intersect=intersect,
-            scene_event_detection=scene_event_detection,
             tracks_metadata=tracks_metadata,
             action_state=action_state,
             filter_element_setting_restorer=filter_element_settings_restorer,
             generate_flows=generate_flows,
-            intersect_tracks_with_sections=intersect_tracks_with_sections,
+            create_intersection_events=intersect_tracks_with_sections,
             export_counts=export_counts,
+            create_events=create_events,
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
@@ -246,20 +267,30 @@ class ApplicationStarter:
         OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
 
     def start_cli(self, cli_args: CliArguments) -> None:
-        track_parser = self._create_track_parser(self._create_track_repository())
+        track_repository = self._create_track_repository()
+        section_repository = self._create_section_repository()
+        track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
-        intersect = self._create_intersect()
-        scene_event_detection = self._create_scene_event_detection()
+        add_section = AddSection(section_repository)
+        add_events = AddEvents(event_repository)
+        get_all_tracks = GetAllTracks(track_repository)
+        create_events = self._create_use_case_create_events(
+            section_repository, event_repository, get_all_tracks, add_events
+        )
+        add_all_tracks = AddAllTracks(track_repository)
+        clear_all_tracks = ClearAllTracks(track_repository)
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
             flow_parser=flow_parser,
             event_list_parser=event_list_parser,
             event_repository=event_repository,
-            intersect=intersect,
-            scene_event_detection=scene_event_detection,
+            add_section=add_section,
+            create_events=create_events,
+            add_all_tracks=add_all_tracks,
+            clear_all_tracks=clear_all_tracks,
             progressbar=TqdmBuilder(),
         ).start()
 
@@ -372,12 +403,23 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
+        track_repository: TrackRepository,
         color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
+        id_filter: Optional[TrackIdProvider] = None,
     ) -> Plotter:
+        data_provider = pandas_data_provider
+        data_provider = FilterById(
+            pandas_data_provider,
+            id_filter=TracksOverlapOccurrenceWindow(
+                other=id_filter,
+                track_repository=track_repository,
+                track_view_state=state,
+            ),
+        )
         track_plotter = MatplotlibTrackPlotter(
             TrackStartEndPointPlotter(
-                pandas_data_provider,
+                data_provider,
                 color_palette_provider,
                 enable_legend=enable_legend,
             ),
@@ -434,15 +476,17 @@ class ApplicationStarter:
         state: TrackViewState,
         tracks_intersecting_sections: TracksIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
+        track_repository: TrackRepository,
         color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
     ) -> Plotter:
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_intersecting_sections
-        )
-
         return self._create_track_start_end_point_plotter(
-            state, filter_by_id, color_palette_provider, enable_legend=enable_legend
+            state,
+            pandas_track_provider,
+            track_repository,
+            color_palette_provider,
+            enable_legend=enable_legend,
+            id_filter=tracks_intersecting_sections,
         )
 
     def _create_start_end_point_tracks_not_intersecting_sections_plotter(
@@ -450,14 +494,17 @@ class ApplicationStarter:
         state: TrackViewState,
         tracks_not_intersecting_sections: TracksNotIntersectingSelection,
         pandas_track_provider: PandasDataFrameProvider,
+        track_repository: TrackRepository,
         color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
     ) -> Plotter:
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_not_intersecting_sections
-        )
         return self._create_track_start_end_point_plotter(
-            state, filter_by_id, color_palette_provider, enable_legend=enable_legend
+            state,
+            pandas_track_provider,
+            track_repository,
+            color_palette_provider,
+            enable_legend=enable_legend,
+            id_filter=tracks_not_intersecting_sections,
         )
 
     def _create_highlight_tracks_assigned_to_flow(
@@ -564,6 +611,7 @@ class ApplicationStarter:
                 track_view_state,
                 tracks_intersecting_sections,
                 data_provider_class_filter,
+                datastore._track_repository,
                 color_palette_provider,
                 enable_legend=False,
             )
@@ -573,6 +621,7 @@ class ApplicationStarter:
                 track_view_state,
                 tracks_not_intersecting_sections,
                 data_provider_class_filter,
+                datastore._track_repository,
                 color_palette_provider,
                 enable_legend=False,
             )
@@ -580,6 +629,7 @@ class ApplicationStarter:
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state,
             data_provider_class_filter,
+            datastore._track_repository,
             color_palette_provider,
             enable_legend=False,
         )
@@ -681,23 +731,20 @@ class ApplicationStarter:
         )
 
     def _create_intersect_tracks_with_sections(
-        self, datastore: Datastore
-    ) -> IntersectTracksWithSections:
-        intersect = self._create_intersect()
-        return SimpleIntersectTracksWithSections(intersect, datastore)
-
-    def _create_intersect(
         self,
-    ) -> RunIntersect:
-        return RunIntersect(
-            intersect_implementation=ShapelyIntersectImplementationAdapter(
-                ShapelyIntersector()
-            ),
-            intersect_parallelizer=MultiprocessingIntersectParallelization(),
-        )
+        section_repository: SectionRepository,
+        get_all_tracks: GetAllTracks,
+        add_events: AddEvents,
+    ) -> CreateIntersectionEvents:
+        intersect = self._create_intersect(get_all_tracks)
+        return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
 
-    def _create_scene_event_detection(self) -> RunSceneEventDetection:
-        return RunSceneEventDetection(SceneActionDetector(SceneEventBuilder()))
+    def _create_intersect(self, get_all_tracks: GetAllTracks) -> RunIntersect:
+        return SimpleRunIntersect(
+            intersect_implementation=ShapelyIntersector(ShapelyMapper()),
+            intersect_parallelizer=MultiprocessingIntersectParallelization(),
+            get_all_tracks=get_all_tracks,
+        )
 
     def _create_tracks_metadata(
         self, track_repository: TrackRepository
@@ -725,4 +772,24 @@ class ApplicationStarter:
             RoadUserAssigner(),
             SimpleTaggerFactory(track_repository),
             FillZerosExporterFactory(SimpleExporterFactory()),
+        )
+
+    def _create_use_case_create_events(
+        self,
+        section_repository: SectionRepository,
+        event_repository: EventRepository,
+        get_all_tracks: GetAllTracks,
+        add_events: AddEvents,
+    ) -> CreateEvents:
+        run_intersect = self._create_intersect(get_all_tracks)
+        clear_event_repository = ClearEventRepository(event_repository)
+        create_intersection_events = SimpleCreateIntersectionEvents(
+            run_intersect, section_repository, add_events
+        )
+        scene_action_detector = SceneActionDetector(SceneEventBuilder())
+        create_scene_events = SimpleCreateSceneEvents(
+            get_all_tracks, scene_action_detector, add_events
+        )
+        return CreateEvents(
+            clear_event_repository, create_intersection_events, create_scene_events
         )

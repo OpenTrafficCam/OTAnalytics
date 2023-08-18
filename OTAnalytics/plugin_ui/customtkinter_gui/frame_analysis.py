@@ -4,6 +4,7 @@ from typing import Any
 from customtkinter import CTkButton
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.logger import logger
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
@@ -79,7 +80,7 @@ class FrameAnalysis(EmbeddedCTkFrame):
         )
 
     def _create_events(self) -> None:
-        print("Start analysis")
+        logger().info("Creating events")
         self._viewmodel.create_events()
 
     def _save_eventlist(self) -> None:
