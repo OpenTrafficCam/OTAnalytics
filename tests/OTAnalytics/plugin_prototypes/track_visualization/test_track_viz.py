@@ -301,7 +301,12 @@ class TestColorPaletteProvider:
         for classification in palette.keys():
             assert classification in total_classifications
 
-    def _is_hex_color(self, value: str) -> bool:
+    def test_generate_random_color(self) -> None:
+        random_color = ColorPaletteProvider._generate_random_color()
+        assert self._is_hex_color(random_color)
+
+    @staticmethod
+    def _is_hex_color(value: str) -> bool:
         import re
 
         hex_color_pattern = re.compile(r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")

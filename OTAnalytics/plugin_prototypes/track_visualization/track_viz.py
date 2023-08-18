@@ -109,9 +109,10 @@ class ColorPaletteProvider:
             if classification in self._default_palette.keys():
                 self._palette[classification] = self._default_palette[classification]
             else:
-                self._palette[classification] = self._get_random_color()
+                self._palette[classification] = self._generate_random_color()
 
-    def _get_random_color(self) -> str:
+    @staticmethod
+    def _generate_random_color() -> str:
         red = random.randint(0, 255)
         green = random.randint(0, 255)
         blue = random.randint(0, 255)
