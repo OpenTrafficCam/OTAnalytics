@@ -220,6 +220,24 @@ class Track(DataclassValidation):
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
             raise ValueError("detections must be sorted by occurence")
 
+    @property
+    def start(self) -> datetime:
+        """Get start time of this track.
+
+        Returns:
+            datetime: the start time.
+        """
+        return self.detections[0].occurrence
+
+    @property
+    def end(self) -> datetime:
+        """Get end time of this track.
+
+        Returns:
+            datetime: the end time.
+        """
+        return self.detections[-1].occurrence
+
 
 @dataclass(frozen=True)
 class TrackImage:
@@ -357,7 +375,7 @@ class TrackRepository:
         """
         self._tracks[track.id] = track
 
-    def add_all(self, tracks: list[Track]) -> None:
+    def add_all(self, tracks: Iterable[Track]) -> None:
         """
         Add multiple tracks to the repository and notify only once about it.
 
@@ -367,7 +385,7 @@ class TrackRepository:
         if tracks:
             self.__add_all(tracks)
 
-    def __add_all(self, tracks: list[Track]) -> None:
+    def __add_all(self, tracks: Iterable[Track]) -> None:
         """Internal method to add all tracks to the repository and notify only once
         about it.
 
@@ -377,10 +395,6 @@ class TrackRepository:
         for track in tracks:
             self.__add(track)
         self.observers.notify([track.id for track in tracks])
-
-    def delete_all(self) -> None:
-        """Delete all tracks."""
-        self._tracks = {}
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """

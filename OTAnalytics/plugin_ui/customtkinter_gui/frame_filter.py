@@ -24,6 +24,7 @@ from OTAnalytics.adapter_ui.default_values import (
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,
@@ -366,7 +367,7 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
             date_range = DateRange(self.get_start_date(), self.get_end_date())
 
             self._viewmodel.apply_filter_tracks_by_date(date_range)
-            print("Filter tracks by date applied.")
+            logger().info("Filter tracks by date applied")
             self._close()
         except InvalidDatetimeFormatError as e:
             InfoBox(message=str(e), initial_position=self.get_position())
@@ -735,7 +736,7 @@ class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
         self._viewmodel.apply_filter_tracks_by_class(
             list(self.treeview_classes.selection())
         )
-        print("Filter tracks by classification applied.")
+        logger().info("Filter tracks by classification applied")
         self._close()
 
     def _on_reset_button_clicked(self) -> None:
