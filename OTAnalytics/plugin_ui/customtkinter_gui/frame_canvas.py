@@ -8,6 +8,7 @@ from PIL import Image, ImageTk
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import (
     CanvasObserver,
@@ -158,7 +159,7 @@ class CanvasEventHandler(EventHandler):
 
     def detach_observer(self, observer: CanvasObserver) -> None:
         if self._canvas.focus_get() == self._canvas:
-            print("set focus to canvases masters master")
+            logger().debug("Set focus to canvases masters master")
             self._canvas.master.master.focus_set()
         self._observers.remove(observer)
 

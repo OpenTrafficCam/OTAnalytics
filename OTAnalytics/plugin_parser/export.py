@@ -18,6 +18,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
     ExportSpecificationDto,
 )
+from OTAnalytics.application.logger import logger
 
 
 class CsvExport(Exporter):
@@ -25,7 +26,7 @@ class CsvExport(Exporter):
         self._output_file = output_file
 
     def export(self, counts: Count) -> None:
-        print(f"Exporting counts {counts} to {self._output_file}")
+        logger().info(f"Exporting counts {counts} to {self._output_file}")
         dataframe = self.__create_data_frame(counts)
         dataframe.to_csv(self.__create_path(), index=False)
 
