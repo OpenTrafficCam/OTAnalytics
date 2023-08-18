@@ -269,7 +269,7 @@ class SectionEventBuilder(EventBuilder):
             event_coordinate=self.event_coordinate,
             event_type=self.event_type,
             direction_vector=self.direction_vector,
-            video_name=detection.input_file_path.name,
+            video_name=detection.video_name,
         )
 
 
@@ -316,7 +316,7 @@ class SceneEventBuilder(EventBuilder):
             event_coordinate=self.event_coordinate,
             event_type=self.event_type,
             direction_vector=self.direction_vector,
-            video_name=detection.input_file_path.name,
+            video_name=detection.video_name,
         )
 
 
