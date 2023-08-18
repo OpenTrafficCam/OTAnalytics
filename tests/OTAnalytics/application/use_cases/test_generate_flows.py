@@ -3,7 +3,7 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.application.generate_flows import (
+from OTAnalytics.application.use_cases.generate_flows import (
     AndPredicate,
     CrossProductFlowGenerator,
     FilterExisting,

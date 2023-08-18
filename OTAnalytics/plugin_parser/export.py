@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -7,10 +8,15 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Count,
     Exporter,
     ExporterFactory,
+    FillEmptyCount,
+    Tag,
+    create_flow_tag,
+    create_mode_tag,
+    create_timeslot_tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
-    CountingSpecificationDto,
     ExportFormat,
+    ExportSpecificationDto,
 )
 from OTAnalytics.application.logging import logger
 
@@ -56,5 +62,63 @@ class SimpleExporterFactory(ExporterFactory):
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         return self._formats.keys()
 
-    def create_exporter(self, specification: CountingSpecificationDto) -> Exporter:
+    def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         return self._factories[specification.format](specification.output_file)
+
+
+class TagExploder:
+    """
+    This class creates all combinations of tags for a given ExportSpecificationDto.
+    The resulting tags are a cross product of the the flows, the modes and the time
+    intervals. The list of tags can then be used as the maximum set of tags in the
+    export.
+    """
+
+    def __init__(self, specification: ExportSpecificationDto):
+        self._specification = specification
+
+    def explode(self) -> list[Tag]:
+        tags = []
+        maximum = (
+            self._specification.counting_specification.end
+            - self._specification.counting_specification.start
+        )
+        duration = int(maximum.total_seconds())
+        interval = self._specification.counting_specification.interval_in_minutes * 60
+        for flow in self._specification.flow_names:
+            for mode in self._specification.counting_specification.modes:
+                for delta in range(0, duration, interval):
+                    offset = timedelta(seconds=delta)
+                    start = self._specification.counting_specification.start + offset
+                    interval_time = timedelta(seconds=interval)
+                    tag = (
+                        create_flow_tag(flow)
+                        .combine(create_mode_tag(mode))
+                        .combine(create_timeslot_tag(start, interval_time))
+                    )
+                    tags.append(tag)
+        return tags
+
+
+class FillZerosExporter(Exporter):
+    def __init__(self, other: Exporter, tag_exploder: TagExploder) -> None:
+        self._other = other
+        self._tag_exploder = tag_exploder
+
+    def export(self, counts: Count) -> None:
+        tags = self._tag_exploder.explode()
+        self._other.export(FillEmptyCount(counts, tags))
+
+
+class FillZerosExporterFactory(ExporterFactory):
+    def __init__(self, other: ExporterFactory) -> None:
+        self.other = other
+
+    def get_supported_formats(self) -> Iterable[ExportFormat]:
+        return self.other.get_supported_formats()
+
+    def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
+        return FillZerosExporter(
+            self.other.create_exporter(specification),
+            TagExploder(specification),
+        )

@@ -3,12 +3,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from OTAnalytics.application.analysis.intersect import (
-    RunIntersect,
-    RunSceneEventDetection,
-)
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.logging import logger
+from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
+    ClearAllTracks,
+)
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -110,8 +112,10 @@ class OTAnalyticsCli:
         flow_parser: FlowParser,
         event_list_parser: EventListParser,
         event_repository: EventRepository,
-        intersect: RunIntersect,
-        scene_event_detection: RunSceneEventDetection,
+        add_section: AddSection,
+        create_events: CreateEvents,
+        add_all_tracks: AddAllTracks,
+        clear_all_tracks: ClearAllTracks,
         progressbar: ProgressbarBuilder,
     ) -> None:
         self._validate_cli_args(cli_args)
@@ -121,8 +125,10 @@ class OTAnalyticsCli:
         self._flow_parser = flow_parser
         self._event_list_parser = event_list_parser
         self._event_repository = event_repository
-        self._intersect = intersect
-        self._scene_event_detection = scene_event_detection
+        self._add_section = add_section
+        self._create_events = create_events
+        self._add_all_tracks = add_all_tracks
+        self._clear_all_tracks = clear_all_tracks
         self._progressbar = progressbar
 
     def start(self) -> None:
@@ -138,6 +144,11 @@ class OTAnalyticsCli:
     def _parse_flows(self, flow_file: Path) -> tuple[Iterable[Section], Iterable[Flow]]:
         return self._flow_parser.parse(flow_file)
 
+    def _add_sections(self, sections: Iterable[Section]) -> None:
+        """Add sections to section repository."""
+        for section in sections:
+            self._add_section.add(section)
+
     def _parse_tracks(self, track_file: Path) -> Iterable[Track]:
         return self._track_parser.parse(track_file)
 
@@ -149,15 +160,18 @@ class OTAnalyticsCli:
         Args:
             ottrk_files (list[Path]): the ottrk files to be analyzed
         """
+        self._add_sections(sections)
+
         messages: list[str] = []
         for ottrk_file in self._progressbar(
             list(ottrk_files), "Analyzed files", "files"
         ):
+            self._clear_all_tracks()
             self._event_repository.clear()
             save_path = self._determine_eventlist_save_path(ottrk_file)
             tracks = self._parse_tracks(ottrk_file)
-            self._intersect.run(tracks, sections)
-            self._event_repository.add_all(self._scene_event_detection.run(tracks))
+            self._add_all_tracks(tracks)
+            self._create_events()
             self._event_list_parser.serialize(
                 self._event_repository.get_all(), sections, save_path
             )
