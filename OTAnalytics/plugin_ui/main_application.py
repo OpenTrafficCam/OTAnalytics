@@ -1,3 +1,4 @@
+import logging
 from typing import Sequence
 
 from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
@@ -17,6 +18,7 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.logger import logger, setup_logger
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,
@@ -123,17 +125,24 @@ class ApplicationStarter:
     def start(self) -> None:
         parser = self._build_cli_argument_parser()
         cli_args = parser.parse()
+        self._setup_logger(cli_args.debug)
 
         if cli_args.start_cli:
             try:
                 self.start_cli(cli_args)
             except CliParseError as e:
-                print(e)
+                logger().exception(e, exc_info=True)
         else:
             self.start_gui()
 
     def _build_cli_argument_parser(self) -> CliArgumentParser:
         return CliArgumentParser()
+
+    def _setup_logger(self, debug: bool) -> None:
+        if debug:
+            setup_logger(logging.DEBUG)
+        else:
+            setup_logger(logging.INFO)
 
     def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
