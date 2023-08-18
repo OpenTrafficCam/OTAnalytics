@@ -90,11 +90,11 @@ CLASS_ORDER = [
 
 
 class ColorPaletteProvider:
-    """
-    Provides a color palette for all classes known from the tracks metadata.
+    """Provides a color palette for all classes known from the tracks metadata.
+
     Uses a default palette for known values.
     Generates random colors for unknown values.
-    Updates, whenever track matedata are updated.
+    Updates, whenever track metadata are updated.
     """
 
     def __init__(
