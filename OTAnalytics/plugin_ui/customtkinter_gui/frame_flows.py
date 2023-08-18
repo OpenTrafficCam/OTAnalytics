@@ -1,5 +1,4 @@
 import tkinter
-from tkinter.ttk import Treeview
 from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
@@ -118,7 +117,7 @@ class FrameFlows(AbstractCTkFrame):
         return x, y
 
 
-class TreeviewFlows(TreeviewTemplate, Treeview):
+class TreeviewFlows(TreeviewTemplate):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         self._viewmodel = viewmodel
         super().__init__(**kwargs)
