@@ -35,7 +35,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
-from OTAnalytics.application.logging import logger
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,

@@ -24,7 +24,7 @@ from OTAnalytics.adapter_ui.default_values import (
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.logging import logger
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,

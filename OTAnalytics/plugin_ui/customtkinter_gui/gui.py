@@ -6,7 +6,7 @@ from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.exception import gather_exception_messages
-from OTAnalytics.application.logging import logger
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,

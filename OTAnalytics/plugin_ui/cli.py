@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
-from OTAnalytics.application.logging import logger
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import (

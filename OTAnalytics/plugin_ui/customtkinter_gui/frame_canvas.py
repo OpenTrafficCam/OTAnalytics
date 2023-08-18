@@ -8,7 +8,7 @@ from PIL import Image, ImageTk
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.logging import logger
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import (
     CanvasObserver,

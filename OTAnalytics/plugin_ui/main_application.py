@@ -18,7 +18,7 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.logging import logger, setup_logger
+from OTAnalytics.application.logger import logger, setup_logger
 from OTAnalytics.application.plotting import (
     LayeredPlotter,
     PlottingLayer,

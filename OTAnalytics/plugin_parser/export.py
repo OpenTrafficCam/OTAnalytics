@@ -18,7 +18,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
     ExportSpecificationDto,
 )
-from OTAnalytics.application.logging import logger
+from OTAnalytics.application.logger import logger
 
 
 class CsvExport(Exporter):

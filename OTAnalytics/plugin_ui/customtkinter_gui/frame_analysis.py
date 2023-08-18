@@ -4,7 +4,7 @@ from typing import Any
 from customtkinter import CTkButton
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.logging import logger
+from OTAnalytics.application.logger import logger
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,

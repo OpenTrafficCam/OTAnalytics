@@ -19,7 +19,7 @@ from OTAnalytics.application.datastore import (
     TrackVideoParser,
     VideoParser,
 )
-from OTAnalytics.application.logging import logger
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.event import Event, EventType
