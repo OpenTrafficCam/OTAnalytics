@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -631,7 +631,7 @@ class TestIntersectAreaByTrackPoints:
                 road_user_id=1,
                 road_user_type="car",
                 hostname="myhostname",
-                occurrence=datetime(2020, 1, 1, 0, 0, 0, 1),
+                occurrence=datetime(2020, 1, 1, 0, 0, 0, 1, tzinfo=timezone.utc),
                 frame_number=2,
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(1.5, 1.5),
