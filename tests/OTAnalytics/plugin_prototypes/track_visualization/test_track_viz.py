@@ -22,7 +22,6 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    DEFAULT_COLOR_PALETTE,
     CachedPandasTrackProvider,
     ColorPaletteProvider,
     FilterByClassification,
@@ -264,42 +263,48 @@ class TestCachedPandasTrackProvider:
 
 
 class TestColorPaletteProvider:
+    DEFAULT_RANDOM_COLOR = "#000"
+
     @pytest.mark.parametrize(
-        "new_classifications,existing_classifications,default_palette",
+        "new_classifications,default_palette,expected",
         [
-            ({"Class 1", "Class 2", "Class 3"}, set(), {}),
             (
                 {"Class 1", "Class 2", "Class 3"},
-                set(DEFAULT_COLOR_PALETTE.keys()),
-                DEFAULT_COLOR_PALETTE,
-            ),
-            (
-                {"Class 1", "Class 2", "Class 3"},
-                {"Existing class 1", "Existing class 2"},
+                {},
                 {
-                    "Existing class 1": "red",
-                    "Existing class 2": "blue",
-                    "Not used class": "pink",
+                    "Class 1": DEFAULT_RANDOM_COLOR,
+                    "Class 2": DEFAULT_RANDOM_COLOR,
+                    "Class 3": DEFAULT_RANDOM_COLOR,
                 },
             ),
+            (
+                {"Class 1", "Class 2", "Class 3"},
+                {"Class 1": "red", "Not used class": "blue"},
+                {
+                    "Class 1": "red",
+                    "Class 2": DEFAULT_RANDOM_COLOR,
+                    "Class 3": DEFAULT_RANDOM_COLOR,
+                },
+            ),
+            ({}, {"Default 1": "red", "Default 2": "blue"}, {}),
         ],
     )
-    def test_update_with_filled_default_palette(
+    def test_update_with_filled_default(
         self,
         new_classifications: set[str],
-        existing_classifications: set[str],
         default_palette: dict[str, str],
+        expected: dict[str, str],
     ) -> None:
-        total_classifications = existing_classifications | new_classifications
-        color_palette_provider = ColorPaletteProvider(default_palette)
-        color_palette_provider.update(total_classifications)
-        palette = color_palette_provider.get()
-        for classification in new_classifications:
-            assert self._is_hex_color(palette[classification])
-        for classification in existing_classifications:
-            assert palette[classification] == default_palette[classification]
-        for classification in palette.keys():
-            assert classification in total_classifications
+        with patch.object(
+            ColorPaletteProvider,
+            "_generate_random_color",
+            return_value=self.DEFAULT_RANDOM_COLOR,
+        ):
+            assert self._is_hex_color("#000")
+            color_palette_provider = ColorPaletteProvider(default_palette)
+            color_palette_provider.update(new_classifications)
+            actual = color_palette_provider.get()
+            assert actual == expected
 
     def test_generate_random_color(self) -> None:
         random_color = ColorPaletteProvider._generate_random_color()
