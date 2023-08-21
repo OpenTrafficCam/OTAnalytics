@@ -1,6 +1,6 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Iterable, Optional, TypeVar
+from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
 
 import numpy
 import pandas
@@ -14,14 +14,18 @@ from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    FlowState,
     ObservableOptionalProperty,
     ObservableProperty,
     Plotter,
+    SectionState,
     TrackViewState,
 )
 from OTAnalytics.domain import track
+from OTAnalytics.domain.flow import FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionRepository
 from OTAnalytics.domain.track import (
     PilImage,
     Track,
@@ -156,17 +160,89 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
     def __init__(
         self,
         other: Plotter,
+        # TODO change to layer aware plotter or plotter factory,
+        # TODO so new plotter can be constructed for each layer
         visibility_indicator: ObservableProperty[list[ENTITY]],
+        entity_lookup: Callable[[], set[ENTITY]],
     ) -> None:
         self._other = other
         visibility_indicator.register(self.notify_visibility)
+        self._entity_lookup = entity_lookup
+
+        self._cache: dict[ENTITY, Optional[TrackImage]] = dict()
+        self._visible: set[ENTITY] = set()
+
+    def plot(self) -> Optional[TrackImage]:
+        # TODO call plotter for all visible layers and merge track images
+        # TODO or put plotters of each layer in LayerPlotter for merging
+        return self._other.plot()
 
     def notify_visibility(self, visible_entities: list[ENTITY]) -> None:
-        # Callable[[VALUE], None]
-        pass
+        self._visible = set(visible_entities)
+        print("Update visible layers:", self._visible)
 
     def notify_layers(self, entities: list[ENTITY]) -> None:
-        pass
+        match entities:
+            case []:
+                self._handle_remove()
+            case _:
+                self._handle_add_update(entities)
+        print("Update available layers:", list(self._cache.keys()))
+
+    def _handle_add_update(self, entities: list[ENTITY]) -> None:
+        for entity in entities:
+            self._cache[entity] = None
+
+    def _handle_remove(self) -> None:
+        remaining_entities = self._entity_lookup()
+
+        for entity in list(self._cache.keys()):
+            if entity not in remaining_entities:
+                del self._cache[entity]
+
+
+class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
+    def __init__(
+        self,
+        other: Plotter,
+        flow_state: FlowState,
+        flow_repository: FlowRepository,
+    ) -> None:
+        super().__init__(other, flow_state.selected_flows, self.get_flow_ids)
+        flow_repository.register_flows_observer(self)
+        flow_repository.register_flow_changed_observer(self.notify_flow)
+        self._repository = flow_repository
+
+    def notify_flow(self, flow: FlowId) -> None:
+        self.notify_layers([flow])
+
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        self.notify_layers(flows)
+
+    def get_flow_ids(self) -> set[FlowId]:
+        return {flow.id for flow in self._repository.get_all()}
+
+
+class SectionLayerPlotter(DynamicLayersPlotter[SectionId], SectionListObserver):
+    def __init__(
+        self,
+        other: Plotter,
+        section_state: SectionState,
+        section_repository: SectionRepository,
+    ) -> None:
+        super().__init__(other, section_state.selected_sections, self.get_section_ids)
+        section_repository.register_sections_observer(self)
+        section_repository.register_section_changed_observer(self.notify_section)
+        self._repository = section_repository
+
+    def notify_section(self, section: SectionId) -> None:
+        self.notify_layers([section])
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        self.notify_layers(sections)
+
+    def get_section_ids(self) -> set[SectionId]:
+        return {section.id for section in self._repository.get_all()}
 
     # section list notifications
     # -> add section: notify([new_id])
@@ -186,14 +262,6 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
     #
     # flow content notifications:
     # -> update -> notify(exist.id)
-
-    #
-
-    # def notify_sections(self, sections: list[SectionId]) -> None:
-    #    pass
-
-    # def notify_flows(self, flows: list[FlowId]) -> None:
-    #    pass
 
 
 class DummyObservableWrapper(ObservableOptionalProperty[Any], TrackListObserver):
