@@ -254,6 +254,7 @@ class ApplicationStarter:
             export_counts=export_counts,
             create_events=create_events,
         )
+        application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
         name_generator = ArrowFlowNameGenerator()
         dummy_viewmodel = DummyViewModel(
