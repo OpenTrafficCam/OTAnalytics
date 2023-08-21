@@ -114,6 +114,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
+    ColorPaletteProvider,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
@@ -194,6 +195,7 @@ class ApplicationStarter:
         pandas_data_provider = self._create_pandas_data_provider(
             datastore, track_view_state, pulling_progressbar_builder
         )
+        color_palette_provider = ColorPaletteProvider()
         layers = self._create_layers(
             datastore,
             track_view_state,
@@ -201,6 +203,7 @@ class ApplicationStarter:
             section_state,
             pandas_data_provider,
             road_user_assigner,
+            color_palette_provider,
         )
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
@@ -212,6 +215,11 @@ class ApplicationStarter:
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
         tracks_metadata = self._create_tracks_metadata(track_repository)
+        # TODO: Should not register to tracks_metadata._classifications but to
+        # TODO: ottrk metadata detection classes
+        tracks_metadata._classifications.register(
+            observer=color_palette_provider.update
+        )
         action_state = self._create_action_state()
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
@@ -388,12 +396,16 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         alpha: float,
         enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackGeometryPlotter(
-                pandas_data_provider, alpha=alpha, enable_legend=enable_legend
+                pandas_data_provider,
+                color_palette_provider,
+                alpha=alpha,
+                enable_legend=enable_legend,
             ),
         )
         return PlotterPrototype(state, track_plotter)
@@ -403,6 +415,7 @@ class ApplicationStarter:
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
         track_repository: TrackRepository,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         id_filter: Optional[TrackIdProvider] = None,
     ) -> Plotter:
@@ -416,7 +429,11 @@ class ApplicationStarter:
             ),
         )
         track_plotter = MatplotlibTrackPlotter(
-            TrackStartEndPointPlotter(data_provider, enable_legend=enable_legend),
+            TrackStartEndPointPlotter(
+                data_provider,
+                color_palette_provider,
+                enable_legend=enable_legend,
+            ),
         )
         return PlotterPrototype(state, track_plotter)
 
@@ -425,13 +442,18 @@ class ApplicationStarter:
         state: TrackViewState,
         tracks_intersecting_selected_sections: TracksIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
     ) -> Plotter:
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=tracks_intersecting_selected_sections
         )
         return self._create_track_geometry_plotter(
-            state, filter_by_id, alpha=1, enable_legend=enable_legend
+            state,
+            filter_by_id,
+            color_palette_provider,
+            alpha=1,
+            enable_legend=enable_legend,
         )
 
     def _create_tracks_intersecting_selected_sections(
@@ -449,13 +471,18 @@ class ApplicationStarter:
         state: TrackViewState,
         tracks_not_intersecting_sections: TracksNotIntersectingSelection,
         pandas_track_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
     ) -> Plotter:
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=tracks_not_intersecting_sections
         )
         return self._create_track_geometry_plotter(
-            state, filter_by_id, alpha=1, enable_legend=enable_legend
+            state,
+            filter_by_id,
+            color_palette_provider,
+            alpha=1,
+            enable_legend=enable_legend,
         )
 
     def _create_start_end_point_tracks_intersecting_sections_plotter(
@@ -464,12 +491,14 @@ class ApplicationStarter:
         tracks_intersecting_sections: TracksIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
         track_repository: TrackRepository,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
     ) -> Plotter:
         return self._create_track_start_end_point_plotter(
             state,
             pandas_track_provider,
             track_repository,
+            color_palette_provider,
             enable_legend=enable_legend,
             id_filter=tracks_intersecting_sections,
         )
@@ -480,12 +509,14 @@ class ApplicationStarter:
         tracks_not_intersecting_sections: TracksNotIntersectingSelection,
         pandas_track_provider: PandasDataFrameProvider,
         track_repository: TrackRepository,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
     ) -> Plotter:
         return self._create_track_start_end_point_plotter(
             state,
             pandas_track_provider,
             track_repository,
+            color_palette_provider,
             enable_legend=enable_legend,
             id_filter=tracks_not_intersecting_sections,
         )
@@ -494,6 +525,7 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         pandas_track_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
         enable_legend: bool,
     ) -> Plotter:
@@ -501,13 +533,18 @@ class ApplicationStarter:
             pandas_track_provider, id_filter=tracks_assigned_to_flow
         )
         return self._create_track_geometry_plotter(
-            state, filter_by_id, alpha=1, enable_legend=enable_legend
+            state,
+            filter_by_id,
+            color_palette_provider,
+            alpha=1,
+            enable_legend=enable_legend,
         )
 
     def _create_highlight_tracks_not_assigned_to_flow(
         self,
         state: TrackViewState,
         pandas_track_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
         track_repository: TrackRepository,
         enable_legend: bool,
@@ -519,7 +556,11 @@ class ApplicationStarter:
             pandas_track_provider, id_filter=tracks_not_assigned_to_flow
         )
         return self._create_track_geometry_plotter(
-            state, filter_by_id, alpha=1, enable_legend=enable_legend
+            state,
+            filter_by_id,
+            color_palette_provider,
+            alpha=1,
+            enable_legend=enable_legend,
         )
 
     def _create_layers(
@@ -530,6 +571,7 @@ class ApplicationStarter:
         section_state: SectionState,
         pandas_data_provider: PandasDataFrameProvider,
         road_user_assigner: RoadUserAssigner,
+        color_palette_provider: ColorPaletteProvider,
     ) -> Sequence[PlottingLayer]:
         background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
         data_provider_all_filters = FilterByClassification(
@@ -549,6 +591,7 @@ class ApplicationStarter:
         track_geometry_plotter = self._create_track_geometry_plotter(
             track_view_state,
             data_provider_all_filters,
+            color_palette_provider,
             alpha=0.2,
             enable_legend=True,
         )
@@ -572,6 +615,7 @@ class ApplicationStarter:
                 track_view_state,
                 tracks_intersecting_selected_sections,
                 data_provider_all_filters,
+                color_palette_provider,
                 enable_legend=False,
             )
         )
@@ -580,6 +624,7 @@ class ApplicationStarter:
                 track_view_state,
                 tracks_not_intersecting_sections,
                 data_provider_all_filters,
+                color_palette_provider,
                 enable_legend=False,
             )
         )
@@ -589,6 +634,7 @@ class ApplicationStarter:
                 tracks_intersecting_selected_sections,
                 data_provider_class_filter,
                 datastore._track_repository,
+                color_palette_provider,
                 enable_legend=False,
             )
         )
@@ -598,6 +644,7 @@ class ApplicationStarter:
                 tracks_not_intersecting_sections,
                 data_provider_class_filter,
                 datastore._track_repository,
+                color_palette_provider,
                 enable_legend=False,
             )
         )
@@ -605,6 +652,7 @@ class ApplicationStarter:
             track_view_state,
             data_provider_class_filter,
             datastore._track_repository,
+            color_palette_provider,
             enable_legend=False,
         )
         tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
@@ -617,6 +665,7 @@ class ApplicationStarter:
             self._create_highlight_tracks_assigned_to_flow(
                 track_view_state,
                 data_provider_all_filters,
+                color_palette_provider,
                 tracks_assigned_to_flow,
                 enable_legend=False,
             )
@@ -625,6 +674,7 @@ class ApplicationStarter:
             self._create_highlight_tracks_not_assigned_to_flow(
                 track_view_state,
                 data_provider_all_filters,
+                color_palette_provider,
                 tracks_assigned_to_flow,
                 datastore._track_repository,
                 enable_legend=False,

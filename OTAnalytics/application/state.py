@@ -448,9 +448,6 @@ class TracksMetadata(TrackListObserver):
     def _update_classifications(self, new_tracks: list[TrackId]) -> None:
         """Update current classifications."""
         updated_classifications = self._classifications.get().copy()
-        if (updated_classifications := self._classifications.get()) is None:
-            updated_classifications = set()
-
         for track_id in new_tracks:
             if track := self._track_repository.get_for(track_id):
                 updated_classifications.add(track.classification)

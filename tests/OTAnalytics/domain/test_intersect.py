@@ -22,6 +22,7 @@ def detection() -> Detection:
         input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId(1),
+        video_name="myhostname_something.mp4",
     )
 
 
