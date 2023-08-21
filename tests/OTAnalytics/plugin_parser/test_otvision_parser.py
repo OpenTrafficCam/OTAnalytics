@@ -265,10 +265,17 @@ class TestOttrkParser:
         detections: list[
             dict
         ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
+            ottrk_dataformat.VIDEO
+        ]
 
-        result_sorted_input = self.ottrk_parser._parse_detections(detections)
+        result_sorted_input = self.ottrk_parser._parse_detections(
+            detections, metadata_video
+        )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = self.ottrk_parser._parse_detections(unsorted_detections)
+        result_unsorted_input = self.ottrk_parser._parse_detections(
+            unsorted_detections, metadata_video
+        )
 
         expected_sorted = {
             TrackId(1): track_builder_setup_with_sample_data.build_detections()
@@ -283,10 +290,17 @@ class TestOttrkParser:
         detections: list[
             dict
         ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
+            ottrk_dataformat.VIDEO
+        ]
 
-        result_sorted_input = self.ottrk_parser._parse_tracks(detections)
+        result_sorted_input = self.ottrk_parser._parse_tracks(
+            detections, metadata_video
+        )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = self.ottrk_parser._parse_tracks(unsorted_detections)
+        result_unsorted_input = self.ottrk_parser._parse_tracks(
+            unsorted_detections, metadata_video
+        )
 
         expected_sorted = [track_builder_setup_with_sample_data.build_track()]
 
@@ -302,6 +316,9 @@ class TestOttrkParser:
         deserialized_detections = (
             track_builder_setup_with_sample_data.build_detections()
         )
+        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
+            ottrk_dataformat.VIDEO
+        ]
         existing_track_builder = TrackBuilder()
         append_sample_data(
             existing_track_builder,
@@ -316,7 +333,9 @@ class TestOttrkParser:
         all_detections = deserialized_detections + existing_track.detections
         merged_track = Track(existing_track.id, merged_classification, all_detections)
 
-        result_sorted_input = self.ottrk_parser._parse_tracks(detections)
+        result_sorted_input = self.ottrk_parser._parse_tracks(
+            detections, metadata_video
+        )
 
         expected_sorted = [merged_track]
 
