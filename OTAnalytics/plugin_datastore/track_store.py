@@ -145,7 +145,19 @@ class PandasTrackDataset(TrackDataset):
         tracks: DataFrame,
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
     ) -> TrackDataset:
-        return PandasTrackDataset(_assign_track_classification(tracks, calculator))
+        classified_tracks = _assign_track_classification(tracks, calculator)
+        detections_per_track = (
+            classified_tracks.groupby(by=track.TRACK_ID)[track.FRAME]
+            .count()
+            .reset_index()
+        )
+        valid_track_ids = detections_per_track.loc[
+            detections_per_track[track.FRAME] >= 2, track.TRACK_ID
+        ]
+        valid_tracks = classified_tracks.loc[
+            classified_tracks[track.TRACK_ID].isin(valid_track_ids), :
+        ]
+        return PandasTrackDataset(valid_tracks)
 
     def add_all(self, other: TrackDataset) -> TrackDataset:
         new_tracks = self.__get_tracks(other)
@@ -154,8 +166,7 @@ class PandasTrackDataset(TrackDataset):
         if self._dataset.empty:
             return PandasTrackDataset.from_dataframe(new_tracks, self._calculator)
         new_dataset = pandas.concat([self._dataset, new_tracks])
-        merged_dataset = _assign_track_classification(new_dataset, self._calculator)
-        return PandasTrackDataset(merged_dataset)
+        return PandasTrackDataset.from_dataframe(new_dataset)
 
     def __get_tracks(self, other: TrackDataset) -> DataFrame:
         if isinstance(other, PandasTrackDataset):
