@@ -1,27 +1,30 @@
 import tkinter
-import traceback
 from typing import Any, Sequence
 
-from customtkinter import (
-    CTk,
-    CTkFrame,
-    CTkScrollableFrame,
-    CTkTabview,
-    set_appearance_mode,
-    set_default_color_theme,
-)
+from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_theme
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.exception import gather_exception_messages
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import Layer
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import FrameAnalysis
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    TABVIEW_SEGMENTED_BUTTON_ELEVATION,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
+    CustomCTkTabview,
+    EmbeddedCTkScrollableFrame,
+)
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import TabviewAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
-    FrameConfiguration,
+    TabviewConfiguration,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import FrameProject
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import TabviewProject
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
@@ -60,12 +63,16 @@ class ModifiedCTk(AbstractMainWindow, CTk):
         x, y = get_widget_position(self, offset=offset)
         return x, y
 
-    def report_callback_exception(self, exc: Any, val: Any, tb: Any) -> None:
-        traceback.print_exception(val)
-        InfoBox(message=str(val), title="Error", initial_position=self.get_position())
+    def report_callback_exception(
+        self, exc: BaseException | BaseExceptionGroup, val: Any, tb: Any
+    ) -> None:
+        messages = gather_exception_messages(val)
+        message = "\n".join(messages)
+        logger().exception(messages, exc_info=True)
+        InfoBox(message=message, title="Error", initial_position=self.get_position())
 
 
-class TabviewInputFiles(CTkTabview):
+class TabviewInputFiles(CustomCTkTabview):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -98,54 +105,50 @@ class FrameContent(CTkFrame):
     def __init__(
         self, master: Any, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
     ) -> None:
-        super().__init__(master, **kwargs)
+        super().__init__(master=master, **kwargs)
         self._viewmodel = viewmodel
-        self.ctkscrollableframe = CTkScrollableFrame(
-            master=self, orientation="horizontal"
-        )
-        self.ctkscrollableframe.pack(fill=tkinter.BOTH, expand=True)
 
         self._frame_track_plotting = FrameTrackPlotting(
-            master=self.ctkscrollableframe,
+            master=self,
             layers=layers,
         )
-        self._frame_filter = FrameFilter(
-            master=self.ctkscrollableframe, viewmodel=self._viewmodel
-        )
+        self._frame_filter = FrameFilter(master=self, viewmodel=self._viewmodel)
         self._frame_canvas = FrameCanvas(
-            master=self.ctkscrollableframe,
+            master=self,
             viewmodel=self._viewmodel,
         )
+        self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure((0, 1), weight=1)
-        self._frame_track_plotting.grid(row=0, column=0, pady=PADY, sticky=STICKY)
-        self._frame_filter.grid(row=0, column=1, pady=PADY, sticky=STICKY)
-        self._frame_canvas.grid(row=1, column=0, columnspan=2, pady=PADY, sticky=STICKY)
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
+        self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
+        self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
 
 
-class FrameNavigation(CTkFrame):
+class FrameNavigation(EmbeddedCTkScrollableFrame):
     def __init__(self, master: Any, viewmodel: ViewModel, **kwargs: Any) -> None:
-        super().__init__(master, **kwargs)
+        super().__init__(master=master, **kwargs)
         self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        self._frame_project = FrameProject(
+        self._frame_project = TabviewProject(
             master=self,
             viewmodel=self._viewmodel,
         )
         self._tabview_input_files = TabviewInputFiles(
             master=self, viewmodel=self._viewmodel
         )
-        self._tabview_configuration = FrameConfiguration(
+        self._tabview_configuration = TabviewConfiguration(
             master=self, viewmodel=self._viewmodel
         )
-        self._frame_analysis = FrameAnalysis(master=self, viewmodel=self._viewmodel)
+        self._frame_analysis = TabviewAnalysis(master=self, viewmodel=self._viewmodel)
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure((1, 2), weight=1)
-        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure((0, 3), weight=0)
         self._frame_project.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._tabview_input_files.grid(row=1, column=0, pady=PADY, sticky=STICKY)
         self._tabview_configuration.grid(row=2, column=0, pady=PADY, sticky=STICKY)
@@ -155,11 +158,12 @@ class FrameNavigation(CTkFrame):
 class OTAnalyticsGui:
     def __init__(
         self,
+        app: ModifiedCTk,
         view_model: ViewModel,
         layers: Sequence[Layer],
     ) -> None:
         self._viewmodel = view_model
-        self._app: ModifiedCTk = ModifiedCTk(viewmodel=view_model)
+        self._app = app
         self._layers = layers
 
     def start(self) -> None:
@@ -178,14 +182,24 @@ class OTAnalyticsGui:
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
-        self._app.grid_columnconfigure(0, minsize=350, weight=0)
-        self._app.grid_columnconfigure(1, weight=1)
-        self._app.grid_rowconfigure(0, weight=1)
-        self._navigation = FrameNavigation(master=self._app, viewmodel=self._viewmodel)
+        self._navigation = FrameNavigation(
+            master=self._app,
+            viewmodel=self._viewmodel,
+            width=336,
+        )
         self._content = FrameContent(
             master=self._app, viewmodel=self._viewmodel, layers=self._layers
         )
 
     def _place_widgets(self) -> None:
+        self._app.grid_columnconfigure(0, minsize=300, weight=0)
+        self._app.grid_columnconfigure(1, weight=1)
+        self._app.grid_rowconfigure(0, weight=1)
         self._navigation.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self._content.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self._content.grid(
+            row=0,
+            column=1,
+            padx=PADX,
+            pady=PADY + TABVIEW_SEGMENTED_BUTTON_ELEVATION,
+            sticky=STICKY,
+        )

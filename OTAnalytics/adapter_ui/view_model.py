@@ -3,11 +3,10 @@ from datetime import datetime
 from typing import Callable, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
-from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -48,7 +47,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+    def set_sections_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod
@@ -56,11 +55,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+    def set_flows_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
+    def set_frame_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         pass
 
     @abstractmethod
@@ -72,15 +71,15 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def update_project(self, name: str, start_date: datetime) -> None:
+    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
         pass
 
     @abstractmethod
-    def save_configuration(self) -> None:
+    def load_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def load_configuration(self) -> None:
+    def save_otconfig(self) -> None:
         pass
 
     @abstractmethod
@@ -116,11 +115,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def load_sections(self) -> None:
+    def load_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def save_sections(self) -> None:
+    def save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -128,7 +127,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def add_section(self) -> None:
+    def add_line_section(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_area_section(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -153,7 +156,10 @@ class ViewModel(ABC):
 
     @abstractmethod
     def add_new_section(
-        self, coordinates: list[tuple[int, int]], get_metadata: MetadataProvider
+        self,
+        coordinates: list[tuple[int, int]],
+        is_area_section: bool,
+        get_metadata: MetadataProvider,
     ) -> None:
         raise NotImplementedError
 
@@ -162,7 +168,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def edit_section_metadata(self) -> None:
+    def edit_selected_section_metadata(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -182,7 +188,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def edit_flow(self) -> None:
+    def generate_flows(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def edit_selected_flow(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -198,8 +208,8 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def update_show_tracks_state(self, value: bool) -> None:
-        pass
+    def export_events(self) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:

@@ -5,6 +5,8 @@ from typing import Any, Optional
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
 from OTAnalytics.application.application import CancelAddFlow
+from OTAnalytics.application.logger import logger
+from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
     FrameContent,
@@ -39,12 +41,14 @@ class FrameConfigureFlow(FrameContent):
     def __init__(
         self,
         section_ids: list[IdResource],
+        name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self._section_ids = section_ids
+        self._name_generator = name_generator
         self._section_name_to_id = self._create_section_name_to_id(section_ids)
         self._section_id_to_name = self._create_section_id_to_name(section_ids)
         self._current_name = StringVar()
@@ -130,10 +134,10 @@ class FrameConfigureFlow(FrameContent):
     def _autofill_name(self, event: Any) -> None:
         if self._last_autofilled_name == self.entry_name.get():
             self.entry_name.delete(0, tkinter.END)
-            auto_name = (
-                self.dropdown_section_start.get()
-                + " --> "
-                + self.dropdown_section_end.get()
+            start_section = self.dropdown_section_start.get()
+            end_section = self.dropdown_section_end.get()
+            auto_name = self._name_generator.generate_from_string(
+                start_section, end_section
             )
             self.entry_name.insert(0, auto_name)
             self._last_autofilled_name = auto_name
@@ -207,12 +211,14 @@ class ToplevelFlows(ToplevelTemplate):
     def __init__(
         self,
         section_ids: list[IdResource],
+        name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
         self._input_values = input_values
         self._section_ids = section_ids
+        self._name_generator = name_generator
         self._show_distance = show_distance
         super().__init__(**kwargs)
 
@@ -220,6 +226,7 @@ class ToplevelFlows(ToplevelTemplate):
         return FrameConfigureFlow(
             master=master,
             section_ids=self._section_ids,
+            name_generator=self._name_generator,
             input_values=self._input_values,
             show_distance=self._show_distance,
         )
@@ -234,5 +241,5 @@ class ToplevelFlows(ToplevelTemplate):
             raise CancelAddFlow()
         if self._input_values is None:
             raise ValueError("input values is None, but should be a dict")
-        print(self._input_values)
+        logger().debug(self._input_values)
         return self._input_values

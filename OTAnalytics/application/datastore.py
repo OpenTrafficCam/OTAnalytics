@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
-from OTAnalytics.application.our_custom_group_exception import OurCustomGroupException
 from OTAnalytics.application.project import Project
+from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import (
     Flow,
@@ -14,6 +13,7 @@ from OTAnalytics.domain.flow import (
     FlowListObserver,
     FlowRepository,
 )
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
@@ -235,6 +235,7 @@ class Datastore:
         video_repository: VideoRepository,
         video_parser: VideoParser,
         track_video_parser: TrackVideoParser,
+        progressbar: ProgressbarBuilder,
         config_parser: ConfigParser,
     ) -> None:
         self._track_parser = track_parser
@@ -248,8 +249,9 @@ class Datastore:
         self._event_repository = event_repository
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
+        self._progressbar = progressbar
         self._config_parser = config_parser
-        self.project = Project(name="", start_date=datetime.now())
+        self.project = Project(name="", start_date=None)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._video_repository.register_videos_observer(observer)
@@ -272,7 +274,7 @@ class Datastore:
         """
         self._section_repository.register_sections_observer(observer)
 
-    def load_configuration_file(self, file: Path) -> None:
+    def load_otconfig(self, file: Path) -> None:
         self.clear_repositories()
         config = self._config_parser.parse(file)
         self.project = config.project
@@ -297,7 +299,10 @@ class Datastore:
             except Exception as cause:
                 raised_exceptions.append(cause)
         if raised_exceptions:
-            raise OurCustomGroupException(raised_exceptions)
+            raise ExceptionGroup(
+                "Errors occured while loading the video files:",
+                raised_exceptions,
+            )
         self._video_repository.add_all(videos)
 
     def remove_videos(self, videos: list[Video]) -> None:
@@ -340,13 +345,17 @@ class Datastore:
             file (Path): file in ottrk format
         """
         raised_exceptions: list[Exception] = []
-        for file in files:
+        for file in self._progressbar(
+            files, unit="files", description="Processed ottrk files: "
+        ):
             try:
                 self.load_track_file(file)
             except Exception as cause:
                 raised_exceptions.append(cause)
         if raised_exceptions:
-            raise OurCustomGroupException(raised_exceptions)
+            raise ExceptionGroup(
+                "Errors occured while loading the track files:", raised_exceptions
+            )
 
     def get_all_tracks(self) -> list[Track]:
         """
@@ -359,9 +368,9 @@ class Datastore:
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks in repository."""
-        self._track_repository.delete_all()
+        self._track_repository.clear()
 
-    def load_flow_file(self, file: Path) -> None:
+    def load_otflow(self, file: Path) -> None:
         """
         Load sections and flows from the given files and store them in the repositories.
 
@@ -389,7 +398,7 @@ class Datastore:
         else:
             raise NoSectionsToSave()
 
-    def get_all_sections(self) -> Iterable[Section]:
+    def get_all_sections(self) -> list[Section]:
         return self._section_repository.get_all()
 
     def get_section_for(self, section_id: SectionId) -> Optional[Section]:
@@ -426,6 +435,22 @@ class Datastore:
         self._event_list_parser.serialize(
             self._event_repository.get_all(),
             self._section_repository.get_all(),
+            file=file,
+        )
+
+    def export_event_list_file(
+        self, file: Path, event_list_exporter: EventListExporter
+    ) -> None:
+        """
+        Export events from the event list to other formats (like CSV or Excel).
+
+        Args:
+            file (Path): File to export events to
+            event_list_exporter (EventListExporter): Exporter building the format
+        """
+        event_list_exporter.export(
+            events=self._event_repository.get_all(),
+            sections=self._section_repository.get_all(),
             file=file,
         )
 

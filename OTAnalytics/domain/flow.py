@@ -72,6 +72,9 @@ class Flow:
     def __eq__(self, other: object) -> bool:
         return self.id == other.id if isinstance(other, Flow) else False
 
+    def __repr__(self) -> str:
+        return str(self.__dict__)
+
 
 class FlowListObserver(ABC):
     """

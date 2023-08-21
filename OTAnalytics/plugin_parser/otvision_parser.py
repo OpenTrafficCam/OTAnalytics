@@ -19,6 +19,7 @@ from OTAnalytics.application.datastore import (
     TrackVideoParser,
     VideoParser,
 )
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.event import Event, EventType
@@ -290,9 +291,11 @@ class OttrkParser(TrackParser):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_length_limit: int,
         format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
     ) -> None:
         super().__init__(track_classification_calculator, track_repository)
+        self._track_length_limit = track_length_limit
         self._format_fixer = format_fixer
         self._path_cache: dict[str, Path] = {}
 
@@ -309,9 +312,11 @@ class OttrkParser(TrackParser):
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
-        return self._parse_tracks(dets_list)
+        return self._parse_tracks(
+            dets_list, ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
+        )
 
-    def _parse_tracks(self, dets: list[dict]) -> list[Track]:
+    def _parse_tracks(self, dets: list[dict], metadata_video: dict) -> list[Track]:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
 
         This method will also sort the detections belonging to a track by their
@@ -319,15 +324,18 @@ class OttrkParser(TrackParser):
 
         Args:
             dets (list[dict]): the detections in dict format.
+            metadata_video (dict): holds video information.
 
         Returns:
             list[Track]: the tracks.
         """
-        tracks_dict = self._parse_detections(dets)
+        tracks_dict = self._parse_detections(dets, metadata_video)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
             all_detections = existing_detections + detections
+            if len(all_detections) > self._track_length_limit:
+                continue
             sort_dets_by_occurrence = sorted(
                 all_detections, key=lambda det: det.occurrence
             )
@@ -340,9 +348,8 @@ class OttrkParser(TrackParser):
                 )
                 tracks.append(current_track)
             except BuildTrackWithLessThanNDetectionsError as build_error:
-                # TODO: log error
                 # Skip tracks with less than 2 detections
-                print(build_error)
+                logger().warning(build_error)
 
         return tracks
 
@@ -361,7 +368,9 @@ class OttrkParser(TrackParser):
             return existing_track.detections
         return []
 
-    def _parse_detections(self, det_list: list[dict]) -> dict[TrackId, list[Detection]]:
+    def _parse_detections(
+        self, det_list: list[dict], metadata_video: dict
+    ) -> dict[TrackId, list[Detection]]:
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
@@ -380,6 +389,8 @@ class OttrkParser(TrackParser):
                 input_file_path=path,
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
                 track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
+                video_name=metadata_video[ottrk_format.FILENAME]
+                + metadata_video[ottrk_format.FILETYPE],
             )
             if not tracks_dict.get(det.track_id):
                 tracks_dict[det.track_id] = []
@@ -862,6 +873,19 @@ class OtConfigParser(ConfigParser):
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
+        """Serializes the project with the given videos, sections and flows into the
+        file.
+
+        Args:
+            project (Project): description of the project
+            video_files (Iterable[Video]): video files to reference
+            sections (Iterable[Section]): sections to store
+            flows (Iterable[Flow]): flows to store
+            file (Path): output file
+
+        Raises:
+            StartDateMissing: if start date is not configured
+        """
         parent_folder = file.parent
         project_content = project.to_dict()
         video_content = self._video_parser.convert(

@@ -1,3 +1,4 @@
+import random
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Iterable, Optional, TypeVar
 
@@ -20,6 +21,7 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track import (
     PilImage,
     Track,
@@ -51,7 +53,7 @@ CLASS_PRVAN_TRAILER = "private_van_with_trailer"
 CLASS_TRAIN = "train"
 CLASS_BUS = "bus"
 
-COLOR_PALETTE: dict[str, str] = {
+DEFAULT_COLOR_PALETTE: dict[str, str] = {
     CLASS_CAR: "blue",
     CLASS_CAR_TRAILER: "skyblue",
     CLASS_MOTORCYCLIST: "orange",
@@ -90,6 +92,39 @@ CLASS_ORDER = [
     CLASS_BUS,
     CLASS_TRAIN,
 ]
+
+
+class ColorPaletteProvider:
+    """Provides a color palette for all classes known from the tracks metadata.
+
+    Uses a default palette for known values.
+    Generates random colors for unknown values.
+    Updates, whenever track metadata are updated.
+    """
+
+    def __init__(
+        self,
+        default_palette: dict[str, str] = DEFAULT_COLOR_PALETTE,
+    ) -> None:
+        self._default_palette = default_palette
+        self._palette: dict[str, str] = {}
+
+    def update(self, classifications: set[str]) -> None:
+        for classification in classifications:
+            if classification in self._default_palette.keys():
+                self._palette[classification] = self._default_palette[classification]
+            else:
+                self._palette[classification] = self._generate_random_color()
+
+    @staticmethod
+    def _generate_random_color() -> str:
+        red = random.randint(0, 255)
+        green = random.randint(0, 255)
+        blue = random.randint(0, 255)
+        return "#{:02X}{:02X}{:02X}".format(red, green, blue)
+
+    def get(self) -> dict[str, str]:
+        return self._palette
 
 
 class CachedPlotter(Plotter):
@@ -242,6 +277,80 @@ class FilterById(PandasDataFrameProvider):
         return data.loc[data[track.TRACK_ID].isin(ids)]
 
 
+class FilterByClassification(PandasDataFrameProvider):
+    def __init__(
+        self,
+        other: PandasDataFrameProvider,
+        track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
+    ) -> None:
+        self._other = other
+        self._track_view_state = track_view_state
+        self._filter_builder = filter_builder
+
+    def get_data(self) -> DataFrame:
+        tracks_df = self._other.get_data()
+        if tracks_df.empty:
+            return tracks_df
+        return self._filter(tracks_df)
+
+    def _filter(
+        self,
+        track_df: DataFrame,
+    ) -> DataFrame:
+        """
+        Filter tracks by classifications.
+
+        Args:
+            track_df (DataFrame): dataframe of tracks.
+
+        Returns:
+            DataFrame: filtered by classifications.
+        """
+        self._filter_builder.set_classification_column(track.CLASSIFICATION)
+        filter_element = self._track_view_state.filter_element.get()
+        dataframe_filter = filter_element.build_filter(self._filter_builder)
+
+        return next(iter(dataframe_filter.apply([track_df])))
+
+
+class FilterByOccurrence(PandasDataFrameProvider):
+    def __init__(
+        self,
+        other: PandasDataFrameProvider,
+        track_view_state: TrackViewState,
+        filter_builder: DataFrameFilterBuilder,
+    ) -> None:
+        self._other = other
+        self._track_view_state = track_view_state
+        self._filter_builder = filter_builder
+
+    def get_data(self) -> DataFrame:
+        tracks_df = self._other.get_data()
+        if tracks_df.empty:
+            return tracks_df
+        return self._filter(tracks_df)
+
+    def _filter(
+        self,
+        track_df: DataFrame,
+    ) -> DataFrame:
+        """
+        Filter tracks by occurrence.
+
+        Args:
+            track_df (DataFrame): dataframe of tracks.
+
+        Returns:
+            DataFrame: filtered by occurrence.
+        """
+        self._filter_builder.set_occurrence_column(track.OCCURRENCE)
+        filter_element = self._track_view_state.filter_element.get()
+        dataframe_filter = filter_element.build_filter(self._filter_builder)
+
+        return next(iter(dataframe_filter.apply([track_df])))
+
+
 class PandasTrackProvider(PandasDataFrameProvider):
     """Provides tracks as pandas DataFrame."""
 
@@ -250,35 +359,34 @@ class PandasTrackProvider(PandasDataFrameProvider):
         datastore: Datastore,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
+        progressbar: ProgressbarBuilder,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._filter_builder = filter_builder
+        self._progressbar = progressbar
 
     def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
         if not tracks:
             return DataFrame()
 
-        data = self._convert_tracks(tracks)
-
-        if data.empty:
-            return data
-
-        return self._filter_tracks(data)
+        return self._convert_tracks(tracks)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
         Convert tracks into a dataframe.
 
         Args:
-            tracks (Iterable[Track]): tracks to convert
+            tracks (Iterable[Track]): tracks to convert.
 
         Returns:
-            DataFrame: tracks as dataframe
+            DataFrame: tracks as dataframe.
         """
         prepared: list[dict] = []
-        for current_track in tracks:
+        for current_track in self._progressbar(
+            list(tracks), "Tracks to be converted to DataFrame", "tracks"
+        ):
             for detection in current_track.detections:
                 detection_dict = detection.to_dict()
                 detection_dict[track.CLASSIFICATION] = current_track.classification
@@ -300,27 +408,6 @@ class PandasTrackProvider(PandasDataFrameProvider):
             return track_df.sort_values([track.TRACK_ID, track.FRAME])
         else:
             return track_df
-
-    def _filter_tracks(
-        self,
-        track_df: DataFrame,
-    ) -> DataFrame:
-        """
-        Filter tracks by classes, time and number of images.
-
-        Args:
-            filter_classes (Iterable[str]): classes to show
-            track_df (DataFrame): dataframe of tracks
-
-        Returns:
-            DataFrame: filtered by classes, time and number of images
-        """
-        self._filter_builder.set_classification_column(track.CLASSIFICATION)
-        self._filter_builder.set_occurrence_column(track.OCCURRENCE)
-        filter_element = self._track_view_state.filter_element.get()
-        dataframe_filter = filter_element.build_filter(self._filter_builder)
-
-        return next(iter(dataframe_filter.apply([track_df])))
 
 
 class PandasTracksOffsetProvider(PandasDataFrameProvider):
@@ -355,8 +442,9 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         datastore: Datastore,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
+        progressbar: ProgressbarBuilder,
     ) -> None:
-        super().__init__(datastore, track_view_state, filter_builder)
+        super().__init__(datastore, track_view_state, filter_builder, progressbar)
         datastore.register_tracks_observer(self)
         self._cache_df: DataFrame = DataFrame()
 
@@ -376,8 +464,8 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         return self._cache_df
 
     def __do_convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
-        """Internal method to convert the given tracks
-            to dataframe format without caching.
+        """Internal method to convert the given tracks to dataframe format without
+        caching.
 
         Args:
             tracks (Iterable[Track]): the tracks to be converted.
@@ -389,7 +477,8 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """Take notice of some change in the track repository.
-        Remove cached tracks matching any given id.
+
+        Update cached tracks matching any given id.
         Add tracks of ids not yet present in cache.
         Clear cache if no ids are given.
 
@@ -409,45 +498,38 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
                 )
 
                 # concat remaining tracks and new tracks
-                if filtered_cache is not None:
-                    df = pandas.concat([filtered_cache, new_df])
-                else:
+                if filtered_cache.empty:
                     df = new_df
+                else:
+                    df = pandas.concat([filtered_cache, new_df])
 
                 self._cache_df = self._sort_tracks(df)
 
     def _fetch_new_track_data(self, track_ids: list[TrackId]) -> list[Track]:
-        existing_tracks: list[int] = []
-
-        if not self._cache_df.empty:
-            existing_tracks = self._cache_df[track.TRACK_ID].unique().tolist()
-
         return [
-            t
+            track
             for t_id in track_ids
-            if t_id.id not in existing_tracks
-            and (t := self._datastore._track_repository.get_for(t_id)) is not None
+            if (track := self._datastore._track_repository.get_for(t_id))
         ]
 
-    def _cache_without_existing_tracks(
-        self, track_ids: list[TrackId]
-    ) -> DataFrame | None:
+    def _cache_without_existing_tracks(self, track_ids: list[TrackId]) -> DataFrame:
         """Filter cached tracks.
+
         Only keep those not matching the ids in the given list of track_ids.
-        Return None if the current cache is empty.
 
         Args:
             track_ids (list[TrackId]): ids of tracks to be removed from cache.
 
         Returns:
-            DataFrame | None: filtered cache or None if it is already empty.
+            DataFrame : filtered cache.
         """
         if self._cache_df.empty:
-            return None
+            return self._cache_df
 
         track_id_nums = [t.id for t in track_ids]
-        df = self._cache_df
-        return df[~df[track.TRACK_ID].isin(track_id_nums)]
+        return self._cache_df.drop(
+            self._cache_df.index[self._cache_df[track.TRACK_ID].isin(track_id_nums)]
+        )
 
 
 class MatplotlibPlotterImplementation(ABC):
@@ -464,10 +546,12 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
         self._enable_legend = enable_legend
         self._alpha = alpha
 
@@ -496,8 +580,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             sort=False,
             alpha=self._alpha,
             ax=axes,
-            palette=COLOR_PALETTE,
-            hue_order=CLASS_ORDER,
+            palette=self._color_palette_provider.get(),
             legend=self._enable_legend,
         )
 
@@ -508,10 +591,12 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
         self._enable_legend = enable_legend
         self._alpha = alpha
 
@@ -548,7 +633,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             legend=self._enable_legend,
             s=15,
             ax=axes,
-            palette=COLOR_PALETTE,
+            palette=self._color_palette_provider.get(),
         )
 
 

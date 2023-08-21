@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Callable, Generic, Iterable, Optional, TypeVar
+from typing import Callable, Generic, Iterable, Optional
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.observer import VALUE, Subject
 from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.domain.track import (
     Detection,
@@ -67,36 +68,6 @@ class TrackState(TrackListObserver):
         """
         track_to_select = tracks[0] if tracks else None
         self.select(track_to_select)
-
-
-VALUE = TypeVar("VALUE")
-
-
-class Subject(Generic[VALUE]):
-    """
-    Helper class to handle and notify observers
-    """
-
-    def __init__(self) -> None:
-        self.observers: set[Callable[[VALUE], None]] = set()
-
-    def register(self, observer: Callable[[VALUE], None]) -> None:
-        """
-        Listen to events.
-
-        Args:
-            observer (Observer[VALUE]): listener to add
-        """
-        self.observers.add(observer)
-
-    def notify(self, value: VALUE) -> None:
-        """
-        Notifies observers about the changed value.
-
-        Args:
-            value (Optional[VALUE]): changed value
-        """
-        [observer(value) for observer in self.observers]
 
 
 class ObservableProperty(Generic[VALUE]):
@@ -201,7 +172,6 @@ class TrackViewState:
 
     def __init__(self) -> None:
         self.background_image = ObservableOptionalProperty[TrackImage]()
-        self.show_tracks = ObservableOptionalProperty[bool]()
         self.track_offset = ObservableOptionalProperty[RelativeOffsetCoordinate](
             RelativeOffsetCoordinate(0.5, 0.5)
         )
@@ -328,8 +298,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._section_state = section_state
         self._flow_state = flow_state
         self._plotter = plotter
-        self._track_view_state.selected_videos.register(self.notify_video)
-        self._track_view_state.show_tracks.register(self._notify_show_tracks)
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
         self._section_state.selected_sections.register(self._notify_section_selection)
@@ -352,15 +320,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
             tracks (list[TrackId]): list of changed track ids
         """
         self._update_image()
-
-    def _notify_show_tracks(self, show_tracks: Optional[bool]) -> None:
-        """
-        Will update the image according to changes of the show tracks property.
-
-        Args:
-            show_tracks (Optional[bool]): current value
-        """
-        self._update()
 
     def _notify_track_offset(self, offset: Optional[RelativeOffsetCoordinate]) -> None:
         """
@@ -489,9 +448,6 @@ class TracksMetadata(TrackListObserver):
     def _update_classifications(self, new_tracks: list[TrackId]) -> None:
         """Update current classifications."""
         updated_classifications = self._classifications.get().copy()
-        if (updated_classifications := self._classifications.get()) is None:
-            updated_classifications = set()
-
         for track_id in new_tracks:
             if track := self._track_repository.get_for(track_id):
                 updated_classifications.add(track.classification)
