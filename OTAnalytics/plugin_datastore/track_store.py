@@ -8,7 +8,13 @@ import pandas
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import Detection, Track, TrackDataset, TrackId
+from OTAnalytics.domain.track import (
+    MIN_NUMBER_OF_DETECTIONS,
+    Detection,
+    Track,
+    TrackDataset,
+    TrackId,
+)
 
 
 class PandasDetection(Detection):
@@ -152,7 +158,8 @@ class PandasTrackDataset(TrackDataset):
             .reset_index()
         )
         valid_track_ids = detections_per_track.loc[
-            detections_per_track[track.FRAME] >= 2, track.TRACK_ID
+            detections_per_track[track.FRAME] >= MIN_NUMBER_OF_DETECTIONS,
+            track.TRACK_ID,
         ]
         valid_tracks = classified_tracks.loc[
             classified_tracks[track.TRACK_ID].isin(valid_track_ids), :

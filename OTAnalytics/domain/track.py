@@ -9,6 +9,8 @@ from PIL import Image
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.observer import Subject
 
+MIN_NUMBER_OF_DETECTIONS = 5
+
 CLASSIFICATION: str = "classification"
 TRACK_CLASSIFICATION: str = "track_classification"
 CONFIDENCE: str = "confidence"
@@ -344,7 +346,7 @@ class PythonTrack(Track, DataclassValidation):
         self._validate_detections_sorted_by_occurrence()
 
     def _validate_track_has_at_least_five_detections(self) -> None:
-        if len(self._detections) < 5:
+        if len(self._detections) < MIN_NUMBER_OF_DETECTIONS:
             raise BuildTrackWithLessThanNDetectionsError(self._id)
 
     def _validate_detections_sorted_by_occurrence(self) -> None:
