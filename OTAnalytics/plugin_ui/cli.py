@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import (
@@ -37,6 +38,7 @@ class InvalidSectionFileType(Exception):
 @dataclass(frozen=True)
 class CliArguments:
     start_cli: bool
+    debug: bool
     track_files: list[str]
     sections_file: str
 
@@ -78,6 +80,12 @@ class CliArgumentParser:
             help="Otflow file containing sections.",
             required=False,
         )
+        self._parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Set log level to DEBUG.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -86,7 +94,7 @@ class CliArgumentParser:
             CliArguments: _description_
         """
         args = self._parser.parse_args()
-        return CliArguments(args.cli, args.ottrks, args.otflow)
+        return CliArguments(args.cli, args.debug, args.ottrks, args.otflow)
 
 
 class OTAnalyticsCli:
@@ -170,7 +178,7 @@ class OTAnalyticsCli:
             messages.append(f"Analysis finished. Event list saved at '{save_path}'")
 
         for msg in messages:
-            print(msg)
+            logger().info(msg)
 
     @staticmethod
     def _determine_eventlist_save_path(track_file: Path) -> Path:
@@ -225,7 +233,9 @@ class OTAnalyticsCli:
                 continue
 
             if not ottrk_file.exists() or ottrk_file.suffix != f".{TRACK_FILE_TYPE}":
-                print(f"Ottrk file'{ottrk_file}' does not exist. Skipping file.")
+                logger().warning(
+                    f"Ottrk file'{ottrk_file}' does not exist. Skipping file."
+                )
                 continue
 
             ottrk_files.add(ottrk_file)

@@ -33,6 +33,7 @@ def valid_detection_dict() -> dict:
         ottrk_format.INPUT_FILE_PATH: Path("path/to/file.otdet"),
         ottrk_format.INTERPOLATED_DETECTION: False,
         "track-id": TrackId(1),
+        "video_name": "file.mp4",
     }
 
 
@@ -52,6 +53,7 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
             ottrk_format.INTERPOLATED_DETECTION
         ],
         track_id=valid_detection_dict[ottrk_format.TRACK_ID],
+        video_name=valid_detection_dict["video_name"],
     )
 
 
@@ -104,6 +106,7 @@ class TestDetection:
                 input_file_path=Path("path/to/file.otdet"),
                 interpolated_detection=False,
                 track_id=TrackId(track_id),
+                video_name="file.mp4",
             )
 
     def test_instantiation_with_valid_args(
@@ -161,6 +164,36 @@ class TestTrack:
             valid_detection,
             valid_detection,
         ]
+
+    def test_start_and_end_time(self) -> None:
+        start_time = datetime(2022, 1, 1, 13)
+        end_time = datetime(2022, 1, 1, 14)
+
+        start_detection = Mock(spec=Detection)
+        start_detection.occurrence = start_time
+        second_detection = Mock(spec=Detection)
+        second_detection.occurrence = datetime(2022, 1, 1, 13, 15)
+        third_detection = Mock(spec=Detection)
+        third_detection.occurrence = datetime(2022, 1, 1, 13, 30)
+        fourth_detection = Mock(spec=Detection)
+        fourth_detection.occurrence = datetime(2022, 1, 1, 13, 45)
+
+        end_detection = Mock(spec=Detection)
+        end_detection.occurrence = end_time
+        track = Track(
+            TrackId(1),
+            "car",
+            [
+                start_detection,
+                second_detection,
+                third_detection,
+                fourth_detection,
+                end_detection,
+            ],
+        )
+
+        assert track.start == start_time
+        assert track.end == end_time
 
 
 class TestCalculateTrackClassificationByMaxConfidence:

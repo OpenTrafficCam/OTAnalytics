@@ -1,4 +1,8 @@
 import platform
+from pathlib import Path
+
+LOG_DIR = Path(".logs").absolute()
+"""The log save directory."""
 
 GEOMETRY_CACHE_SIZE: int = 20000
 
