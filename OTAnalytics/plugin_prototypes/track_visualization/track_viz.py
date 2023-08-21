@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Optional
+from typing import Any, Generic, Iterable, Optional, TypeVar
 
 import numpy
 import pandas
@@ -112,6 +112,53 @@ class CachedPlotter(Plotter):
 
     def invalidate_cache(self, _: Any) -> None:
         self._cache = None
+
+
+ENTITY = TypeVar("ENTITY")
+
+
+class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
+    def __init__(
+        self,
+        other: Plotter,
+        visibility_indicator: ObservableProperty[list[ENTITY]],
+    ) -> None:
+        self._other = other
+        visibility_indicator.register(self.notify_visibility)
+
+    def notify_visibility(self, visible_entities: list[ENTITY]) -> None:
+        # Callable[[VALUE], None]
+        pass
+
+    def notify_layers(self, entities: list[ENTITY]) -> None:
+        pass
+
+    # section list notifications
+    # -> add section: notify([new_id])
+    # -> add all sections -> notify([new_id_1, new_id_2,...])
+    # -> remove section -> notify([])
+    # -> clear -> notify([])
+    #
+    # section content notification
+    # -> update section -> notify(exist_id)
+    # -> set plugin data -> notify(exist_id)
+    #
+    # flow list notifications
+    # -> clear -> notify([])
+    # -> add flow -> notify([new_id])
+    # -> add all flows -> notify([new_id_1, new_id_2,...])
+    # -> remove -> notify([])
+    #
+    # flow content notifications:
+    # -> update -> notify(exist.id)
+
+    #
+
+    # def notify_sections(self, sections: list[SectionId]) -> None:
+    #    pass
+
+    # def notify_flows(self, flows: list[FlowId]) -> None:
+    #    pass
 
 
 class DummyObservableWrapper(ObservableOptionalProperty[Any], TrackListObserver):
