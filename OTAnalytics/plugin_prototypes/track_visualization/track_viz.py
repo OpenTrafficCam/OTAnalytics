@@ -13,6 +13,7 @@ from pandas import DataFrame
 from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
 from OTAnalytics.application.state import (
     FlowState,
     ObservableOptionalProperty,
@@ -33,6 +34,7 @@ from OTAnalytics.domain.track import (
     TrackIdProvider,
     TrackImage,
     TrackListObserver,
+    TrackRepository,
 )
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
@@ -154,70 +156,90 @@ class CachedPlotter(Plotter):
 
 
 ENTITY = TypeVar("ENTITY")
+EntityPlotterFactory = Callable[[ENTITY], Plotter]
+AvailableEntityProvider = Callable[[], set[ENTITY]]
+VisibilitySubject = ObservableProperty[list[ENTITY]]
 
 
 class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
     def __init__(
         self,
-        other: Plotter,
-        # TODO change to layer aware plotter or plotter factory,
-        # TODO so new plotter can be constructed for each layer
-        visibility_indicator: ObservableProperty[list[ENTITY]],
-        entity_lookup: Callable[[], set[ENTITY]],
+        plotter_factory: EntityPlotterFactory,
+        visibility_subject: VisibilitySubject,
+        entity_lookup: AvailableEntityProvider,
     ) -> None:
-        self._other = other
-        visibility_indicator.register(self.notify_visibility)
+        self._plotter_factory = plotter_factory
         self._entity_lookup = entity_lookup
 
-        self._cache: dict[ENTITY, Optional[TrackImage]] = dict()
-        self._visible: set[ENTITY] = set()
+        self._layer_mapping: dict[ENTITY, PlottingLayer] = dict()
+        self._plotter_mapping: dict[ENTITY, CachedPlotter] = dict()
+        # additional plotter mapping could be avoided
+        # if PlottingLayer were Generic in the used plotter type
+
+        visibility_subject.register(self.notify_visibility)
 
     def plot(self) -> Optional[TrackImage]:
-        # TODO call plotter for all visible layers and merge track images
-        # TODO or put plotters of each layer in LayerPlotter for merging
-        return self._other.plot()
+        layer_plotter = LayeredPlotter(list(self._layer_mapping.values()))
+        return layer_plotter.plot()
 
     def notify_visibility(self, visible_entities: list[ENTITY]) -> None:
-        self._visible = set(visible_entities)
-        print("Update visible layers:", self._visible)
+        for entity, layer in self._layer_mapping.items():
+            layer.set_enabled(entity in visible_entities)
 
-    def notify_layers(self, entities: list[ENTITY]) -> None:
+        print("Update visible layers:", visible_entities)
+
+    def notify_invalidate(self, _: Any) -> None:
+        for plotter in self._plotter_mapping.values():
+            plotter.invalidate_cache(_)
+
+    def notify_layers_changed(self, entities: list[ENTITY]) -> None:
         match entities:
             case []:
                 self._handle_remove()
             case _:
                 self._handle_add_update(entities)
-        print("Update available layers:", list(self._cache.keys()))
+        print("Update available layers:", list(self._layer_mapping.keys()))
 
     def _handle_add_update(self, entities: list[ENTITY]) -> None:
         for entity in entities:
-            self._cache[entity] = None
+            if entity in self._layer_mapping:
+                plotter: CachedPlotter = self._plotter_mapping[entity]
+                plotter.invalidate_cache(None)
+            else:
+                plotter = CachedPlotter(self._plotter_factory(entity), [])
+                self._plotter_mapping[entity] = plotter
+                self._layer_mapping[entity] = PlottingLayer(str(entity), plotter, False)
 
     def _handle_remove(self) -> None:
         remaining_entities = self._entity_lookup()
 
-        for entity in list(self._cache.keys()):
+        for entity in self._layer_mapping:
             if entity not in remaining_entities:
-                del self._cache[entity]
+                del self._plotter_mapping[entity]
+                del self._layer_mapping[entity]
 
 
 class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
     def __init__(
         self,
-        other: Plotter,
+        plotter_factory: EntityPlotterFactory,
         flow_state: FlowState,
         flow_repository: FlowRepository,
+        track_repository: TrackRepository,
     ) -> None:
-        super().__init__(other, flow_state.selected_flows, self.get_flow_ids)
+        super().__init__(plotter_factory, flow_state.selected_flows, self.get_flow_ids)
+
         flow_repository.register_flows_observer(self)
         flow_repository.register_flow_changed_observer(self.notify_flow)
+        track_repository.observers.register(self.notify_invalidate)
+
         self._repository = flow_repository
 
     def notify_flow(self, flow: FlowId) -> None:
-        self.notify_layers([flow])
+        self.notify_layers_changed([flow])
 
     def notify_flows(self, flows: list[FlowId]) -> None:
-        self.notify_layers(flows)
+        self.notify_layers_changed(flows)
 
     def get_flow_ids(self) -> set[FlowId]:
         return {flow.id for flow in self._repository.get_all()}
@@ -226,20 +248,25 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
 class SectionLayerPlotter(DynamicLayersPlotter[SectionId], SectionListObserver):
     def __init__(
         self,
-        other: Plotter,
+        plotter_factory: EntityPlotterFactory,
         section_state: SectionState,
         section_repository: SectionRepository,
+        track_repository: TrackRepository,
     ) -> None:
-        super().__init__(other, section_state.selected_sections, self.get_section_ids)
+        super().__init__(
+            plotter_factory, section_state.selected_sections, self.get_section_ids
+        )
         section_repository.register_sections_observer(self)
         section_repository.register_section_changed_observer(self.notify_section)
+        track_repository.observers.register(self.notify_invalidate)
+
         self._repository = section_repository
 
     def notify_section(self, section: SectionId) -> None:
-        self.notify_layers([section])
+        self.notify_layers_changed([section])
 
     def notify_sections(self, sections: list[SectionId]) -> None:
-        self.notify_layers(sections)
+        self.notify_layers_changed(sections)
 
     def get_section_ids(self) -> set[SectionId]:
         return {section.id for section in self._repository.get_all()}
