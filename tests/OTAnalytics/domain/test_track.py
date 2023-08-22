@@ -5,6 +5,7 @@ from unittest.mock import Mock, call
 import pytest
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
     CalculateTrackClassificationByMaxConfidence,
@@ -48,12 +49,11 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
         h=valid_detection_dict[ottrk_format.H],
         frame=valid_detection_dict[ottrk_format.FRAME],
         occurrence=valid_detection_dict[ottrk_format.OCCURRENCE],
-        input_file_path=valid_detection_dict[ottrk_format.INPUT_FILE_PATH],
         interpolated_detection=valid_detection_dict[
             ottrk_format.INTERPOLATED_DETECTION
         ],
         track_id=valid_detection_dict[ottrk_format.TRACK_ID],
-        video_name=valid_detection_dict["video_name"],
+        video_name=valid_detection_dict[VIDEO_NAME],
     )
 
 
@@ -103,7 +103,6 @@ class TestDetection:
                 h=h,
                 frame=frame,
                 occurrence=datetime(2022, 1, 1, 1, 0, 0),
-                input_file_path=Path("path/to/file.otdet"),
                 interpolated_detection=False,
                 track_id=TrackId(track_id),
                 video_name="file.mp4",
@@ -121,7 +120,7 @@ class TestDetection:
         assert det.h == valid_detection_dict[ottrk_format.H]
         assert det.frame == valid_detection_dict[ottrk_format.FRAME]
         assert det.occurrence == valid_detection_dict[ottrk_format.OCCURRENCE]
-        assert det.input_file_path == valid_detection_dict[ottrk_format.INPUT_FILE_PATH]
+        assert det.video_name == valid_detection_dict[VIDEO_NAME]
         assert (
             det.interpolated_detection
             == valid_detection_dict[ottrk_format.INTERPOLATED_DETECTION]

@@ -54,7 +54,6 @@ class TrackBuilder:
     occurrence_minute: int = DEFAULT_OCCURRENCE_MINUTE
     occurrence_second: int = DEFAULT_OCCURRENCE_SECOND
     occurrence_microsecond: int = DEFAULT_OCCURRENCE_MICROSECOND
-    input_file_path: str = DEFAULT_OTDET_FILE
     video_name: str = DEFAULT_VIDEO_NAME
     interpolated_detection: bool = False
 
@@ -91,7 +90,6 @@ class TrackBuilder:
                 self.occurrence_second,
                 self.occurrence_microsecond,
             ),
-            input_file_path=Path(self.input_file_path),
             interpolated_detection=self.interpolated_detection,
             track_id=TrackId(self.track_id),
             video_name=self.video_name,
@@ -219,7 +217,6 @@ class TrackBuilder:
             ottrk_dataformat.H: detection.h,
             ottrk_dataformat.FRAME: detection.frame,
             ottrk_dataformat.OCCURRENCE: str(detection.occurrence.timestamp()),
-            ottrk_dataformat.INPUT_FILE_PATH: str(detection.input_file_path),
             ottrk_dataformat.INTERPOLATED_DETECTION: detection.interpolated_detection,
             ottrk_dataformat.FIRST: is_first,
             ottrk_dataformat.FINISHED: is_finished,

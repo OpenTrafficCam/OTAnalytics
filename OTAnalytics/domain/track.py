@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from typing import Iterable, Optional
 
 from PIL import Image
@@ -17,7 +16,6 @@ W: str = "w"
 H: str = "h"
 FRAME: str = "frame"
 OCCURRENCE: str = "occurrence"
-INPUT_FILE_PATH: str = "input_file_path"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
 
@@ -131,9 +129,7 @@ class Detection(DataclassValidation):
         w (float): the width component of the bounding box.
         h (float): the height component of the bounding box.
         frame (int): the frame that the detection belongs to.
-        occurrence (datetime): the time of the detection's occurence.
-        input_file_path (Path): absolute path to otdet that the detection belongs to
-        at the time of its creation.
+        occurrence (datetime): the time of the detection's occurrence.
         interpolated_detection (bool): whether this detection is interpolated.
         track_id (TrackId): the track id this detection belongs to.
         video_name (str): name of video including filetype extension.
@@ -147,7 +143,6 @@ class Detection(DataclassValidation):
     h: float
     frame: int
     occurrence: datetime
-    input_file_path: Path
     interpolated_detection: bool
     track_id: TrackId
     video_name: str
@@ -185,7 +180,6 @@ class Detection(DataclassValidation):
             H: self.h,
             FRAME: self.frame,
             OCCURRENCE: self.occurrence,
-            INPUT_FILE_PATH: self.input_file_path,
             INTERPOLATED_DETECTION: self.interpolated_detection,
             TRACK_ID: self.track_id.id,
         }

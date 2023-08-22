@@ -203,7 +203,7 @@ class TestIntersectBySplittingTrackLine:
         assert result_event.event_type == EventType.SECTION_ENTER
         assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
-        assert result_event.video_name == expected_detection.input_file_path.name
+        assert result_event.video_name == expected_detection.video_name
 
     def test_intersect_track_offset_applied_to_event_coordinate(
         self, track: Track
@@ -250,7 +250,7 @@ class TestIntersectBySplittingTrackLine:
         assert result_event.event_type == EventType.SECTION_ENTER
         assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
-        assert result_event.video_name == expected_detection.input_file_path.name
+        assert result_event.video_name == expected_detection.video_name
         assert result_event.event_coordinate == ImageCoordinate(25.3, 35.5)
 
 
@@ -348,7 +348,7 @@ class TestIntersectBySmallTrackComponents:
         assert result_event.event_type == EventType.SECTION_ENTER
         assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
-        assert result_event.video_name == expected_detection.input_file_path.name
+        assert result_event.video_name == expected_detection.video_name
         assert result_event.event_coordinate == ImageCoordinate(25.3, 35.5)
 
     @patch("OTAnalytics.domain.intersect.Intersector._select_coordinate_in_detection")

@@ -374,7 +374,6 @@ class OttrkParser(TrackParser):
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
-            path = self.__get_path(det_dict)
             det = Detection(
                 classification=det_dict[ottrk_format.CLASS],
                 confidence=det_dict[ottrk_format.CONFIDENCE],
@@ -386,7 +385,6 @@ class OttrkParser(TrackParser):
                 occurrence=datetime.fromtimestamp(
                     float(det_dict[ottrk_format.OCCURRENCE])
                 ),
-                input_file_path=path,
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
                 track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
                 video_name=metadata_video[ottrk_format.FILENAME]
