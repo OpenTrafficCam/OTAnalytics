@@ -282,6 +282,7 @@ class DummyViewModel(
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         self._intersect_tracks_with_sections()
+        self.notify_files()
 
     def _intersect_tracks_with_sections(self) -> None:
         if self._window is None:
@@ -553,7 +554,6 @@ class DummyViewModel(
         logger().info(f"Tracks files to load: {track_files}")
         track_paths = [Path(file) for file in track_files]
         self._application.add_tracks_of_files(track_files=track_paths)
-        self.notify_files()
 
     def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
