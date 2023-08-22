@@ -6,7 +6,8 @@ from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.state import FlowState, SectionState, TrackViewState
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import EventRepository
-from OTAnalytics.domain.flow import FlowRepository
+from OTAnalytics.domain.flow import FlowId, FlowRepository
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider, TrackRepository
 
 
@@ -34,6 +35,28 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
         sections = self._get_section_by_id(currently_selected_sections)
 
         return self._tracks_intersecting_sections(sections)
+
+
+class TracksIntersectingGivenSections(TrackIdProvider):
+    """Returns track ids intersecting given sections.
+    Args:
+        section_ids (list[SectionId]): the sections to identify intersection tracks
+        tracks_intersecting_sections (TracksIntersectingSections): get track ids
+            intersecting sections
+        get_section_by_id (GetSectionsById): use case to get sections by id
+    """
+
+    def __init__(
+        self,
+        section_ids: list[SectionId],
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_section_by_id: GetSectionsById,
+    ) -> None:
+        self._sections = get_section_by_id(section_ids)
+        self._tracks_intersecting_sections = tracks_intersecting_sections
+
+    def get_ids(self) -> set[TrackId]:
+        return self._tracks_intersecting_sections(self._sections)
 
 
 class TracksNotIntersectingSelection(TrackIdProvider):
@@ -88,6 +111,41 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
         ids = set()
         for assignment in assignments:
             if assignment.assignment.id in self._flow_state.selected_flows.get():
+                ids.add(TrackId(assignment.road_user))
+        return ids
+
+
+class TracksAssignedToGivenFlows(TrackIdProvider):
+    """Returns track ids that are assigned to the given flows.
+    Args:
+        assigner (RoadUserAssigner): to assign tracks to flows
+        event_repository (EventRepository): the event repository
+        flow_repository (FlowRepository): the track repository
+        flow_ids (list[FlowId]): the flows fo identify assigned tracks for
+    """
+
+    def __init__(
+        self,
+        assigner: RoadUserAssigner,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        flow_ids: list[FlowId],
+    ) -> None:
+        self._assigner = assigner
+        self._event_repository = event_repository
+        self._flow_repository = flow_repository
+        self._flows = list(flow_ids)
+
+    def get_ids(self) -> Iterable[TrackId]:
+        events = self._event_repository.get_all()
+        # All flows must be passed to assigner to ensure that a track potentially
+        # belonging to several flows is assigned to the correct one.
+        all_flows = self._flow_repository.get_all()
+        assignments = self._assigner.assign(events, all_flows).as_list()
+
+        ids = set()
+        for assignment in assignments:
+            if assignment.assignment.id in self._flows:
                 ids.add(TrackId(assignment.road_user))
         return ids
 
