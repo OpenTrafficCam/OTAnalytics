@@ -544,14 +544,12 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
             y = row[Y]
             width = row[W]
             height = row[H]
-            classification = row[track.CLASSIFICATION]
             axes.add_patch(
                 Rectangle(
                     xy=(x, y),
                     width=width,
                     height=height,
                     fc="none",
-                    color=COLOR_PALETTE[classification],
                     linewidth=0.5,
                     alpha=0.5,
                 )
