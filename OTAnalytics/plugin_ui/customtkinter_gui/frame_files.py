@@ -38,10 +38,6 @@ class FrameFiles(EmbeddedCTkFrame):
         self.button_add_files = CTkButton(
             master=self, text="Load", command=self._viewmodel.load_tracks
         )
-        # TODO: Add method to remove track files to ViewModel
-        # self.button_remove_files = CTkButton(
-        #     master=self, text="Remove", command=self._viewmodel.remove_tracks
-        # )
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure(0, weight=1)
@@ -52,9 +48,6 @@ class FrameFiles(EmbeddedCTkFrame):
             row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_add_files.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        # self.button_remove_files.grid(
-        #     row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
-        # )
 
 
 COLUMN_FILE = "File"
@@ -96,11 +89,9 @@ class TreeviewFiles(TreeviewTemplate):
         self._viewmodel.set_treeview_files(self)
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
-        # TODO
         pass
 
     def _on_double_click(self, event: Any) -> None:
-        # TODO: Change canvas to track file double clicked
         pass
 
     def update_items(self) -> None:
