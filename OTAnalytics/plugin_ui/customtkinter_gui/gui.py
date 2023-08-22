@@ -8,12 +8,7 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.exception import gather_exception_messages
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import Layer
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
-    PADX,
-    PADY,
-    STICKY,
-    TABVIEW_SEGMENTED_BUTTON_ELEVATION,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkScrollableFrame,
@@ -23,6 +18,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
     TabviewConfiguration,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_files import FrameFiles
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import TabviewProject
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
@@ -32,6 +28,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_videos import FrameVideos
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+
+CANVAS: str = "Canvas"
+FILES: str = "Files"
 
 
 class ModifiedCTk(AbstractMainWindow, CTk):
@@ -155,6 +154,35 @@ class FrameNavigation(EmbeddedCTkScrollableFrame):
         self._frame_analysis.grid(row=3, column=0, pady=PADY, sticky=STICKY)
 
 
+class TabviewContent(CustomCTkTabview):
+    def __init__(
+        self,
+        viewmodel: ViewModel,
+        layers: Sequence[Layer],
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._viewmodel = viewmodel
+        self._layers = layers
+        self._get_widgets()
+        self._place_widgets()
+
+    def _get_widgets(self) -> None:
+        self.add(CANVAS)
+        self.frame_tracks = FrameContent(
+            master=self.tab(CANVAS), viewmodel=self._viewmodel, layers=self._layers
+        )
+        self.add(FILES)
+        self.frame_track_files = FrameFiles(
+            master=self.tab(FILES), viewmodel=self._viewmodel
+        )
+
+    def _place_widgets(self) -> None:
+        self.frame_tracks.pack(fill=tkinter.BOTH, expand=True)
+        self.frame_track_files.pack(fill=tkinter.BOTH, expand=True)
+        self.set(CANVAS)
+
+
 class OTAnalyticsGui:
     def __init__(
         self,
@@ -187,7 +215,7 @@ class OTAnalyticsGui:
             viewmodel=self._viewmodel,
             width=336,
         )
-        self._content = FrameContent(
+        self._content = TabviewContent(
             master=self._app, viewmodel=self._viewmodel, layers=self._layers
         )
 
@@ -200,6 +228,6 @@ class OTAnalyticsGui:
             row=0,
             column=1,
             padx=PADX,
-            pady=PADY + TABVIEW_SEGMENTED_BUTTON_ELEVATION,
+            pady=PADY,
             sticky=STICKY,
         )
