@@ -85,10 +85,10 @@ class TreeviewVideos(TreeviewTemplate):
     def update_items(self) -> None:
         self.delete(*self.get_children())
         item_ids = [
-            self.__to_id_resource(video) for video in self._viewmodel.get_all_videos()
+            self.__to_resource(video) for video in self._viewmodel.get_all_videos()
         ]
         self.add_items(item_ids=item_ids)
 
-    def __to_id_resource(self, video: Video) -> ColumnResource:
+    def __to_resource(self, video: Video) -> ColumnResource:
         values = {COLUMN_VIDEO: video.get_path().name}
         return ColumnResource(id=str(video.get_path()), values=values)

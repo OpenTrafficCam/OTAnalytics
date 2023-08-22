@@ -157,12 +157,12 @@ class TreeviewSections(TreeviewTemplate):
     def update_items(self) -> None:
         self.delete(*self.get_children())
         item_ids = [
-            self.__to_id_resource(section)
+            self.__to_resource(section)
             for section in self._viewmodel.get_all_sections()
         ]
         self.add_items(item_ids=sorted(item_ids))
 
-    def __to_id_resource(self, section: Section) -> ColumnResource:
+    def __to_resource(self, section: Section) -> ColumnResource:
         values = {COLUMN_SECTION: section.name}
         return ColumnResource(id=section.id.id, values=values)
 

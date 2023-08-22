@@ -115,12 +115,12 @@ class TreeviewFiles(TreeviewTemplate):
                 track_files_have_videos.append(False)
 
         item_ids = [
-            self.__to_id_resource(file=file, video_loaded=video_loaded)
+            self.__to_resource(file=file, video_loaded=video_loaded)
             for file, video_loaded in zip(track_files, track_files_have_videos)
         ]
         self.add_items(item_ids=item_ids)
 
-    def __to_id_resource(
+    def __to_resource(
         self, file: Path, video_loaded: bool, tracks_loaded: bool = True
     ) -> ColumnResource:
         values = {

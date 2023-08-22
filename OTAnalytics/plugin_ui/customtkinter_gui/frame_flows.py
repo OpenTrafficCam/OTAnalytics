@@ -146,10 +146,10 @@ class TreeviewFlows(TreeviewTemplate):
     def update_items(self) -> None:
         self.delete(*self.get_children())
         item_ids = [
-            self.__to_id_resource(flow) for flow in self._viewmodel.get_all_flows()
+            self.__to_resource(flow) for flow in self._viewmodel.get_all_flows()
         ]
         self.add_items(item_ids=sorted(item_ids))
 
-    def __to_id_resource(self, flow: Flow) -> ColumnResource:
+    def __to_resource(self, flow: Flow) -> ColumnResource:
         values = {COLUMN_FLOW: flow.name}
         return ColumnResource(id=flow.id.id, values=values)

@@ -1025,7 +1025,7 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
         section_ids = [
-            self.__to_id_resource(section) for section in self.get_all_sections()
+            self.__to_resource(section) for section in self.get_all_sections()
         ]
         if len(section_ids) < 2:
             InfoBox(
@@ -1083,7 +1083,7 @@ class DummyViewModel(
     def generate_flows(self) -> None:
         self._application.generate_flows()
 
-    def __to_id_resource(self, section: Section) -> ColumnResource:
+    def __to_resource(self, section: Section) -> ColumnResource:
         values = {COLUMN_SECTION: section.name}
         return ColumnResource(id=section.id.serialize(), values=values)
 
