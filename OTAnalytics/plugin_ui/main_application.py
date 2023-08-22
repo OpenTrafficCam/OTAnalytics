@@ -108,10 +108,12 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
+    FlowLayerPlotter,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
+    SectionLayerPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
@@ -474,13 +476,15 @@ class ApplicationStarter:
     def _create_start_end_point_tracks_intersecting_sections_plotter(
         self,
         state: TrackViewState,
+        section_state: SectionState,
+        section_repository: SectionRepository,
         tracks_intersecting_sections: TracksIntersectingSelectedSections,
         pandas_track_provider: PandasDataFrameProvider,
         track_repository: TrackRepository,
         color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
     ) -> Plotter:
-        return self._create_track_start_end_point_plotter(
+        plotter = self._create_track_start_end_point_plotter(
             state,
             pandas_track_provider,
             track_repository,
@@ -488,6 +492,8 @@ class ApplicationStarter:
             enable_legend=enable_legend,
             id_filter=tracks_intersecting_sections,
         )
+
+        return SectionLayerPlotter(plotter, section_state, section_repository)
 
     def _create_start_end_point_tracks_not_intersecting_sections_plotter(
         self,
@@ -510,6 +516,8 @@ class ApplicationStarter:
     def _create_highlight_tracks_assigned_to_flow(
         self,
         state: TrackViewState,
+        flow_state: FlowState,
+        flow_repository: FlowRepository,
         pandas_track_provider: PandasDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
@@ -518,13 +526,15 @@ class ApplicationStarter:
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=tracks_assigned_to_flow
         )
-        return self._create_track_geometry_plotter(
+        plotter = self._create_track_geometry_plotter(
             state,
             filter_by_id,
             color_palette_provider,
             alpha=1,
             enable_legend=enable_legend,
         )
+
+        return FlowLayerPlotter(plotter, flow_state, flow_repository)
 
     def _create_highlight_tracks_not_assigned_to_flow(
         self,
@@ -609,6 +619,8 @@ class ApplicationStarter:
         start_end_points_tracks_intersecting_sections = (
             self._create_start_end_point_tracks_intersecting_sections_plotter(
                 track_view_state,
+                section_state,
+                datastore._section_repository,
                 tracks_intersecting_sections,
                 data_provider_class_filter,
                 datastore._track_repository,
@@ -642,6 +654,8 @@ class ApplicationStarter:
         highlight_tracks_assigned_to_flow = (
             self._create_highlight_tracks_assigned_to_flow(
                 track_view_state,
+                flow_state,
+                datastore._flow_repository,
                 data_provider_all_filters,
                 color_palette_provider,
                 tracks_assigned_to_flow,
