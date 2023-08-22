@@ -350,7 +350,7 @@ class TestOttrkParser:
         assert d1.h == d2.h
         assert d1.frame == d2.frame
         assert d1.occurrence == d2.occurrence
-        assert d1.input_file_path == d2.input_file_path
+        assert d1.video_name == d2.video_name
         assert d1.interpolated_detection == d2.interpolated_detection
         assert d1.track_id == d2.track_id
 
