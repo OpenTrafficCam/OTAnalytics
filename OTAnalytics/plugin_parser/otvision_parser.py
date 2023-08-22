@@ -1,7 +1,7 @@
 import bz2
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Tuple
 
@@ -230,7 +230,7 @@ class Version_1_1_To_1_2(DetectionFixer):
         if otdet_format_version <= Version(1, 1):
             occurrence = datetime.strptime(
                 detection[ottrk_format.OCCURRENCE], ottrk_format.DATE_FORMAT
-            )
+            ).replace(tzinfo=timezone.utc)
             detection[ottrk_format.OCCURRENCE] = str(occurrence.timestamp())
         return detection
 
@@ -383,7 +383,7 @@ class OttrkParser(TrackParser):
                 h=det_dict[ottrk_format.H],
                 frame=det_dict[ottrk_format.FRAME],
                 occurrence=datetime.fromtimestamp(
-                    float(det_dict[ottrk_format.OCCURRENCE])
+                    float(det_dict[ottrk_format.OCCURRENCE]), timezone.utc
                 ),
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
                 track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
@@ -860,7 +860,7 @@ class OtConfigParser(ConfigParser):
     def _parse_project(self, data: dict) -> Project:
         _validate_data(data, [project.NAME, project.START_DATE])
         name = data[project.NAME]
-        start_date = datetime.fromtimestamp(data[project.START_DATE])
+        start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
         return Project(name=name, start_date=start_date)
 
     def serialize(

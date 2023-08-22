@@ -1,6 +1,6 @@
 import shutil
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator, Sequence, TypeVar
 
@@ -89,6 +89,7 @@ class TrackBuilder:
                 self.occurrence_minute,
                 self.occurrence_second,
                 self.occurrence_microsecond,
+                tzinfo=timezone.utc,
             ),
             interpolated_detection=self.interpolated_detection,
             track_id=TrackId(self.track_id),
@@ -280,6 +281,7 @@ class EventBuilder:
                 self.occurrence_minute,
                 self.occurrence_second,
                 self.occurrence_microsecond,
+                tzinfo=timezone.utc,
             ),
             frame_number=self.frame_number,
             section_id=SectionId(self.section_id),
