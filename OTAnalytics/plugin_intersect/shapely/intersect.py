@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from numpy import ndarray
 from shapely import GeometryCollection, LineString
 from shapely import Polygon as ShapelyPolygon
@@ -7,6 +9,11 @@ from shapely.ops import snap, split
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
+
+
+@lru_cache(maxsize=100000)
+def cached_intersects(line_1: LineString, line_2: LineString) -> bool:
+    return line_1.intersects(line_2)
 
 
 class ShapelyIntersector(IntersectImplementation):
@@ -27,7 +34,8 @@ class ShapelyIntersector(IntersectImplementation):
         """
         shapely_line_1 = self._mapper.map_to_shapely_line_string(line_1)
         shapely_line_2 = self._mapper.map_to_shapely_line_string(line_2)
-        return shapely_line_1.intersects(shapely_line_2)
+
+        return cached_intersects(shapely_line_1, shapely_line_2)
 
     def line_intersects_polygon(self, line: Line, polygon: Polygon) -> bool:
         """Checks if a line intersects with a polygon.
