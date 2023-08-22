@@ -29,6 +29,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_videos import FrameVideos
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 
+CANVAS: str = "Canvas"
+FILES: str = "Files"
+
 
 class ModifiedCTk(AbstractMainWindow, CTk):
     def __init__(
@@ -161,25 +164,23 @@ class TabviewContent(CustomCTkTabview):
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
         self._layers = layers
-        self.CANVAS: str = "Canvas"
-        self.FILES: str = "Files"
         self._get_widgets()
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        self.add(self.CANVAS)
+        self.add(CANVAS)
         self.frame_tracks = FrameContent(
-            master=self.tab(self.CANVAS), viewmodel=self._viewmodel, layers=self._layers
+            master=self.tab(CANVAS), viewmodel=self._viewmodel, layers=self._layers
         )
-        self.add(self.FILES)
+        self.add(FILES)
         self.frame_track_files = FrameFiles(
-            master=self.tab(self.FILES), viewmodel=self._viewmodel
+            master=self.tab(FILES), viewmodel=self._viewmodel
         )
 
     def _place_widgets(self) -> None:
         self.frame_tracks.pack(fill=tkinter.BOTH, expand=True)
         self.frame_track_files.pack(fill=tkinter.BOTH, expand=True)
-        self.set(self.CANVAS)
+        self.set(CANVAS)
 
 
 class OTAnalyticsGui:
