@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from tkinter.ttk import Treeview
-from typing import Any
+from typing import Any, Literal
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
@@ -9,14 +9,23 @@ from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
 
 @dataclass(frozen=True, order=True)
-class IdResource:
+class ColumnResource:
+    """
+    Represents a row in a treeview with an id and a dict of values to be shown.
+    The dicts keys represent the columns and the values represent the cell values.
+    """
+
     id: str
-    name: str
+    values: dict[str, str]
 
 
 class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(show="tree", selectmode="none", **kwargs)
+    def __init__(
+        self,
+        show: Literal["tree", "headings", "tree headings", ""] = "tree",
+        **kwargs: Any
+    ) -> None:
+        super().__init__(selectmode="none", show=show, **kwargs)
         self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
         self.bind(tk_events.LEFT_BUTTON_UP, self._on_single_select)
         self.bind(tk_events.MULTI_SELECT_SINGLE, self._on_single_multi_select)
@@ -44,9 +53,10 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
         x, y = get_widget_position(self, offset=offset)
         return x, y
 
-    def add_items(self, item_ids: list[IdResource]) -> None:
+    def add_items(self, item_ids: list[ColumnResource]) -> None:
         for id in item_ids:
-            self.insert(parent="", index="end", iid=id.id, text="", values=[id.name])
+            cell_values = tuple(id.values[column] for column in self["columns"])
+            self.insert(parent="", index="end", iid=id.id, text="", values=cell_values)
 
     def _on_deselect(self, event: Any) -> None:
         self._deselect_all()

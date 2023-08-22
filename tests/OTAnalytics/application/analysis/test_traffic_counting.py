@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -103,16 +103,20 @@ class TestFillEmptyCount:
         flow_name = "Flow"
         mode = "mode"
         tag = MultiTag(
-            {
-                SingleTag(LEVEL_CLASSIFICATION, id=mode),
-                SingleTag(LEVEL_FLOW, id=flow_name),
-            }
+            frozenset(
+                [
+                    SingleTag(LEVEL_CLASSIFICATION, id=mode),
+                    SingleTag(LEVEL_FLOW, id=flow_name),
+                ]
+            )
         )
         filled_tag = MultiTag(
-            {
-                SingleTag(LEVEL_FLOW, id=flow_name),
-                SingleTag(LEVEL_CLASSIFICATION, id=mode),
-            }
+            frozenset(
+                [
+                    SingleTag(LEVEL_FLOW, id=flow_name),
+                    SingleTag(LEVEL_CLASSIFICATION, id=mode),
+                ]
+            )
         )
         other_dict: dict[Tag, int] = {tag: 1}
         other = Mock(spec=Count)
@@ -123,7 +127,7 @@ class TestFillEmptyCount:
 
         actual = count.to_dict()
 
-        assert actual == filled_dict
+        assert dict(actual) == dict(filled_dict)
         other.to_dict.assert_called_once()
 
 
@@ -138,7 +142,9 @@ def create_event(
         road_user_id=track_id.id,
         road_user_type="car",
         hostname="my_hostname",
-        occurrence=datetime(2020, 1, 1, 0, minute, second=real_seconds),
+        occurrence=datetime(
+            2020, 1, 1, 0, minute, second=real_seconds, tzinfo=timezone.utc
+        ),
         frame_number=1,
         section_id=section,
         event_coordinate=ImageCoordinate(0, 0),
@@ -351,10 +357,12 @@ class TestCaseBuilder:
             EventPair(first_south, first_west),
         )
         first_result = MultiTag(
-            {
-                SingleTag(level=LEVEL_START_TIME, id="00:00"),
-                SingleTag(level=LEVEL_END_TIME, id="00:01"),
-            }
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="00:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="00:01"),
+                ]
+            )
         )
 
         second_south = create_event(self.first_track, self.south_section_id, 59)
@@ -365,10 +373,12 @@ class TestCaseBuilder:
             EventPair(second_south, second_west),
         )
         second_result = MultiTag(
-            {
-                SingleTag(level=LEVEL_START_TIME, id="00:00"),
-                SingleTag(level=LEVEL_END_TIME, id="00:01"),
-            }
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="00:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="00:01"),
+                ]
+            )
         )
 
         third_south = create_event(self.third_track, self.south_section_id, 60)
@@ -379,10 +389,12 @@ class TestCaseBuilder:
             EventPair(third_south, third_west),
         )
         third_result = MultiTag(
-            {
-                SingleTag(level=LEVEL_START_TIME, id="00:01"),
-                SingleTag(level=LEVEL_END_TIME, id="00:02"),
-            }
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="00:01"),
+                    SingleTag(level=LEVEL_END_TIME, id="00:02"),
+                ]
+            )
         )
 
         forth_south = create_event(self.forth_track, self.south_section_id, 120)
@@ -393,10 +405,12 @@ class TestCaseBuilder:
             EventPair(forth_south, forth_west),
         )
         forth_result = MultiTag(
-            {
-                SingleTag(level=LEVEL_START_TIME, id="00:02"),
-                SingleTag(level=LEVEL_END_TIME, id="00:03"),
-            }
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="00:02"),
+                    SingleTag(level=LEVEL_END_TIME, id="00:03"),
+                ]
+            )
         )
         return [
             (first_assignment, first_result),
@@ -610,7 +624,7 @@ class TestCombinedTagger:
 
         group_name = tagger.create_tag(assignment)
 
-        assert group_name == MultiTag({first_id, second_id})
+        assert group_name == MultiTag(frozenset([first_id, second_id]))
 
 
 class TestCountableAssignments:

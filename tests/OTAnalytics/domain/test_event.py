@@ -42,6 +42,7 @@ def valid_detection() -> Detection:
         input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId(1),
+        video_name="myhostname_something.mp4",
     )
 
 
@@ -227,7 +228,7 @@ class TestSectionEventBuilder:
         assert event.event_coordinate == ImageCoordinate(1, 1)
         assert event.event_type == EventType.SECTION_ENTER
         assert event.direction_vector == direction_vector
-        assert event.video_name == valid_detection.input_file_path.name
+        assert event.video_name == valid_detection.video_name
 
 
 class TestSceneEventBuilder:
@@ -283,7 +284,7 @@ class TestSceneEventBuilder:
         )
         assert event.event_type == EventType.ENTER_SCENE
         assert event.direction_vector == direction_vector
-        assert event.video_name == valid_detection.input_file_path.name
+        assert event.video_name == valid_detection.video_name
         assert event.event_coordinate == ImageCoordinate(0, 0)
 
 

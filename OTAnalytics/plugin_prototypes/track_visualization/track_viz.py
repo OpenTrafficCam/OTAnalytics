@@ -1,3 +1,4 @@
+import random
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional
 
@@ -52,7 +53,7 @@ CLASS_PRVAN_TRAILER = "private_van_with_trailer"
 CLASS_TRAIN = "train"
 CLASS_BUS = "bus"
 
-COLOR_PALETTE: dict[str, str] = {
+DEFAULT_COLOR_PALETTE: dict[str, str] = {
     CLASS_CAR: "blue",
     CLASS_CAR_TRAILER: "skyblue",
     CLASS_MOTORCYCLIST: "orange",
@@ -91,6 +92,39 @@ CLASS_ORDER = [
     CLASS_BUS,
     CLASS_TRAIN,
 ]
+
+
+class ColorPaletteProvider:
+    """Provides a color palette for all classes known from the tracks metadata.
+
+    Uses a default palette for known values.
+    Generates random colors for unknown values.
+    Updates, whenever track metadata are updated.
+    """
+
+    def __init__(
+        self,
+        default_palette: dict[str, str] = DEFAULT_COLOR_PALETTE,
+    ) -> None:
+        self._default_palette = default_palette
+        self._palette: dict[str, str] = {}
+
+    def update(self, classifications: set[str]) -> None:
+        for classification in classifications:
+            if classification in self._default_palette.keys():
+                self._palette[classification] = self._default_palette[classification]
+            else:
+                self._palette[classification] = self._generate_random_color()
+
+    @staticmethod
+    def _generate_random_color() -> str:
+        red = random.randint(0, 255)
+        green = random.randint(0, 255)
+        blue = random.randint(0, 255)
+        return "#{:02X}{:02X}{:02X}".format(red, green, blue)
+
+    def get(self) -> dict[str, str]:
+        return self._palette
 
 
 class TrackPlotter(ABC):
@@ -423,10 +457,12 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
         self._enable_legend = enable_legend
         self._alpha = alpha
 
@@ -455,8 +491,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             sort=False,
             alpha=self._alpha,
             ax=axes,
-            palette=COLOR_PALETTE,
-            hue_order=CLASS_ORDER,
+            palette=self._color_palette_provider.get(),
             legend=self._enable_legend,
         )
 
@@ -467,10 +502,12 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
         self._enable_legend = enable_legend
         self._alpha = alpha
 
@@ -507,7 +544,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             legend=self._enable_legend,
             s=15,
             ax=axes,
-            palette=COLOR_PALETTE,
+            palette=self._color_palette_provider.get(),
         )
 
 

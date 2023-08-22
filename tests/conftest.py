@@ -1,6 +1,6 @@
 import shutil
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator, Sequence, TypeVar
 
@@ -24,8 +24,8 @@ T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
 
 DEFAULT_HOSTNAME = "myhostname"
-DEFAULT_VIDEO_NAME = f"{DEFAULT_HOSTNAME}_file.otdet"
-DEFAULT_INPUT_FILE_PATH = f"path/to/{DEFAULT_VIDEO_NAME}"
+DEFAULT_VIDEO_NAME = f"{DEFAULT_HOSTNAME}_file.mp4"
+DEFAULT_OTDET_FILE = f"path/to/{DEFAULT_VIDEO_NAME}"
 DEFAULT_OCCURRENCE_YEAR: int = 2020
 DEFAULT_OCCURRENCE_MONTH: int = 1
 DEFAULT_OCCURRENCE_DAY: int = 1
@@ -54,7 +54,8 @@ class TrackBuilder:
     occurrence_minute: int = DEFAULT_OCCURRENCE_MINUTE
     occurrence_second: int = DEFAULT_OCCURRENCE_SECOND
     occurrence_microsecond: int = DEFAULT_OCCURRENCE_MICROSECOND
-    input_file_path: str = DEFAULT_INPUT_FILE_PATH
+    input_file_path: str = DEFAULT_OTDET_FILE
+    video_name: str = DEFAULT_VIDEO_NAME
     interpolated_detection: bool = False
 
     def __post_init__(self) -> None:
@@ -89,10 +90,12 @@ class TrackBuilder:
                 self.occurrence_minute,
                 self.occurrence_second,
                 self.occurrence_microsecond,
+                tzinfo=timezone.utc,
             ),
             input_file_path=Path(self.input_file_path),
             interpolated_detection=self.interpolated_detection,
             track_id=TrackId(self.track_id),
+            video_name=self.video_name,
         )
 
     def add_track_id(self, id: int) -> None:
@@ -146,7 +149,7 @@ class TrackBuilder:
         return {
             "otdet_version": self.otdet_version,
             "video": {
-                "filename": "path/to/myhostname_file",
+                "filename": "myhostname_file",
                 "filetype": ".mp4",
                 "width": 800.0,
                 "height": 600.0,
@@ -281,6 +284,7 @@ class EventBuilder:
                 self.occurrence_minute,
                 self.occurrence_second,
                 self.occurrence_microsecond,
+                tzinfo=timezone.utc,
             ),
             frame_number=self.frame_number,
             section_id=SectionId(self.section_id),

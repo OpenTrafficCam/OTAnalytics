@@ -26,6 +26,7 @@ from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
@@ -73,6 +74,7 @@ class OTAnalyticsApplication:
         tracks_metadata: TracksMetadata,
         action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
+        get_all_track_files: GetAllTrackFiles,
         generate_flows: GenerateFlows,
         create_intersection_events: CreateIntersectionEvents,
         export_counts: ExportCounts,
@@ -88,6 +90,7 @@ class OTAnalyticsApplication:
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
         self._add_flow = AddFlow(self._datastore._flow_repository)
+        self._get_all_track_files = get_all_track_files
         self._generate_flows = generate_flows
         self._create_intersection_events = create_intersection_events
         self._clear_event_repository = ClearEventRepository(
@@ -154,6 +157,9 @@ class OTAnalyticsApplication:
 
     def get_all_videos(self) -> list[Video]:
         return self._datastore.get_all_videos()
+
+    def get_all_track_files(self) -> set[Path]:
+        return self._get_all_track_files()
 
     def get_all_flows(self) -> list[Flow]:
         return self._datastore.get_all_flows()

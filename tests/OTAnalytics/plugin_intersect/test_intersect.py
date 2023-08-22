@@ -1,8 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
 
+from OTAnalytics.application.geometry import (
+    SectionGeometryBuilder,
+    TrackGeometryBuilder,
+)
+from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event, EventType, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
@@ -12,12 +17,13 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
 )
 from OTAnalytics.domain.intersect import IntersectImplementation
-from OTAnalytics.domain.section import Area, LineSection, SectionId
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleIntersectAreaByTrackPoints,
     SimpleIntersectBySmallestTrackSegments,
     SimpleIntersectBySplittingTrackLine,
+    SimpleTracksIntersectingSections,
 )
 from tests.conftest import EventBuilder, TrackBuilder
 
@@ -631,13 +637,13 @@ class TestIntersectAreaByTrackPoints:
                 road_user_id=1,
                 road_user_type="car",
                 hostname="myhostname",
-                occurrence=datetime(2020, 1, 1, 0, 0, 0, 1),
+                occurrence=datetime(2020, 1, 1, 0, 0, 0, 1, tzinfo=timezone.utc),
                 frame_number=2,
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(1.5, 1.5),
                 event_type=EventType.SECTION_ENTER,
                 direction_vector=DirectionVector2D(1, 0),
-                video_name="myhostname_file.otdet",
+                video_name="myhostname_file.mp4",
             )
         ]
         assert result_events == expected_events
@@ -940,3 +946,41 @@ class TestIntersectAreaByTrackPoints:
         event_builder.append_section_event()
         expected_events = event_builder.build_events()
         assert result_events == expected_events
+
+
+class TestSimpleTracksIntersectingSections:
+    def test_tracks_intersecting_sections(self, track: Track) -> None:
+        get_all_tracks = Mock(spec=GetAllTracks)
+        get_all_tracks.return_value = [track]
+
+        section = Mock(spec=Section)
+        offset = RelativeOffsetCoordinate(0, 0)
+        section.get_offset.return_value = offset
+
+        intersect_implementation = Mock(spec=IntersectImplementation)
+        intersect_implementation.line_intersects_line.return_value = True
+
+        section_geom = Mock(spec=Line)
+        track_geom = Mock(spec=Line)
+
+        track_geometry_builder = Mock(spec=TrackGeometryBuilder)
+        track_geometry_builder.build.return_value = track_geom
+        section_geometry_builder = Mock(spec=SectionGeometryBuilder)
+        section_geometry_builder.build_as_line.return_value = section_geom
+
+        tracks_intersecting_sections = SimpleTracksIntersectingSections(
+            get_all_tracks,
+            intersect_implementation,
+            track_geometry_builder,
+            section_geometry_builder,
+        )
+        intersecting = tracks_intersecting_sections([section])
+
+        assert intersecting == {track.id}
+        get_all_tracks.assert_called_once()
+        section.get_offset.assert_called_once_with(EventType.SECTION_ENTER)
+        track_geometry_builder.build.assert_called_once_with(track, offset)
+        section_geometry_builder.build_as_line.assert_called_once_with(section)
+        intersect_implementation.line_intersects_line.assert_called_once_with(
+            track_geom, section_geom
+        )

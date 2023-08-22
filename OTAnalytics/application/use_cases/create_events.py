@@ -37,7 +37,7 @@ class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
 
 
     Args:
-        intersect (RunIntersect): use case to intersect tracks with sections
+        run_intersect (RunIntersect): use case to intersect tracks with sections
         datastore (Datastore): the datastore containing tracks, sections and events
     """
 

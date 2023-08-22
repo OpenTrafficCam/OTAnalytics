@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
@@ -67,7 +67,7 @@ class Tag(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def contained_tags(self) -> set["Tag"]:
+    def contained_tags(self) -> frozenset["Tag"]:
         """
         List all tags this tag consists of.
         """
@@ -87,7 +87,7 @@ class Tag(ABC):
 
 @dataclass(frozen=True)
 class MultiTag(Tag):
-    tags: set[Tag]
+    tags: frozenset[Tag]
 
     def combine(self, other: Tag) -> Tag:
         """
@@ -99,14 +99,17 @@ class MultiTag(Tag):
         Returns:
             Tag: combined tag
         """
-        combined_tags: set[Tag] = self.contained_tags().union(other.contained_tags())
+        combined_tags: frozenset[Tag] = self.contained_tags().union(
+            other.contained_tags()
+        )
+
         return MultiTag(tags=combined_tags)
 
-    def contained_tags(self) -> set[Tag]:
+    def contained_tags(self) -> frozenset[Tag]:
         """
         List all tags this tag consists of.
         """
-        return self.tags.copy()
+        return self.tags
 
     def as_dict(self) -> dict[str, str]:
         """
@@ -120,9 +123,6 @@ class MultiTag(Tag):
         for tag in self.tags:
             result |= tag.as_dict()
         return result
-
-    def __hash__(self) -> int:
-        return hash(tuple(self.tags))
 
 
 @dataclass(frozen=True)
@@ -142,11 +142,11 @@ class SingleTag(Tag):
         """
         return MultiTag(self.contained_tags().union(other.contained_tags()))
 
-    def contained_tags(self) -> set[Tag]:
+    def contained_tags(self) -> frozenset[Tag]:
         """
         List all tags this tag consists of.
         """
-        return {self}
+        return frozenset([self])
 
     def as_dict(self) -> dict[str, str]:
         """
@@ -171,10 +171,12 @@ def create_timeslot_tag(start_of_time_slot: datetime, interval: timedelta) -> Ta
     serialized_start = start_of_time_slot.strftime("%H:%M")
     serialized_end = end_of_time_slot.strftime("%H:%M")
     return MultiTag(
-        {
-            SingleTag(level=LEVEL_START_TIME, id=serialized_start),
-            SingleTag(level=LEVEL_END_TIME, id=serialized_end),
-        }
+        frozenset(
+            [
+                SingleTag(level=LEVEL_START_TIME, id=serialized_start),
+                SingleTag(level=LEVEL_END_TIME, id=serialized_end),
+            ]
+        )
     )
 
 
@@ -323,7 +325,7 @@ class TimeslotTagger(Tagger):
         original_time = int(assignment.events.start.occurrence.timestamp())
         interval_seconds = self._interval.total_seconds()
         result = int(original_time / interval_seconds) * interval_seconds
-        start_of_time_slot = datetime.fromtimestamp(result)
+        start_of_time_slot = datetime.fromtimestamp(result, timezone.utc)
         return create_timeslot_tag(start_of_time_slot, self._interval)
 
 

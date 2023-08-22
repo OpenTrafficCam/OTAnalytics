@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
@@ -100,6 +101,14 @@ class ViewModel(ABC):
 
     @abstractmethod
     def get_all_videos(self) -> list[Video]:
+        pass
+
+    @abstractmethod
+    def get_all_track_files(self) -> set[Path]:
+        pass
+
+    @abstractmethod
+    def set_treeview_files(self, treeview: AbstractTreeviewInterface) -> None:
         pass
 
     @abstractmethod
