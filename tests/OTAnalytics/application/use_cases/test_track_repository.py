@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -5,9 +6,10 @@ import pytest
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
+    GetAllTrackFiles,
     GetAllTracks,
 )
-from OTAnalytics.domain.track import Track, TrackRepository
+from OTAnalytics.domain.track import Detection, Track, TrackRepository
 
 
 @pytest.fixture
@@ -42,3 +44,21 @@ class TestClearAllTracks:
         clear_all = ClearAllTracks(track_repository)
         clear_all()
         track_repository.clear.assert_called_once()
+
+
+class TestGetAllTrackFiles:
+    def test_get_all_track_files(
+        self, track_repository: Mock, tracks: list[Mock]
+    ) -> None:
+        expected_path = Mock(spec=Path)
+        detection_1 = Mock(spec=Detection)
+        detection_1.input_file_path = expected_path
+        detection_2 = Mock(spec=Detection)
+        detection_2.input_file_path = expected_path
+        for track in tracks:
+            track.detections = [detection_1, detection_2]
+        use_case = GetAllTrackFiles(track_repository)
+
+        files = use_case()
+
+        assert {expected_path} == files
