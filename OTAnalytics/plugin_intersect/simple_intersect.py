@@ -1,8 +1,15 @@
 from functools import partial
 from typing import Iterable
 
-from OTAnalytics.application.analysis.intersect import RunIntersect
+from OTAnalytics.application.analysis.intersect import (
+    RunIntersect,
+    TracksIntersectingSections,
+)
 from OTAnalytics.application.eventlist import SectionActionDetector
+from OTAnalytics.application.geometry import (
+    SectionGeometryBuilder,
+    TrackGeometryBuilder,
+)
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event, EventBuilder, EventType, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
@@ -18,7 +25,7 @@ from OTAnalytics.domain.intersect import (
     LineSectionIntersector,
 )
 from OTAnalytics.domain.section import Area, LineSection, Section
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import Track, TrackId
 
 
 class SimpleIntersectBySmallestTrackSegments(LineSectionIntersector[Track]):
@@ -45,9 +52,7 @@ class SimpleIntersectBySmallestTrackSegments(LineSectionIntersector[Track]):
         line_section_as_geometry = Line(self._line_section.get_coordinates())
 
         event_builder.add_road_user_type(track.classification)
-        offset = self._extract_offset_from_section(
-            self._line_section, EventType.SECTION_ENTER
-        )
+        offset = self._line_section.get_offset(EventType.SECTION_ENTER)
 
         if not self._track_line_intersects_section(
             track, line_section_as_geometry, offset
@@ -105,7 +110,7 @@ class SimpleIntersectAreaByTrackPoints(AreaIntersector[Track]):
             bool: `True` if area intersects detection. Otherwise `False`.
         """
         area_as_polygon = Polygon(self._area.coordinates)
-        offset = self._extract_offset_from_section(self._area, EventType.SECTION_ENTER)
+        offset = self._area.get_offset(EventType.SECTION_ENTER)
 
         track_coordinates: list[Coordinate] = [
             self._select_coordinate_in_detection(detection, offset)
@@ -295,3 +300,39 @@ def _run_intersect_on_single_track(
             )
         events.extend(section_action_detector._detect(section=_section, track=track))
     return events
+
+
+class SimpleTracksIntersectingSections(TracksIntersectingSections):
+    def __init__(
+        self,
+        get_all_tracks: GetAllTracks,
+        intersect_implementation: IntersectImplementation,
+        track_geometry_builder: TrackGeometryBuilder = TrackGeometryBuilder(),
+        section_geometry_builder: SectionGeometryBuilder = SectionGeometryBuilder(),
+    ):
+        self._get_all_tracks = get_all_tracks
+        self._intersect_implementation = intersect_implementation
+        self._track_geometry_builder = track_geometry_builder
+        self._section_geometry_builder = section_geometry_builder
+
+    def __call__(self, sections: Iterable[Section]) -> set[TrackId]:
+        tracks = self._get_all_tracks()
+        return self._intersect(tracks, sections)
+
+    def _intersect(
+        self, tracks: Iterable[Track], sections: Iterable[Section]
+    ) -> set[TrackId]:
+        return {
+            track.id
+            for section in sections
+            for track in tracks
+            if self._track_intersects_section(track, section)
+        }
+
+    def _track_intersects_section(self, track: Track, section: Section) -> bool:
+        section_offset = section.get_offset(EventType.SECTION_ENTER)
+        track_as_geom = self._track_geometry_builder.build(track, section_offset)
+        section_as_geom = self._section_geometry_builder.build_as_line(section)
+        return self._intersect_implementation.line_intersects_line(
+            track_as_geom, section_as_geom
+        )

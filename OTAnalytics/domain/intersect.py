@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Generic, Iterable, TypeVar
 
-from OTAnalytics.domain.event import Event, EventBuilder, EventType
+from OTAnalytics.domain.event import Event, EventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
     DirectionVector2D,
@@ -173,21 +173,6 @@ class Intersector(ABC, Generic[T]):
             x=detection.x + detection.w * offset.x,
             y=detection.y + detection.h * offset.y,
         )
-
-    @staticmethod
-    def _extract_offset_from_section(
-        section: Section, offset_type: EventType
-    ) -> RelativeOffsetCoordinate:
-        """Extract the section offset.
-
-        Args:
-            section (Section): the section to extract the offset from
-            offset_type (EventType): the type offset to extract
-
-        Returns:
-            RelativeOffsetCoordinate: the extracted offset
-        """
-        return section.relative_offset_coordinates[offset_type]
 
     @staticmethod
     def _calculate_direction_vector(

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
@@ -325,7 +325,7 @@ class TimeslotTagger(Tagger):
         original_time = int(assignment.events.start.occurrence.timestamp())
         interval_seconds = self._interval.total_seconds()
         result = int(original_time / interval_seconds) * interval_seconds
-        start_of_time_slot = datetime.fromtimestamp(result)
+        start_of_time_slot = datetime.fromtimestamp(result, timezone.utc)
         return create_timeslot_tag(start_of_time_slot, self._interval)
 
 
