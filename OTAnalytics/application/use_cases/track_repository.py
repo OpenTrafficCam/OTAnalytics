@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.domain.track import Track, TrackRepository
@@ -43,3 +44,15 @@ class ClearAllTracks:
 
     def __call__(self) -> None:
         self._track_repository.clear()
+
+
+class GetAllTrackFiles:
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+
+    def __call__(self) -> set[Path]:
+        return {
+            detection.input_file_path
+            for track in self._track_repository.get_all()
+            for detection in track.detections
+        }
