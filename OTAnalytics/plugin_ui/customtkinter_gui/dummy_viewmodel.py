@@ -68,6 +68,7 @@ from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import COLUMN_SECTION
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -107,7 +108,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     ToplevelFlows,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
 TAG_SELECTED_SECTION: str = "selected_section"
@@ -195,6 +196,12 @@ class DummyViewModel(
         self._treeview_videos.update_items()
         self._update_enabled_buttons()
 
+    def notify_files(self) -> None:
+        if self._treeview_files is None:
+            raise MissingInjectedInstanceError(type(self._treeview_files).__name__)
+        self._treeview_files.update_items()
+        self._update_enabled_buttons()
+
     def _update_enabled_buttons(self) -> None:
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
@@ -274,7 +281,7 @@ class DummyViewModel(
         )
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
-        pass
+        self.notify_files()
 
     def _intersect_tracks_with_sections(self) -> None:
         if self._window is None:
@@ -347,6 +354,9 @@ class DummyViewModel(
     def set_treeview_videos(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_videos = treeview
 
+    def set_treeview_files(self, treeview: AbstractTreeviewInterface) -> None:
+        self._treeview_files = treeview
+
     def set_selected_videos(self, video_paths: list[str]) -> None:
         self._selected_videos = video_paths
         selected_videos: list[Video] = []
@@ -357,6 +367,9 @@ class DummyViewModel(
 
     def get_all_videos(self) -> list[Video]:
         return self._application.get_all_videos()
+
+    def get_all_track_files(self) -> set[Path]:
+        return self._application.get_all_track_files()
 
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
         self._frame_project = project_frame
@@ -1010,7 +1023,7 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
         section_ids = [
-            self.__to_id_resource(section) for section in self.get_all_sections()
+            self.__to_resource(section) for section in self.get_all_sections()
         ]
         if len(section_ids) < 2:
             InfoBox(
@@ -1025,7 +1038,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
     ) -> dict:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
@@ -1051,7 +1064,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
     ) -> dict:
         return ToplevelFlows(
             title=title,
@@ -1068,8 +1081,9 @@ class DummyViewModel(
     def generate_flows(self) -> None:
         self._application.generate_flows()
 
-    def __to_id_resource(self, section: Section) -> IdResource:
-        return IdResource(id=section.id.serialize(), name=section.name)
+    def __to_resource(self, section: Section) -> ColumnResource:
+        values = {COLUMN_SECTION: section.name}
+        return ColumnResource(id=section.id.serialize(), values=values)
 
     def __update_flow_data(self, flow_data: dict) -> None:
         flow_id = FlowId(flow_data.get(FLOW_ID, ""))

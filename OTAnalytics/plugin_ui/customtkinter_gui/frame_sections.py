@@ -10,9 +10,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractC
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    IdResource,
+    ColumnResource,
     TreeviewTemplate,
 )
+
+COLUMN_SECTION = "Section"
 
 
 class FrameSections(AbstractCTkFrame):
@@ -133,15 +135,15 @@ class TreeviewSections(TreeviewTemplate):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         self._viewmodel = viewmodel
         super().__init__(**kwargs)
-        self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
 
     def _define_columns(self) -> None:
-        self["columns"] = "Section"
+        columns = [COLUMN_SECTION]
+        self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
-        self.column(column="Section", anchor="center", width=150, minwidth=40)
-        self["displaycolumns"] = "Section"
+        self.column(column=COLUMN_SECTION, anchor="center", width=150, minwidth=40)
+        self["displaycolumns"] = columns
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_sections(self)
@@ -155,13 +157,14 @@ class TreeviewSections(TreeviewTemplate):
     def update_items(self) -> None:
         self.delete(*self.get_children())
         item_ids = [
-            self.__to_id_resource(section)
+            self.__to_resource(section)
             for section in self._viewmodel.get_all_sections()
         ]
         self.add_items(item_ids=sorted(item_ids))
 
-    def __to_id_resource(self, section: Section) -> IdResource:
-        return IdResource(id=section.id.id, name=section.name)
+    def __to_resource(self, section: Section) -> ColumnResource:
+        values = {COLUMN_SECTION: section.name}
+        return ColumnResource(id=section.id.id, values=values)
 
 
 class ListboxSections(Listbox):
