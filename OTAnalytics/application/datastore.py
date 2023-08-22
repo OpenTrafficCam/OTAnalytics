@@ -368,7 +368,7 @@ class Datastore:
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks in repository."""
-        self._track_repository.delete_all()
+        self._track_repository.clear()
 
     def load_otflow(self, file: Path) -> None:
         """

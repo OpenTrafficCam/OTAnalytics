@@ -1,19 +1,13 @@
-from abc import ABC
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-from OTAnalytics.application.analysis.intersect import (
-    RunIntersect,
-    RunSceneEventDetection,
-)
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     ExportCounts,
     ExportFormat,
 )
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.generate_flows import GenerateFlows
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -23,33 +17,30 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.application.use_cases.config import SaveOtconfig
+from OTAnalytics.application.use_cases.create_events import (
+    CreateEvents,
+    CreateIntersectionEvents,
+)
+from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
 from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
+from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
-from OTAnalytics.domain.flow import (
-    Flow,
-    FlowChangedObserver,
-    FlowId,
-    FlowListObserver,
-    FlowRepository,
-)
+from OTAnalytics.domain.flow import Flow, FlowChangedObserver, FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
     SectionId,
     SectionListObserver,
-    SectionRepository,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
+from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-
-
-class SectionAlreadyExists(Exception):
-    pass
 
 
 class CancelAddSection(Exception):
@@ -60,94 +51,12 @@ class CancelAddFlow(Exception):
     pass
 
 
-class FlowAlreadyExists(Exception):
-    pass
-
-
 class MultipleSectionsSelected(Exception):
     pass
 
 
 class MultipleFlowsSelected(Exception):
     pass
-
-
-class AddSection:
-    """
-    Add a single section to the repository.
-    """
-
-    def __init__(self, section_repository: SectionRepository) -> None:
-        self._section_repository = section_repository
-
-    def add(self, section: Section) -> None:
-        if not self.is_section_name_valid(section.name):
-            raise SectionAlreadyExists(
-                f"A section with the name {section.name} already exists. "
-                "Choose another name."
-            )
-        self._section_repository.add(section)
-
-    def is_section_name_valid(self, section_name: str) -> bool:
-        if not section_name:
-            return False
-        return all(
-            stored_section.name != section_name
-            for stored_section in self._section_repository.get_all()
-        )
-
-
-class AddFlow:
-    """
-    Add a single flow to the repository.
-    """
-
-    def __init__(self, flow_repository: FlowRepository) -> None:
-        self._flow_repository = flow_repository
-
-    def add(self, flow: Flow) -> None:
-        if not self.is_flow_name_valid(flow.name):
-            raise FlowAlreadyExists(
-                f"A flow with the name {flow.name} already exists. "
-                "Choose another name."
-            )
-        self._flow_repository.add(flow)
-
-    def is_flow_name_valid(self, flow_name: str) -> bool:
-        if not flow_name:
-            return False
-        return all(
-            stored_flow.name != flow_name
-            for stored_flow in self._flow_repository.get_all()
-        )
-
-
-class ClearEventRepository(SectionListObserver, TrackListObserver):
-    """Clears the event repository also on section state changes.
-
-    Args:
-        event_repository (EventRepository): the event repository
-    """
-
-    def __init__(self, event_repository: EventRepository) -> None:
-        self._event_repository = event_repository
-
-    def clear(self) -> None:
-        self._event_repository.clear()
-
-    def notify_sections(self, sections: list[SectionId]) -> None:
-        self.clear()
-
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
-        self.clear()
-
-    def on_section_changed(self, section_id: SectionId) -> None:
-        self.clear()
-
-
-class IntersectTracksWithSections(ABC):
-    def run(self) -> None:
-        raise NotImplementedError
 
 
 class OTAnalyticsApplication:
@@ -162,29 +71,28 @@ class OTAnalyticsApplication:
         track_view_state: TrackViewState,
         section_state: SectionState,
         flow_state: FlowState,
-        intersect: RunIntersect,
-        scene_event_detection: RunSceneEventDetection,
         tracks_metadata: TracksMetadata,
         action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
+        get_all_track_files: GetAllTrackFiles,
         generate_flows: GenerateFlows,
-        intersect_tracks_with_sections: IntersectTracksWithSections,
+        create_intersection_events: CreateIntersectionEvents,
         export_counts: ExportCounts,
+        create_events: CreateEvents,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self.flow_state: FlowState = flow_state
-        self._intersect = intersect
-        self._scene_event_detection = scene_event_detection
         self._tracks_metadata = tracks_metadata
         self.action_state = action_state
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = AddSection(self._datastore._section_repository)
         self._add_flow = AddFlow(self._datastore._flow_repository)
+        self._get_all_track_files = get_all_track_files
         self._generate_flows = generate_flows
-        self._intersect_tracks_with_sections = intersect_tracks_with_sections
+        self._create_intersection_events = create_intersection_events
         self._clear_event_repository = ClearEventRepository(
             self._datastore._event_repository
         )
@@ -193,6 +101,7 @@ class OTAnalyticsApplication:
         self._save_otconfig = SaveOtconfig(
             datastore, config_parser=datastore._config_parser
         )
+        self._create_events = create_events
 
     def connect_observers(self) -> None:
         """
@@ -248,6 +157,9 @@ class OTAnalyticsApplication:
 
     def get_all_videos(self) -> list[Video]:
         return self._datastore.get_all_videos()
+
+    def get_all_track_files(self) -> set[Path]:
+        return self._get_all_track_files()
 
     def get_all_flows(self) -> list[Flow]:
         return self._datastore.get_all_flows()
@@ -433,17 +345,10 @@ class OTAnalyticsApplication:
         Intersect all tracks with all sections and write the events into the event
         repository
         """
-        tracks = self._datastore.get_all_tracks()
-        sections = self._datastore.get_all_sections()
-        events = self._intersect.run(tracks, sections)
-        self._clear_event_repository.clear()
-        self._datastore.add_events(events)
-
-        scene_events = self._scene_event_detection.run(self._datastore.get_all_tracks())
-        self._datastore.add_events(scene_events)
+        self._create_events()
 
     def intersect_tracks_with_sections(self) -> None:
-        self._intersect_tracks_with_sections.run()
+        self._create_intersection_events()
 
     def save_events(self, file: Path) -> None:
         """

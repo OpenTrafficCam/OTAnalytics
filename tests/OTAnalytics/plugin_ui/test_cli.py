@@ -6,22 +6,33 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from OTAnalytics.adapter_intersect.intersect import (
-    ShapelyIntersectImplementationAdapter,
-)
-from OTAnalytics.application.analysis.intersect import (
-    RunIntersect,
-    RunSceneEventDetection,
-)
+from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.use_cases.create_events import (
+    CreateEvents,
+    SimpleCreateIntersectionEvents,
+    SimpleCreateSceneEvents,
+)
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearEventRepository,
+)
+from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
+    ClearAllTracks,
+    GetAllTracks,
+)
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
+from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     TrackRepository,
 )
-from OTAnalytics.plugin_intersect.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
+from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -97,7 +108,7 @@ class TestCliArgumentParser:
             parser = CliArgumentParser()
             args = parser.parse()
             assert args == CliArguments(
-                True, [track_file_1, track_file_2], sections_file
+                True, False, [track_file_1, track_file_2], sections_file
             )
 
 
@@ -105,9 +116,11 @@ class TestOTAnalyticsCli:
     TRACK_PARSER: str = "track_parser"
     FLOW_PARSER: str = "flow_parser"
     EVENT_LIST_PARSER: str = "event_list_parser"
-    INTERSECT: str = "intersect"
     EVENT_REPOSITORY: str = "event_repository"
-    SCENE_EVENT_DETECTION: str = "scene_event_detection"
+    ADD_SECTION: str = "add_section"
+    CREATE_EVENTS: str = "create_events"
+    ADD_ALL_TRACKS: str = "add_all_tracks"
+    CLEAR_ALL_TRACKS: str = "clear_all_tracks"
     PROGRESSBAR: str = "progressbar"
 
     @pytest.fixture
@@ -117,47 +130,78 @@ class TestOTAnalyticsCli:
             self.FLOW_PARSER: Mock(spec=FlowParser),
             self.EVENT_LIST_PARSER: Mock(spec=EventListParser),
             self.EVENT_REPOSITORY: Mock(spec=EventRepository),
-            self.INTERSECT: Mock(spec=RunIntersect),
-            self.SCENE_EVENT_DETECTION: Mock(spec=RunSceneEventDetection),
+            self.ADD_SECTION: Mock(spec=AddSection),
+            self.CREATE_EVENTS: Mock(spec=CreateEvents),
+            self.ADD_ALL_TRACKS: Mock(spec=AddAllTracks),
+            self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
             self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
         }
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
+        track_repository = TrackRepository()
+        section_repository = SectionRepository()
         event_repository = EventRepository()
+        add_events = AddEvents(event_repository)
+
+        get_all_tracks = GetAllTracks(track_repository)
+        add_all_tracks = AddAllTracks(track_repository)
+        clear_all_tracks = ClearAllTracks(track_repository)
+
+        clear_event_repository = ClearEventRepository(event_repository)
+        create_intersection_events = SimpleCreateIntersectionEvents(
+            SimpleRunIntersect(
+                ShapelyIntersector(),
+                MultiprocessingIntersectParallelization(),
+                get_all_tracks,
+            ),
+            section_repository,
+            add_events,
+        )
+        create_scene_events = SimpleCreateSceneEvents(
+            get_all_tracks,
+            SceneActionDetector(SceneEventBuilder()),
+            add_events,
+        )
+        create_events = CreateEvents(
+            clear_event_repository, create_intersection_events, create_scene_events
+        )
         return {
             self.TRACK_PARSER: OttrkParser(
-                CalculateTrackClassificationByMaxConfidence(), TrackRepository()
+                CalculateTrackClassificationByMaxConfidence(),
+                track_repository,
+                TRACK_LENGTH_LIMIT,
             ),
             self.FLOW_PARSER: OtFlowParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.EVENT_REPOSITORY: event_repository,
-            self.INTERSECT: RunIntersect(
-                ShapelyIntersectImplementationAdapter(ShapelyIntersector()),
-                MultiprocessingIntersectParallelization(),
-            ),
-            self.SCENE_EVENT_DETECTION: RunSceneEventDetection(
-                SceneActionDetector(SceneEventBuilder())
-            ),
+            self.ADD_SECTION: AddSection(section_repository),
+            self.CREATE_EVENTS: create_events,
+            self.ADD_ALL_TRACKS: add_all_tracks,
+            self.CLEAR_ALL_TRACKS: clear_all_tracks,
             self.PROGRESSBAR: NoProgressbarBuilder(),
         }
 
     def test_init(self, mock_cli_dependencies: dict[str, Any]) -> None:
         cli_args = CliArguments(
-            True, [f"track_file.{TRACK_FILE_TYPE}"], "sections_file.otflow"
+            True, False, [f"track_file.{TRACK_FILE_TYPE}"], "sections_file.otflow"
         )
         cli = OTAnalyticsCli(cli_args, **mock_cli_dependencies)
         assert cli.cli_args == cli_args
         assert cli._track_parser == mock_cli_dependencies[self.TRACK_PARSER]
         assert cli._flow_parser == mock_cli_dependencies[self.FLOW_PARSER]
         assert cli._event_list_parser == mock_cli_dependencies[self.EVENT_LIST_PARSER]
-        assert cli._intersect == mock_cli_dependencies[self.INTERSECT]
+        assert cli._add_section == mock_cli_dependencies[self.ADD_SECTION]
+        assert cli._create_events == mock_cli_dependencies[self.CREATE_EVENTS]
+        assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
+        assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
+        assert cli._progressbar == mock_cli_dependencies[self.PROGRESSBAR]
 
     def test_init_empty_tracks_cli_arg(
         self, mock_cli_dependencies: dict[str, Any]
     ) -> None:
         cli_args = CliArguments(
-            True, track_files=[], sections_file="section_file.otflow"
+            True, False, track_files=[], sections_file="section_file.otflow"
         )
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli(cli_args, **mock_cli_dependencies)
@@ -166,18 +210,18 @@ class TestOTAnalyticsCli:
         self, mock_cli_dependencies: dict[str, Any]
     ) -> None:
         cli_args = CliArguments(
-            True, track_files=[f"ottrk_file.{TRACK_FILE_TYPE}"], sections_file=""
+            True, False, track_files=[f"ottrk_file.{TRACK_FILE_TYPE}"], sections_file=""
         )
         with pytest.raises(CliParseError, match=r"No otflow file passed.*"):
             OTAnalyticsCli(cli_args, **mock_cli_dependencies)
 
     def test_validate_cli_args_no_tracks(self) -> None:
-        cli_args = CliArguments(True, [], "section.otflow")
+        cli_args = CliArguments(True, False, [], "section.otflow")
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli._validate_cli_args(cli_args)
 
     def test_validate_cli_args_no_section(self) -> None:
-        cli_args = CliArguments(True, [f"track.{TRACK_FILE_TYPE}"], "")
+        cli_args = CliArguments(True, False, [f"track.{TRACK_FILE_TYPE}"], "")
         with pytest.raises(CliParseError, match=r"No otflow file passed.*"):
             OTAnalyticsCli._validate_cli_args(cli_args)
 
@@ -244,7 +288,7 @@ class TestOTAnalyticsCli:
     def test_start_with_no_video_in_folder(
         self, temp_ottrk: Path, temp_section: Path, cli_dependencies: dict[str, Any]
     ) -> None:
-        cli_args = CliArguments(True, [str(temp_ottrk)], str(temp_section))
+        cli_args = CliArguments(True, False, [str(temp_ottrk)], str(temp_section))
         cli = OTAnalyticsCli(cli_args, **cli_dependencies)
         cli.start()
 

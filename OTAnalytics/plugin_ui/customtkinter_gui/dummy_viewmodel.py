@@ -35,12 +35,13 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
-from OTAnalytics.application.generate_flows import FlowNameGenerator
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
 )
+from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -67,6 +68,7 @@ from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import COLUMN_SECTION
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -85,9 +87,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    END,
     EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
+    START,
     CancelExportCounts,
     ToplevelExportCounts,
 )
@@ -104,7 +108,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     ToplevelFlows,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
 TAG_SELECTED_SECTION: str = "selected_section"
@@ -192,6 +196,12 @@ class DummyViewModel(
         self._treeview_videos.update_items()
         self._update_enabled_buttons()
 
+    def notify_files(self) -> None:
+        if self._treeview_files is None:
+            raise MissingInjectedInstanceError(type(self._treeview_files).__name__)
+        self._treeview_files.update_items()
+        self._update_enabled_buttons()
+
     def _update_enabled_buttons(self) -> None:
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
@@ -271,7 +281,7 @@ class DummyViewModel(
         )
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
-        self._intersect_tracks_with_sections()
+        self.notify_files()
 
     def _intersect_tracks_with_sections(self) -> None:
         if self._window is None:
@@ -290,7 +300,6 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()
         self._treeview_sections.update_items()
-        self._intersect_tracks_with_sections()
         self._update_enabled_buttons()
 
     def notify_flows(self, flows: list[FlowId]) -> None:
@@ -335,7 +344,7 @@ class DummyViewModel(
         )
         if not track_files:
             return
-        print(f"Video files to load: {track_files}")
+        logger().info(f"Video files to load: {track_files}")
         paths = [Path(file) for file in track_files]
         self._application.add_videos(files=paths)
 
@@ -344,6 +353,9 @@ class DummyViewModel(
 
     def set_treeview_videos(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_videos = treeview
+
+    def set_treeview_files(self, treeview: AbstractTreeviewInterface) -> None:
+        self._treeview_files = treeview
 
     def set_selected_videos(self, video_paths: list[str]) -> None:
         self._selected_videos = video_paths
@@ -355,6 +367,9 @@ class DummyViewModel(
 
     def get_all_videos(self) -> list[Video]:
         return self._application.get_all_videos()
+
+    def get_all_track_files(self) -> set[Path]:
+        return self._application.get_all_track_files()
 
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
         self._frame_project = project_frame
@@ -382,7 +397,7 @@ class DummyViewModel(
         self._save_otconfig(otconfig_file)
 
     def _save_otconfig(self, otconfig_file: Path) -> None:
-        print(f"Config file to save: {otconfig_file}")
+        logger().info(f"Config file to save: {otconfig_file}")
         try:
             self._application.save_otconfig(otconfig_file)
         except NoSectionsToSave as cause:
@@ -442,7 +457,7 @@ class DummyViewModel(
         )
         if proceed.canceled:
             return
-        print(f"{OTCONFIG} file to load: {otconfig_file}")
+        logger().info(f"{OTCONFIG} file to load: {otconfig_file}")
         self._application.load_otconfig(file=Path(otconfig_file))
         self._show_current_project()
 
@@ -505,7 +520,7 @@ class DummyViewModel(
             self._application.set_selected_section([])
         self._application.set_selected_flows(ids)
 
-        print(f"New flows selected in treeview: id={ids}")
+        logger().debug(f"New flows selected in treeview: id={ids}")
 
     def set_selected_section_ids(self, ids: list[str]) -> None:
         if self._application.action_state.action_running.get():
@@ -515,7 +530,7 @@ class DummyViewModel(
             self._application.set_selected_flows([])
         self._application.set_selected_section(ids)
 
-        print(f"New line sections selected in treeview: id={ids}")
+        logger().debug(f"New line sections selected in treeview: id={ids}")
 
     def get_selected_flow_ids(self) -> list[str]:
         return [
@@ -534,7 +549,7 @@ class DummyViewModel(
         )
         if not track_files:
             return
-        print(f"Tracks files to load: {track_files}")
+        logger().info(f"Tracks files to load: {track_files}")
         track_paths = [Path(file) for file in track_files]
         self._application.add_tracks_of_files(track_files=track_paths)
 
@@ -560,7 +575,7 @@ class DummyViewModel(
             raise ValueError("Configuration file to load has unknown file extension")
 
     def _load_otflow(self, otflow_file: Path) -> None:
-        print(f"otflow file to load: {otflow_file}")
+        logger().info(f"otflow file to load: {otflow_file}")
         self._application.load_otflow(sections_file=Path(otflow_file))
         self.set_selected_section_ids([])
         self.set_selected_flow_ids([])
@@ -586,7 +601,7 @@ class DummyViewModel(
             raise ValueError("Configuration file to save has unknown file extension")
 
     def _save_otflow(self, otflow_file: Path) -> None:
-        print(f"Sections file to save: {otflow_file}")
+        logger().info(f"Sections file to save: {otflow_file}")
         try:
             self._application.save_otflow(Path(otflow_file))
         except NoSectionsToSave as cause:
@@ -655,7 +670,7 @@ class DummyViewModel(
             raise MissingCoordinate("Second coordinate is missing")
         with contextlib.suppress(CancelAddSection):
             section = self.__create_section(coordinates, is_area_section, get_metadata)
-            print(f"New section created: {section.id}")
+            logger().info(f"New section created: {section.id}")
             self._update_selected_sections([section.id])
         self._finish_action()
 
@@ -737,7 +752,7 @@ class DummyViewModel(
             [self._to_coordinate(coordinate) for coordinate in coordinates]
         )
         self._application.update_section(section)
-        print(f"Update section: {section.id}")
+        logger().info(f"Update section: {section.id}")
         self._update_selected_sections([section.id])
         self._finish_action()
 
@@ -817,7 +832,7 @@ class DummyViewModel(
             data=updated_section_data,
         )
         self.refresh_items_on_canvas()
-        print(f"Updated line_section Metadata: {updated_section_data}")
+        logger().info(f"Updated line_section Metadata: {updated_section_data}")
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
         if self._treeview_sections is None:
@@ -978,7 +993,7 @@ class DummyViewModel(
         self._start_action()
         with contextlib.suppress(CancelAddFlow):
             flow = self.__create_flow()
-            print(f"Added new flow: {flow.id}")
+            logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
         self._finish_action()
 
@@ -1008,7 +1023,7 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
         section_ids = [
-            self.__to_id_resource(section) for section in self.get_all_sections()
+            self.__to_resource(section) for section in self.get_all_sections()
         ]
         if len(section_ids) < 2:
             InfoBox(
@@ -1023,7 +1038,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
     ) -> dict:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
@@ -1049,7 +1064,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
     ) -> dict:
         return ToplevelFlows(
             title=title,
@@ -1066,8 +1081,9 @@ class DummyViewModel(
     def generate_flows(self) -> None:
         self._application.generate_flows()
 
-    def __to_id_resource(self, section: Section) -> IdResource:
-        return IdResource(id=section.id.serialize(), name=section.name)
+    def __to_resource(self, section: Section) -> ColumnResource:
+        values = {COLUMN_SECTION: section.name}
+        return ColumnResource(id=section.id.serialize(), values=values)
 
     def __update_flow_data(self, flow_data: dict) -> None:
         flow_id = FlowId(flow_data.get(FLOW_ID, ""))
@@ -1147,8 +1163,8 @@ class DummyViewModel(
         start_msg_popup.close()
 
     def save_events(self, file: str) -> None:
-        print(f"Eventlist file to save: {file}")
         self._application.save_events(Path(file))
+        logger().info(f"Eventlist file saved to '{file}'")
 
     def export_events(self) -> None:
         default_values: dict[str, str] = {
@@ -1163,11 +1179,11 @@ class DummyViewModel(
                 default_values, export_format_extensions
             )
             self._application.export_events(Path(file), event_list_exporter)
-            print(
+            logger().info(
                 f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
             )
         except CancelExportEvents:
-            print("User canceled configuration of export")
+            logger().info("User canceled configuration of export")
 
     def __get_default_export_format(self) -> str:
         if self._event_list_export_formats:
@@ -1357,20 +1373,32 @@ class DummyViewModel(
             for format in self._application.get_supported_export_formats()
         }
         default_format = next(iter(export_formats.keys()))
-        default_values: dict = {INTERVAL: 15, EXPORT_FORMAT: default_format}
+        start = self._application._tracks_metadata.first_detection_occurrence
+        end = self._application._tracks_metadata.last_detection_occurrence
+        modes = list(self._application._tracks_metadata.classifications)
+        default_values: dict = {
+            INTERVAL: 15,
+            START: start,
+            END: end,
+            EXPORT_FORMAT: default_format,
+        }
         try:
             export_values: dict = ToplevelExportCounts(
                 title="Export counts",
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_formats=export_formats,
+                viewmodel=self,
             ).get_data()
-            print(export_values)
+            logger().debug(export_values)
             export_specification = CountingSpecificationDto(
                 interval_in_minutes=export_values[INTERVAL],
-                format=export_values[EXPORT_FORMAT],
+                start=export_values[START],
+                end=export_values[END],
+                modes=modes,
+                output_format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
             )
             self._application.export_counts(export_specification)
         except CancelExportCounts:
-            print("User canceled configuration of export")
+            logger().info("User canceled configuration of export")

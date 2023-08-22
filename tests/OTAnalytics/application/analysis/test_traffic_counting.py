@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -6,16 +6,19 @@ import pytest
 from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
     LEVEL_END_TIME,
+    LEVEL_FLOW,
     LEVEL_START_TIME,
     UNCLASSIFIED,
     CombinedTagger,
     Count,
     CountableAssignments,
     CountByFlow,
+    CountDecorator,
     EventPair,
     Exporter,
     ExporterFactory,
     ExportTrafficCounting,
+    FillEmptyCount,
     ModeTagger,
     MultiTag,
     RoadUserAssigner,
@@ -27,6 +30,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Tagger,
     TaggerFactory,
     TimeslotTagger,
+    create_export_specification,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -51,6 +55,82 @@ def track(track_builder: TrackBuilder) -> Track:
     return track_builder.build_track()
 
 
+class TestCountByFlow:
+    def test_to_dict(self) -> None:
+        value = 2
+        flow_name = "Flow"
+        flow = Mock(spec=Flow)
+        flow.name = flow_name
+        result: dict[Flow, int] = {flow: value}
+        count = CountByFlow(result)
+
+        actual = count.to_dict()
+
+        expected = {SingleTag(LEVEL_FLOW, id=flow_name): value}
+        assert actual == expected
+
+
+class TestCountDecorator:
+    def test_to_dict(self) -> None:
+        other_dict: dict[Tag, int] = {}
+        other = Mock(spec=Count)
+        other.to_dict.return_value = other_dict
+        decorator = CountDecorator(other)
+
+        actual = decorator.to_dict()
+
+        assert actual is other_dict
+        other.to_dict.assert_called_once()
+
+
+class TestFillEmptyCount:
+    def test_fill_empty_tags(self) -> None:
+        flow_name = "Flow"
+        other_dict: dict[Tag, int] = {}
+        other = Mock(spec=Count)
+        other.to_dict.return_value = other_dict
+        flow_tag = SingleTag(LEVEL_FLOW, id=flow_name)
+        tags: list[Tag] = [flow_tag]
+        filled_dict = {flow_tag: 0}
+        count = FillEmptyCount(other, tags)
+
+        actual = count.to_dict()
+
+        assert actual == filled_dict
+        other.to_dict.assert_called_once()
+
+    def test_fill_existing_tags(self) -> None:
+        flow_name = "Flow"
+        mode = "mode"
+        tag = MultiTag(
+            frozenset(
+                [
+                    SingleTag(LEVEL_CLASSIFICATION, id=mode),
+                    SingleTag(LEVEL_FLOW, id=flow_name),
+                ]
+            )
+        )
+        filled_tag = MultiTag(
+            frozenset(
+                [
+                    SingleTag(LEVEL_FLOW, id=flow_name),
+                    SingleTag(LEVEL_CLASSIFICATION, id=mode),
+                ]
+            )
+        )
+        other_dict: dict[Tag, int] = {tag: 1}
+        other = Mock(spec=Count)
+        other.to_dict.return_value = other_dict
+        tags: list[Tag] = [tag]
+        filled_dict = {filled_tag: 1}
+        count = FillEmptyCount(other, tags)
+
+        actual = count.to_dict()
+
+        assert dict(actual) == dict(filled_dict)
+        other.to_dict.assert_called_once()
+
+
 def create_event(
     track_id: TrackId,
     section: SectionId,
@@ -62,7 +142,9 @@ def create_event(
         road_user_id=track_id.id,
         road_user_type="car",
         hostname="my_hostname",
-        occurrence=datetime(2020, 1, 1, 0, minute, second=real_seconds),
+        occurrence=datetime(
+            2020, 1, 1, 0, minute, second=real_seconds, tzinfo=timezone.utc
+        ),
         frame_number=1,
         section_id=section,
         event_coordinate=ImageCoordinate(0, 0),
@@ -275,10 +357,12 @@ class TestCaseBuilder:
             EventPair(first_south, first_west),
         )
         first_result = MultiTag(
-            [
-                SingleTag(level=LEVEL_START_TIME, id="00:00"),
-                SingleTag(level=LEVEL_END_TIME, id="00:01"),
-            ]
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="00:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="00:01"),
+                ]
+            )
         )
 
         second_south = create_event(self.first_track, self.south_section_id, 59)
@@ -289,10 +373,12 @@ class TestCaseBuilder:
             EventPair(second_south, second_west),
         )
         second_result = MultiTag(
-            [
-                SingleTag(level=LEVEL_START_TIME, id="00:00"),
-                SingleTag(level=LEVEL_END_TIME, id="00:01"),
-            ]
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="00:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="00:01"),
+                ]
+            )
         )
 
         third_south = create_event(self.third_track, self.south_section_id, 60)
@@ -303,10 +389,12 @@ class TestCaseBuilder:
             EventPair(third_south, third_west),
         )
         third_result = MultiTag(
-            [
-                SingleTag(level=LEVEL_START_TIME, id="00:01"),
-                SingleTag(level=LEVEL_END_TIME, id="00:02"),
-            ]
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="00:01"),
+                    SingleTag(level=LEVEL_END_TIME, id="00:02"),
+                ]
+            )
         )
 
         forth_south = create_event(self.forth_track, self.south_section_id, 120)
@@ -317,10 +405,12 @@ class TestCaseBuilder:
             EventPair(forth_south, forth_west),
         )
         forth_result = MultiTag(
-            [
-                SingleTag(level=LEVEL_START_TIME, id="00:02"),
-                SingleTag(level=LEVEL_END_TIME, id="00:03"),
-            ]
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="00:02"),
+                    SingleTag(level=LEVEL_END_TIME, id="00:03"),
+                ]
+            )
         )
         return [
             (first_assignment, first_result),
@@ -516,9 +606,9 @@ class TestTimeTagger:
     ) -> None:
         tagger = TimeslotTagger(interval=timedelta(minutes=1))
 
-        group_name = tagger.create_tag(assignment)
+        group = tagger.create_tag(assignment)
 
-        assert group_name == expected_result
+        assert group == expected_result
 
 
 class TestCombinedTagger:
@@ -534,7 +624,7 @@ class TestCombinedTagger:
 
         group_name = tagger.create_tag(assignment)
 
-        assert group_name == MultiTag([first_id, second_id])
+        assert group_name == MultiTag(frozenset([first_id, second_id]))
 
 
 class TestCountableAssignments:
@@ -564,6 +654,7 @@ class TestTrafficCounting:
         exporter = Mock(spec=Exporter)
         events: list[Event] = []
         flows: list[Flow] = []
+        modes: list[str] = []
         assignments = Mock(spec=RoadUserAssignments)
         tagged_assignments = Mock(spec=TaggedAssignments)
         counts = Mock(spec=Count)
@@ -574,10 +665,18 @@ class TestTrafficCounting:
         assignments.tag.return_value = tagged_assignments
         tagged_assignments.count.return_value = counts
         exporter_factory.create_exporter.return_value = exporter
-        specification = CountingSpecificationDto(
+        start = datetime(2023, 1, 1, 0, 0, 0)
+        end = datetime(2023, 1, 1, 0, 15, 0)
+        counting_specification = CountingSpecificationDto(
+            start=start,
+            end=end,
             interval_in_minutes=15,
-            format="csv",
+            modes=modes,
+            output_format="csv",
             output_file="counts.csv",
+        )
+        export_specification = create_export_specification(
+            flows, counting_specification
         )
         use_case = ExportTrafficCounting(
             event_repository,
@@ -587,13 +686,13 @@ class TestTrafficCounting:
             exporter_factory,
         )
 
-        use_case.export(specification)
+        use_case.export(counting_specification)
 
         event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
         road_user_assigner.assign.assert_called_once()
-        tagger_factory.create_tagger.assert_called_once_with(specification)
+        tagger_factory.create_tagger.assert_called_once_with(counting_specification)
         assignments.tag.assert_called_once_with(tagger)
         tagged_assignments.count.assert_called_once_with(flows)
-        exporter_factory.create_exporter.assert_called_once_with(specification)
+        exporter_factory.create_exporter.assert_called_once_with(export_specification)
         exporter.export.assert_called_once_with(counts)

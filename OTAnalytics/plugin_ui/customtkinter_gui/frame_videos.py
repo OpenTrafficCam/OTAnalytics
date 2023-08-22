@@ -8,7 +8,7 @@ from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    IdResource,
+    ColumnResource,
     TreeviewTemplate,
 )
 
@@ -56,22 +56,22 @@ class FrameVideos(EmbeddedCTkFrame):
         )
 
 
-COLUMN_NAME = "Video files"
+COLUMN_VIDEO = "Video files"
 
 
 class TreeviewVideos(TreeviewTemplate):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         self._viewmodel = viewmodel
         super().__init__(**kwargs)
-        self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
 
     def _define_columns(self) -> None:
-        self["columns"] = [COLUMN_NAME]
+        columns = [COLUMN_VIDEO]
+        self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
-        self.column(column=COLUMN_NAME, anchor=tkinter.CENTER, width=150, minwidth=40)
-        self["displaycolumns"] = [COLUMN_NAME]
+        self.column(column=COLUMN_VIDEO, anchor=tkinter.CENTER, width=150, minwidth=40)
+        self["displaycolumns"] = columns
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_treeview_videos(self)
@@ -85,9 +85,10 @@ class TreeviewVideos(TreeviewTemplate):
     def update_items(self) -> None:
         self.delete(*self.get_children())
         item_ids = [
-            self.__to_id_resource(video) for video in self._viewmodel.get_all_videos()
+            self.__to_resource(video) for video in self._viewmodel.get_all_videos()
         ]
         self.add_items(item_ids=item_ids)
 
-    def __to_id_resource(self, video: Video) -> IdResource:
-        return IdResource(id=str(video.get_path()), name=video.get_path().name)
+    def __to_resource(self, video: Video) -> ColumnResource:
+        values = {COLUMN_VIDEO: video.get_path().name}
+        return ColumnResource(id=str(video.get_path()), values=values)
