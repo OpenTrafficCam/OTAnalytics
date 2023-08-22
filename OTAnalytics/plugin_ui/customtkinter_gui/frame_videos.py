@@ -8,7 +8,7 @@ from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    IdResource,
+    ColumnResource,
     TreeviewTemplate,
 )
 
@@ -89,6 +89,6 @@ class TreeviewVideos(TreeviewTemplate):
         ]
         self.add_items(item_ids=item_ids)
 
-    def __to_id_resource(self, video: Video) -> IdResource:
+    def __to_id_resource(self, video: Video) -> ColumnResource:
         values = {COLUMN_VIDEO: video.get_path().name}
-        return IdResource(id=str(video.get_path()), values=values)
+        return ColumnResource(id=str(video.get_path()), values=values)

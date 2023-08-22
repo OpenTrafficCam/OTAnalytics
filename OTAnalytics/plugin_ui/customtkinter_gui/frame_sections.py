@@ -10,7 +10,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractC
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    IdResource,
+    ColumnResource,
     TreeviewTemplate,
 )
 
@@ -162,9 +162,9 @@ class TreeviewSections(TreeviewTemplate):
         ]
         self.add_items(item_ids=sorted(item_ids))
 
-    def __to_id_resource(self, section: Section) -> IdResource:
+    def __to_id_resource(self, section: Section) -> ColumnResource:
         values = {COLUMN_SECTION: section.name}
-        return IdResource(id=section.id.id, values=values)
+        return ColumnResource(id=section.id.id, values=values)
 
 
 class ListboxSections(Listbox):

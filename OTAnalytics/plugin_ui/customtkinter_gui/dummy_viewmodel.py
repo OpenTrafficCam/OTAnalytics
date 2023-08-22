@@ -108,7 +108,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     ToplevelFlows,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
 TAG_SELECTED_SECTION: str = "selected_section"
@@ -1040,7 +1040,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
     ) -> dict:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
@@ -1066,7 +1066,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
     ) -> dict:
         return ToplevelFlows(
             title=title,
@@ -1083,9 +1083,9 @@ class DummyViewModel(
     def generate_flows(self) -> None:
         self._application.generate_flows()
 
-    def __to_id_resource(self, section: Section) -> IdResource:
+    def __to_id_resource(self, section: Section) -> ColumnResource:
         values = {COLUMN_SECTION: section.name}
-        return IdResource(id=section.id.serialize(), values=values)
+        return ColumnResource(id=section.id.serialize(), values=values)
 
     def __update_flow_data(self, flow_data: dict) -> None:
         flow_id = FlowId(flow_data.get(FLOW_ID, ""))

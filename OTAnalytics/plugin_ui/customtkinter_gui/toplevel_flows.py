@@ -13,7 +13,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
     FrameContent,
     ToplevelTemplate,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 FLOW_ID = "Id"
 FLOW_NAME = "Name"
@@ -41,7 +41,7 @@ class InvalidFlowNameException(Exception):
 class FrameConfigureFlow(FrameContent):
     def __init__(
         self,
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
         name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,
@@ -109,10 +109,14 @@ class FrameConfigureFlow(FrameContent):
             self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
             self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
 
-    def _create_section_name_to_id(self, sections: list[IdResource]) -> dict[str, str]:
+    def _create_section_name_to_id(
+        self, sections: list[ColumnResource]
+    ) -> dict[str, str]:
         return {resource.values[COLUMN_SECTION]: resource.id for resource in sections}
 
-    def _create_section_id_to_name(self, sections: list[IdResource]) -> dict[str, str]:
+    def _create_section_id_to_name(
+        self, sections: list[ColumnResource]
+    ) -> dict[str, str]:
         return {resource.id: resource.values[COLUMN_SECTION] for resource in sections}
 
     def __set_initial_values(self) -> None:
@@ -211,7 +215,7 @@ class FrameConfigureFlow(FrameContent):
 class ToplevelFlows(ToplevelTemplate):
     def __init__(
         self,
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
         name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,

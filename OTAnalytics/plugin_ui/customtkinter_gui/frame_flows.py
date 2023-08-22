@@ -9,7 +9,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractC
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    IdResource,
+    ColumnResource,
     TreeviewTemplate,
 )
 
@@ -150,6 +150,6 @@ class TreeviewFlows(TreeviewTemplate):
         ]
         self.add_items(item_ids=sorted(item_ids))
 
-    def __to_id_resource(self, flow: Flow) -> IdResource:
+    def __to_id_resource(self, flow: Flow) -> ColumnResource:
         values = {COLUMN_FLOW: flow.name}
-        return IdResource(id=flow.id.id, values=values)
+        return ColumnResource(id=flow.id.id, values=values)

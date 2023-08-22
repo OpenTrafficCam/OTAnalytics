@@ -9,7 +9,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
 
 @dataclass(frozen=True, order=True)
-class IdResource:
+class ColumnResource:
     """
     Represents a row in a treeview with an id and a dict of values to be shown.
     The dicts keys represent the columns and the values represent the cell values.
@@ -53,7 +53,7 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
         x, y = get_widget_position(self, offset=offset)
         return x, y
 
-    def add_items(self, item_ids: list[IdResource]) -> None:
+    def add_items(self, item_ids: list[ColumnResource]) -> None:
         for id in item_ids:
             cell_values = tuple(id.values[column] for column in self["columns"])
             self.insert(parent="", index="end", iid=id.id, text="", values=cell_values)

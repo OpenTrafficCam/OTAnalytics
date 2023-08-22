@@ -8,7 +8,7 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    IdResource,
+    ColumnResource,
     TreeviewTemplate,
 )
 
@@ -122,10 +122,10 @@ class TreeviewFiles(TreeviewTemplate):
 
     def __to_id_resource(
         self, file: Path, video_loaded: bool, tracks_loaded: bool = True
-    ) -> IdResource:
+    ) -> ColumnResource:
         values = {
             COLUMN_FILE: file.stem,
             COLUMN_TRACKS: "x" if tracks_loaded else "",
             COLUMN_VIDEO: "x" if video_loaded else "",
         }
-        return IdResource(id=str(file), values=values)
+        return ColumnResource(id=str(file), values=values)
