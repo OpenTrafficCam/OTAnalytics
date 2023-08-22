@@ -370,11 +370,7 @@ class DummyViewModel(
         return self._application.get_all_videos()
 
     def get_all_track_files(self) -> set[Path]:
-        return {
-            detection.input_file_path
-            for track in self._application._datastore._track_repository.get_all()
-            for detection in track.detections
-        }
+        return self._application.get_all_track_files()
 
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
         self._frame_project = project_frame

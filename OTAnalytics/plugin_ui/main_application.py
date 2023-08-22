@@ -65,6 +65,7 @@ from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
+    GetAllTrackFiles,
     GetAllTracks,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
@@ -214,6 +215,7 @@ class ApplicationStarter:
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
+        get_all_track_files = self._create_get_all_track_files(track_repository)
         generate_flows = self._create_flow_generator(
             section_repository, flow_repository
         )
@@ -237,6 +239,7 @@ class ApplicationStarter:
             tracks_metadata=tracks_metadata,
             action_state=action_state,
             filter_element_setting_restorer=filter_element_settings_restorer,
+            get_all_track_files=get_all_track_files,
             generate_flows=generate_flows,
             create_intersection_events=intersect_tracks_with_sections,
             export_counts=export_counts,
@@ -713,6 +716,11 @@ class ApplicationStarter:
 
     def _create_flow_state(self) -> FlowState:
         return FlowState()
+
+    def _create_get_all_track_files(
+        self, track_repository: TrackRepository
+    ) -> GetAllTrackFiles:
+        return GetAllTrackFiles(track_repository)
 
     def _create_flow_generator(
         self, section_repository: SectionRepository, flow_repository: FlowRepository
