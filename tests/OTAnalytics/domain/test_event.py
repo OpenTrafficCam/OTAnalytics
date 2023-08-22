@@ -18,8 +18,8 @@ from OTAnalytics.domain.event import (
     Event,
     EventBuilder,
     EventRepository,
+    ImproperFormattedFilename,
     IncompleteEventBuilderSetup,
-    InproperFormattedFilename,
     SceneEventBuilder,
     SectionEventBuilder,
 )
@@ -169,7 +169,7 @@ class TestEventBuilder:
 
     def test_extract_hostname_wrong_format(self) -> None:
         wrong_formatted_name = "myhostname.mp4"
-        with pytest.raises(InproperFormattedFilename):
+        with pytest.raises(ImproperFormattedFilename):
             EventBuilder.extract_hostname(wrong_formatted_name)
 
 

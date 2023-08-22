@@ -26,8 +26,8 @@ DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)_.*\..*"
 
 
-class InproperFormattedFilename(Exception):
-    """This exception indicates an in proper formatted file name."""
+class ImproperFormattedFilename(Exception):
+    """This exception indicates an improper formatted file name."""
 
     pass
 
@@ -176,7 +176,7 @@ class EventBuilder(ABC):
         if match:
             hostname: str = match.group(HOSTNAME)
             return hostname
-        raise InproperFormattedFilename(f"Could not parse {name}. Hostname is missing.")
+        raise ImproperFormattedFilename(f"Could not parse {name}. Hostname is missing.")
 
     def add_road_user_type(self, road_user_type: str) -> None:
         """Add a road user type to add to the event to be build.
