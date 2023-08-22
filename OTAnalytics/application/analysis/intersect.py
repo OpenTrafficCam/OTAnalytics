@@ -3,6 +3,7 @@ from typing import Iterable
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.track import TrackId
 
 
 class RunIntersect(ABC):
@@ -15,3 +16,9 @@ class RunIntersect(ABC):
     def __call__(self, sections: Iterable[Section]) -> list[Event]:
         raise NotImplementedError
         # bla
+
+
+class TracksIntersectingSections(ABC):
+    @abstractmethod
+    def __call__(self, sections: Iterable[Section]) -> set[TrackId]:
+        raise NotImplementedError

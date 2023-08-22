@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable
 from unittest.mock import Mock
 
@@ -64,11 +64,15 @@ class TestDataFramePredicates:
         "predicate, expected_result",
         [
             (
-                DataFrameStartsAtOrAfterDate(OCCURRENCE, datetime(2000, 1, 1)),
+                DataFrameStartsAtOrAfterDate(
+                    OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
+                ),
                 Series([True, True, True, True, True]),
             ),
             (
-                DataFrameStartsAtOrAfterDate(OCCURRENCE, datetime(2000, 1, 10)),
+                DataFrameStartsAtOrAfterDate(
+                    OCCURRENCE, datetime(2000, 1, 10, tzinfo=timezone.utc)
+                ),
                 Series([False, False, False, False, False]),
             ),
             (
@@ -81,7 +85,7 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterDate(
-                    OCCURRENCE, datetime(2000, 1, 1)
+                    OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
                 ).conjunct_with(
                     DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 ),
@@ -89,7 +93,7 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterDate(
-                    OCCURRENCE, datetime(2000, 1, 11)
+                    OCCURRENCE, datetime(2000, 1, 11, tzinfo=timezone.utc)
                 ).conjunct_with(
                     DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 ),
@@ -108,7 +112,7 @@ class TestDataFramePredicates:
 
 class TestDataFrameFilter:
     def test_filter_tracks_fulfill_all(self, track_dataframe: DataFrame) -> None:
-        start_date = datetime(2000, 1, 1)
+        start_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
         starts_at_or_after_date = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
         has_classifications = DataFrameHasClassifications(
             CLASSIFICATION, {"car", "truck"}

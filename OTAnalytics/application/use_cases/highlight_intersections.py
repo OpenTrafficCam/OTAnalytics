@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import Iterable, Optional
 
+from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.state import FlowState, SectionState, TrackViewState
+from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider, TrackRepository
@@ -12,26 +14,26 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
     """Returns track ids intersecting selected sections.
     Args:
         section_state (SectionState): the section state
-        event_repository (EventRepository): the event repository
+        tracks_intersecting_sections (TracksIntersectingSections): get track ids
+            intersecting sections
+        get_section_by_id (GetSectionsById): use case to get sections by id
     """
 
     def __init__(
         self,
         section_state: SectionState,
-        event_repository: EventRepository,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_section_by_id: GetSectionsById,
     ) -> None:
         self._section_state = section_state
-        self._event_repository = event_repository
+        self._tracks_intersecting_sections = tracks_intersecting_sections
+        self._get_section_by_id = get_section_by_id
 
-    def get_ids(self) -> Iterable[TrackId]:
-        intersecting_ids: set[TrackId] = set()
-
+    def get_ids(self) -> set[TrackId]:
         currently_selected_sections = self._section_state.selected_sections.get()
-        for section_id in currently_selected_sections:
-            for event in self._event_repository.get_all():
-                if event.section_id == section_id:
-                    intersecting_ids.add(TrackId(event.road_user_id))
-        return intersecting_ids
+        sections = self._get_section_by_id(currently_selected_sections)
+
+        return self._tracks_intersecting_sections(sections)
 
 
 class TracksNotIntersectingSelection(TrackIdProvider):
