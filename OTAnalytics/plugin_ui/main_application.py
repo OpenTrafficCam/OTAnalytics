@@ -428,10 +428,16 @@ class ApplicationStarter:
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         alpha: float,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
-            TrackBoundingBoxPlotter(pandas_data_provider, state, alpha=alpha),
+            TrackBoundingBoxPlotter(
+                pandas_data_provider,
+                color_palette_provider,
+                state,
+                alpha=alpha,
+            ),
         )
         return PlotterPrototype(state, track_plotter)
 
@@ -601,6 +607,7 @@ class ApplicationStarter:
         track_bounding_box_plotter = self._create_track_bounding_box_plotter(
             track_view_state,
             self.__create_all_filters_provider(track_view_state, track_data_provider),
+            color_palette_provider=color_palette_provider,
             alpha=0.5,
         )
         track_offset_data_provider = self._create_pandas_track_offset_data_provider(

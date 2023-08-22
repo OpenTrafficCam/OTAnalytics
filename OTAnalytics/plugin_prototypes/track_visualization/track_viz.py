@@ -549,15 +549,17 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
 
 class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
-    """Plot geometry of tracks."""
+    """Plot bounding boxes of detections."""
 
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
         track_view_state: TrackViewState,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
         self._track_view_state = track_view_state
         self._alpha = alpha
 
@@ -581,6 +583,8 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
             y = row[Y]
             width = row[W]
             height = row[H]
+            classification = row[track.CLASSIFICATION]
+            color = self._color_palette_provider.get()[classification]
             axes.add_patch(
                 Rectangle(
                     xy=(x, y),
@@ -588,6 +592,7 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
                     height=height,
                     fc="none",
                     linewidth=0.5,
+                    color=color,
                     alpha=0.5,
                 )
             )
