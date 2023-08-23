@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Iterable, Optional
 
 from PIL import Image
@@ -132,7 +133,7 @@ class Detection(DataclassValidation):
         occurrence (datetime): the time of the detection's occurrence.
         interpolated_detection (bool): whether this detection is interpolated.
         track_id (TrackId): the track id this detection belongs to.
-        video_name (str): name of video including filetype extension.
+        video_name (str): name of video that this detection belongs.
     """
 
     classification: str
@@ -419,6 +420,39 @@ class TrackRepository:
         """
         self._tracks.clear()
         self.observers.notify([])
+
+
+class TrackFileRepository:
+    def __init__(self) -> None:
+        self._files: set[Path] = set()
+
+    def add(self, file: Path) -> None:
+        """
+        Add a single track file the repository.
+
+        Args:
+            file (Path): track file to be added.
+        """
+        self._files.add(file)
+
+    def add_all(self, files: Iterable[Path]) -> None:
+        """
+        Add multiple files to the repository.
+
+        Args:
+            files (Iterable[Path]): the files to be added.
+        """
+        for file in files:
+            self.add(file)
+
+    def get_all(self) -> set[Path]:
+        """
+        Retrieve all track files.
+
+        Returns:
+            set[Path]: all tracks within the repository.
+        """
+        return self._files.copy()
 
 
 class TrackIdProvider(ABC):

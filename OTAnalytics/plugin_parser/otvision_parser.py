@@ -31,6 +31,7 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackClassificationCalculator,
+    TrackFileRepository,
     TrackId,
     TrackImage,
     TrackRepository,
@@ -291,10 +292,13 @@ class OttrkParser(TrackParser):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
         track_length_limit: int,
         format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
     ) -> None:
-        super().__init__(track_classification_calculator, track_repository)
+        super().__init__(
+            track_classification_calculator, track_repository, track_file_repository
+        )
         self._track_length_limit = track_length_limit
         self._format_fixer = format_fixer
         self._path_cache: dict[str, Path] = {}
@@ -309,6 +313,7 @@ class OttrkParser(TrackParser):
         Returns:
             list[Track]: the tracks.
         """
+        self._track_file_repository.add(ottrk_file)
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]

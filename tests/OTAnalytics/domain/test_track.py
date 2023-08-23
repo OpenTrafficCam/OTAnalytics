@@ -11,6 +11,7 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
     Track,
+    TrackFileRepository,
     TrackId,
     TrackListObserver,
     TrackObserver,
@@ -297,3 +298,28 @@ class TestTrackRepository:
             call([first_id, second_id]),
             call([]),
         ]
+
+
+class TestTrackFileRepository:
+    @pytest.fixture
+    def mock_file(self) -> Mock:
+        return Mock(spec=Path)
+
+    @pytest.fixture
+    def mock_other_file(self) -> Mock:
+        return Mock(spec=Path)
+
+    def test_add(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        repository = TrackFileRepository()
+        assert repository._files == set()
+        repository.add(mock_file)
+        assert repository._files == {mock_file}
+        repository.add(mock_file)
+        assert repository._files == {mock_file}
+        repository.add(mock_other_file)
+        assert repository._files == {mock_file, mock_other_file}
+
+    def test_add_all(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        repository = TrackFileRepository()
+        repository.add_all([mock_file, mock_other_file])
+        assert repository._files == {mock_file, mock_other_file}

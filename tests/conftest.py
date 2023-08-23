@@ -14,6 +14,7 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
     Track,
+    TrackFileRepository,
     TrackId,
     TrackRepository,
 )
@@ -364,6 +365,7 @@ def tracks(ottrk_path: Path) -> list[Track]:
     ottrk_parser = OttrkParser(
         CalculateTrackClassificationByMaxConfidence(),
         TrackRepository(),
+        TrackFileRepository(),
         TRACK_LENGTH_LIMIT,
     )
     return ottrk_parser.parse(ottrk_path)
