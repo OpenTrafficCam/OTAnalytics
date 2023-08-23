@@ -5,6 +5,9 @@ from customtkinter import CTkFrame, CTkLabel, CTkSlider
 from OTAnalytics.domain import geometry
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX
 
+SLIDER_RESOLUTION = 0.1
+DECIMAL_DIGITS = 1
+
 
 class FrameBboxOffset(CTkFrame):
     def __init__(
@@ -33,7 +36,7 @@ class FrameBboxOffset(CTkFrame):
             width=110,
             from_=0,
             to=1,
-            number_of_steps=10,
+            number_of_steps=1 / SLIDER_RESOLUTION,
             command=self._on_slider_change,
         )
         self.slider_x.bind("<ButtonRelease-1>", self._on_slider_release)
@@ -69,19 +72,19 @@ class FrameBboxOffset(CTkFrame):
         self.label_y_value.configure(text=str(y))
 
     def get_relative_offset_coordintes(self) -> dict:
-        x = round(self.slider_x.get(), 2)
-        y = round(self.slider_y.get(), 2)
+        x = round(self.slider_x.get(), DECIMAL_DIGITS)
+        y = round(self.slider_y.get(), DECIMAL_DIGITS)
         return {geometry.X: x, geometry.Y: y}
 
     def _on_slider_change(self, value: Any) -> None:
         x, y = self._get_slider_values()
-        self.label_x_value.configure(text=round(x, 1))
-        self.label_y_value.configure(text=round(y, 1))
+        self.label_x_value.configure(text=round(x, DECIMAL_DIGITS))
+        self.label_y_value.configure(text=round(y, DECIMAL_DIGITS))
 
     def _on_slider_release(self, value: Any) -> None:
         x, y = self._get_slider_values()
         if self._notify_change is not None:
-            self._notify_change(round(x, 2), round(y, 2))
+            self._notify_change(round(x, DECIMAL_DIGITS), round(y, DECIMAL_DIGITS))
 
     def _get_slider_values(self) -> tuple[float, float]:
         x = self.slider_x.get()
