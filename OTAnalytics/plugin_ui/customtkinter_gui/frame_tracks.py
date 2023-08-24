@@ -5,7 +5,6 @@ from customtkinter import CTkButton
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.domain import geometry
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
 
@@ -29,11 +28,7 @@ class TracksFrame(AbstractFrameTracks):
             master=self,
             frame_heading="Offset",
             relative_offset_coordinates=RELATIVE_SECTION_OFFSET.to_dict(),
-        )
-        self.button_update_offset = CTkButton(
-            master=self,
-            text="Update plot",
-            command=self._on_change_offset,
+            notify_change=self._viewmodel.set_track_offset,
         )
         self.button_change_to_section_offset = CTkButton(
             master=self,
@@ -50,22 +45,13 @@ class TracksFrame(AbstractFrameTracks):
         self._frame_bbox_offset.grid(
             row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_update_offset.grid(
-            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
         self.button_change_to_section_offset.grid(
-            row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def update_offset(self, new_offset_x: float, new_offset_y: float) -> None:
         self._frame_bbox_offset.set_relative_offset_coordintes(
             x=new_offset_x, y=new_offset_y
-        )
-
-    def _on_change_offset(self) -> None:
-        offset_coordinates = self._frame_bbox_offset.get_relative_offset_coordintes()
-        self._viewmodel.set_track_offset(
-            offset_coordinates[geometry.X], offset_coordinates[geometry.Y]
         )
 
     def _on_change_to_section_offset(self) -> None:
