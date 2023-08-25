@@ -7,6 +7,10 @@ class SectionAlreadyExists(Exception):
     pass
 
 
+class SectionIdAlreadyExists(Exception):
+    pass
+
+
 class GetAllSections:
     """Get all sections from the repository."""
 
@@ -46,16 +50,33 @@ class GetSectionsById:
 class AddSection:
     """
     Add a single section to the repository.
+
+    Args:
+        section_repository (SectionRepository): the section repository to add the
+            section to.
     """
 
     def __init__(self, section_repository: SectionRepository) -> None:
         self._section_repository = section_repository
 
-    def add(self, section: Section) -> None:
+    def __call__(self, section: Section) -> None:
+        """Adds section to the section repository.
+
+        Raises:
+            SectionAlreadyExists: if section name already exists in repository.
+            SectionIdAlreadyExists: if section id already exists in repository.
+
+        Args:
+            section (Section): the section to be added.
+        """
         if not self.is_section_name_valid(section.name):
             raise SectionAlreadyExists(
                 f"A section with the name {section.name} already exists. "
                 "Choose another name."
+            )
+        if not self.is_section_id_valid(section.id):
+            raise SectionIdAlreadyExists(
+                f"A section with id {section.id} already exists."
             )
         self._section_repository.add(section)
 
@@ -66,3 +87,20 @@ class AddSection:
             stored_section.name != section_name
             for stored_section in self._section_repository.get_all()
         )
+
+    def is_section_id_valid(self, section_id: SectionId) -> bool:
+        return not (section_id in self._section_repository.get_section_ids())
+
+
+class ClearSections:
+    """Clear the section repository.
+
+    Args:
+        section_repository: the section repository to be cleared.
+    """
+
+    def __init__(self, section_repository: SectionRepository):
+        self._section_repository = section_repository
+
+    def __call__(self) -> None:
+        self._section_repository.clear()
