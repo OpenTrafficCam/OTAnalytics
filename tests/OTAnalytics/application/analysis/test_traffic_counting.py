@@ -19,11 +19,13 @@ from OTAnalytics.application.analysis.traffic_counting import (
     ExporterFactory,
     ExportTrafficCounting,
     FillEmptyCount,
+    FilterBySectionEnterEvent,
     ModeTagger,
     MultiTag,
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
+    SimpleRoadUserAssigner,
     SingleTag,
     Tag,
     TaggedAssignments,
@@ -518,7 +520,22 @@ def create_assignment_test_cases() -> (
     return TestCaseBuilder().build_assignment_test_cases()
 
 
-class TestRoadUserAssigner:
+class TestFilterBySectionEnterEvent:
+    def test_assign_filters_by_section_enter_event(self) -> None:
+        enter_scene_event = Mock(spec=Event)
+        enter_scene_event.event_type = EventType.ENTER_SCENE
+        section_enter_event = Mock(spec=Event)
+        section_enter_event.event_type = EventType.SECTION_ENTER
+        flow = Mock(spec=Flow)
+
+        road_user_assigner = Mock(spec=RoadUserAssigner)
+
+        decorator = FilterBySectionEnterEvent(road_user_assigner)
+        decorator.assign([enter_scene_event, section_enter_event], [flow])
+        road_user_assigner.assign.assert_called_once_with([section_enter_event], [flow])
+
+
+class TestSimpleRoadUserAssigner:
     @pytest.mark.parametrize(
         "events, flows, expected_result", create_assignment_test_cases()
     )
@@ -528,7 +545,7 @@ class TestRoadUserAssigner:
         flows: list[Flow],
         expected_result: RoadUserAssignments,
     ) -> None:
-        analysis = RoadUserAssigner()
+        analysis = SimpleRoadUserAssigner()
         result = analysis.assign(events, flows)
 
         assert result == expected_result

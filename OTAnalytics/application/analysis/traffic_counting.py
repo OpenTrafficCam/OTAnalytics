@@ -14,6 +14,7 @@ from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import TrackId, TrackRepository
+from OTAnalytics.domain.types import EventType
 
 LEVEL_FLOW = "flow"
 LEVEL_CLASSIFICATION = "classification"
@@ -479,7 +480,52 @@ class RoadUserAssignments:
         return RoadUserAssignments.__name__ + repr(self._assignments)
 
 
-class RoadUserAssigner:
+class RoadUserAssigner(ABC):
+    """
+    Class to assign tracks to flows.
+    """
+
+    @abstractmethod
+    def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
+        """
+        Assign each track to exactly one flow.
+
+        Args:
+            events (Iterable[Event]): events to be used during assignment
+            flows (list[Flow]): flows to assign tracks to
+
+        Returns:
+            RoadUserAssignments: group of RoadUserAssignment objects
+        """
+        raise NotImplementedError
+
+
+class RoadUserAssignerDecorator(RoadUserAssigner):
+    """
+    Decorator class for RoadUserAssigner.
+
+    Args:
+        other: the RoadUserAssigner to be decorated.
+    """
+
+    def __init__(self, other: RoadUserAssigner) -> None:
+        self._other = other
+
+    def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
+        return self._other.assign(events, flows)
+
+
+class FilterBySectionEnterEvent(RoadUserAssignerDecorator):
+    """Decorator to filters events by event type section-enter."""
+
+    def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
+        section_enter_events: list[Event] = [
+            event for event in events if event.event_type == EventType.SECTION_ENTER
+        ]
+        return super().assign(section_enter_events, flows)
+
+
+class SimpleRoadUserAssigner(RoadUserAssigner):
     """
     Class to assign tracks to flows.
     """
