@@ -5,7 +5,7 @@ from OTAnalytics.application.datastore import FlowParser
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import (
     AddFlow,
-    ClearFlows,
+    ClearAllFlows,
     FlowAlreadyExists,
 )
 from OTAnalytics.application.use_cases.section_repository import (
@@ -27,7 +27,7 @@ class LoadOtflow:
 
     Args:
         clear_all_sections (ClearAllSections): use case to clear section repository.
-        clear_flows (ClearFlows): use case to clear flow repository.
+        clear_all_flows (ClearAllFlows): use case to clear flow repository.
         clear_all_events (ClearAllEvents): use case to clear event repository.
         flow_parser (FlowParser): to parse sections and flows from file.
         add_section (AddSection): use case to add sections to section repository.
@@ -37,14 +37,14 @@ class LoadOtflow:
     def __init__(
         self,
         clear_all_sections: ClearAllSections,
-        clear_flows: ClearFlows,
+        clear_all_flows: ClearAllFlows,
         clear_all_events: ClearAllEvents,
         flow_parser: FlowParser,
         add_section: AddSection,
         add_flow: AddFlow,
     ) -> None:
         self._clear_all_sections = clear_all_sections
-        self._clear_flows = clear_flows
+        self._clear_all_flows = clear_all_flows
         self._clear_all_events = clear_all_events
         self._flow_parser = flow_parser
         self._add_section = add_section
@@ -73,7 +73,7 @@ class LoadOtflow:
     def _clear_repositories(self) -> None:
         self._clear_all_events()
         self._clear_all_sections()
-        self._clear_flows()
+        self._clear_all_flows()
 
     def _add_sections(self, sections: Iterable[Section]) -> None:
         for section in sections:

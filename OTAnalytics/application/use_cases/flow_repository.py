@@ -52,7 +52,7 @@ class AddFlow:
         return not (flow_id in self._flow_repository.get_flow_ids())
 
 
-class ClearFlows:
+class ClearAllFlows:
     """Clear the flow repository.
 
     Args:
