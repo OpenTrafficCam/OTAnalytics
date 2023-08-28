@@ -5,7 +5,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.datastore import FlowParser
-from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
+from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import (
     AddFlow,
     ClearFlows,
@@ -27,7 +27,7 @@ from OTAnalytics.domain.section import Section
 class MockDependencies(TypedDict):
     clear_sections: Mock
     clear_flows: Mock
-    clear_events: Mock
+    clear_all_events: Mock
     flow_parser: Mock
     add_section: Mock
     add_flow: Mock
@@ -52,7 +52,7 @@ class TestLoadOtflow:
     ) -> MockDependencies:
         clear_sections = Mock(spec=ClearSections)
         clear_flows = Mock(spec=ClearFlows)
-        clear_events = Mock(spec=ClearEventRepository)
+        clear_all_events = Mock(spec=ClearAllEvents)
 
         flow_parser = Mock(spec=FlowParser)
         flow_parser.parse.return_value = (
@@ -65,7 +65,7 @@ class TestLoadOtflow:
         return {
             "clear_sections": clear_sections,
             "clear_flows": clear_flows,
-            "clear_events": clear_events,
+            "clear_all_events": clear_all_events,
             "flow_parser": flow_parser,
             "add_section": add_section,
             "add_flow": add_flow,
@@ -89,7 +89,7 @@ class TestLoadOtflow:
             call(mock_second_section),
         ]
         assert mock_deps["add_flow"].call_args_list == [call(mock_flow)]
-        mock_deps["clear_events"].assert_called_once()
+        mock_deps["clear_all_events"].assert_called_once()
         mock_deps["clear_flows"].assert_called_once()
         mock_deps["clear_sections"].assert_called_once()
 
@@ -107,7 +107,7 @@ class TestLoadOtflow:
         mock_deps["add_flow"].assert_not_called()
         assert mock_deps["clear_sections"].call_count == 2
         assert mock_deps["clear_flows"].call_count == 2
-        assert mock_deps["clear_events"].call_count == 2
+        assert mock_deps["clear_all_events"].call_count == 2
 
     def test_load_flow_file_invalid_flow_file(
         self,
@@ -130,4 +130,4 @@ class TestLoadOtflow:
         mock_deps["add_flow"].assert_called_once_with(mock_flow)
         assert mock_deps["clear_sections"].call_count == 2
         assert mock_deps["clear_flows"].call_count == 2
-        assert mock_deps["clear_events"].call_count == 2
+        assert mock_deps["clear_all_events"].call_count == 2
