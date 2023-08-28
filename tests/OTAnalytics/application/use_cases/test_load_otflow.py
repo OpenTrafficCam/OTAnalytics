@@ -5,10 +5,10 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.datastore import FlowParser
-from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
+from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import (
     AddFlow,
-    ClearFlows,
+    ClearAllFlows,
     FlowAlreadyExists,
 )
 from OTAnalytics.application.use_cases.load_otflow import (
@@ -17,7 +17,7 @@ from OTAnalytics.application.use_cases.load_otflow import (
 )
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
-    ClearSections,
+    ClearAllSections,
     SectionAlreadyExists,
 )
 from OTAnalytics.domain.flow import Flow
@@ -25,9 +25,9 @@ from OTAnalytics.domain.section import Section
 
 
 class MockDependencies(TypedDict):
-    clear_sections: Mock
-    clear_flows: Mock
-    clear_events: Mock
+    clear_all_sections: Mock
+    clear_all_flows: Mock
+    clear_all_events: Mock
     flow_parser: Mock
     add_section: Mock
     add_flow: Mock
@@ -50,9 +50,9 @@ class TestLoadOtflow:
     def mock_deps(
         self, mock_first_section: Mock, mock_second_section: Mock, mock_flow: Mock
     ) -> MockDependencies:
-        clear_sections = Mock(spec=ClearSections)
-        clear_flows = Mock(spec=ClearFlows)
-        clear_events = Mock(spec=ClearEventRepository)
+        clear_all_sections = Mock(spec=ClearAllSections)
+        clear_all_flows = Mock(spec=ClearAllFlows)
+        clear_all_events = Mock(spec=ClearAllEvents)
 
         flow_parser = Mock(spec=FlowParser)
         flow_parser.parse.return_value = (
@@ -63,9 +63,9 @@ class TestLoadOtflow:
         add_section = Mock(spec=AddSection)
         add_flow = Mock(spec=AddFlow)
         return {
-            "clear_sections": clear_sections,
-            "clear_flows": clear_flows,
-            "clear_events": clear_events,
+            "clear_all_sections": clear_all_sections,
+            "clear_all_flows": clear_all_flows,
+            "clear_all_events": clear_all_events,
             "flow_parser": flow_parser,
             "add_section": add_section,
             "add_flow": add_flow,
@@ -89,9 +89,9 @@ class TestLoadOtflow:
             call(mock_second_section),
         ]
         assert mock_deps["add_flow"].call_args_list == [call(mock_flow)]
-        mock_deps["clear_events"].assert_called_once()
-        mock_deps["clear_flows"].assert_called_once()
-        mock_deps["clear_sections"].assert_called_once()
+        mock_deps["clear_all_events"].assert_called_once()
+        mock_deps["clear_all_flows"].assert_called_once()
+        mock_deps["clear_all_sections"].assert_called_once()
 
     def test_load_flow_file_invalid_section_file(
         self, mock_deps: MockDependencies, mock_first_section: Mock
@@ -105,9 +105,9 @@ class TestLoadOtflow:
 
         mock_deps["add_section"].assert_called_once_with(mock_first_section)
         mock_deps["add_flow"].assert_not_called()
-        assert mock_deps["clear_sections"].call_count == 2
-        assert mock_deps["clear_flows"].call_count == 2
-        assert mock_deps["clear_events"].call_count == 2
+        assert mock_deps["clear_all_sections"].call_count == 2
+        assert mock_deps["clear_all_flows"].call_count == 2
+        assert mock_deps["clear_all_events"].call_count == 2
 
     def test_load_flow_file_invalid_flow_file(
         self,
@@ -128,6 +128,6 @@ class TestLoadOtflow:
             call(mock_second_section),
         ]
         mock_deps["add_flow"].assert_called_once_with(mock_flow)
-        assert mock_deps["clear_sections"].call_count == 2
-        assert mock_deps["clear_flows"].call_count == 2
-        assert mock_deps["clear_events"].call_count == 2
+        assert mock_deps["clear_all_sections"].call_count == 2
+        assert mock_deps["clear_all_flows"].call_count == 2
+        assert mock_deps["clear_all_events"].call_count == 2

@@ -4,6 +4,7 @@ import pytest
 
 from OTAnalytics.application.use_cases.flow_repository import (
     AddFlow,
+    ClearAllFlows,
     FlowAlreadyExists,
     FlowIdAlreadyExists,
 )
@@ -71,3 +72,11 @@ class TestAddFlow:
 
         with pytest.raises(FlowIdAlreadyExists):
             use_case(new_section)
+
+
+class TestClearAllFlows:
+    def test_clear_all_flows(self) -> None:
+        flow_repository = Mock(spec=FlowRepository)
+        clear_all_flows = ClearAllFlows(flow_repository)
+        clear_all_flows()
+        flow_repository.clear.assert_called_once()

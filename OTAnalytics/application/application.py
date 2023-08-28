@@ -21,7 +21,7 @@ from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
 )
-from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
+from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
@@ -83,7 +83,7 @@ class OTAnalyticsApplication:
         load_otflow: LoadOtflow,
         add_section: AddSection,
         add_flow: AddFlow,
-        clear_event_repository: ClearEventRepository,
+        clear_all_events: ClearAllEvents,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -98,7 +98,7 @@ class OTAnalyticsApplication:
         self._get_all_track_files = get_all_track_files
         self._generate_flows = generate_flows
         self._create_intersection_events = create_intersection_events
-        self._clear_event_repository = clear_event_repository
+        self._clear_all_events = clear_all_events
         self._export_counts = export_counts
         self._project_updater = ProjectUpdater(datastore)
         self._save_otconfig = SaveOtconfig(
@@ -116,11 +116,11 @@ class OTAnalyticsApplication:
         self._datastore.register_sections_observer(self.section_state)
 
     def connect_clear_event_repository_observer(self) -> None:
-        self._datastore.register_sections_observer(self._clear_event_repository)
+        self._datastore.register_sections_observer(self._clear_all_events)
         self._datastore.register_section_changed_observer(
-            self._clear_event_repository.on_section_changed
+            self._clear_all_events.on_section_changed
         )
-        self._datastore.register_tracks_observer(self._clear_event_repository)
+        self._datastore.register_tracks_observer(self._clear_all_events)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._datastore.register_video_observer(observer)

@@ -47,11 +47,8 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
-from OTAnalytics.application.use_cases.event_repository import (
-    AddEvents,
-    ClearEventRepository,
-)
-from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearFlows
+from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearAllFlows
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -70,7 +67,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
-    ClearSections,
+    ClearAllSections,
     GetSectionsById,
 )
 from OTAnalytics.application.use_cases.track_repository import (
@@ -235,14 +232,14 @@ class ApplicationStarter:
             section_repository, flow_repository
         )
         add_events = AddEvents(event_repository)
-        clear_events = ClearEventRepository(event_repository)
+        clear_all_events = ClearAllEvents(event_repository)
         get_all_tracks = GetAllTracks(track_repository)
-        clear_sections = ClearSections(section_repository)
-        clear_flows = ClearFlows(flow_repository)
+        clear_all_sections = ClearAllSections(section_repository)
+        clear_all_flows = ClearAllFlows(flow_repository)
         add_section = AddSection(section_repository)
         add_flow = AddFlow(flow_repository)
         create_events = self._create_use_case_create_events(
-            section_repository, clear_events, get_all_tracks, add_events
+            section_repository, clear_all_events, get_all_tracks, add_events
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
@@ -253,9 +250,9 @@ class ApplicationStarter:
             event_repository, flow_repository, track_repository
         )
         load_otflow = self._create_use_case_load_otflow(
-            clear_sections,
-            clear_flows,
-            clear_events,
+            clear_all_sections,
+            clear_all_flows,
+            clear_all_events,
             datastore._flow_parser,
             add_section,
             add_flow,
@@ -277,7 +274,7 @@ class ApplicationStarter:
             load_otflow=load_otflow,
             add_section=add_section,
             add_flow=add_flow,
-            clear_event_repository=clear_events,
+            clear_all_events=clear_all_events,
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
@@ -313,9 +310,9 @@ class ApplicationStarter:
         add_section = AddSection(section_repository)
         add_events = AddEvents(event_repository)
         get_all_tracks = GetAllTracks(track_repository)
-        clear_events = ClearEventRepository(event_repository)
+        clear_all_events = ClearAllEvents(event_repository)
         create_events = self._create_use_case_create_events(
-            section_repository, clear_events, get_all_tracks, add_events
+            section_repository, clear_all_events, get_all_tracks, add_events
         )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
@@ -831,7 +828,7 @@ class ApplicationStarter:
     def _create_use_case_create_events(
         self,
         section_repository: SectionRepository,
-        clear_events: ClearEventRepository,
+        clear_events: ClearAllEvents,
         get_all_tracks: GetAllTracks,
         add_events: AddEvents,
     ) -> CreateEvents:
@@ -858,17 +855,17 @@ class ApplicationStarter:
 
     @staticmethod
     def _create_use_case_load_otflow(
-        clear_sections: ClearSections,
-        clear_flows: ClearFlows,
-        clear_events: ClearEventRepository,
+        clear_all_sections: ClearAllSections,
+        clear_all_flows: ClearAllFlows,
+        clear_all_events: ClearAllEvents,
         flow_parser: FlowParser,
         add_section: AddSection,
         add_flow: AddFlow,
     ) -> LoadOtflow:
         return LoadOtflow(
-            clear_sections,
-            clear_flows,
-            clear_events,
+            clear_all_sections,
+            clear_all_flows,
+            clear_all_events,
             flow_parser,
             add_section,
             add_flow,
