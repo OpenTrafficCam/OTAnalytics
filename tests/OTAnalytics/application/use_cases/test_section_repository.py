@@ -4,6 +4,7 @@ import pytest
 
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
+    ClearAllSections,
     GetAllSections,
     GetSectionsById,
     SectionAlreadyExists,
@@ -101,3 +102,11 @@ class TestAddSection:
 
         with pytest.raises(SectionIdAlreadyExists):
             use_case(new_section)
+
+
+class TestClearAllSections:
+    def test_clear_all_sections(self) -> None:
+        section_repository = Mock(spec=SectionRepository)
+        clear_all_sections = ClearAllSections(section_repository)
+        clear_all_sections()
+        section_repository.clear.assert_called_once()
