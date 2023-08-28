@@ -124,7 +124,7 @@ class VideoListObserver(ABC):
         Notifies that the given videos have been added.
 
         Args:
-            tracks (list[Video]): list of added videos
+            videos (list[Video]): list of added videos
         """
         pass
 
@@ -166,7 +166,7 @@ class VideoRepository:
         Listen to changes of the repository.
 
         Args:
-            observer (VideoListObserver): listener to be notifed about changes
+            observer (VideoListObserver): listener to be notified about changes.
         """
         self._observers.register(observer)
 
