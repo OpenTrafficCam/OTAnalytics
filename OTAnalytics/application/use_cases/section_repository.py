@@ -92,7 +92,7 @@ class AddSection:
         return not (section_id in self._section_repository.get_section_ids())
 
 
-class ClearSections:
+class ClearAllSections:
     """Clear the section repository.
 
     Args:

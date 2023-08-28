@@ -67,7 +67,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
-    ClearSections,
+    ClearAllSections,
     GetSectionsById,
 )
 from OTAnalytics.application.use_cases.track_repository import (
@@ -234,7 +234,7 @@ class ApplicationStarter:
         add_events = AddEvents(event_repository)
         clear_all_events = ClearAllEvents(event_repository)
         get_all_tracks = GetAllTracks(track_repository)
-        clear_sections = ClearSections(section_repository)
+        clear_all_sections = ClearAllSections(section_repository)
         clear_flows = ClearFlows(flow_repository)
         add_section = AddSection(section_repository)
         add_flow = AddFlow(flow_repository)
@@ -250,7 +250,7 @@ class ApplicationStarter:
             event_repository, flow_repository, track_repository
         )
         load_otflow = self._create_use_case_load_otflow(
-            clear_sections,
+            clear_all_sections,
             clear_flows,
             clear_all_events,
             datastore._flow_parser,
@@ -855,7 +855,7 @@ class ApplicationStarter:
 
     @staticmethod
     def _create_use_case_load_otflow(
-        clear_sections: ClearSections,
+        clear_all_sections: ClearAllSections,
         clear_flows: ClearFlows,
         clear_all_events: ClearAllEvents,
         flow_parser: FlowParser,
@@ -863,7 +863,7 @@ class ApplicationStarter:
         add_flow: AddFlow,
     ) -> LoadOtflow:
         return LoadOtflow(
-            clear_sections,
+            clear_all_sections,
             clear_flows,
             clear_all_events,
             flow_parser,
