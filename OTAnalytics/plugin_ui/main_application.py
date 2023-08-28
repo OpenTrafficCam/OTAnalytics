@@ -8,7 +8,9 @@ from OTAnalytics.application.analysis.intersect import (
 )
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
+    FilterBySectionEnterEvent,
     RoadUserAssigner,
+    SimpleRoadUserAssigner,
     SimpleTaggerFactory,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
@@ -193,7 +195,7 @@ class ApplicationStarter:
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
         flow_state = self._create_flow_state()
-        road_user_assigner = RoadUserAssigner()
+        road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
 
         pandas_data_provider = self._create_pandas_data_provider(
             datastore, track_view_state, pulling_progressbar_builder
@@ -814,7 +816,7 @@ class ApplicationStarter:
         return ExportTrafficCounting(
             event_repository,
             flow_repository,
-            RoadUserAssigner(),
+            FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleTaggerFactory(track_repository),
             FillZerosExporterFactory(SimpleExporterFactory()),
         )
