@@ -147,7 +147,7 @@ class CachedPlotter(Plotter):
 
     def plot(self) -> Optional[TrackImage]:
         if self._cache is None:
-            self._cache = super().plot()
+            self._cache = self._other.plot()
 
         return self._cache
 
