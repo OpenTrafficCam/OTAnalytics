@@ -311,3 +311,15 @@ class ViewModel(ABC):
     @abstractmethod
     def export_counts(self) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def start_new_project(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_project_name(self, name: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_project_start_date(self, start_date: Optional[datetime]) -> None:
+        raise NotImplementedError

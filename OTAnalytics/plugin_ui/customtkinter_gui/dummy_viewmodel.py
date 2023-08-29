@@ -154,6 +154,7 @@ class DummyViewModel(
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
         self._window: Optional[AbstractMainWindow] = None
+        self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_sections: Optional[AbstractFrame] = None
@@ -1422,3 +1423,25 @@ class DummyViewModel(
             self._application.export_counts(export_specification)
         except CancelExportCounts:
             logger().info("User canceled configuration of export")
+
+    def start_new_project(self) -> None:
+        proceed = InfoBox(
+            message=(
+                "This will start a new project. \n"
+                "All configured project settings, sections, flows, tracks, and videos "
+                "will be reset to the default application settings."
+            ),
+            initial_position=self._get_window_position(),
+            show_cancel=True,
+        )
+        if proceed.canceled:
+            return
+        self._application.start_new_project()
+        self._show_current_project()
+        logger().info("Start new project.")
+
+    def update_project_name(self, name: str) -> None:
+        self._application.update_project_name(name)
+
+    def update_project_start_date(self, start_date: Optional[datetime]) -> None:
+        self._application.update_project_start_date(start_date)
