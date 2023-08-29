@@ -281,7 +281,7 @@ class ApplicationStarter:
         project_updater = self._create_project_updater(datastore)
         reset_project_config = self._create_reset_project_config(project_updater)
         start_new_project = self._create_use_case_start_new_project(
-            clear_repositories, reset_project_config
+            clear_repositories, reset_project_config, track_view_state
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -922,8 +922,11 @@ class ApplicationStarter:
     def _create_use_case_start_new_project(
         clear_repositories: ClearRepositories,
         reset_project_config: ResetProjectConfig,
+        track_view_state: TrackViewState,
     ) -> StartNewProject:
-        return StartNewProject(clear_repositories, reset_project_config)
+        return StartNewProject(
+            clear_repositories, reset_project_config, track_view_state
+        )
 
     @staticmethod
     def _create_reset_project_config(

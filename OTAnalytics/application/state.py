@@ -163,12 +163,7 @@ class ObservableOptionalProperty(Generic[VALUE]):
 
 
 class TrackViewState:
-    """
-    This state represents the information to be shown on the ui.
-
-    Args:
-        filter_element_state (FilterElementState): the filter element state
-    """
+    """This state represents the information to be shown on the ui."""
 
     def __init__(self) -> None:
         self.background_image = ObservableOptionalProperty[TrackImage]()
