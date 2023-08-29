@@ -198,3 +198,4 @@ class VideoRepository:
         Clear the repository.
         """
         self._videos.clear()
+        self._observers.notify([])
