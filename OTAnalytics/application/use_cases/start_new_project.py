@@ -1,3 +1,4 @@
+from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
@@ -28,3 +29,4 @@ class StartNewProject:
         self._clear_repositories()
         self._reset_project_config()
         self._track_view_state.background_image.set(None)
+        self._track_view_state.track_offset.set(DEFAULT_TRACK_OFFSET)

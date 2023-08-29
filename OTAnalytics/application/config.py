@@ -1,10 +1,13 @@
 import platform
 from pathlib import Path
 
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+
 LOG_DIR = Path(".logs").absolute()
 """The log save directory."""
 
 GEOMETRY_CACHE_SIZE: int = 20000
+DEFAULT_TRACK_OFFSET: RelativeOffsetCoordinate = RelativeOffsetCoordinate(0.5, 0.5)
 
 OS: str = platform.system()
 """OS OTAnalyitcs is currently running on"""

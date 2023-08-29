@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Callable, Generic, Iterable, Optional
 
+from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
@@ -168,7 +169,7 @@ class TrackViewState:
     def __init__(self) -> None:
         self.background_image = ObservableOptionalProperty[TrackImage]()
         self.track_offset = ObservableOptionalProperty[RelativeOffsetCoordinate](
-            RelativeOffsetCoordinate(0.5, 0.5)
+            DEFAULT_TRACK_OFFSET
         )
         self.filter_element = ObservableProperty[FilterElement](
             FilterElement(DateRange(None, None), None)
