@@ -8,6 +8,9 @@ from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
+from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
+    AbstractFrameTrackPlotting,
+)
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -326,4 +329,10 @@ class ViewModel(ABC):
 
     @abstractmethod
     def on_start_new_project(self, _: None) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_frame_track_plotting(
+        self, frame_track_plotting: AbstractFrameTrackPlotting
+    ) -> None:
         raise NotImplementedError

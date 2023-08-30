@@ -10,6 +10,9 @@ from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
+from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
+    AbstractFrameTrackPlotting,
+)
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -161,6 +164,7 @@ class DummyViewModel(
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._canvas: Optional[AbstractCanvas] = None
+        self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._new_section: dict = {}
@@ -1446,6 +1450,11 @@ class DummyViewModel(
     def update_project_start_date(self, start_date: Optional[datetime]) -> None:
         self._application.update_project_start_date(start_date)
 
+    def on_start_new_project(self, _: None) -> None:
+        self._reset_filters()
+        self._reset_plotting_layer()
+        self._display_preview_image()
+
     def _reset_filters(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
@@ -1456,6 +1465,12 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         self._canvas.add_preview_image()
 
-    def on_start_new_project(self, _: None) -> None:
-        self._reset_filters()
-        self._display_preview_image()
+    def _reset_plotting_layer(self) -> None:
+        if self._frame_track_plotting is None:
+            raise MissingInjectedInstanceError(AbstractFrameTrackPlotting.__name__)
+        self._frame_track_plotting.reset_layers()
+
+    def set_frame_track_plotting(
+        self, frame_track_plotting: AbstractFrameTrackPlotting
+    ) -> None:
+        self._frame_track_plotting = frame_track_plotting
