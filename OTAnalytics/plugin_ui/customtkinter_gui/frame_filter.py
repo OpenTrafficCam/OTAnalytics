@@ -100,6 +100,10 @@ class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
             row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
         )
 
+    def reset(self) -> None:
+        self._get_widgets()
+        self._place_widgets()
+
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_filter_frame(self)
 

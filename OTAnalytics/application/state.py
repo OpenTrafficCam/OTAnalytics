@@ -180,6 +180,15 @@ class TrackViewState:
             list[Video]
         ](default=[])
 
+    def reset(self) -> None:
+        """Reset to default settings."""
+        self.selected_videos.set([])
+        self.background_image.set(None)
+        self.view_width.set(DEFAULT_WIDTH)
+        self.view_height.set(DEFAULT_HEIGHT)
+        self.filter_element.set(FilterElement(DateRange(None, None), None))
+        self.track_offset.set(DEFAULT_TRACK_OFFSET)
+
 
 class TrackPropertiesUpdater:
     """

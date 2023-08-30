@@ -1445,3 +1445,8 @@ class DummyViewModel(
 
     def update_project_start_date(self, start_date: Optional[datetime]) -> None:
         self._application.update_project_start_date(start_date)
+
+    def reset_filters(self, _: None) -> None:
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+        self._frame_filter.reset()
