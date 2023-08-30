@@ -28,5 +28,6 @@ class StartNewProject:
         """Start a new OTAnalytics project."""
         self._clear_repositories()
         self._reset_project_config()
+        self._track_view_state.selected_videos.set([])
         self._track_view_state.background_image.set(None)
         self._track_view_state.track_offset.set(DEFAULT_TRACK_OFFSET)
