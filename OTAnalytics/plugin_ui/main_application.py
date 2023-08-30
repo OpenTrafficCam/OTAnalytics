@@ -322,7 +322,7 @@ class ApplicationStarter:
         datastore.register_section_changed_observer(
             image_updater.notify_section_changed
         )
-        start_new_project.register(dummy_viewmodel.reset_filters)
+        start_new_project.register(dummy_viewmodel.on_start_new_project)
 
         for layer in layers:
             layer.register(image_updater.notify_layers)

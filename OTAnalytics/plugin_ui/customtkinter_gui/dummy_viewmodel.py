@@ -1446,7 +1446,16 @@ class DummyViewModel(
     def update_project_start_date(self, start_date: Optional[datetime]) -> None:
         self._application.update_project_start_date(start_date)
 
-    def reset_filters(self, _: None) -> None:
+    def _reset_filters(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
         self._frame_filter.reset()
+
+    def _display_preview_image(self) -> None:
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
+        self._canvas.add_preview_image()
+
+    def on_start_new_project(self, _: None) -> None:
+        self._reset_filters()
+        self._display_preview_image()

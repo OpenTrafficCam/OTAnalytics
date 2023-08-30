@@ -323,3 +323,7 @@ class ViewModel(ABC):
     @abstractmethod
     def update_project_start_date(self, start_date: Optional[datetime]) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def on_start_new_project(self, _: None) -> None:
+        raise NotImplementedError
