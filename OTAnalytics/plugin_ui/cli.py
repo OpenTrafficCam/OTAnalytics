@@ -3,6 +3,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from OTAnalytics.application.config import (
+    DEFAULT_EVENTLIST_FILE_TYPE,
+    DEFAULT_EVENTLIST_SAVE_NAME,
+    DEFAULT_SECTIONS_FILE_TYPE,
+    DEFAULT_TRACK_FILE_TYPE,
+)
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.create_events import CreateEvents
@@ -15,12 +21,6 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import Track
-
-EVENTLIST_FILE_TYPE = "otevents"
-TRACK_FILE_TYPE = "ottrk"
-
-SECTIONS_FILE_TYPE = "otflow"
 
 
 class CliParseError(Exception):
@@ -41,6 +41,7 @@ class CliArguments:
     debug: bool
     track_files: list[str]
     sections_file: str
+    eventlist_filename: str
 
 
 class CliArgumentParser:
@@ -81,6 +82,13 @@ class CliArgumentParser:
             required=False,
         )
         self._parser.add_argument(
+            "--save-name",
+            default="",
+            type=str,
+            help="Name of the otevents file.",
+            required=False,
+        )
+        self._parser.add_argument(
             "--debug",
             action="store_true",
             help="Set log level to DEBUG.",
@@ -94,7 +102,9 @@ class CliArgumentParser:
             CliArguments: _description_
         """
         args = self._parser.parse_args()
-        return CliArguments(args.cli, args.debug, args.ottrks, args.otflow)
+        return CliArguments(
+            args.cli, args.debug, args.ottrks, args.otflow, args.save_name
+        )
 
 
 class OTAnalyticsCli:
@@ -149,50 +159,55 @@ class OTAnalyticsCli:
         for section in sections:
             self._add_section(section)
 
-    def _parse_tracks(self, track_file: Path) -> Iterable[Track]:
-        return self._track_parser.parse(track_file)
+    def _parse_tracks(self, track_files: list[Path]) -> None:
+        for track_file in self._progressbar(track_files, "Parsed track files", "files"):
+            tracks = self._track_parser.parse(track_file)
+            self._add_all_tracks(tracks)
 
     def _run_analysis(
         self, ottrk_files: set[Path], sections: Iterable[Section]
     ) -> None:
-        """Run analysis.
-
-        Args:
-            ottrk_files (list[Path]): the ottrk files to be analyzed
-        """
+        """Run analysis."""
+        self._clear_all_tracks()
+        self._event_repository.clear()
         self._add_sections(sections)
+        ottrk_files_sorted: list[Path] = sorted(
+            ottrk_files, key=lambda file: str(file).lower()
+        )
+        self._parse_tracks(ottrk_files_sorted)
 
-        messages: list[str] = []
-        for ottrk_file in self._progressbar(
-            list(ottrk_files), "Analyzed files", "files"
-        ):
-            self._clear_all_tracks()
-            self._event_repository.clear()
-            save_path = self._determine_eventlist_save_path(ottrk_file)
-            tracks = self._parse_tracks(ottrk_file)
-            self._add_all_tracks(tracks)
-            self._create_events()
-            self._event_list_parser.serialize(
-                self._event_repository.get_all(), sections, save_path
-            )
-            messages.append(f"Analysis finished. Event list saved at '{save_path}'")
+        logger().info("Create event list ...")
+        self._create_events()
+        logger().info("Event list created.")
 
-        for msg in messages:
-            logger().info(msg)
+        save_path = self._determine_eventlist_save_path(ottrk_files_sorted[0])
+        self._event_list_parser.serialize(
+            self._event_repository.get_all(), sections, save_path
+        )
+        logger().info(f"Event list saved at '{save_path}'")
 
-    @staticmethod
-    def _determine_eventlist_save_path(track_file: Path) -> Path:
+    def _determine_eventlist_save_path(self, track_file: Path) -> Path:
         """Determine save path of eventlist.
 
-        The save path will be determined by the location of the track file.
+        The save path will be the parent directory of the track file.
+        The eventlist file name will be either name passed via CLI or the
+        `DEFAULT_EVENTLIST_FILENAME`.
 
         Args:
-            track_file (Path): the track file used to determine the save path
+            track_file (Path): the track file used to determine the save path.
 
         Returns:
-            Path: the save path of the event list
+            Path: the save path of the event list.
         """
-        return track_file.with_suffix(f".{EVENTLIST_FILE_TYPE}")
+        eventlist_file_name = self.cli_args.eventlist_filename
+        if eventlist_file_name == "":
+            return track_file.with_name(
+                f"{DEFAULT_EVENTLIST_SAVE_NAME}.{DEFAULT_EVENTLIST_FILE_TYPE}"
+            )
+
+        return track_file.with_name(
+            f"{self.cli_args.eventlist_filename}.{DEFAULT_EVENTLIST_FILE_TYPE}"
+        )
 
     @staticmethod
     def _validate_cli_args(args: CliArguments) -> None:
@@ -228,11 +243,14 @@ class OTAnalyticsCli:
         for file in files:
             ottrk_file = Path(file)
             if ottrk_file.is_dir():
-                files_in_directory = ottrk_file.rglob(f"*.{TRACK_FILE_TYPE}")
+                files_in_directory = ottrk_file.rglob(f"*.{DEFAULT_TRACK_FILE_TYPE}")
                 ottrk_files.update(files_in_directory)
                 continue
 
-            if not ottrk_file.exists() or ottrk_file.suffix != f".{TRACK_FILE_TYPE}":
+            if (
+                not ottrk_file.exists()
+                or ottrk_file.suffix != f".{DEFAULT_TRACK_FILE_TYPE}"
+            ):
                 logger().warning(
                     f"Ottrk file'{ottrk_file}' does not exist. Skipping file."
                 )
@@ -260,7 +278,7 @@ class OTAnalyticsCli:
                 f"Sections file '{sections_file}' does not exist. "
                 "Unable to run analysis."
             )
-        if sections_file.suffix != f".{SECTIONS_FILE_TYPE}":
+        if sections_file.suffix != f".{DEFAULT_SECTIONS_FILE_TYPE}":
             raise InvalidSectionFileType(
                 f"Sections file {sections_file} has wrong file type. "
                 "Unable to run analysis."
