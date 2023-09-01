@@ -26,11 +26,7 @@ VALID_TRACK_SIZE: int = 5
 
 @dataclass(frozen=True)
 class TrackId(DataclassValidation):
-    id: int
-
-    def _validate(self) -> None:
-        if self.id < 1:
-            raise ValueError("track id must be greater equal 1")
+    id: str
 
 
 class TrackListObserver(ABC):

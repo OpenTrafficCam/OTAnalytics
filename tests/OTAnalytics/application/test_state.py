@@ -32,8 +32,8 @@ from OTAnalytics.domain.track import (
 
 class TestTrackState:
     def test_notify_observer(self) -> None:
-        first_track = TrackId(1)
-        changed_track = TrackId(2)
+        first_track = TrackId("1")
+        changed_track = TrackId("2")
         observer = Mock(spec=TrackObserver)
         state = TrackState()
         state.register(observer)
@@ -48,8 +48,8 @@ class TestTrackState:
         ]
 
     def test_update_selected_track_on_notify_tracks(self) -> None:
-        first_track = TrackId(1)
-        second_track = TrackId(2)
+        first_track = TrackId("1")
+        second_track = TrackId("2")
         state = TrackState()
 
         state.notify_tracks([first_track, second_track])
@@ -57,7 +57,7 @@ class TestTrackState:
         assert state.selected_track == first_track
 
     def test_update_selected_track_on_notify_tracks_with_empty_list(self) -> None:
-        first_track = TrackId(1)
+        first_track = TrackId("1")
         state = TrackState()
 
         state.notify_tracks([first_track])
@@ -152,7 +152,7 @@ class TestTrackImageUpdater:
         section_state = SectionState()
         background_image = Mock(spec=TrackImage)
         plotter.plot.return_value = background_image
-        track_id = TrackId(1)
+        track_id = TrackId("1")
         track = Mock(spec=Track)
         datastore = Mock(spec=Datastore)
         track_view_state = TrackViewState()
@@ -198,7 +198,7 @@ class TestTracksMetadata:
         self, first_detection: Mock, second_detection: Mock, third_detection: Mock
     ) -> Mock:
         track = Mock(spec=Track).return_value
-        track.id = TrackId(1)
+        track.id = TrackId("1")
         track.classification = "car"
         track.detections = [first_detection, second_detection, third_detection]
         return track

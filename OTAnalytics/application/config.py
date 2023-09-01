@@ -5,6 +5,7 @@ LOG_DIR = Path(".logs").absolute()
 """The log save directory."""
 
 GEOMETRY_CACHE_SIZE: int = 20000
+CUTTING_SECTION_MARKER: str = "#cut"
 
 OS: str = platform.system()
 """OS OTAnalyitcs is currently running on"""

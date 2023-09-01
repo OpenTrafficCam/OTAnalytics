@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Iterable, Optional
 
+from OTAnalytics.application.config import CUTTING_SECTION_MARKER
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import Subject
@@ -14,6 +15,7 @@ NAME: str = "name"
 TYPE: str = "type"
 LINE: str = "line"
 AREA: str = "area"
+CUTTING: str = "cutting"
 COORDINATES: str = "coordinates"
 RELATIVE_OFFSET_COORDINATES: str = "relative_offset_coordinates"
 PLUGIN_DATA: str = "plugin_data"
@@ -22,6 +24,7 @@ PLUGIN_DATA: str = "plugin_data"
 class SectionType(Enum):
     AREA = AREA
     LINE = LINE
+    CUTTING = CUTTING
 
 
 @dataclass(frozen=True)
@@ -314,6 +317,19 @@ class Area(Section):
 
     def get_type(self) -> SectionType:
         return SectionType.AREA
+
+
+class CuttingSection(LineSection):
+    def _validate(self) -> None:
+        super()._validate()
+        if not self.name.startswith(CUTTING_SECTION_MARKER):
+            raise ValueError(
+                f"Name of cutting section must start with '{CUTTING_SECTION_MARKER}',"
+                f" but is  '{self.name}'."
+            )
+
+    def get_type(self) -> SectionType:
+        return SectionType.CUTTING
 
 
 class MissingSection(Exception):

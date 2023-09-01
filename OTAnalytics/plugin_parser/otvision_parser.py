@@ -388,7 +388,7 @@ class OttrkParser(TrackParser):
                 ),
                 input_file_path=path,
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-                track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
+                track_id=TrackId(str(det_dict[ottrk_format.TRACK_ID])),
                 video_name=metadata_video[ottrk_format.FILENAME]
                 + metadata_video[ottrk_format.FILETYPE],
             )

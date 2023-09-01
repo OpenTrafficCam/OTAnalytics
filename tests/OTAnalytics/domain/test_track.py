@@ -32,7 +32,7 @@ def valid_detection_dict() -> dict:
         ottrk_format.OCCURRENCE: datetime(2022, 1, 1, 1, 0, 0),
         ottrk_format.INPUT_FILE_PATH: Path("path/to/file.otdet"),
         ottrk_format.INTERPOLATED_DETECTION: False,
-        "track-id": TrackId(1),
+        "track-id": TrackId("1"),
         "video_name": "file.mp4",
     }
 
@@ -59,7 +59,7 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
 
 class TestTrackSubject:
     def test_notify_observer(self) -> None:
-        changed_track = TrackId(1)
+        changed_track = TrackId("1")
         observer = Mock(spec=TrackObserver)
         subject = TrackSubject()
         subject.register(observer)
@@ -79,8 +79,6 @@ class TestDetection:
             (0, -1, -0.0001, 1, 1, 1, 1),
             (0, 2, 1, 1, -0.0001, 1, 1),
             (0, 2, 1, 1, 1, 0, 1),
-            (0, 1, 1, 1, 1, 1, -1),
-            (0, 1, 1, 1, 1, 1, 0),
         ],
     )
     def test_value_error_raised_with_invalid_arg(
@@ -105,7 +103,7 @@ class TestDetection:
                 occurrence=datetime(2022, 1, 1, 1, 0, 0),
                 input_file_path=Path("path/to/file.otdet"),
                 interpolated_detection=False,
-                track_id=TrackId(track_id),
+                track_id=TrackId(str(track_id)),
                 video_name="file.mp4",
             )
 
@@ -130,22 +128,17 @@ class TestDetection:
 
 
 class TestTrack:
-    @pytest.mark.parametrize("id", [0, -1, 0.5])
-    def test_value_error_raised_with_invalid_arg(self, id: int) -> None:
-        with pytest.raises(ValueError):
-            TrackId(id)
-
     def test_raise_error_on_empty_detections(self) -> None:
         with pytest.raises(BuildTrackWithLessThanNDetectionsError):
-            Track(id=TrackId(1), classification="car", detections=[])
+            Track(id=TrackId("1"), classification="car", detections=[])
 
     def test_error_on_single_detection(self, valid_detection: Detection) -> None:
         with pytest.raises(BuildTrackWithLessThanNDetectionsError):
-            Track(id=TrackId(5), classification="car", detections=[valid_detection])
+            Track(id=TrackId("5"), classification="car", detections=[valid_detection])
 
     def test_instantiation_with_valid_args(self, valid_detection: Detection) -> None:
         track = Track(
-            id=TrackId(5),
+            id=TrackId("5"),
             classification="car",
             detections=[
                 valid_detection,
@@ -155,7 +148,7 @@ class TestTrack:
                 valid_detection,
             ],
         )
-        assert track.id == TrackId(5)
+        assert track.id == TrackId("5")
         assert track.classification == "car"
         assert track.detections == [
             valid_detection,
@@ -181,7 +174,7 @@ class TestTrack:
         end_detection = Mock(spec=Detection)
         end_detection.occurrence = end_time
         track = Track(
-            TrackId(1),
+            TrackId("1"),
             "car",
             [
                 start_detection,
@@ -229,7 +222,7 @@ class TestCalculateTrackClassificationByMaxConfidence:
 
 class TestTrackRepository:
     def test_add(self) -> None:
-        track_id = TrackId(1)
+        track_id = TrackId("1")
         track = Mock()
         track.id = track_id
         observer = Mock(spec=TrackListObserver)
@@ -252,8 +245,8 @@ class TestTrackRepository:
         observer.notify_tracks.assert_not_called()
 
     def test_add_all(self) -> None:
-        first_id = TrackId(1)
-        second_id = TrackId(2)
+        first_id = TrackId("1")
+        second_id = TrackId("2")
         first_track = Mock()
         first_track.id = first_id
         second_track = Mock()
@@ -270,7 +263,7 @@ class TestTrackRepository:
 
     def test_get_by_id(self) -> None:
         first_track = Mock()
-        first_track.id.return_value = TrackId(1)
+        first_track.id.return_value = TrackId("1")
         second_track = Mock()
         repository = TrackRepository()
         repository.add_all([first_track, second_track])
@@ -280,8 +273,8 @@ class TestTrackRepository:
         assert returned == first_track
 
     def test_clear(self) -> None:
-        first_id = TrackId(1)
-        second_id = TrackId(2)
+        first_id = TrackId("1")
+        second_id = TrackId("2")
         first_track = Mock()
         first_track.id = first_id
         second_track = Mock()

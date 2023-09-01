@@ -278,7 +278,7 @@ class TestOttrkParser:
         )
 
         expected_sorted = {
-            TrackId(1): track_builder_setup_with_sample_data.build_detections()
+            TrackId("1"): track_builder_setup_with_sample_data.build_detections()
         }
 
         assert expected_sorted == result_sorted_input
@@ -568,7 +568,7 @@ class TestOtFlowParser:
 
 class TestOtEventListParser:
     def test_convert_event(self, test_data_tmp_dir: Path) -> None:
-        road_user_id = 1
+        road_user_id = "1"
         road_user_type = "car"
         hostname = "myhostname"
         section_id = SectionId("N")

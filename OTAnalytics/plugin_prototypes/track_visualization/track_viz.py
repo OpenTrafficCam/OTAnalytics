@@ -191,7 +191,7 @@ class FilterById(PandasDataFrameProvider):
         data = self._other.get_data()
         if data.empty:
             return data
-        ids: set[int] = {track_id.id for track_id in self._filter.get_ids()}
+        ids: set[str] = {track_id.id for track_id in self._filter.get_ids()}
         return data.loc[data[track.TRACK_ID].isin(ids)]
 
 

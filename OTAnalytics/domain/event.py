@@ -58,7 +58,7 @@ class Event(DataclassValidation):
         ValueError: frame_number < 1
 
     Args:
-        road_user_id (int): the road user id involved with this event. It must be
+        road_user_id (str): the road user id involved with this event. It must be
             greater equal one
         road_user_type (str): the road user type involved with this event
         hostname (str): the OTCamera hostname that the video is associated with
@@ -75,7 +75,7 @@ class Event(DataclassValidation):
 
     """
 
-    road_user_id: int
+    road_user_id: str
     road_user_type: str
     hostname: str
     occurrence: datetime
@@ -87,7 +87,6 @@ class Event(DataclassValidation):
     video_name: str
 
     def _validate(self) -> None:
-        self._validate_road_user_id_greater_zero()
         self._validate_frame_number_greater_equal_one()
 
     def _validate_frame_number_greater_equal_one(self) -> None:
@@ -99,12 +98,6 @@ class Event(DataclassValidation):
                         f"but is {self.frame_number}"
                     )
                 )
-            )
-
-    def _validate_road_user_id_greater_zero(self) -> None:
-        if self.road_user_id < 1:
-            raise ValueError(
-                f"vehicle_id must be at least 1, but is {self.road_user_id}"
             )
 
     def to_dict(self) -> dict:

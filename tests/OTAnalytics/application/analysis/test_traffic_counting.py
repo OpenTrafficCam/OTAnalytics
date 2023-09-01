@@ -158,12 +158,12 @@ def create_event(
 
 class TestCaseBuilder:
     def __init__(self) -> None:
-        self.first_track = TrackId(1)
-        self.second_track = TrackId(2)
-        self.third_track = TrackId(3)
-        self.forth_track = TrackId(4)
-        self.fifth_track = TrackId(5)
-        self.sixth_track = TrackId(6)
+        self.first_track = TrackId("1")
+        self.second_track = TrackId("2")
+        self.third_track = TrackId("3")
+        self.forth_track = TrackId("4")
+        self.fifth_track = TrackId("5")
+        self.sixth_track = TrackId("6")
         self.south_section_id = SectionId("south")
         self.north_section_id = SectionId("north")
         self.west_section_id = SectionId("west")
@@ -596,7 +596,7 @@ class TestModeTagger:
         )
 
     def test_create_tag_missing_track(self) -> None:
-        track_id = 1
+        track_id = "1"
         flow = Mock(spec=Flow)
         first_event = Mock(spec=Event)
         second_event = Mock(spec=Event)
