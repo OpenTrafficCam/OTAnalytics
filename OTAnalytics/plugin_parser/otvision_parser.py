@@ -317,9 +317,11 @@ class OttrkParser(TrackParser):
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
-        return self._parse_tracks(
+        tracks = self._parse_tracks(
             dets_list, ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
         )
+        self._track_file_repository.add(ottrk_file)
+        return tracks
 
     def _parse_tracks(self, dets: list[dict], metadata_video: dict) -> list[Track]:
         """Parse the detections of ottrk located at ottrk["data"]["detections"].
