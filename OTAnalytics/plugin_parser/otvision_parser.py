@@ -320,6 +320,7 @@ class OttrkParser(TrackParser):
         tracks = self._parse_tracks(
             dets_list, ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
         )
+        # Add only after parsing was successful
         self._track_file_repository.add(ottrk_file)
         return tracks
 
