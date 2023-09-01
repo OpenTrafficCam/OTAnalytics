@@ -77,8 +77,8 @@ class LoadOtflow:
 
     def _add_sections(self, sections: Iterable[Section]) -> None:
         for section in sections:
-            self._add_section.__call__(section)
+            self._add_section(section)
 
     def _add_flows(self, flows: Iterable[Flow]) -> None:
         for flow in flows:
-            self._add_flow.__call__(flow)
+            self._add_flow(flow)

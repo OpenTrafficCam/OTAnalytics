@@ -69,7 +69,7 @@ class TestAddSection:
     ) -> None:
         use_case = AddSection(section_repository)
 
-        use_case.__call__(section_south)
+        use_case(section_south)
 
         assert section_repository.add.call_args_list == [
             call(section_south),
