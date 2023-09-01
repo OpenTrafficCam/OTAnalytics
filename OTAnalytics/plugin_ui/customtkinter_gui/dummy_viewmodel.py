@@ -34,6 +34,7 @@ from OTAnalytics.application.application import (
     MultipleSectionsSelected,
     OTAnalyticsApplication,
 )
+from OTAnalytics.application.config import DEFAULT_COUNTING_INTERVAL_IN_MINUTES
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.config import MissingDate
@@ -1386,7 +1387,7 @@ class DummyViewModel(
         end = self._application._tracks_metadata.last_detection_occurrence
         modes = list(self._application._tracks_metadata.classifications)
         default_values: dict = {
-            INTERVAL: 15,
+            INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
             START: start,
             END: end,
             EXPORT_FORMAT: default_format,

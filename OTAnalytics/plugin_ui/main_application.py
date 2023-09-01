@@ -51,6 +51,7 @@ from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearEventRepository,
 )
+from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -286,11 +287,13 @@ class ApplicationStarter:
     def start_cli(self, cli_args: CliArguments) -> None:
         track_repository = self._create_track_repository()
         section_repository = self._create_section_repository()
+        flow_repository = self._create_flow_repository()
         track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
         add_section = AddSection(section_repository)
+        add_flow = AddFlow(flow_repository)
         add_events = AddEvents(event_repository)
         get_all_tracks = GetAllTracks(track_repository)
         create_events = self._create_use_case_create_events(
@@ -298,6 +301,9 @@ class ApplicationStarter:
         )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
+        export_counts = self._create_export_counts(
+            event_repository, flow_repository, track_repository
+        )
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
@@ -306,7 +312,9 @@ class ApplicationStarter:
             event_repository=event_repository,
             add_section=add_section,
             create_events=create_events,
+            export_counts=export_counts,
             add_all_tracks=add_all_tracks,
+            add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
             progressbar=TqdmBuilder(),
         ).start()

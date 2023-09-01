@@ -7,9 +7,16 @@ from unittest.mock import Mock, patch
 import pytest
 
 from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
+from OTAnalytics.application.analysis.traffic_counting import (
+    ExportCounts,
+    ExportTrafficCounting,
+    FilterBySectionEnterEvent,
+    SimpleRoadUserAssigner,
+    SimpleTaggerFactory,
+)
 from OTAnalytics.application.config import (
+    DEFAULT_EVENTLIST_FILE_STEM,
     DEFAULT_EVENTLIST_FILE_TYPE,
-    DEFAULT_EVENTLIST_SAVE_NAME,
     DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
@@ -23,6 +30,7 @@ from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearEventRepository,
 )
+from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
@@ -40,6 +48,10 @@ from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
+)
+from OTAnalytics.plugin_parser.export import (
+    FillZerosExporterFactory,
+    SimpleExporterFactory,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
@@ -124,7 +136,9 @@ class TestOTAnalyticsCli:
     EVENT_LIST_PARSER: str = "event_list_parser"
     EVENT_REPOSITORY: str = "event_repository"
     ADD_SECTION: str = "add_section"
+    ADD_FLOW: str = "add_flow"
     CREATE_EVENTS: str = "create_events"
+    EXPORT_COUNTS: str = "export_counts"
     ADD_ALL_TRACKS: str = "add_all_tracks"
     CLEAR_ALL_TRACKS: str = "clear_all_tracks"
     PROGRESSBAR: str = "progressbar"
@@ -137,7 +151,9 @@ class TestOTAnalyticsCli:
             self.EVENT_LIST_PARSER: Mock(spec=EventListParser),
             self.EVENT_REPOSITORY: Mock(spec=EventRepository),
             self.ADD_SECTION: Mock(spec=AddSection),
+            self.ADD_FLOW: Mock(spec=AddFlow),
             self.CREATE_EVENTS: Mock(spec=CreateEvents),
+            self.EXPORT_COUNTS: Mock(spec=ExportCounts),
             self.ADD_ALL_TRACKS: Mock(spec=AddAllTracks),
             self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
             self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
@@ -148,6 +164,7 @@ class TestOTAnalyticsCli:
         track_repository = TrackRepository()
         section_repository = SectionRepository()
         event_repository = EventRepository()
+        flow_repository = FlowRepository()
         add_events = AddEvents(event_repository)
 
         get_all_tracks = GetAllTracks(track_repository)
@@ -172,6 +189,13 @@ class TestOTAnalyticsCli:
         create_events = CreateEvents(
             clear_event_repository, create_intersection_events, create_scene_events
         )
+        export_counts = ExportTrafficCounting(
+            event_repository,
+            flow_repository,
+            FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
+            SimpleTaggerFactory(track_repository),
+            FillZerosExporterFactory(SimpleExporterFactory()),
+        )
         return {
             self.TRACK_PARSER: OttrkParser(
                 CalculateTrackClassificationByMaxConfidence(),
@@ -182,7 +206,9 @@ class TestOTAnalyticsCli:
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.EVENT_REPOSITORY: event_repository,
             self.ADD_SECTION: AddSection(section_repository),
+            self.ADD_FLOW: AddFlow(flow_repository),
             self.CREATE_EVENTS: create_events,
+            self.EXPORT_COUNTS: export_counts,
             self.ADD_ALL_TRACKS: add_all_tracks,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
             self.PROGRESSBAR: NoProgressbarBuilder(),
@@ -202,7 +228,9 @@ class TestOTAnalyticsCli:
         assert cli._flow_parser == mock_cli_dependencies[self.FLOW_PARSER]
         assert cli._event_list_parser == mock_cli_dependencies[self.EVENT_LIST_PARSER]
         assert cli._add_section == mock_cli_dependencies[self.ADD_SECTION]
+        assert cli._add_flow == mock_cli_dependencies[self.ADD_FLOW]
         assert cli._create_events == mock_cli_dependencies[self.CREATE_EVENTS]
+        assert cli._export_counts == mock_cli_dependencies[self.EXPORT_COUNTS]
         assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
         assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
         assert cli._progressbar == mock_cli_dependencies[self.PROGRESSBAR]
@@ -310,7 +338,7 @@ class TestOTAnalyticsCli:
 
     @pytest.mark.parametrize(
         "eventlist_filename,expected_filename",
-        [("my_events", "my_events"), ("", DEFAULT_EVENTLIST_SAVE_NAME)],
+        [("my_events", "my_events"), ("", DEFAULT_EVENTLIST_FILE_STEM)],
     )
     def test_determine_eventlist_save_path(
         self,
