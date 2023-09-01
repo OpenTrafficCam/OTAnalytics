@@ -5,6 +5,10 @@ LOG_DIR = Path(".logs").absolute()
 """The log save directory."""
 
 GEOMETRY_CACHE_SIZE: int = 20000
+DEFAULT_EVENTLIST_SAVE_NAME: str = "events"
+DEFAULT_EVENTLIST_FILE_TYPE: str = "otevents"
+DEFAULT_TRACK_FILE_TYPE: str = "ottrk"
+DEFAULT_SECTIONS_FILE_TYPE: str = "otflow"
 
 OS: str = platform.system()
 """OS OTAnalyitcs is currently running on"""
