@@ -1209,8 +1209,17 @@ class DummyViewModel(
         return event_list_exporter, file
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
+        if self._window is None:
+            raise MissingInjectedInstanceError(type(self._window).__name__)
+
+        start_msg_popup = MinimalInfoBox(
+            message="Apply offset...",
+            initial_position=self._window.get_position(),
+        )
         offset = geometry.RelativeOffsetCoordinate(offset_x, offset_y)
         self._application.track_view_state.track_offset.set(offset)
+        start_msg_popup.update_message(message="Apply offset completed")
+        start_msg_popup.close()
 
     def get_track_offset(self) -> Optional[tuple[float, float]]:
         if current_offset := self._application.get_current_track_offset():
