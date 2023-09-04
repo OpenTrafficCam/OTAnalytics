@@ -4,6 +4,10 @@ from typing import Any
 from customtkinter import CTkButton
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.config import (
+    DEFAULT_EVENTLIST_FILE_TYPE,
+    DEFAULT_EVENTLIST_SAVE_NAME,
+)
 from OTAnalytics.application.logger import logger
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
@@ -88,7 +92,7 @@ class FrameAnalysis(EmbeddedCTkFrame):
             title="Save event list file as",
             filetypes=[("events file", "*.otevents")],
             defaultextension=".otevents",
-            initialfile="events.otevents",
+            initialfile=f"{DEFAULT_EVENTLIST_SAVE_NAME}.{DEFAULT_EVENTLIST_FILE_TYPE}",
         )
         if not file:
             return
