@@ -25,6 +25,7 @@ from OTAnalytics.application.datastore import (
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
 from OTAnalytics.application.plotting import (
+    CachedPlotter,
     LayeredPlotter,
     PlottingLayer,
     TrackBackgroundPlotter,
@@ -119,17 +120,18 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
-    CachedPlotter,
     ColorPaletteProvider,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
     FlowLayerPlotter,
+    FlowListObserverWrapper,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
     SectionLayerPlotter,
+    SectionListObserverWrapper,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
@@ -390,10 +392,32 @@ class ApplicationStarter:
         return TrackViewState()
 
     def _wrap_plotter_with_cache(
-        self, other: Plotter, track_repository: TrackRepository
+        self,
+        other: Plotter,
+        datastore: Datastore,
+        tracks: bool,
+        sections: bool,
+        flows: bool,
     ) -> Plotter:
-        cached_plotter = CachedPlotter(other, subjects=[])
-        track_repository.observers.register(cached_plotter.invalidate_cache)
+        cached_plotter: CachedPlotter = CachedPlotter(other, subjects=[])
+        invalidate = cached_plotter.invalidate_cache
+
+        if tracks:
+            track_repo = datastore._track_repository
+            track_repo.observers.register(invalidate)
+
+        if sections:
+            section_repo = datastore._section_repository
+            section_repo.register_sections_observer(
+                SectionListObserverWrapper(invalidate)
+            )
+            section_repo._section_content_observers.register(invalidate)
+
+        if flows:
+            flow_repo = datastore._flow_repository
+            flow_repo.register_flows_observer(FlowListObserverWrapper(invalidate))
+            flow_repo._flow_content_observers.register(invalidate)
+
         return cached_plotter
 
     def _create_pandas_data_provider(
@@ -525,6 +549,7 @@ class ApplicationStarter:
         )
 
     def _create_start_end_point_tracks_intersecting_sections_plotter(
+        # TODO use caching
         self,
         state: TrackViewState,
         tracks_intersecting_sections: TracksIntersectingSelectedSections,
@@ -770,7 +795,11 @@ class ApplicationStarter:
         all_tracks_layer = PlottingLayer(
             "Show all tracks",
             self._wrap_plotter_with_cache(
-                track_geometry_plotter, datastore._track_repository
+                track_geometry_plotter,
+                datastore,
+                tracks=True,
+                sections=False,
+                flows=False,
             ),
             enabled=True,
         )
@@ -782,7 +811,11 @@ class ApplicationStarter:
         highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
             "Highlight tracks not intersecting sections",
             self._wrap_plotter_with_cache(
-                highlight_tracks_not_intersecting_sections, datastore._track_repository
+                highlight_tracks_not_intersecting_sections,
+                datastore,
+                tracks=True,
+                sections=True,
+                flows=False,
             ),  # TODO: cache must be invalidated if sections change
             enabled=False,
         )
@@ -796,14 +829,21 @@ class ApplicationStarter:
             "Show start and end point of tracks not intersecting sections",
             self._wrap_plotter_with_cache(
                 start_end_points_tracks_not_intersecting_sections,
-                datastore._track_repository,
-            ),  # TODO: cache must be invalidated if sections change
+                datastore,
+                tracks=True,
+                sections=True,
+                flows=False,
+            ),
             enabled=False,
         )
         start_end_point_layer = PlottingLayer(
             "Show start and end point",
             self._wrap_plotter_with_cache(
-                track_start_end_point_plotter, datastore._track_repository
+                track_start_end_point_plotter,
+                datastore,
+                tracks=True,
+                sections=False,
+                flows=False,
             ),
             enabled=False,
         )
@@ -815,8 +855,12 @@ class ApplicationStarter:
         highlight_tracks_not_assigned_to_flow_layer = PlottingLayer(
             "Highlight tracks not assigned to flow",
             self._wrap_plotter_with_cache(
-                highlight_tracks_not_assigned_to_flow, datastore._track_repository
-            ),  # TODO: cache must be invalidated if flows change
+                highlight_tracks_not_assigned_to_flow,
+                datastore,
+                tracks=True,
+                sections=True,
+                flows=True,
+            ),
             enabled=False,
         )
 

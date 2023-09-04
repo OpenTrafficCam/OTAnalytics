@@ -1,6 +1,6 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
+from typing import Any, Callable, Iterable, Optional
 
 import numpy
 import pandas
@@ -13,11 +13,10 @@ from pandas import DataFrame
 from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
+from OTAnalytics.application.plotting import DynamicLayersPlotter, EntityPlotterFactory
 from OTAnalytics.application.state import (
     FlowState,
     ObservableOptionalProperty,
-    ObservableProperty,
     Plotter,
     SectionState,
     TrackViewState,
@@ -133,90 +132,13 @@ class ColorPaletteProvider:
         return self._palette
 
 
-class CachedPlotter(Plotter):
-    def __init__(
-        self,
-        other: Plotter,
-        subjects: list[ObservableProperty | ObservableOptionalProperty],
-    ) -> None:
-        self._other = other
-        self._cache: Optional[TrackImage] = None
+class FlowListObserverWrapper(FlowListObserver):
+    def __init__(self, callback: Callable[[list[FlowId]], None]) -> None:
+        super().__init__()
+        self.callback = callback
 
-        for subject in subjects:
-            subject.register(self.invalidate_cache)
-
-    def plot(self) -> Optional[TrackImage]:
-        if self._cache is None:
-            self._cache = self._other.plot()
-
-        return self._cache
-
-    def invalidate_cache(self, _: Any) -> None:
-        self._cache = None
-
-
-ENTITY = TypeVar("ENTITY")
-EntityPlotterFactory = Callable[[ENTITY], Plotter]
-AvailableEntityProvider = Callable[[], set[ENTITY]]
-VisibilitySubject = ObservableProperty[list[ENTITY]]
-
-
-class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
-    def __init__(
-        self,
-        plotter_factory: EntityPlotterFactory,
-        visibility_subject: VisibilitySubject,
-        entity_lookup: AvailableEntityProvider,
-    ) -> None:
-        self._plotter_factory = plotter_factory
-        self._entity_lookup = entity_lookup
-
-        self._layer_mapping: dict[ENTITY, PlottingLayer] = dict()
-        self._plotter_mapping: dict[ENTITY, CachedPlotter] = dict()
-        # additional plotter mapping could be avoided
-        # if PlottingLayer were Generic in the used plotter type
-
-        visibility_subject.register(self.notify_visibility)
-
-    def plot(self) -> Optional[TrackImage]:
-        layer_plotter = LayeredPlotter(list(self._layer_mapping.values()))
-        return layer_plotter.plot()
-
-    def notify_visibility(self, visible_entities: list[ENTITY]) -> None:
-        for entity, layer in self._layer_mapping.items():
-            layer.set_enabled(entity in visible_entities)
-
-        print("Update visible layers:", visible_entities)
-
-    def notify_invalidate(self, _: Any) -> None:
-        for plotter in self._plotter_mapping.values():
-            plotter.invalidate_cache(_)
-
-    def notify_layers_changed(self, entities: list[ENTITY]) -> None:
-        match entities:
-            case []:
-                self._handle_remove()
-            case _:
-                self._handle_add_update(entities)
-        print("Update available layers:", list(self._layer_mapping.keys()))
-
-    def _handle_add_update(self, entities: list[ENTITY]) -> None:
-        for entity in entities:
-            if entity in self._layer_mapping:
-                plotter: CachedPlotter = self._plotter_mapping[entity]
-                plotter.invalidate_cache(None)
-            else:
-                plotter = CachedPlotter(self._plotter_factory(entity), [])
-                self._plotter_mapping[entity] = plotter
-                self._layer_mapping[entity] = PlottingLayer(str(entity), plotter, False)
-
-    def _handle_remove(self) -> None:
-        remaining_entities = self._entity_lookup()
-
-        for entity in self._layer_mapping:
-            if entity not in remaining_entities:
-                del self._plotter_mapping[entity]
-                del self._layer_mapping[entity]
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        return self.callback(flows)
 
 
 class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
@@ -243,6 +165,15 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
 
     def get_flow_ids(self) -> set[FlowId]:
         return {flow.id for flow in self._repository.get_all()}
+
+
+class SectionListObserverWrapper(SectionListObserver):
+    def __init__(self, callback: Callable[[list[SectionId]], None]) -> None:
+        super().__init__()
+        self.callback = callback
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        return self.callback(sections)
 
 
 class SectionLayerPlotter(DynamicLayersPlotter[SectionId], SectionListObserver):
