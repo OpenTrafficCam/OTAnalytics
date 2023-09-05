@@ -7,9 +7,10 @@ from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackFiles,
+    GetAllTrackIds,
     GetAllTracks,
 )
-from OTAnalytics.domain.track import Detection, Track, TrackRepository
+from OTAnalytics.domain.track import Detection, Track, TrackId, TrackRepository
 
 
 @pytest.fixture
@@ -21,6 +22,7 @@ def tracks() -> list[Mock]:
 def track_repository(tracks: list[Mock]) -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_all.return_value = tracks
+    repository.get_all_ids.return_value = {TrackId(1), TrackId(2)}
     return repository
 
 
@@ -30,6 +32,14 @@ class TestGetAllTracks:
         result_tracks = get_all_tracks()
         assert result_tracks == tracks
         track_repository.get_all.assert_called_once()
+
+
+class TestGetAllTrackIds:
+    def test_get_all_tracks(self, track_repository: Mock) -> None:
+        get_all_track_ids = GetAllTrackIds(track_repository)
+        result_tracks = get_all_track_ids()
+        assert result_tracks == {TrackId(1), TrackId(2)}
+        track_repository.get_all_ids.assert_called_once()
 
 
 class TestAddAllTracks:

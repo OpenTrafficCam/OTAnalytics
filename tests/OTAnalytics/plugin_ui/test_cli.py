@@ -35,6 +35,7 @@ from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
+    GetAllTrackIds,
     GetAllTracks,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
@@ -140,6 +141,7 @@ class TestOTAnalyticsCli:
     CREATE_EVENTS: str = "create_events"
     EXPORT_COUNTS: str = "export_counts"
     ADD_ALL_TRACKS: str = "add_all_tracks"
+    GET_ALL_TRACK_IDS: str = "get_all_track_ids"
     CLEAR_ALL_TRACKS: str = "clear_all_tracks"
     PROGRESSBAR: str = "progressbar"
 
@@ -155,6 +157,7 @@ class TestOTAnalyticsCli:
             self.CREATE_EVENTS: Mock(spec=CreateEvents),
             self.EXPORT_COUNTS: Mock(spec=ExportCounts),
             self.ADD_ALL_TRACKS: Mock(spec=AddAllTracks),
+            self.GET_ALL_TRACK_IDS: Mock(spec=GetAllTrackIds),
             self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
             self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
         }
@@ -168,6 +171,7 @@ class TestOTAnalyticsCli:
         add_events = AddEvents(event_repository)
 
         get_all_tracks = GetAllTracks(track_repository)
+        get_all_track_ids = GetAllTrackIds(track_repository)
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
 
@@ -210,6 +214,7 @@ class TestOTAnalyticsCli:
             self.CREATE_EVENTS: create_events,
             self.EXPORT_COUNTS: export_counts,
             self.ADD_ALL_TRACKS: add_all_tracks,
+            self.GET_ALL_TRACK_IDS: get_all_track_ids,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
             self.PROGRESSBAR: NoProgressbarBuilder(),
         }

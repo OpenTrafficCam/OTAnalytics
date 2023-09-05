@@ -25,6 +25,7 @@ from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
+    GetAllTrackIds,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
@@ -136,6 +137,7 @@ class OTAnalyticsCli:
         create_events: CreateEvents,
         export_counts: ExportCounts,
         add_all_tracks: AddAllTracks,
+        get_all_track_ids: GetAllTrackIds,
         clear_all_tracks: ClearAllTracks,
         progressbar: ProgressbarBuilder,
     ) -> None:
@@ -151,6 +153,7 @@ class OTAnalyticsCli:
         self._create_events = create_events
         self._export_counts = export_counts
         self._add_all_tracks = add_all_tracks
+        self._get_all_track_ids = get_all_track_ids
         self._clear_all_tracks = clear_all_tracks
         self._progressbar = progressbar
 
@@ -312,7 +315,7 @@ class OTAnalyticsCli:
     def _do_export_counts(self, event_list_output_file: Path) -> None:
         logger().info("Create counts ...")
         tracks_metadata = TracksMetadata(self._add_all_tracks._track_repository)
-        tracks_metadata.notify_tracks([])
+        tracks_metadata.notify_tracks(list(self._get_all_track_ids()))
         start = tracks_metadata.first_detection_occurrence
         end = tracks_metadata.last_detection_occurrence
         modes = tracks_metadata.classifications
@@ -332,7 +335,7 @@ class OTAnalyticsCli:
         output_file = event_list_output_file.with_stem(output_file_stem).with_suffix(
             f".{DEFAULT_COUNTS_FILE_TYPE}"
         )
-        counting_specificaation = CountingSpecificationDto(
+        counting_specification = CountingSpecificationDto(
             start=start,
             end=end,
             modes=list(modes),
@@ -340,5 +343,5 @@ class OTAnalyticsCli:
             output_file=str(output_file),
             output_format="CSV",
         )
-        self._export_counts.export(specification=counting_specificaation)
-        logger().info(f"Counts saved at {str(output_file)}")
+        self._export_counts.export(specification=counting_specification)
+        logger().info(f"Counts saved at {output_file}")

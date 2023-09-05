@@ -75,6 +75,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackFiles,
+    GetAllTrackIds,
     GetAllTracks,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
@@ -296,6 +297,7 @@ class ApplicationStarter:
         add_flow = AddFlow(flow_repository)
         add_events = AddEvents(event_repository)
         get_all_tracks = GetAllTracks(track_repository)
+        get_all_track_ids = GetAllTrackIds(track_repository)
         create_events = self._create_use_case_create_events(
             section_repository, event_repository, get_all_tracks, add_events
         )
@@ -314,6 +316,7 @@ class ApplicationStarter:
             create_events=create_events,
             export_counts=export_counts,
             add_all_tracks=add_all_tracks,
+            get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
             progressbar=TqdmBuilder(),
