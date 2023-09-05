@@ -452,15 +452,13 @@ class ApplicationStarter:
         )
         return PlotterPrototype(state, track_plotter)
 
-    def _create_track_start_end_point_plotter(
+    def _create_track_start_end_point_data_provider(
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
         track_repository: TrackRepository,
-        color_palette_provider: ColorPaletteProvider,
-        enable_legend: bool,
         id_filter: Optional[TrackIdProvider] = None,
-    ) -> Plotter:
+    ) -> FilterById:
         data_provider = pandas_data_provider
         data_provider = FilterById(
             pandas_data_provider,
@@ -470,6 +468,15 @@ class ApplicationStarter:
                 track_view_state=state,
             ),
         )
+        return data_provider
+
+    def _create_track_start_end_point_plotter(
+        self,
+        state: TrackViewState,
+        data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        enable_legend: bool,
+    ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackStartEndPointPlotter(
                 data_provider,
@@ -518,7 +525,7 @@ class ApplicationStarter:
             enable_legend,
         )
 
-    def _create_track_highlight_geometry_plotter(
+    def _create_cached_section_layer_plotter(
         self,
         plotter_factory: Callable[[SectionId], Plotter],
         section_state: SectionState,
@@ -548,26 +555,40 @@ class ApplicationStarter:
             enable_legend=enable_legend,
         )
 
-    def _create_start_end_point_tracks_intersecting_sections_plotter(
-        # TODO use caching
+    def _create_tracks_start_end_point_intersecting_given_sections_filter(
         self,
         state: TrackViewState,
-        tracks_intersecting_sections: TracksIntersectingSelectedSections,
-        pandas_track_provider: PandasDataFrameProvider,
         track_repository: TrackRepository,
-        color_palette_provider: ColorPaletteProvider,
-        enable_legend: bool,
-    ) -> Plotter:
-        plotter = self._create_track_start_end_point_plotter(
-            state,
-            pandas_track_provider,
-            track_repository,
-            color_palette_provider,
-            enable_legend=enable_legend,
-            id_filter=tracks_intersecting_sections,
+        pandas_data_provider: PandasDataFrameProvider,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_sections_by_id: GetSectionsById,
+    ) -> Callable[[SectionId], PandasDataFrameProvider]:
+        return lambda section: FilterById(
+            pandas_data_provider,
+            id_filter=TracksOverlapOccurrenceWindow(
+                other=TracksIntersectingGivenSections(
+                    [section],
+                    tracks_intersecting_sections,
+                    get_sections_by_id,
+                ),
+                track_repository=track_repository,
+                track_view_state=state,
+            ),
         )
 
-        return plotter
+    def _create_start_end_point_intersecting_section_factory(
+        self,
+        state: TrackViewState,
+        pandas_data_provider_factory: Callable[[SectionId], PandasDataFrameProvider],
+        color_palette_provider: ColorPaletteProvider,
+        enable_legend: bool,
+    ) -> Callable[[SectionId], Plotter]:
+        return lambda section: self._create_track_start_end_point_plotter(
+            state,
+            pandas_data_provider_factory(section),
+            color_palette_provider,
+            enable_legend,
+        )
 
     def _create_start_end_point_tracks_not_intersecting_sections_plotter(
         self,
@@ -580,11 +601,14 @@ class ApplicationStarter:
     ) -> Plotter:
         return self._create_track_start_end_point_plotter(
             state,
-            pandas_track_provider,
-            track_repository,
+            self._create_track_start_end_point_data_provider(
+                state,
+                pandas_track_provider,
+                track_repository,
+                tracks_not_intersecting_sections,
+            ),
             color_palette_provider,
-            enable_legend=enable_legend,
-            id_filter=tracks_not_intersecting_sections,
+            enable_legend,
         )
 
     def _create_tracks_assigned_to_flows_filter(
@@ -701,15 +725,20 @@ class ApplicationStarter:
             tracks_intersecting_selected_sections, datastore._track_repository
         )
 
+        get_sections_by_id = GetSectionsById(datastore._section_repository)
+        tracks_intersecting_sections_filter = (
+            self._create_tracks_intersecting_sections_filter(
+                data_provider_all_filters,
+                tracks_intersecting_sections,
+                get_sections_by_id,
+            )
+        )
+
         highlight_tracks_intersecting_sections = (
-            self._create_track_highlight_geometry_plotter(
+            self._create_cached_section_layer_plotter(
                 self._create_highlight_tracks_intersecting_section_factory(
                     track_view_state,
-                    self._create_tracks_intersecting_sections_filter(
-                        data_provider_all_filters,
-                        tracks_intersecting_sections,
-                        GetSectionsById(datastore._section_repository),
-                    ),
+                    tracks_intersecting_sections_filter,
                     color_palette_provider,
                     alpha=1,
                     enable_legend=False,
@@ -728,16 +757,24 @@ class ApplicationStarter:
                 enable_legend=False,
             )
         )
-        start_end_points_tracks_intersecting_sections = (
-            self._create_start_end_point_tracks_intersecting_sections_plotter(
+        start_end_points_intersecting = self._create_cached_section_layer_plotter(
+            self._create_start_end_point_intersecting_section_factory(
                 track_view_state,
-                tracks_intersecting_selected_sections,
-                data_provider_class_filter,
-                datastore._track_repository,
+                self._create_tracks_start_end_point_intersecting_given_sections_filter(
+                    track_view_state,
+                    datastore._track_repository,
+                    data_provider_class_filter,
+                    tracks_intersecting_sections,
+                    get_sections_by_id,
+                ),
                 color_palette_provider,
                 enable_legend=False,
-            )
+            ),
+            section_state,
+            datastore._section_repository,
+            datastore._track_repository,
         )
+
         start_end_points_tracks_not_intersecting_sections = (
             self._create_start_end_point_tracks_not_intersecting_sections_plotter(
                 track_view_state,
@@ -750,8 +787,12 @@ class ApplicationStarter:
         )
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             track_view_state,
-            data_provider_class_filter,
-            datastore._track_repository,
+            self._create_track_start_end_point_data_provider(
+                track_view_state,
+                data_provider_class_filter,
+                datastore._track_repository,
+                tracks_not_intersecting_sections,
+            ),
             color_palette_provider,
             enable_legend=False,
         )
@@ -816,13 +857,12 @@ class ApplicationStarter:
                 tracks=True,
                 sections=True,
                 flows=False,
-            ),  # TODO: cache must be invalidated if sections change
+            ),
             enabled=False,
         )
         start_end_points_tracks_intersecting_sections_layer = PlottingLayer(
             "Show start and end point of tracks intersecting sections",
-            start_end_points_tracks_intersecting_sections,
-            # trivial cache wrapper not applicable since selected sections may change
+            start_end_points_intersecting,
             enabled=False,
         )
         start_end_points_tracks_not_intersecting_sections_layer = PlottingLayer(
