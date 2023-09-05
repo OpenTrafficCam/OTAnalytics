@@ -100,6 +100,10 @@ class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
             row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
         )
 
+    def reset(self) -> None:
+        self._get_widgets()
+        self._place_widgets()
+
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_filter_frame(self)
 
@@ -427,8 +431,17 @@ class DateRow(EmbeddedCTkFrame):
             self._hour_var.set(f"{date_time.hour}")
             self._minute_var.set(f"{date_time.minute}")
             self._second_var.set(f"{date_time.second}")
+        else:
+            self.reset()
 
     def get_datetime(self) -> Optional[datetime]:
+        if (
+            self.date == ""
+            and self.hour == ""
+            and self.minute == ""
+            and self.second == ""
+        ):
+            return None
         try:
             date = datetime.strptime(self.date, DATE_FORMAT)
             return datetime(
@@ -600,6 +613,14 @@ class DateRow(EmbeddedCTkFrame):
         self._hour_var.trace_add("write", callback=callback)
         self._minute_var.trace_add("write", callback=callback)
         self._second_var.trace_add("write", callback=callback)
+
+    def reset(self) -> None:
+        self._date_var.set("")
+        self._hour_var.set("")
+        self._minute_var.set("")
+        self._second_var.set("")
+        self._reset_all_border_colors()
+        self._clear_validation_info()
 
 
 class FilterTracksbyClassificationButton(FilterButton):

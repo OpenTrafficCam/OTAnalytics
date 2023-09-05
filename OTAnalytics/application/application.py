@@ -27,6 +27,7 @@ from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
@@ -84,6 +85,8 @@ class OTAnalyticsApplication:
         add_section: AddSection,
         add_flow: AddFlow,
         clear_all_events: ClearAllEvents,
+        start_new_project: StartNewProject,
+        project_updater: ProjectUpdater,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -100,12 +103,13 @@ class OTAnalyticsApplication:
         self._create_intersection_events = create_intersection_events
         self._clear_all_events = clear_all_events
         self._export_counts = export_counts
-        self._project_updater = ProjectUpdater(datastore)
+        self._project_updater = project_updater
         self._save_otconfig = SaveOtconfig(
             datastore, config_parser=datastore._config_parser
         )
         self._create_events = create_events
         self._load_otflow = load_otflow
+        self._start_new_project = start_new_project
 
     def connect_observers(self) -> None:
         """
@@ -538,6 +542,15 @@ class OTAnalyticsApplication:
             end_date = last_occurrence
 
         return start_date, end_date
+
+    def start_new_project(self) -> None:
+        self._start_new_project()
+
+    def update_project_name(self, name: str) -> None:
+        self._project_updater.update_name(name)
+
+    def update_project_start_date(self, start_date: datetime | None) -> None:
+        self._project_updater.update_start_date(start_date)
 
 
 class MissingTracksError(Exception):
