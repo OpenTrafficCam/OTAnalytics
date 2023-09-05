@@ -32,7 +32,7 @@ class Layer:
 
     @abstractmethod
     def is_enabled(self) -> bool:
-        """Returns wether layer is enabled."""
+        """Returns whether layer is enabled."""
         raise NotImplementedError
 
     @abstractmethod
@@ -42,12 +42,18 @@ class Layer:
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def reset(self) -> None:
+        """Reset layer enabled state to default value."""
+        raise NotImplementedError
+
 
 class PlottingLayer(Plotter, Layer):
     def __init__(self, name: str, other: Plotter, enabled: bool) -> None:
         self._name = name
         self._other = other
         self._enabled: ObservableProperty[bool] = ObservableProperty[bool](enabled)
+        self._default_enabled = enabled
 
     def plot(self) -> Optional[TrackImage]:
         """Plots layer if enabled.
@@ -68,6 +74,10 @@ class PlottingLayer(Plotter, Layer):
 
     def register(self, observer: Callable[[bool], None]) -> None:
         self._enabled.register(observer)
+
+    def reset(self) -> None:
+        """Reset layer enabled state to default value."""
+        self._enabled.set(self._default_enabled)
 
 
 class LayeredPlotter(Plotter):
