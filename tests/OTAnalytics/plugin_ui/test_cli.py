@@ -26,10 +26,7 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
-from OTAnalytics.application.use_cases.event_repository import (
-    AddEvents,
-    ClearEventRepository,
-)
+from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import (
@@ -175,7 +172,7 @@ class TestOTAnalyticsCli:
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
 
-        clear_event_repository = ClearEventRepository(event_repository)
+        clear_all_events = ClearAllEvents(event_repository)
         create_intersection_events = SimpleCreateIntersectionEvents(
             SimpleRunIntersect(
                 ShapelyIntersector(),
@@ -191,7 +188,7 @@ class TestOTAnalyticsCli:
             add_events,
         )
         create_events = CreateEvents(
-            clear_event_repository, create_intersection_events, create_scene_events
+            clear_all_events, create_intersection_events, create_scene_events
         )
         export_counts = ExportTrafficCounting(
             event_repository,
