@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 
 import pytest
 
@@ -19,7 +18,6 @@ def detection() -> Detection:
         h=30.5,
         frame=1,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId(1),
         video_name="myhostname_something.mp4",

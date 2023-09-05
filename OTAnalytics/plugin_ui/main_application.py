@@ -95,6 +95,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
+    TrackFileRepository,
     TrackIdProvider,
     TrackRepository,
 )
@@ -194,11 +195,13 @@ class ApplicationStarter:
         )
 
         track_repository = self._create_track_repository()
+        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
         datastore = self._create_datastore(
             track_repository,
+            track_file_repository,
             section_repository,
             flow_repository,
             event_repository,
@@ -242,7 +245,7 @@ class ApplicationStarter:
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
-        get_all_track_files = self._create_get_all_track_files(track_repository)
+        get_all_track_files = self._create_get_all_track_files(track_file_repository)
         generate_flows = self._create_flow_generator(
             section_repository, flow_repository
         )
@@ -339,8 +342,11 @@ class ApplicationStarter:
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_repository = self._create_track_repository()
+        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
-        track_parser = self._create_track_parser(track_repository)
+        track_parser = self._create_track_parser(
+            track_repository, track_file_repository
+        )
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
@@ -369,6 +375,7 @@ class ApplicationStarter:
     def _create_datastore(
         self,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
         section_repository: SectionRepository,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
@@ -381,7 +388,9 @@ class ApplicationStarter:
             track_repository (TrackRepository): the track repository to inject
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
-        track_parser = self._create_track_parser(track_repository)
+        track_parser = self._create_track_parser(
+            track_repository, track_file_repository
+        )
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
@@ -411,10 +420,15 @@ class ApplicationStarter:
     def _create_track_repository(self) -> TrackRepository:
         return TrackRepository()
 
-    def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
+    def _create_track_parser(
+        self,
+        track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
+    ) -> TrackParser:
         return OttrkParser(
             CalculateTrackClassificationByMaxConfidence(),
             track_repository,
+            track_file_repository,
             track_length_limit=TRACK_LENGTH_LIMIT,
         )
 
@@ -971,9 +985,9 @@ class ApplicationStarter:
         return FlowState()
 
     def _create_get_all_track_files(
-        self, track_repository: TrackRepository
+        self, track_file_repository: TrackFileRepository
     ) -> GetAllTrackFiles:
-        return GetAllTrackFiles(track_repository)
+        return GetAllTrackFiles(track_file_repository)
 
     def _create_flow_generator(
         self, section_repository: SectionRepository, flow_repository: FlowRepository
@@ -1118,3 +1132,6 @@ class ApplicationStarter:
     @staticmethod
     def _create_project_updater(datastore: Datastore) -> ProjectUpdater:
         return ProjectUpdater(datastore)
+
+    def _create_track_file_repository(self) -> TrackFileRepository:
+        return TrackFileRepository()

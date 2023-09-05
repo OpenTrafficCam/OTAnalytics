@@ -24,6 +24,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
+    TrackFileRepository,
     TrackId,
     TrackImage,
     TrackListObserver,
@@ -37,9 +38,11 @@ class TrackParser(ABC):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
     ) -> None:
         self._track_classification_calculator = track_classification_calculator
         self._track_repository = track_repository
+        self._track_file_repository = track_file_repository
 
     @abstractmethod
     def parse(self, file: Path) -> list[Track]:
