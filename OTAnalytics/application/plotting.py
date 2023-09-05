@@ -177,25 +177,16 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
         visibility_subject.register(self.notify_visibility)
 
     def plot(self) -> Optional[TrackImage]:
-        print(
-            "plot",
-            [
-                (layer.get_name(), layer._enabled.get())
-                for layer in self._layer_mapping.values()
-            ],
-        )
         layer_plotter = LayeredPlotter(list(self._layer_mapping.values()))
         return layer_plotter.plot()
 
     def notify_visibility(self, visible_entities: list[ENTITY]) -> None:
         """Set visibility of given entities to true, others to false."""
-        print("update visibility:", visible_entities)
         for entity, layer in self._layer_mapping.items():
             layer.set_enabled(entity in visible_entities)
 
     def notify_invalidate(self, _: Any) -> None:
         """Invalidate all caches."""
-        print("invalidate all:", self._plotter_mapping.values())
         for plotter in self._plotter_mapping.values():
             plotter.invalidate_cache(_)
 
@@ -205,7 +196,6 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
         entities = [] indicates deletion
         otherwise entities were added or updated.
         """
-        print("layers change:", entities)
         match entities:
             case []:
                 self._handle_remove()
@@ -219,18 +209,15 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
         """
         for entity in entities:
             if entity in self._layer_mapping:
-                print("invalidate", entity)
                 plotter: CachedPlotter = self._plotter_mapping[entity]
                 plotter.invalidate_cache(None)
             else:
-                print("add", entity)
                 plotter = CachedPlotter(self._plotter_factory(entity), [])
                 self._plotter_mapping[entity] = plotter
                 self._layer_mapping[entity] = PlottingLayer(str(entity), plotter, False)
 
     def _handle_remove(self) -> None:
         remaining_entities = self._entity_lookup()
-        print("handle remove -> remaining:", remaining_entities)
 
         for entity in self._layer_mapping:
             if entity not in remaining_entities:
