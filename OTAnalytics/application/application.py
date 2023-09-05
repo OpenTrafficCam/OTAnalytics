@@ -21,10 +21,11 @@ from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
 )
-from OTAnalytics.application.use_cases.event_repository import ClearEventRepository
+from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
+from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
@@ -79,6 +80,10 @@ class OTAnalyticsApplication:
         create_intersection_events: CreateIntersectionEvents,
         export_counts: ExportCounts,
         create_events: CreateEvents,
+        load_otflow: LoadOtflow,
+        add_section: AddSection,
+        add_flow: AddFlow,
+        clear_all_events: ClearAllEvents,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -88,20 +93,19 @@ class OTAnalyticsApplication:
         self._tracks_metadata = tracks_metadata
         self.action_state = action_state
         self._filter_element_setting_restorer = filter_element_setting_restorer
-        self._add_section = AddSection(self._datastore._section_repository)
-        self._add_flow = AddFlow(self._datastore._flow_repository)
+        self._add_section = add_section
+        self._add_flow = add_flow
         self._get_all_track_files = get_all_track_files
         self._generate_flows = generate_flows
         self._create_intersection_events = create_intersection_events
-        self._clear_event_repository = ClearEventRepository(
-            self._datastore._event_repository
-        )
+        self._clear_all_events = clear_all_events
         self._export_counts = export_counts
         self._project_updater = ProjectUpdater(datastore)
         self._save_otconfig = SaveOtconfig(
             datastore, config_parser=datastore._config_parser
         )
         self._create_events = create_events
+        self._load_otflow = load_otflow
 
     def connect_observers(self) -> None:
         """
@@ -112,11 +116,11 @@ class OTAnalyticsApplication:
         self._datastore.register_sections_observer(self.section_state)
 
     def connect_clear_event_repository_observer(self) -> None:
-        self._datastore.register_sections_observer(self._clear_event_repository)
+        self._datastore.register_sections_observer(self._clear_all_events)
         self._datastore.register_section_changed_observer(
-            self._clear_event_repository.on_section_changed
+            self._clear_all_events.on_section_changed
         )
-        self._datastore.register_tracks_observer(self._clear_event_repository)
+        self._datastore.register_tracks_observer(self._clear_all_events)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._datastore.register_video_observer(observer)
@@ -186,7 +190,7 @@ class OTAnalyticsApplication:
         return self._add_flow.is_flow_name_valid(flow_name)
 
     def add_flow(self, flow: Flow) -> None:
-        self._add_flow.add(flow)
+        self._add_flow(flow)
 
     def generate_flows(self) -> None:
         self._generate_flows.generate()
@@ -235,7 +239,7 @@ class OTAnalyticsApplication:
         Args:
             sections_file (Path): file in sections format
         """
-        self._datastore.load_otflow(file=sections_file)
+        self._load_otflow(sections_file)
 
     def is_flow_using_section(self, section: SectionId) -> bool:
         """
@@ -286,7 +290,7 @@ class OTAnalyticsApplication:
         Args:
             section (Section): section to add
         """
-        self._add_section.add(section)
+        self._add_section(section)
 
     def remove_section(self, section: SectionId) -> None:
         """

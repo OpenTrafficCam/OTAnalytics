@@ -420,6 +420,8 @@ class InvalidSectionData(Exception):
     This exception indicates invalid data when parsing a section file.
     """
 
+    pass
+
 
 class OtFlowParser(FlowParser):
     """
