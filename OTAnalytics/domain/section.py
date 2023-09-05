@@ -388,6 +388,14 @@ class SectionRepository:
         """
         return self._sections.get(id)
 
+    def get_section_ids(self) -> Iterable[SectionId]:
+        """Get all section ids used in repository.
+
+        Returns:
+            Iterable[SectionId]: the section ids.
+        """
+        return self._sections.keys()
+
     def remove(self, section: SectionId) -> None:
         """Remove section from the repository.
 

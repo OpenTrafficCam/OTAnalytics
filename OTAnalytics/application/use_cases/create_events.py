@@ -2,10 +2,7 @@ from abc import ABC, abstractmethod
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.use_cases.event_repository import (
-    AddEvents,
-    ClearEventRepository,
-)
+from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import SectionRepository
 
@@ -89,11 +86,11 @@ class SimpleCreateSceneEvents(CreateSceneEvents):
 class CreateEvents:
     def __init__(
         self,
-        clear_event_repository: ClearEventRepository,
+        clear_all_events: ClearAllEvents,
         create_intersection_events: CreateIntersectionEvents,
         create_scene_events: CreateSceneEvents,
     ) -> None:
-        self._clear_event_repository = clear_event_repository
+        self._clear_event_repository = clear_all_events
         self._create_intersection_events = create_intersection_events
         self._create_scene_events = create_scene_events
 

@@ -157,7 +157,7 @@ class OTAnalyticsCli:
     def _add_sections(self, sections: Iterable[Section]) -> None:
         """Add sections to section repository."""
         for section in sections:
-            self._add_section.add(section)
+            self._add_section(section)
 
     def _parse_tracks(self, track_files: list[Path]) -> None:
         for track_file in self._progressbar(track_files, "Parsed track files", "files"):

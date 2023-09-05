@@ -373,17 +373,6 @@ class Datastore:
         """Delete all tracks in repository."""
         self._track_repository.clear()
 
-    def load_otflow(self, file: Path) -> None:
-        """
-        Load sections and flows from the given files and store them in the repositories.
-
-        Args:
-            file (Path): file to load sections and flows from
-        """
-        sections, flows = self._flow_parser.parse(file)
-        self._section_repository.add_all(sections)
-        self._flow_repository.add_all(flows)
-
     def save_flow_file(self, file: Path) -> None:
         """
         Save the flows and sections from the repositories into a file.
