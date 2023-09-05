@@ -484,3 +484,13 @@ class TestSectionRepository:
             call([section_id_north, section_id_south]),
             call([]),
         ]
+
+    def test_get_section_ids(self) -> None:
+        section_id = SectionId("North")
+        section = Mock(spec=Section)
+        section.id = section_id
+
+        repository = SectionRepository()
+        repository.add(section)
+        result = repository.get_section_ids()
+        assert list(result) == [section_id]

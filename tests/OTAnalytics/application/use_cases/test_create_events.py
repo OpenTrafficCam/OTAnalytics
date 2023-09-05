@@ -11,10 +11,7 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
-from OTAnalytics.application.use_cases.event_repository import (
-    AddEvents,
-    ClearEventRepository,
-)
+from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section, SectionRepository
@@ -93,24 +90,24 @@ class TestSimpleCreateSceneEvents:
 
 class TestCreateEvents:
     def test_create_events(self) -> None:
-        clear_event_repository = Mock(spec=ClearEventRepository)
+        clear_all_events = Mock(spec=ClearAllEvents)
         create_intersection_events = Mock(spec=CreateIntersectionEvents)
         create_scene_events = Mock(spec=CreateSceneEvents)
 
         create_events = CreateEvents(
-            clear_event_repository, create_intersection_events, create_scene_events
+            clear_all_events, create_intersection_events, create_scene_events
         )
 
         method_execution_order_observer = Mock()
         method_execution_order_observer.configure_mock(
-            clear_event_repository=clear_event_repository,
+            clear_event_repository=clear_all_events,
             create_intersection_events=create_intersection_events,
             create_scene_events=create_scene_events,
         )
 
         create_events()
 
-        clear_event_repository.assert_called_once()
+        clear_all_events.assert_called_once()
         create_intersection_events.assert_called_once()
         create_scene_events.assert_called_once()
 
