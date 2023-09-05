@@ -40,6 +40,7 @@ from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
+    TrackFileRepository,
     TrackRepository,
 )
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
@@ -162,6 +163,7 @@ class TestOTAnalyticsCli:
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
         track_repository = TrackRepository()
+        track_file_repository = TrackFileRepository()
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()
@@ -201,6 +203,7 @@ class TestOTAnalyticsCli:
             self.TRACK_PARSER: OttrkParser(
                 CalculateTrackClassificationByMaxConfidence(),
                 track_repository,
+                track_file_repository,
                 TRACK_LENGTH_LIMIT,
             ),
             self.FLOW_PARSER: OtFlowParser(),

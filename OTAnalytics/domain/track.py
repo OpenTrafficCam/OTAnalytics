@@ -17,7 +17,6 @@ W: str = "w"
 H: str = "h"
 FRAME: str = "frame"
 OCCURRENCE: str = "occurrence"
-INPUT_FILE_PATH: str = "input_file_path"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
 
@@ -131,12 +130,10 @@ class Detection(DataclassValidation):
         w (float): the width component of the bounding box.
         h (float): the height component of the bounding box.
         frame (int): the frame that the detection belongs to.
-        occurrence (datetime): the time of the detection's occurence.
-        input_file_path (Path): absolute path to otdet that the detection belongs to
-        at the time of its creation.
+        occurrence (datetime): the time of the detection's occurrence.
         interpolated_detection (bool): whether this detection is interpolated.
         track_id (TrackId): the track id this detection belongs to.
-        video_name (str): name of video including filetype extension.
+        video_name (str): name of video that this detection belongs.
     """
 
     classification: str
@@ -147,7 +144,6 @@ class Detection(DataclassValidation):
     h: float
     frame: int
     occurrence: datetime
-    input_file_path: Path
     interpolated_detection: bool
     track_id: TrackId
     video_name: str
@@ -185,7 +181,6 @@ class Detection(DataclassValidation):
             H: self.h,
             FRAME: self.frame,
             OCCURRENCE: self.occurrence,
-            INPUT_FILE_PATH: self.input_file_path,
             INTERPOLATED_DETECTION: self.interpolated_detection,
             TRACK_ID: self.track_id.id,
         }
@@ -433,6 +428,39 @@ class TrackRepository:
         """
         self._tracks.clear()
         self.observers.notify([])
+
+
+class TrackFileRepository:
+    def __init__(self) -> None:
+        self._files: set[Path] = set()
+
+    def add(self, file: Path) -> None:
+        """
+        Add a single track file the repository.
+
+        Args:
+            file (Path): track file to be added.
+        """
+        self._files.add(file)
+
+    def add_all(self, files: Iterable[Path]) -> None:
+        """
+        Add multiple files to the repository.
+
+        Args:
+            files (Iterable[Path]): the files to be added.
+        """
+        for file in files:
+            self.add(file)
+
+    def get_all(self) -> set[Path]:
+        """
+        Retrieve all track files.
+
+        Returns:
+            set[Path]: all tracks within the repository.
+        """
+        return self._files.copy()
 
 
 class TrackIdProvider(ABC):

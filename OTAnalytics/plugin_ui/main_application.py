@@ -41,6 +41,7 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
@@ -65,11 +66,13 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksOverlapOccurrenceWindow,
 )
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
+from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
     GetSectionsById,
 )
+from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -77,6 +80,11 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackIds,
     GetAllTracks,
 )
+from OTAnalytics.application.use_cases.track_to_video_repository import (
+    ClearAllTrackToVideos,
+)
+from OTAnalytics.application.use_cases.update_project import ProjectUpdater
+from OTAnalytics.application.use_cases.video_repository import ClearAllVideos
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
@@ -85,6 +93,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
+    TrackFileRepository,
     TrackIdProvider,
     TrackRepository,
 )
@@ -180,11 +189,13 @@ class ApplicationStarter:
         )
 
         track_repository = self._create_track_repository()
+        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
         datastore = self._create_datastore(
             track_repository,
+            track_file_repository,
             section_repository,
             flow_repository,
             event_repository,
@@ -228,17 +239,22 @@ class ApplicationStarter:
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
-        get_all_track_files = self._create_get_all_track_files(track_repository)
+        get_all_track_files = self._create_get_all_track_files(track_file_repository)
         generate_flows = self._create_flow_generator(
             section_repository, flow_repository
         )
         add_events = AddEvents(event_repository)
         clear_all_events = ClearAllEvents(event_repository)
         get_all_tracks = GetAllTracks(track_repository)
+        clear_all_tracks = ClearAllTracks(track_repository)
         clear_all_sections = ClearAllSections(section_repository)
         clear_all_flows = ClearAllFlows(flow_repository)
         add_section = AddSection(section_repository)
         add_flow = AddFlow(flow_repository)
+        clear_all_videos = ClearAllVideos(datastore._video_repository)
+        clear_all_track_to_videos = ClearAllTrackToVideos(
+            datastore._track_to_video_repository
+        )
         create_events = self._create_use_case_create_events(
             section_repository, clear_all_events, get_all_tracks, add_events
         )
@@ -258,24 +274,39 @@ class ApplicationStarter:
             add_section,
             add_flow,
         )
+        clear_repositories = self._create_use_case_clear_all_repositories(
+            clear_all_events,
+            clear_all_flows,
+            clear_all_sections,
+            clear_all_track_to_videos,
+            clear_all_tracks,
+            clear_all_videos,
+        )
+        project_updater = self._create_project_updater(datastore)
+        reset_project_config = self._create_reset_project_config(project_updater)
+        start_new_project = self._create_use_case_start_new_project(
+            clear_repositories, reset_project_config, track_view_state
+        )
         application = OTAnalyticsApplication(
-            datastore=datastore,
-            track_state=track_state,
-            track_view_state=track_view_state,
-            section_state=section_state,
-            flow_state=flow_state,
-            tracks_metadata=tracks_metadata,
-            action_state=action_state,
-            filter_element_setting_restorer=filter_element_settings_restorer,
-            get_all_track_files=get_all_track_files,
-            generate_flows=generate_flows,
-            create_intersection_events=intersect_tracks_with_sections,
-            export_counts=export_counts,
-            create_events=create_events,
-            load_otflow=load_otflow,
-            add_section=add_section,
-            add_flow=add_flow,
-            clear_all_events=clear_all_events,
+            datastore,
+            track_state,
+            track_view_state,
+            section_state,
+            flow_state,
+            tracks_metadata,
+            action_state,
+            filter_element_settings_restorer,
+            get_all_track_files,
+            generate_flows,
+            intersect_tracks_with_sections,
+            export_counts,
+            create_events,
+            load_otflow,
+            add_section,
+            add_flow,
+            clear_all_events,
+            start_new_project,
+            project_updater,
         )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
@@ -295,6 +326,8 @@ class ApplicationStarter:
         datastore.register_section_changed_observer(
             image_updater.notify_section_changed
         )
+        start_new_project.register(dummy_viewmodel.on_start_new_project)
+
         for layer in layers:
             layer.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
@@ -303,9 +336,12 @@ class ApplicationStarter:
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_repository = self._create_track_repository()
+        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
-        track_parser = self._create_track_parser(track_repository)
+        track_parser = self._create_track_parser(
+            track_repository, track_file_repository
+        )
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
@@ -342,6 +378,7 @@ class ApplicationStarter:
     def _create_datastore(
         self,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
         section_repository: SectionRepository,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
@@ -354,7 +391,9 @@ class ApplicationStarter:
             track_repository (TrackRepository): the track repository to inject
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
-        track_parser = self._create_track_parser(track_repository)
+        track_parser = self._create_track_parser(
+            track_repository, track_file_repository
+        )
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
@@ -384,10 +423,15 @@ class ApplicationStarter:
     def _create_track_repository(self) -> TrackRepository:
         return TrackRepository()
 
-    def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
+    def _create_track_parser(
+        self,
+        track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
+    ) -> TrackParser:
         return OttrkParser(
             CalculateTrackClassificationByMaxConfidence(),
             track_repository,
+            track_file_repository,
             track_length_limit=TRACK_LENGTH_LIMIT,
         )
 
@@ -771,9 +815,9 @@ class ApplicationStarter:
         return FlowState()
 
     def _create_get_all_track_files(
-        self, track_repository: TrackRepository
+        self, track_file_repository: TrackFileRepository
     ) -> GetAllTrackFiles:
-        return GetAllTrackFiles(track_repository)
+        return GetAllTrackFiles(track_file_repository)
 
     def _create_flow_generator(
         self, section_repository: SectionRepository, flow_repository: FlowRepository
@@ -880,3 +924,44 @@ class ApplicationStarter:
             add_section,
             add_flow,
         )
+
+    @staticmethod
+    def _create_use_case_clear_all_repositories(
+        clear_all_events: ClearAllEvents,
+        clear_all_flows: ClearAllFlows,
+        clear_all_sections: ClearAllSections,
+        clear_all_track_to_videos: ClearAllTrackToVideos,
+        clear_all_tracks: ClearAllTracks,
+        clear_all_videos: ClearAllVideos,
+    ) -> ClearRepositories:
+        return ClearRepositories(
+            clear_all_events,
+            clear_all_flows,
+            clear_all_sections,
+            clear_all_track_to_videos,
+            clear_all_tracks,
+            clear_all_videos,
+        )
+
+    @staticmethod
+    def _create_use_case_start_new_project(
+        clear_repositories: ClearRepositories,
+        reset_project_config: ResetProjectConfig,
+        track_view_state: TrackViewState,
+    ) -> StartNewProject:
+        return StartNewProject(
+            clear_repositories, reset_project_config, track_view_state
+        )
+
+    @staticmethod
+    def _create_reset_project_config(
+        project_updater: ProjectUpdater,
+    ) -> ResetProjectConfig:
+        return ResetProjectConfig(project_updater)
+
+    @staticmethod
+    def _create_project_updater(datastore: Datastore) -> ProjectUpdater:
+        return ProjectUpdater(datastore)
+
+    def _create_track_file_repository(self) -> TrackFileRepository:
+        return TrackFileRepository()

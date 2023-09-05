@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Iterable
 
-from OTAnalytics.domain.track import Track, TrackId, TrackRepository
+from OTAnalytics.domain.track import Track, TrackFileRepository, TrackId, TrackRepository
 
 
 class GetAllTracks:
@@ -66,12 +66,8 @@ class ClearAllTracks:
 
 
 class GetAllTrackFiles:
-    def __init__(self, track_repository: TrackRepository) -> None:
-        self._track_repository = track_repository
+    def __init__(self, track_file_repository: TrackFileRepository) -> None:
+        self._track_file_repository = track_file_repository
 
     def __call__(self) -> set[Path]:
-        return {
-            detection.input_file_path
-            for track in self._track_repository.get_all()
-            for detection in track.detections
-        }
+        return self._track_file_repository.get_all()
