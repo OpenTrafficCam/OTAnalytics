@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -33,7 +32,6 @@ def detection() -> Detection:
         h=30.5,
         frame=1,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
@@ -53,7 +51,6 @@ def track() -> Track:
         h=30.5,
         frame=1,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
@@ -67,7 +64,6 @@ def track() -> Track:
         h=30.5,
         frame=2,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
@@ -81,7 +77,6 @@ def track() -> Track:
         h=30.5,
         frame=3,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 2),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
@@ -95,7 +90,6 @@ def track() -> Track:
         h=30.5,
         frame=4,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 3),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
@@ -109,7 +103,6 @@ def track() -> Track:
         h=30.5,
         frame=5,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId("1"),
         video_name="myhostname_something.mp4",

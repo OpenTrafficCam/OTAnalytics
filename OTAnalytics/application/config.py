@@ -1,6 +1,8 @@
 import platform
 from pathlib import Path
 
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+
 LOG_DIR = Path(".logs").absolute()
 """The log save directory."""
 
@@ -10,6 +12,7 @@ DEFAULT_EVENTLIST_SAVE_NAME: str = "events"
 DEFAULT_EVENTLIST_FILE_TYPE: str = "otevents"
 DEFAULT_TRACK_FILE_TYPE: str = "ottrk"
 DEFAULT_SECTIONS_FILE_TYPE: str = "otflow"
+DEFAULT_TRACK_OFFSET: RelativeOffsetCoordinate = RelativeOffsetCoordinate(0.5, 0.5)
 
 OS: str = platform.system()
 """OS OTAnalyitcs is currently running on"""
