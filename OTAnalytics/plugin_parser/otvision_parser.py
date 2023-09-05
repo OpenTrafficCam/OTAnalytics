@@ -313,7 +313,6 @@ class OttrkParser(TrackParser):
         Returns:
             list[Track]: the tracks.
         """
-        self._track_file_repository.add(ottrk_file)
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
