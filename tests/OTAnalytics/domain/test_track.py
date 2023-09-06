@@ -188,6 +188,22 @@ class TestTrack:
         assert track.start == start_time
         assert track.end == end_time
 
+    def test_first_and_last_detection(self, valid_detection: Detection) -> None:
+        first = Mock(spec=Detection)
+        first.occurrence = datetime.min
+        last = Mock(spec=Detection)
+        last.occurrence = datetime.max
+        detections: list[Detection] = [
+            first,
+            valid_detection,
+            valid_detection,
+            valid_detection,
+            last,
+        ]
+        track = Track(TrackId("1"), "car", detections)
+        assert track.first_detection == first
+        assert track.last_detection == last
+
 
 class TestCalculateTrackClassificationByMaxConfidence:
     def test_calculate(self) -> None:

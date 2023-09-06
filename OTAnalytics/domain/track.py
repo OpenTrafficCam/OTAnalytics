@@ -231,6 +231,24 @@ class Track(DataclassValidation):
         """
         return self.detections[-1].occurrence
 
+    @property
+    def first_detection(self) -> Detection:
+        """Get first detection of track.
+
+        Returns:
+            Detection: the first detection.
+        """
+        return self.detections[0]
+
+    @property
+    def last_detection(self) -> Detection:
+        """Get last detection of track.
+
+        Returns:
+            Detection: the last detection.
+        """
+        return self.detections[-1]
+
 
 @dataclass(frozen=True)
 class TrackImage:
