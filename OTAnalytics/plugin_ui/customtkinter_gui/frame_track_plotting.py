@@ -1,20 +1,27 @@
 import tkinter
 from typing import Any, Sequence
 
-from customtkinter import CTkCheckBox, CTkFrame, CTkLabel, ThemeManager
+from customtkinter import CTkCheckBox, CTkLabel
 
+from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
+    AbstractFrameTrackPlotting,
+)
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.style import STICKY_WEST
 
-DEFAULT_COLOR = ThemeManager.theme["CTkFrame"]["fg_color"]
 
-
-class FrameTrackPlotting(CTkFrame):
-    def __init__(self, layers: Sequence[Layer], **kwargs: Any) -> None:
+class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
+    def __init__(
+        self, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
+    ) -> None:
         super().__init__(**kwargs)
+        self._view_model = viewmodel
         self._layers = layers
         self.get_widgets()
+        self.introduce_to_viewmodel()
 
     def get_widgets(self) -> None:
         PADY = 10
@@ -24,19 +31,25 @@ class FrameTrackPlotting(CTkFrame):
                 row=idx, column=0, padx=PADX, pady=(0, PADY), sticky=STICKY
             )
 
+    def introduce_to_viewmodel(self) -> None:
+        self._view_model.set_frame_track_plotting(self)
 
-class CheckBoxLayer(CTkFrame):
+    def reset_layers(self) -> None:
+        for layer in self._layers:
+            layer.reset()
+
+
+class CheckBoxLayer(EmbeddedCTkFrame):
     def __init__(self, layer: Layer, **kwargs: Any) -> None:
-        super().__init__(fg_color=DEFAULT_COLOR, **kwargs)
+        super().__init__(**kwargs)
         self._enabled = tkinter.BooleanVar()
         self._layer = layer
         self._enabled.set(self._layer.is_enabled())
+        layer.register(self._on_layer_state_changed)
         self.get_widgets()
 
     def get_widgets(self) -> None:
-        self._label = CTkLabel(
-            master=self, text=self._layer.get_name(), bg_color=DEFAULT_COLOR
-        )
+        self._label = CTkLabel(master=self, text=self._layer.get_name())
         self._checkbox = CTkCheckBox(
             master=self,
             text="",
@@ -44,7 +57,6 @@ class CheckBoxLayer(CTkFrame):
             variable=self._enabled,
             onvalue=True,
             offvalue=False,
-            bg_color=DEFAULT_COLOR,
             width=5,
         )
         self._checkbox.grid(row=0, column=0, padx=0, pady=0, sticky=STICKY_WEST)
@@ -52,3 +64,6 @@ class CheckBoxLayer(CTkFrame):
 
     def _on_checkbox_clicked(self) -> None:
         self._layer.set_enabled(self._enabled.get())
+
+    def _on_layer_state_changed(self, enabled: bool) -> None:
+        self._enabled.set(enabled)

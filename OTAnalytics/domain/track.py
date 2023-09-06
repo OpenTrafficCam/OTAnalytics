@@ -17,7 +17,6 @@ W: str = "w"
 H: str = "h"
 FRAME: str = "frame"
 OCCURRENCE: str = "occurrence"
-INPUT_FILE_PATH: str = "input_file_path"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
 
@@ -131,11 +130,10 @@ class Detection(DataclassValidation):
         w (float): the width component of the bounding box.
         h (float): the height component of the bounding box.
         frame (int): the frame that the detection belongs to.
-        occurrence (datetime): the time of the detection's occurence.
-        input_file_path (Path): absolute path to otdet that the detection belongs to
-        at the time of its creation.
+        occurrence (datetime): the time of the detection's occurrence.
         interpolated_detection (bool): whether this detection is interpolated.
         track_id (TrackId): the track id this detection belongs to.
+        video_name (str): name of video that this detection belongs.
     """
 
     classification: str
@@ -146,9 +144,9 @@ class Detection(DataclassValidation):
     h: float
     frame: int
     occurrence: datetime
-    input_file_path: Path
     interpolated_detection: bool
     track_id: TrackId
+    video_name: str
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()
@@ -183,7 +181,6 @@ class Detection(DataclassValidation):
             H: self.h,
             FRAME: self.frame,
             OCCURRENCE: self.occurrence,
-            INPUT_FILE_PATH: self.input_file_path,
             INTERPOLATED_DETECTION: self.interpolated_detection,
             TRACK_ID: self.track_id.id,
         }
@@ -219,6 +216,24 @@ class Track(DataclassValidation):
     def _validate_detections_sorted_by_occurrence(self) -> None:
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
             raise ValueError("detections must be sorted by occurence")
+
+    @property
+    def start(self) -> datetime:
+        """Get start time of this track.
+
+        Returns:
+            datetime: the start time.
+        """
+        return self.detections[0].occurrence
+
+    @property
+    def end(self) -> datetime:
+        """Get end time of this track.
+
+        Returns:
+            datetime: the end time.
+        """
+        return self.detections[-1].occurrence
 
 
 @dataclass(frozen=True)
@@ -357,7 +372,7 @@ class TrackRepository:
         """
         self._tracks[track.id] = track
 
-    def add_all(self, tracks: list[Track]) -> None:
+    def add_all(self, tracks: Iterable[Track]) -> None:
         """
         Add multiple tracks to the repository and notify only once about it.
 
@@ -367,7 +382,7 @@ class TrackRepository:
         if tracks:
             self.__add_all(tracks)
 
-    def __add_all(self, tracks: list[Track]) -> None:
+    def __add_all(self, tracks: Iterable[Track]) -> None:
         """Internal method to add all tracks to the repository and notify only once
         about it.
 
@@ -377,10 +392,6 @@ class TrackRepository:
         for track in tracks:
             self.__add(track)
         self.observers.notify([track.id for track in tracks])
-
-    def delete_all(self) -> None:
-        """Delete all tracks."""
-        self._tracks = {}
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
@@ -409,6 +420,39 @@ class TrackRepository:
         """
         self._tracks.clear()
         self.observers.notify([])
+
+
+class TrackFileRepository:
+    def __init__(self) -> None:
+        self._files: set[Path] = set()
+
+    def add(self, file: Path) -> None:
+        """
+        Add a single track file the repository.
+
+        Args:
+            file (Path): track file to be added.
+        """
+        self._files.add(file)
+
+    def add_all(self, files: Iterable[Path]) -> None:
+        """
+        Add multiple files to the repository.
+
+        Args:
+            files (Iterable[Path]): the files to be added.
+        """
+        for file in files:
+            self.add(file)
+
+    def get_all(self) -> set[Path]:
+        """
+        Retrieve all track files.
+
+        Returns:
+            set[Path]: all tracks within the repository.
+        """
+        return self._files.copy()
 
 
 class TrackIdProvider(ABC):

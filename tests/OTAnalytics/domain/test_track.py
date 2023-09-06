@@ -5,11 +5,13 @@ from unittest.mock import Mock, call
 import pytest
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
     CalculateTrackClassificationByMaxConfidence,
     Detection,
     Track,
+    TrackFileRepository,
     TrackId,
     TrackListObserver,
     TrackObserver,
@@ -33,6 +35,7 @@ def valid_detection_dict() -> dict:
         ottrk_format.INPUT_FILE_PATH: Path("path/to/file.otdet"),
         ottrk_format.INTERPOLATED_DETECTION: False,
         "track-id": TrackId(1),
+        "video_name": "file.mp4",
     }
 
 
@@ -47,11 +50,11 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
         h=valid_detection_dict[ottrk_format.H],
         frame=valid_detection_dict[ottrk_format.FRAME],
         occurrence=valid_detection_dict[ottrk_format.OCCURRENCE],
-        input_file_path=valid_detection_dict[ottrk_format.INPUT_FILE_PATH],
         interpolated_detection=valid_detection_dict[
             ottrk_format.INTERPOLATED_DETECTION
         ],
         track_id=valid_detection_dict[ottrk_format.TRACK_ID],
+        video_name=valid_detection_dict[VIDEO_NAME],
     )
 
 
@@ -101,9 +104,9 @@ class TestDetection:
                 h=h,
                 frame=frame,
                 occurrence=datetime(2022, 1, 1, 1, 0, 0),
-                input_file_path=Path("path/to/file.otdet"),
                 interpolated_detection=False,
                 track_id=TrackId(track_id),
+                video_name="file.mp4",
             )
 
     def test_instantiation_with_valid_args(
@@ -118,7 +121,7 @@ class TestDetection:
         assert det.h == valid_detection_dict[ottrk_format.H]
         assert det.frame == valid_detection_dict[ottrk_format.FRAME]
         assert det.occurrence == valid_detection_dict[ottrk_format.OCCURRENCE]
-        assert det.input_file_path == valid_detection_dict[ottrk_format.INPUT_FILE_PATH]
+        assert det.video_name == valid_detection_dict[VIDEO_NAME]
         assert (
             det.interpolated_detection
             == valid_detection_dict[ottrk_format.INTERPOLATED_DETECTION]
@@ -161,6 +164,36 @@ class TestTrack:
             valid_detection,
             valid_detection,
         ]
+
+    def test_start_and_end_time(self) -> None:
+        start_time = datetime(2022, 1, 1, 13)
+        end_time = datetime(2022, 1, 1, 14)
+
+        start_detection = Mock(spec=Detection)
+        start_detection.occurrence = start_time
+        second_detection = Mock(spec=Detection)
+        second_detection.occurrence = datetime(2022, 1, 1, 13, 15)
+        third_detection = Mock(spec=Detection)
+        third_detection.occurrence = datetime(2022, 1, 1, 13, 30)
+        fourth_detection = Mock(spec=Detection)
+        fourth_detection.occurrence = datetime(2022, 1, 1, 13, 45)
+
+        end_detection = Mock(spec=Detection)
+        end_detection.occurrence = end_time
+        track = Track(
+            TrackId(1),
+            "car",
+            [
+                start_detection,
+                second_detection,
+                third_detection,
+                fourth_detection,
+                end_detection,
+            ],
+        )
+
+        assert track.start == start_time
+        assert track.end == end_time
 
 
 class TestCalculateTrackClassificationByMaxConfidence:
@@ -265,3 +298,28 @@ class TestTrackRepository:
             call([first_id, second_id]),
             call([]),
         ]
+
+
+class TestTrackFileRepository:
+    @pytest.fixture
+    def mock_file(self) -> Mock:
+        return Mock(spec=Path)
+
+    @pytest.fixture
+    def mock_other_file(self) -> Mock:
+        return Mock(spec=Path)
+
+    def test_add(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        repository = TrackFileRepository()
+        assert repository._files == set()
+        repository.add(mock_file)
+        assert repository._files == {mock_file}
+        repository.add(mock_file)
+        assert repository._files == {mock_file}
+        repository.add(mock_other_file)
+        assert repository._files == {mock_file, mock_other_file}
+
+    def test_add_all(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        repository = TrackFileRepository()
+        repository.add_all([mock_file, mock_other_file])
+        assert repository._files == {mock_file, mock_other_file}

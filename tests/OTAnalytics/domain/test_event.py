@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -17,7 +16,9 @@ from OTAnalytics.domain.event import (
     SECTION_ID,
     VIDEO_NAME,
     Event,
+    EventBuilder,
     EventRepository,
+    ImproperFormattedFilename,
     IncompleteEventBuilderSetup,
     SceneEventBuilder,
     SectionEventBuilder,
@@ -39,9 +40,9 @@ def valid_detection() -> Detection:
         h=30.5,
         frame=1,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
         track_id=TrackId(1),
+        video_name="myhostname_something.mp4",
     )
 
 
@@ -161,6 +162,17 @@ class TestEvent:
         assert event_dict == expected
 
 
+class TestEventBuilder:
+    def test_extract_hostname(self) -> None:
+        video_name = "myhostname_2022-12-13_13-00-00.mp4"
+        assert EventBuilder.extract_hostname(video_name) == "myhostname"
+
+    def test_extract_hostname_wrong_format(self) -> None:
+        wrong_formatted_name = "myhostname.mp4"
+        with pytest.raises(ImproperFormattedFilename):
+            EventBuilder.extract_hostname(wrong_formatted_name)
+
+
 class TestSectionEventBuilder:
     def test_create_event_without_adds(self, valid_detection: Detection) -> None:
         event_builder = SectionEventBuilder()
@@ -227,7 +239,7 @@ class TestSectionEventBuilder:
         assert event.event_coordinate == ImageCoordinate(1, 1)
         assert event.event_type == EventType.SECTION_ENTER
         assert event.direction_vector == direction_vector
-        assert event.video_name == valid_detection.input_file_path.name
+        assert event.video_name == valid_detection.video_name
 
 
 class TestSceneEventBuilder:
@@ -283,7 +295,7 @@ class TestSceneEventBuilder:
         )
         assert event.event_type == EventType.ENTER_SCENE
         assert event.direction_vector == direction_vector
-        assert event.video_name == valid_detection.input_file_path.name
+        assert event.video_name == valid_detection.video_name
         assert event.event_coordinate == ImageCoordinate(0, 0)
 
 

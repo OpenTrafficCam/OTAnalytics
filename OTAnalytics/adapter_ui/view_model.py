@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_flows import AbstractFrameFlows
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
-from OTAnalytics.adapter_ui.abstract_frame_sections import AbstractFrameSections
+from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
+    AbstractFrameTrackPlotting,
+)
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -48,7 +51,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_sections_frame(self, frame: AbstractFrameSections) -> None:
+    def set_sections_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod
@@ -56,11 +59,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_flows_frame(self, frame: AbstractFrameFlows) -> None:
+    def set_flows_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod
-    def set_tracks_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
+    def set_frame_canvas(self, tracks_canvas: AbstractFrameCanvas) -> None:
         pass
 
     @abstractmethod
@@ -76,11 +79,11 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
-    def save_configuration(self) -> None:
+    def load_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def load_configuration(self) -> None:
+    def save_otconfig(self) -> None:
         pass
 
     @abstractmethod
@@ -104,6 +107,14 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def get_all_track_files(self) -> set[Path]:
+        pass
+
+    @abstractmethod
+    def set_treeview_files(self, treeview: AbstractTreeviewInterface) -> None:
+        pass
+
+    @abstractmethod
     def set_selected_section_ids(self, ids: list[str]) -> None:
         raise NotImplementedError
 
@@ -116,11 +127,11 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def load_sections(self) -> None:
+    def load_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def save_sections(self) -> None:
+    def save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -213,10 +224,6 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update_show_tracks_state(self, value: bool) -> None:
-        pass
-
-    @abstractmethod
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         pass
 
@@ -306,4 +313,26 @@ class ViewModel(ABC):
 
     @abstractmethod
     def export_counts(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def start_new_project(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_project_name(self, name: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_project_start_date(self, start_date: Optional[datetime]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_start_new_project(self, _: None) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_frame_track_plotting(
+        self, frame_track_plotting: AbstractFrameTrackPlotting
+    ) -> None:
         raise NotImplementedError

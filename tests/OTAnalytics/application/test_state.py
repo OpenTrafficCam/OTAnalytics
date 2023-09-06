@@ -4,8 +4,11 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 
+from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
+    DEFAULT_HEIGHT,
+    DEFAULT_WIDTH,
     FlowState,
     ObservableOptionalProperty,
     ObservableProperty,
@@ -19,6 +22,7 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
     Detection,
@@ -155,7 +159,7 @@ class TestTrackImageUpdater:
         track = Mock(spec=Track)
         datastore = Mock(spec=Datastore)
         track_view_state = TrackViewState()
-        track_view_state.show_tracks.set(True)
+        track_view_state.track_offset.set(RelativeOffsetCoordinate(0.5, 0.7))
         track.id = track_id
         flow_state = FlowState()
         updater = TrackImageUpdater(
@@ -262,3 +266,35 @@ class TestTracksMetadata:
         assert tracks_metadata.classifications == {"car"}
         mock_track_repository.get_for.assert_any_call(track.id)
         assert mock_track_repository.get_for.call_count == 2
+
+
+class TestTrackViewState:
+    def test_reset(self) -> None:
+        image = Mock()
+        filter_element = Mock()
+        track_offset = Mock()
+        video = Mock()
+        track_view_state = TrackViewState()
+        track_view_state.selected_videos.set([video])
+        track_view_state.background_image.set(image)
+        track_view_state.view_width.set(20)
+        track_view_state.view_height.set(25)
+        track_view_state.filter_element.set(filter_element)
+        track_view_state.track_offset.set(track_offset)
+
+        assert track_view_state.selected_videos.get() == [video]
+        assert track_view_state.background_image.get() == image
+        assert track_view_state.view_width.get() == 20
+        assert track_view_state.view_height.get() == 25
+        assert track_view_state.filter_element.get() == filter_element
+        assert track_view_state.track_offset.get() == track_offset
+
+        track_view_state.reset()
+        assert track_view_state.selected_videos.get() == []
+        assert track_view_state.background_image.get() is None
+        assert track_view_state.view_width.get() == DEFAULT_WIDTH
+        assert track_view_state.view_height.get() == DEFAULT_HEIGHT
+        current_filter_element = track_view_state.filter_element.get()
+        assert current_filter_element.date_range == DateRange(None, None)
+        assert current_filter_element.classifications is None
+        assert track_view_state.track_offset.get() == DEFAULT_TRACK_OFFSET

@@ -1,5 +1,5 @@
 import bz2
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 from unittest.mock import Mock, call
@@ -8,6 +8,7 @@ import pytest
 import ujson
 
 from OTAnalytics import version
+from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.application.project import Project
@@ -19,10 +20,7 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import (
-    IntersectBySplittingTrackLine,
-    IntersectImplementation,
-)
+from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -41,6 +39,9 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_intersect.simple_intersect import (
+    SimpleIntersectBySplittingTrackLine,
+)
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     EVENT_FORMAT_VERSION,
@@ -123,9 +124,17 @@ def example_json(test_data_tmp_dir: Path) -> tuple[Path, dict]:
     return json_file, content
 
 
+@pytest.fixture
 def mocked_track_repository() -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_for.return_value = None
+    return repository
+
+
+@pytest.fixture
+def mocked_track_file_repository() -> Mock:
+    repository = Mock(spec=TrackRepository)
+    repository.get_all.return_value = set()
     return repository
 
 
@@ -221,25 +230,33 @@ class TestOttrkFormatFixer:
 
 
 class TestOttrkParser:
-    _track_repository = mocked_track_repository()
-    ottrk_parser: OttrkParser = OttrkParser(
-        CalculateTrackClassificationByMaxConfidence(),
-        _track_repository,
-    )
+    @pytest.fixture
+    def ottrk_parser(
+        self, mocked_track_repository: Mock, mocked_track_file_repository: Mock
+    ) -> OttrkParser:
+        return OttrkParser(
+            CalculateTrackClassificationByMaxConfidence(),
+            mocked_track_repository,
+            mocked_track_file_repository,
+            TRACK_LENGTH_LIMIT,
+        )
 
-    def test_parse_whole_ottrk(self, ottrk_path: Path) -> None:
+    def test_parse_whole_ottrk(
+        self, ottrk_parser: OttrkParser, ottrk_path: Path
+    ) -> None:
         # TODO What is the expected result?
-        self.ottrk_parser.parse(ottrk_path)
+        ottrk_parser.parse(ottrk_path)
 
     def test_parse_ottrk_sample(
         self,
         test_data_tmp_dir: Path,
         track_builder_setup_with_sample_data: TrackBuilder,
+        ottrk_parser: OttrkParser,
     ) -> None:
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
         _write_bz2(ottrk_data, ottrk_file)
-        result_tracks = self.ottrk_parser.parse(ottrk_file)
+        result_tracks = ottrk_parser.parse(ottrk_file)
 
         expected_track = track_builder_setup_with_sample_data.build_track()
 
@@ -259,14 +276,20 @@ class TestOttrkParser:
     def test_parse_detections_output_has_same_order_as_input(
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
+        ottrk_parser: OttrkParser,
     ) -> None:
         detections: list[
             dict
         ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
+            ottrk_dataformat.VIDEO
+        ]
 
-        result_sorted_input = self.ottrk_parser._parse_detections(detections)
+        result_sorted_input = ottrk_parser._parse_detections(detections, metadata_video)
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = self.ottrk_parser._parse_detections(unsorted_detections)
+        result_unsorted_input = ottrk_parser._parse_detections(
+            unsorted_detections, metadata_video
+        )
 
         expected_sorted = {
             TrackId(1): track_builder_setup_with_sample_data.build_detections()
@@ -276,15 +299,22 @@ class TestOttrkParser:
         assert expected_sorted != result_unsorted_input
 
     def test_parse_tracks(
-        self, track_builder_setup_with_sample_data: TrackBuilder
+        self,
+        track_builder_setup_with_sample_data: TrackBuilder,
+        ottrk_parser: OttrkParser,
     ) -> None:
         detections: list[
             dict
         ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
+            ottrk_dataformat.VIDEO
+        ]
 
-        result_sorted_input = self.ottrk_parser._parse_tracks(detections)
+        result_sorted_input = ottrk_parser._parse_tracks(detections, metadata_video)
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = self.ottrk_parser._parse_tracks(unsorted_detections)
+        result_unsorted_input = ottrk_parser._parse_tracks(
+            unsorted_detections, metadata_video
+        )
 
         expected_sorted = [track_builder_setup_with_sample_data.build_track()]
 
@@ -292,7 +322,10 @@ class TestOttrkParser:
         assert expected_sorted == result_unsorted_input
 
     def test_parse_tracks_merge_with_existing(
-        self, track_builder_setup_with_sample_data: TrackBuilder
+        self,
+        track_builder_setup_with_sample_data: TrackBuilder,
+        mocked_track_repository: Mock,
+        ottrk_parser: OttrkParser,
     ) -> None:
         detections: list[
             dict
@@ -300,6 +333,9 @@ class TestOttrkParser:
         deserialized_detections = (
             track_builder_setup_with_sample_data.build_detections()
         )
+        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
+            ottrk_dataformat.VIDEO
+        ]
         existing_track_builder = TrackBuilder()
         append_sample_data(
             existing_track_builder,
@@ -310,11 +346,11 @@ class TestOttrkParser:
         merged_classification = "car"
         classificator = Mock(spec=TrackClassificationCalculator)
         classificator.calculate.return_value = merged_classification
-        self._track_repository.get_for.return_value = existing_track
+        mocked_track_repository.get_for.return_value = existing_track
         all_detections = deserialized_detections + existing_track.detections
         merged_track = Track(existing_track.id, merged_classification, all_detections)
 
-        result_sorted_input = self.ottrk_parser._parse_tracks(detections)
+        result_sorted_input = ottrk_parser._parse_tracks(detections, metadata_video)
 
         expected_sorted = [merged_track]
 
@@ -329,7 +365,7 @@ class TestOttrkParser:
         assert d1.h == d2.h
         assert d1.frame == d2.frame
         assert d1.occurrence == d2.occurrence
-        assert d1.input_file_path == d2.input_file_path
+        assert d1.video_name == d2.video_name
         assert d1.interpolated_detection == d2.interpolated_detection
         assert d1.track_id == d2.track_id
 
@@ -628,7 +664,7 @@ class TestOtEventListParser:
         shapely_intersection_adapter.split_line_with_line.return_value = []
 
         if isinstance(line_section, LineSection):
-            line_section_intersector = IntersectBySplittingTrackLine(
+            line_section_intersector = SimpleIntersectBySplittingTrackLine(
                 implementation=shapely_intersection_adapter, line_section=line_section
             )
 
@@ -786,7 +822,9 @@ class TestOtConfigParser:
             video_parser=video_parser,
             flow_parser=flow_parser,
         )
-        project = Project(name="Test Project", start_date=datetime(2020, 1, 1))
+        project = Project(
+            name="Test Project", start_date=datetime(2020, 1, 1, tzinfo=timezone.utc)
+        )
         videos: Sequence[Video] = ()
         sections: Sequence[Section] = ()
         flows: Sequence[Flow] = ()
