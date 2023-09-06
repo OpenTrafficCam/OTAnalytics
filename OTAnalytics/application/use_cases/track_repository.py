@@ -104,3 +104,26 @@ class RemoveTracks:
                 self._track_repository.remove(track_id)
             except TrackRemoveError:
                 continue
+
+
+class GetTracksFromIds:
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+
+    def __call__(self, track_ids: Iterable[TrackId]) -> Iterable[Track]:
+        """Get tracks from ids.
+
+        Non-existing ids will be omitted.
+
+        Args:
+            track_ids (Iterable[TrackId]): the ids of the tracks to get.
+
+        Returns:
+            Iterable[Track]: the tracks with the ids to get.
+        """
+        tracks: list[Track] = []
+        for track_id in track_ids:
+            if track := self._track_repository.get_for(track_id):
+                tracks.append(track)
+
+        return tracks

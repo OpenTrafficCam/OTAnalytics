@@ -9,6 +9,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     GetAllTrackIds,
     GetAllTracks,
+    GetTracksFromIds,
     RemoveTracks,
 )
 from OTAnalytics.domain.track import (
@@ -80,6 +81,18 @@ class TestRemoveTracks:
         remove_tracks = RemoveTracks(track_repository)
         remove_tracks([remove_id])
         track_repository.remove.assert_called_once_with(remove_id)
+
+
+class TestGetTracksFromIds:
+    def test_get_ids(self, track_repository: Mock) -> None:
+        track_1 = Mock()
+        track_1.id = TrackId("1")
+        track_repository.get_for.return_value = track_1
+
+        get_tracks_from_ids = GetTracksFromIds(track_repository)
+        tracks = get_tracks_from_ids([track_1.id])
+        assert tracks == [track_1]
+        track_repository.get_for.assert_called_once_with(track_1.id)
 
 
 class TestGetAllTrackFiles:
