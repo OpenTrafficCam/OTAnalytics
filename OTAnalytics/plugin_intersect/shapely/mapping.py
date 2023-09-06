@@ -26,6 +26,11 @@ class ShapelyMapper:
         return ShapelyPoint(point.x, point.y)
 
     @staticmethod
+    def map_to_domain_coordinate(point: ShapelyPoint) -> Coordinate:
+        """Map shapely `Point` to a domain `Coordinate`."""
+        return Coordinate(point.x, point.y)
+
+    @staticmethod
     def map_to_domain_line(line: ShapelyLineString) -> Line:
         """Map a shapely `LineString` to a domain `Line` geometry."""
         coords = [Coordinate(coord[0], coord[1]) for coord in line.coords]

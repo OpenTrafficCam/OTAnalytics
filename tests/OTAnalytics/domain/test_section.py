@@ -5,10 +5,8 @@ import pytest
 from OTAnalytics.domain.event import EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate, X, Y
 from OTAnalytics.domain.section import (
-    AREA,
     COORDINATES,
     ID,
-    LINE,
     NAME,
     PLUGIN_DATA,
     RELATIVE_OFFSET_COORDINATES,
@@ -21,6 +19,7 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionListSubject,
     SectionRepository,
+    SectionType,
 )
 
 
@@ -34,6 +33,36 @@ class TestSectionListSubject:
         subject.notify(changed_tracks)
 
         observer.notify_sections.assert_called_with(changed_tracks)
+
+
+class TestSection:
+    @pytest.fixture
+    def section_north(self) -> Section:
+        plugin_data: dict = {"key_1": "some data", "key_2": "some data"}
+        id = "North"
+        coordinates = [
+            Coordinate(0, 0),
+            Coordinate(1, 0),
+            Coordinate(2, 0),
+            Coordinate(0, 0),
+        ]
+        return Area(
+            id=SectionId(id),
+            name=id,
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)
+            },
+            plugin_data=plugin_data,
+            coordinates=coordinates,
+        )
+
+    def test_get_offset(self, section_north: Section) -> None:
+        assert section_north.get_offset(
+            EventType.SECTION_ENTER
+        ) == RelativeOffsetCoordinate(0.5, 0.5)
+        assert section_north.get_offset(
+            EventType.ENTER_SCENE
+        ) == RelativeOffsetCoordinate(0, 0)
 
 
 class TestLineSection:
@@ -113,7 +142,7 @@ class TestLineSection:
         section_dict = section.to_dict()
 
         assert section_dict == {
-            TYPE: LINE,
+            TYPE: SectionType.LINE.value,
             ID: section_id.id,
             NAME: section.name,
             RELATIVE_OFFSET_COORDINATES: {
@@ -269,7 +298,7 @@ class TestAreaSection:
         section_dict = section.to_dict()
 
         assert section_dict == {
-            TYPE: AREA,
+            TYPE: SectionType.AREA.value,
             ID: section_id.id,
             NAME: section.name,
             RELATIVE_OFFSET_COORDINATES: {
@@ -455,3 +484,13 @@ class TestSectionRepository:
             call([section_id_north, section_id_south]),
             call([]),
         ]
+
+    def test_get_section_ids(self) -> None:
+        section_id = SectionId("North")
+        section = Mock(spec=Section)
+        section.id = section_id
+
+        repository = SectionRepository()
+        repository.add(section)
+        result = repository.get_section_ids()
+        assert list(result) == [section_id]

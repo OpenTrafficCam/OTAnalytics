@@ -226,3 +226,11 @@ class FlowRepository:
 
     def get_all(self) -> list[Flow]:
         return list(self._flows.values())
+
+    def get_flow_ids(self) -> Iterable[FlowId]:
+        """Get all flow ids used in repository.
+
+        Returns:
+            Iterable[FlowId]: the flow ids.
+        """
+        return self._flows.keys()

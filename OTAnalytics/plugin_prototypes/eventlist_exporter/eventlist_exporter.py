@@ -3,6 +3,7 @@ from typing import Iterable
 
 import pandas as pd
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import (
     DIRECTION_VECTOR,
@@ -114,11 +115,13 @@ class EventListDictPrinter(EventListExporter):
     def export(
         self, events: Iterable[Event], sections: Iterable[Section], file: Path
     ) -> None:
-        print("Events:")
-        print([event.to_dict() for event in events])
-        print("__________________________________________________________________")
-        print("Sections:")
-        print([section.to_dict() for section in sections])
+        logger().info("Events:")
+        logger().info([event.to_dict() for event in events])
+        logger().info(
+            "__________________________________________________________________"
+        )
+        logger().info("Sections:")
+        logger().info([section.to_dict() for section in sections])
 
     def get_extension(self) -> str:
         return ""
@@ -133,11 +136,13 @@ class EventListDataFramePrinter(EventListExporter):
     ) -> None:
         df_events = EventListDataFrameBuilder(events=events, sections=sections).build()
         df_sections = SectionsDataFrameBuilder(sections=sections).build()
-        print("Events:")
-        print(df_events)
-        print("__________________________________________________________________")
-        print("Sections:")
-        print(df_sections)
+        logger().info("Events:")
+        logger().info(df_events)
+        logger().info(
+            "__________________________________________________________________"
+        )
+        logger().info("Sections:")
+        logger().info(df_sections)
 
     def get_extension(self) -> str:
         return ""

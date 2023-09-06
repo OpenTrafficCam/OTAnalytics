@@ -3,21 +3,34 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from OTAnalytics.application.analysis.intersect import (
-    RunIntersect,
-    RunSceneEventDetection,
+from OTAnalytics.application.analysis.traffic_counting import ExportCounts
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
+from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_COUNTS_FILE_STEM,
+    DEFAULT_COUNTS_FILE_TYPE,
+    DEFAULT_EVENTLIST_FILE_STEM,
+    DEFAULT_EVENTLIST_FILE_TYPE,
+    DEFAULT_SECTIONS_FILE_TYPE,
+    DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
+from OTAnalytics.application.logger import logger
+from OTAnalytics.application.state import TracksMetadata
+from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
+    ClearAllTracks,
+    GetAllTrackIds,
+)
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import Track
-
-EVENTLIST_FILE_TYPE = "otevents"
-TRACK_FILE_TYPE = "ottrk"
-
-SECTIONS_FILE_TYPE = "otflow"
 
 
 class CliParseError(Exception):
@@ -35,8 +48,10 @@ class InvalidSectionFileType(Exception):
 @dataclass(frozen=True)
 class CliArguments:
     start_cli: bool
+    debug: bool
     track_files: list[str]
     sections_file: str
+    eventlist_filename: str
 
 
 class CliArgumentParser:
@@ -76,6 +91,19 @@ class CliArgumentParser:
             help="Otflow file containing sections.",
             required=False,
         )
+        self._parser.add_argument(
+            "--save-name",
+            default="",
+            type=str,
+            help="Name of the otevents file.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Set log level to DEBUG.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -84,7 +112,9 @@ class CliArgumentParser:
             CliArguments: _description_
         """
         args = self._parser.parse_args()
-        return CliArguments(args.cli, args.ottrks, args.otflow)
+        return CliArguments(
+            args.cli, args.debug, args.ottrks, args.otflow, args.save_name
+        )
 
 
 class OTAnalyticsCli:
@@ -102,8 +132,13 @@ class OTAnalyticsCli:
         flow_parser: FlowParser,
         event_list_parser: EventListParser,
         event_repository: EventRepository,
-        intersect: RunIntersect,
-        scene_event_detection: RunSceneEventDetection,
+        add_section: AddSection,
+        add_flow: AddFlow,
+        create_events: CreateEvents,
+        export_counts: ExportCounts,
+        add_all_tracks: AddAllTracks,
+        get_all_track_ids: GetAllTrackIds,
+        clear_all_tracks: ClearAllTracks,
         progressbar: ProgressbarBuilder,
     ) -> None:
         self._validate_cli_args(cli_args)
@@ -113,8 +148,13 @@ class OTAnalyticsCli:
         self._flow_parser = flow_parser
         self._event_list_parser = event_list_parser
         self._event_repository = event_repository
-        self._intersect = intersect
-        self._scene_event_detection = scene_event_detection
+        self._add_section = add_section
+        self._add_flow = add_flow
+        self._create_events = create_events
+        self._export_counts = export_counts
+        self._add_all_tracks = add_all_tracks
+        self._get_all_track_ids = get_all_track_ids
+        self._clear_all_tracks = clear_all_tracks
         self._progressbar = progressbar
 
     def start(self) -> None:
@@ -125,52 +165,75 @@ class OTAnalyticsCli:
 
         sections, flows = self._parse_flows(sections_file)
 
-        self._run_analysis(ottrk_files, sections)
+        self._run_analysis(ottrk_files, sections, flows)
 
     def _parse_flows(self, flow_file: Path) -> tuple[Iterable[Section], Iterable[Flow]]:
         return self._flow_parser.parse(flow_file)
 
-    def _parse_tracks(self, track_file: Path) -> Iterable[Track]:
-        return self._track_parser.parse(track_file)
+    def _add_sections(self, sections: Iterable[Section]) -> None:
+        """Add sections to section repository."""
+        for section in sections:
+            self._add_section(section)
+
+    def _add_flows(self, flows: Iterable[Flow]) -> None:
+        """Add flows to flow repository."""
+        for flow in flows:
+            self._add_flow(flow)
+
+    def _parse_tracks(self, track_files: list[Path]) -> None:
+        for track_file in self._progressbar(track_files, "Parsed track files", "files"):
+            tracks = self._track_parser.parse(track_file)
+            self._add_all_tracks(tracks)
 
     def _run_analysis(
-        self, ottrk_files: set[Path], sections: Iterable[Section]
+        self, ottrk_files: set[Path], sections: Iterable[Section], flows: Iterable[Flow]
     ) -> None:
-        """Run analysis.
+        """Run analysis."""
+        self._clear_all_tracks()
+        self._event_repository.clear()
+        self._add_sections(sections)
+        self._add_flows(flows)
+        ottrk_files_sorted: list[Path] = sorted(
+            ottrk_files, key=lambda file: str(file).lower()
+        )
+        self._parse_tracks(ottrk_files_sorted)
 
-        Args:
-            ottrk_files (list[Path]): the ottrk files to be analyzed
-        """
-        messages: list[str] = []
-        for ottrk_file in self._progressbar(
-            list(ottrk_files), "Analyzed files", "files"
-        ):
-            self._event_repository.clear()
-            save_path = self._determine_eventlist_save_path(ottrk_file)
-            tracks = self._parse_tracks(ottrk_file)
-            self._intersect.run(tracks, sections)
-            self._event_repository.add_all(self._scene_event_detection.run(tracks))
-            self._event_list_parser.serialize(
-                self._event_repository.get_all(), sections, save_path
-            )
-            messages.append(f"Analysis finished. Event list saved at '{save_path}'")
+        logger().info("Create event list ...")
+        self._create_events()
+        logger().info("Event list created.")
 
-        for msg in messages:
-            print(msg)
+        event_list_output_file = self._determine_eventlist_save_path(
+            ottrk_files_sorted[0]
+        )
+        self._event_list_parser.serialize(
+            self._event_repository.get_all(), sections, event_list_output_file
+        )
+        logger().info(f"Event list saved at '{event_list_output_file}'")
 
-    @staticmethod
-    def _determine_eventlist_save_path(track_file: Path) -> Path:
+        self._do_export_counts(event_list_output_file)
+
+    def _determine_eventlist_save_path(self, track_file: Path) -> Path:
         """Determine save path of eventlist.
 
-        The save path will be determined by the location of the track file.
+        The save path will be the parent directory of the track file.
+        The eventlist file name will be either name passed via CLI or the
+        `DEFAULT_EVENTLIST_FILENAME`.
 
         Args:
-            track_file (Path): the track file used to determine the save path
+            track_file (Path): the track file used to determine the save path.
 
         Returns:
-            Path: the save path of the event list
+            Path: the save path of the event list.
         """
-        return track_file.with_suffix(f".{EVENTLIST_FILE_TYPE}")
+        eventlist_file_name = self.cli_args.eventlist_filename
+        if eventlist_file_name == "":
+            return track_file.with_name(
+                f"{DEFAULT_EVENTLIST_FILE_STEM}.{DEFAULT_EVENTLIST_FILE_TYPE}"
+            )
+
+        return track_file.with_name(
+            f"{self.cli_args.eventlist_filename}.{DEFAULT_EVENTLIST_FILE_TYPE}"
+        )
 
     @staticmethod
     def _validate_cli_args(args: CliArguments) -> None:
@@ -206,12 +269,17 @@ class OTAnalyticsCli:
         for file in files:
             ottrk_file = Path(file)
             if ottrk_file.is_dir():
-                files_in_directory = ottrk_file.rglob(f"*.{TRACK_FILE_TYPE}")
+                files_in_directory = ottrk_file.rglob(f"*.{DEFAULT_TRACK_FILE_TYPE}")
                 ottrk_files.update(files_in_directory)
                 continue
 
-            if not ottrk_file.exists() or ottrk_file.suffix != f".{TRACK_FILE_TYPE}":
-                print(f"Ottrk file'{ottrk_file}' does not exist. Skipping file.")
+            if (
+                not ottrk_file.exists()
+                or ottrk_file.suffix != f".{DEFAULT_TRACK_FILE_TYPE}"
+            ):
+                logger().warning(
+                    f"Ottrk file'{ottrk_file}' does not exist. Skipping file."
+                )
                 continue
 
             ottrk_files.add(ottrk_file)
@@ -236,10 +304,44 @@ class OTAnalyticsCli:
                 f"Sections file '{sections_file}' does not exist. "
                 "Unable to run analysis."
             )
-        if sections_file.suffix != f".{SECTIONS_FILE_TYPE}":
+        if sections_file.suffix != f".{DEFAULT_SECTIONS_FILE_TYPE}":
             raise InvalidSectionFileType(
                 f"Sections file {sections_file} has wrong file type. "
                 "Unable to run analysis."
             )
 
         return sections_file
+
+    def _do_export_counts(self, event_list_output_file: Path) -> None:
+        logger().info("Create counts ...")
+        tracks_metadata = TracksMetadata(self._add_all_tracks._track_repository)
+        tracks_metadata.notify_tracks(list(self._get_all_track_ids()))
+        start = tracks_metadata.first_detection_occurrence
+        end = tracks_metadata.last_detection_occurrence
+        modes = tracks_metadata.classifications
+        if start is None:
+            raise ValueError("start is None but has to be defined for exporting counts")
+        if end is None:
+            raise ValueError("end is None but has to be defined for exporting counts")
+        if modes is None:
+            raise ValueError("modes is None but has to be defined for exporting counts")
+        interval: int = DEFAULT_COUNTING_INTERVAL_IN_MINUTES
+        if event_list_output_file.stem == DEFAULT_EVENTLIST_FILE_STEM:
+            output_file_stem = DEFAULT_COUNTS_FILE_STEM
+        else:
+            output_file_stem = (
+                f"{event_list_output_file.stem}_{DEFAULT_COUNTS_FILE_STEM}"
+            )
+        output_file = event_list_output_file.with_stem(output_file_stem).with_suffix(
+            f".{DEFAULT_COUNTS_FILE_TYPE}"
+        )
+        counting_specification = CountingSpecificationDto(
+            start=start,
+            end=end,
+            modes=list(modes),
+            interval_in_minutes=interval,
+            output_file=str(output_file),
+            output_format="CSV",
+        )
+        self._export_counts.export(specification=counting_specification)
+        logger().info(f"Counts saved at {output_file}")

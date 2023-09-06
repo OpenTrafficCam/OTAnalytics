@@ -93,7 +93,6 @@ class PollingProgressbarPopup(ProgressbarPopupTemplate):
     def update_progress(self) -> None:
         self._update_progress()
         if not self._close:
-            print("Not closed yet")
             self.master.after(1000, self.update_progress)
 
 

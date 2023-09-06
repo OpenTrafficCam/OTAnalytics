@@ -1,9 +1,12 @@
 import contextlib
+import tkinter
 from typing import Any
 
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import DateRow
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
     FrameContent,
@@ -11,6 +14,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
 )
 
 INTERVAL = "interval"
+START = "start"
+END = "end"
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
 INITIAL_FILE_STEM = "counts"
@@ -29,22 +34,28 @@ class FrameConfigureExportCounts(FrameContent):
         self,
         export_formats: dict[str, str],
         input_values: dict,
+        viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self._input_values = input_values
         self._export_formats = export_formats
+        self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
 
     def _get_widgets(self) -> None:
+        self.start_date = DateRow(master=self, viewmodel=self._viewmodel, name="Start")
+        self.start_date.set_datetime(self._input_values[START])
+        self.end_date = DateRow(master=self, viewmodel=self._viewmodel, name="End")
+        self.end_date.set_datetime(self._input_values[END])
         self.label_interval = CTkLabel(master=self, text="Interval")
         self.entry_interval = CTkEntry(
             master=self,
             validate="key",
             validatecommand=(self.register(self._is_int_above_zero), "%P"),
         )
-        self.entry_interval.insert(0, str(self._input_values["interval"]))
+        self.entry_interval.insert(0, str(self._input_values[INTERVAL]))
         self.label_interval_unit = CTkLabel(master=self, text="min")
         self.label_format = CTkLabel(master=self, text="Format")
         self.optionmenu_format = CTkOptionMenu(
@@ -53,22 +64,35 @@ class FrameConfigureExportCounts(FrameContent):
         self.optionmenu_format.set(self._input_values[EXPORT_FORMAT])
 
     def _place_widgets(self) -> None:
-        self.label_interval.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.entry_interval.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-        self.label_interval_unit.grid(
-            row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY
+        self.grid_columnconfigure(2, weight=1)
+        self.start_date.grid(
+            row=0, column=0, columnspan=3, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.label_format.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.end_date.grid(
+            row=1, column=0, columnspan=3, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.label_interval.grid(
+            row=2, column=0, padx=PADX, pady=PADY, sticky=tkinter.NW
+        )
+        self.entry_interval.grid(
+            row=2, column=1, padx=PADX, pady=PADY, sticky=tkinter.NW
+        )
+        self.label_interval_unit.grid(
+            row=2, column=2, padx=PADX, pady=PADY, sticky=tkinter.NW
+        )
+        self.label_format.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=tkinter.NW)
         self.optionmenu_format.grid(
-            row=1, column=1, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=3, column=1, columnspan=2, padx=PADX, pady=PADY, sticky=tkinter.NW
         )
 
     def set_focus(self) -> None:
         self.after(0, lambda: self.entry_interval.focus_set())
 
     def _parse_input_values(self) -> None:
-        self._input_values["interval"] = int(self.entry_interval.get())
-        self._input_values["export_format"] = self.optionmenu_format.get()
+        self._input_values[START] = self.start_date.get_datetime()
+        self._input_values[END] = self.end_date.get_datetime()
+        self._input_values[INTERVAL] = int(self.entry_interval.get())
+        self._input_values[EXPORT_FORMAT] = self.optionmenu_format.get()
 
     def get_input_values(self) -> dict:
         self._parse_input_values()
@@ -87,10 +111,12 @@ class ToplevelExportCounts(ToplevelTemplate):
         self,
         export_formats: dict[str, str],
         input_values: dict,
+        viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
         self._input_values = input_values
         self._export_formats = export_formats
+        self._viewmodel = viewmodel
         super().__init__(**kwargs)
 
     def _create_frame_content(self, master: Any) -> FrameContent:
@@ -98,6 +124,7 @@ class ToplevelExportCounts(ToplevelTemplate):
             master=master,
             export_formats=self._export_formats,
             input_values=self._input_values,
+            viewmodel=self._viewmodel,
         )
 
     def _choose_file(self) -> None:

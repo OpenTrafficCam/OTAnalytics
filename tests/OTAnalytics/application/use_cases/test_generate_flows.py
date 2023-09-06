@@ -3,8 +3,10 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.application.generate_flows import (
+from OTAnalytics.application.use_cases.generate_flows import (
+    AndPredicate,
     CrossProductFlowGenerator,
+    FilterExisting,
     FilterSameSection,
     FlowGenerator,
     FlowIdGenerator,
@@ -25,6 +27,54 @@ class TestFilterSameSection:
 
         assert not predicate(south_id, south_id)
         assert predicate(south_id, north_id)
+
+
+class TestFilterExisting:
+    def test_filter_existing_flows(self) -> None:
+        south_id = SectionId("south")
+        north_id = SectionId("north")
+        south_to_north = Flow(
+            FlowId("1"),
+            name="south to north",
+            start=south_id,
+            end=north_id,
+            distance=0,
+        )
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = [south_to_north]
+
+        predicate = FilterExisting(flow_repository)
+
+        assert not predicate(south_id, north_id)
+        assert predicate(north_id, south_id)
+
+
+class TestAndPredicate:
+    @pytest.mark.parametrize(
+        "first_value, second_value, expected_result",
+        [
+            (False, False, False),
+            (False, True, False),
+            (True, False, False),
+            (True, True, True),
+        ],
+    )
+    def test_and_then(
+        self, first_value: bool, second_value: bool, expected_result: bool
+    ) -> None:
+        south_id = SectionId("south")
+        north_id = SectionId("north")
+        first = Mock(spec=FlowPredicate)
+        second = Mock(spec=FlowPredicate)
+        first.return_value = first_value
+        second.return_value = second_value
+
+        and_predicate = AndPredicate(first, second)
+
+        assert and_predicate(south_id, north_id) is expected_result
+        first.assert_called_once_with(south_id, north_id)
+        if first_value:
+            second.assert_called_once_with(south_id, north_id)
 
 
 def create_test_cases() -> list[tuple[list[Section], list[Flow]]]:

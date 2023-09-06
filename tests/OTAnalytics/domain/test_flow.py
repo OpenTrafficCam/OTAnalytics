@@ -130,3 +130,13 @@ class TestFlowRepository:
         assert using_flow_end_section == [flow]
         assert using_other_start_section == [other_flow]
         assert using_other_end_section == [other_flow]
+
+    def test_get_flow_ids(self) -> None:
+        flow_id = FlowId("North -> South")
+        flow = Mock(spec=Flow)
+        flow.id = flow_id
+
+        repository = FlowRepository()
+        repository.add(flow)
+        result = repository.get_flow_ids()
+        assert list(result) == [flow_id]

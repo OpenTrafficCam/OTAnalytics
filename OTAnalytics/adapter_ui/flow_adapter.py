@@ -1,9 +1,5 @@
 from abc import ABC, abstractmethod
 
-from customtkinter import CTkFrame
-
-from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
-from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.domain.section import COORDINATES, Section
 
 
@@ -56,25 +52,3 @@ class GeometricCenterCalculator(SectionRefPointCalculator):
         center_x = total_x / num_points
         center_y = total_y / num_points
         return center_x, center_y
-
-
-class AbstractFrameFlows(AbstractFrame, WidgetPositionProvider, CTkFrame):
-    @abstractmethod
-    def introduce_to_viewmodel(self) -> None:
-        pass
-
-    @abstractmethod
-    def enable_remove_button(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def disable_remove_button(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def enable_edit_button(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def disable_edit_button(self) -> None:
-        raise NotImplementedError

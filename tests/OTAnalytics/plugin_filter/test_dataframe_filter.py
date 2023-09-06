@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable
 from unittest.mock import Mock
 
@@ -64,11 +64,15 @@ class TestDataFramePredicates:
         "predicate, expected_result",
         [
             (
-                DataFrameStartsAtOrAfterDate(OCCURRENCE, datetime(2000, 1, 1)),
+                DataFrameStartsAtOrAfterDate(
+                    OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
+                ),
                 Series([True, True, True, True, True]),
             ),
             (
-                DataFrameStartsAtOrAfterDate(OCCURRENCE, datetime(2000, 1, 10)),
+                DataFrameStartsAtOrAfterDate(
+                    OCCURRENCE, datetime(2000, 1, 10, tzinfo=timezone.utc)
+                ),
                 Series([False, False, False, False, False]),
             ),
             (
@@ -81,7 +85,7 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterDate(
-                    OCCURRENCE, datetime(2000, 1, 1)
+                    OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
                 ).conjunct_with(
                     DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 ),
@@ -89,7 +93,7 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterDate(
-                    OCCURRENCE, datetime(2000, 1, 11)
+                    OCCURRENCE, datetime(2000, 1, 11, tzinfo=timezone.utc)
                 ).conjunct_with(
                     DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 ),
@@ -108,7 +112,7 @@ class TestDataFramePredicates:
 
 class TestDataFrameFilter:
     def test_filter_tracks_fulfill_all(self, track_dataframe: DataFrame) -> None:
-        start_date = datetime(2000, 1, 1)
+        start_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
         starts_at_or_after_date = DataFrameStartsAtOrAfterDate(OCCURRENCE, start_date)
         has_classifications = DataFrameHasClassifications(
             CLASSIFICATION, {"car", "truck"}
@@ -141,7 +145,7 @@ class TestDataFrameFilterBuilder:
         builder.build()
         dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) == DataFrameStartsAtOrAfterDate
+        assert type(dataframe_filter._predicate) is DataFrameStartsAtOrAfterDate
         assert dataframe_filter._predicate._start_date == start_date
 
     def test_add_ends_before_or_at_date_predicate(self) -> None:
@@ -155,7 +159,7 @@ class TestDataFrameFilterBuilder:
 
         dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) == DataFrameEndsBeforeOrAtDate
+        assert type(dataframe_filter._predicate) is DataFrameEndsBeforeOrAtDate
         assert dataframe_filter._predicate._end_date == end_date
 
     def test_add_has_classifications_predicate(self) -> None:
@@ -169,7 +173,7 @@ class TestDataFrameFilterBuilder:
 
         dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) == DataFrameHasClassifications
+        assert type(dataframe_filter._predicate) is DataFrameHasClassifications
         assert dataframe_filter._predicate._classifications == classifications
 
     def test_add_has_classifications_predicate_column_not_set(self) -> None:
@@ -213,11 +217,11 @@ class TestDataFrameFilterBuilder:
         assert hasattr(dataframe_filter, "_predicate")
         assert (
             type(dataframe_filter._predicate._first_predicate)
-            == DataFrameEndsBeforeOrAtDate
+            is DataFrameEndsBeforeOrAtDate
         )
         assert (
             type(dataframe_filter._predicate._second_predicate)
-            == DataFrameHasClassifications
+            is DataFrameHasClassifications
         )
 
         assert dataframe_filter._predicate._first_predicate._end_date == end_date
@@ -227,7 +231,7 @@ class TestDataFrameFilterBuilder:
         builder.build()
         track_filter = builder.get_result()
 
-        assert type(track_filter) == NoOpDataFrameFilter
+        assert type(track_filter) is NoOpDataFrameFilter
 
     def test_reset(self) -> None:
         classifications = {"car", "truck"}

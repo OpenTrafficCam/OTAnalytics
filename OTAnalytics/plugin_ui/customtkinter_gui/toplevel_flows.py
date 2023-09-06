@@ -5,13 +5,15 @@ from typing import Any, Optional
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
 from OTAnalytics.application.application import CancelAddFlow
-from OTAnalytics.application.generate_flows import FlowNameGenerator
+from OTAnalytics.application.logger import logger
+from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import COLUMN_SECTION
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
     FrameContent,
     ToplevelTemplate,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import IdResource
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 FLOW_ID = "Id"
 FLOW_NAME = "Name"
@@ -39,7 +41,7 @@ class InvalidFlowNameException(Exception):
 class FrameConfigureFlow(FrameContent):
     def __init__(
         self,
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
         name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,
@@ -107,11 +109,15 @@ class FrameConfigureFlow(FrameContent):
             self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
             self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
 
-    def _create_section_name_to_id(self, sections: list[IdResource]) -> dict[str, str]:
-        return {resource.name: resource.id for resource in sections}
+    def _create_section_name_to_id(
+        self, sections: list[ColumnResource]
+    ) -> dict[str, str]:
+        return {resource.values[COLUMN_SECTION]: resource.id for resource in sections}
 
-    def _create_section_id_to_name(self, sections: list[IdResource]) -> dict[str, str]:
-        return {resource.id: resource.name for resource in sections}
+    def _create_section_id_to_name(
+        self, sections: list[ColumnResource]
+    ) -> dict[str, str]:
+        return {resource.id: resource.values[COLUMN_SECTION] for resource in sections}
 
     def __set_initial_values(self) -> None:
         self._current_name.set(self._input_values.get(FLOW_NAME, ""))
@@ -128,7 +134,7 @@ class FrameConfigureFlow(FrameContent):
         }
 
     def _section_names(self) -> list[str]:
-        return [resource.name for resource in self._section_ids]
+        return [resource.values[COLUMN_SECTION] for resource in self._section_ids]
 
     def _autofill_name(self, event: Any) -> None:
         if self._last_autofilled_name == self.entry_name.get():
@@ -209,7 +215,7 @@ class FrameConfigureFlow(FrameContent):
 class ToplevelFlows(ToplevelTemplate):
     def __init__(
         self,
-        section_ids: list[IdResource],
+        section_ids: list[ColumnResource],
         name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,
@@ -240,5 +246,5 @@ class ToplevelFlows(ToplevelTemplate):
             raise CancelAddFlow()
         if self._input_values is None:
             raise ValueError("input values is None, but should be a dict")
-        print(self._input_values)
+        logger().debug(self._input_values)
         return self._input_values

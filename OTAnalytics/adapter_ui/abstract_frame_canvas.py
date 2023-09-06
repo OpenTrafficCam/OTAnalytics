@@ -9,10 +9,6 @@ class AbstractFrameCanvas:
         pass
 
     @abstractmethod
-    def update_show_tracks(self, value: bool) -> None:
-        pass
-
-    @abstractmethod
     def update_background(self, image: TrackImage) -> None:
         pass
 

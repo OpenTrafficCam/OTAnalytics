@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -23,6 +22,7 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
+    ColorPaletteProvider,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
@@ -44,8 +44,8 @@ class TestPlotterPrototype:
         track = Mock(spec=Track)
         plotted_tracks = Mock(spec=TrackImage)
         track_view_state = TrackViewState()
-        track_view_state.show_tracks.set(True)
-        track_plotter = Mock(sepc=TrackPlotter)
+        track_view_state.track_offset.set(RelativeOffsetCoordinate(0.5, 0.7))
+        track_plotter = Mock(spec=TrackPlotter)
         track.id = track_id
         track_plotter.plot.return_value = plotted_tracks
         plotter = PlotterPrototype(track_view_state, track_plotter)
@@ -100,11 +100,71 @@ class TestCachedPandasTrackProvider:
         """Create a dummy track with the given id and 5 car detections."""
         t_id = TrackId(id)
         detections = [
-            Detection("car", 0.99, 0, 1, 2, 7, 1, datetime.min, Path(""), False, t_id),
-            Detection("car", 0.99, 0, 2, 2, 7, 2, datetime.min, Path(""), False, t_id),
-            Detection("car", 0.99, 0, 3, 2, 7, 3, datetime.min, Path(""), False, t_id),
-            Detection("car", 0.99, 0, 4, 2, 7, 4, datetime.min, Path(""), False, t_id),
-            Detection("car", 0.99, 0, 5, 2, 7, 5, datetime.min, Path(""), False, t_id),
+            Detection(
+                "car",
+                0.99,
+                0,
+                1,
+                2,
+                7,
+                1,
+                datetime.min,
+                False,
+                t_id,
+                "video_name",
+            ),
+            Detection(
+                "car",
+                0.99,
+                0,
+                2,
+                2,
+                7,
+                2,
+                datetime.min,
+                False,
+                t_id,
+                "video_name",
+            ),
+            Detection(
+                "car",
+                0.99,
+                0,
+                3,
+                2,
+                7,
+                3,
+                datetime.min,
+                False,
+                t_id,
+                "video_name",
+            ),
+            Detection(
+                "car",
+                0.99,
+                0,
+                4,
+                2,
+                7,
+                4,
+                datetime.min,
+                False,
+                t_id,
+                "video_name",
+            ),
+            Detection(
+                "car",
+                0.99,
+                0,
+                5,
+                2,
+                7,
+                5,
+                datetime.min,
+                False,
+                t_id,
+                "video_name",
+            ),
         ]
         return Track(t_id, "car", detections)
 
@@ -196,6 +256,62 @@ class TestCachedPandasTrackProvider:
         self.check_expected_ids(provider, [track_1, track_2])
 
 
+class TestColorPaletteProvider:
+    DEFAULT_RANDOM_COLOR = "#000"
+
+    @pytest.mark.parametrize(
+        "new_classifications,default_palette,expected",
+        [
+            (
+                {"Class 1", "Class 2", "Class 3"},
+                {},
+                {
+                    "Class 1": DEFAULT_RANDOM_COLOR,
+                    "Class 2": DEFAULT_RANDOM_COLOR,
+                    "Class 3": DEFAULT_RANDOM_COLOR,
+                },
+            ),
+            (
+                {"Class 1", "Class 2", "Class 3"},
+                {"Class 1": "red", "Not used class": "blue"},
+                {
+                    "Class 1": "red",
+                    "Class 2": DEFAULT_RANDOM_COLOR,
+                    "Class 3": DEFAULT_RANDOM_COLOR,
+                },
+            ),
+            ({}, {"Default 1": "red", "Default 2": "blue"}, {}),
+        ],
+    )
+    def test_update_with_filled_default(
+        self,
+        new_classifications: set[str],
+        default_palette: dict[str, str],
+        expected: dict[str, str],
+    ) -> None:
+        with patch.object(
+            ColorPaletteProvider,
+            "_generate_random_color",
+            return_value=self.DEFAULT_RANDOM_COLOR,
+        ):
+            assert self._is_hex_color("#000")
+            color_palette_provider = ColorPaletteProvider(default_palette)
+            color_palette_provider.update(new_classifications)
+            actual = color_palette_provider.get()
+            assert actual == expected
+
+    def test_generate_random_color(self) -> None:
+        random_color = ColorPaletteProvider._generate_random_color()
+        assert self._is_hex_color(random_color)
+
+    @staticmethod
+    def _is_hex_color(value: str) -> bool:
+        import re
+
+        hex_color_pattern = re.compile(r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")
+        return bool(hex_color_pattern.match(value))
+
+
 class TestBackgroundPlotter:
     def test_plot(self) -> None:
         track = Mock(spec=Track).return_value
@@ -251,11 +367,15 @@ class TestTrackGeometryPlotter:
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)
+        color_palette_provider = Mock(spec=ColorPaletteProvider)
         axes = Mock()
 
         data_provider.get_data.return_value = data_frame
+        color_palette_provider.get.return_value = {"Class 1": "green", "Class 2": "red"}
 
-        plotter = TrackGeometryPlotter(data_provider, enable_legend=False)
+        plotter = TrackGeometryPlotter(
+            data_provider, color_palette_provider, enable_legend=False
+        )
 
         plotter.plot(axes)
         assert mock_plot_dataframe.call_count == call_count
@@ -287,11 +407,15 @@ class TestStartEndPointPlotter:
         call_count: int,
     ) -> None:
         data_provider = Mock(spec=PandasTrackProvider)
+        data_provider.get_data.return_value = data_frame
         axes = Mock()
 
-        data_provider.get_data.return_value = data_frame
+        color_palette_provider = Mock(spec=ColorPaletteProvider)
+        color_palette_provider.get.return_value = {"Class 1": "green", "Class 2": "red"}
 
-        plotter = TrackStartEndPointPlotter(data_provider, enable_legend=False)
+        plotter = TrackStartEndPointPlotter(
+            data_provider, color_palette_provider, enable_legend=False
+        )
 
         plotter.plot(axes)
         assert mock_plot_dataframe.call_count == call_count

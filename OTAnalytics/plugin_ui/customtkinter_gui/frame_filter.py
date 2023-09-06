@@ -1,6 +1,6 @@
 import tkinter
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from tkinter import END, IntVar
 from tkinter.ttk import Treeview
 from typing import Any, Callable, Optional
@@ -24,6 +24,7 @@ from OTAnalytics.adapter_ui.default_values import (
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,
@@ -31,6 +32,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STICKY,
     tk_events,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
@@ -56,7 +58,7 @@ class InvalidDatetimeFormatError(Exception):
     pass
 
 
-class FrameFilter(AbstractFrameFilter, CTkFrame):
+class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -97,6 +99,10 @@ class FrameFilter(AbstractFrameFilter, CTkFrame):
         self.filter_by_classification_button.grid(
             row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def reset(self) -> None:
+        self._get_widgets()
+        self._place_widgets()
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_filter_frame(self)
@@ -270,18 +276,14 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
             master=self,
             viewmodel=self._viewmodel,
             name="From",
-            fg_color=get_default_toplevel_fg_color(),
         )
         self.to_date_row = DateRow(
             master=self,
             viewmodel=self._viewmodel,
             name="To",
-            fg_color=get_default_toplevel_fg_color(),
         )
         self._get_detection_info_label()
-        self._button_frame = CTkFrame(
-            master=self, fg_color=get_default_toplevel_fg_color()
-        )
+        self._button_frame = EmbeddedCTkFrame(master=self)
         self.apply_button = CTkButton(
             master=self._button_frame,
             text="Apply",
@@ -369,7 +371,7 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
             date_range = DateRange(self.get_start_date(), self.get_end_date())
 
             self._viewmodel.apply_filter_tracks_by_date(date_range)
-            print("Filter tracks by date applied.")
+            logger().info("Filter tracks by date applied")
             self._close()
         except InvalidDatetimeFormatError as e:
             InfoBox(message=str(e), initial_position=self.get_position())
@@ -383,7 +385,7 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
         return x, y
 
 
-class DateRow(CTkFrame):
+class DateRow(EmbeddedCTkFrame):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -429,8 +431,17 @@ class DateRow(CTkFrame):
             self._hour_var.set(f"{date_time.hour}")
             self._minute_var.set(f"{date_time.minute}")
             self._second_var.set(f"{date_time.second}")
+        else:
+            self.reset()
 
     def get_datetime(self) -> Optional[datetime]:
+        if (
+            self.date == ""
+            and self.hour == ""
+            and self.minute == ""
+            and self.second == ""
+        ):
+            return None
         try:
             date = datetime.strptime(self.date, DATE_FORMAT)
             return datetime(
@@ -440,6 +451,7 @@ class DateRow(CTkFrame):
                 hour=int(self.hour),
                 minute=int(self.minute),
                 second=int(self.second),
+                tzinfo=timezone.utc,
             )
         except ValueError:
             raise InvalidDatetimeFormatError(f"{self._name} datetime is not valid.")
@@ -602,6 +614,14 @@ class DateRow(CTkFrame):
         self._minute_var.trace_add("write", callback=callback)
         self._second_var.trace_add("write", callback=callback)
 
+    def reset(self) -> None:
+        self._date_var.set("")
+        self._hour_var.set("")
+        self._minute_var.set("")
+        self._second_var.set("")
+        self._reset_all_border_colors()
+        self._clear_validation_info()
+
 
 class FilterTracksbyClassificationButton(FilterButton):
     def __init__(
@@ -737,7 +757,7 @@ class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
         self._viewmodel.apply_filter_tracks_by_class(
             list(self.treeview_classes.selection())
         )
-        print("Filter tracks by classification applied.")
+        logger().info("Filter tracks by classification applied")
         self._close()
 
     def _on_reset_button_clicked(self) -> None:
