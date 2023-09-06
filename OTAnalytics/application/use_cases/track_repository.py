@@ -5,6 +5,7 @@ from OTAnalytics.domain.track import (
     Track,
     TrackFileRepository,
     TrackId,
+    TrackRemoveError,
     TrackRepository,
 )
 
@@ -76,3 +77,30 @@ class GetAllTrackFiles:
 
     def __call__(self) -> set[Path]:
         return self._track_file_repository.get_all()
+
+
+class RemoveTracks:
+    """Use case to remove tracks from track repository.
+
+    Tracks that do not exist in the repository will be skipped.
+
+    Args:
+        track_repository (TrackRepository): the repository to remove the tracks from.
+    """
+
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+
+    def __call__(self, track_ids: Iterable[TrackId]) -> None:
+        """Remove tracks from track repository.
+
+        Tracks that do not exist in the repository will be skipped.
+
+        Args:
+            track_ids (Iterable[TrackId]): ids of tracks to be removed.
+        """
+        for track_id in track_ids:
+            try:
+                self._track_repository.remove(track_id)
+            except TrackRemoveError:
+                continue

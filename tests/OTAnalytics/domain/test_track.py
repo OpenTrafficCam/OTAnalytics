@@ -15,6 +15,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackListObserver,
     TrackObserver,
+    TrackRemoveError,
     TrackRepository,
     TrackSubject,
 )
@@ -307,6 +308,22 @@ class TestTrackRepository:
         repository.add_all([track_1, track_2])
         ids = repository.get_all_ids()
         assert set(ids) == {track_1.id, track_2.id}
+
+    def test_remove(self, track_1: Mock, track_2: Mock) -> None:
+        repository = TrackRepository()
+        repository.add_all([track_1, track_2])
+
+        observer = Mock(spec=TrackListObserver)
+        repository.register_tracks_observer(observer)
+
+        repository.remove(track_1.id)
+        assert repository.get_all() == [track_2]
+        repository.remove(track_2.id)
+        assert repository.get_all() == []
+        with pytest.raises(TrackRemoveError):
+            repository.remove(track_2.id)
+
+        assert observer.notify_tracks.call_args_list == [call([]), call([])]
 
 
 class TestTrackFileRepository:

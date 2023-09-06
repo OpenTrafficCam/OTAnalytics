@@ -354,6 +354,18 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
         return max(classifications, key=lambda x: classifications[x])
 
 
+class TrackRemoveError(Exception):
+    def __init__(self, track_id: TrackId, message: str) -> None:
+        """Exception to be raised if track can not be removed.
+
+        Args:
+            track_id (TrackId): the track id of the track to be removed.
+            message (str): the error message.
+        """
+        self._track_id = track_id
+        super().__init__(message)
+
+
 class TrackRepository:
     def __init__(self) -> None:
         self._tracks: dict[TrackId, Track] = {}
@@ -435,6 +447,25 @@ class TrackRepository:
             Iterable[TrackId]: the track ids.
         """
         return self._tracks.keys()
+
+    def remove(self, track_id: TrackId) -> None:
+        """Remove track by its id.
+
+        Raises:
+            TrackRemoveError: if track does not exist in repository.
+
+        Args:
+            track_id (TrackId): the id of the track to be removed.
+        """
+        try:
+            del self._tracks[track_id]
+        except KeyError:
+            raise TrackRemoveError(
+                track_id, f"Trying to remove non existing track with id '{track_id.id}'"
+            )
+        # TODO: Pass removed track id to notify when moving observers to
+        #  application layer
+        self.observers.notify([])
 
     def clear(self) -> None:
         """

@@ -9,6 +9,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     GetAllTrackIds,
     GetAllTracks,
+    RemoveTracks,
 )
 from OTAnalytics.domain.track import (
     Track,
@@ -32,7 +33,7 @@ def track_files() -> set[Mock]:
 def track_repository(tracks: list[Mock]) -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_all.return_value = tracks
-    repository.get_all_ids.return_value = {TrackId(1), TrackId(2)}
+    repository.get_all_ids.return_value = {TrackId("1"), TrackId("2")}
     return repository
 
 
@@ -55,7 +56,7 @@ class TestGetAllTrackIds:
     def test_get_all_tracks(self, track_repository: Mock) -> None:
         get_all_track_ids = GetAllTrackIds(track_repository)
         result_tracks = get_all_track_ids()
-        assert result_tracks == {TrackId(1), TrackId(2)}
+        assert result_tracks == {TrackId("1"), TrackId("2")}
         track_repository.get_all_ids.assert_called_once()
 
 
@@ -71,6 +72,14 @@ class TestClearAllTracks:
         clear_all = ClearAllTracks(track_repository)
         clear_all()
         track_repository.clear.assert_called_once()
+
+
+class TestRemoveTracks:
+    def test_remove(self, track_repository: Mock) -> None:
+        remove_id = TrackId("1")
+        remove_tracks = RemoveTracks(track_repository)
+        remove_tracks([remove_id])
+        track_repository.remove.assert_called_once_with(remove_id)
 
 
 class TestGetAllTrackFiles:
