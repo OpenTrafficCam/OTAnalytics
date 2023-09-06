@@ -145,7 +145,7 @@ def create_event(
         road_user_type="car",
         hostname="my_hostname",
         occurrence=datetime(
-            2020, 1, 1, 0, minute, second=real_seconds, tzinfo=timezone.utc
+            2000, 1, 1, 0, minute, second=real_seconds, tzinfo=timezone.utc
         ),
         frame_number=1,
         section_id=section,
@@ -361,8 +361,8 @@ class TestCaseBuilder:
         first_result = MultiTag(
             frozenset(
                 [
-                    SingleTag(level=LEVEL_START_TIME, id="00:00"),
-                    SingleTag(level=LEVEL_END_TIME, id="00:01"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:00:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:01:00"),
                 ]
             )
         )
@@ -377,8 +377,8 @@ class TestCaseBuilder:
         second_result = MultiTag(
             frozenset(
                 [
-                    SingleTag(level=LEVEL_START_TIME, id="00:00"),
-                    SingleTag(level=LEVEL_END_TIME, id="00:01"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:00:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:01:00"),
                 ]
             )
         )
@@ -393,8 +393,8 @@ class TestCaseBuilder:
         third_result = MultiTag(
             frozenset(
                 [
-                    SingleTag(level=LEVEL_START_TIME, id="00:01"),
-                    SingleTag(level=LEVEL_END_TIME, id="00:02"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:01:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:02:00"),
                 ]
             )
         )
@@ -409,8 +409,8 @@ class TestCaseBuilder:
         forth_result = MultiTag(
             frozenset(
                 [
-                    SingleTag(level=LEVEL_START_TIME, id="00:02"),
-                    SingleTag(level=LEVEL_END_TIME, id="00:03"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:02:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:03:00"),
                 ]
             )
         )

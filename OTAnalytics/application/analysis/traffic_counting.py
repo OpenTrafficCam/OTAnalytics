@@ -169,8 +169,8 @@ def create_mode_tag(tag: str) -> Tag:
 
 def create_timeslot_tag(start_of_time_slot: datetime, interval: timedelta) -> Tag:
     end_of_time_slot = start_of_time_slot + interval
-    serialized_start = start_of_time_slot.strftime("%H:%M")
-    serialized_end = end_of_time_slot.strftime("%H:%M")
+    serialized_start = start_of_time_slot.strftime(r"%Y-%m-%d %H:%M:%S")
+    serialized_end = end_of_time_slot.strftime(r"%Y-%m-%d %H:%M:%S")
     return MultiTag(
         frozenset(
             [
