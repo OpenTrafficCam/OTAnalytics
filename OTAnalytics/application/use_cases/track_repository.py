@@ -1,7 +1,12 @@
 from pathlib import Path
 from typing import Iterable
 
-from OTAnalytics.domain.track import Track, TrackFileRepository, TrackId, TrackRepository
+from OTAnalytics.domain.track import (
+    Track,
+    TrackFileRepository,
+    TrackId,
+    TrackRepository,
+)
 
 
 class GetAllTracks:

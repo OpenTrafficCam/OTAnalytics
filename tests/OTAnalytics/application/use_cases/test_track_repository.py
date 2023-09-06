@@ -10,7 +10,12 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackIds,
     GetAllTracks,
 )
-from OTAnalytics.domain.track import Detection, Track, TrackFileRepository, TrackId, TrackRepository
+from OTAnalytics.domain.track import (
+    Track,
+    TrackFileRepository,
+    TrackId,
+    TrackRepository,
+)
 
 
 @pytest.fixture
