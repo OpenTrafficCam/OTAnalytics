@@ -519,3 +519,51 @@ class TrackIdProvider(ABC):
             Iterable[TrackId]: the track ids.
         """
         pass
+
+
+class TrackBuilderError(Exception):
+    pass
+
+
+class TrackBuilder(ABC):
+    """Interface to create Tracks with different configuration strategies."""
+
+    @abstractmethod
+    def add_detection(self, detection: Detection) -> None:
+        """Add a detection to the track to be built.
+
+        Args:
+            detection (Detection): the detection.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_id(self, track_id: str) -> None:
+        """Add the id of the track to be built.
+
+        Args:
+            track_id (str): the id.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def build(self) -> Track:
+        """Build a track with the configured settings.
+
+        The builder will be reset after building the track.
+
+        Raises:
+            TrackBuildError: if track id has not been set.
+
+        Returns:
+            Track: the built track.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Resets the builder.
+
+        All configurations made to the builder will be reset.
+        """
+        raise NotImplementedError
