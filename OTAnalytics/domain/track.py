@@ -414,6 +414,14 @@ class TrackRepository:
         """
         return list(self._tracks.values())
 
+    def get_all_ids(self) -> Iterable[TrackId]:
+        """Get all track ids in this repository.
+
+        Returns:
+            Iterable[TrackId]: the track ids.
+        """
+        return self._tracks.keys()
+
     def clear(self) -> None:
         """
         Clear the repository and inform the observers about the empty repository.
