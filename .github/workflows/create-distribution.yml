@@ -34,7 +34,7 @@ jobs:
           body: |
             This is the latest release and is not production ready.
             Use at your own risk.
-          name: latest
+          name: Nightly
           draft: True
           prerelease: True
           files: dist/*.zip
