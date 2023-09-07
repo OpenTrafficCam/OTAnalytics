@@ -1,8 +1,11 @@
+from typing import Iterable
+
 from shapely import LineString as ShapelyLineString
 from shapely import Point as ShapelyPoint
 from shapely import Polygon as ShapelyPolygon
 
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
+from OTAnalytics.domain.track import Detection
 
 
 class ShapelyMapper:
@@ -41,3 +44,17 @@ class ShapelyMapper:
         coordinates: list[Coordinate],
     ) -> list[tuple[float, float]]:
         return [(coordinate.x, coordinate.y) for coordinate in coordinates]
+
+    @staticmethod
+    def map_coordinates_to_line_string(
+        coordinates: Iterable[Coordinate],
+    ) -> ShapelyLineString:
+        return ShapelyLineString([[coord.x, coord.y] for coord in coordinates])
+
+    @staticmethod
+    def map_detections_to_line_string(
+        detections: Iterable[Detection],
+    ) -> ShapelyLineString:
+        return ShapelyLineString(
+            [[detection.x, detection.y] for detection in detections]
+        )
