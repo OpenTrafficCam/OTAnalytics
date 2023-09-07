@@ -80,6 +80,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackFiles,
+    GetAllTrackIds,
     GetAllTracks,
 )
 from OTAnalytics.application.use_cases.track_to_video_repository import (
@@ -344,6 +345,7 @@ class ApplicationStarter:
         track_repository = self._create_track_repository()
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
+        flow_repository = self._create_flow_repository()
         track_parser = self._create_track_parser(
             track_repository, track_file_repository
         )
@@ -351,14 +353,19 @@ class ApplicationStarter:
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
         add_section = AddSection(section_repository)
+        add_flow = AddFlow(flow_repository)
         add_events = AddEvents(event_repository)
         get_all_tracks = GetAllTracks(track_repository)
+        get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
         create_events = self._create_use_case_create_events(
             section_repository, clear_all_events, get_all_tracks, add_events
         )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
+        export_counts = self._create_export_counts(
+            event_repository, flow_repository, track_repository
+        )
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
@@ -367,7 +374,10 @@ class ApplicationStarter:
             event_repository=event_repository,
             add_section=add_section,
             create_events=create_events,
+            export_counts=export_counts,
             add_all_tracks=add_all_tracks,
+            get_all_track_ids=get_all_track_ids,
+            add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
             progressbar=TqdmBuilder(),
         ).start()

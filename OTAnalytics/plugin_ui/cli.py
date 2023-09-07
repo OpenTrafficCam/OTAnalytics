@@ -3,19 +3,29 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from OTAnalytics.application.analysis.traffic_counting import ExportCounts
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
 from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_COUNTS_FILE_STEM,
+    DEFAULT_COUNTS_FILE_TYPE,
+    DEFAULT_EVENTLIST_FILE_STEM,
     DEFAULT_EVENTLIST_FILE_TYPE,
-    DEFAULT_EVENTLIST_SAVE_NAME,
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
+    GetAllTrackIds,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
@@ -123,8 +133,11 @@ class OTAnalyticsCli:
         event_list_parser: EventListParser,
         event_repository: EventRepository,
         add_section: AddSection,
+        add_flow: AddFlow,
         create_events: CreateEvents,
+        export_counts: ExportCounts,
         add_all_tracks: AddAllTracks,
+        get_all_track_ids: GetAllTrackIds,
         clear_all_tracks: ClearAllTracks,
         progressbar: ProgressbarBuilder,
     ) -> None:
@@ -136,8 +149,11 @@ class OTAnalyticsCli:
         self._event_list_parser = event_list_parser
         self._event_repository = event_repository
         self._add_section = add_section
+        self._add_flow = add_flow
         self._create_events = create_events
+        self._export_counts = export_counts
         self._add_all_tracks = add_all_tracks
+        self._get_all_track_ids = get_all_track_ids
         self._clear_all_tracks = clear_all_tracks
         self._progressbar = progressbar
 
@@ -149,7 +165,7 @@ class OTAnalyticsCli:
 
         sections, flows = self._parse_flows(sections_file)
 
-        self._run_analysis(ottrk_files, sections)
+        self._run_analysis(ottrk_files, sections, flows)
 
     def _parse_flows(self, flow_file: Path) -> tuple[Iterable[Section], Iterable[Flow]]:
         return self._flow_parser.parse(flow_file)
@@ -159,18 +175,24 @@ class OTAnalyticsCli:
         for section in sections:
             self._add_section(section)
 
+    def _add_flows(self, flows: Iterable[Flow]) -> None:
+        """Add flows to flow repository."""
+        for flow in flows:
+            self._add_flow(flow)
+
     def _parse_tracks(self, track_files: list[Path]) -> None:
         for track_file in self._progressbar(track_files, "Parsed track files", "files"):
             tracks = self._track_parser.parse(track_file)
             self._add_all_tracks(tracks)
 
     def _run_analysis(
-        self, ottrk_files: set[Path], sections: Iterable[Section]
+        self, ottrk_files: set[Path], sections: Iterable[Section], flows: Iterable[Flow]
     ) -> None:
         """Run analysis."""
         self._clear_all_tracks()
         self._event_repository.clear()
         self._add_sections(sections)
+        self._add_flows(flows)
         ottrk_files_sorted: list[Path] = sorted(
             ottrk_files, key=lambda file: str(file).lower()
         )
@@ -180,11 +202,15 @@ class OTAnalyticsCli:
         self._create_events()
         logger().info("Event list created.")
 
-        save_path = self._determine_eventlist_save_path(ottrk_files_sorted[0])
-        self._event_list_parser.serialize(
-            self._event_repository.get_all(), sections, save_path
+        event_list_output_file = self._determine_eventlist_save_path(
+            ottrk_files_sorted[0]
         )
-        logger().info(f"Event list saved at '{save_path}'")
+        self._event_list_parser.serialize(
+            self._event_repository.get_all(), sections, event_list_output_file
+        )
+        logger().info(f"Event list saved at '{event_list_output_file}'")
+
+        self._do_export_counts(event_list_output_file)
 
     def _determine_eventlist_save_path(self, track_file: Path) -> Path:
         """Determine save path of eventlist.
@@ -202,7 +228,7 @@ class OTAnalyticsCli:
         eventlist_file_name = self.cli_args.eventlist_filename
         if eventlist_file_name == "":
             return track_file.with_name(
-                f"{DEFAULT_EVENTLIST_SAVE_NAME}.{DEFAULT_EVENTLIST_FILE_TYPE}"
+                f"{DEFAULT_EVENTLIST_FILE_STEM}.{DEFAULT_EVENTLIST_FILE_TYPE}"
             )
 
         return track_file.with_name(
@@ -285,3 +311,37 @@ class OTAnalyticsCli:
             )
 
         return sections_file
+
+    def _do_export_counts(self, event_list_output_file: Path) -> None:
+        logger().info("Create counts ...")
+        tracks_metadata = TracksMetadata(self._add_all_tracks._track_repository)
+        tracks_metadata.notify_tracks(list(self._get_all_track_ids()))
+        start = tracks_metadata.first_detection_occurrence
+        end = tracks_metadata.last_detection_occurrence
+        modes = tracks_metadata.classifications
+        if start is None:
+            raise ValueError("start is None but has to be defined for exporting counts")
+        if end is None:
+            raise ValueError("end is None but has to be defined for exporting counts")
+        if modes is None:
+            raise ValueError("modes is None but has to be defined for exporting counts")
+        interval: int = DEFAULT_COUNTING_INTERVAL_IN_MINUTES
+        if event_list_output_file.stem == DEFAULT_EVENTLIST_FILE_STEM:
+            output_file_stem = DEFAULT_COUNTS_FILE_STEM
+        else:
+            output_file_stem = (
+                f"{event_list_output_file.stem}_{DEFAULT_COUNTS_FILE_STEM}"
+            )
+        output_file = event_list_output_file.with_stem(output_file_stem).with_suffix(
+            f".{DEFAULT_COUNTS_FILE_TYPE}"
+        )
+        counting_specification = CountingSpecificationDto(
+            start=start,
+            end=end,
+            modes=list(modes),
+            interval_in_minutes=interval,
+            output_file=str(output_file),
+            output_format="CSV",
+        )
+        self._export_counts.export(specification=counting_specification)
+        logger().info(f"Counts saved at {output_file}")
