@@ -179,7 +179,7 @@ class TestDatastore:
         )
         some_file = Path("some.file.otconfig")
 
-        store.load_configuration_file(some_file)
+        store.load_otconfig(some_file)
 
         assert store.project == project
         track_repository.clear.assert_called_once()

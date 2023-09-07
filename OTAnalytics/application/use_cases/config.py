@@ -7,7 +7,7 @@ class MissingDate(Exception):
     pass
 
 
-class SaveConfiguration:
+class SaveOtconfig:
     def __init__(self, datastore: Datastore, config_parser: ConfigParser) -> None:
         self._datastore = datastore
         self._config_parser = config_parser

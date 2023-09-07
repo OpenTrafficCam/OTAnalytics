@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -31,22 +31,25 @@ class TestTrackPredicates:
     @pytest.mark.parametrize(
         "predicate, expected_result",
         [
-            (TrackStartsAtOrAfterDate(datetime(2000, 1, 1)), True),
-            (TrackStartsAtOrAfterDate(datetime(2000, 1, 5)), False),
-            (TrackEndsBeforeOrAtDate(datetime(2000, 1, 3)), True),
-            (TrackEndsBeforeOrAtDate(datetime(2000, 1, 1)), False),
+            (TrackStartsAtOrAfterDate(datetime(2000, 1, 1, tzinfo=timezone.utc)), True),
+            (
+                TrackStartsAtOrAfterDate(datetime(2000, 1, 5, tzinfo=timezone.utc)),
+                False,
+            ),
+            (TrackEndsBeforeOrAtDate(datetime(2000, 1, 3, tzinfo=timezone.utc)), True),
+            (TrackEndsBeforeOrAtDate(datetime(2000, 1, 1, tzinfo=timezone.utc)), False),
             (TrackHasClassifications({"car", "truck"}), True),
             (TrackHasClassifications({"bicycle", "truck"}), False),
             (
-                TrackStartsAtOrAfterDate(datetime(2000, 1, 1)).conjunct_with(
-                    TrackHasClassifications({"truck", "car"})
-                ),
+                TrackStartsAtOrAfterDate(
+                    datetime(2000, 1, 1, tzinfo=timezone.utc)
+                ).conjunct_with(TrackHasClassifications({"truck", "car"})),
                 True,
             ),
             (
-                TrackStartsAtOrAfterDate(datetime(2000, 1, 1)).conjunct_with(
-                    TrackHasClassifications({"truck", "bicycle"})
-                ),
+                TrackStartsAtOrAfterDate(
+                    datetime(2000, 1, 1, tzinfo=timezone.utc)
+                ).conjunct_with(TrackHasClassifications({"truck", "bicycle"})),
                 False,
             ),
         ],
@@ -109,7 +112,7 @@ class TestTrackFilterBuilder:
 
         track_filter = builder.get_result()
         assert hasattr(track_filter, "_predicate")
-        assert type(track_filter._predicate) == TrackStartsAtOrAfterDate
+        assert type(track_filter._predicate) is TrackStartsAtOrAfterDate
         assert track_filter._predicate._start_date == start_date
 
     def test_add_ends_before_or_at_predicate(self) -> None:
@@ -121,7 +124,7 @@ class TestTrackFilterBuilder:
 
         track_filter = builder.get_result()
         assert hasattr(track_filter, "_predicate")
-        assert type(track_filter._predicate) == TrackEndsBeforeOrAtDate
+        assert type(track_filter._predicate) is TrackEndsBeforeOrAtDate
         assert track_filter._predicate._end_date == end_date
 
     def test_add_has_classifications_predicate(self) -> None:
@@ -132,11 +135,11 @@ class TestTrackFilterBuilder:
 
         track_filter = builder.get_result()
         assert hasattr(track_filter, "_predicate")
-        assert type(track_filter._predicate) == TrackHasClassifications
+        assert type(track_filter._predicate) is TrackHasClassifications
         assert track_filter._predicate._classifications == classifications
 
     def test_add_multiple_predicates_fulfills(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 1)
+        start_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
         classifications = {"car", "truck"}
 
         builder = TrackFilterBuilder()
@@ -149,7 +152,7 @@ class TestTrackFilterBuilder:
         assert result == [track]
 
     def test_add_multiple_predicates_not_fulfilled(self, track: Track) -> None:
-        start_date = datetime(2000, 1, 1)
+        start_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
         classifications = {"bicycle", "truck"}
 
         builder = TrackFilterBuilder()
@@ -187,7 +190,7 @@ class TestTrackFilterBuilder:
         builder.build()
         track_filter = builder.get_result()
 
-        assert type(track_filter) == NoOpTrackFilter
+        assert type(track_filter) is NoOpTrackFilter
 
     def test_reset(self) -> None:
         builder = TrackFilterBuilder()
