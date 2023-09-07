@@ -1,9 +1,7 @@
-name: Create release
+name: Create Distribution Files
 
 on:
-  push:
-    branches:
-      - OP2453-Create-github-action-for-build-otc
+  workflow_call:
 
 jobs:
   create_distributions:

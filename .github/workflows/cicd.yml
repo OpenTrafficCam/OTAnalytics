@@ -56,8 +56,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Create distributions
-        run: python build-otc.py --package_version ${{ github.ref_name }}
+      - name: create Distribution files
+        uses: ./.github/workflows/create-distribution-files.yml
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
