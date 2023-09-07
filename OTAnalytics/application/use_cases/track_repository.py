@@ -24,6 +24,26 @@ class GetAllTracks:
         return self._track_repository.get_all()
 
 
+class GetTracksWithoutSingleDetections:
+    """Get tracks that have at least two detections.
+
+    Returns:
+        list[Track]: tracks with at least two detections.
+    """
+
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+
+    def __call__(self) -> list[Track]:
+        """Get tracks that have at least two detections.
+
+        Returns:
+            list[Track]: tracks with at least two detections.
+        """
+        tracks = self._track_repository.get_all()
+        return [track for track in tracks if len(track.detections) > 1]
+
+
 class GetAllTrackIds:
     """Get all track ids from the track repository.
 

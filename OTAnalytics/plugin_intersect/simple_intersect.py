@@ -10,7 +10,9 @@ from OTAnalytics.application.geometry import (
     SectionGeometryBuilder,
     TrackGeometryBuilder,
 )
-from OTAnalytics.application.use_cases.track_repository import GetAllTracks
+from OTAnalytics.application.use_cases.track_repository import (
+    GetTracksWithoutSingleDetections,
+)
 from OTAnalytics.domain.event import Event, EventBuilder, EventType, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
@@ -254,11 +256,11 @@ class SimpleRunIntersect(RunIntersect):
         self,
         intersect_implementation: IntersectImplementation,
         intersect_parallelizer: IntersectParallelizationStrategy,
-        get_all_tracks: GetAllTracks,
+        get_tracks: GetTracksWithoutSingleDetections,
     ) -> None:
         self._intersect_implementation = intersect_implementation
         self._intersect_parallelizer = intersect_parallelizer
-        self._get_all_tracks = get_all_tracks
+        self._get_tracks = get_tracks
 
     def __call__(self, sections: Iterable[Section]) -> list[Event]:
         return self._intersect_parallelizer.execute(
@@ -266,7 +268,7 @@ class SimpleRunIntersect(RunIntersect):
                 _run_intersect_on_single_track,
                 intersect_implementation=self._intersect_implementation,
             ),
-            self._get_all_tracks(),
+            self._get_tracks(),
             sections,
         )
 
@@ -305,18 +307,18 @@ def _run_intersect_on_single_track(
 class SimpleTracksIntersectingSections(TracksIntersectingSections):
     def __init__(
         self,
-        get_all_tracks: GetAllTracks,
+        get_tracks: GetTracksWithoutSingleDetections,
         intersect_implementation: IntersectImplementation,
         track_geometry_builder: TrackGeometryBuilder = TrackGeometryBuilder(),
         section_geometry_builder: SectionGeometryBuilder = SectionGeometryBuilder(),
     ):
-        self._get_all_tracks = get_all_tracks
+        self._get_tracks = get_tracks
         self._intersect_implementation = intersect_implementation
         self._track_geometry_builder = track_geometry_builder
         self._section_geometry_builder = section_geometry_builder
 
     def __call__(self, sections: Iterable[Section]) -> set[TrackId]:
-        tracks = self._get_all_tracks()
+        tracks = self._get_tracks()
         return self._intersect(tracks, sections)
 
     def _intersect(

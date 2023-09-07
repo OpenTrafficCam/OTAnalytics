@@ -20,8 +20,6 @@ OCCURRENCE: str = "occurrence"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
 
-VALID_TRACK_SIZE: int = 5
-
 
 @dataclass(frozen=True)
 class TrackId(DataclassValidation):
@@ -93,12 +91,8 @@ class TrackError(Exception):
         self.track_id = track_id
 
 
-class BuildTrackWithLessThanNDetectionsError(TrackError):
-    def __str__(self) -> str:
-        return (
-            f"Trying to construct track (track_id={self.track_id}) with less than "
-            f"{VALID_TRACK_SIZE} detections."
-        )
+class TrackHasNoDetectionError(TrackError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -184,9 +178,8 @@ class Detection(DataclassValidation):
 
 @dataclass(frozen=True)
 class Track(DataclassValidation):
-    """Represents the the track of an object as seen in the task of object tracking
+    """Represents the track of an object as seen in the task of object tracking
     (computer vision).
-
 
     Args:
         id (TrackId): the track id.
@@ -202,16 +195,22 @@ class Track(DataclassValidation):
     detections: list[Detection]
 
     def _validate(self) -> None:
-        self._validate_track_has_at_least_five_detections()
+        self._validate_track_has_detections()
         self._validate_detections_sorted_by_occurrence()
 
-    def _validate_track_has_at_least_five_detections(self) -> None:
-        if len(self.detections) < 5:
-            raise BuildTrackWithLessThanNDetectionsError(self.id)
+    def _validate_track_has_detections(self) -> None:
+        if not self.detections:
+            raise TrackHasNoDetectionError(
+                self.id,
+                (
+                    f"Trying to construct track (track_id={self.id.id})"
+                    " with no detections."
+                ),
+            )
 
     def _validate_detections_sorted_by_occurrence(self) -> None:
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
-            raise ValueError("detections must be sorted by occurence")
+            raise ValueError("detections must be sorted by occurrence")
 
     @property
     def start(self) -> datetime:

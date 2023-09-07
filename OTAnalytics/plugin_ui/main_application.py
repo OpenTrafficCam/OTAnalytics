@@ -78,7 +78,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     ClearAllTracks,
     GetAllTrackFiles,
     GetAllTrackIds,
-    GetAllTracks,
+    GetTracksWithoutSingleDetections,
 )
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
@@ -245,7 +245,9 @@ class ApplicationStarter:
         )
         add_events = AddEvents(event_repository)
         clear_all_events = ClearAllEvents(event_repository)
-        get_all_tracks = GetAllTracks(track_repository)
+        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+            track_repository
+        )
         clear_all_tracks = ClearAllTracks(track_repository)
         clear_all_sections = ClearAllSections(section_repository)
         clear_all_flows = ClearAllFlows(flow_repository)
@@ -256,11 +258,14 @@ class ApplicationStarter:
             datastore._track_to_video_repository
         )
         create_events = self._create_use_case_create_events(
-            section_repository, clear_all_events, get_all_tracks, add_events
+            section_repository,
+            clear_all_events,
+            get_tracks_without_single_detections,
+            add_events,
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
-                section_repository, get_all_tracks, add_events
+                section_repository, get_tracks_without_single_detections, add_events
             )
         )
         export_counts = self._create_export_counts(
@@ -348,11 +353,16 @@ class ApplicationStarter:
         add_section = AddSection(section_repository)
         add_flow = AddFlow(flow_repository)
         add_events = AddEvents(event_repository)
-        get_all_tracks = GetAllTracks(track_repository)
+        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+            track_repository
+        )
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
         create_events = self._create_use_case_create_events(
-            section_repository, clear_all_events, get_all_tracks, add_events
+            section_repository,
+            clear_all_events,
+            get_tracks_without_single_detections,
+            add_events,
         )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
@@ -674,7 +684,7 @@ class ApplicationStarter:
             enable_legend=True,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            GetAllTracks(datastore._track_repository),
+            GetTracksWithoutSingleDetections(datastore._track_repository),
             ShapelyIntersector(),
         )
         tracks_intersecting_selected_sections = (
@@ -838,17 +848,18 @@ class ApplicationStarter:
     def _create_use_case_create_intersection_events(
         self,
         section_repository: SectionRepository,
-        get_all_tracks: GetAllTracks,
+        get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
     ) -> CreateIntersectionEvents:
-        intersect = self._create_intersect(get_all_tracks)
+        intersect = self._create_intersect(get_tracks)
         return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
 
-    def _create_intersect(self, get_all_tracks: GetAllTracks) -> RunIntersect:
+    @staticmethod
+    def _create_intersect(get_tracks: GetTracksWithoutSingleDetections) -> RunIntersect:
         return SimpleRunIntersect(
             intersect_implementation=ShapelyIntersector(ShapelyMapper()),
             intersect_parallelizer=MultiprocessingIntersectParallelization(),
-            get_all_tracks=get_all_tracks,
+            get_tracks=get_tracks,
         )
 
     def _create_tracks_metadata(
@@ -883,29 +894,27 @@ class ApplicationStarter:
         self,
         section_repository: SectionRepository,
         clear_events: ClearAllEvents,
-        get_all_tracks: GetAllTracks,
+        get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(get_all_tracks)
+        run_intersect = self._create_intersect(get_tracks)
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_repository, add_events
         )
         scene_action_detector = SceneActionDetector(SceneEventBuilder())
         create_scene_events = SimpleCreateSceneEvents(
-            get_all_tracks, scene_action_detector, add_events
+            get_tracks, scene_action_detector, add_events
         )
         return CreateEvents(
             clear_events, create_intersection_events, create_scene_events
         )
 
+    @staticmethod
     def _create_tracks_intersecting_sections(
-        self,
-        get_all_tracks: GetAllTracks,
+        get_tracks: GetTracksWithoutSingleDetections,
         intersect_implementation: IntersectImplementation,
     ) -> TracksIntersectingSections:
-        return SimpleTracksIntersectingSections(
-            get_all_tracks, intersect_implementation
-        )
+        return SimpleTracksIntersectingSections(get_tracks, intersect_implementation)
 
     @staticmethod
     def _create_use_case_load_otflow(

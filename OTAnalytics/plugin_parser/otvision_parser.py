@@ -10,6 +10,7 @@ import ujson
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
 from OTAnalytics.application import project
+from OTAnalytics.application.config import ALLOWED_TRACK_SIZE_PARSING
 from OTAnalytics.application.datastore import (
     ConfigParser,
     EventListParser,
@@ -27,11 +28,11 @@ from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
-    BuildTrackWithLessThanNDetectionsError,
     Detection,
     Track,
     TrackClassificationCalculator,
     TrackFileRepository,
+    TrackHasNoDetectionError,
     TrackId,
     TrackImage,
     TrackRepository,
@@ -285,7 +286,13 @@ class OttrkParser(TrackParser):
     `Tracks`.
 
     Args:
-        TrackParser (TrackParser): extends TrackParser interface.
+        track_classification_calculator (TrackClassificationCalculator): determines
+            a tracks max class.
+        track_repository (TrackRepository): the track repository.
+        track_file_repository (TrackFileRepository): the track file repository.
+        track_length_limit (int): tracks with length above the limit will not be
+            parsed.
+        format_fixer (OttrkFormatFixer):to fix older ottrk version files.
     """
 
     def __init__(
@@ -308,7 +315,7 @@ class OttrkParser(TrackParser):
         `Track`s.
 
         Args:
-            ottrk_file (Path): the file to
+            ottrk_file (Path): the track file.
 
         Returns:
             list[Track]: the tracks.
@@ -324,10 +331,12 @@ class OttrkParser(TrackParser):
         return tracks
 
     def _parse_tracks(self, dets: list[dict], metadata_video: dict) -> list[Track]:
-        """Parse the detections of ottrk located at ottrk["data"]["detections"].
+        """Parse the detections of ottrk located at `ottrk["data"]["detections"]`.
 
         This method will also sort the detections belonging to a track by their
         occurrence.
+        Tracks with no detections or sizes less than the allowed limit
+        `ALLOWED_TRACK_SIZE_PARSING` will not be parsed.
 
         Args:
             dets (list[dict]): the detections in dict format.
@@ -353,9 +362,15 @@ class OttrkParser(TrackParser):
                     classification=classification,
                     detections=sort_dets_by_occurrence,
                 )
-                tracks.append(current_track)
-            except BuildTrackWithLessThanNDetectionsError as build_error:
-                # Skip tracks with less than 2 detections
+                if len(current_track.detections) >= ALLOWED_TRACK_SIZE_PARSING:
+                    tracks.append(current_track)
+                else:
+                    logger().warning(
+                        f"Trying to construct track (track_id={current_track.id}) "
+                        f"with less than {ALLOWED_TRACK_SIZE_PARSING} detections."
+                    )
+            except TrackHasNoDetectionError as build_error:
+                # Skip tracks with no detections
                 logger().warning(build_error)
 
         return tracks
@@ -375,8 +390,9 @@ class OttrkParser(TrackParser):
             return existing_track.detections
         return []
 
+    @staticmethod
     def _parse_detections(
-        self, det_list: list[dict], metadata_video: dict
+        det_list: list[dict], metadata_video: dict
     ) -> dict[TrackId, list[Detection]]:
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
