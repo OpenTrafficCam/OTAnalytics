@@ -186,6 +186,9 @@ class LineSection(Section):
     """
     A section that is defined by a line.
 
+    If the section name starts with `CUTTING_SECTION_MARKER` this section will become
+    a cutting section.
+
     Raises:
         ValueError: number of coordinates defining this section must be greater equal
             two.
@@ -251,7 +254,13 @@ class LineSection(Section):
             SectionType: this sections type.
 
         """
+        if self._is_cutting_section():
+            return SectionType.CUTTING
+
         return SectionType.LINE
+
+    def _is_cutting_section(self) -> bool:
+        return self.name.startswith(CUTTING_SECTION_MARKER)
 
 
 @dataclass(frozen=True)
@@ -317,40 +326,6 @@ class Area(Section):
 
     def get_type(self) -> SectionType:
         return SectionType.AREA
-
-
-class CuttingSection(LineSection):
-    """
-    A line section used to cut tracks.
-
-
-    Raises:
-        ValueError: number of coordinates defining this section must be greater equal
-            two.
-        ValueError: if start and end point coordinates are the same and therefore
-            define a point.
-        ValueError: if name of cutting section starts with `CUTTING_SECTION_MARKER`.
-
-    Args:
-        id (str): the section id.
-        name (str): the section name.
-        relative_offset_coordinates (list[RelativeOffsetCoordinate]): used to determine
-            which coordinates of a track to build the geometry to intersect.
-        plugin_data (dict[str,any]): data that plugins or prototypes can use which are
-            not modelled in the domain layer yet
-        coordinates (list[Coordinate]): the coordinates defining the section geometry.
-    """
-
-    def _validate(self) -> None:
-        super()._validate()
-        if not self.name.startswith(CUTTING_SECTION_MARKER):
-            raise ValueError(
-                f"Name of cutting section must start with '{CUTTING_SECTION_MARKER}',"
-                f" but is  '{self.name}'."
-            )
-
-    def get_type(self) -> SectionType:
-        return SectionType.CUTTING
 
 
 class MissingSection(Exception):

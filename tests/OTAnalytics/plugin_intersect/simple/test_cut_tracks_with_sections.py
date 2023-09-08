@@ -19,13 +19,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
 )
 from OTAnalytics.domain.geometry import Coordinate
-from OTAnalytics.domain.section import (
-    Area,
-    CuttingSection,
-    LineSection,
-    SectionId,
-    SectionType,
-)
+from OTAnalytics.domain.section import Area, LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import (
     Detection,
     Track,
@@ -99,11 +93,11 @@ class TestSimpleCutTracksWithSection:
     @staticmethod
     def _create_cutting_section(
         id_name: str, coordinates: Iterable[tuple[float, float]]
-    ) -> CuttingSection:
+    ) -> LineSection:
         section_id = SectionId(id_name)
         converted_coords = [Coordinate(x, y) for x, y in coordinates]
 
-        return CuttingSection(section_id, section_id.id, {}, {}, converted_coords)
+        return LineSection(section_id, section_id.id, {}, {}, converted_coords)
 
     @staticmethod
     def _create_track(
@@ -177,8 +171,8 @@ class TestSimpleCutTracksWithSection:
 
 class TestSimpleCutTracksIntersectingSection:
     @pytest.fixture
-    def cutting_section(self) -> CuttingSection:
-        section = Mock(spec=CuttingSection)
+    def cutting_section(self) -> LineSection:
+        section = Mock(spec=LineSection)
         section.id = SectionId("#cut_1")
         section.get_type.return_value = SectionType.CUTTING
         return section
@@ -197,7 +191,7 @@ class TestSimpleCutTracksIntersectingSection:
         section.get_type.return_value = SectionType.AREA
         return section
 
-    def test_cut(self, cutting_section: CuttingSection) -> None:
+    def test_cut(self, cutting_section: LineSection) -> None:
         track_id = TrackId("1")
         track = Mock(spec=Track)
         track.id = track_id
@@ -235,7 +229,7 @@ class TestSimpleCutTracksIntersectingSection:
 
     def test_notify_sections(
         self,
-        cutting_section: CuttingSection,
+        cutting_section: LineSection,
         line_section: LineSection,
         area_section: Area,
     ) -> None:
