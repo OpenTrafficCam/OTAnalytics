@@ -48,6 +48,9 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
+    CutTracksIntersectingSection,
+)
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearAllFlows
 from OTAnalytics.application.use_cases.generate_flows import (
@@ -71,6 +74,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
     GetSectionsById,
+    RemoveSection,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.track_repository import (
@@ -78,7 +82,9 @@ from OTAnalytics.application.use_cases.track_repository import (
     ClearAllTracks,
     GetAllTrackFiles,
     GetAllTrackIds,
+    GetTracksFromIds,
     GetTracksWithoutSingleDetections,
+    RemoveTracks,
 )
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
@@ -101,6 +107,11 @@ from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
+from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
+    SimpleCutTrackSegmentBuilder,
+    SimpleCutTracksIntersectingSection,
+    SimpleCutTracksWithSection,
+)
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleRunIntersect,
     SimpleTracksIntersectingSections,
@@ -239,24 +250,35 @@ class ApplicationStarter:
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
+
         get_all_track_files = self._create_get_all_track_files(track_file_repository)
-        generate_flows = self._create_flow_generator(
-            section_repository, flow_repository
-        )
-        add_events = AddEvents(event_repository)
-        clear_all_events = ClearAllEvents(event_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             track_repository
         )
+        get_tracks_from_ids = GetTracksFromIds(track_repository)
+        add_all_tracks = AddAllTracks(track_repository)
+        remove_tracks = RemoveTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
-        clear_all_sections = ClearAllSections(section_repository)
-        clear_all_flows = ClearAllFlows(flow_repository)
+
+        get_sections_bv_id = GetSectionsById(section_repository)
         add_section = AddSection(section_repository)
+        remove_section = RemoveSection(section_repository)
+        clear_all_sections = ClearAllSections(section_repository)
+
+        generate_flows = self._create_flow_generator(
+            section_repository, flow_repository
+        )
         add_flow = AddFlow(flow_repository)
+        clear_all_flows = ClearAllFlows(flow_repository)
+
+        add_events = AddEvents(event_repository)
+        clear_all_events = ClearAllEvents(event_repository)
+
         clear_all_videos = ClearAllVideos(datastore._video_repository)
         clear_all_track_to_videos = ClearAllTrackToVideos(
             datastore._track_to_video_repository
         )
+
         create_events = self._create_use_case_create_events(
             section_repository,
             clear_all_events,
@@ -292,6 +314,19 @@ class ApplicationStarter:
         start_new_project = self._create_use_case_start_new_project(
             clear_repositories, reset_project_config, track_view_state
         )
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            GetTracksWithoutSingleDetections(track_repository),
+            ShapelyIntersector(),
+        )
+        cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
+            get_sections_bv_id,
+            get_tracks_without_single_detections,
+            get_tracks_from_ids,
+            tracks_intersecting_sections,
+            add_all_tracks,
+            remove_tracks,
+            remove_section,
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -313,6 +348,10 @@ class ApplicationStarter:
             start_new_project,
             project_updater,
         )
+        section_repository.register_sections_observer(cut_tracks_intersecting_section)
+        section_repository.register_section_changed_observer(
+            cut_tracks_intersecting_section.notify_section_changed
+        )
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
         name_generator = ArrowFlowNameGenerator()
@@ -322,6 +361,8 @@ class ApplicationStarter:
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
         )
+        # TODO: Streamline observers - move registering to subjects happening in
+        #   constructor dummy_viewmodel
         dummy_viewmodel.register_observers()
         application.connect_observers()
         datastore.register_tracks_observer(selected_video_updater)
@@ -974,3 +1015,29 @@ class ApplicationStarter:
 
     def _create_track_file_repository(self) -> TrackFileRepository:
         return TrackFileRepository()
+
+    @staticmethod
+    def _create_cut_tracks_intersecting_section(
+        get_sections_by_id: GetSectionsById,
+        get_tracks: GetTracksWithoutSingleDetections,
+        get_tracks_from_ids: GetTracksFromIds,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        add_all_tracks: AddAllTracks,
+        remove_tracks: RemoveTracks,
+        remove_section: RemoveSection,
+    ) -> CutTracksIntersectingSection:
+        track_builder = SimpleCutTrackSegmentBuilder(
+            CalculateTrackClassificationByMaxConfidence()
+        )
+        cut_tracks_with_section = SimpleCutTracksWithSection(
+            get_tracks_from_ids, ShapelyMapper(), track_builder
+        )
+        return SimpleCutTracksIntersectingSection(
+            get_sections_by_id,
+            get_tracks,
+            tracks_intersecting_sections,
+            cut_tracks_with_section,
+            add_all_tracks,
+            remove_tracks,
+            remove_section,
+        )

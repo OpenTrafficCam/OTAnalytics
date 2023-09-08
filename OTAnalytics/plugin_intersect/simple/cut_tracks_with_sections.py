@@ -76,13 +76,16 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
         self._remove_section(cutting_section.id)
         self._subject.notify(None)
 
+    def register(self, observer: OBSERVER[Any]) -> None:
+        self._subject.register(observer)
+
     def notify_sections(self, sections: list[SectionId]) -> None:
         for section in self._get_sections_by_id(sections):
             if section.get_type() == SectionType.CUTTING:
                 self.__call__(section)
 
-    def register(self, observer: OBSERVER[Any]) -> None:
-        self._subject.register(observer)
+    def notify_section_changed(self, section_id: SectionId) -> None:
+        self.notify_sections([section_id])
 
 
 class SimpleCutTracksWithSection(CutTracksWithSection):

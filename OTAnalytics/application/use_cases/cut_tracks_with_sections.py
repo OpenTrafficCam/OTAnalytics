@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Iterable
 
 from OTAnalytics.domain.observer import OBSERVER
-from OTAnalytics.domain.section import Section, SectionListObserver
+from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import Track, TrackId
 
 
@@ -28,6 +28,15 @@ class CutTracksIntersectingSection(SectionListObserver):
 
         Args:
             observer (OBSERVER[Any]): the observer to listen to this use case.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def notify_section_changed(self, section_id: SectionId) -> None:
+        """Observer to listen to section changed events in the section repository.
+
+        Args:
+            section_id: id of section that has changed.
         """
         raise NotImplementedError
 
