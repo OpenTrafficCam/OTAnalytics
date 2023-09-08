@@ -1,10 +1,22 @@
-from typing import Iterable
+from typing import Any, Iterable
 
+from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
+    CutTracksIntersectingSection,
     CutTracksWithSection,
 )
-from OTAnalytics.application.use_cases.track_repository import GetTracksFromIds
-from OTAnalytics.domain.section import CuttingSection
+from OTAnalytics.application.use_cases.section_repository import (
+    GetSectionsById,
+    RemoveSection,
+)
+from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
+    GetTracksFromIds,
+    GetTracksWithoutSingleDetections,
+    RemoveTracks,
+)
+from OTAnalytics.domain.observer import OBSERVER, Subject
+from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import (
     Detection,
     Track,
@@ -14,6 +26,63 @@ from OTAnalytics.domain.track import (
     TrackId,
 )
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
+
+
+class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
+    """Implementation of `CutTracksIntersectingSection`
+
+    Args:
+        get_sections_by_id (GetSectionsById): get sections by id.
+        get_tracks (GetTracksWithoutSingleDetections): get all tracks with at
+            least two detections.
+        tracks_intersecting_sections (TracksIntersectingSections): returns all
+            tracks intersecting a section.
+        cut_tracks_with_section (CutTracksWithSection): returns cut tracks with
+            a section.
+        add_all_tracks (AddAllTracks): used to add all tracks to the track
+            repository.
+        remove_tracks (RemoveTracks): used to remove original tracks that have been
+            cut.
+        remove_section (RemoveSection): used to remove the cutting section.
+    """
+
+    def __init__(
+        self,
+        get_sections_by_id: GetSectionsById,
+        get_tracks: GetTracksWithoutSingleDetections,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        cut_tracks_with_section: CutTracksWithSection,
+        add_all_tracks: AddAllTracks,
+        remove_tracks: RemoveTracks,
+        remove_section: RemoveSection,
+    ) -> None:
+        self._subject: Subject[Any] = Subject[Any]()
+
+        self._get_sections_by_id = get_sections_by_id
+        self._get_tracks = get_tracks
+        self._tracks_intersecting_sections = tracks_intersecting_sections
+        self._cut_tracks_with_section = cut_tracks_with_section
+        self._add_all_tracks = add_all_tracks
+        self._remove_tracks = remove_tracks
+        self._remove_section = remove_section
+
+    def __call__(self, cutting_section: Section) -> None:
+        intersecting_track_ids = self._tracks_intersecting_sections([cutting_section])
+        new_tracks = self._cut_tracks_with_section(
+            intersecting_track_ids, cutting_section
+        )
+        self._add_all_tracks(new_tracks)
+        self._remove_tracks(intersecting_track_ids)
+        self._remove_section(cutting_section.id)
+        self._subject.notify(None)
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        for section in self._get_sections_by_id(sections):
+            if section.get_type() == SectionType.CUTTING:
+                self.__call__(section)
+
+    def register(self, observer: OBSERVER[Any]) -> None:
+        self._subject.register(observer)
 
 
 class SimpleCutTracksWithSection(CutTracksWithSection):
@@ -37,7 +106,7 @@ class SimpleCutTracksWithSection(CutTracksWithSection):
         self._track_builder = track_builder
 
     def __call__(
-        self, track_ids: Iterable[TrackId], cutting_section: CuttingSection
+        self, track_ids: Iterable[TrackId], cutting_section: Section
     ) -> Iterable[Track]:
         tracks = self._get_tracks_from_ids(track_ids)
         cut_tracks: list[Track] = []
@@ -47,7 +116,7 @@ class SimpleCutTracksWithSection(CutTracksWithSection):
         return cut_tracks
 
     def _cut_track_with_section(
-        self, track: Track, cutting_section: CuttingSection
+        self, track: Track, cutting_section: Section
     ) -> Iterable[Track]:
         cut_track_segments: list[Track] = []
         section_geometry = self._shapely_mapper.map_coordinates_to_line_string(

@@ -1,12 +1,31 @@
 from datetime import datetime
 from typing import Iterable
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
-from OTAnalytics.application.use_cases.track_repository import GetTracksFromIds
+from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
+    CutTracksWithSection,
+)
+from OTAnalytics.application.use_cases.section_repository import (
+    GetSectionsById,
+    RemoveSection,
+)
+from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
+    GetTracksFromIds,
+    GetTracksWithoutSingleDetections,
+    RemoveTracks,
+)
 from OTAnalytics.domain.geometry import Coordinate
-from OTAnalytics.domain.section import CuttingSection, SectionId
+from OTAnalytics.domain.section import (
+    Area,
+    CuttingSection,
+    LineSection,
+    SectionId,
+    SectionType,
+)
 from OTAnalytics.domain.track import (
     Detection,
     Track,
@@ -16,6 +35,7 @@ from OTAnalytics.domain.track import (
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTrackSegmentBuilder,
+    SimpleCutTracksIntersectingSection,
     SimpleCutTracksWithSection,
 )
 from tests.conftest import TrackBuilder as TrackBuilderForTesting
@@ -153,3 +173,92 @@ class TestSimpleCutTracksWithSection:
                 assert actual_detection.x == expected_x
                 assert actual_detection.y == expected_y
                 assert expected_track_id == actual_detection.track_id
+
+
+class TestSimpleCutTracksIntersectingSection:
+    @pytest.fixture
+    def cutting_section(self) -> CuttingSection:
+        section = Mock(spec=CuttingSection)
+        section.id = SectionId("#cut_1")
+        section.get_type.return_value = SectionType.CUTTING
+        return section
+
+    @pytest.fixture
+    def line_section(self) -> LineSection:
+        section = Mock(spec=LineSection)
+        section.id = SectionId("LineSection")
+        section.get_type.return_value = SectionType.LINE
+        return section
+
+    @pytest.fixture
+    def area_section(self) -> Area:
+        section = Mock(spec=Area)
+        section.id = SectionId("Area")
+        section.get_type.return_value = SectionType.AREA
+        return section
+
+    def test_cut(self, cutting_section: CuttingSection) -> None:
+        track_id = TrackId("1")
+        track = Mock(spec=Track)
+        track.id = track_id
+
+        cut_tracks = [Mock(), Mock()]
+
+        get_sections_by_id = Mock(spec=GetSectionsById)
+        get_tracks = Mock(spec=GetTracksWithoutSingleDetections, return_value=[track])
+        tracks_intersecting_sections = Mock(
+            spec=TracksIntersectingSections, return_value={track_id}
+        )
+        cut_tracks_with_section = Mock(
+            spec=CutTracksWithSection, return_value=cut_tracks
+        )
+        add_all_tracks = Mock(spec=AddAllTracks)
+        remove_tracks = Mock(spec=RemoveTracks)
+        remove_section = Mock(spec=RemoveSection)
+
+        cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
+            get_sections_by_id,
+            get_tracks,
+            tracks_intersecting_sections,
+            cut_tracks_with_section,
+            add_all_tracks,
+            remove_tracks,
+            remove_section,
+        )
+        cut_tracks_intersecting_section(cutting_section)
+
+        tracks_intersecting_sections.assert_called_once_with([cutting_section])
+        cut_tracks_with_section.assert_called_once_with({track_id}, cutting_section)
+        add_all_tracks.assert_called_once_with(cut_tracks)
+        remove_tracks.assert_called_once_with({track_id})
+        remove_section.assert_called_once_with(cutting_section.id)
+
+    def test_notify_sections(
+        self,
+        cutting_section: CuttingSection,
+        line_section: LineSection,
+        area_section: Area,
+    ) -> None:
+        section_ids = [line_section.id, area_section.id, cutting_section.id]
+        sections = [line_section, area_section, cutting_section]
+        get_sections_by_id = Mock(spec=GetSectionsById, return_value=sections)
+
+        with patch.object(SimpleCutTracksIntersectingSection, "__call__") as call_mock:
+            cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
+                get_sections_by_id, Mock(), Mock(), Mock(), Mock(), Mock(), Mock()
+            )
+            cut_tracks_intersecting_section.notify_sections(section_ids)
+
+            get_sections_by_id.assert_called_once_with(section_ids)
+            call_mock.assert_called_once_with(cutting_section)
+
+    @patch(
+        "OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections.Subject.register"
+    )
+    def test_register(self, mock_subject_register: Mock) -> None:
+        observer = Mock()
+        cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
+            Mock(), Mock(), Mock(), Mock(), Mock(), Mock(), Mock()
+        )
+        cut_tracks_intersecting_section.register(observer)
+        mock_subject_register.assert_called_once_with(observer)
