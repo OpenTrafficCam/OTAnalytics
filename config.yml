@@ -25,13 +25,7 @@ configurations:
         destination: "install.command"
       - source: "start_gui.sh"
         destination: "start_gui.command"
-    suffix: "macOS"
+    suffix: "macos"
     output_file_name: otanalytics
     additional_requirements:
       - ""
-
-
-
-
-
-
