@@ -5,7 +5,6 @@ from shapely import Point as ShapelyPoint
 from shapely import Polygon as ShapelyPolygon
 
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
-from OTAnalytics.domain.track import Detection
 
 
 class ShapelyMapper:
@@ -52,9 +51,7 @@ class ShapelyMapper:
         return ShapelyLineString([[coord.x, coord.y] for coord in coordinates])
 
     @staticmethod
-    def map_detections_to_line_string(
-        detections: Iterable[Detection],
+    def map_domain_coordinates_to_line_string(
+        coordinates: Iterable[Coordinate],
     ) -> ShapelyLineString:
-        return ShapelyLineString(
-            [[detection.x, detection.y] for detection in detections]
-        )
+        return ShapelyLineString([[coord.x, coord.y] for coord in coordinates])

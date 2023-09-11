@@ -1,6 +1,7 @@
 from typing import Any, Iterable
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
+from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
     CutTracksWithSection,
@@ -103,10 +104,12 @@ class SimpleCutTracksWithSection(CutTracksWithSection):
         get_tracks_from_ids: GetTracksFromIds,
         shapely_mapper: ShapelyMapper,
         track_builder: TrackBuilder,
+        track_view_state: TrackViewState,
     ) -> None:
         self._get_tracks_from_ids = get_tracks_from_ids
         self._shapely_mapper = shapely_mapper
         self._track_builder = track_builder
+        self._track_view_state = track_view_state
 
     def __call__(
         self, track_ids: Iterable[TrackId], cutting_section: Section
@@ -125,11 +128,16 @@ class SimpleCutTracksWithSection(CutTracksWithSection):
         section_geometry = self._shapely_mapper.map_coordinates_to_line_string(
             cutting_section.get_coordinates()
         )
+        track_offset = self._track_view_state.track_offset.get()
         for current_detection, next_detection in zip(
             track.detections[0:-1], track.detections[1:]
         ):
-            track_segment_geometry = self._shapely_mapper.map_detections_to_line_string(
-                [current_detection, next_detection]
+            current_coordinate = current_detection.get_coordinate(track_offset)
+            next_coordinate = next_detection.get_coordinate(track_offset)
+            track_segment_geometry = (
+                self._shapely_mapper.map_domain_coordinates_to_line_string(
+                    [current_coordinate, next_coordinate]
+                )
             )
             if track_segment_geometry.intersects(section_geometry):
                 new_track_segment = self._build_track(

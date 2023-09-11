@@ -7,6 +7,7 @@ from typing import Iterable, Optional
 from PIL import Image
 
 from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import Subject
 
 CLASSIFICATION: str = "classification"
@@ -174,6 +175,23 @@ class Detection(DataclassValidation):
             INTERPOLATED_DETECTION: self.interpolated_detection,
             TRACK_ID: self.track_id.id,
         }
+
+    def get_coordinate(self, offset: RelativeOffsetCoordinate | None) -> Coordinate:
+        """Get coordinate of this detection.
+
+        Args:
+            offset (RelativeOffsetCoordinate | None): relative offset to be applied.
+
+        Returns:
+            Coordinate: this detection's coordinate.
+        """
+        if offset:
+            return Coordinate(
+                x=self.x + self.w * offset.x,
+                y=self.y + self.h * offset.y,
+            )
+        else:
+            return Coordinate(self.x, self.y)
 
 
 @dataclass(frozen=True)
