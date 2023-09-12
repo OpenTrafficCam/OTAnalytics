@@ -355,6 +355,7 @@ class ApplicationStarter:
         section_repository.register_section_changed_observer(
             cut_tracks_intersecting_section.notify_section_changed
         )
+        cut_tracks_intersecting_section.register(clear_all_events.on_tracks_cut)
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
         name_generator = ArrowFlowNameGenerator()
