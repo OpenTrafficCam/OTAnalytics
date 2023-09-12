@@ -18,7 +18,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
     RemoveTracks,
 )
-from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import (
     Detection,
@@ -147,8 +147,16 @@ class TestSimpleCutTracksWithSection:
         class_calculator = Mock(spec=TrackClassificationCalculator, return_value="car")
         cut_track_segment_builder = SimpleCutTrackSegmentBuilder(class_calculator)
 
+        observable_track_offset = Mock()
+        observable_track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
+        track_view_state = Mock()
+        track_view_state.track_offset = observable_track_offset
+
         cut_tracks_with_section = SimpleCutTracksWithSection(
-            get_tracks_from_ids, geometry_mapper, cut_track_segment_builder
+            get_tracks_from_ids,
+            geometry_mapper,
+            cut_track_segment_builder,
+            track_view_state,
         )
 
         actual_cut_tracks = cut_tracks_with_section([TrackId("1")], cutting_section)
@@ -174,6 +182,7 @@ class TestSimpleCutTracksIntersectingSection:
     def cutting_section(self) -> LineSection:
         section = Mock(spec=LineSection)
         section.id = SectionId("#cut_1")
+        section.name = "#cut_1"
         section.get_type.return_value = SectionType.CUTTING
         return section
 
