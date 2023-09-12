@@ -214,7 +214,7 @@ class ApplicationStarter:
         )
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
-        section_state = self._create_section_state()
+        section_state = self._create_section_state(section_repository)
         flow_state = self._create_flow_state()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         cached_pandas_track_provider = self._create_cached_pandas_track_provider(
@@ -866,8 +866,9 @@ class ApplicationStarter:
             highlight_tracks_not_assigned_to_flow_layer,
         ]
 
-    def _create_section_state(self) -> SectionState:
-        return SectionState()
+    @staticmethod
+    def _create_section_state(section_repository: SectionRepository) -> SectionState:
+        return SectionState(GetSectionsById(section_repository))
 
     def _create_flow_state(self) -> FlowState:
         return FlowState()

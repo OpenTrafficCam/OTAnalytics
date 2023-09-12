@@ -23,7 +23,7 @@ from OTAnalytics.application.state import (
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import (
     Detection,
     Track,
@@ -114,37 +114,72 @@ class TestObservableProperty:
 
 
 class TestOptionalObservableProperty:
-    def test_notify_observer(self) -> None:
-        first_section = SectionId("north")
-        changed_section = SectionId("south")
+    @pytest.fixture
+    def section_north(self) -> Section:
+        section = Mock()
+        section.id = SectionId("north")
+        section.get_type.return_value = SectionType.LINE
+        return section
+
+    @pytest.fixture
+    def section_south(self) -> Section:
+        section = Mock()
+        section.id = SectionId("south")
+        section.get_type.return_value = SectionType.LINE
+        return section
+
+    @pytest.fixture
+    def section_cutting(self) -> Section:
+        section = Mock()
+        section.id = SectionId("#cut")
+        section.get_type.return_value = SectionType.CUTTING
+        return section
+
+    def test_notify_observer(
+        self, section_north: Section, section_south: Section
+    ) -> None:
         observer = Mock(spec=Callable[[Optional[SectionId]], None])
         state = ObservableOptionalProperty[SectionId]()
         state.register(observer)
 
-        state.set(first_section)
-        state.set(changed_section)
-        state.set(changed_section)
+        state.set(section_north.id)
+        state.set(section_south.id)
+        state.set(section_south.id)
 
         assert observer.call_args_list == [
-            call(first_section),
-            call(changed_section),
+            call(section_north.id),
+            call(section_south.id),
         ]
 
-    def test_update_selected_section_on_notify_sections(self) -> None:
-        first = SectionId("north")
-        second = SectionId("south")
-        state = SectionState()
+    def test_update_selected_section_on_notify_sections(
+        self, section_north: Section, section_south: Section
+    ) -> None:
+        get_sections_by_id = Mock()
+        get_sections_by_id.return_value = [section_north, section_south]
+        state = SectionState(get_sections_by_id)
 
-        state.notify_sections([first, second])
+        state.notify_sections([section_north.id, section_south.id])
 
-        assert state.selected_sections.get() == [first]
+        assert state.selected_sections.get() == [section_north.id]
 
-    def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
-        first = SectionId("north")
-        state = SectionState()
+    def test_update_selected_section_on_notify_sections_with_empty_list(
+        self, section_north: Section
+    ) -> None:
+        get_sections_by_id = Mock()
+        get_sections_by_id.return_value = [section_north]
+        state = SectionState(get_sections_by_id)
 
-        state.notify_sections([first])
+        state.notify_sections([section_north.id])
         state.notify_sections([])
+
+        assert state.selected_sections.get() == []
+
+    def test_update_with_cutting_section(self, section_cutting: Section) -> None:
+        get_sections_by_id = Mock()
+        get_sections_by_id.return_value = [section_cutting]
+        state = SectionState(get_sections_by_id)
+
+        state.notify_sections([section_cutting.id])
 
         assert state.selected_sections.get() == []
 
@@ -152,7 +187,7 @@ class TestOptionalObservableProperty:
 class TestTrackImageUpdater:
     def test_update_image(self) -> None:
         plotter = Mock(spec=Plotter)
-        section_state = SectionState()
+        section_state = SectionState(Mock())
         background_image = Mock(spec=TrackImage)
         plotter.plot.return_value = background_image
         track_id = TrackId("1")
