@@ -114,11 +114,11 @@ class TrackBackgroundPlotter(Plotter):
 
 
 class CachedPlotter(Plotter):
-    """
-    A plotter caching the generated track image.
+    """A plotter caching the generated track image.
+
     It can listen to changes of observable properties to invalidate the cache.
     It can also be registered at subjects via:
-        subject.register(cached_plotter.invalidate_cache)
+        ubject.register(cached_plotter.invalidate_cache)
     """
 
     def __init__(
@@ -149,15 +149,17 @@ VisibilitySubject = ObservableProperty[list[ENTITY]]
 
 
 class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
-    """
-    A plotter managing entity specific, toggleable, cached plot layers.
+    """A plotter managing entity specific, toggleable, cached plot layers.
+
     Entities can e.g. be SectionIds or FlowIds.
 
-    An EntityPlotterFactory is used to create delegate plotters for each managed entity.
-    The DynamicLayersPlotter listens to changes of the VisibilitySubject
-        to toggle the visibility of the entity layers.
-    An AvailableEntityProvider is used to check which entities are remaining
-        (since entity deletion is notified by "[]" in entity repositories).
+    Args:
+        plotter_factory (EntityPlotterFactory): used to create delegate plotters for
+        each managed entity.
+        visibility_subject (VisibilitySubject): listen to changes of the
+        VisibilitySubject to toggle the visibility of the entity layers.
+        entity_lookup (AvailableEntityProvider): used to check which entities are
+        remaining (since entity deletion is notified by "[]" in entity repositories).
     """
 
     def __init__(
@@ -196,6 +198,7 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
         entities = [] indicates deletion
         otherwise entities were added or updated.
         """
+        # TODO: Refactor observers - update code if [] no longer indicates deletion
         match entities:
             case []:
                 self._handle_remove()
