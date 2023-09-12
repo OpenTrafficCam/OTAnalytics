@@ -41,6 +41,7 @@ from OTAnalytics.application.config import DEFAULT_COUNTING_INTERVAL_IN_MINUTES
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.config import MissingDate
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
@@ -1475,3 +1476,15 @@ class DummyViewModel(
         self, frame_track_plotting: AbstractFrameTrackPlotting
     ) -> None:
         self._frame_track_plotting = frame_track_plotting
+
+    def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
+        window_position = self._get_window_position()
+        formatted_ids = "\n".join(
+            [track_id.id for track_id in cut_tracks_dto.original_tracks]
+        )
+        msg = (
+            f"Cut succesful. Cutting section '{cut_tracks_dto.section} '"
+            " and original tracks deleted.\n"
+            f"Deleted original track ids:\n{formatted_ids}"
+        )
+        InfoBox(msg, window_position)

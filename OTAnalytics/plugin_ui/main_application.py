@@ -364,8 +364,9 @@ class ApplicationStarter:
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
         )
-        # TODO: Streamline observers - move registering to subjects happening in
+        # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
+        cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
         dummy_viewmodel.register_observers()
         application.connect_observers()
         datastore.register_tracks_observer(selected_video_updater)
