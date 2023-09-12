@@ -1,8 +1,9 @@
-from typing import Any, Iterable
+from typing import Iterable
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
+    CutTracksDto,
     CutTracksIntersectingSection,
     CutTracksWithSection,
 )
@@ -57,7 +58,7 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
         remove_tracks: RemoveTracks,
         remove_section: RemoveSection,
     ) -> None:
-        self._subject: Subject[Any] = Subject[Any]()
+        self._subject: Subject[CutTracksDto] = Subject[CutTracksDto]()
 
         self._get_sections_by_id = get_sections_by_id
         self._get_tracks = get_tracks
@@ -75,9 +76,11 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
         self._add_all_tracks(new_tracks)
         self._remove_tracks(intersecting_track_ids)
         self._remove_section(cutting_section.id)
-        self._subject.notify(None)
+        self._subject.notify(
+            CutTracksDto(cutting_section.name, list(intersecting_track_ids))
+        )
 
-    def register(self, observer: OBSERVER[Any]) -> None:
+    def register(self, observer: OBSERVER[CutTracksDto]) -> None:
         self._subject.register(observer)
 
     def notify_sections(self, sections: list[SectionId]) -> None:

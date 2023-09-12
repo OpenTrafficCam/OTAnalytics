@@ -1,9 +1,24 @@
 from abc import ABC, abstractmethod
-from typing import Any, Iterable
+from dataclasses import dataclass
+from typing import Iterable
 
 from OTAnalytics.domain.observer import OBSERVER
 from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
 from OTAnalytics.domain.track import Track, TrackId
+
+
+@dataclass(frozen=True)
+class CutTracksDto:
+    """Holds information tracks that have been cut with a section.
+
+    Args:
+        section (str): name of the cutting section.
+        original_tracks (list[TrackId]): ids of original tracks that have been
+            cut.
+    """
+
+    section: str
+    original_tracks: list[TrackId]
 
 
 class CutTracksIntersectingSection(SectionListObserver):
@@ -23,7 +38,7 @@ class CutTracksIntersectingSection(SectionListObserver):
         raise NotImplementedError
 
     @abstractmethod
-    def register(self, observer: OBSERVER[Any]) -> None:
+    def register(self, observer: OBSERVER[CutTracksDto]) -> None:
         """Register to this use case.
 
         Args:
