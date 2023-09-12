@@ -366,6 +366,9 @@ class ApplicationStarter:
         )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
+        cut_tracks_intersecting_section.register(
+            cached_pandas_track_provider.on_tracks_cut
+        )
         cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
         dummy_viewmodel.register_observers()
         application.connect_observers()
