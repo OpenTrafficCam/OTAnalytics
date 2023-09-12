@@ -383,6 +383,19 @@ class TrackRemoveError(Exception):
         super().__init__(message)
 
 
+class RemoveMultipleTracksError(Exception):
+    """Exception to be raised if multiple tracks can not be removed.
+
+    Args:
+        track_ids (list[TrackId]): the track id of the track to be removed.
+        message (str): the error message.
+    """
+
+    def __init__(self, track_ids: list[TrackId], message: str):
+        self._track_ids = track_ids
+        super().__init__(message)
+
+
 class TrackRepository:
     def __init__(self) -> None:
         self._tracks: dict[TrackId, Track] = {}
@@ -466,7 +479,7 @@ class TrackRepository:
         return self._tracks.keys()
 
     def remove(self, track_id: TrackId) -> None:
-        """Remove track by its id.
+        """Remove track by its id and notify observers
 
         Raises:
             TrackRemoveError: if track does not exist in repository.
@@ -475,13 +488,44 @@ class TrackRepository:
             track_id (TrackId): the id of the track to be removed.
         """
         try:
-            del self._tracks[track_id]
+            self._remove(track_id)
         except KeyError:
             raise TrackRemoveError(
                 track_id, f"Trying to remove non existing track with id '{track_id.id}'"
             )
         # TODO: Pass removed track id to notify when moving observers to
         #  application layer
+        self.observers.notify([])
+
+    def _remove(self, track_id: TrackId) -> None:
+        """Remove track by its id without notifying observers.
+
+        Raises:
+            TrackRemoveError: if track does not exist in repository.
+
+        Args:
+            track_id (TrackId): the id of the track to be removed.
+        """
+        del self._tracks[track_id]
+
+    def remove_multiple(self, track_ids: set[TrackId]) -> None:
+        failed_tracks: list[TrackId] = []
+        for track_id in track_ids:
+            try:
+                self._remove(track_id)
+            except KeyError:
+                failed_tracks.append(track_id)
+            # TODO: Pass removed track id to notify when moving observers to
+            #  application layer
+
+        if failed_tracks:
+            raise RemoveMultipleTracksError(
+                failed_tracks,
+                (
+                    "Multiple tracks with following ids could not be removed."
+                    f" '{[failed_track.id for failed_track in failed_tracks]}'"
+                ),
+            )
         self.observers.notify([])
 
     def clear(self) -> None:

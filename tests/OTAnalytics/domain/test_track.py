@@ -9,6 +9,7 @@ from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
+    RemoveMultipleTracksError,
     Track,
     TrackFileRepository,
     TrackHasNoDetectionError,
@@ -326,6 +327,18 @@ class TestTrackRepository:
             repository.remove(track_2.id)
 
         assert observer.notify_tracks.call_args_list == [call([]), call([])]
+
+    def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
+        repository = TrackRepository()
+        repository.add_all([track_1, track_2])
+
+        observer = Mock(spec=TrackListObserver)
+        repository.register_tracks_observer(observer)
+
+        repository.remove_multiple({track_1.id, track_2.id})
+        assert repository.get_all() == []
+        with pytest.raises(RemoveMultipleTracksError):
+            repository.remove_multiple({track_1.id})
 
 
 class TestTrackFileRepository:

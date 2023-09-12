@@ -1,11 +1,12 @@
 from pathlib import Path
 from typing import Iterable
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track import (
+    RemoveMultipleTracksError,
     Track,
     TrackFileRepository,
     TrackId,
-    TrackRemoveError,
     TrackRepository,
 )
 
@@ -119,11 +120,10 @@ class RemoveTracks:
         Args:
             track_ids (Iterable[TrackId]): ids of tracks to be removed.
         """
-        for track_id in track_ids:
-            try:
-                self._track_repository.remove(track_id)
-            except TrackRemoveError:
-                continue
+        try:
+            self._track_repository.remove_multiple(set(track_ids))
+        except RemoveMultipleTracksError as cause:
+            logger().info(cause)
 
 
 class GetTracksFromIds:

@@ -78,10 +78,10 @@ class TestClearAllTracks:
 
 class TestRemoveTracks:
     def test_remove(self, track_repository: Mock) -> None:
-        remove_id = TrackId("1")
+        remove_ids = [TrackId("1"), TrackId("2")]
         remove_tracks = RemoveTracks(track_repository)
-        remove_tracks([remove_id])
-        track_repository.remove.assert_called_once_with(remove_id)
+        remove_tracks(remove_ids)
+        track_repository.remove_multiple.assert_called_once_with(set(remove_ids))
 
 
 class TestGetTracksFromIds:
