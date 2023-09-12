@@ -217,9 +217,11 @@ class ApplicationStarter:
         section_state = self._create_section_state()
         flow_state = self._create_flow_state()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-
-        pandas_data_provider = self._create_pandas_data_provider(
+        cached_pandas_track_provider = self._create_cached_pandas_track_provider(
             datastore, track_view_state, pulling_progressbar_builder
+        )
+        pandas_data_provider = self._wrap_pandas_track_offset_provider(
+            cached_pandas_track_provider, track_view_state
         )
         color_palette_provider = ColorPaletteProvider()
         layers = self._create_layers(
@@ -326,6 +328,7 @@ class ApplicationStarter:
             add_all_tracks,
             remove_tracks,
             remove_section,
+            track_view_state,
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -507,19 +510,23 @@ class ApplicationStarter:
     def _create_track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_pandas_data_provider(
+    def _create_cached_pandas_track_provider(
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
         progressbar: ProgressbarBuilder,
-    ) -> PandasDataFrameProvider:
+    ) -> CachedPandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        return PandasTracksOffsetProvider(
-            CachedPandasTrackProvider(
-                datastore, track_view_state, dataframe_filter_builder, progressbar
-            ),
-            track_view_state=track_view_state,
+        return CachedPandasTrackProvider(
+            datastore, track_view_state, dataframe_filter_builder, progressbar
         )
+
+    @staticmethod
+    def _wrap_pandas_track_offset_provider(
+        other: PandasDataFrameProvider,
+        track_view_state: TrackViewState,
+    ) -> PandasDataFrameProvider:
+        return PandasTracksOffsetProvider(other, track_view_state)
 
     def _create_track_geometry_plotter(
         self,
@@ -1025,12 +1032,13 @@ class ApplicationStarter:
         add_all_tracks: AddAllTracks,
         remove_tracks: RemoveTracks,
         remove_section: RemoveSection,
+        track_view_state: TrackViewState,
     ) -> CutTracksIntersectingSection:
         track_builder = SimpleCutTrackSegmentBuilder(
             CalculateTrackClassificationByMaxConfidence()
         )
         cut_tracks_with_section = SimpleCutTracksWithSection(
-            get_tracks_from_ids, ShapelyMapper(), track_builder
+            get_tracks_from_ids, ShapelyMapper(), track_builder, track_view_state
         )
         return SimpleCutTracksIntersectingSection(
             get_sections_by_id,
