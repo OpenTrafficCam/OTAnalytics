@@ -73,8 +73,8 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
         new_tracks = self._cut_tracks_with_section(
             intersecting_track_ids, cutting_section
         )
-        self._add_all_tracks(new_tracks)
         self._remove_tracks(intersecting_track_ids)
+        self._add_all_tracks(new_tracks)
         self._remove_section(cutting_section.id)
         self._subject.notify(
             CutTracksDto(cutting_section.name, list(intersecting_track_ids))
