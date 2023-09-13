@@ -313,7 +313,7 @@ class ModeTagger(Tagger):
         Returns:
             Tag: tag of the assignment
         """
-        track = self._track_repository.get_for(TrackId(str(assignment.road_user)))
+        track = self._track_repository.get_for(TrackId(assignment.road_user))
         tag = track.classification if track else UNCLASSIFIED
         return create_mode_tag(tag)
 
