@@ -163,7 +163,7 @@ class TestSimpleCutTracksWithSection:
         assert len(list(actual_cut_tracks)) == len(expected)
 
         for expected_track_id_suffix, (actual_track, expected_track_coord) in enumerate(
-            zip(actual_cut_tracks, expected), start=1
+            zip(actual_cut_tracks, expected), start=0
         ):
             assert len(actual_track.detections) == len(expected_track_coord)
             expected_track_id = TrackId(f"1_{expected_track_id_suffix}")

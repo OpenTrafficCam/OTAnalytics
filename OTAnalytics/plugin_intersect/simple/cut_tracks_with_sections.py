@@ -144,14 +144,14 @@ class SimpleCutTracksWithSection(CutTracksWithSection):
             )
             if track_segment_geometry.intersects(section_geometry):
                 new_track_segment = self._build_track(
-                    f"{track.id.id}_{len(cut_track_segments) + 1}", current_detection
+                    f"{track.id.id}_{len(cut_track_segments)}", current_detection
                 )
                 cut_track_segments.append(new_track_segment)
             else:
                 self._track_builder.add_detection(current_detection)
 
         new_track_segment = self._build_track(
-            f"{track.id.id}_{len(cut_track_segments) + 1}", track.last_detection
+            f"{track.id.id}_{len(cut_track_segments)}", track.last_detection
         )
         cut_track_segments.append(new_track_segment)
 
