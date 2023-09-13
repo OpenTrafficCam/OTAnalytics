@@ -224,7 +224,7 @@ class TestDatastore:
         config_parser: Mock,
     ) -> None:
         some_track = Mock()
-        some_track_id = TrackId(1)
+        some_track_id = TrackId("1")
         some_track.id = some_track_id
         some_video = SimpleVideo(
             video_reader=Mock(), path=Path(""), start_date=START_DATE
@@ -283,13 +283,13 @@ class TestDatastore:
         config_parser: Mock,
     ) -> None:
         some_track = Mock()
-        some_track_id = TrackId(1)
+        some_track_id = TrackId("1")
         some_track.id = some_track_id
         some_video = SimpleVideo(
             video_reader=Mock(), path=Path(""), start_date=START_DATE
         )
         other_track = Mock()
-        other_track_id = TrackId(2)
+        other_track_id = TrackId("2")
         other_track.id = other_track_id
         other_video = SimpleVideo(
             video_reader=Mock(), path=Path(""), start_date=START_DATE

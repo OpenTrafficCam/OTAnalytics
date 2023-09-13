@@ -4,12 +4,13 @@ from typing import Callable, Generic, Iterable, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import VALUE, Subject
-from OTAnalytics.domain.section import SectionId, SectionListObserver
+from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionType
 from OTAnalytics.domain.track import (
     Detection,
     TrackId,
@@ -241,10 +242,11 @@ class SectionState(SectionListObserver):
     This state represents the currently selected sections.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, get_sections_by_id: GetSectionsById) -> None:
         self.selected_sections: ObservableProperty[
             list[SectionId]
         ] = ObservableProperty[list]([])
+        self._get_sections_by_id = get_sections_by_id
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         """
@@ -253,8 +255,17 @@ class SectionState(SectionListObserver):
         Args:
             sections (list[SectionId]): newly added sections
         """
-        if sections:
-            self.selected_sections.set([sections[0]])
+        if not sections:
+            self.selected_sections.set([])
+            return
+
+        no_cutting_sections = [
+            section
+            for section in self._get_sections_by_id(sections)
+            if section.get_type() != SectionType.CUTTING
+        ]
+        if no_cutting_sections:
+            self.selected_sections.set([no_cutting_sections[0].id])
         else:
             self.selected_sections.set([])
 

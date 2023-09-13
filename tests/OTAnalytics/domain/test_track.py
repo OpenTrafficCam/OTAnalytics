@@ -7,14 +7,16 @@ import pytest
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.track import (
-    BuildTrackWithLessThanNDetectionsError,
     CalculateTrackClassificationByMaxConfidence,
     Detection,
+    RemoveMultipleTracksError,
     Track,
     TrackFileRepository,
+    TrackHasNoDetectionError,
     TrackId,
     TrackListObserver,
     TrackObserver,
+    TrackRemoveError,
     TrackRepository,
     TrackSubject,
 )
@@ -34,7 +36,7 @@ def valid_detection_dict() -> dict:
         ottrk_format.OCCURRENCE: datetime(2022, 1, 1, 1, 0, 0),
         ottrk_format.INPUT_FILE_PATH: Path("path/to/file.otdet"),
         ottrk_format.INTERPOLATED_DETECTION: False,
-        "track-id": TrackId(1),
+        "track-id": TrackId("1"),
         "video_name": "file.mp4",
     }
 
@@ -60,7 +62,7 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
 
 class TestTrackSubject:
     def test_notify_observer(self) -> None:
-        changed_track = TrackId(1)
+        changed_track = TrackId("1")
         observer = Mock(spec=TrackObserver)
         subject = TrackSubject()
         subject.register(observer)
@@ -80,8 +82,6 @@ class TestDetection:
             (0, -1, -0.0001, 1, 1, 1, 1),
             (0, 2, 1, 1, -0.0001, 1, 1),
             (0, 2, 1, 1, 1, 0, 1),
-            (0, 1, 1, 1, 1, 1, -1),
-            (0, 1, 1, 1, 1, 1, 0),
         ],
     )
     def test_value_error_raised_with_invalid_arg(
@@ -105,7 +105,7 @@ class TestDetection:
                 frame=frame,
                 occurrence=datetime(2022, 1, 1, 1, 0, 0),
                 interpolated_detection=False,
-                track_id=TrackId(track_id),
+                track_id=TrackId(str(track_id)),
                 video_name="file.mp4",
             )
 
@@ -130,22 +130,19 @@ class TestDetection:
 
 
 class TestTrack:
-    @pytest.mark.parametrize("id", [0, -1, 0.5])
-    def test_value_error_raised_with_invalid_arg(self, id: int) -> None:
-        with pytest.raises(ValueError):
-            TrackId(id)
-
     def test_raise_error_on_empty_detections(self) -> None:
-        with pytest.raises(BuildTrackWithLessThanNDetectionsError):
-            Track(id=TrackId(1), classification="car", detections=[])
+        with pytest.raises(TrackHasNoDetectionError):
+            Track(id=TrackId("1"), classification="car", detections=[])
 
-    def test_error_on_single_detection(self, valid_detection: Detection) -> None:
-        with pytest.raises(BuildTrackWithLessThanNDetectionsError):
-            Track(id=TrackId(5), classification="car", detections=[valid_detection])
+    def test_no_error_on_single_detection(self, valid_detection: Detection) -> None:
+        track = Track(
+            id=TrackId("5"), classification="car", detections=[valid_detection]
+        )
+        assert track.detections == [valid_detection]
 
     def test_instantiation_with_valid_args(self, valid_detection: Detection) -> None:
         track = Track(
-            id=TrackId(5),
+            id=TrackId("5"),
             classification="car",
             detections=[
                 valid_detection,
@@ -155,7 +152,7 @@ class TestTrack:
                 valid_detection,
             ],
         )
-        assert track.id == TrackId(5)
+        assert track.id == TrackId("5")
         assert track.classification == "car"
         assert track.detections == [
             valid_detection,
@@ -181,7 +178,7 @@ class TestTrack:
         end_detection = Mock(spec=Detection)
         end_detection.occurrence = end_time
         track = Track(
-            TrackId(1),
+            TrackId("1"),
             "car",
             [
                 start_detection,
@@ -194,6 +191,22 @@ class TestTrack:
 
         assert track.start == start_time
         assert track.end == end_time
+
+    def test_first_and_last_detection(self, valid_detection: Detection) -> None:
+        first = Mock(spec=Detection)
+        first.occurrence = datetime.min
+        last = Mock(spec=Detection)
+        last.occurrence = datetime.max
+        detections: list[Detection] = [
+            first,
+            valid_detection,
+            valid_detection,
+            valid_detection,
+            last,
+        ]
+        track = Track(TrackId("1"), "car", detections)
+        assert track.first_detection == first
+        assert track.last_detection == last
 
 
 class TestCalculateTrackClassificationByMaxConfidence:
@@ -231,13 +244,13 @@ class TestTrackRepository:
     @pytest.fixture
     def track_1(self) -> Mock:
         track = Mock(spec=Track)
-        track.id = TrackId(1)
+        track.id = TrackId("1")
         return track
 
     @pytest.fixture
     def track_2(self) -> Mock:
         track = Mock(spec=Track)
-        track.id = TrackId(2)
+        track.id = TrackId("2")
         return track
 
     def test_add(self, track_1: Mock) -> None:
@@ -298,6 +311,34 @@ class TestTrackRepository:
         repository.add_all([track_1, track_2])
         ids = repository.get_all_ids()
         assert set(ids) == {track_1.id, track_2.id}
+
+    def test_remove(self, track_1: Mock, track_2: Mock) -> None:
+        repository = TrackRepository()
+        repository.add_all([track_1, track_2])
+
+        observer = Mock(spec=TrackListObserver)
+        repository.register_tracks_observer(observer)
+
+        repository.remove(track_1.id)
+        assert repository.get_all() == [track_2]
+        repository.remove(track_2.id)
+        assert repository.get_all() == []
+        with pytest.raises(TrackRemoveError):
+            repository.remove(track_2.id)
+
+        assert observer.notify_tracks.call_args_list == [call([]), call([])]
+
+    def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
+        repository = TrackRepository()
+        repository.add_all([track_1, track_2])
+
+        observer = Mock(spec=TrackListObserver)
+        repository.register_tracks_observer(observer)
+
+        repository.remove_multiple({track_1.id, track_2.id})
+        assert repository.get_all() == []
+        with pytest.raises(RemoveMultipleTracksError):
+            repository.remove_multiple({track_1.id})
 
 
 class TestTrackFileRepository:

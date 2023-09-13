@@ -7,6 +7,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     ClearAllSections,
     GetAllSections,
     GetSectionsById,
+    RemoveSection,
     SectionAlreadyExists,
     SectionIdAlreadyExists,
 )
@@ -110,3 +111,10 @@ class TestClearAllSections:
         clear_all_sections = ClearAllSections(section_repository)
         clear_all_sections()
         section_repository.clear.assert_called_once()
+
+
+class TestRemoveSection:
+    def test_remove(self, section_repository: Mock, section_north: Section) -> None:
+        remove_section = RemoveSection(section_repository)
+        remove_section(section_north.id)
+        section_repository.remove.assert_called_once_with(section_north.id)

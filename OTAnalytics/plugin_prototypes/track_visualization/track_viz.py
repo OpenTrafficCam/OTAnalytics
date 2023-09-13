@@ -15,6 +15,7 @@ from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -187,7 +188,7 @@ class FilterById(PandasDataFrameProvider):
         data = self._other.get_data()
         if data.empty:
             return data
-        ids: set[int] = {track_id.id for track_id in self._filter.get_ids()}
+        ids: set[str] = {track_id.id for track_id in self._filter.get_ids()}
         return data.loc[data[track.TRACK_ID].isin(ids)]
 
 
@@ -399,9 +400,10 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         Args:
             tracks (list[TrackId]): the ids of changed tracks
         """
+        # TODO: Refactor observers - Distinguish between added tracks and removed tracks
         match (tracks):
             case []:
-                self._cache_df = DataFrame()
+                self._reset_cache()
             case _:
                 # filter existing tracks from cache
                 filtered_cache = self._cache_without_existing_tracks(track_ids=tracks)
@@ -418,6 +420,9 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
                     df = pandas.concat([filtered_cache, new_df])
 
                 self._cache_df = self._sort_tracks(df)
+
+    def _reset_cache(self) -> None:
+        self._cache_df = DataFrame()
 
     def _fetch_new_track_data(self, track_ids: list[TrackId]) -> list[Track]:
         return [
@@ -440,10 +445,19 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         if self._cache_df.empty:
             return self._cache_df
 
+        return self._remove_tracks(track_ids)
+
+    def _remove_tracks(self, track_ids: Iterable[TrackId]) -> DataFrame:
         track_id_nums = [t.id for t in track_ids]
-        return self._cache_df.drop(
+        cache_without_removed_tracks = self._cache_df.drop(
             self._cache_df.index[self._cache_df[track.TRACK_ID].isin(track_id_nums)]
         )
+        return cache_without_removed_tracks
+
+    def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
+        cut_tracks_dto.original_tracks
+        cache_without_cut_tracks = self._remove_tracks(cut_tracks_dto.original_tracks)
+        self._cache_df = self._sort_tracks(cache_without_cut_tracks)
 
 
 class MatplotlibPlotterImplementation(ABC):
