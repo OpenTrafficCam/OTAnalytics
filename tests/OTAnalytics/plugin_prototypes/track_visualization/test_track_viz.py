@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -109,7 +108,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 1,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -123,7 +121,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 2,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -137,7 +134,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 3,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -151,7 +147,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 4,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -165,7 +160,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 5,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",

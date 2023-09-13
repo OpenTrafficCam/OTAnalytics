@@ -5,6 +5,10 @@ from typing import Iterable
 from pandas import DataFrame
 
 from OTAnalytics.application.analysis.traffic_counting import (
+    LEVEL_CLASSIFICATION,
+    LEVEL_END_TIME,
+    LEVEL_FLOW,
+    LEVEL_START_TIME,
     Count,
     Exporter,
     ExporterFactory,
@@ -28,7 +32,22 @@ class CsvExport(Exporter):
     def export(self, counts: Count) -> None:
         logger().info(f"Exporting counts {counts} to {self._output_file}")
         dataframe = self.__create_data_frame(counts)
+        dataframe = self._set_column_order(dataframe)
         dataframe.to_csv(self.__create_path(), index=False)
+
+    def _set_column_order(self, dataframe: DataFrame) -> DataFrame:
+        desired_columns_order = [
+            LEVEL_START_TIME,
+            LEVEL_END_TIME,
+            LEVEL_CLASSIFICATION,
+            LEVEL_FLOW,
+        ]
+        dataframe = dataframe[
+            desired_columns_order
+            + [col for col in dataframe.columns if col not in desired_columns_order]
+        ]
+
+        return dataframe
 
     def __create_data_frame(self, counts: Count) -> DataFrame:
         transformed = counts.to_dict()

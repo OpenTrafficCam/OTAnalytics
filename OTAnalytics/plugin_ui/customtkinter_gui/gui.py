@@ -112,6 +112,7 @@ class FrameContent(CTkFrame):
 
         self._frame_track_plotting = FrameTrackPlotting(
             master=self,
+            viewmodel=viewmodel,
             layers=layers,
         )
         self._frame_filter = FrameFilter(master=self, viewmodel=self._viewmodel)

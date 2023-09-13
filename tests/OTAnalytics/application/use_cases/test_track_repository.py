@@ -7,9 +7,15 @@ from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackFiles,
+    GetAllTrackIds,
     GetAllTracks,
 )
-from OTAnalytics.domain.track import Detection, Track, TrackRepository
+from OTAnalytics.domain.track import (
+    Track,
+    TrackFileRepository,
+    TrackId,
+    TrackRepository,
+)
 
 
 @pytest.fixture
@@ -18,9 +24,22 @@ def tracks() -> list[Mock]:
 
 
 @pytest.fixture
+def track_files() -> set[Mock]:
+    return {Mock(spec=Path), Mock(spec=Path)}
+
+
+@pytest.fixture
 def track_repository(tracks: list[Mock]) -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_all.return_value = tracks
+    repository.get_all_ids.return_value = {TrackId(1), TrackId(2)}
+    return repository
+
+
+@pytest.fixture
+def track_file_repository(track_files: list[Mock]) -> Mock:
+    repository = Mock(spec=TrackFileRepository)
+    repository.get_all.return_value = track_files
     return repository
 
 
@@ -30,6 +49,14 @@ class TestGetAllTracks:
         result_tracks = get_all_tracks()
         assert result_tracks == tracks
         track_repository.get_all.assert_called_once()
+
+
+class TestGetAllTrackIds:
+    def test_get_all_tracks(self, track_repository: Mock) -> None:
+        get_all_track_ids = GetAllTrackIds(track_repository)
+        result_tracks = get_all_track_ids()
+        assert result_tracks == {TrackId(1), TrackId(2)}
+        track_repository.get_all_ids.assert_called_once()
 
 
 class TestAddAllTracks:
@@ -48,17 +75,10 @@ class TestClearAllTracks:
 
 class TestGetAllTrackFiles:
     def test_get_all_track_files(
-        self, track_repository: Mock, tracks: list[Mock]
+        self, track_file_repository: Mock, track_files: set[Mock]
     ) -> None:
-        expected_path = Mock(spec=Path)
-        detection_1 = Mock(spec=Detection)
-        detection_1.input_file_path = expected_path
-        detection_2 = Mock(spec=Detection)
-        detection_2.input_file_path = expected_path
-        for track in tracks:
-            track.detections = [detection_1, detection_2]
-        use_case = GetAllTrackFiles(track_repository)
-
+        use_case = GetAllTrackFiles(track_file_repository)
         files = use_case()
 
-        assert {expected_path} == files
+        assert track_files == files
+        track_file_repository.get_all.assert_called_once()

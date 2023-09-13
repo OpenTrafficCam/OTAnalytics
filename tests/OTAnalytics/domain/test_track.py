@@ -5,11 +5,13 @@ from unittest.mock import Mock, call
 import pytest
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.track import (
     BuildTrackWithLessThanNDetectionsError,
     CalculateTrackClassificationByMaxConfidence,
     Detection,
     Track,
+    TrackFileRepository,
     TrackId,
     TrackListObserver,
     TrackObserver,
@@ -48,12 +50,11 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
         h=valid_detection_dict[ottrk_format.H],
         frame=valid_detection_dict[ottrk_format.FRAME],
         occurrence=valid_detection_dict[ottrk_format.OCCURRENCE],
-        input_file_path=valid_detection_dict[ottrk_format.INPUT_FILE_PATH],
         interpolated_detection=valid_detection_dict[
             ottrk_format.INTERPOLATED_DETECTION
         ],
         track_id=valid_detection_dict[ottrk_format.TRACK_ID],
-        video_name=valid_detection_dict["video_name"],
+        video_name=valid_detection_dict[VIDEO_NAME],
     )
 
 
@@ -103,7 +104,6 @@ class TestDetection:
                 h=h,
                 frame=frame,
                 occurrence=datetime(2022, 1, 1, 1, 0, 0),
-                input_file_path=Path("path/to/file.otdet"),
                 interpolated_detection=False,
                 track_id=TrackId(track_id),
                 video_name="file.mp4",
@@ -121,7 +121,7 @@ class TestDetection:
         assert det.h == valid_detection_dict[ottrk_format.H]
         assert det.frame == valid_detection_dict[ottrk_format.FRAME]
         assert det.occurrence == valid_detection_dict[ottrk_format.OCCURRENCE]
-        assert det.input_file_path == valid_detection_dict[ottrk_format.INPUT_FILE_PATH]
+        assert det.video_name == valid_detection_dict[VIDEO_NAME]
         assert (
             det.interpolated_detection
             == valid_detection_dict[ottrk_format.INTERPOLATED_DETECTION]
@@ -228,18 +228,27 @@ class TestCalculateTrackClassificationByMaxConfidence:
 
 
 class TestTrackRepository:
-    def test_add(self) -> None:
-        track_id = TrackId(1)
-        track = Mock()
-        track.id = track_id
+    @pytest.fixture
+    def track_1(self) -> Mock:
+        track = Mock(spec=Track)
+        track.id = TrackId(1)
+        return track
+
+    @pytest.fixture
+    def track_2(self) -> Mock:
+        track = Mock(spec=Track)
+        track.id = TrackId(2)
+        return track
+
+    def test_add(self, track_1: Mock) -> None:
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add(track)
+        repository.add(track_1)
 
-        assert track in repository.get_all()
-        observer.notify_tracks.assert_called_with([track_id])
+        assert track_1 in repository.get_all()
+        observer.notify_tracks.assert_called_with([track_1.id])
 
     def test_add_nothing(self) -> None:
         observer = Mock(spec=TrackListObserver)
@@ -251,50 +260,66 @@ class TestTrackRepository:
         assert 0 == len(repository.get_all())
         observer.notify_tracks.assert_not_called()
 
-    def test_add_all(self) -> None:
-        first_id = TrackId(1)
-        second_id = TrackId(2)
-        first_track = Mock()
-        first_track.id = first_id
-        second_track = Mock()
-        second_track.id = second_id
+    def test_add_all(self, track_1: Mock, track_2: Mock) -> None:
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add_all([first_track, second_track])
+        repository.add_all([track_1, track_2])
 
-        assert first_track in repository.get_all()
-        assert second_track in repository.get_all()
-        observer.notify_tracks.assert_called_with([first_id, second_id])
+        assert track_1 in repository.get_all()
+        assert track_2 in repository.get_all()
+        observer.notify_tracks.assert_called_with([track_1.id, track_2.id])
 
-    def test_get_by_id(self) -> None:
-        first_track = Mock()
-        first_track.id.return_value = TrackId(1)
-        second_track = Mock()
+    def test_get_by_id(self, track_1: Mock, track_2: Mock) -> None:
         repository = TrackRepository()
-        repository.add_all([first_track, second_track])
+        repository.add_all([track_1, track_2])
 
-        returned = repository.get_for(first_track.id)
+        returned = repository.get_for(track_1.id)
 
-        assert returned == first_track
+        assert returned == track_1
 
-    def test_clear(self) -> None:
-        first_id = TrackId(1)
-        second_id = TrackId(2)
-        first_track = Mock()
-        first_track.id = first_id
-        second_track = Mock()
-        second_track.id = second_id
+    def test_clear(self, track_1: Mock, track_2: Mock) -> None:
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add_all([first_track, second_track])
+        repository.add_all([track_1, track_2])
         repository.clear()
 
         assert not list(repository.get_all())
         assert observer.notify_tracks.call_args_list == [
-            call([first_id, second_id]),
+            call([track_1.id, track_2.id]),
             call([]),
         ]
+
+    def test_get_all_ids(self, track_1: Mock, track_2: Mock) -> None:
+        repository = TrackRepository()
+        repository.add_all([track_1, track_2])
+        ids = repository.get_all_ids()
+        assert set(ids) == {track_1.id, track_2.id}
+
+
+class TestTrackFileRepository:
+    @pytest.fixture
+    def mock_file(self) -> Mock:
+        return Mock(spec=Path)
+
+    @pytest.fixture
+    def mock_other_file(self) -> Mock:
+        return Mock(spec=Path)
+
+    def test_add(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        repository = TrackFileRepository()
+        assert repository._files == set()
+        repository.add(mock_file)
+        assert repository._files == {mock_file}
+        repository.add(mock_file)
+        assert repository._files == {mock_file}
+        repository.add(mock_other_file)
+        assert repository._files == {mock_file, mock_other_file}
+
+    def test_add_all(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        repository = TrackFileRepository()
+        repository.add_all([mock_file, mock_other_file])
+        assert repository._files == {mock_file, mock_other_file}

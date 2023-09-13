@@ -18,4 +18,8 @@ class AbstractCanvas(CTkCanvas, WidgetPositionProvider):
 
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
-        pass
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_preview_image(self) -> None:
+        raise NotImplementedError

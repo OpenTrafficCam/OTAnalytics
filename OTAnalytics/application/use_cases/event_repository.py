@@ -16,7 +16,7 @@ class AddEvents:
             self._event_repository.add_all(events)
 
 
-class ClearEventRepository(SectionListObserver, TrackListObserver):
+class ClearAllEvents(SectionListObserver, TrackListObserver):
     """Clears the event repository also on section state changes.
 
     Args:
