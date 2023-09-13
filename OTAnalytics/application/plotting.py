@@ -110,7 +110,6 @@ class TrackBackgroundPlotter(Plotter):
     def plot(self) -> Optional[TrackImage]:
         if videos := self._video_provider():
             if len(videos) > 0:
-                current_frame = self._frame_provider()
-                frame_number = current_frame or 1
+                frame_number = self._frame_provider()
                 return videos[0].get_frame(frame_number)
         return None
