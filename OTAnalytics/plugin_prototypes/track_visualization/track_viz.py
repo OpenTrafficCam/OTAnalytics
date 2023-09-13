@@ -32,6 +32,9 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
+"""Frames start with 1 in OTVision but frames of videos are loaded zero based."""
+FRAME_OFFSET = 1
+
 ENCODING = "UTF-8"
 DPI = 100
 
@@ -577,7 +580,8 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
             alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
-        boxes_frame = track_df[track_df[track.FRAME] == self.__current_frame()]
+        current_frame = self.__current_frame() + FRAME_OFFSET
+        boxes_frame = track_df[track_df[track.FRAME] == current_frame]
         for index, row in boxes_frame.iterrows():
             x = row[X]
             y = row[Y]
