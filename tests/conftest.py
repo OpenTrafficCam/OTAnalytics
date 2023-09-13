@@ -39,7 +39,7 @@ DEFAULT_OCCURRENCE_MICROSECOND: int = 0
 @dataclass
 class TrackBuilder:
     otdet_version = "1.2"
-    track_id: int = 1
+    track_id: str = "1"
     track_class: str = "car"
     detection_class: str = "car"
     confidence: float = 0.5
@@ -97,7 +97,7 @@ class TrackBuilder:
             video_name=self.video_name,
         )
 
-    def add_track_id(self, id: int) -> None:
+    def add_track_id(self, id: str) -> None:
         self.track_id = id
 
     def add_detection_class(self, classification: str) -> None:
@@ -244,7 +244,7 @@ class TrackBuilder:
 
 @dataclass
 class EventBuilder:
-    road_user_id: int = 1
+    road_user_id: str = "1"
     road_user_type: str = "car"
     hostname: str = DEFAULT_HOSTNAME
     occurrence_year: int = DEFAULT_OCCURRENCE_YEAR
@@ -319,7 +319,7 @@ class EventBuilder:
         self.direction_vector_x = x
         self.direction_vector_y = y
 
-    def add_road_user_id(self, id: int) -> None:
+    def add_road_user_id(self, id: str) -> None:
         self.road_user_id = id
 
     def add_road_user_type(self, type: str) -> None:
