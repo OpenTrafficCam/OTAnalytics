@@ -254,14 +254,13 @@ class SectionState(SectionListObserver):
         Args:
             sections (list[SectionId]): newly added sections
         """
-        _sections = self._get_sections_by_id(sections)
         if not sections:
             self.selected_sections.set([])
             return
 
         no_cutting_sections = [
             section
-            for section in _sections
+            for section in self._get_sections_by_id(sections)
             if section.get_type() != SectionType.CUTTING
         ]
         if no_cutting_sections:
