@@ -67,7 +67,7 @@ class TestSimpleCutTrackSegmentBuilder:
             track_builder.add_detection(detection)
         result = track_builder.build()
         assert result.id == TrackId(track_id_name)
-        assert result.classification == "car"
+        assert result.classification == classification
         for result_detection, expected_detection in zip(result.detections, detections):
             assert result_detection.classification == expected_detection.classification
             assert result_detection.confidence == expected_detection.confidence
