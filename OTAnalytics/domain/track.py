@@ -379,8 +379,8 @@ class TrackRemoveError(Exception):
             track_id (TrackId): the track id of the track to be removed.
             message (str): the error message.
         """
-        self._track_id = track_id
         super().__init__(message)
+        self._track_id = track_id
 
 
 class RemoveMultipleTracksError(Exception):
@@ -392,8 +392,8 @@ class RemoveMultipleTracksError(Exception):
     """
 
     def __init__(self, track_ids: list[TrackId], message: str):
-        self._track_ids = track_ids
         super().__init__(message)
+        self._track_ids = track_ids
 
 
 class TrackRepository:
