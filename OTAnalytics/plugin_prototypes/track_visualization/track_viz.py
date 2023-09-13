@@ -275,13 +275,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
     def __init__(
         self,
         datastore: Datastore,
-        track_view_state: TrackViewState,
-        filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
         self._datastore = datastore
-        self._track_view_state = track_view_state
-        self._filter_builder = filter_builder
         self._progressbar = progressbar
 
     def get_data(self) -> DataFrame:
@@ -362,7 +358,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
-        super().__init__(datastore, track_view_state, filter_builder, progressbar)
+        super().__init__(datastore, progressbar)  # track_view_state, filter_builder,
         datastore.register_tracks_observer(self)
         self._cache_df: DataFrame = DataFrame()
 
