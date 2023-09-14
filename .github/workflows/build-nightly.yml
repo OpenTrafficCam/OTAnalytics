@@ -2,7 +2,10 @@
 name: Build Nightly Version
 
 on:
-  workflow_dispatch:
+  workflow_run:
+    workflows: [Tests]
+    types:
+      - completed
   push:
     branches:
       - main
