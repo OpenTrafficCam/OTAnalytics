@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v*.*.*
 
 jobs:
   test:
@@ -14,6 +16,6 @@ jobs:
     uses: platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml
     with:
       secrets: inherit
-      package-version: nightly
+      package-version: ${{ github.ref_name }}
       draft-release: True
-      pre-release: True
+      pre-release: False
