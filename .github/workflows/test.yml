@@ -20,5 +20,5 @@ jobs:
     uses: 'platomo/GitHub-workflows/.github/workflows/reusable-python-tests.yml@main'
     with:
       os: ${{ matrix.os }}
-      py: ${{ matrix.py }}
+      py-version: ${{ matrix.py }}
       test_path: OTAnalytics
