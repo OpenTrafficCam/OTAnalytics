@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    uses: '.github/workflows/test.yml'
+    uses: './.github/workflows/test.yml'
   publish:
     needs: test
     name: Do something when test is done.
