@@ -1,0 +1,15 @@
+---
+name: Build Nightly Version
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    needs: test
+    name: Do a test run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
