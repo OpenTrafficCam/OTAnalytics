@@ -2,18 +2,18 @@
 name: Build Nightly Version
 
 on:
-  workflow_run:
-    workflows: [Tests]
-    types:
-      - completed
+  # for testing also called in pull requests
+  pull_request:
   push:
     branches:
       - main
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
   publish:
     needs: test
-    name: Do a test run
+    name: Do something when test is done.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
