@@ -21,3 +21,4 @@ jobs:
     with:
       os: ${{ matrix.os }}
       py: ${{ matrix.py }}
+      test_path: OTAnalytics
