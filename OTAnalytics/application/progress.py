@@ -23,24 +23,34 @@ class AutoIncrementingProgressbar(Progressbar):
         sequence: Sequence,
         counter: Counter,
         notify: Optional[Callable[[], None]] = None,
+        step_percentage: int = 1,
     ) -> None:
         self._sequence = sequence
         self._counter = counter
         self._notify = notify
+        self._step_percentage = step_percentage * 100
         self._iterator = iter(self._sequence)
         self._counter.reset()
 
     def __iter__(self) -> Iterator:
+        total_elements = len(self._sequence)
+        step_size = self.__get_step_size(total_elements)
         self._counter.reset()
         self._iterator = iter(self._sequence)
         while True:
             try:
                 yield next(self._iterator)
                 self._counter.increment(1)
-                if self._notify:
-                    self._notify()
+                counter_value = self._counter.get_value()
+                if counter_value == total_elements or counter_value % step_size == 0:
+                    if self._notify:
+                        self._notify()
             except StopIteration:
                 return
+
+    def __get_step_size(self, total_elements: int) -> int:
+        step_size = int(total_elements / self._step_percentage)
+        return step_size or 1
 
 
 class ManualIncrementingProgressbar(Progressbar):
