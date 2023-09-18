@@ -6,7 +6,9 @@ from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 LOG_DIR = Path(".logs").absolute()
 """The log save directory."""
 
+ALLOWED_TRACK_SIZE_PARSING = 5
 GEOMETRY_CACHE_SIZE: int = 20000
+CUTTING_SECTION_MARKER: str = "#cut"
 DEFAULT_EVENTLIST_FILE_STEM: str = "events"
 DEFAULT_EVENTLIST_FILE_TYPE: str = "otevents"
 DEFAULT_COUNTS_FILE_STEM: str = "counts"

@@ -19,7 +19,7 @@ def detection() -> Detection:
         frame=1,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
         interpolated_detection=False,
-        track_id=TrackId(1),
+        track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
     )
 

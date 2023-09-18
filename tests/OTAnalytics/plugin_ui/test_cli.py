@@ -33,7 +33,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackIds,
-    GetAllTracks,
+    GetTracksWithoutSingleDetections,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
@@ -169,7 +169,7 @@ class TestOTAnalyticsCli:
         flow_repository = FlowRepository()
         add_events = AddEvents(event_repository)
 
-        get_all_tracks = GetAllTracks(track_repository)
+        get_all_tracks = GetTracksWithoutSingleDetections(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
