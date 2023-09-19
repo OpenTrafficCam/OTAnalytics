@@ -1,5 +1,5 @@
 ---
-name: Tests
+name: Test
 
 on:
   # Run tests each time a PR is opened or changed.
