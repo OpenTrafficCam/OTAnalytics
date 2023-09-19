@@ -5,22 +5,19 @@ from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackId
 from tests.OTAnalytics.plugin_intersect.intersect_data import load_data
 from tests.OTAnalytics.plugin_intersect.intersect_provider import (
+    GeoPandasIntersect,
     IntersectProvider,
     OTAIntersect,
     PyGeosIntersect,
     PyGeosPandasCollectionIntersect,
     PyGeosPandasIntersect,
     PyGeosSegmentIntersect,
+    ShapelyIntersect,
 )
 from tests.OTAnalytics.plugin_intersect.validate import ERRORS, time, validate
 
 REPEAT = 10
 SEED = 42
-
-
-@time
-def test_load(datastore: Datastore, provider: IntersectProvider) -> None:
-    provider.use_sections(datastore).use_tracks(datastore)
 
 
 @validate
@@ -66,9 +63,8 @@ def test_intersect_random_sections(
 
 @time
 def test_ota_shapely(datastore: Datastore) -> None:
-    provider = OTAIntersect()
+    provider = OTAIntersect(datastore)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider, record=True)
     test_intersect_random_sections(
         datastore, provider, n=REPEAT, seed=SEED, record=True
@@ -77,84 +73,84 @@ def test_ota_shapely(datastore: Datastore) -> None:
 
 @time
 def test_pygeos(datastore: Datastore) -> None:
-    provider = PyGeosIntersect(prepare=False)
+    provider = PyGeosIntersect(datastore, prepare=False)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider)
     test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
 
 
 @time
 def test_pygeos_segments(datastore: Datastore) -> None:
-    provider = PyGeosSegmentIntersect(prepare=False)
+    provider = PyGeosSegmentIntersect(datastore, prepare=False)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider)
     test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
 
 
 @time
 def test_pygeos_prepare(datastore: Datastore) -> None:
-    provider = PyGeosIntersect(prepare=True)
+    provider = PyGeosIntersect(datastore, prepare=True)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider)
     test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
 
 
 @time
 def test_pygeos_segments_prepare(datastore: Datastore) -> None:
-    provider = PyGeosSegmentIntersect(prepare=True)
+    provider = PyGeosSegmentIntersect(datastore, prepare=True)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider)
     test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
 
 
 @time
 def test_pygeos_pandas(datastore: Datastore) -> None:
-    provider = PyGeosPandasIntersect(prepare=True)
+    provider = PyGeosPandasIntersect(datastore, prepare=True)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider)
     test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
 
 
 @time
 def test_pygeos_pandas_prepare(datastore: Datastore) -> None:
-    provider = PyGeosPandasIntersect(prepare=True)
+    provider = PyGeosPandasIntersect(datastore, prepare=True)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider)
     test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
 
 
 @time
 def test_pygeos_pandas_collection(datastore: Datastore) -> None:
-    provider = PyGeosPandasCollectionIntersect(prepare=False)
+    provider = PyGeosPandasCollectionIntersect(datastore, prepare=False)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider)
     test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
 
 
 @time
 def test_pygeos_pandas_collection_prepare(datastore: Datastore) -> None:
-    provider = PyGeosPandasCollectionIntersect(prepare=True)
+    provider = PyGeosPandasCollectionIntersect(datastore, prepare=True)
 
-    test_load(datastore, provider)
     test_intersect_all(datastore, provider)
     test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
 
 
-# apply each segment between detections as linestring
-# apply whole track as linestring
+@time
+def test_geopandas(datastore: Datastore) -> None:
+    provider = GeoPandasIntersect(datastore)
 
-# pygeos
-# Geometry -> Linestring / multilinestring
-# crosses -> boolean
-# intersection
-# shortest_line
+    test_intersect_all(datastore, provider)
+    test_intersect_random_sections(datastore, provider, n=REPEAT, seed=SEED)
+
+
+@time
+def test_shapely(datastore: Datastore) -> None:
+    provider = ShapelyIntersect(datastore)
+
+    test_intersect_all(datastore, provider, record=True)
+    test_intersect_random_sections(
+        datastore, provider, n=REPEAT, seed=SEED, record=True
+    )
 
 
 if __name__ == "__main__":
@@ -162,7 +158,10 @@ if __name__ == "__main__":
 
     print()
     print()
-    test_ota_shapely(data)
+    test_shapely(data)
+    print()
+    print()
+    test_geopandas(data)
     print()
     print()
     test_pygeos(data)
@@ -175,6 +174,11 @@ if __name__ == "__main__":
     print()
     print()
     test_pygeos_pandas_prepare(data)
+
+    # todo pygeos segments pandas
+    # todo shapely pandas
+    # todo shapely segments pandas
+    # todo geopandas segments
 
     # print()
     # print()

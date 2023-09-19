@@ -7,12 +7,14 @@ from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.types import EventType
 from tests.OTAnalytics.plugin_intersect.intersect_data import load_data
 from tests.OTAnalytics.plugin_intersect.intersect_provider import (
+    GeoPandasIntersect,
     IntersectProvider,
     OTAIntersect,
     PyGeosIntersect,
     PyGeosPandasCollectionIntersect,
     PyGeosPandasIntersect,
     PyGeosSegmentIntersect,
+    ShapelyIntersect,
 )
 
 INDENT = 0
@@ -40,7 +42,7 @@ def validate(func: Any) -> Any:
             )
         else:
             if key not in ORACLE:
-                raise KeyError("No expected results were recorded for {key}")
+                raise KeyError(f"No expected results were recorded for {key}")
             expected: list = ORACLE[key]
             try:
                 assert len(res) == len(expected)
@@ -82,9 +84,6 @@ def time(func: Any) -> Any:
 
 
 def validate_provider(provider: IntersectProvider) -> None:
-    data = load_data(skip_tracks=False, size="small")
-    provider.use_tracks(data).use_sections(data)
-
     def validate_intersects(track_id: int, section_id: int, expected: bool) -> None:
         track = data._track_repository.get_for(TrackId(track_id))
         section = data.get_section_for(SectionId(str(section_id)))
@@ -114,17 +113,23 @@ def validate_provider(provider: IntersectProvider) -> None:
 
 
 if __name__ == "__main__":
-    validate_provider(OTAIntersect())
+    data = load_data(skip_tracks=False, size="small")
 
-    validate_provider(PyGeosIntersect(prepare=False))
-    validate_provider(PyGeosIntersect(prepare=True))
+    validate_provider(OTAIntersect(data))
 
-    validate_provider(PyGeosSegmentIntersect(prepare=False))
-    validate_provider(PyGeosSegmentIntersect(prepare=True))
+    validate_provider(PyGeosIntersect(data, prepare=False))
+    validate_provider(PyGeosIntersect(data, prepare=True))
 
-    validate_provider(PyGeosPandasIntersect(prepare=False))
-    validate_provider(PyGeosPandasIntersect(prepare=True))
+    validate_provider(PyGeosSegmentIntersect(data, prepare=False))
+    validate_provider(PyGeosSegmentIntersect(data, prepare=True))
 
-    validate_provider(PyGeosPandasCollectionIntersect(prepare=False))
-    validate_provider(PyGeosPandasCollectionIntersect(prepare=True))
+    validate_provider(PyGeosPandasIntersect(data, prepare=False))
+    validate_provider(PyGeosPandasIntersect(data, prepare=True))
+
+    validate_provider(PyGeosPandasCollectionIntersect(data, prepare=False))
+    validate_provider(PyGeosPandasCollectionIntersect(data, prepare=True))
+
+    validate_provider(GeoPandasIntersect(data))
+
+    validate_provider(ShapelyIntersect(data))
     pass
