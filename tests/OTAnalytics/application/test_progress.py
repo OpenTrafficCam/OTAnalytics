@@ -22,6 +22,7 @@ class TestAutoIncrementingProgressbar:
     def test(self) -> None:
         numbers = [1, 2, 3]
         counter = Mock(spec=Counter)
+        counter.get_value.return_value = 1
         notify = Mock()
         progressbar = AutoIncrementingProgressbar(numbers, counter, notify)
         result = [elem for elem in progressbar]
