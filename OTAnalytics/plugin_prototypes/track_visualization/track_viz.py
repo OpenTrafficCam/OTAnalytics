@@ -11,7 +11,6 @@ from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
-from plugin_datastore.track_store import PandasTrackDataset
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
@@ -27,6 +26,7 @@ from OTAnalytics.domain.track import (
     TrackImage,
     TrackListObserver,
 )
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
@@ -508,7 +508,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
         seaborn.lineplot(
             x="x",
             y="y",
-            hue=track.CLASSIFICATION,
+            hue=track.TRACK_CLASSIFICATION,
             data=track_df,
             units=track.TRACK_ID,
             linewidth=0.6,
