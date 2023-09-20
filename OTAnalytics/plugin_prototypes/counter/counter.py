@@ -54,6 +54,7 @@ class Counter:
         self,
         filter_sections: list = [],
         filter_classes: list = [],
+        time_delta: pd.Timedelta = pd.Timedelta("0h"),
         both_timestamps: bool = False,
     ) -> pd.DataFrame:
         """Get a pandas dataframe of flows from a pandas dataframe of single events.
@@ -147,6 +148,14 @@ class Counter:
                 (flows_section["road_user_type"].isin(filter_classes))
             ]
 
+        occur_list = list(
+            flows_section.columns[flows_section.columns.str.contains("occurrence")]
+        )
+
+        for occur_col in occur_list:
+            flows_section[occur_col] = flows_section[occur_col] - time_delta
+        flows_section["time_interval"] = flows_section["time_interval"] - time_delta
+
         return flows_section
 
     def create_counting_table(
@@ -235,10 +244,14 @@ class Counter:
         intervals = self.INTERVALS
 
         # Import Sectionlist
-        section_list = [section for section in self.SECTIONS]
+        section_list_org = [section for section in self.SECTIONS[0]]
 
         if filter_sections != []:
-            section_list = [s for s in section_list if s in filter_sections]
+            section_list = [
+                s.id.id for s in section_list_org if str(s.id.id) in filter_sections
+            ]
+        else:
+            section_list = [s.id.id for s in section_list_org]
 
         # Import directions
         direction_list = self.DIRECTION_NAMES.values()
@@ -288,7 +301,6 @@ class Counter:
     def convert_flow_table(
         self,
         flows: pd.DataFrame,
-        flow_names: dict,
         mode_mapper: dict,
         aggregated: bool = False,
     ) -> pd.DataFrame:
@@ -304,82 +316,50 @@ class Counter:
             pd.DataFrame: Pandas dataframe of flow table in the format
             for the customer SH.
         """
-        ret_table = pd.DataFrame()
-        for flow, value in flow_names.items():
-            tmp_flows = flows[
-                (flows["from_section"].isin(value["from"]))
-                & (flows["to_section"].isin(value["to"]))
-                & (flows["road_user_type"].isin(value["classes"]))
-            ]
-            if aggregated:
-                new_flows = pd.DataFrame(
-                    {
-                        "Datum": tmp_flows["time_interval"].dt.strftime("%d.%m.%Y"),
-                        "Uhrzeit": tmp_flows["time_interval"].dt.strftime("%H:%M:%S"),
-                        "Strom-Bezeichnung": flow,
-                        "Fzg-Typ": tmp_flows["road_user_type"],
-                        "Anzahl": tmp_flows["n_vehicles"],
-                    }
-                )
-                if len(new_flows) == 0:
-                    dates = flows["time_interval"].dt.strftime("%d.%m.%Y").unique()
-                    times = flows["time_interval"].dt.strftime("%H:%M:%S").unique()
-                    ru_types = value["classes"]
-
-                    new_flows = pd.DataFrame(
-                        {
-                            "Datum": [
-                                e
-                                for x in zip(
-                                    *[list(dates)] * len(times) * len(ru_types)
-                                )
-                                for e in x
-                            ],
-                            "Uhrzeit": [
-                                e
-                                for x in zip(*[list(times)] * len(ru_types))
-                                for e in x
-                            ]
-                            * len(dates),
-                            "Strom-Bezeichnung": flow,
-                            "Fzg-Typ": list(ru_types) * len(dates) * len(times),
-                            "Anzahl": 0,
-                        }
-                    )
-
-            else:
-                new_flows = pd.DataFrame(
-                    {
-                        "Datum": tmp_flows["occurrence"].dt.strftime("%d.%m.%Y"),
-                        "Uhrzeit": tmp_flows["occurrence"].dt.strftime("%H:%M:%S"),
-                        "Strom-Bezeichnung": flow,
-                        "Fzg-Typ": tmp_flows["road_user_type"],
-                    }
-                )
-
-            ret_table = pd.concat(
-                [
-                    ret_table,
-                    new_flows,
-                ]
-            )
-
-        ret_table = ret_table.sort_values(["Datum", "Uhrzeit"]).reset_index(drop=True)
-        ret_table["Fzg-Typ"] = ret_table["Fzg-Typ"].map(mode_mapper)
 
         if aggregated:
-            ret_table = (
-                ret_table.groupby(["Datum", "Uhrzeit", "Strom-Bezeichnung", "Fzg-Typ"])
+            new_flows = pd.DataFrame(
+                {
+                    "Datum": flows["time_interval"].dt.strftime("%d.%m.%Y"),
+                    "Uhrzeit": flows["time_interval"].dt.strftime("%H:%M:%S"),
+                    "from_section": flows["from_section"],
+                    "to_section": flows["to_section"],
+                    "Fzg-Typ": flows["road_user_type"],
+                    "Anzahl": flows["n_vehicles"],
+                }
+            )
+
+        else:
+            new_flows = pd.DataFrame(
+                {
+                    "Datum": flows["occurrence"].dt.strftime("%d.%m.%Y"),
+                    "Uhrzeit": flows["occurrence"].dt.strftime("%H:%M:%S"),
+                    "from_section": flows["from_section"],
+                    "to_section": flows["to_section"],
+                    "Fzg-Typ": flows["road_user_type"],
+                }
+            )
+
+        new_flows = new_flows.sort_values(["Datum", "Uhrzeit"]).reset_index(drop=True)
+        new_flows["Fzg-Typ"] = new_flows["Fzg-Typ"].map(mode_mapper)
+
+        if aggregated:
+            new_flows = (
+                new_flows.groupby(
+                    ["Datum", "Uhrzeit", "from_section", "to_section", "Fzg-Typ"]
+                )
                 .sum()
                 .reset_index()
             )
 
-        return ret_table
+        return new_flows
 
     def create_flow_table(
         self,
         filter_sections: list = [],
         filter_classes: list = [],
+        time_delta: pd.Timedelta = pd.Timedelta("0h"),
+        reload_flows: bool = True,
         return_table: bool = True,
     ) -> pd.DataFrame:
         """Create a simple flow table for the flows between all (filtered) sections.
@@ -401,8 +381,8 @@ class Counter:
             pd.DataFrame: Pandas dataframe containing the number of road users for
             each time interval, flow and class.
         """
-        if not hasattr(self, "FLOWS"):
-            self.FLOWS = self.get_flows(filter_sections, filter_classes)
+        if not hasattr(self, "FLOWS") or reload_flows:
+            self.FLOWS = self.get_flows(filter_sections, filter_classes, time_delta)
         flows_section = (
             self.FLOWS.groupby(
                 [
@@ -426,7 +406,8 @@ class Counter:
         # Set time intervals
         intervals = self.INTERVALS
         # Import Sectionlist
-        section_list = [section for section in self.SECTIONS]
+        section_list = [section.name for section in self.SECTIONS[0]]
+        section_dict = {section.id.id: section.name for section in self.SECTIONS[0]}
 
         if filter_sections != []:
             section_list = [s for s in section_list if s in filter_sections]
@@ -451,6 +432,10 @@ class Counter:
                         }
                     )
                     flows_template = pd.concat([flows_template, flows_to_add])
+
+        # Rename sections from id to name
+        flows_section["from_section"] = flows_section["from_section"].map(section_dict)
+        flows_section["to_section"] = flows_section["to_section"].map(section_dict)
 
         # Merge data and save
         self.FLOW_TABLE = pd.merge(

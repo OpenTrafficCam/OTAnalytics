@@ -4,10 +4,8 @@ import pandas as pd
 
 
 class McMioParser:
-    def __init__(self, id_dict: dict, CONFIG: dict, access_roads: dict):
-        self.path = Path(CONFIG["EXCEL_PATH"])
-        self.id_to_class = id_dict["id_to_class"]
-        self.id_flows = id_dict["id_flows"]
+    def __init__(self, CONFIG: dict, access_roads: dict):
+        self.path = Path(CONFIG["MIO_COUNT_PATH"])
         self.CONFIG = CONFIG
         self.access_roads = access_roads
         self.START_TIME = pd.to_datetime(
@@ -35,9 +33,8 @@ class McMioParser:
                 ]
 
                 for dir in directions:
-                    other_dirs = [i for i in self.access_roads.values() if dir != i]
                     col = countings_tmp.columns.get_indexer(
-                        countings_tmp.columns[countings_tmp.columns.isin(other_dirs)]
+                        countings_tmp.columns[countings_tmp.columns == dir]
                     )[0]
                     col_range = list(range(col - 2, col + 4))
                     countings_ext = countings_tmp.iloc[:, [0] + col_range][
@@ -92,7 +89,11 @@ class McMioParser:
             "%H:%M:%S"
         )
 
-        return formatted_table.drop(["time_interval"], axis=1)
+        return (
+            formatted_table.drop(["time_interval"], axis=1)
+            .sort_values(["Datum", "Uhrzeit", "from_section", "to_section", "Fzg-Typ"])
+            .reset_index(drop=True)
+        )
 
     def excel_parser(self, aggregate: bool = False) -> pd.DataFrame:
         """Function to import Excel files from manual counts in the

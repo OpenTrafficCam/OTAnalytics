@@ -5,7 +5,7 @@ from typing import Optional
 import pandas as pd
 import plotly.express as px
 
-from OTAnalytics.plugin_parser.otvision_parser import OtsectionParser
+from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
 from OTAnalytics.plugin_prototypes.counter.counter import Counter
 
 # import plotly.express as px
@@ -39,7 +39,7 @@ class SpeedCalculator:
     ) -> None:
         self.TIME_FORMAT = config["TIME_FORMAT"]
 
-        otsection_parser = OtsectionParser()
+        otsection_parser = OtFlowParser()
         self.SECTIONS = otsection_parser.parse(Path(config["SECTIONSLIST_PATH"]))
 
         events = events[events["event_type"] == "section-enter"].reset_index(drop=True)
@@ -50,8 +50,8 @@ class SpeedCalculator:
             filter_sections, filter_classes, both_timestamps=True
         )
 
-        self.COUNTING_TABLES = counts_processor.create_counting_table(
-            filter_sections, filter_directions, filter_classes
+        self.COUNTING_TABLES = counts_processor.create_flow_table(
+            filter_sections, filter_classes
         )
         self.DIRECTION_NAMES = config["DIRECTION_NAMES"]
 
@@ -78,14 +78,17 @@ class SpeedCalculator:
         from_sections = []
         to_sections = []
         distances = []
+        sections = self.SECTIONS[0]
 
-        for section in self.SECTIONS:
-            if len(section.plugin_data["distances"]) > 0:
-                for distance in section.plugin_data["distances"]:
-                    from_sections.append(section.id.id)
-                    to_sections.append(list(distance.keys())[0])
-                    distances.append(list(distance.values())[0])
+        for flow in self.SECTIONS[1]:
+            if flow.distance is not None:
+                from_sections.append(
+                    [s for s in sections if s.id == flow.start][0].id.id
+                )
+                to_sections.append([s for s in sections if s.id == flow.end][0].id.id)
+                distances.append(flow.distance)
             else:
+                print(f"No distance value for flow {flow.name} given!")
                 continue
 
         section_distances = pd.DataFrame(
@@ -105,31 +108,33 @@ class SpeedCalculator:
 
         movements_dis = movements[~movements["distance"].isna()]
 
-        movements_dis["speed"] = (
-            movements_dis["distance"]
-            / (
-                movements_dis["occurrence_to"] - movements_dis["occurrence_from"]
-            ).dt.total_seconds()
-        ) * 3.6
+        movements_dis["speed"] = round(
+            (
+                movements_dis["distance"]
+                / (
+                    movements_dis["occurrence_to"] - movements_dis["occurrence_from"]
+                ).dt.total_seconds()
+            )
+            * 3.6,
+            2,
+        )
 
         q = (
-            (
-                self.COUNTING_TABLES.copy()[
-                    self.COUNTING_TABLES["direction"]
-                    == self.DIRECTION_NAMES["first_to_last_section"]
-                ]
-                .drop("road_user_type", axis=1)
-                .groupby(["section_id", "time_interval", "direction"])
-                .sum()
-            )
-            .reset_index()
-            .rename({"section_id": "from_section"}, axis=1)
-        )
+            self.COUNTING_TABLES.copy()
+            .drop("road_user_type", axis=1)
+            .groupby(["from_section", "to_section", "time_interval"])
+            .sum()
+        ).reset_index()
+
+        section_map = {s.name: s.id.id for s in sections}
+
+        q["from_section"] = q["from_section"].map(section_map)
+        q["to_section"] = q["to_section"].map(section_map)
 
         self.SPEED_TABLE = pd.merge(
             movements_dis,
             q,
-            on=["from_section", "time_interval"],
+            on=["from_section", "to_section", "time_interval"],
             how="left",
         )
 

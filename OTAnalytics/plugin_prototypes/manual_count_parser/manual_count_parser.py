@@ -3,9 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 
-class ExcelCountParser:
+class ManualCountParser:
     def __init__(self, id_dict: dict, CONFIG: dict):
-        self.path = Path(CONFIG["EXCEL_PATH"])
+        self.path = Path(CONFIG["MAN_COUNT_PATH"])
         self.id_to_class = id_dict["id_to_class"]
         self.id_flows = id_dict["id_flows"]
         self.CONFIG = CONFIG
@@ -14,7 +14,7 @@ class ExcelCountParser:
         if self.path.is_file():
             excel_path = [self.path]
         else:
-            excel_path = list(self.path.glob("*.xlsm"))
+            excel_path = list(self.path.glob("*[0-9].xlsm"))
 
         countings = pd.DataFrame()
 
@@ -22,12 +22,12 @@ class ExcelCountParser:
             self.START_TIME = pd.to_datetime(
                 str(pd.to_datetime(self.CONFIG["FROM_TIME"]).date())
                 + str(excel_file).split(".")[0].split("_")[-1],
-                format="%Y-%m-%d%H%M",
+                format="%Y-%m-%d%H-%M-%S",
             )
             if self.START_TIME >= pd.to_datetime(self.CONFIG["FROM_TIME"]):
                 countings_df = pd.read_excel(
                     excel_file,
-                    sheet_name="Zaehler",
+                    sheet_name="Zähler",
                     skiprows=range(1),
                     usecols=["Klasse", "Strom", "Zeitstempel"],
                 )
@@ -41,7 +41,7 @@ class ExcelCountParser:
         return countings.sort_values(["Zeitstempel"])
 
     def _formatting(
-        self, excel_table: pd.DataFrame, aggregate: bool = True
+        self, excel_table: pd.DataFrame, mode_mapper: dict, aggregate: bool = True
     ) -> pd.DataFrame:
         formatted_table = excel_table
 
@@ -66,6 +66,8 @@ class ExcelCountParser:
         )
 
         formatted_table["Anzahl"] = 1
+
+        formatted_table["Fzg-Typ"] = formatted_table["Fzg-Typ"].map(mode_mapper)
 
         # Group by sections, time interval, and road user type
         if aggregate:
@@ -95,7 +97,7 @@ class ExcelCountParser:
             ["road_user_type", "time_interval", "Strom"], axis=1
         )
 
-    def excel_parser(self, aggregate: bool = False) -> pd.DataFrame:
+    def excel_parser(self, mode_mapper: dict, aggregate: bool = False) -> pd.DataFrame:
         """Function to import Excel files from manual counts in the
         QuerPlaner/platomo format
 
@@ -108,4 +110,4 @@ class ExcelCountParser:
             pd.DataFrame: Pandas dataframe of manual counting data in
             the SH format.
         """
-        return self._formatting(self._read_excel(), aggregate)
+        return self._formatting(self._read_excel(), mode_mapper, aggregate)
