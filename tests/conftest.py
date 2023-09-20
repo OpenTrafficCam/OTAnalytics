@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Generator, Sequence, TypeVar
 
 import pytest
-from plugin_datastore.track_store import PandasByMaxConfidence
 
 from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.domain.event import Event, EventType
@@ -18,6 +17,7 @@ from OTAnalytics.domain.track import (
     Track,
     TrackId,
 )
+from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
