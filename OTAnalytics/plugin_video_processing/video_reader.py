@@ -41,4 +41,4 @@ class MoviepyVideoReader(VideoReader):
         clip.close()
         if found is None:
             raise FrameDoesNotExistError(f"frame number '{index}' does not exist")
-        return PilImage(Image.fromarray(found))
+        return PilImage(Image.fromarray(found).convert("L"))
