@@ -104,7 +104,10 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasByMaxConfidence,
+    PandasTrackDataset,
+)
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
@@ -478,7 +481,7 @@ class ApplicationStarter:
         )
 
     def _create_track_repository(self) -> TrackRepository:
-        return TrackRepository()
+        return TrackRepository(PandasTrackDataset.from_list([]))
 
     def _create_track_parser(self) -> TrackParser:
         calculator = PandasByMaxConfidence()
