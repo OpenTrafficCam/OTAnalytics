@@ -1,5 +1,7 @@
 from unittest.mock import Mock, call
 
+import pytest
+
 from OTAnalytics.application.progress import (
     AutoIncrementingProgressbar,
     ManualIncrementingProgressbar,
@@ -29,6 +31,14 @@ class TestAutoIncrementingProgressbar:
         assert result == numbers
         assert counter.increment.call_args_list == [call(1), call(1), call(1)]
         assert notify.call_count == len(numbers)
+
+    @pytest.mark.parametrize("step_percentage", [-1, 0, 101])
+    def test_validation(self, step_percentage: int) -> None:
+        numbers = [1, 2, 3]
+        counter = Mock(spec=Counter)
+        notify = Mock()
+        with pytest.raises(ValueError):
+            AutoIncrementingProgressbar(numbers, counter, notify, step_percentage)
 
 
 class TestManualIncrementingProgressbar:
