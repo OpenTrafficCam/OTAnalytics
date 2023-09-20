@@ -1,7 +1,6 @@
 import logging
 from typing import Optional, Sequence
 
-from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -15,6 +14,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.application.config import ALLOWED_TRACK_SIZE_PARSING
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -98,12 +98,13 @@ from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
-    CalculateTrackClassificationByMaxConfidence,
+    ByMaxConfidence,
     TrackFileRepository,
     TrackIdProvider,
     TrackRepository,
 )
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
@@ -130,6 +131,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
+    PandasDetectionParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -390,12 +392,9 @@ class ApplicationStarter:
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_repository = self._create_track_repository()
-        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
-        track_parser = self._create_track_parser(
-            track_repository, track_file_repository
-        )
+        track_parser = self._create_track_parser()
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
@@ -450,9 +449,7 @@ class ApplicationStarter:
             track_repository (TrackRepository): the track repository to inject
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
-        track_parser = self._create_track_parser(
-            track_repository, track_file_repository
-        )
+        track_parser = self._create_track_parser()
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
@@ -465,6 +462,7 @@ class ApplicationStarter:
         )
         return Datastore(
             track_repository,
+            track_file_repository,
             track_parser,
             section_repository,
             flow_parser,
@@ -482,17 +480,12 @@ class ApplicationStarter:
     def _create_track_repository(self) -> TrackRepository:
         return TrackRepository()
 
-    def _create_track_parser(
-        self,
-        track_repository: TrackRepository,
-        track_file_repository: TrackFileRepository,
-    ) -> TrackParser:
-        return OttrkParser(
-            CalculateTrackClassificationByMaxConfidence(),
-            track_repository,
-            track_file_repository,
-            track_length_limit=TRACK_LENGTH_LIMIT,
+    def _create_track_parser(self) -> TrackParser:
+        calculator = PandasByMaxConfidence()
+        detection_parser = PandasDetectionParser(
+            calculator, track_length_limit=ALLOWED_TRACK_SIZE_PARSING
         )
+        return OttrkParser(detection_parser)
 
     def _create_section_repository(self) -> SectionRepository:
         return SectionRepository()
@@ -1040,9 +1033,7 @@ class ApplicationStarter:
         remove_section: RemoveSection,
         track_view_state: TrackViewState,
     ) -> CutTracksIntersectingSection:
-        track_builder = SimpleCutTrackSegmentBuilder(
-            CalculateTrackClassificationByMaxConfidence()
-        )
+        track_builder = SimpleCutTrackSegmentBuilder(ByMaxConfidence())
         cut_tracks_with_section = SimpleCutTracksWithSection(
             get_tracks_from_ids, ShapelyMapper(), track_builder, track_view_state
         )

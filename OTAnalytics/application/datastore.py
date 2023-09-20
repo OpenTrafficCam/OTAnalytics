@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
+from domain.track import TrackDataset
+
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import Event, EventRepository
@@ -22,7 +24,6 @@ from OTAnalytics.domain.section import (
     SectionRepository,
 )
 from OTAnalytics.domain.track import (
-    Track,
     TrackClassificationCalculator,
     TrackFileRepository,
     TrackId,
@@ -45,8 +46,8 @@ class TrackParser(ABC):
         self._track_file_repository = track_file_repository
 
     @abstractmethod
-    def parse(self, file: Path) -> list[Track]:
-        pass
+    def parse(self, file: Path) -> TrackDataset:
+        raise NotImplementedError
 
 
 class FlowParser(ABC):
@@ -228,6 +229,7 @@ class Datastore:
     def __init__(
         self,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
         track_parser: TrackParser,
         section_repository: SectionRepository,
         flow_parser: FlowParser,
@@ -247,6 +249,7 @@ class Datastore:
         self._video_parser = video_parser
         self._track_video_parser = track_video_parser
         self._track_repository = track_repository
+        self._track_file_repository = track_file_repository
         self._section_repository = section_repository
         self._flow_repository = flow_repository
         self._event_repository = event_repository
@@ -339,6 +342,7 @@ class Datastore:
         self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
+        self._track_file_repository.add(file)
 
     def load_track_files(self, files: list[Path]) -> None:
         """
@@ -360,7 +364,7 @@ class Datastore:
                 "Errors occured while loading the track files:", raised_exceptions
             )
 
-    def get_all_tracks(self) -> list[Track]:
+    def get_all_tracks(self) -> TrackDataset:
         """
         Retrieve all tracks of the repository as list.
 

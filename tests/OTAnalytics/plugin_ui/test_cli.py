@@ -5,8 +5,8 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from plugin_parser.otvision_parser import PythonDetectionParser
 
-from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportCounts,
     ExportTrafficCounting,
@@ -15,6 +15,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     SimpleTaggerFactory,
 )
 from OTAnalytics.application.config import (
+    ALLOWED_TRACK_SIZE_PARSING,
     DEFAULT_EVENTLIST_FILE_STEM,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
@@ -38,11 +39,7 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import (
-    CalculateTrackClassificationByMaxConfidence,
-    TrackFileRepository,
-    TrackRepository,
-)
+from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -163,7 +160,6 @@ class TestOTAnalyticsCli:
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
         track_repository = TrackRepository()
-        track_file_repository = TrackFileRepository()
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()
@@ -201,10 +197,9 @@ class TestOTAnalyticsCli:
         )
         return {
             self.TRACK_PARSER: OttrkParser(
-                CalculateTrackClassificationByMaxConfidence(),
-                track_repository,
-                track_file_repository,
-                TRACK_LENGTH_LIMIT,
+                PythonDetectionParser(
+                    ByMaxConfidence(), track_repository, ALLOWED_TRACK_SIZE_PARSING
+                ),
             ),
             self.FLOW_PARSER: OtFlowParser(),
             self.EVENT_LIST_PARSER: OtEventListParser(),

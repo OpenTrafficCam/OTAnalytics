@@ -11,6 +11,7 @@ from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
+from plugin_datastore.track_store import PandasTrackDataset
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import Plotter, TrackViewState
@@ -287,10 +288,13 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
-        if not tracks:
+        if isinstance(tracks, PandasTrackDataset):
+            return tracks.as_dataframe()
+        track_list = tracks.as_list()
+        if not track_list:
             return DataFrame()
 
-        return self._convert_tracks(tracks)
+        return self._convert_tracks(track_list)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """

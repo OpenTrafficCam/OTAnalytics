@@ -14,6 +14,9 @@ from OTAnalytics.domain.track import (
     OCCURRENCE,
     TRACK_ID,
     Detection,
+    PythonDetection,
+    PythonTrack,
+    PythonTrackDataset,
     Track,
     TrackId,
     TrackIdProvider,
@@ -71,7 +74,7 @@ class TestPandasDataProvider:
 class TestPandasTrackProvider:
     def test_get_data_empty_track_repository(self) -> None:
         datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = []
+        datastore.get_all_tracks.return_value = PythonTrackDataset.from_list([])
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
@@ -99,8 +102,8 @@ class TestCachedPandasTrackProvider:
     def set_up_track(self, id: str) -> Track:
         """Create a dummy track with the given id and 5 car detections."""
         t_id = TrackId(id)
-        detections = [
-            Detection(
+        detections: list[Detection] = [
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -113,7 +116,7 @@ class TestCachedPandasTrackProvider:
                 t_id,
                 "video_name",
             ),
-            Detection(
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -126,7 +129,7 @@ class TestCachedPandasTrackProvider:
                 t_id,
                 "video_name",
             ),
-            Detection(
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -139,7 +142,7 @@ class TestCachedPandasTrackProvider:
                 t_id,
                 "video_name",
             ),
-            Detection(
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -152,7 +155,7 @@ class TestCachedPandasTrackProvider:
                 t_id,
                 "video_name",
             ),
-            Detection(
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -166,7 +169,7 @@ class TestCachedPandasTrackProvider:
                 "video_name",
             ),
         ]
-        return Track(t_id, "car", detections)
+        return PythonTrack(t_id, "car", detections)
 
     def set_up_provider(
         self, init_tracks: list[Track], query_tracks: list[Track]
