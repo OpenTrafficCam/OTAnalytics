@@ -25,12 +25,18 @@ class AutoIncrementingProgressbar(Progressbar):
         notify: Optional[Callable[[], None]] = None,
         step_percentage: int = 1,
     ) -> None:
+        self.__validate(step_percentage)
         self._sequence = sequence
         self._counter = counter
         self._notify = notify
-        self._step_percentage = step_percentage * 100
+        self._step_percentage = step_percentage
         self._iterator = iter(self._sequence)
         self._counter.reset()
+
+    def __validate(self, step_percentage: int) -> None:
+        if 1 <= step_percentage <= 100:
+            return
+        raise ValueError("Step percentage must be between 1 and 100.")
 
     def __iter__(self) -> Iterator:
         total_elements = len(self._sequence)
@@ -49,7 +55,7 @@ class AutoIncrementingProgressbar(Progressbar):
                 return
 
     def __get_step_size(self, total_elements: int) -> int:
-        step_size = int(total_elements / self._step_percentage)
+        step_size = int(total_elements * (self._step_percentage / 100))
         return step_size or 1
 
 
