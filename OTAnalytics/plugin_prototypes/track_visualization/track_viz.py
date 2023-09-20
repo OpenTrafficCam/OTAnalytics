@@ -312,7 +312,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
         ):
             for detection in current_track.detections:
                 detection_dict = detection.to_dict()
-                detection_dict[track.CLASSIFICATION] = current_track.classification
+                detection_dict[
+                    track.TRACK_CLASSIFICATION
+                ] = current_track.classification
                 prepared.append(detection_dict)
 
         return self._sort_tracks(DataFrame(prepared))
