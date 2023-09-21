@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
-from domain.track import TrackDataset
-
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import Event, EventRepository
@@ -25,6 +23,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
+    TrackDataset,
     TrackFileRepository,
     TrackId,
     TrackImage,
