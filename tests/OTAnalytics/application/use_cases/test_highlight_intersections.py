@@ -39,7 +39,7 @@ from OTAnalytics.domain.track import (
 
 class TestTracksIntersectingSelectedSections:
     def test_get_ids(self) -> None:
-        track_id = TrackId(2)
+        track_id = TrackId("2")
         section_id = Mock(spec=SectionId)
         section = Mock(spec=Section)
         section.id = section_id
@@ -67,8 +67,8 @@ class TestTracksIntersectingSelectedSections:
 
 class TestTracksNotIntersectingSelection:
     def test_get_ids(self) -> None:
-        first_track_id = TrackId(1)
-        second_track_id = TrackId(2)
+        first_track_id = TrackId("1")
+        second_track_id = TrackId("2")
         first_track = Mock(spec=Track)
         first_track.id = first_track_id
         second_track = Mock(spec=Track)
@@ -89,8 +89,8 @@ class TestTracksNotIntersectingSelection:
         tracks_intersecting_sections.get_ids.assert_called_once()
 
     def test_no_selection_returns_all_tracks(self) -> None:
-        first_track_id = TrackId(1)
-        second_track_id = TrackId(2)
+        first_track_id = TrackId("1")
+        second_track_id = TrackId("2")
         first_track = Mock(spec=Track)
         first_track.id = first_track_id
         second_track = Mock(spec=Track)
@@ -104,9 +104,9 @@ class TestTracksNotIntersectingSelection:
         tracks_not_intersecting_sections = TracksNotIntersectingSelection(
             tracks_intersecting_sections, track_repository
         )
-        track_ids = list(tracks_not_intersecting_sections.get_ids())
+        track_ids = tracks_not_intersecting_sections.get_ids()
 
-        assert track_ids == [first_track_id, second_track_id]
+        assert set(track_ids) == {first_track_id, second_track_id}
         track_repository.get_all.assert_called_once()
         tracks_intersecting_sections.get_ids.assert_called_once()
 
@@ -126,8 +126,8 @@ class TestTracksAssignedToSelectedFlows:
         flow_state = Mock(spec=FlowState)
         flow_state.selected_flows = selected_flows
 
-        first_assignment = RoadUserAssignment(1, first_flow, Mock(spec=EventPair))
-        second_assignment = RoadUserAssignment(2, second_flow, Mock(spec=EventPair))
+        first_assignment = RoadUserAssignment("1", first_flow, Mock(spec=EventPair))
+        second_assignment = RoadUserAssignment("2", second_flow, Mock(spec=EventPair))
         assignments = Mock(spec=RoadUserAssignments)
         assignments.as_list.return_value = [first_assignment, second_assignment]
         assigner = Mock(spec=RoadUserAssigner)
@@ -145,7 +145,7 @@ class TestTracksAssignedToSelectedFlows:
         )
         track_ids = list(tracks_assigned_to_flow.get_ids())
 
-        assert track_ids == [TrackId(1)]
+        assert track_ids == [TrackId("1")]
         event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
         assert selected_flows.get.call_count == 2
@@ -324,7 +324,7 @@ class TestTracksOverlapOccurrenceWindow:
             new_callable=PropertyMock,
             return_value=end_time,
         ) as mock_end:
-            track_id = TrackId(1)
+            track_id = TrackId("1")
             track = Mock(spec=Track)
             track.id = track_id
             track.start.return_value = start_detection

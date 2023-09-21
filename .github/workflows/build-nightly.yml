@@ -2,6 +2,9 @@
 name: Build Nightly Version
 
 on:
+
+  # Creates Nightly Release of main
+  # Needs: secrets.PLATOMO_BUILDER_ACCESS
   push:
     branches:
       - main

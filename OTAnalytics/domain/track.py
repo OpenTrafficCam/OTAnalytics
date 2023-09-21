@@ -7,6 +7,7 @@ from typing import Iterable, Optional
 from PIL import Image
 
 from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import Subject
 
 CLASSIFICATION: str = "classification"
@@ -20,16 +21,10 @@ OCCURRENCE: str = "occurrence"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
 
-VALID_TRACK_SIZE: int = 5
-
 
 @dataclass(frozen=True)
 class TrackId(DataclassValidation):
-    id: int
-
-    def _validate(self) -> None:
-        if self.id < 1:
-            raise ValueError("track id must be greater equal 1")
+    id: str
 
 
 class TrackListObserver(ABC):
@@ -97,12 +92,8 @@ class TrackError(Exception):
         self.track_id = track_id
 
 
-class BuildTrackWithLessThanNDetectionsError(TrackError):
-    def __str__(self) -> str:
-        return (
-            f"Trying to construct track (track_id={self.track_id}) with less than "
-            f"{VALID_TRACK_SIZE} detections."
-        )
+class TrackHasNoDetectionError(TrackError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -185,12 +176,28 @@ class Detection(DataclassValidation):
             TRACK_ID: self.track_id.id,
         }
 
+    def get_coordinate(self, offset: RelativeOffsetCoordinate | None) -> Coordinate:
+        """Get coordinate of this detection.
+
+        Args:
+            offset (RelativeOffsetCoordinate | None): relative offset to be applied.
+
+        Returns:
+            Coordinate: this detection's coordinate.
+        """
+        if offset:
+            return Coordinate(
+                x=self.x + self.w * offset.x,
+                y=self.y + self.h * offset.y,
+            )
+        else:
+            return Coordinate(self.x, self.y)
+
 
 @dataclass(frozen=True)
 class Track(DataclassValidation):
-    """Represents the the track of an object as seen in the task of object tracking
+    """Represents the track of an object as seen in the task of object tracking
     (computer vision).
-
 
     Args:
         id (TrackId): the track id.
@@ -206,16 +213,22 @@ class Track(DataclassValidation):
     detections: list[Detection]
 
     def _validate(self) -> None:
-        self._validate_track_has_at_least_five_detections()
+        self._validate_track_has_detections()
         self._validate_detections_sorted_by_occurrence()
 
-    def _validate_track_has_at_least_five_detections(self) -> None:
-        if len(self.detections) < 5:
-            raise BuildTrackWithLessThanNDetectionsError(self.id)
+    def _validate_track_has_detections(self) -> None:
+        if not self.detections:
+            raise TrackHasNoDetectionError(
+                self.id,
+                (
+                    f"Trying to construct track (track_id={self.id.id})"
+                    " with no detections."
+                ),
+            )
 
     def _validate_detections_sorted_by_occurrence(self) -> None:
         if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
-            raise ValueError("detections must be sorted by occurence")
+            raise ValueError("detections must be sorted by occurrence")
 
     @property
     def start(self) -> datetime:
@@ -234,6 +247,24 @@ class Track(DataclassValidation):
             datetime: the end time.
         """
         return self.detections[-1].occurrence
+
+    @property
+    def first_detection(self) -> Detection:
+        """Get first detection of track.
+
+        Returns:
+            Detection: the first detection.
+        """
+        return self.detections[0]
+
+    @property
+    def last_detection(self) -> Detection:
+        """Get last detection of track.
+
+        Returns:
+            Detection: the last detection.
+        """
+        return self.detections[-1]
 
 
 @dataclass(frozen=True)
@@ -340,6 +371,31 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
         return max(classifications, key=lambda x: classifications[x])
 
 
+class TrackRemoveError(Exception):
+    def __init__(self, track_id: TrackId, message: str) -> None:
+        """Exception to be raised if track can not be removed.
+
+        Args:
+            track_id (TrackId): the track id of the track to be removed.
+            message (str): the error message.
+        """
+        super().__init__(message)
+        self._track_id = track_id
+
+
+class RemoveMultipleTracksError(Exception):
+    """Exception to be raised if multiple tracks can not be removed.
+
+    Args:
+        track_ids (list[TrackId]): the track id of the track to be removed.
+        message (str): the error message.
+    """
+
+    def __init__(self, track_ids: list[TrackId], message: str):
+        super().__init__(message)
+        self._track_ids = track_ids
+
+
 class TrackRepository:
     def __init__(self) -> None:
         self._tracks: dict[TrackId, Track] = {}
@@ -422,6 +478,56 @@ class TrackRepository:
         """
         return self._tracks.keys()
 
+    def remove(self, track_id: TrackId) -> None:
+        """Remove track by its id and notify observers
+
+        Raises:
+            TrackRemoveError: if track does not exist in repository.
+
+        Args:
+            track_id (TrackId): the id of the track to be removed.
+        """
+        try:
+            self._remove(track_id)
+        except KeyError:
+            raise TrackRemoveError(
+                track_id, f"Trying to remove non existing track with id '{track_id.id}'"
+            )
+        # TODO: Pass removed track id to notify when moving observers to
+        #  application layer
+        self.observers.notify([])
+
+    def _remove(self, track_id: TrackId) -> None:
+        """Remove track by its id without notifying observers.
+
+        Raises:
+            TrackRemoveError: if track does not exist in repository.
+
+        Args:
+            track_id (TrackId): the id of the track to be removed.
+        """
+        del self._tracks[track_id]
+
+    def remove_multiple(self, track_ids: set[TrackId]) -> None:
+        failed_tracks: list[TrackId] = []
+        for track_id in track_ids:
+            try:
+                self._remove(track_id)
+            except KeyError:
+                failed_tracks.append(track_id)
+            # TODO: Pass removed track id to notify when moving observers to
+            #  application layer
+
+        if failed_tracks:
+            raise RemoveMultipleTracksError(
+                failed_tracks,
+                (
+                    "Multiple tracks with following ids could not be removed."
+                    f" '{[failed_track.id for failed_track in failed_tracks]}'"
+                ),
+            )
+        self.observers.notify([])
+
     def clear(self) -> None:
         """
         Clear the repository and inform the observers about the empty repository.
@@ -474,3 +580,51 @@ class TrackIdProvider(ABC):
             Iterable[TrackId]: the track ids.
         """
         pass
+
+
+class TrackBuilderError(Exception):
+    pass
+
+
+class TrackBuilder(ABC):
+    """Interface to create Tracks with different configuration strategies."""
+
+    @abstractmethod
+    def add_detection(self, detection: Detection) -> None:
+        """Add a detection to the track to be built.
+
+        Args:
+            detection (Detection): the detection.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_id(self, track_id: str) -> None:
+        """Add the id of the track to be built.
+
+        Args:
+            track_id (str): the id.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def build(self) -> Track:
+        """Build a track with the configured settings.
+
+        The builder will be reset after building the track.
+
+        Raises:
+            TrackBuildError: if track id has not been set.
+
+        Returns:
+            Track: the built track.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Resets the builder.
+
+        All configurations made to the builder will be reset.
+        """
+        raise NotImplementedError

@@ -104,3 +104,34 @@ class ClearAllSections:
 
     def __call__(self) -> None:
         self._section_repository.clear()
+
+
+class SectionDoesNotExistError(Exception):
+    pass
+
+
+class RemoveSection:
+    """Use case to remove a section from the section repository.
+
+    Args:
+        section_repository: the repository to remove the section from.
+    """
+
+    def __init__(self, section_repository: SectionRepository) -> None:
+        self._section_repository = section_repository
+
+    def __call__(self, section_id: SectionId) -> None:
+        """Remove section from section repository.
+
+        Raises:
+            SectionDoesNotExistError: if section with passed id does not exist.
+
+        Args:
+            section_id (SectionId): the id of the section to be removed.
+        """
+        try:
+            self._section_repository.remove(section_id)
+        except KeyError:
+            raise SectionDoesNotExistError(
+                f"Trying to remove a non-existing section with id='{section_id}'."
+            )
