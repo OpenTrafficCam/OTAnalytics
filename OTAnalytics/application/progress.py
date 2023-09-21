@@ -1,5 +1,6 @@
 from typing import Any, Callable, Iterator, Optional, Sequence
 
+from OTAnalytics.application.config import DEFAULT_PROGRESSBAR_STEP_PERCENTAGE
 from OTAnalytics.domain.progress import Counter, Progressbar
 
 
@@ -23,7 +24,7 @@ class AutoIncrementingProgressbar(Progressbar):
         sequence: Sequence,
         counter: Counter,
         notify: Optional[Callable[[], None]] = None,
-        step_percentage: int = 1,
+        step_percentage: int = DEFAULT_PROGRESSBAR_STEP_PERCENTAGE,
     ) -> None:
         self.__validate(step_percentage)
         self._sequence = sequence
