@@ -6,6 +6,8 @@ from PIL import Image
 from OTAnalytics.domain.track import PilImage, TrackImage
 from OTAnalytics.domain.video import VideoReader
 
+GRAYSCALE = "L"
+
 
 class InvalidVideoError(Exception):
     pass
@@ -41,4 +43,4 @@ class MoviepyVideoReader(VideoReader):
         clip.close()
         if found is None:
             raise FrameDoesNotExistError(f"frame number '{index}' does not exist")
-        return PilImage(Image.fromarray(found))
+        return PilImage(Image.fromarray(found).convert(GRAYSCALE))
