@@ -206,17 +206,17 @@ class PythonDetection(Detection, DataclassValidation):
 
 
     Args:
-        classification (str): class of detection.
-        confidence (float): the confidence.
-        x (float): the x coordinate component of the bounding box.
-        y (float): the y coordinate component of the bounding box.
-        w (float): the width component of the bounding box.
-        h (float): the height component of the bounding box.
-        frame (int): the frame that the detection belongs to.
-        occurrence (datetime): the time of the detection's occurrence.
-        interpolated_detection (bool): whether this detection is interpolated.
-        track_id (TrackId): the track id this detection belongs to.
-        video_name (str): name of video that this detection belongs.
+        _classification (str): class of detection.
+        _confidence (float): the confidence.
+        _x (float): the x coordinate component of the bounding box.
+        _y (float): the y coordinate component of the bounding box.
+        _w (float): the width component of the bounding box.
+        _h (float): the height component of the bounding box.
+        _frame (int): the frame that the detection belongs to.
+        _occurrence (datetime): the time of the detection's occurrence.
+        _interpolated_detection (bool): whether this detection is interpolated.
+        _track_id (TrackId): the track id this detection belongs to.
+        _video_name (str): name of video that this detection belongs.
     """
 
     _classification: str
@@ -360,8 +360,9 @@ class PythonTrack(Track, DataclassValidation):
     (computer vision).
 
     Args:
-        id (TrackId): the track id.
-        detections (list[Detection]): the detections belonging to this track.
+        _id (TrackId): the track id.
+        _classification: the max classification of this track.
+        _detections (list[Detection]): the detections belonging to this track.
 
     Raises:
         ValueError: if detections are not sorted by `occurrence`.
@@ -449,7 +450,7 @@ class TrackImage:
         Convert image into a base python image.
 
         Returns:
-            Image.Image: image as pilow image
+            Image.Image: image as pillow image
         """
         pass
 
@@ -477,7 +478,7 @@ class TrackImage:
 @dataclass(frozen=True)
 class PilImage(TrackImage):
     """
-    Concrete implementation using pilow as image format.
+    Concrete implementation using pillow as image format.
     """
 
     _image: Image.Image
@@ -684,7 +685,7 @@ class TrackRepository:
         Listen to changes of the repository.
 
         Args:
-            observer (TrackListObserver): listener to be notifed about changes
+            observer (TrackListObserver): listener to be notified about changes
         """
         self.observers.register(observer.notify_tracks)
 
