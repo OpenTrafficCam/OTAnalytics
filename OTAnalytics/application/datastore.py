@@ -305,7 +305,7 @@ class Datastore:
                 raised_exceptions.append(cause)
         if raised_exceptions:
             raise ExceptionGroup(
-                "Errors occured while loading the video files:",
+                "Errors occurred while loading the video files:",
                 raised_exceptions,
             )
         self._video_repository.add_all(videos)
@@ -348,7 +348,7 @@ class Datastore:
         Load and parse the given track file together with the corresponding video file.
 
         Args:
-            file (Path): file in ottrk format
+            files (Path): files in ottrk format.
         """
         raised_exceptions: list[Exception] = []
         for file in self._progressbar(
@@ -360,7 +360,7 @@ class Datastore:
                 raised_exceptions.append(cause)
         if raised_exceptions:
             raise ExceptionGroup(
-                "Errors occured while loading the track files:", raised_exceptions
+                "Errors occurred while loading the track files:", raised_exceptions
             )
 
     def get_all_tracks(self) -> TrackDataset:
