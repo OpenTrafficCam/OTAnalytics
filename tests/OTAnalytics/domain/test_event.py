@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -17,7 +16,9 @@ from OTAnalytics.domain.event import (
     SECTION_ID,
     VIDEO_NAME,
     Event,
+    EventBuilder,
     EventRepository,
+    ImproperFormattedFilename,
     IncompleteEventBuilderSetup,
     SceneEventBuilder,
     SectionEventBuilder,
@@ -39,9 +40,8 @@ def valid_detection() -> Detection:
         h=30.5,
         frame=1,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
-        track_id=TrackId(1),
+        track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
     )
 
@@ -66,29 +66,11 @@ class TestEvent:
     def test_instantiate_event_with_invalid_frame_number(self, frame: int) -> None:
         with pytest.raises(ValueError):
             Event(
-                road_user_id=1,
+                road_user_id="1",
                 road_user_type="car",
                 hostname="my_hostname",
                 occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
                 frame_number=frame,
-                section_id=SectionId("N"),
-                event_coordinate=ImageCoordinate(0, 0),
-                event_type=EventType.SECTION_ENTER,
-                direction_vector=DirectionVector2D(1, 0),
-                video_name="my_video_name.mp4",
-            )
-
-    @pytest.mark.parametrize("road_user_id", [-1, 0])
-    def test_instantiate_event_with_invalid_road_user_id(
-        self, road_user_id: int
-    ) -> None:
-        with pytest.raises(ValueError):
-            Event(
-                road_user_id=road_user_id,
-                road_user_type="car",
-                hostname="myhostname",
-                occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-                frame_number=1,
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(0, 0),
                 event_type=EventType.SECTION_ENTER,
@@ -101,7 +83,7 @@ class TestEvent:
         event_coordinate = ImageCoordinate(0, 0)
         direction = DirectionVector2D(1, 0)
         event = Event(
-            road_user_id=1,
+            road_user_id="1",
             road_user_type="car",
             hostname="my_hostname",
             occurrence=occurrence,
@@ -112,7 +94,7 @@ class TestEvent:
             direction_vector=direction,
             video_name="my_video_name.mp4",
         )
-        assert event.road_user_id == 1
+        assert event.road_user_id == "1"
         assert event.road_user_type == "car"
         assert event.hostname == "my_hostname"
         assert event.occurrence == occurrence
@@ -124,7 +106,7 @@ class TestEvent:
         assert event.video_name == "my_video_name.mp4"
 
     def test_to_dict(self) -> None:
-        road_user_id = 1
+        road_user_id = "1"
         road_user_type = "car"
         hostname = "myhostname"
         occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
@@ -160,6 +142,17 @@ class TestEvent:
         }
 
         assert event_dict == expected
+
+
+class TestEventBuilder:
+    def test_extract_hostname(self) -> None:
+        video_name = "myhostname_2022-12-13_13-00-00.mp4"
+        assert EventBuilder.extract_hostname(video_name) == "myhostname"
+
+    def test_extract_hostname_wrong_format(self) -> None:
+        wrong_formatted_name = "myhostname.mp4"
+        with pytest.raises(ImproperFormattedFilename):
+            EventBuilder.extract_hostname(wrong_formatted_name)
 
 
 class TestSectionEventBuilder:

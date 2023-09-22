@@ -14,6 +14,7 @@ from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
     Detection,
     Track,
+    TrackFileRepository,
     TrackId,
     TrackRepository,
 )
@@ -38,7 +39,7 @@ DEFAULT_OCCURRENCE_MICROSECOND: int = 0
 @dataclass
 class TrackBuilder:
     otdet_version = "1.2"
-    track_id: int = 1
+    track_id: str = "1"
     track_class: str = "car"
     detection_class: str = "car"
     confidence: float = 0.5
@@ -54,7 +55,6 @@ class TrackBuilder:
     occurrence_minute: int = DEFAULT_OCCURRENCE_MINUTE
     occurrence_second: int = DEFAULT_OCCURRENCE_SECOND
     occurrence_microsecond: int = DEFAULT_OCCURRENCE_MICROSECOND
-    input_file_path: str = DEFAULT_OTDET_FILE
     video_name: str = DEFAULT_VIDEO_NAME
     interpolated_detection: bool = False
 
@@ -92,13 +92,12 @@ class TrackBuilder:
                 self.occurrence_microsecond,
                 tzinfo=timezone.utc,
             ),
-            input_file_path=Path(self.input_file_path),
             interpolated_detection=self.interpolated_detection,
             track_id=TrackId(self.track_id),
             video_name=self.video_name,
         )
 
-    def add_track_id(self, id: int) -> None:
+    def add_track_id(self, id: str) -> None:
         self.track_id = id
 
     def add_detection_class(self, classification: str) -> None:
@@ -220,7 +219,6 @@ class TrackBuilder:
             ottrk_dataformat.H: detection.h,
             ottrk_dataformat.FRAME: detection.frame,
             ottrk_dataformat.OCCURRENCE: str(detection.occurrence.timestamp()),
-            ottrk_dataformat.INPUT_FILE_PATH: str(detection.input_file_path),
             ottrk_dataformat.INTERPOLATED_DETECTION: detection.interpolated_detection,
             ottrk_dataformat.FIRST: is_first,
             ottrk_dataformat.FINISHED: is_finished,
@@ -246,7 +244,7 @@ class TrackBuilder:
 
 @dataclass
 class EventBuilder:
-    road_user_id: int = 1
+    road_user_id: str = "1"
     road_user_type: str = "car"
     hostname: str = DEFAULT_HOSTNAME
     occurrence_year: int = DEFAULT_OCCURRENCE_YEAR
@@ -321,7 +319,7 @@ class EventBuilder:
         self.direction_vector_x = x
         self.direction_vector_y = y
 
-    def add_road_user_id(self, id: int) -> None:
+    def add_road_user_id(self, id: str) -> None:
         self.road_user_id = id
 
     def add_road_user_type(self, type: str) -> None:
@@ -367,6 +365,7 @@ def tracks(ottrk_path: Path) -> list[Track]:
     ottrk_parser = OttrkParser(
         CalculateTrackClassificationByMaxConfidence(),
         TrackRepository(),
+        TrackFileRepository(),
         TRACK_LENGTH_LIMIT,
     )
     return ottrk_parser.parse(ottrk_path)

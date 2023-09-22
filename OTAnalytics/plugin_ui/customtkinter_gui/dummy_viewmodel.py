@@ -10,6 +10,9 @@ from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
+from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
+    AbstractFrameTrackPlotting,
+)
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -34,9 +37,14 @@ from OTAnalytics.application.application import (
     MultipleSectionsSelected,
     OTAnalyticsApplication,
 )
+from OTAnalytics.application.config import (
+    CUTTING_SECTION_MARKER,
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+)
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.config import MissingDate
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
@@ -154,12 +162,14 @@ class DummyViewModel(
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
         self._window: Optional[AbstractMainWindow] = None
+        self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_sections: Optional[AbstractFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._canvas: Optional[AbstractCanvas] = None
+        self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._new_section: dict = {}
@@ -575,6 +585,17 @@ class DummyViewModel(
             raise ValueError("Configuration file to load has unknown file extension")
 
     def _load_otflow(self, otflow_file: Path) -> None:
+        proceed = InfoBox(
+            message=(
+                "This will load a stored otflow configuration from file. \n"
+                "All configured sections and flows will be removed before "
+                "loading."
+            ),
+            initial_position=self._get_window_position(),
+            show_cancel=True,
+        )
+        if proceed.canceled:
+            return
         logger().info(f"otflow file to load: {otflow_file}")
         self._application.load_otflow(sections_file=Path(otflow_file))
         self.set_selected_section_ids([])
@@ -670,8 +691,9 @@ class DummyViewModel(
             raise MissingCoordinate("Second coordinate is missing")
         with contextlib.suppress(CancelAddSection):
             section = self.__create_section(coordinates, is_area_section, get_metadata)
-            logger().info(f"New section created: {section.id}")
-            self._update_selected_sections([section.id])
+            if not section.name.startswith(CUTTING_SECTION_MARKER):
+                logger().info(f"New section created: {section.id}")
+                self._update_selected_sections([section.id])
         self._finish_action()
 
     def __create_section(
@@ -839,7 +861,8 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(AbstractTreeviewInterface.__name__)
         section = self._flow_parser.parse_section(data)
         self._application.update_section(section)
-        self._treeview_sections.update_selected_items([id.serialize()])
+        if not section.name.startswith(CUTTING_SECTION_MARKER):
+            self._treeview_sections.update_selected_items([id.serialize()])
 
     def remove_sections(self) -> None:
         if self._treeview_sections is None:
@@ -1386,7 +1409,7 @@ class DummyViewModel(
         end = self._application._tracks_metadata.last_detection_occurrence
         modes = list(self._application._tracks_metadata.classifications)
         default_values: dict = {
-            INTERVAL: 15,
+            INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
             START: start,
             END: end,
             EXPORT_FORMAT: default_format,
@@ -1411,3 +1434,63 @@ class DummyViewModel(
             self._application.export_counts(export_specification)
         except CancelExportCounts:
             logger().info("User canceled configuration of export")
+
+    def start_new_project(self) -> None:
+        proceed = InfoBox(
+            message=(
+                "This will start a new project. \n"
+                "All configured project settings, sections, flows, tracks, and videos "
+                "will be reset to the default application settings."
+            ),
+            initial_position=self._get_window_position(),
+            show_cancel=True,
+        )
+        if proceed.canceled:
+            return
+        self._application.start_new_project()
+        self._show_current_project()
+        logger().info("Start new project.")
+
+    def update_project_name(self, name: str) -> None:
+        self._application.update_project_name(name)
+
+    def update_project_start_date(self, start_date: Optional[datetime]) -> None:
+        self._application.update_project_start_date(start_date)
+
+    def on_start_new_project(self, _: None) -> None:
+        self._reset_filters()
+        self._reset_plotting_layer()
+        self._display_preview_image()
+
+    def _reset_filters(self) -> None:
+        if self._frame_filter is None:
+            raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
+        self._frame_filter.reset()
+
+    def _display_preview_image(self) -> None:
+        if self._canvas is None:
+            raise MissingInjectedInstanceError(AbstractCanvas.__name__)
+        self._canvas.add_preview_image()
+
+    def _reset_plotting_layer(self) -> None:
+        if self._frame_track_plotting is None:
+            raise MissingInjectedInstanceError(AbstractFrameTrackPlotting.__name__)
+        self._frame_track_plotting.reset_layers()
+
+    def set_frame_track_plotting(
+        self, frame_track_plotting: AbstractFrameTrackPlotting
+    ) -> None:
+        self._frame_track_plotting = frame_track_plotting
+
+    def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
+        window_position = self._get_window_position()
+        formatted_ids = "\n".join(
+            [track_id.id for track_id in cut_tracks_dto.original_tracks]
+        )
+        msg = (
+            f"Cut succesful. Cutting section '{cut_tracks_dto.section} '"
+            " and original tracks deleted.\n"
+            f"Deleted original track ids:\n{formatted_ids}"
+        )
+        logger().info(msg)
+        InfoBox(msg, window_position)

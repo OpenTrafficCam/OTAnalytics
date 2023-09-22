@@ -1,5 +1,6 @@
 from typing import Any, Callable, Iterator, Optional, Sequence
 
+from OTAnalytics.application.config import DEFAULT_PROGRESSBAR_STEP_PERCENTAGE
 from OTAnalytics.domain.progress import Counter, Progressbar
 
 
@@ -23,24 +24,40 @@ class AutoIncrementingProgressbar(Progressbar):
         sequence: Sequence,
         counter: Counter,
         notify: Optional[Callable[[], None]] = None,
+        step_percentage: int = DEFAULT_PROGRESSBAR_STEP_PERCENTAGE,
     ) -> None:
+        self.__validate(step_percentage)
         self._sequence = sequence
         self._counter = counter
         self._notify = notify
+        self._step_percentage = step_percentage
         self._iterator = iter(self._sequence)
         self._counter.reset()
 
+    def __validate(self, step_percentage: int) -> None:
+        if 1 <= step_percentage <= 100:
+            return
+        raise ValueError("Step percentage must be between 1 and 100.")
+
     def __iter__(self) -> Iterator:
+        total_elements = len(self._sequence)
+        step_size = self.__get_step_size(total_elements)
         self._counter.reset()
         self._iterator = iter(self._sequence)
         while True:
             try:
                 yield next(self._iterator)
                 self._counter.increment(1)
-                if self._notify:
-                    self._notify()
+                counter_value = self._counter.get_value()
+                if counter_value == total_elements or counter_value % step_size == 0:
+                    if self._notify:
+                        self._notify()
             except StopIteration:
                 return
+
+    def __get_step_size(self, total_elements: int) -> int:
+        step_size = int(total_elements * (self._step_percentage / 100))
+        return step_size or 1
 
 
 class ManualIncrementingProgressbar(Progressbar):

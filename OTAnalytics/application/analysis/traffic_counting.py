@@ -169,8 +169,8 @@ def create_mode_tag(tag: str) -> Tag:
 
 def create_timeslot_tag(start_of_time_slot: datetime, interval: timedelta) -> Tag:
     end_of_time_slot = start_of_time_slot + interval
-    serialized_start = start_of_time_slot.strftime("%H:%M")
-    serialized_end = end_of_time_slot.strftime("%H:%M")
+    serialized_start = start_of_time_slot.strftime(r"%Y-%m-%d %H:%M:%S")
+    serialized_end = end_of_time_slot.strftime(r"%Y-%m-%d %H:%M:%S")
     return MultiTag(
         frozenset(
             [
@@ -271,7 +271,7 @@ class RoadUserAssignment:
     Assignment of a road user to a flow.
     """
 
-    road_user: int
+    road_user: str
     assignment: Flow
     events: EventPair
 
@@ -359,7 +359,7 @@ class CountableAssignments:
         Returns:
             dict[FlowId, int]: count per flow
         """
-        flow_to_user: dict[Flow, list[int]] = defaultdict(list)
+        flow_to_user: dict[Flow, list[str]] = defaultdict(list)
         for assignment in self._assignments:
             flow_to_user[assignment.assignment].append(assignment.road_user)
         return {current: len(users) for current, users in flow_to_user.items()}
@@ -567,7 +567,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
 
     def __group_events_by_road_user(
         self, events: Iterable[Event]
-    ) -> dict[int, list[Event]]:
+    ) -> dict[str, list[Event]]:
         """
         Group events by road user.
 
@@ -577,7 +577,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         Returns:
             dict[int, list[Event]]: events grouped by user
         """
-        events_by_road_user: dict[int, list[Event]] = defaultdict(list)
+        events_by_road_user: dict[str, list[Event]] = defaultdict(list)
         sorted_events = sorted(events, key=lambda event: event.occurrence)
         for event in sorted_events:
             if event.section_id:
@@ -587,7 +587,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
     def __assign_user_to_flow(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        events_by_road_user: dict[int, list[Event]],
+        events_by_road_user: dict[str, list[Event]],
     ) -> RoadUserAssignments:
         """
         Assign each user to exactly one flow.
@@ -595,10 +595,10 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
                 end section
-            events_by_road_user (dict[int, list[Event]]): events by road user
+            events_by_road_user (dict[str, list[Event]]): events by road user
 
         Returns:
-            dict[int, FlowId]: assignment of flow to road user
+            dict[str, FlowId]: assignment of flow to road user
         """
         assignments: list[RoadUserAssignment] = []
         for road_user, events in events_by_road_user.items():

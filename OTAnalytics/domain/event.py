@@ -2,7 +2,6 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from typing import Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
@@ -24,11 +23,11 @@ DIRECTION_VECTOR = "direction_vector"
 VIDEO_NAME = "video_name"
 
 DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)" r"_.*\..*"
+FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)_.*\..*"
 
 
-class InproperFormattedFilename(Exception):
-    """This exception indicates an in proper formatted file name."""
+class ImproperFormattedFilename(Exception):
+    """This exception indicates an improper formatted file name."""
 
     pass
 
@@ -58,7 +57,7 @@ class Event(DataclassValidation):
         ValueError: frame_number < 1
 
     Args:
-        road_user_id (int): the road user id involved with this event. It must be
+        road_user_id (str): the road user id involved with this event. It must be
             greater equal one
         road_user_type (str): the road user type involved with this event
         hostname (str): the OTCamera hostname that the video is associated with
@@ -75,7 +74,7 @@ class Event(DataclassValidation):
 
     """
 
-    road_user_id: int
+    road_user_id: str
     road_user_type: str
     hostname: str
     occurrence: datetime
@@ -87,7 +86,6 @@ class Event(DataclassValidation):
     video_name: str
 
     def _validate(self) -> None:
-        self._validate_road_user_id_greater_zero()
         self._validate_frame_number_greater_equal_one()
 
     def _validate_frame_number_greater_equal_one(self) -> None:
@@ -99,12 +97,6 @@ class Event(DataclassValidation):
                         f"but is {self.frame_number}"
                     )
                 )
-            )
-
-    def _validate_road_user_id_greater_zero(self) -> None:
-        if self.road_user_id < 1:
-            raise ValueError(
-                f"vehicle_id must be at least 1, but is {self.road_user_id}"
             )
 
     def to_dict(self) -> dict:
@@ -156,29 +148,28 @@ class EventBuilder(ABC):
         """
         pass
 
-    def extract_hostname(self, file_path: Path) -> str:
-        """Parse the given filename and retrieve the start date of the video.
+    @staticmethod
+    def extract_hostname(name: str) -> str:
+        """Extract hostname from name.
 
         Args:
-            video_file (Path): path to video file
+            name (Path): name containing the hostname.
 
         Raises:
-            InproperFormattedFilename: if the filename is not formatted as expected, an
-                exception will be raised
+            InproperFormattedFilename: if the name is not formatted as expected, an
+                exception will be raised.
 
         Returns:
-            datetime: start date of the video
+            str: the hostname.
         """
         match = re.search(
             FILE_NAME_PATTERN,
-            file_path.name,
+            name,
         )
         if match:
             hostname: str = match.group(HOSTNAME)
             return hostname
-        raise InproperFormattedFilename(
-            f"Could not parse {file_path.name}. Hostname is missing."
-        )
+        raise ImproperFormattedFilename(f"Could not parse {name}. Hostname is missing.")
 
     def add_road_user_type(self, road_user_type: str) -> None:
         """Add a road user type to add to the event to be build.
@@ -262,7 +253,7 @@ class SectionEventBuilder(EventBuilder):
         return Event(
             road_user_id=detection.track_id.id,
             road_user_type=self.road_user_type,
-            hostname=self.extract_hostname(detection.input_file_path),
+            hostname=self.extract_hostname(detection.video_name),
             occurrence=detection.occurrence,
             frame_number=detection.frame,
             section_id=self.section_id,
@@ -309,7 +300,7 @@ class SceneEventBuilder(EventBuilder):
         return Event(
             road_user_id=detection.track_id.id,
             road_user_type=self.road_user_type,
-            hostname=self.extract_hostname(detection.input_file_path),
+            hostname=self.extract_hostname(detection.video_name),
             occurrence=detection.occurrence,
             frame_number=detection.frame,
             section_id=None,

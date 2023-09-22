@@ -43,3 +43,8 @@ class AbstractFrameFilter(ABC):
     @abstractmethod
     def update_date_range(self, date_range: DateRangeDto) -> None:
         pass
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Reset all filters."""
+        raise NotImplementedError

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Iterable, Optional
 
+from OTAnalytics.application.config import CUTTING_SECTION_MARKER
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import Subject
@@ -14,6 +15,7 @@ NAME: str = "name"
 TYPE: str = "type"
 LINE: str = "line"
 AREA: str = "area"
+CUTTING: str = "cutting"
 COORDINATES: str = "coordinates"
 RELATIVE_OFFSET_COORDINATES: str = "relative_offset_coordinates"
 PLUGIN_DATA: str = "plugin_data"
@@ -22,6 +24,7 @@ PLUGIN_DATA: str = "plugin_data"
 class SectionType(Enum):
     AREA = AREA
     LINE = LINE
+    CUTTING = CUTTING
 
 
 @dataclass(frozen=True)
@@ -183,6 +186,9 @@ class LineSection(Section):
     """
     A section that is defined by a line.
 
+    If the section name starts with `CUTTING_SECTION_MARKER` this section will become
+    a cutting section.
+
     Raises:
         ValueError: number of coordinates defining this section must be greater equal
             two.
@@ -248,7 +254,13 @@ class LineSection(Section):
             SectionType: this sections type.
 
         """
+        if self._is_cutting_section():
+            return SectionType.CUTTING
+
         return SectionType.LINE
+
+    def _is_cutting_section(self) -> bool:
+        return self.name.startswith(CUTTING_SECTION_MARKER)
 
 
 @dataclass(frozen=True)
@@ -387,6 +399,14 @@ class SectionRepository:
             Optional[Section]: section if present
         """
         return self._sections.get(id)
+
+    def get_section_ids(self) -> Iterable[SectionId]:
+        """Get all section ids used in repository.
+
+        Returns:
+            Iterable[SectionId]: the section ids.
+        """
+        return self._sections.keys()
 
     def remove(self, section: SectionId) -> None:
         """Remove section from the repository.

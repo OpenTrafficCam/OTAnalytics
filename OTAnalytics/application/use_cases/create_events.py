@@ -2,11 +2,10 @@ from abc import ABC, abstractmethod
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.use_cases.event_repository import (
-    AddEvents,
-    ClearEventRepository,
+from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.track_repository import (
+    GetTracksWithoutSingleDetections,
 )
-from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import SectionRepository
 
 
@@ -64,24 +63,25 @@ class SimpleCreateSceneEvents(CreateSceneEvents):
     """Create scene enter and leave events and add them to the event repository.
 
     Args:
-        get_all_tracks (GetAllTracks): use case to get all tracks from track repository.
+        get_tracks (GetTracksWithoutSingleDetections): use case to get tracks with at
+          least two detections from track repository.
         scene_action_detector (SceneActionDetector): use case to detect scene events.
         add_events (AddEvents): use case to add events to event repository.
     """
 
     def __init__(
         self,
-        get_all_tracks: GetAllTracks,
+        get_tracks: GetTracksWithoutSingleDetections,
         scene_action_detector: SceneActionDetector,
         add_events: AddEvents,
     ) -> None:
-        self._get_all_tracks = get_all_tracks
+        self._get_tracks = get_tracks
         self._scene_action_detector = scene_action_detector
         self._add_events = add_events
 
     def __call__(self) -> None:
         """Create scene enter and leave events and save them to the event repository."""
-        tracks = self._get_all_tracks()
+        tracks = self._get_tracks()
         events = self._scene_action_detector.detect(tracks)
         self._add_events(events)
 
@@ -89,11 +89,11 @@ class SimpleCreateSceneEvents(CreateSceneEvents):
 class CreateEvents:
     def __init__(
         self,
-        clear_event_repository: ClearEventRepository,
+        clear_all_events: ClearAllEvents,
         create_intersection_events: CreateIntersectionEvents,
         create_scene_events: CreateSceneEvents,
     ) -> None:
-        self._clear_event_repository = clear_event_repository
+        self._clear_event_repository = clear_all_events
         self._create_intersection_events = create_intersection_events
         self._create_scene_events = create_scene_events
 

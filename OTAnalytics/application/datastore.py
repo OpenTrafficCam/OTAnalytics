@@ -24,6 +24,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
+    TrackFileRepository,
     TrackId,
     TrackImage,
     TrackListObserver,
@@ -37,9 +38,11 @@ class TrackParser(ABC):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
     ) -> None:
         self._track_classification_calculator = track_classification_calculator
         self._track_repository = track_repository
+        self._track_file_repository = track_file_repository
 
     @abstractmethod
     def parse(self, file: Path) -> list[Track]:
@@ -369,17 +372,6 @@ class Datastore:
     def delete_all_tracks(self) -> None:
         """Delete all tracks in repository."""
         self._track_repository.clear()
-
-    def load_otflow(self, file: Path) -> None:
-        """
-        Load sections and flows from the given files and store them in the repositories.
-
-        Args:
-            file (Path): file to load sections and flows from
-        """
-        sections, flows = self._flow_parser.parse(file)
-        self._section_repository.add_all(sections)
-        self._flow_repository.add_all(flows)
 
     def save_flow_file(self, file: Path) -> None:
         """

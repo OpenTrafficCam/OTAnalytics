@@ -5,14 +5,18 @@ from unittest.mock import Mock, call
 import pytest
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.track import (
-    BuildTrackWithLessThanNDetectionsError,
     CalculateTrackClassificationByMaxConfidence,
     Detection,
+    RemoveMultipleTracksError,
     Track,
+    TrackFileRepository,
+    TrackHasNoDetectionError,
     TrackId,
     TrackListObserver,
     TrackObserver,
+    TrackRemoveError,
     TrackRepository,
     TrackSubject,
 )
@@ -32,7 +36,7 @@ def valid_detection_dict() -> dict:
         ottrk_format.OCCURRENCE: datetime(2022, 1, 1, 1, 0, 0),
         ottrk_format.INPUT_FILE_PATH: Path("path/to/file.otdet"),
         ottrk_format.INTERPOLATED_DETECTION: False,
-        "track-id": TrackId(1),
+        "track-id": TrackId("1"),
         "video_name": "file.mp4",
     }
 
@@ -48,18 +52,17 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
         h=valid_detection_dict[ottrk_format.H],
         frame=valid_detection_dict[ottrk_format.FRAME],
         occurrence=valid_detection_dict[ottrk_format.OCCURRENCE],
-        input_file_path=valid_detection_dict[ottrk_format.INPUT_FILE_PATH],
         interpolated_detection=valid_detection_dict[
             ottrk_format.INTERPOLATED_DETECTION
         ],
         track_id=valid_detection_dict[ottrk_format.TRACK_ID],
-        video_name=valid_detection_dict["video_name"],
+        video_name=valid_detection_dict[VIDEO_NAME],
     )
 
 
 class TestTrackSubject:
     def test_notify_observer(self) -> None:
-        changed_track = TrackId(1)
+        changed_track = TrackId("1")
         observer = Mock(spec=TrackObserver)
         subject = TrackSubject()
         subject.register(observer)
@@ -79,8 +82,6 @@ class TestDetection:
             (0, -1, -0.0001, 1, 1, 1, 1),
             (0, 2, 1, 1, -0.0001, 1, 1),
             (0, 2, 1, 1, 1, 0, 1),
-            (0, 1, 1, 1, 1, 1, -1),
-            (0, 1, 1, 1, 1, 1, 0),
         ],
     )
     def test_value_error_raised_with_invalid_arg(
@@ -103,9 +104,8 @@ class TestDetection:
                 h=h,
                 frame=frame,
                 occurrence=datetime(2022, 1, 1, 1, 0, 0),
-                input_file_path=Path("path/to/file.otdet"),
                 interpolated_detection=False,
-                track_id=TrackId(track_id),
+                track_id=TrackId(str(track_id)),
                 video_name="file.mp4",
             )
 
@@ -121,7 +121,7 @@ class TestDetection:
         assert det.h == valid_detection_dict[ottrk_format.H]
         assert det.frame == valid_detection_dict[ottrk_format.FRAME]
         assert det.occurrence == valid_detection_dict[ottrk_format.OCCURRENCE]
-        assert det.input_file_path == valid_detection_dict[ottrk_format.INPUT_FILE_PATH]
+        assert det.video_name == valid_detection_dict[VIDEO_NAME]
         assert (
             det.interpolated_detection
             == valid_detection_dict[ottrk_format.INTERPOLATED_DETECTION]
@@ -130,22 +130,19 @@ class TestDetection:
 
 
 class TestTrack:
-    @pytest.mark.parametrize("id", [0, -1, 0.5])
-    def test_value_error_raised_with_invalid_arg(self, id: int) -> None:
-        with pytest.raises(ValueError):
-            TrackId(id)
-
     def test_raise_error_on_empty_detections(self) -> None:
-        with pytest.raises(BuildTrackWithLessThanNDetectionsError):
-            Track(id=TrackId(1), classification="car", detections=[])
+        with pytest.raises(TrackHasNoDetectionError):
+            Track(id=TrackId("1"), classification="car", detections=[])
 
-    def test_error_on_single_detection(self, valid_detection: Detection) -> None:
-        with pytest.raises(BuildTrackWithLessThanNDetectionsError):
-            Track(id=TrackId(5), classification="car", detections=[valid_detection])
+    def test_no_error_on_single_detection(self, valid_detection: Detection) -> None:
+        track = Track(
+            id=TrackId("5"), classification="car", detections=[valid_detection]
+        )
+        assert track.detections == [valid_detection]
 
     def test_instantiation_with_valid_args(self, valid_detection: Detection) -> None:
         track = Track(
-            id=TrackId(5),
+            id=TrackId("5"),
             classification="car",
             detections=[
                 valid_detection,
@@ -155,7 +152,7 @@ class TestTrack:
                 valid_detection,
             ],
         )
-        assert track.id == TrackId(5)
+        assert track.id == TrackId("5")
         assert track.classification == "car"
         assert track.detections == [
             valid_detection,
@@ -181,7 +178,7 @@ class TestTrack:
         end_detection = Mock(spec=Detection)
         end_detection.occurrence = end_time
         track = Track(
-            TrackId(1),
+            TrackId("1"),
             "car",
             [
                 start_detection,
@@ -194,6 +191,22 @@ class TestTrack:
 
         assert track.start == start_time
         assert track.end == end_time
+
+    def test_first_and_last_detection(self, valid_detection: Detection) -> None:
+        first = Mock(spec=Detection)
+        first.occurrence = datetime.min
+        last = Mock(spec=Detection)
+        last.occurrence = datetime.max
+        detections: list[Detection] = [
+            first,
+            valid_detection,
+            valid_detection,
+            valid_detection,
+            last,
+        ]
+        track = Track(TrackId("1"), "car", detections)
+        assert track.first_detection == first
+        assert track.last_detection == last
 
 
 class TestCalculateTrackClassificationByMaxConfidence:
@@ -228,18 +241,27 @@ class TestCalculateTrackClassificationByMaxConfidence:
 
 
 class TestTrackRepository:
-    def test_add(self) -> None:
-        track_id = TrackId(1)
-        track = Mock()
-        track.id = track_id
+    @pytest.fixture
+    def track_1(self) -> Mock:
+        track = Mock(spec=Track)
+        track.id = TrackId("1")
+        return track
+
+    @pytest.fixture
+    def track_2(self) -> Mock:
+        track = Mock(spec=Track)
+        track.id = TrackId("2")
+        return track
+
+    def test_add(self, track_1: Mock) -> None:
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add(track)
+        repository.add(track_1)
 
-        assert track in repository.get_all()
-        observer.notify_tracks.assert_called_with([track_id])
+        assert track_1 in repository.get_all()
+        observer.notify_tracks.assert_called_with([track_1.id])
 
     def test_add_nothing(self) -> None:
         observer = Mock(spec=TrackListObserver)
@@ -251,50 +273,94 @@ class TestTrackRepository:
         assert 0 == len(repository.get_all())
         observer.notify_tracks.assert_not_called()
 
-    def test_add_all(self) -> None:
-        first_id = TrackId(1)
-        second_id = TrackId(2)
-        first_track = Mock()
-        first_track.id = first_id
-        second_track = Mock()
-        second_track.id = second_id
+    def test_add_all(self, track_1: Mock, track_2: Mock) -> None:
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add_all([first_track, second_track])
+        repository.add_all([track_1, track_2])
 
-        assert first_track in repository.get_all()
-        assert second_track in repository.get_all()
-        observer.notify_tracks.assert_called_with([first_id, second_id])
+        assert track_1 in repository.get_all()
+        assert track_2 in repository.get_all()
+        observer.notify_tracks.assert_called_with([track_1.id, track_2.id])
 
-    def test_get_by_id(self) -> None:
-        first_track = Mock()
-        first_track.id.return_value = TrackId(1)
-        second_track = Mock()
+    def test_get_by_id(self, track_1: Mock, track_2: Mock) -> None:
         repository = TrackRepository()
-        repository.add_all([first_track, second_track])
+        repository.add_all([track_1, track_2])
 
-        returned = repository.get_for(first_track.id)
+        returned = repository.get_for(track_1.id)
 
-        assert returned == first_track
+        assert returned == track_1
 
-    def test_clear(self) -> None:
-        first_id = TrackId(1)
-        second_id = TrackId(2)
-        first_track = Mock()
-        first_track.id = first_id
-        second_track = Mock()
-        second_track.id = second_id
+    def test_clear(self, track_1: Mock, track_2: Mock) -> None:
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository()
         repository.register_tracks_observer(observer)
 
-        repository.add_all([first_track, second_track])
+        repository.add_all([track_1, track_2])
         repository.clear()
 
         assert not list(repository.get_all())
         assert observer.notify_tracks.call_args_list == [
-            call([first_id, second_id]),
+            call([track_1.id, track_2.id]),
             call([]),
         ]
+
+    def test_get_all_ids(self, track_1: Mock, track_2: Mock) -> None:
+        repository = TrackRepository()
+        repository.add_all([track_1, track_2])
+        ids = repository.get_all_ids()
+        assert set(ids) == {track_1.id, track_2.id}
+
+    def test_remove(self, track_1: Mock, track_2: Mock) -> None:
+        repository = TrackRepository()
+        repository.add_all([track_1, track_2])
+
+        observer = Mock(spec=TrackListObserver)
+        repository.register_tracks_observer(observer)
+
+        repository.remove(track_1.id)
+        assert repository.get_all() == [track_2]
+        repository.remove(track_2.id)
+        assert repository.get_all() == []
+        with pytest.raises(TrackRemoveError):
+            repository.remove(track_2.id)
+
+        assert observer.notify_tracks.call_args_list == [call([]), call([])]
+
+    def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
+        repository = TrackRepository()
+        repository.add_all([track_1, track_2])
+
+        observer = Mock(spec=TrackListObserver)
+        repository.register_tracks_observer(observer)
+
+        repository.remove_multiple({track_1.id, track_2.id})
+        assert repository.get_all() == []
+        with pytest.raises(RemoveMultipleTracksError):
+            repository.remove_multiple({track_1.id})
+
+
+class TestTrackFileRepository:
+    @pytest.fixture
+    def mock_file(self) -> Mock:
+        return Mock(spec=Path)
+
+    @pytest.fixture
+    def mock_other_file(self) -> Mock:
+        return Mock(spec=Path)
+
+    def test_add(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        repository = TrackFileRepository()
+        assert repository._files == set()
+        repository.add(mock_file)
+        assert repository._files == {mock_file}
+        repository.add(mock_file)
+        assert repository._files == {mock_file}
+        repository.add(mock_other_file)
+        assert repository._files == {mock_file, mock_other_file}
+
+    def test_add_all(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        repository = TrackFileRepository()
+        repository.add_all([mock_file, mock_other_file])
+        assert repository._files == {mock_file, mock_other_file}

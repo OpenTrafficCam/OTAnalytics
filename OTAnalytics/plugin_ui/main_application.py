@@ -41,16 +41,18 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
 )
+from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
-from OTAnalytics.application.use_cases.event_repository import (
-    AddEvents,
-    ClearEventRepository,
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
+    CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearAllFlows
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -66,16 +68,29 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksNotIntersectingSelection,
     TracksOverlapOccurrenceWindow,
 )
+from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
+from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
+    ClearAllSections,
     GetSectionsById,
+    RemoveSection,
 )
+from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackFiles,
-    GetAllTracks,
+    GetAllTrackIds,
+    GetTracksFromIds,
+    GetTracksWithoutSingleDetections,
+    RemoveTracks,
 )
+from OTAnalytics.application.use_cases.track_to_video_repository import (
+    ClearAllTrackToVideos,
+)
+from OTAnalytics.application.use_cases.update_project import ProjectUpdater
+from OTAnalytics.application.use_cases.video_repository import ClearAllVideos
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
@@ -84,6 +99,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     CalculateTrackClassificationByMaxConfidence,
+    TrackFileRepository,
     TrackIdProvider,
     TrackRepository,
 )
@@ -91,6 +107,11 @@ from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
+from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
+    SimpleCutTrackSegmentBuilder,
+    SimpleCutTracksIntersectingSection,
+    SimpleCutTracksWithSection,
+)
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleRunIntersect,
     SimpleTracksIntersectingSections,
@@ -179,11 +200,13 @@ class ApplicationStarter:
         )
 
         track_repository = self._create_track_repository()
+        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
         datastore = self._create_datastore(
             track_repository,
+            track_file_repository,
             section_repository,
             flow_repository,
             event_repository,
@@ -191,12 +214,14 @@ class ApplicationStarter:
         )
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
-        section_state = self._create_section_state()
+        section_state = self._create_section_state(section_repository)
         flow_state = self._create_flow_state()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-
-        pandas_data_provider = self._create_pandas_data_provider(
+        cached_pandas_track_provider = self._create_cached_pandas_track_provider(
             datastore, track_view_state, pulling_progressbar_builder
+        )
+        pandas_data_provider = self._wrap_pandas_track_offset_provider(
+            cached_pandas_track_provider, track_view_state
         )
         color_palette_provider = ColorPaletteProvider()
         layers = self._create_layers(
@@ -227,38 +252,110 @@ class ApplicationStarter:
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
-        get_all_track_files = self._create_get_all_track_files(track_repository)
+
+        get_all_track_files = self._create_get_all_track_files(track_file_repository)
+        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+            track_repository
+        )
+        get_tracks_from_ids = GetTracksFromIds(track_repository)
+        add_all_tracks = AddAllTracks(track_repository)
+        remove_tracks = RemoveTracks(track_repository)
+        clear_all_tracks = ClearAllTracks(track_repository)
+
+        get_sections_bv_id = GetSectionsById(section_repository)
+        add_section = AddSection(section_repository)
+        remove_section = RemoveSection(section_repository)
+        clear_all_sections = ClearAllSections(section_repository)
+
         generate_flows = self._create_flow_generator(
             section_repository, flow_repository
         )
+        add_flow = AddFlow(flow_repository)
+        clear_all_flows = ClearAllFlows(flow_repository)
+
         add_events = AddEvents(event_repository)
-        get_all_tracks = GetAllTracks(track_repository)
+        clear_all_events = ClearAllEvents(event_repository)
+
+        clear_all_videos = ClearAllVideos(datastore._video_repository)
+        clear_all_track_to_videos = ClearAllTrackToVideos(
+            datastore._track_to_video_repository
+        )
+
         create_events = self._create_use_case_create_events(
-            section_repository, event_repository, get_all_tracks, add_events
+            section_repository,
+            clear_all_events,
+            get_tracks_without_single_detections,
+            add_events,
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
-                section_repository, get_all_tracks, add_events
+                section_repository, get_tracks_without_single_detections, add_events
             )
         )
         export_counts = self._create_export_counts(
             event_repository, flow_repository, track_repository
         )
-        application = OTAnalyticsApplication(
-            datastore=datastore,
-            track_state=track_state,
-            track_view_state=track_view_state,
-            section_state=section_state,
-            flow_state=flow_state,
-            tracks_metadata=tracks_metadata,
-            action_state=action_state,
-            filter_element_setting_restorer=filter_element_settings_restorer,
-            get_all_track_files=get_all_track_files,
-            generate_flows=generate_flows,
-            create_intersection_events=intersect_tracks_with_sections,
-            export_counts=export_counts,
-            create_events=create_events,
+        load_otflow = self._create_use_case_load_otflow(
+            clear_all_sections,
+            clear_all_flows,
+            clear_all_events,
+            datastore._flow_parser,
+            add_section,
+            add_flow,
         )
+        clear_repositories = self._create_use_case_clear_all_repositories(
+            clear_all_events,
+            clear_all_flows,
+            clear_all_sections,
+            clear_all_track_to_videos,
+            clear_all_tracks,
+            clear_all_videos,
+        )
+        project_updater = self._create_project_updater(datastore)
+        reset_project_config = self._create_reset_project_config(project_updater)
+        start_new_project = self._create_use_case_start_new_project(
+            clear_repositories, reset_project_config, track_view_state
+        )
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            GetTracksWithoutSingleDetections(track_repository),
+            ShapelyIntersector(),
+        )
+        cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
+            get_sections_bv_id,
+            get_tracks_without_single_detections,
+            get_tracks_from_ids,
+            tracks_intersecting_sections,
+            add_all_tracks,
+            remove_tracks,
+            remove_section,
+            track_view_state,
+        )
+        application = OTAnalyticsApplication(
+            datastore,
+            track_state,
+            track_view_state,
+            section_state,
+            flow_state,
+            tracks_metadata,
+            action_state,
+            filter_element_settings_restorer,
+            get_all_track_files,
+            generate_flows,
+            intersect_tracks_with_sections,
+            export_counts,
+            create_events,
+            load_otflow,
+            add_section,
+            add_flow,
+            clear_all_events,
+            start_new_project,
+            project_updater,
+        )
+        section_repository.register_sections_observer(cut_tracks_intersecting_section)
+        section_repository.register_section_changed_observer(
+            cut_tracks_intersecting_section.notify_section_changed
+        )
+        cut_tracks_intersecting_section.register(clear_all_events.on_tracks_cut)
         application.connect_clear_event_repository_observer()
         flow_parser: FlowParser = application._datastore._flow_parser
         name_generator = ArrowFlowNameGenerator()
@@ -268,6 +365,12 @@ class ApplicationStarter:
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
         )
+        # TODO: Refactor observers - move registering to subjects happening in
+        #   constructor dummy_viewmodel
+        cut_tracks_intersecting_section.register(
+            cached_pandas_track_provider.on_tracks_cut
+        )
+        cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
         dummy_viewmodel.register_observers()
         application.connect_observers()
         datastore.register_tracks_observer(selected_video_updater)
@@ -277,6 +380,8 @@ class ApplicationStarter:
         datastore.register_section_changed_observer(
             image_updater.notify_section_changed
         )
+        start_new_project.register(dummy_viewmodel.on_start_new_project)
+
         for layer in layers:
             layer.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
@@ -285,19 +390,34 @@ class ApplicationStarter:
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_repository = self._create_track_repository()
+        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
-        track_parser = self._create_track_parser(track_repository)
+        flow_repository = self._create_flow_repository()
+        track_parser = self._create_track_parser(
+            track_repository, track_file_repository
+        )
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
         add_section = AddSection(section_repository)
+        add_flow = AddFlow(flow_repository)
         add_events = AddEvents(event_repository)
-        get_all_tracks = GetAllTracks(track_repository)
+        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+            track_repository
+        )
+        get_all_track_ids = GetAllTrackIds(track_repository)
+        clear_all_events = ClearAllEvents(event_repository)
         create_events = self._create_use_case_create_events(
-            section_repository, event_repository, get_all_tracks, add_events
+            section_repository,
+            clear_all_events,
+            get_tracks_without_single_detections,
+            add_events,
         )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
+        export_counts = self._create_export_counts(
+            event_repository, flow_repository, track_repository
+        )
         OTAnalyticsCli(
             cli_args,
             track_parser=track_parser,
@@ -306,7 +426,10 @@ class ApplicationStarter:
             event_repository=event_repository,
             add_section=add_section,
             create_events=create_events,
+            export_counts=export_counts,
             add_all_tracks=add_all_tracks,
+            get_all_track_ids=get_all_track_ids,
+            add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
             progressbar=TqdmBuilder(),
         ).start()
@@ -314,6 +437,7 @@ class ApplicationStarter:
     def _create_datastore(
         self,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
         section_repository: SectionRepository,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
@@ -326,7 +450,9 @@ class ApplicationStarter:
             track_repository (TrackRepository): the track repository to inject
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
-        track_parser = self._create_track_parser(track_repository)
+        track_parser = self._create_track_parser(
+            track_repository, track_file_repository
+        )
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
@@ -356,10 +482,15 @@ class ApplicationStarter:
     def _create_track_repository(self) -> TrackRepository:
         return TrackRepository()
 
-    def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
+    def _create_track_parser(
+        self,
+        track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
+    ) -> TrackParser:
         return OttrkParser(
             CalculateTrackClassificationByMaxConfidence(),
             track_repository,
+            track_file_repository,
             track_length_limit=TRACK_LENGTH_LIMIT,
         )
 
@@ -384,19 +515,23 @@ class ApplicationStarter:
     def _create_track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_pandas_data_provider(
+    def _create_cached_pandas_track_provider(
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
         progressbar: ProgressbarBuilder,
-    ) -> PandasDataFrameProvider:
+    ) -> CachedPandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        return PandasTracksOffsetProvider(
-            CachedPandasTrackProvider(
-                datastore, track_view_state, dataframe_filter_builder, progressbar
-            ),
-            track_view_state=track_view_state,
+        return CachedPandasTrackProvider(
+            datastore, track_view_state, dataframe_filter_builder, progressbar
         )
+
+    @staticmethod
+    def _wrap_pandas_track_offset_provider(
+        other: PandasDataFrameProvider,
+        track_view_state: TrackViewState,
+    ) -> PandasDataFrameProvider:
+        return PandasTracksOffsetProvider(other, track_view_state)
 
     def _create_track_geometry_plotter(
         self,
@@ -602,7 +737,7 @@ class ApplicationStarter:
             enable_legend=True,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            GetAllTracks(datastore._track_repository),
+            GetTracksWithoutSingleDetections(datastore._track_repository),
             ShapelyIntersector(),
         )
         tracks_intersecting_selected_sections = (
@@ -736,16 +871,17 @@ class ApplicationStarter:
             highlight_tracks_not_assigned_to_flow_layer,
         ]
 
-    def _create_section_state(self) -> SectionState:
-        return SectionState()
+    @staticmethod
+    def _create_section_state(section_repository: SectionRepository) -> SectionState:
+        return SectionState(GetSectionsById(section_repository))
 
     def _create_flow_state(self) -> FlowState:
         return FlowState()
 
     def _create_get_all_track_files(
-        self, track_repository: TrackRepository
+        self, track_file_repository: TrackFileRepository
     ) -> GetAllTrackFiles:
-        return GetAllTrackFiles(track_repository)
+        return GetAllTrackFiles(track_file_repository)
 
     def _create_flow_generator(
         self, section_repository: SectionRepository, flow_repository: FlowRepository
@@ -766,17 +902,18 @@ class ApplicationStarter:
     def _create_use_case_create_intersection_events(
         self,
         section_repository: SectionRepository,
-        get_all_tracks: GetAllTracks,
+        get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
     ) -> CreateIntersectionEvents:
-        intersect = self._create_intersect(get_all_tracks)
+        intersect = self._create_intersect(get_tracks)
         return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
 
-    def _create_intersect(self, get_all_tracks: GetAllTracks) -> RunIntersect:
+    @staticmethod
+    def _create_intersect(get_tracks: GetTracksWithoutSingleDetections) -> RunIntersect:
         return SimpleRunIntersect(
             intersect_implementation=ShapelyIntersector(ShapelyMapper()),
             intersect_parallelizer=MultiprocessingIntersectParallelization(),
-            get_all_tracks=get_all_tracks,
+            get_tracks=get_tracks,
         )
 
     def _create_tracks_metadata(
@@ -810,28 +947,111 @@ class ApplicationStarter:
     def _create_use_case_create_events(
         self,
         section_repository: SectionRepository,
-        event_repository: EventRepository,
-        get_all_tracks: GetAllTracks,
+        clear_events: ClearAllEvents,
+        get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(get_all_tracks)
-        clear_event_repository = ClearEventRepository(event_repository)
+        run_intersect = self._create_intersect(get_tracks)
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_repository, add_events
         )
         scene_action_detector = SceneActionDetector(SceneEventBuilder())
         create_scene_events = SimpleCreateSceneEvents(
-            get_all_tracks, scene_action_detector, add_events
+            get_tracks, scene_action_detector, add_events
         )
         return CreateEvents(
-            clear_event_repository, create_intersection_events, create_scene_events
+            clear_events, create_intersection_events, create_scene_events
         )
 
+    @staticmethod
     def _create_tracks_intersecting_sections(
-        self,
-        get_all_tracks: GetAllTracks,
+        get_tracks: GetTracksWithoutSingleDetections,
         intersect_implementation: IntersectImplementation,
     ) -> TracksIntersectingSections:
-        return SimpleTracksIntersectingSections(
-            get_all_tracks, intersect_implementation
+        return SimpleTracksIntersectingSections(get_tracks, intersect_implementation)
+
+    @staticmethod
+    def _create_use_case_load_otflow(
+        clear_all_sections: ClearAllSections,
+        clear_all_flows: ClearAllFlows,
+        clear_all_events: ClearAllEvents,
+        flow_parser: FlowParser,
+        add_section: AddSection,
+        add_flow: AddFlow,
+    ) -> LoadOtflow:
+        return LoadOtflow(
+            clear_all_sections,
+            clear_all_flows,
+            clear_all_events,
+            flow_parser,
+            add_section,
+            add_flow,
+        )
+
+    @staticmethod
+    def _create_use_case_clear_all_repositories(
+        clear_all_events: ClearAllEvents,
+        clear_all_flows: ClearAllFlows,
+        clear_all_sections: ClearAllSections,
+        clear_all_track_to_videos: ClearAllTrackToVideos,
+        clear_all_tracks: ClearAllTracks,
+        clear_all_videos: ClearAllVideos,
+    ) -> ClearRepositories:
+        return ClearRepositories(
+            clear_all_events,
+            clear_all_flows,
+            clear_all_sections,
+            clear_all_track_to_videos,
+            clear_all_tracks,
+            clear_all_videos,
+        )
+
+    @staticmethod
+    def _create_use_case_start_new_project(
+        clear_repositories: ClearRepositories,
+        reset_project_config: ResetProjectConfig,
+        track_view_state: TrackViewState,
+    ) -> StartNewProject:
+        return StartNewProject(
+            clear_repositories, reset_project_config, track_view_state
+        )
+
+    @staticmethod
+    def _create_reset_project_config(
+        project_updater: ProjectUpdater,
+    ) -> ResetProjectConfig:
+        return ResetProjectConfig(project_updater)
+
+    @staticmethod
+    def _create_project_updater(datastore: Datastore) -> ProjectUpdater:
+        return ProjectUpdater(datastore)
+
+    def _create_track_file_repository(self) -> TrackFileRepository:
+        return TrackFileRepository()
+
+    @staticmethod
+    def _create_cut_tracks_intersecting_section(
+        get_sections_by_id: GetSectionsById,
+        get_tracks: GetTracksWithoutSingleDetections,
+        get_tracks_from_ids: GetTracksFromIds,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        add_all_tracks: AddAllTracks,
+        remove_tracks: RemoveTracks,
+        remove_section: RemoveSection,
+        track_view_state: TrackViewState,
+    ) -> CutTracksIntersectingSection:
+        track_builder = SimpleCutTrackSegmentBuilder(
+            CalculateTrackClassificationByMaxConfidence()
+        )
+        cut_tracks_with_section = SimpleCutTracksWithSection(
+            get_tracks_from_ids, ShapelyMapper(), track_builder, track_view_state
+        )
+        return SimpleCutTracksIntersectingSection(
+            get_sections_by_id,
+            get_tracks,
+            tracks_intersecting_sections,
+            cut_tracks_with_section,
+            add_all_tracks,
+            remove_tracks,
+            remove_section,
         )

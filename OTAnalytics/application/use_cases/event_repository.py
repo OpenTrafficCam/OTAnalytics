@@ -1,5 +1,6 @@
 from typing import Iterable
 
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import SectionId, SectionListObserver
 from OTAnalytics.domain.track import TrackId, TrackListObserver
@@ -16,7 +17,7 @@ class AddEvents:
             self._event_repository.add_all(events)
 
 
-class ClearEventRepository(SectionListObserver, TrackListObserver):
+class ClearAllEvents(SectionListObserver, TrackListObserver):
     """Clears the event repository also on section state changes.
 
     Args:
@@ -39,4 +40,7 @@ class ClearEventRepository(SectionListObserver, TrackListObserver):
         self.clear()
 
     def on_section_changed(self, section_id: SectionId) -> None:
+        self.clear()
+
+    def on_tracks_cut(self, _: CutTracksDto) -> None:
         self.clear()

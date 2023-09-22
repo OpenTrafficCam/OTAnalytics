@@ -10,6 +10,7 @@ import ujson
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
 from OTAnalytics.application import project
+from OTAnalytics.application.config import ALLOWED_TRACK_SIZE_PARSING
 from OTAnalytics.application.datastore import (
     ConfigParser,
     EventListParser,
@@ -27,10 +28,11 @@ from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
-    BuildTrackWithLessThanNDetectionsError,
     Detection,
     Track,
     TrackClassificationCalculator,
+    TrackFileRepository,
+    TrackHasNoDetectionError,
     TrackId,
     TrackImage,
     TrackRepository,
@@ -284,17 +286,26 @@ class OttrkParser(TrackParser):
     `Tracks`.
 
     Args:
-        TrackParser (TrackParser): extends TrackParser interface.
+        track_classification_calculator (TrackClassificationCalculator): determines
+            a tracks max class.
+        track_repository (TrackRepository): the track repository.
+        track_file_repository (TrackFileRepository): the track file repository.
+        track_length_limit (int): tracks with length above the limit will not be
+            parsed.
+        format_fixer (OttrkFormatFixer):to fix older ottrk version files.
     """
 
     def __init__(
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
         track_length_limit: int,
         format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
     ) -> None:
-        super().__init__(track_classification_calculator, track_repository)
+        super().__init__(
+            track_classification_calculator, track_repository, track_file_repository
+        )
         self._track_length_limit = track_length_limit
         self._format_fixer = format_fixer
         self._path_cache: dict[str, Path] = {}
@@ -304,7 +315,7 @@ class OttrkParser(TrackParser):
         `Track`s.
 
         Args:
-            ottrk_file (Path): the file to
+            ottrk_file (Path): the track file.
 
         Returns:
             list[Track]: the tracks.
@@ -312,15 +323,20 @@ class OttrkParser(TrackParser):
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
-        return self._parse_tracks(
+        tracks = self._parse_tracks(
             dets_list, ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
         )
+        # Add only after parsing was successful
+        self._track_file_repository.add(ottrk_file)
+        return tracks
 
     def _parse_tracks(self, dets: list[dict], metadata_video: dict) -> list[Track]:
-        """Parse the detections of ottrk located at ottrk["data"]["detections"].
+        """Parse the detections of ottrk located at `ottrk["data"]["detections"]`.
 
         This method will also sort the detections belonging to a track by their
         occurrence.
+        Tracks with no detections or sizes less than the allowed limit
+        `ALLOWED_TRACK_SIZE_PARSING` will not be parsed.
 
         Args:
             dets (list[dict]): the detections in dict format.
@@ -346,9 +362,15 @@ class OttrkParser(TrackParser):
                     classification=classification,
                     detections=sort_dets_by_occurrence,
                 )
-                tracks.append(current_track)
-            except BuildTrackWithLessThanNDetectionsError as build_error:
-                # Skip tracks with less than 2 detections
+                if len(current_track.detections) >= ALLOWED_TRACK_SIZE_PARSING:
+                    tracks.append(current_track)
+                else:
+                    logger().warning(
+                        f"Trying to construct track (track_id={current_track.id}) "
+                        f"with less than {ALLOWED_TRACK_SIZE_PARSING} detections."
+                    )
+            except TrackHasNoDetectionError as build_error:
+                # Skip tracks with no detections
                 logger().warning(build_error)
 
         return tracks
@@ -368,13 +390,13 @@ class OttrkParser(TrackParser):
             return existing_track.detections
         return []
 
+    @staticmethod
     def _parse_detections(
-        self, det_list: list[dict], metadata_video: dict
+        det_list: list[dict], metadata_video: dict
     ) -> dict[TrackId, list[Detection]]:
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
-            path = self.__get_path(det_dict)
             det = Detection(
                 classification=det_dict[ottrk_format.CLASS],
                 confidence=det_dict[ottrk_format.CONFIDENCE],
@@ -386,9 +408,8 @@ class OttrkParser(TrackParser):
                 occurrence=datetime.fromtimestamp(
                     float(det_dict[ottrk_format.OCCURRENCE]), timezone.utc
                 ),
-                input_file_path=path,
                 interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-                track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
+                track_id=TrackId(str(det_dict[ottrk_format.TRACK_ID])),
                 video_name=metadata_video[ottrk_format.FILENAME]
                 + metadata_video[ottrk_format.FILETYPE],
             )
@@ -419,6 +440,8 @@ class InvalidSectionData(Exception):
     """
     This exception indicates invalid data when parsing a section file.
     """
+
+    pass
 
 
 class OtFlowParser(FlowParser):

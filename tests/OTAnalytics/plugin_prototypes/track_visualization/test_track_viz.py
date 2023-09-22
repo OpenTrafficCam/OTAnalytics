@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -41,7 +40,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
 
 class TestPlotterPrototype:
     def test_plot(self) -> None:
-        track_id = TrackId(1)
+        track_id = TrackId("1")
         track = Mock(spec=Track)
         plotted_tracks = Mock(spec=TrackImage)
         track_view_state = TrackViewState()
@@ -90,14 +89,14 @@ class TestCachedPandasTrackProvider:
     @pytest.fixture
     def track_1(self) -> Track:
         """Create dummy track with id 1 and 5 detections."""
-        return self.set_up_track(1)
+        return self.set_up_track("1")
 
     @pytest.fixture
     def track_2(self) -> Track:
         """Create dummy track with id 2 and 5 detections."""
-        return self.set_up_track(2)
+        return self.set_up_track("2")
 
-    def set_up_track(self, id: int) -> Track:
+    def set_up_track(self, id: str) -> Track:
         """Create a dummy track with the given id and 5 car detections."""
         t_id = TrackId(id)
         detections = [
@@ -110,7 +109,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 1,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -124,7 +122,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 2,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -138,7 +135,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 3,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -152,7 +148,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 4,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -166,7 +161,6 @@ class TestCachedPandasTrackProvider:
                 7,
                 5,
                 datetime.min,
-                Path(""),
                 False,
                 t_id,
                 "video_name",
@@ -321,7 +315,7 @@ class TestColorPaletteProvider:
 class TestBackgroundPlotter:
     def test_plot(self) -> None:
         track = Mock(spec=Track).return_value
-        track.id = TrackId(5)
+        track.id = TrackId("5")
 
         tracks = [track]
         expected_image = Mock()

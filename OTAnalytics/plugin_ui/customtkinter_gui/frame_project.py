@@ -3,7 +3,7 @@ import tkinter
 from datetime import datetime
 from typing import Any, Optional
 
-from customtkinter import CTkEntry, CTkLabel, ThemeManager
+from customtkinter import CTkButton, CTkEntry, CTkLabel, ThemeManager
 
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -69,6 +69,9 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             name="Start date",
             place_validation_below=True,
         )
+        self._button_new_project = CTkButton(
+            master=self, text="New", command=self._viewmodel.start_new_project
+        )
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure(1, weight=1)
@@ -77,16 +80,21 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         self._label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_name.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self._start_date_row.grid(row=1, column=0, columnspan=2, sticky=STICKY_WEST)
+        self._button_new_project.grid(
+            row=2, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
 
     def _wire_callbacks(self) -> None:
-        self._project_name.trace_add("write", callback=self._update_project)
-        self._start_date_row.trace_add(callback=self._update_project)
+        self._project_name.trace_add("write", callback=self._update_project_name)
+        self._start_date_row.trace_add(callback=self._update_project_start_date)
 
-    def _update_project(self, name: str, other: str, mode: str) -> None:
+    def _update_project_name(self, name: str, other: str, mode: str) -> None:
+        self._viewmodel.update_project_name(self._project_name.get())
+
+    def _update_project_start_date(self, name: str, other: str, mode: str) -> None:
         with contextlib.suppress(InvalidDatetimeFormatError):
-            self._viewmodel.update_project(
-                name=self._project_name.get(),
-                start_date=self._start_date_row.get_datetime(),
+            self._viewmodel.update_project_start_date(
+                self._start_date_row.get_datetime(),
             )
 
     def update(self, name: str, start_date: Optional[datetime]) -> None:

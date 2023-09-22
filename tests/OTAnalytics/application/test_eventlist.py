@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -33,16 +32,15 @@ def detection() -> Detection:
         h=30.5,
         frame=1,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
-        track_id=TrackId(1),
+        track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
     )
 
 
 @pytest.fixture
 def track() -> Track:
-    track_id = TrackId(1)
+    track_id = TrackId("1")
 
     detection_1 = Detection(
         classification="car",
@@ -53,9 +51,8 @@ def track() -> Track:
         h=30.5,
         frame=1,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
-        track_id=TrackId(1),
+        track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
     )
     detection_2 = Detection(
@@ -67,9 +64,8 @@ def track() -> Track:
         h=30.5,
         frame=2,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 1),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
-        track_id=TrackId(1),
+        track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
     )
     detection_3 = Detection(
@@ -81,9 +77,8 @@ def track() -> Track:
         h=30.5,
         frame=3,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 2),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
-        track_id=TrackId(1),
+        track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
     )
     detection_4 = Detection(
@@ -95,9 +90,8 @@ def track() -> Track:
         h=30.5,
         frame=4,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 3),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
-        track_id=TrackId(1),
+        track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
     )
     detection_5 = Detection(
@@ -109,9 +103,8 @@ def track() -> Track:
         h=30.5,
         frame=5,
         occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),
-        input_file_path=Path("path/to/myhostname_something.otdet"),
         interpolated_detection=False,
-        track_id=TrackId(1),
+        track_id=TrackId("1"),
         video_name="myhostname_something.mp4",
     )
 
@@ -176,7 +169,7 @@ class TestSceneActionDetector:
         scene_action_detector = SceneActionDetector(scene_event_builder)
         event = scene_action_detector.detect_enter_scene(track)
         assert event == Event(
-            road_user_id=1,
+            road_user_id="1",
             road_user_type="car",
             hostname="myhostname",
             occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
@@ -195,7 +188,7 @@ class TestSceneActionDetector:
         scene_action_detector = SceneActionDetector(scene_event_builder)
         event = scene_action_detector.detect_leave_scene(track)
         assert event == Event(
-            road_user_id=1,
+            road_user_id="1",
             road_user_type="car",
             hostname="myhostname",
             occurrence=datetime(2022, 1, 1, 0, 0, 0, 4),

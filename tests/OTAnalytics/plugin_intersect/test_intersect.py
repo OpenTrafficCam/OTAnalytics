@@ -31,7 +31,7 @@ from tests.conftest import EventBuilder, TrackBuilder
 @pytest.fixture
 def track(track_builder: TrackBuilder) -> Track:
     classification = "car"
-    track_id = 1
+    track_id = "1"
 
     track_builder.add_track_class(classification)
     track_builder.add_detection_class(classification)
@@ -68,7 +68,7 @@ def track(track_builder: TrackBuilder) -> Track:
 @pytest.fixture
 def closed_track(track_builder: TrackBuilder) -> Track:
     classification = "car"
-    track_id = 2
+    track_id = "2"
 
     track_builder.add_track_class(classification)
     track_builder.add_detection_class(classification)
@@ -209,7 +209,7 @@ class TestIntersectBySplittingTrackLine:
         assert result_event.event_type == EventType.SECTION_ENTER
         assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
-        assert result_event.video_name == expected_detection.input_file_path.name
+        assert result_event.video_name == expected_detection.video_name
 
     def test_intersect_track_offset_applied_to_event_coordinate(
         self, track: Track
@@ -256,7 +256,7 @@ class TestIntersectBySplittingTrackLine:
         assert result_event.event_type == EventType.SECTION_ENTER
         assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
-        assert result_event.video_name == expected_detection.input_file_path.name
+        assert result_event.video_name == expected_detection.video_name
         assert result_event.event_coordinate == ImageCoordinate(25.3, 35.5)
 
 
@@ -354,7 +354,7 @@ class TestIntersectBySmallTrackComponents:
         assert result_event.event_type == EventType.SECTION_ENTER
         assert result_event.direction_vector.x1 == 10
         assert result_event.direction_vector.x2 == 0
-        assert result_event.video_name == expected_detection.input_file_path.name
+        assert result_event.video_name == expected_detection.video_name
         assert result_event.event_coordinate == ImageCoordinate(25.3, 35.5)
 
     @patch("OTAnalytics.domain.intersect.Intersector._select_coordinate_in_detection")
@@ -634,7 +634,7 @@ class TestIntersectAreaByTrackPoints:
         result_events = intersector.intersect(track, event_builder)
         expected_events = [
             Event(
-                road_user_id=1,
+                road_user_id="1",
                 road_user_type="car",
                 hostname="myhostname",
                 occurrence=datetime(2020, 1, 1, 0, 0, 0, 1, tzinfo=timezone.utc),
@@ -956,6 +956,7 @@ class TestSimpleTracksIntersectingSections:
         section = Mock(spec=Section)
         offset = RelativeOffsetCoordinate(0, 0)
         section.get_offset.return_value = offset
+        section.name = "south"
 
         intersect_implementation = Mock(spec=IntersectImplementation)
         intersect_implementation.line_intersects_line.return_value = True

@@ -145,7 +145,7 @@ def create_event(
         road_user_type="car",
         hostname="my_hostname",
         occurrence=datetime(
-            2020, 1, 1, 0, minute, second=real_seconds, tzinfo=timezone.utc
+            2000, 1, 1, 0, minute, second=real_seconds, tzinfo=timezone.utc
         ),
         frame_number=1,
         section_id=section,
@@ -158,12 +158,12 @@ def create_event(
 
 class TestCaseBuilder:
     def __init__(self) -> None:
-        self.first_track = TrackId(1)
-        self.second_track = TrackId(2)
-        self.third_track = TrackId(3)
-        self.forth_track = TrackId(4)
-        self.fifth_track = TrackId(5)
-        self.sixth_track = TrackId(6)
+        self.first_track = TrackId("1")
+        self.second_track = TrackId("2")
+        self.third_track = TrackId("3")
+        self.forth_track = TrackId("4")
+        self.fifth_track = TrackId("5")
+        self.sixth_track = TrackId("6")
         self.south_section_id = SectionId("south")
         self.north_section_id = SectionId("north")
         self.west_section_id = SectionId("west")
@@ -361,8 +361,8 @@ class TestCaseBuilder:
         first_result = MultiTag(
             frozenset(
                 [
-                    SingleTag(level=LEVEL_START_TIME, id="00:00"),
-                    SingleTag(level=LEVEL_END_TIME, id="00:01"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:00:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:01:00"),
                 ]
             )
         )
@@ -377,8 +377,8 @@ class TestCaseBuilder:
         second_result = MultiTag(
             frozenset(
                 [
-                    SingleTag(level=LEVEL_START_TIME, id="00:00"),
-                    SingleTag(level=LEVEL_END_TIME, id="00:01"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:00:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:01:00"),
                 ]
             )
         )
@@ -393,8 +393,8 @@ class TestCaseBuilder:
         third_result = MultiTag(
             frozenset(
                 [
-                    SingleTag(level=LEVEL_START_TIME, id="00:01"),
-                    SingleTag(level=LEVEL_END_TIME, id="00:02"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:01:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:02:00"),
                 ]
             )
         )
@@ -409,8 +409,8 @@ class TestCaseBuilder:
         forth_result = MultiTag(
             frozenset(
                 [
-                    SingleTag(level=LEVEL_START_TIME, id="00:02"),
-                    SingleTag(level=LEVEL_END_TIME, id="00:03"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:02:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:03:00"),
                 ]
             )
         )
@@ -596,7 +596,7 @@ class TestModeTagger:
         )
 
     def test_create_tag_missing_track(self) -> None:
-        track_id = 1
+        track_id = "1"
         flow = Mock(spec=Flow)
         first_event = Mock(spec=Event)
         second_event = Mock(spec=Event)
