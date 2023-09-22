@@ -37,10 +37,14 @@ from OTAnalytics.application.application import (
     MultipleSectionsSelected,
     OTAnalyticsApplication,
 )
-from OTAnalytics.application.config import DEFAULT_COUNTING_INTERVAL_IN_MINUTES
+from OTAnalytics.application.config import (
+    CUTTING_SECTION_MARKER,
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+)
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.config import MissingDate
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
@@ -687,8 +691,9 @@ class DummyViewModel(
             raise MissingCoordinate("Second coordinate is missing")
         with contextlib.suppress(CancelAddSection):
             section = self.__create_section(coordinates, is_area_section, get_metadata)
-            logger().info(f"New section created: {section.id}")
-            self._update_selected_sections([section.id])
+            if not section.name.startswith(CUTTING_SECTION_MARKER):
+                logger().info(f"New section created: {section.id}")
+                self._update_selected_sections([section.id])
         self._finish_action()
 
     def __create_section(
@@ -856,7 +861,8 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(AbstractTreeviewInterface.__name__)
         section = self._flow_parser.parse_section(data)
         self._application.update_section(section)
-        self._treeview_sections.update_selected_items([id.serialize()])
+        if not section.name.startswith(CUTTING_SECTION_MARKER):
+            self._treeview_sections.update_selected_items([id.serialize()])
 
     def remove_sections(self) -> None:
         if self._treeview_sections is None:
@@ -1475,3 +1481,16 @@ class DummyViewModel(
         self, frame_track_plotting: AbstractFrameTrackPlotting
     ) -> None:
         self._frame_track_plotting = frame_track_plotting
+
+    def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
+        window_position = self._get_window_position()
+        formatted_ids = "\n".join(
+            [track_id.id for track_id in cut_tracks_dto.original_tracks]
+        )
+        msg = (
+            f"Cut succesful. Cutting section '{cut_tracks_dto.section} '"
+            " and original tracks deleted.\n"
+            f"Deleted original track ids:\n{formatted_ids}"
+        )
+        logger().info(msg)
+        InfoBox(msg, window_position)
