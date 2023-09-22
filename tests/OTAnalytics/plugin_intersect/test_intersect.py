@@ -956,6 +956,7 @@ class TestSimpleTracksIntersectingSections:
         section = Mock(spec=Section)
         offset = RelativeOffsetCoordinate(0, 0)
         section.get_offset.return_value = offset
+        section.name = "south"
 
         intersect_implementation = Mock(spec=IntersectImplementation)
         intersect_implementation.line_intersects_line.return_value = True

@@ -324,12 +324,19 @@ class SimpleTracksIntersectingSections(TracksIntersectingSections):
     def _intersect(
         self, tracks: Iterable[Track], sections: Iterable[Section]
     ) -> set[TrackId]:
-        return {
-            track.id
-            for section in sections
-            for track in tracks
-            if self._track_intersects_section(track, section)
-        }
+        print("Number of intersecting tracks per section")
+        all_track_ids: set[TrackId] = set()
+        for section in sections:
+            track_ids = {
+                track.id
+                for track in tracks
+                if self._track_intersects_section(track, section)
+            }
+            print(f"{section.name}: {len(track_ids)} tracks")
+            all_track_ids.update(track_ids)
+
+        print(f"All sections: {len(all_track_ids)} tracks")
+        return all_track_ids
 
     def _track_intersects_section(self, track: Track, section: Section) -> bool:
         section_offset = section.get_offset(EventType.SECTION_ENTER)
