@@ -173,32 +173,6 @@ class DummyViewModel(
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._new_section: dict = {}
-        self.register_to_subjects()
-
-    def register_to_subjects(self) -> None:
-        self._application.register_video_observer(self)
-        self._application.register_sections_observer(self)
-        self._application.register_flows_observer(self)
-        self._application.register_flow_changed_observer(self._on_flow_changed)
-        self._application.track_view_state.selected_videos.register(
-            self._update_selected_videos
-        )
-        self._application.section_state.selected_sections.register(
-            self._update_selected_sections
-        )
-        self._application.flow_state.selected_flows.register(
-            self._update_selected_flows
-        )
-        self._application.track_view_state.background_image.register(
-            self._on_background_updated
-        )
-        self._application.track_view_state.track_offset.register(self._update_offset)
-        self._application.track_view_state.filter_element.register(
-            self._update_date_range
-        )
-        self._application.action_state.action_running.register(
-            self._notify_action_running_state
-        )
 
     def notify_videos(self, videos: list[Video]) -> None:
         if self._treeview_videos is None:
