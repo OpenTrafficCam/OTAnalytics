@@ -31,10 +31,6 @@ class MissingCoordinate(Exception):
 
 class ViewModel(ABC):
     @abstractmethod
-    def register_to_subjects(self) -> None:
-        pass
-
-    @abstractmethod
     def set_window(self, window: AbstractMainWindow) -> None:
         pass
 
