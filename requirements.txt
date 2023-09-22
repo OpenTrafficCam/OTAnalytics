@@ -1,5 +1,5 @@
 customtkinter==5.2.0
-matplotlib==3.7.2
+matplotlib==3.8.0
 moviepy==1.0.3
 numpy==1.25.2
 openpyxl==3.1.2
