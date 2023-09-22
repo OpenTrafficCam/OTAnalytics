@@ -8,6 +8,8 @@ from PIL import Image
 from OTAnalytics.domain.track import PilImage, TrackImage
 from OTAnalytics.domain.video import VideoReader
 
+GRAYSCALE = "L"
+
 
 class InvalidVideoError(Exception):
     pass
@@ -37,7 +39,7 @@ class MoviepyVideoReader(VideoReader):
         frame_to_load = min(index, max_frames)
         found = clip.get_frame(frame_to_load / clip.fps)
         clip.close()
-        return PilImage(Image.fromarray(found))
+        return PilImage(Image.fromarray(found).convert(GRAYSCALE))
 
     def __get_clip(self, video_path: Path) -> VideoFileClip:
         try:

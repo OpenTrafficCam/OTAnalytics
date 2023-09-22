@@ -726,7 +726,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
         """
         canvas = FigureCanvasAgg(figure)
         canvas.draw()
-        bbox_contents = figure.canvas.copy_from_bbox(axes.bbox)
+        bbox_contents = canvas.copy_from_bbox(axes.bbox)
         left, bottom, right, top = bbox_contents.get_extents()
 
         image_array = numpy.frombuffer(bbox_contents.to_string(), dtype=numpy.uint8)
