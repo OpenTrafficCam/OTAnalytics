@@ -5,7 +5,6 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from plugin_parser.otvision_parser import PythonDetectionParser
 
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportCounts,
@@ -53,6 +52,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtFlowParser,
     OttrkParser,
+    PythonDetectionParser,
 )
 from OTAnalytics.plugin_ui.cli import (
     CliArgumentParser,

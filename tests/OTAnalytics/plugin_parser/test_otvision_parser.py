@@ -6,10 +6,10 @@ from unittest.mock import Mock, call
 
 import pytest
 import ujson
-from application.config import ALLOWED_TRACK_SIZE_PARSING
 
 from OTAnalytics import version
 from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
+from OTAnalytics.application.config import ALLOWED_TRACK_SIZE_PARSING
 from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.application.project import Project
