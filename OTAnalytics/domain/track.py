@@ -739,7 +739,7 @@ class TrackRepository:
             track_id (TrackId): the id of the track to be removed.
         """
         try:
-            self._remove(track_id)
+            self._dataset = self._dataset.remove(track_id)
         except KeyError:
             raise TrackRemoveError(
                 track_id, f"Trying to remove non existing track with id '{track_id.id}'"
@@ -748,22 +748,11 @@ class TrackRepository:
         #  application layer
         self.observers.notify([])
 
-    def _remove(self, track_id: TrackId) -> None:
-        """Remove track by its id without notifying observers.
-
-        Raises:
-            TrackRemoveError: if track does not exist in repository.
-
-        Args:
-            track_id (TrackId): the id of the track to be removed.
-        """
-        self._dataset = self._dataset.remove(track_id)
-
     def remove_multiple(self, track_ids: set[TrackId]) -> None:
         failed_tracks: list[TrackId] = []
         for track_id in track_ids:
             try:
-                self._remove(track_id)
+                self._dataset = self._dataset.remove(track_id)
             except KeyError:
                 failed_tracks.append(track_id)
             # TODO: Pass removed track id to notify when moving observers to
