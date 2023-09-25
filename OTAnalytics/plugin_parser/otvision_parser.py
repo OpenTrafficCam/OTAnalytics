@@ -291,10 +291,24 @@ class OttrkFormatFixer:
 
 
 class DetectionParser(ABC):
+    """Parse the detections of an ottrk file and convert them into a `TrackDataset`."""
+
     @abstractmethod
     def parse_tracks(
         self, detections: list[dict], metadata_video: dict
     ) -> TrackDataset:
+        """Parse the detections.
+
+        This method will also sort the detections belonging to a track by their
+        occurrence.
+
+        Args:
+            detections (list[dict]): the detections in dict format.
+            metadata_video (dict): metadata of the track file in dict format.
+
+        Returns:
+            TrackDataset: the tracks.
+        """
         raise NotImplementedError
 
 
@@ -397,13 +411,6 @@ class PythonDetectionParser(DetectionParser):
 
 
 class PandasDetectionParser(DetectionParser):
-    """Parse an ottrk file and convert its contents to our domain objects namely
-    `Tracks`.
-
-    Args:
-        TrackParser (TrackParser): extends TrackParser interface.
-    """
-
     def __init__(
         self,
         calculator: PandasTrackClassificationCalculator,
@@ -489,7 +496,7 @@ class OttrkParser(TrackParser):
             ottrk_file (Path): the track file.
 
         Returns:
-            list[Track]: the tracks.
+            TrackDataset: the tracks.
         """
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
