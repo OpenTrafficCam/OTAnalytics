@@ -316,24 +316,6 @@ class Track(ABC):
         raise NotImplementedError
 
     @property
-    def start(self) -> datetime:
-        """Get start time of this track.
-
-        Returns:
-            datetime: the start time.
-        """
-        return self.first_detection.occurrence
-
-    @property
-    def end(self) -> datetime:
-        """Get end time of this track.
-
-        Returns:
-            datetime: the end time.
-        """
-        return self.last_detection.occurrence
-
-    @property
     @abstractmethod
     def first_detection(self) -> Detection:
         """Get first detection of track.
@@ -352,6 +334,24 @@ class Track(ABC):
             Detection: the last detection.
         """
         raise NotImplementedError
+
+    @property
+    def start(self) -> datetime:
+        """Get start time of this track.
+
+        Returns:
+            datetime: the start time.
+        """
+        return self.first_detection.occurrence
+
+    @property
+    def end(self) -> datetime:
+        """Get end time of this track.
+
+        Returns:
+            datetime: the end time.
+        """
+        return self.last_detection.occurrence
 
 
 @dataclass(frozen=True)
