@@ -375,6 +375,7 @@ class OTAnalyticsApplication:
             file (Path): File to export the events to
             event_list_exporter (EventListExporter): Exporter building the format
         """
+        self.create_events()
         self._datastore.export_event_list_file(file, event_list_exporter)
 
     def get_supported_export_formats(self) -> Iterable[ExportFormat]:
