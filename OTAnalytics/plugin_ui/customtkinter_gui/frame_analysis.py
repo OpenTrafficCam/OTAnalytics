@@ -51,7 +51,7 @@ class FrameAnalysis(EmbeddedCTkFrame):
     def _get_widgets(self) -> None:
         self._button_create_events = CTkButton(
             master=self,
-            text="Assign flows",
+            text="Update Flow Highlighting",
             command=self._create_events,
         )
         self._button_save_eventlist = CTkButton(
