@@ -3,6 +3,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from OTAnalytics.application.config import DEFAULT_EVENTLIST_FILE_TYPE
+from OTAnalytics.application.datastore import EventListParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import (
@@ -13,9 +15,11 @@ from OTAnalytics.domain.event import (
     Event,
 )
 from OTAnalytics.domain.section import Section
+from OTAnalytics.plugin_parser.otvision_parser import OtEventListParser
 
 OTC_EXCEL_FORMAT_NAME = "Excel (OpenTrafficCam)"
 OTC_CSV_FORMAT_NAME = "CSV (OpenTrafficCam)"
+OTC_OTEVENTS_FORMAT_NAME = "OTEvents (OpenTrafficCam)"
 
 
 class EventListDataFrameBuilder:
@@ -111,6 +115,22 @@ class EventListCSVExporter(EventListExporter):
         return OTC_CSV_FORMAT_NAME
 
 
+class EventListOteventsExporter(EventListExporter):
+    def __init__(self, event_list_parser: EventListParser) -> None:
+        self._event_list_parser = event_list_parser
+
+    def export(
+        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+    ) -> None:
+        self._event_list_parser.serialize(events, sections, file)
+
+    def get_extension(self) -> str:
+        return DEFAULT_EVENTLIST_FILE_TYPE
+
+    def get_name(self) -> str:
+        return OTC_OTEVENTS_FORMAT_NAME
+
+
 class EventListDictPrinter(EventListExporter):
     def export(
         self, events: Iterable[Event], sections: Iterable[Section], file: Path
@@ -154,4 +174,5 @@ class EventListDataFramePrinter(EventListExporter):
 AVAILABLE_EVENTLIST_EXPORTERS: dict[str, EventListExporter] = {
     OTC_EXCEL_FORMAT_NAME: EventListExcelExporter(),
     OTC_CSV_FORMAT_NAME: EventListCSVExporter(),
+    OTC_OTEVENTS_FORMAT_NAME: EventListOteventsExporter(OtEventListParser()),
 }
