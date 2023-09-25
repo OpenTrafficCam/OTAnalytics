@@ -37,6 +37,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
+from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -664,6 +665,7 @@ class TestTrafficCounting:
     def test_count_traffic(self) -> None:
         event_repository = Mock(spec=EventRepository)
         flow_repository = Mock(spec=FlowRepository)
+        create_events = Mock(spec=CreateEvents)
         road_user_assigner = Mock(spec=RoadUserAssigner)
         tagger_factory = Mock(spec=TaggerFactory)
         tagger = Mock(spec=Tagger)
@@ -698,6 +700,7 @@ class TestTrafficCounting:
         use_case = ExportTrafficCounting(
             event_repository,
             flow_repository,
+            create_events,
             road_user_assigner,
             tagger_factory,
             exporter_factory,
@@ -707,6 +710,7 @@ class TestTrafficCounting:
 
         event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
+        create_events.assert_called_once()
         road_user_assigner.assign.assert_called_once()
         tagger_factory.create_tagger.assert_called_once_with(counting_specification)
         assignments.tag.assert_called_once_with(tagger)
