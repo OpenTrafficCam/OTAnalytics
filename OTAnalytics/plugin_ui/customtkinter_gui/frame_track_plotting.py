@@ -1,12 +1,13 @@
 import tkinter
 from typing import Any, Sequence
 
-from customtkinter import CTkCheckBox, CTkLabel
+from customtkinter import CTkButton, CTkCheckBox, CTkLabel
 
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import Layer
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
@@ -20,16 +21,35 @@ class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
         super().__init__(**kwargs)
         self._view_model = viewmodel
         self._layers = layers
-        self.get_widgets()
+        self._get_widgets()
+        self._place_widgets()
         self.introduce_to_viewmodel()
 
-    def get_widgets(self) -> None:
-        PADY = 10
+    def _get_widgets(self) -> None:
+        self._button_update_highlight_flows = CTkButton(
+            master=self,
+            text="Update Flow Highlighting",
+            command=self._create_events,
+        )
+
+    def _place_widgets(self) -> None:
+        pady = 10
         for idx, layer in enumerate(self._layers):
             checkbox_layer = CheckBoxLayer(master=self, layer=layer)
             checkbox_layer.grid(
-                row=idx, column=0, padx=PADX, pady=(0, PADY), sticky=STICKY
+                row=idx, column=0, padx=PADX, pady=(0, pady), sticky=STICKY
             )
+        self._button_update_highlight_flows.grid(
+            row=len(self._layers),
+            column=0,
+            padx=PADX,
+            pady=(0, pady),
+            sticky=STICKY,
+        )
+
+    def _create_events(self) -> None:
+        logger().info("Creating events")
+        self._view_model.create_events()
 
     def introduce_to_viewmodel(self) -> None:
         self._view_model.set_frame_track_plotting(self)

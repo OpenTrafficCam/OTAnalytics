@@ -8,7 +8,6 @@ from OTAnalytics.application.config import (
     DEFAULT_EVENTLIST_FILE_STEM,
     DEFAULT_EVENTLIST_FILE_TYPE,
 )
-from OTAnalytics.application.logger import logger
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
@@ -49,11 +48,6 @@ class FrameAnalysis(EmbeddedCTkFrame):
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        self._button_create_events = CTkButton(
-            master=self,
-            text="Update Flow Highlighting",
-            command=self._create_events,
-        )
         self._button_save_eventlist = CTkButton(
             master=self,
             text="Save eventlist",
@@ -70,11 +64,8 @@ class FrameAnalysis(EmbeddedCTkFrame):
         # self._label_title.grid(
         #     row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         # )
-        self._button_create_events.grid(
-            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
         self._button_save_eventlist.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_export_eventlist.grid(
             row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY
@@ -82,10 +73,6 @@ class FrameAnalysis(EmbeddedCTkFrame):
         self.button_export_counts.grid(
             row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
-
-    def _create_events(self) -> None:
-        logger().info("Creating events")
-        self._viewmodel.create_events()
 
     def _save_eventlist(self) -> None:
         file = ask_for_save_file_name(
