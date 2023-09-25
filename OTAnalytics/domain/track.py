@@ -6,6 +6,7 @@ from typing import Iterable, Iterator, Optional
 
 from PIL import Image
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import Subject
@@ -636,9 +637,7 @@ class PythonTrackDataset(TrackDataset):
                 )
                 merged_tracks[current_track.id] = current_track
             except TrackHasNoDetectionError as build_error:
-                # TODO: log error
-                # Skip tracks with less than 2 detections
-                print(build_error)
+                logger().exception(build_error, exc_info=True)
         merged = self._tracks | merged_tracks
         return PythonTrackDataset(merged)
 
