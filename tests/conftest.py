@@ -6,7 +6,6 @@ from typing import Generator, Sequence, TypeVar
 
 import pytest
 
-from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
@@ -20,6 +19,7 @@ from OTAnalytics.domain.track import (
 from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
+    DEFAULT_TRACK_LENGTH_LIMIT,
     OtFlowParser,
     OttrkParser,
     PandasDetectionParser,
@@ -368,7 +368,7 @@ def cyclist_video(test_data_dir: Path) -> Path:
 def tracks(ottrk_path: Path) -> list[Track]:
     calculator = PandasByMaxConfidence()
     detection_parser = PandasDetectionParser(
-        calculator, track_length_limit=TRACK_LENGTH_LIMIT
+        calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
     )
     return OttrkParser(detection_parser).parse(ottrk_path).as_list()
     # ottrk_parser = OttrkParser(

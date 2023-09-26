@@ -14,7 +14,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     SimpleTaggerFactory,
 )
 from OTAnalytics.application.config import (
-    ALLOWED_TRACK_SIZE_PARSING,
     DEFAULT_EVENTLIST_FILE_STEM,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
@@ -49,6 +48,7 @@ from OTAnalytics.plugin_parser.export import (
     SimpleExporterFactory,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
+    DEFAULT_TRACK_LENGTH_LIMIT,
     OtEventListParser,
     OtFlowParser,
     OttrkParser,
@@ -198,7 +198,7 @@ class TestOTAnalyticsCli:
         return {
             self.TRACK_PARSER: OttrkParser(
                 PythonDetectionParser(
-                    ByMaxConfidence(), track_repository, ALLOWED_TRACK_SIZE_PARSING
+                    ByMaxConfidence(), track_repository, DEFAULT_TRACK_LENGTH_LIMIT
                 ),
             ),
             self.FLOW_PARSER: OtFlowParser(),

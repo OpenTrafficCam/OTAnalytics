@@ -12,7 +12,10 @@ from pandas import DataFrame
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
 from OTAnalytics.application import project
-from OTAnalytics.application.config import ALLOWED_TRACK_SIZE_PARSING
+from OTAnalytics.application.config import (
+    ALLOWED_TRACK_SIZE_PARSING,
+    TRACK_LENGTH_LIMIT,
+)
 from OTAnalytics.application.datastore import (
     ConfigParser,
     EventListParser,
@@ -25,6 +28,7 @@ from OTAnalytics.application.datastore import (
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import event, flow, geometry, section, track, video
+from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -312,12 +316,39 @@ class DetectionParser(ABC):
         raise NotImplementedError
 
 
+@dataclass(frozen=True)
+class TrackLengthLimit(DataclassValidation):
+    lower_bound: int
+    upper_bound: int
+
+    def _validate(self) -> None:
+        if self.lower_bound < 0:
+            raise ValueError(
+                f"Lower bound of track length limit must be greater than or equal to 0 "
+                f"but is {self.lower_bound}"
+            )
+        if self.upper_bound <= self.lower_bound:
+            raise ValueError(
+                f"Upper bound of track length limit must be greater than to lower bound"
+                f" ({self.lower_bound} but is {self.upper_bound}"
+            )
+
+    def __str__(self) -> str:
+        return f"lower bound: {self.lower_bound}, upper bound: {self.upper_bound}"
+
+
+DEFAULT_TRACK_LENGTH_LIMIT = TrackLengthLimit(
+    ALLOWED_TRACK_SIZE_PARSING,
+    TRACK_LENGTH_LIMIT,
+)
+
+
 class PythonDetectionParser(DetectionParser):
     def __init__(
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
-        track_length_limit: int = ALLOWED_TRACK_SIZE_PARSING,
+        track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
     ):
         self._track_classification_calculator = track_classification_calculator
         self._track_repository = track_repository
@@ -341,26 +372,34 @@ class PythonDetectionParser(DetectionParser):
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
             all_detections = existing_detections + detections
-            sort_dets_by_occurrence = sorted(
-                all_detections, key=lambda det: det.occurrence
-            )
-            classification = self._track_classification_calculator.calculate(detections)
-            try:
-                current_track = PythonTrack(
-                    _id=track_id,
-                    _classification=classification,
-                    _detections=sort_dets_by_occurrence,
+            track_length = len(all_detections)
+            if (
+                self._track_length_limit.lower_bound
+                <= track_length
+                <= self._track_length_limit.upper_bound
+            ):
+                sort_dets_by_occurrence = sorted(
+                    all_detections, key=lambda det: det.occurrence
                 )
-                if len(current_track.detections) >= self._track_length_limit:
-                    tracks.append(current_track)
-                else:
-                    logger().warning(
-                        f"Trying to construct track (track_id={current_track.id}) "
-                        f"with less than {self._track_length_limit} detections."
+                classification = self._track_classification_calculator.calculate(
+                    detections
+                )
+                try:
+                    current_track = PythonTrack(
+                        _id=track_id,
+                        _classification=classification,
+                        _detections=sort_dets_by_occurrence,
                     )
-            except TrackHasNoDetectionError as build_error:
-                # Skip tracks with no detections
-                logger().warning(build_error)
+                    tracks.append(current_track)
+                except TrackHasNoDetectionError as build_error:
+                    # Skip tracks with no detections
+                    logger().warning(build_error)
+            else:
+                logger().warning(
+                    f"Trying to construct track (track_id={track_id}). "
+                    f"Number of detections ({track_length} detections) is outside "
+                    f"the allowed bounds ({self._track_length_limit})."
+                )
 
         return PythonTrackDataset.from_list(
             tracks, self._track_classification_calculator
@@ -414,7 +453,7 @@ class PandasDetectionParser(DetectionParser):
     def __init__(
         self,
         calculator: PandasTrackClassificationCalculator,
-        track_length_limit: int,
+        track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
     ) -> None:
         self._calculator = calculator
         self._track_length_limit = track_length_limit
@@ -455,8 +494,17 @@ class PandasDetectionParser(DetectionParser):
         )
         tracks_by_size = data.groupby(by=[track.TRACK_ID]).size().reset_index()
         track_ids_to_remain = tracks_by_size.loc[
-            tracks_by_size[0] >= self._track_length_limit, track.TRACK_ID
+            (tracks_by_size[0] >= self._track_length_limit.lower_bound)
+            & (tracks_by_size[0] <= self._track_length_limit.upper_bound),
+            track.TRACK_ID,
         ]
+        # TODO log removed tracks
+        # logger().warning(
+        #    f"Trying to construct track (track_id={track_id}). "
+        #    f"Number of detections ({track_length} detections) is outside "
+        #    f"the allowed bounds ({self._track_length_limit})."
+        # )
+
         tracks_to_remain = data.loc[
             data[track.TRACK_ID].isin(track_ids_to_remain)
         ].copy()

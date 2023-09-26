@@ -14,7 +14,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.config import ALLOWED_TRACK_SIZE_PARSING
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -128,6 +127,7 @@ from OTAnalytics.plugin_parser.export import (
     SimpleExporterFactory,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
+    DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
     OtConfigParser,
     OtEventListParser,
@@ -486,7 +486,7 @@ class ApplicationStarter:
     def _create_track_parser(self) -> TrackParser:
         calculator = PandasByMaxConfidence()
         detection_parser = PandasDetectionParser(
-            calculator, track_length_limit=ALLOWED_TRACK_SIZE_PARSING
+            calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
         )
         return OttrkParser(detection_parser)
 
