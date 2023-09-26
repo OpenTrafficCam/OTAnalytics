@@ -115,16 +115,21 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
 
     def get_ids(self) -> Iterable[TrackId]:
         if self._other:
-            track_ids = self._other.get_ids()
-
-            tracks: list[Track] = []
-            for track_id in track_ids:
-                if track := self._track_repository.get_for(track_id):
-                    tracks.append(track)
+            tracks = self._get_other_track_ids()
         else:
             tracks = self._track_repository.get_all()
 
         return self._filter(tracks)
+
+    def _get_other_track_ids(self) -> Iterable[Track]:
+        if self._other:
+            track_ids = self._other.get_ids()
+            tracks: list[Track] = []
+            for track_id in track_ids:
+                if track := self._track_repository.get_for(track_id):
+                    tracks.append(track)
+            return tracks
+        return []
 
     def _filter(self, tracks: Iterable[Track]) -> Iterable[TrackId]:
         date_range = self._track_view_state.filter_element.get().date_range

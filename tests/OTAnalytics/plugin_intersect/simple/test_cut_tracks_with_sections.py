@@ -22,6 +22,7 @@ from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import (
     Detection,
+    PythonDetection,
     Track,
     TrackClassificationCalculator,
     TrackId,
@@ -36,7 +37,7 @@ from tests.conftest import TrackBuilder as TrackBuilderForTesting
 
 
 def create_mock_detection(occurrence: datetime) -> Detection:
-    return Detection(
+    return PythonDetection(
         "car", 0.7, 0, 0, 1, 1, 1, occurrence, False, TrackId("Default"), "my_video.mp4"
     )
 
