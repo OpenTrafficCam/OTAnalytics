@@ -406,6 +406,7 @@ class ApplicationStarter:
             image_updater.notify_section_changed
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
+        event_repository.register_observer(image_updater.notify_events)
 
         for layer in layers:
             layer.register(image_updater.notify_layers)
