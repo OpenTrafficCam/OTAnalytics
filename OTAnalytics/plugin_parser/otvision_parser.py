@@ -521,13 +521,8 @@ class OttrkParser(TrackParser):
     `Tracks`.
 
     Args:
-        track_classification_calculator (TrackClassificationCalculator): determines
-            a tracks max class.
-        track_repository (TrackRepository): the track repository.
-        track_file_repository (TrackFileRepository): the track file repository.
-        track_length_limit (int): tracks with length above the limit will not be
-            parsed.
-        format_fixer (OttrkFormatFixer):to fix older ottrk version files.
+        detection_parser (DetectionParser): parses the given detections.
+        format_fixer (OttrkFormatFixer): to fix older ottrk version files.
     """
 
     def __init__(
