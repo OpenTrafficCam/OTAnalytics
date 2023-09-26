@@ -370,6 +370,31 @@ class ApplicationStarter:
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
         )
+        application.register_video_observer(dummy_viewmodel)
+        application.register_sections_observer(dummy_viewmodel)
+        application.register_flows_observer(dummy_viewmodel)
+        application.register_flow_changed_observer(dummy_viewmodel._on_flow_changed)
+        application.track_view_state.selected_videos.register(
+            dummy_viewmodel._update_selected_videos
+        )
+        application.section_state.selected_sections.register(
+            dummy_viewmodel._update_selected_sections
+        )
+        application.flow_state.selected_flows.register(
+            dummy_viewmodel._update_selected_flows
+        )
+        application.track_view_state.background_image.register(
+            dummy_viewmodel._on_background_updated
+        )
+        application.track_view_state.track_offset.register(
+            dummy_viewmodel._update_offset
+        )
+        application.track_view_state.filter_element.register(
+            dummy_viewmodel._update_date_range
+        )
+        application.action_state.action_running.register(
+            dummy_viewmodel._notify_action_running_state
+        )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
         # cut_tracks_intersecting_section.register(

@@ -18,6 +18,7 @@ DEFAULT_TRACK_FILE_TYPE: str = "ottrk"
 DEFAULT_SECTIONS_FILE_TYPE: str = "otflow"
 DEFAULT_COUNTING_INTERVAL_IN_MINUTES: int = 15
 DEFAULT_TRACK_OFFSET: RelativeOffsetCoordinate = RelativeOffsetCoordinate(0.5, 0.5)
+DEFAULT_PROGRESSBAR_STEP_PERCENTAGE: int = 5
 
 OS: str = platform.system()
 """OS OTAnalyitcs is currently running on"""

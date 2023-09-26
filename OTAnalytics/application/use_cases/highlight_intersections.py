@@ -89,6 +89,7 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
         for assignment in assignments:
             if assignment.assignment.id in self._flow_state.selected_flows.get():
                 ids.add(TrackId(assignment.road_user))
+        print(f"Tracks assigned to selected flow(s): {len(ids)}")
         return ids
 
 
