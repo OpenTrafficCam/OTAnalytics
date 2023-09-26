@@ -498,12 +498,14 @@ class PandasDetectionParser(DetectionParser):
             & (tracks_by_size[0] <= self._track_length_limit.upper_bound),
             track.TRACK_ID,
         ]
-        # TODO log removed tracks
-        # logger().warning(
-        #    f"Trying to construct track (track_id={track_id}). "
-        #    f"Number of detections ({track_length} detections) is outside "
-        #    f"the allowed bounds ({self._track_length_limit})."
-        # )
+        all_track_ids = tracks_by_size[track.TRACK_ID].unique()
+        too_long_track_ids = set(all_track_ids) - set(track_ids_to_remain)
+        if len(too_long_track_ids) > 0:
+            logger().warning(
+                f"Number of detections of the following tracks exceeds the "
+                f"allowed bounds ({self._track_length_limit})."
+                f"Track ids: {too_long_track_ids}"
+            )
 
         tracks_to_remain = data.loc[
             data[track.TRACK_ID].isin(track_ids_to_remain)
