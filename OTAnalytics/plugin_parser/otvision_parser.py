@@ -356,17 +356,6 @@ class PythonDetectionParser(DetectionParser):
         self._path_cache: dict[str, Path] = {}
 
     def parse_tracks(self, dets: list[dict], metadata_video: dict) -> TrackDataset:
-        """Parse the detections of ottrk located at ottrk["data"]["detections"].
-
-        This method will also sort the detections belonging to a track by their
-        occurrence.
-
-        Args:
-            dets (list[dict]): the detections in dict format.
-
-        Returns:
-            list[Track]: the tracks.
-        """
         tracks_dict = self._parse_detections(dets, metadata_video)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
