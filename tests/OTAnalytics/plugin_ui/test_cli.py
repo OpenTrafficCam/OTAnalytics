@@ -191,6 +191,7 @@ class TestOTAnalyticsCli:
         export_counts = ExportTrafficCounting(
             event_repository,
             flow_repository,
+            create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleTaggerFactory(track_repository),
             FillZerosExporterFactory(SimpleExporterFactory()),
