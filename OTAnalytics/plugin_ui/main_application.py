@@ -298,7 +298,7 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(
-            event_repository, flow_repository, track_repository
+            event_repository, flow_repository, track_repository, create_events
         )
         load_otflow = self._create_use_case_load_otflow(
             clear_all_sections,
@@ -444,7 +444,7 @@ class ApplicationStarter:
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
         export_counts = self._create_export_counts(
-            event_repository, flow_repository, track_repository
+            event_repository, flow_repository, track_repository, create_events
         )
         OTAnalyticsCli(
             cli_args,
@@ -952,15 +952,17 @@ class ApplicationStarter:
     def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
         return FilterElementSettingRestorer()
 
+    @staticmethod
     def _create_export_counts(
-        self,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
         track_repository: TrackRepository,
+        create_events: CreateEvents,
     ) -> ExportCounts:
         return ExportTrafficCounting(
             event_repository,
             flow_repository,
+            create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleTaggerFactory(track_repository),
             FillZerosExporterFactory(SimpleExporterFactory()),
