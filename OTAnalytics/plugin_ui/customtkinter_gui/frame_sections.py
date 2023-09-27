@@ -100,6 +100,7 @@ class FrameSections(AbstractCTkFrame):
         self.button_save.grid(row=4, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _set_button_state_categories(self) -> None:
+        self._general_buttons = [self.button_save, self.button_load]
         self._add_buttons = [
             self.button_add_line,
             self.button_add_area,
@@ -116,6 +117,9 @@ class FrameSections(AbstractCTkFrame):
         self.set_enabled_add_buttons(False)
         self.set_enabled_change_single_item_buttons(False)
         self.set_enabled_change_multiple_items_buttons(False)
+
+    def get_general_buttons(self) -> list[CTkButton]:
+        return self._general_buttons
 
     def get_add_buttons(self) -> list[CTkButton]:
         return self._add_buttons

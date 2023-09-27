@@ -187,8 +187,22 @@ class DummyViewModel(
         self._update_enabled_buttons()
 
     def _update_enabled_buttons(self) -> None:
+        self._update_enabled_general_buttons()
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
+
+    def _update_enabled_general_buttons(self) -> None:
+        if self._frame_project is None:
+            raise MissingInjectedInstanceError(type(self._frame_project).__name__)
+        if self._frame_sections is None:
+            raise MissingInjectedInstanceError(type(self._frame_sections).__name__)
+        if self._frame_flows is None:
+            raise MissingInjectedInstanceError(type(self._frame_flows).__name__)
+        action_running = self._application.action_state.action_running.get()
+        general_buttons_enabled = not action_running
+        self._frame_project.set_enabled_general_buttons(general_buttons_enabled)
+        self._frame_sections.set_enabled_general_buttons(general_buttons_enabled)
+        self._frame_flows.set_enabled_general_buttons(general_buttons_enabled)
 
     def _update_enabled_section_buttons(self) -> None:
         if self._frame_sections is None:
