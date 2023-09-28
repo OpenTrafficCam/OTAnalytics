@@ -99,6 +99,7 @@ class FrameFlows(AbstractCTkFrame):
         ]
 
     def _set_initial_button_states(self) -> None:
+        self.set_enabled_general_buttons(True)
         self.set_enabled_add_buttons(False)
         self.set_enabled_change_single_item_buttons(False)
         self.set_enabled_change_multiple_items_buttons(False)

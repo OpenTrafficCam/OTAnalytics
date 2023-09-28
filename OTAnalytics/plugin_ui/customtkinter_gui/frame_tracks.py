@@ -15,6 +15,7 @@ class TracksFrame(AbstractFrameTracks):
         self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
+        self._set_initial_button_states()
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
@@ -38,9 +39,6 @@ class TracksFrame(AbstractFrameTracks):
         if current_track_offset := self._viewmodel.get_track_offset():
             self.update_offset(*current_track_offset)
 
-    def get_general_buttons(self) -> list[CTkButton]:
-        return [self.button_load_tracks, self.button_change_to_section_offset]
-
     def _place_widgets(self) -> None:
         self.button_load_tracks.grid(
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
@@ -52,6 +50,12 @@ class TracksFrame(AbstractFrameTracks):
             row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
 
+    def _set_initial_button_states(self) -> None:
+        self.set_enabled_general_buttons(True)
+        self.set_enabled_add_buttons(True)
+        self.set_enabled_change_single_item_buttons(False)
+        self.set_enabled_change_multiple_items_buttons(False)
+
     def update_offset(self, new_offset_x: float, new_offset_y: float) -> None:
         self._frame_bbox_offset.set_relative_offset_coordintes(
             x=new_offset_x, y=new_offset_y
@@ -59,3 +63,6 @@ class TracksFrame(AbstractFrameTracks):
 
     def _on_change_to_section_offset(self) -> None:
         self._viewmodel.change_track_offset_to_section_offset()
+
+    def get_general_buttons(self) -> list[CTkButton]:
+        return [self.button_load_tracks, self.button_change_to_section_offset]
