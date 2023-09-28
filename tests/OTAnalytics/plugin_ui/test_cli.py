@@ -27,7 +27,10 @@ from OTAnalytics.application.use_cases.create_events import (
 )
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
-from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.section_repository import (
+    AddSection,
+    GetSectionsById,
+)
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -191,6 +194,7 @@ class TestOTAnalyticsCli:
         export_counts = ExportTrafficCounting(
             event_repository,
             flow_repository,
+            GetSectionsById(section_repository),
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleTaggerFactory(track_repository),

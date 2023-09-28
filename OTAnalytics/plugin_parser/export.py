@@ -8,15 +8,19 @@ from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
     LEVEL_END_TIME,
     LEVEL_FLOW,
+    LEVEL_FROM_SECTION,
     LEVEL_START_TIME,
+    LEVEL_TO_SECTION,
     Count,
     Exporter,
     ExporterFactory,
     FillEmptyCount,
     Tag,
     create_flow_tag,
+    create_from_section_tag,
     create_mode_tag,
     create_timeslot_tag,
+    create_to_section_tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
@@ -35,12 +39,15 @@ class CsvExport(Exporter):
         dataframe = self._set_column_order(dataframe)
         dataframe.to_csv(self.__create_path(), index=False)
 
-    def _set_column_order(self, dataframe: DataFrame) -> DataFrame:
+    @staticmethod
+    def _set_column_order(dataframe: DataFrame) -> DataFrame:
         desired_columns_order = [
             LEVEL_START_TIME,
             LEVEL_END_TIME,
             LEVEL_CLASSIFICATION,
             LEVEL_FLOW,
+            LEVEL_FROM_SECTION,
+            LEVEL_TO_SECTION,
         ]
         dataframe = dataframe[
             desired_columns_order
@@ -49,7 +56,8 @@ class CsvExport(Exporter):
 
         return dataframe
 
-    def __create_data_frame(self, counts: Count) -> DataFrame:
+    @staticmethod
+    def __create_data_frame(counts: Count) -> DataFrame:
         transformed = counts.to_dict()
         indexed: list[dict] = []
         for key, value in transformed.items():
@@ -111,7 +119,9 @@ class TagExploder:
                     start = self._specification.counting_specification.start + offset
                     interval_time = timedelta(seconds=interval)
                     tag = (
-                        create_flow_tag(flow)
+                        create_flow_tag(flow.name)
+                        .combine(create_from_section_tag(flow.from_section))
+                        .combine(create_to_section_tag(flow.to_section))
                         .combine(create_mode_tag(mode))
                         .combine(create_timeslot_tag(start, interval_time))
                     )

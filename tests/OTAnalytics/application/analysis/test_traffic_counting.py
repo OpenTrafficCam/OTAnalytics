@@ -38,6 +38,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -665,6 +666,7 @@ class TestTrafficCounting:
     def test_count_traffic(self) -> None:
         event_repository = Mock(spec=EventRepository)
         flow_repository = Mock(spec=FlowRepository)
+        get_sections_by_ids = Mock(spec=GetSectionsById)
         create_events = Mock(spec=CreateEvents)
         road_user_assigner = Mock(spec=RoadUserAssigner)
         tagger_factory = Mock(spec=TaggerFactory)
@@ -679,6 +681,7 @@ class TestTrafficCounting:
         counts = Mock(spec=Count)
         event_repository.get_all.return_value = events
         flow_repository.get_all.return_value = flows
+        get_sections_by_ids.return_value = []
         road_user_assigner.assign.return_value = assignments
         tagger_factory.create_tagger.return_value = tagger
         assignments.tag.return_value = tagged_assignments
@@ -695,11 +698,12 @@ class TestTrafficCounting:
             output_file="counts.csv",
         )
         export_specification = create_export_specification(
-            flows, counting_specification
+            flows, counting_specification, get_sections_by_ids
         )
         use_case = ExportTrafficCounting(
             event_repository,
             flow_repository,
+            get_sections_by_ids,
             create_events,
             road_user_assigner,
             tagger_factory,
