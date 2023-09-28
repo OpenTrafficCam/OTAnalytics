@@ -5,15 +5,15 @@ from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     ColumnResource,
     TreeviewTemplate,
 )
 
 
-class FrameVideos(EmbeddedCTkFrame):
+class FrameVideos(AbstractCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.grid_rowconfigure(0, weight=1)
@@ -24,7 +24,7 @@ class FrameVideos(EmbeddedCTkFrame):
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        pass
+        self._viewmodel.set_video_frame(self)
 
     def _get_widgets(self) -> None:
         self._frame_tree = CTkFrame(master=self)
@@ -54,6 +54,9 @@ class FrameVideos(EmbeddedCTkFrame):
         self.button_remove_videos.grid(
             row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def get_general_buttons(self) -> list[CTkButton]:
+        return [self.button_add_videos, self.button_remove_videos]
 
 
 COLUMN_VIDEO = "Video files"

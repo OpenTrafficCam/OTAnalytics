@@ -164,6 +164,7 @@ class DummyViewModel(
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
+        self._frame_videos: Optional[AbstractFrame] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_sections: Optional[AbstractFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
@@ -192,17 +193,19 @@ class DummyViewModel(
         self._update_enabled_flow_buttons()
 
     def _update_enabled_general_buttons(self) -> None:
-        if self._frame_project is None:
-            raise MissingInjectedInstanceError(type(self._frame_project).__name__)
-        if self._frame_sections is None:
-            raise MissingInjectedInstanceError(type(self._frame_sections).__name__)
-        if self._frame_flows is None:
-            raise MissingInjectedInstanceError(type(self._frame_flows).__name__)
+        frames = [
+            self._frame_tracks,
+            self._frame_videos,
+            self._frame_project,
+            self._frame_sections,
+            self._frame_flows,
+        ]
         action_running = self._application.action_state.action_running.get()
         general_buttons_enabled = not action_running
-        self._frame_project.set_enabled_general_buttons(general_buttons_enabled)
-        self._frame_sections.set_enabled_general_buttons(general_buttons_enabled)
-        self._frame_flows.set_enabled_general_buttons(general_buttons_enabled)
+        for frame in frames:
+            if frame is None:
+                raise MissingInjectedInstanceError(type(frame).__name__)
+            frame.set_enabled_general_buttons(general_buttons_enabled)
 
     def _update_enabled_section_buttons(self) -> None:
         if self._frame_sections is None:
@@ -461,6 +464,9 @@ class DummyViewModel(
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
+
+    def set_video_frame(self, frame: AbstractFrame) -> None:
+        self._frame_videos = frame
 
     def set_sections_frame(self, frame: AbstractFrame) -> None:
         self._frame_sections = frame
