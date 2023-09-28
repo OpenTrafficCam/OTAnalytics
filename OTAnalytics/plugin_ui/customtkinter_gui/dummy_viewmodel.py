@@ -124,6 +124,7 @@ LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
 OTFLOW = "otflow"
+MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 OTCONFIG = "otconfig"
@@ -189,6 +190,7 @@ class DummyViewModel(
 
     def _update_enabled_buttons(self) -> None:
         self._update_enabled_general_buttons()
+        self._update_enabled_video_buttons()
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
 
@@ -206,6 +208,17 @@ class DummyViewModel(
             if frame is None:
                 raise MissingInjectedInstanceError(type(frame).__name__)
             frame.set_enabled_general_buttons(general_buttons_enabled)
+
+    def _update_enabled_video_buttons(self) -> None:
+        if self._frame_videos is None:
+            raise MissingInjectedInstanceError(MISSING_VIDEO_FRAME_MESSAGE)
+        action_running = self._application.action_state.action_running.get()
+        selected_videos: list[Video] = self._application.get_selected_videos()
+        any_video_selected = len(selected_videos) > 0
+        multiple_videos_enabled = (not action_running) and any_video_selected
+        self._frame_videos.set_enabled_change_multiple_items_buttons(
+            multiple_videos_enabled
+        )
 
     def _update_enabled_section_buttons(self) -> None:
         if self._frame_sections is None:
@@ -337,6 +350,7 @@ class DummyViewModel(
         if self._treeview_videos is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self._treeview_videos.update_selected_items(current_paths)
+        self._update_enabled_video_buttons()
 
     def add_video(self) -> None:
         track_files = askopenfilenames(
