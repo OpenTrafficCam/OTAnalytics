@@ -38,6 +38,9 @@ class TracksFrame(AbstractFrameTracks):
         if current_track_offset := self._viewmodel.get_track_offset():
             self.update_offset(*current_track_offset)
 
+    def get_general_buttons(self) -> list[CTkButton]:
+        return [self.button_load_tracks, self.button_change_to_section_offset]
+
     def _place_widgets(self) -> None:
         self.button_load_tracks.grid(
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
