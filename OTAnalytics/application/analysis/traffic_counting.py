@@ -164,12 +164,15 @@ class SingleTag(Tag):
         return {self.level: self.id}
 
 
-def create_from_section_tag(section_name: str) -> Tag:
-    return SingleTag(level=LEVEL_FROM_SECTION, id=section_name)
-
-
-def create_to_section_tag(section_name: str) -> Tag:
-    return SingleTag(level=LEVEL_TO_SECTION, id=section_name)
+def create_section_info_tag(from_section: str, to_section: str) -> Tag:
+    return MultiTag(
+        frozenset(
+            [
+                SingleTag(LEVEL_FROM_SECTION, from_section),
+                SingleTag(LEVEL_TO_SECTION, to_section),
+            ]
+        )
+    )
 
 
 def create_flow_tag(flow_name: str) -> Tag:
@@ -276,6 +279,41 @@ class FillEmptyCount(CountDecorator):
         empty = {tag: 0 for tag in self.tags}
         other_result = super().to_dict()
         return empty | other_result
+
+
+@dataclass(frozen=True)
+class AddSectionInformation(CountDecorator):
+    """Add section information of flows."""
+
+    flow_name_info: dict[str, FlowNameDto]
+
+    def to_dict(self) -> dict[Tag, int]:
+        result: dict[Tag, int] = {}
+        for tag, count in super().to_dict().items():
+            flow_name = self._get_flow_name_from(tag)
+            new_tag = tag.combine(
+                create_section_info_tag(
+                    self.flow_name_info[flow_name].from_section,
+                    self.flow_name_info[flow_name].to_section,
+                )
+            )
+            result[new_tag] = count
+        return result
+
+    def _get_flow_name_from(self, tag: Tag) -> str:
+        found: str = ""
+        for _tags in tag.contained_tags():
+            match _tags:
+                case SingleTag(_) as single_tag:
+                    if single_tag.level == LEVEL_FLOW:
+                        found = single_tag.id
+                        break
+                case MultiTag(_) as multi_tag:
+                    if found := self._get_flow_name_from(multi_tag):
+                        break
+                case invalid_tag:
+                    raise ValueError(f"Unknown tag type '{invalid_tag}'")
+        return found
 
 
 @dataclass(frozen=True)
@@ -782,6 +820,7 @@ class Exporter(ABC):
     Interface to abstract various export formats.
     """
 
+    @abstractmethod
     def export(self, counts: Count) -> None:
         """
         Export the given counts.
@@ -797,6 +836,7 @@ class ExporterFactory(ABC):
     Factory to create the exporter for the given CountingSpecificationDto.
     """
 
+    @abstractmethod
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """
         Returns an iterable of the supported export formats.
@@ -806,6 +846,7 @@ class ExporterFactory(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         """
         Create the exporter for the given CountingSpecificationDto.

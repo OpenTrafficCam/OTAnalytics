@@ -7,8 +7,11 @@ from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
     LEVEL_END_TIME,
     LEVEL_FLOW,
+    LEVEL_FROM_SECTION,
     LEVEL_START_TIME,
+    LEVEL_TO_SECTION,
     UNCLASSIFIED,
+    AddSectionInformation,
     CombinedTagger,
     Count,
     CountableAssignments,
@@ -36,6 +39,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
+    FlowNameDto,
 )
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
@@ -133,6 +137,47 @@ class TestFillEmptyCount:
 
         assert dict(actual) == dict(filled_dict)
         other.to_dict.assert_called_once()
+
+
+class TestAddSectionInformation:
+    @pytest.fixture
+    def flow_name_info(self) -> dict[str, FlowNameDto]:
+        first_flow_dto = FlowNameDto("First Flow", "section a", "section b")
+        # second_flow_dto = FlowNameDto("Second Flow", "section c", "section d")
+        return {
+            first_flow_dto.name: first_flow_dto,
+            # second_flow_dto.name: second_flow_dto,
+        }
+
+    def test_add_section_info(self, flow_name_info: dict[str, FlowNameDto]) -> None:
+        mode = "mode"
+        flow = "First Flow"
+        tag = MultiTag(
+            frozenset(
+                [
+                    SingleTag(LEVEL_CLASSIFICATION, id=mode),
+                    SingleTag(LEVEL_FLOW, id=flow),
+                ]
+            )
+        )
+
+        count = Mock()
+        count.to_dict.return_value = {tag: 1}
+        add_section_info = AddSectionInformation(count, flow_name_info)
+        result = add_section_info.to_dict()
+        expected_tag = tag.combine(
+            MultiTag(
+                frozenset(
+                    [
+                        SingleTag(
+                            LEVEL_FROM_SECTION, flow_name_info[flow].from_section
+                        ),
+                        SingleTag(LEVEL_TO_SECTION, flow_name_info[flow].to_section),
+                    ]
+                )
+            )
+        )
+        assert result == {expected_tag: 1}
 
 
 def create_event(

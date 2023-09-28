@@ -7,10 +7,8 @@ from OTAnalytics.application.analysis.traffic_counting import (
     FillEmptyCount,
     Tag,
     create_flow_tag,
-    create_from_section_tag,
     create_mode_tag,
     create_timeslot_tag,
-    create_to_section_tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -40,7 +38,7 @@ def execute_explode(
     )
     specification = ExportSpecificationDto(
         counting_specification=counting_specification,
-        flow_names=flow_names,
+        flow_name_info=flow_names,
     )
     exploder = TagExploder(specification)
     tags = exploder.explode()
@@ -62,8 +60,6 @@ class TestTagExploder:
         flow_names = [flow_name_dto]
         expected_tags: list[Tag] = [
             create_flow_tag(flow_name_dto.name)
-            .combine(create_from_section_tag(flow_name_dto.from_section))
-            .combine(create_to_section_tag(flow_name_dto.to_section))
             .combine(create_mode_tag("first-mode"))
             .combine(create_timeslot_tag(start, timedelta(minutes=10)))
         ]
@@ -93,43 +89,27 @@ class TestTagExploder:
         flow_names = [first_flow, second_flow]
         expected_tags: list[Tag] = [
             create_flow_tag(first_flow.name)
-            .combine(create_from_section_tag(first_flow.from_section))
-            .combine(create_to_section_tag(first_flow.to_section))
             .combine(create_mode_tag(first_mode))
             .combine(create_timeslot_tag(start, interval)),
             create_flow_tag(first_flow.name)
-            .combine(create_from_section_tag(first_flow.from_section))
-            .combine(create_to_section_tag(first_flow.to_section))
             .combine(create_mode_tag(first_mode))
             .combine(create_timeslot_tag(start + interval, interval)),
             create_flow_tag(first_flow.name)
-            .combine(create_from_section_tag(first_flow.from_section))
-            .combine(create_to_section_tag(first_flow.to_section))
             .combine(create_mode_tag(second_mode))
             .combine(create_timeslot_tag(start, interval)),
             create_flow_tag(first_flow.name)
-            .combine(create_from_section_tag(first_flow.from_section))
-            .combine(create_to_section_tag(first_flow.to_section))
             .combine(create_mode_tag(second_mode))
             .combine(create_timeslot_tag(start + interval, interval)),
             create_flow_tag(second_flow.name)
-            .combine(create_from_section_tag(second_flow.from_section))
-            .combine(create_to_section_tag(second_flow.to_section))
             .combine(create_mode_tag(first_mode))
             .combine(create_timeslot_tag(start, interval)),
             create_flow_tag(second_flow.name)
-            .combine(create_from_section_tag(second_flow.from_section))
-            .combine(create_to_section_tag(second_flow.to_section))
             .combine(create_mode_tag(first_mode))
             .combine(create_timeslot_tag(start + interval, interval)),
             create_flow_tag(second_flow.name)
-            .combine(create_from_section_tag(second_flow.from_section))
-            .combine(create_to_section_tag(second_flow.to_section))
             .combine(create_mode_tag(second_mode))
             .combine(create_timeslot_tag(start, interval)),
             create_flow_tag(second_flow.name)
-            .combine(create_from_section_tag(second_flow.from_section))
-            .combine(create_to_section_tag(second_flow.to_section))
             .combine(create_mode_tag(second_mode))
             .combine(create_timeslot_tag(start + interval, interval)),
         ]

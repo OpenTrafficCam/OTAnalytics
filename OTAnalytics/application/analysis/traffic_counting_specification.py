@@ -38,7 +38,7 @@ class ExportSpecificationDto:
     """
 
     counting_specification: CountingSpecificationDto
-    flow_names: list[FlowNameDto]
+    flow_name_info: list[FlowNameDto]
 
     @property
     def format(self) -> str:
