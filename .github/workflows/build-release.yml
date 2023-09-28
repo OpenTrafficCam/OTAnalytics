@@ -2,15 +2,15 @@
 name: Build Release Version
 
 on:
-  # Build release assest if release is created.
+  # Create release if tag is pushed to main.
   # Needs: secrets.PLATOMO_BUILDER_ACCESS
-  release:
-    types:
-      - created
+  push:
+    tags:
+      - "v.*.*.*"
 
 jobs:
   test:
-    if: github.ref_type == "tag"
+    if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/test.yml'
   create_release:
     needs: test
@@ -19,6 +19,6 @@ jobs:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:
       package-version: ${{ github.ref_name }}
-      draft-release: true
-      pre-release: true
+      draft-release: false
+      pre-release: false
       delete-existing: false
