@@ -427,7 +427,7 @@ class PythonDetectionParser(DetectionParser):
                     float(det_dict[ottrk_format.OCCURRENCE]), tz=timezone.utc
                 ),
                 _interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-                _track_id=TrackId(det_dict[ottrk_format.TRACK_ID]),
+                _track_id=TrackId(str(det_dict[ottrk_format.TRACK_ID])),
                 _video_name=metadata_video[ottrk_format.FILENAME]
                 + metadata_video[ottrk_format.FILETYPE],
             )
@@ -475,6 +475,7 @@ class PandasDetectionParser(DetectionParser):
             },
             inplace=True,
         )
+        data[track.TRACK_ID] = data[track.TRACK_ID].astype(str)
         data[track.VIDEO_NAME] = video_name
         data[track.OCCURRENCE] = (
             data[track.OCCURRENCE]
