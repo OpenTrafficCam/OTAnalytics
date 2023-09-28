@@ -8,7 +8,6 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     ColumnResource,
     TreeviewTemplate,
@@ -129,10 +128,6 @@ class FrameSections(AbstractCTkFrame):
 
     def get_multiple_items_buttons(self) -> list[CTkButton]:
         return self._multiple_items_buttons
-
-    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
-        x, y = get_widget_position(self, offset=offset)
-        return x, y
 
 
 class TreeviewSections(TreeviewTemplate):

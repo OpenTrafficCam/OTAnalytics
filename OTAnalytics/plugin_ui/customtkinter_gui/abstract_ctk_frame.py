@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from customtkinter import CTkButton, CTkFrame
+from customtkinter import CTkButton
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
@@ -8,9 +8,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     STATE_DISABLED,
     STATE_NORMAL,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
+from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
 
-class AbstractCTkFrame(AbstractFrame, WidgetPositionProvider, CTkFrame):
+class AbstractCTkFrame(AbstractFrame, WidgetPositionProvider, EmbeddedCTkFrame):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         raise NotImplementedError
@@ -32,18 +34,18 @@ class AbstractCTkFrame(AbstractFrame, WidgetPositionProvider, CTkFrame):
         for button in buttons:
             button.configure(state=new_state)
 
-    @abstractmethod
     def get_general_buttons(self) -> list[CTkButton]:
-        raise NotImplementedError
+        return []
 
-    @abstractmethod
     def get_add_buttons(self) -> list[CTkButton]:
-        raise NotImplementedError
+        return []
 
-    @abstractmethod
     def get_single_item_buttons(self) -> list[CTkButton]:
-        raise NotImplementedError
+        return []
 
-    @abstractmethod
     def get_multiple_items_buttons(self) -> list[CTkButton]:
-        raise NotImplementedError
+        return []
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        x, y = get_widget_position(self, offset=offset)
+        return x, y
