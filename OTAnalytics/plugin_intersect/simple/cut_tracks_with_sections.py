@@ -21,6 +21,8 @@ from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import (
     Detection,
+    PythonDetection,
+    PythonTrack,
     Track,
     TrackBuilder,
     TrackBuilderError,
@@ -191,7 +193,7 @@ class SimpleCutTrackSegmentBuilder(TrackBuilder):
                 "Track builder setup error occurred. TrackId not set."
             )
         detections = self._build_detections()
-        result = Track(
+        result = PythonTrack(
             self._track_id,
             self._class_calculator.calculate(detections),
             detections,
@@ -208,10 +210,10 @@ class SimpleCutTrackSegmentBuilder(TrackBuilder):
             raise TrackBuilderError(
                 "Track builder setup error occurred. TrackId not set."
             )
-        new_detections = []
+        new_detections: list[Detection] = []
         for detection in self._detections:
             new_detections.append(
-                Detection(
+                PythonDetection(
                     detection.classification,
                     detection.confidence,
                     detection.x,

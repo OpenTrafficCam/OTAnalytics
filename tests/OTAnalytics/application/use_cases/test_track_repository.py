@@ -14,7 +14,9 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
 )
 from OTAnalytics.domain.track import (
+    PythonTrackDataset,
     Track,
+    TrackDataset,
     TrackFileRepository,
     TrackId,
     TrackRepository,
@@ -22,8 +24,8 @@ from OTAnalytics.domain.track import (
 
 
 @pytest.fixture
-def tracks() -> list[Mock]:
-    return [Mock(spec=Track), Mock(spec=Track)]
+def tracks() -> TrackDataset:
+    return PythonTrackDataset.from_list([Mock(spec=Track), Mock(spec=Track)])
 
 
 @pytest.fixture
@@ -47,7 +49,7 @@ def track_file_repository(track_files: list[Mock]) -> Mock:
 
 
 class TestGetAllTracks:
-    def test_get_all_tracks(self, track_repository: Mock, tracks: list[Mock]) -> None:
+    def test_get_all_tracks(self, track_repository: Mock, tracks: TrackDataset) -> None:
         get_all_tracks = GetAllTracks(track_repository)
         result_tracks = get_all_tracks()
         assert result_tracks == tracks
@@ -63,7 +65,7 @@ class TestGetAllTrackIds:
 
 
 class TestAddAllTracks:
-    def test_add_all_tracks(self, track_repository: Mock, tracks: list[Track]) -> None:
+    def test_add_all_tracks(self, track_repository: Mock, tracks: TrackDataset) -> None:
         add_all_tracks = AddAllTracks(track_repository)
         add_all_tracks(tracks)
         track_repository.add_all.assert_called_once_with(tracks)
@@ -102,7 +104,9 @@ class TestGetTracksWithoutSingleDetections:
         track.detections = [Mock(), Mock(), Mock()]
         track_single_detection = Mock(spec=Track)
         track_single_detection.detections = [Mock()]
-        track_repository.get_all.return_value = [track, track_single_detection]
+        track_repository.get_all.return_value = PythonTrackDataset.from_list(
+            [track, track_single_detection]
+        )
 
         get_tracks = GetTracksWithoutSingleDetections(track_repository)
         actual_tracks = get_tracks()
