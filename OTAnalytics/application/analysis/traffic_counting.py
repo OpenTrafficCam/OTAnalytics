@@ -10,6 +10,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
     ExportSpecificationDto,
 )
+from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import SectionId
@@ -822,12 +823,14 @@ class ExportTrafficCounting(ExportCounts):
         self,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
+        create_events: CreateEvents,
         assigner: RoadUserAssigner,
         tagger_factory: TaggerFactory,
         exporter_factory: ExporterFactory,
     ) -> None:
         self._event_repository = event_repository
         self._flow_repository = flow_repository
+        self._create_events = create_events
         self._assigner = assigner
         self._tagger_factory = tagger_factory
         self._exporter_factory = exporter_factory
@@ -839,6 +842,7 @@ class ExportTrafficCounting(ExportCounts):
         Args:
             specification (CountingSpecificationDto): specification of the export
         """
+        self._create_events()
         events = self._event_repository.get_all()
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)

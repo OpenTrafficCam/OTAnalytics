@@ -26,6 +26,7 @@ from OTAnalytics.domain.track import (
     TrackImage,
     TrackListObserver,
 )
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
@@ -287,10 +288,13 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
-        if not tracks:
+        if isinstance(tracks, PandasTrackDataset):
+            return tracks.as_dataframe()
+        track_list = tracks.as_list()
+        if not track_list:
             return DataFrame()
 
-        return self._convert_tracks(tracks)
+        return self._convert_tracks(track_list)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -308,7 +312,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
         ):
             for detection in current_track.detections:
                 detection_dict = detection.to_dict()
-                detection_dict[track.CLASSIFICATION] = current_track.classification
+                detection_dict[
+                    track.TRACK_CLASSIFICATION
+                ] = current_track.classification
                 prepared.append(detection_dict)
 
         return self._sort_tracks(DataFrame(prepared))
@@ -504,7 +510,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
         seaborn.lineplot(
             x="x",
             y="y",
-            hue=track.CLASSIFICATION,
+            hue=track.TRACK_CLASSIFICATION,
             data=track_df,
             units=track.TRACK_ID,
             linewidth=0.6,
@@ -676,7 +682,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
         """
         canvas = FigureCanvasAgg(figure)
         canvas.draw()
-        bbox_contents = figure.canvas.copy_from_bbox(axes.bbox)
+        bbox_contents = canvas.copy_from_bbox(axes.bbox)
         left, bottom, right, top = bbox_contents.get_extents()
 
         image_array = numpy.frombuffer(bbox_contents.to_string(), dtype=numpy.uint8)
