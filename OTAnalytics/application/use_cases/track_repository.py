@@ -21,7 +21,7 @@ class GetAllTracks:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self) -> list[Track]:
+    def __call__(self) -> Iterable[Track]:
         return self._track_repository.get_all()
 
 
@@ -42,7 +42,7 @@ class GetTracksWithoutSingleDetections:
             list[Track]: tracks with at least two detections.
         """
         tracks = self._track_repository.get_all()
-        return [track for track in tracks if len(track.detections) > 1]
+        return [track for track in tracks.as_list() if len(track.detections) > 1]
 
 
 class GetAllTrackIds:

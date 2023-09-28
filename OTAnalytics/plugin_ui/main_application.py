@@ -1,7 +1,6 @@
 import logging
 from typing import Optional, Sequence
 
-from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -73,6 +72,7 @@ from OTAnalytics.application.use_cases.reset_project_config import ResetProjectC
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
+    GetAllSections,
     GetSectionsById,
     RemoveSection,
 )
@@ -98,12 +98,16 @@ from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
-    CalculateTrackClassificationByMaxConfidence,
+    ByMaxConfidence,
     TrackFileRepository,
     TrackIdProvider,
     TrackRepository,
 )
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasByMaxConfidence,
+    PandasTrackDataset,
+)
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
@@ -124,12 +128,14 @@ from OTAnalytics.plugin_parser.export import (
     SimpleExporterFactory,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
+    DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
     OtConfigParser,
     OtEventListParser,
     OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
+    PandasDetectionParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -137,13 +143,13 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     AVAILABLE_EVENTLIST_EXPORTERS,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CachedPandasTrackProvider,
     ColorPaletteProvider,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
+    PandasTrackProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
     TrackGeometryPlotter,
@@ -217,7 +223,7 @@ class ApplicationStarter:
         section_state = self._create_section_state(section_repository)
         flow_state = self._create_flow_state()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-        cached_pandas_track_provider = self._create_cached_pandas_track_provider(
+        cached_pandas_track_provider = self._create_pandas_track_provider(
             datastore, track_view_state, pulling_progressbar_builder
         )
         pandas_data_provider = self._wrap_pandas_track_offset_provider(
@@ -293,7 +299,7 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(
-            event_repository, flow_repository, track_repository
+            event_repository, flow_repository, track_repository, create_events
         )
         load_otflow = self._create_use_case_load_otflow(
             clear_all_sections,
@@ -392,9 +398,9 @@ class ApplicationStarter:
         )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
-        cut_tracks_intersecting_section.register(
-            cached_pandas_track_provider.on_tracks_cut
-        )
+        # cut_tracks_intersecting_section.register(
+        #    cached_pandas_track_provider.on_tracks_cut
+        # )
         cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
         dummy_viewmodel.register_observers()
         application.connect_observers()
@@ -415,12 +421,9 @@ class ApplicationStarter:
 
     def start_cli(self, cli_args: CliArguments) -> None:
         track_repository = self._create_track_repository()
-        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
-        track_parser = self._create_track_parser(
-            track_repository, track_file_repository
-        )
+        track_parser = self._create_track_parser()
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
@@ -438,10 +441,24 @@ class ApplicationStarter:
             get_tracks_without_single_detections,
             add_events,
         )
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            GetTracksWithoutSingleDetections(track_repository),
+            ShapelyIntersector(),
+        )
+        cut_tracks = self._create_cut_tracks_intersecting_section(
+            GetSectionsById(section_repository),
+            get_tracks_without_single_detections,
+            GetTracksFromIds(track_repository),
+            tracks_intersecting_sections,
+            AddAllTracks(track_repository),
+            RemoveTracks(track_repository),
+            RemoveSection(section_repository),
+            TrackViewState(),
+        )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
         export_counts = self._create_export_counts(
-            event_repository, flow_repository, track_repository
+            event_repository, flow_repository, track_repository, create_events
         )
         OTAnalyticsCli(
             cli_args,
@@ -449,9 +466,11 @@ class ApplicationStarter:
             flow_parser=flow_parser,
             event_list_parser=event_list_parser,
             event_repository=event_repository,
+            get_all_sections=GetAllSections(section_repository),
             add_section=add_section,
             create_events=create_events,
             export_counts=export_counts,
+            cut_tracks=cut_tracks,
             add_all_tracks=add_all_tracks,
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
@@ -475,9 +494,7 @@ class ApplicationStarter:
             track_repository (TrackRepository): the track repository to inject
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
-        track_parser = self._create_track_parser(
-            track_repository, track_file_repository
-        )
+        track_parser = self._create_track_parser()
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
@@ -490,6 +507,7 @@ class ApplicationStarter:
         )
         return Datastore(
             track_repository,
+            track_file_repository,
             track_parser,
             section_repository,
             flow_parser,
@@ -505,19 +523,14 @@ class ApplicationStarter:
         )
 
     def _create_track_repository(self) -> TrackRepository:
-        return TrackRepository()
+        return TrackRepository(PandasTrackDataset.from_list([]))
 
-    def _create_track_parser(
-        self,
-        track_repository: TrackRepository,
-        track_file_repository: TrackFileRepository,
-    ) -> TrackParser:
-        return OttrkParser(
-            CalculateTrackClassificationByMaxConfidence(),
-            track_repository,
-            track_file_repository,
-            track_length_limit=TRACK_LENGTH_LIMIT,
+    def _create_track_parser(self) -> TrackParser:
+        calculator = PandasByMaxConfidence()
+        detection_parser = PandasDetectionParser(
+            calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
         )
+        return OttrkParser(detection_parser)
 
     def _create_section_repository(self) -> SectionRepository:
         return SectionRepository()
@@ -540,14 +553,14 @@ class ApplicationStarter:
     def _create_track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_cached_pandas_track_provider(
+    def _create_pandas_track_provider(
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
         progressbar: ProgressbarBuilder,
-    ) -> CachedPandasTrackProvider:
+    ) -> PandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        return CachedPandasTrackProvider(
+        return PandasTrackProvider(
             datastore, track_view_state, dataframe_filter_builder, progressbar
         )
 
@@ -955,15 +968,17 @@ class ApplicationStarter:
     def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
         return FilterElementSettingRestorer()
 
+    @staticmethod
     def _create_export_counts(
-        self,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
         track_repository: TrackRepository,
+        create_events: CreateEvents,
     ) -> ExportCounts:
         return ExportTrafficCounting(
             event_repository,
             flow_repository,
+            create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleTaggerFactory(track_repository),
             FillZerosExporterFactory(SimpleExporterFactory()),
@@ -1065,9 +1080,7 @@ class ApplicationStarter:
         remove_section: RemoveSection,
         track_view_state: TrackViewState,
     ) -> CutTracksIntersectingSection:
-        track_builder = SimpleCutTrackSegmentBuilder(
-            CalculateTrackClassificationByMaxConfidence()
-        )
+        track_builder = SimpleCutTrackSegmentBuilder(ByMaxConfidence())
         cut_tracks_with_section = SimpleCutTracksWithSection(
             get_tracks_from_ids, ShapelyMapper(), track_builder, track_view_state
         )
