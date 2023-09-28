@@ -124,6 +124,7 @@ LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
 OTFLOW = "otflow"
+MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
@@ -190,6 +191,7 @@ class DummyViewModel(
 
     def _update_enabled_buttons(self) -> None:
         self._update_enabled_general_buttons()
+        self._update_enabled_track_buttons()
         self._update_enabled_video_buttons()
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
@@ -208,6 +210,15 @@ class DummyViewModel(
             if frame is None:
                 raise MissingInjectedInstanceError(type(frame).__name__)
             frame.set_enabled_general_buttons(general_buttons_enabled)
+
+    def _update_enabled_track_buttons(self) -> None:
+        if self._frame_tracks is None:
+            raise MissingInjectedInstanceError(MISSING_TRACK_FRAME_MESSAGE)
+        action_running = self._application.action_state.action_running.get()
+        selected_section_ids = self.get_selected_section_ids()
+        single_section_selected = len(selected_section_ids) == 1
+        single_track_enabled = (not action_running) and single_section_selected
+        self._frame_tracks.set_enabled_change_single_item_buttons(single_track_enabled)
 
     def _update_enabled_video_buttons(self) -> None:
         if self._frame_videos is None:

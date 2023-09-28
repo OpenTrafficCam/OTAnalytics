@@ -65,4 +65,7 @@ class TracksFrame(AbstractFrameTracks):
         self._viewmodel.change_track_offset_to_section_offset()
 
     def get_general_buttons(self) -> list[CTkButton]:
-        return [self.button_load_tracks, self.button_change_to_section_offset]
+        return [self.button_load_tracks]
+
+    def get_single_item_buttons(self) -> list[CTkButton]:
+        return [self.button_change_to_section_offset]
