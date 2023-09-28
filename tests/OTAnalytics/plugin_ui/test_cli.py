@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from shutil import copy2, rmtree
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import pytest
 
@@ -20,29 +20,46 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
+    CutTracksIntersectingSection,
+)
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
+    GetAllSections,
     GetSectionsById,
+    RemoveSection,
 )
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackIds,
+    GetTracksFromIds,
     GetTracksWithoutSingleDetections,
+    RemoveTracks,
 )
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
-from OTAnalytics.domain.section import SectionRepository
+from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
 from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
-from OTAnalytics.plugin_intersect.simple_intersect import SimpleRunIntersect
+from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
+from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
+    SimpleCutTrackSegmentBuilder,
+    SimpleCutTracksIntersectingSection,
+    SimpleCutTracksWithSection,
+)
+from OTAnalytics.plugin_intersect.simple_intersect import (
+    SimpleRunIntersect,
+    SimpleTracksIntersectingSections,
+)
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -136,9 +153,11 @@ class TestOTAnalyticsCli:
     EVENT_LIST_PARSER: str = "event_list_parser"
     EVENT_REPOSITORY: str = "event_repository"
     ADD_SECTION: str = "add_section"
+    GET_ALL_SECTIONS: str = "get_all_sections"
     ADD_FLOW: str = "add_flow"
     CREATE_EVENTS: str = "create_events"
     EXPORT_COUNTS: str = "export_counts"
+    CUT_TRACKS: str = "cut_tracks"
     ADD_ALL_TRACKS: str = "add_all_tracks"
     GET_ALL_TRACK_IDS: str = "get_all_track_ids"
     CLEAR_ALL_TRACKS: str = "clear_all_tracks"
@@ -152,9 +171,11 @@ class TestOTAnalyticsCli:
             self.EVENT_LIST_PARSER: Mock(spec=EventListParser),
             self.EVENT_REPOSITORY: Mock(spec=EventRepository),
             self.ADD_SECTION: Mock(spec=AddSection),
+            self.GET_ALL_SECTIONS: Mock(spec=GetAllSections),
             self.ADD_FLOW: Mock(spec=AddFlow),
             self.CREATE_EVENTS: Mock(spec=CreateEvents),
             self.EXPORT_COUNTS: Mock(spec=ExportCounts),
+            self.CUT_TRACKS: Mock(spec=CutTracksIntersectingSection),
             self.ADD_ALL_TRACKS: Mock(spec=AddAllTracks),
             self.GET_ALL_TRACK_IDS: Mock(spec=GetAllTrackIds),
             self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
@@ -183,6 +204,26 @@ class TestOTAnalyticsCli:
             ),
             section_repository,
             add_events,
+        )
+        tracks_intersecting_sections = SimpleTracksIntersectingSections(
+            get_all_tracks, ShapelyIntersector()
+        )
+        cut_tracks_with_section = SimpleCutTracksWithSection(
+            GetTracksFromIds(track_repository),
+            ShapelyMapper(),
+            SimpleCutTrackSegmentBuilder(ByMaxConfidence()),
+            TrackViewState(),
+        )
+        cut_tracks = (
+            SimpleCutTracksIntersectingSection(
+                GetSectionsById(section_repository),
+                get_all_tracks,
+                tracks_intersecting_sections,
+                cut_tracks_with_section,
+                add_all_tracks,
+                RemoveTracks(track_repository),
+                RemoveSection(section_repository),
+            ),
         )
         create_scene_events = SimpleCreateSceneEvents(
             get_all_tracks,
@@ -213,9 +254,11 @@ class TestOTAnalyticsCli:
             self.EVENT_LIST_PARSER: OtEventListParser(),
             self.EVENT_REPOSITORY: event_repository,
             self.ADD_SECTION: AddSection(section_repository),
+            self.GET_ALL_SECTIONS: GetAllSections(section_repository),
             self.ADD_FLOW: AddFlow(flow_repository),
             self.CREATE_EVENTS: create_events,
             self.EXPORT_COUNTS: export_counts,
+            self.CUT_TRACKS: cut_tracks,
             self.ADD_ALL_TRACKS: add_all_tracks,
             self.GET_ALL_TRACK_IDS: get_all_track_ids,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
@@ -236,9 +279,11 @@ class TestOTAnalyticsCli:
         assert cli._flow_parser == mock_cli_dependencies[self.FLOW_PARSER]
         assert cli._event_list_parser == mock_cli_dependencies[self.EVENT_LIST_PARSER]
         assert cli._add_section == mock_cli_dependencies[self.ADD_SECTION]
+        assert cli._get_all_sections == mock_cli_dependencies[self.GET_ALL_SECTIONS]
         assert cli._add_flow == mock_cli_dependencies[self.ADD_FLOW]
         assert cli._create_events == mock_cli_dependencies[self.CREATE_EVENTS]
         assert cli._export_counts == mock_cli_dependencies[self.EXPORT_COUNTS]
+        assert cli._cut_tracks == mock_cli_dependencies[self.CUT_TRACKS]
         assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
         assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
         assert cli._progressbar == mock_cli_dependencies[self.PROGRESSBAR]
@@ -379,3 +424,28 @@ class TestOTAnalyticsCli:
             f"{eventlist_filename}.{DEFAULT_EVENTLIST_FILE_TYPE}"
         )
         assert expected_event_list_file.exists()
+
+    def test_apply_cut_tracks(self, mock_cli_dependencies: dict[str, Mock]) -> None:
+        section = Mock()
+        section.id = SectionId("Section 1")
+        section.name = section.id.id
+        section.get_type.return_value = SectionType.LINE
+
+        normal_cutting_section = Mock()
+        normal_cutting_section.id = SectionId("#cut")
+        normal_cutting_section.name = normal_cutting_section.id.id
+        normal_cutting_section.get_type.return_value = SectionType.CUTTING
+
+        cli_cutting_section = Mock()
+        cli_cutting_section.id = SectionId("#clicut")
+        cli_cutting_section.name = cli_cutting_section.id.id
+        cli_cutting_section.get_type.return_value = SectionType.LINE
+
+        cli = OTAnalyticsCli(Mock(), **mock_cli_dependencies)
+        cli._apply_cuts([normal_cutting_section, section, cli_cutting_section])
+
+        cut_tracks = mock_cli_dependencies[self.CUT_TRACKS]
+        assert cut_tracks.call_args_list == [
+            call(cli_cutting_section),
+            call(normal_cutting_section),
+        ]

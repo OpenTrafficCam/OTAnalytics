@@ -72,6 +72,7 @@ from OTAnalytics.application.use_cases.reset_project_config import ResetProjectC
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
+    GetAllSections,
     GetSectionsById,
     RemoveSection,
 )
@@ -446,6 +447,20 @@ class ApplicationStarter:
             get_tracks_without_single_detections,
             add_events,
         )
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            GetTracksWithoutSingleDetections(track_repository),
+            ShapelyIntersector(),
+        )
+        cut_tracks = self._create_cut_tracks_intersecting_section(
+            GetSectionsById(section_repository),
+            get_tracks_without_single_detections,
+            GetTracksFromIds(track_repository),
+            tracks_intersecting_sections,
+            AddAllTracks(track_repository),
+            RemoveTracks(track_repository),
+            RemoveSection(section_repository),
+            TrackViewState(),
+        )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
         export_counts = self._create_export_counts(
@@ -461,9 +476,11 @@ class ApplicationStarter:
             flow_parser=flow_parser,
             event_list_parser=event_list_parser,
             event_repository=event_repository,
+            get_all_sections=GetAllSections(section_repository),
             add_section=add_section,
             create_events=create_events,
             export_counts=export_counts,
+            cut_tracks=cut_tracks,
             add_all_tracks=add_all_tracks,
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
