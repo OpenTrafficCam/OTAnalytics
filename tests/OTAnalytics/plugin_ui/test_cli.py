@@ -64,6 +64,7 @@ from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
 from OTAnalytics.plugin_parser.export import (
+    AddSectionInformationExporterFactory,
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
@@ -235,10 +236,13 @@ class TestOTAnalyticsCli:
         export_counts = ExportTrafficCounting(
             event_repository,
             flow_repository,
+            GetSectionsById(section_repository),
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleTaggerFactory(track_repository),
-            FillZerosExporterFactory(SimpleExporterFactory()),
+            FillZerosExporterFactory(
+                AddSectionInformationExporterFactory(SimpleExporterFactory())
+            ),
         )
         return {
             self.TRACK_PARSER: OttrkParser(
