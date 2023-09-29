@@ -228,7 +228,8 @@ class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         all_tracks = self._datastore.get_all_tracks()
         if tracks:
-            if video := self._datastore.get_video_for(all_tracks[0].id):
+            first_track = next(iter(all_tracks))
+            if video := self._datastore.get_video_for(first_track.id):
                 self._track_view_state.selected_videos.set([video])
 
     def notify_videos(self, videos: list[Video]) -> None:

@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
+    CLI_CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
@@ -20,8 +21,14 @@ from OTAnalytics.application.datastore import EventListParser, FlowParser, Track
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
+    CutTracksIntersectingSection,
+)
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
-from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.section_repository import (
+    AddSection,
+    GetAllSections,
+)
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -30,7 +37,7 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import Section, SectionType
 
 
 class CliParseError(Exception):
@@ -133,9 +140,11 @@ class OTAnalyticsCli:
         event_list_parser: EventListParser,
         event_repository: EventRepository,
         add_section: AddSection,
+        get_all_sections: GetAllSections,
         add_flow: AddFlow,
         create_events: CreateEvents,
         export_counts: ExportCounts,
+        cut_tracks: CutTracksIntersectingSection,
         add_all_tracks: AddAllTracks,
         get_all_track_ids: GetAllTrackIds,
         clear_all_tracks: ClearAllTracks,
@@ -149,9 +158,11 @@ class OTAnalyticsCli:
         self._event_list_parser = event_list_parser
         self._event_repository = event_repository
         self._add_section = add_section
+        self._get_all_sections = get_all_sections
         self._add_flow = add_flow
         self._create_events = create_events
         self._export_counts = export_counts
+        self._cut_tracks = cut_tracks
         self._add_all_tracks = add_all_tracks
         self._get_all_track_ids = get_all_track_ids
         self._clear_all_tracks = clear_all_tracks
@@ -197,6 +208,7 @@ class OTAnalyticsCli:
             ottrk_files, key=lambda file: str(file).lower()
         )
         self._parse_tracks(ottrk_files_sorted)
+        self._apply_cuts(self._get_all_sections())
 
         logger().info("Create event list ...")
         self._create_events()
@@ -211,6 +223,24 @@ class OTAnalyticsCli:
         logger().info(f"Event list saved at '{event_list_output_file}'")
 
         self._do_export_counts(event_list_output_file)
+
+    def _apply_cuts(self, sections: Iterable[Section]) -> None:
+        cutting_sections = sorted(
+            [
+                section
+                for section in sections
+                if section.get_type() == SectionType.CUTTING
+                or section.name.startswith(CLI_CUTTING_SECTION_MARKER)
+            ],
+            key=lambda section: section.id.id,
+        )
+        logger().info("Cut tracks with cutting sections...")
+        for cutting_section in cutting_sections:
+            logger().info(
+                f"Cut tracks with cutting section '{cutting_section.name}'..."
+            )
+            self._cut_tracks(cutting_section)
+        logger().info("Finished cutting all tracks")
 
     def _determine_eventlist_save_path(self, track_file: Path) -> Path:
         """Determine save path of eventlist.

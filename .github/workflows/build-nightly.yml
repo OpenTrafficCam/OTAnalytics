@@ -2,7 +2,6 @@
 name: Build Nightly Version
 
 on:
-
   # Creates Nightly Release of main
   # Needs: secrets.PLATOMO_BUILDER_ACCESS
   push:
@@ -15,8 +14,10 @@ jobs:
   create_nightly:
     needs: test
     uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
+    secrets:
+      PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:
       package-version: nightly
-      draft-release: True
-      pre-release: True
-    secrets: inherit
+      draft-release: true
+      pre-release: true
+      delete-existing: true

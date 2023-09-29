@@ -7,7 +7,13 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel, ThemeManager
 
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STATE_DISABLED,
+    STATE_NORMAL,
+    STICKY,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkFrame,
@@ -100,6 +106,11 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         self._project_name.set(name)
         self._start_date_row.set_datetime(start_date)
+
+    def set_enabled_general_buttons(self, enabled: bool) -> None:
+        new_state = STATE_NORMAL if enabled else STATE_DISABLED
+        for button in [self._button_new_project]:
+            button.configure(state=new_state)
 
 
 def get_default_toplevel_fg_color() -> str:
