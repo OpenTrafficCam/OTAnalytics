@@ -124,6 +124,7 @@ from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
 from OTAnalytics.plugin_parser.export import (
+    AddSectionInformationExporterFactory,
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
@@ -299,7 +300,11 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(
-            event_repository, flow_repository, track_repository, create_events
+            event_repository,
+            flow_repository,
+            track_repository,
+            get_sections_bv_id,
+            create_events,
         )
         load_otflow = self._create_use_case_load_otflow(
             clear_all_sections,
@@ -428,6 +433,7 @@ class ApplicationStarter:
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
         add_section = AddSection(section_repository)
+        get_sections_by_id = GetSectionsById(section_repository)
         add_flow = AddFlow(flow_repository)
         add_events = AddEvents(event_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
@@ -458,7 +464,11 @@ class ApplicationStarter:
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
         export_counts = self._create_export_counts(
-            event_repository, flow_repository, track_repository, create_events
+            event_repository,
+            flow_repository,
+            track_repository,
+            get_sections_by_id,
+            create_events,
         )
         OTAnalyticsCli(
             cli_args,
@@ -973,15 +983,19 @@ class ApplicationStarter:
         event_repository: EventRepository,
         flow_repository: FlowRepository,
         track_repository: TrackRepository,
+        get_sections_by_id: GetSectionsById,
         create_events: CreateEvents,
     ) -> ExportCounts:
         return ExportTrafficCounting(
             event_repository,
             flow_repository,
+            get_sections_by_id,
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleTaggerFactory(track_repository),
-            FillZerosExporterFactory(SimpleExporterFactory()),
+            FillZerosExporterFactory(
+                AddSectionInformationExporterFactory(SimpleExporterFactory())
+            ),
         )
 
     def _create_use_case_create_events(

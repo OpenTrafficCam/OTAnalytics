@@ -1,46 +1,10 @@
 import tkinter
 from typing import Any
 
-from customtkinter import CTkButton, CTkFrame
-
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_flows import FrameFlows
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import FrameSections
-
-
-class FrameConfiguration(CTkFrame):
-    def __init__(
-        self,
-        viewmodel: ViewModel,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(**kwargs)
-        self._viewmodel = viewmodel
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure((0, 1), weight=1)
-        self._get_widgets()
-        self._place_widgets()
-
-    def _get_widgets(self) -> None:
-        self.tabview = TabviewConfiguration(
-            master=self, width=50, viewmodel=self._viewmodel
-        )
-        self.button_add = CTkButton(
-            master=self,
-            text="Load",
-            width=50,
-            command=self._viewmodel.load_configuration,
-        )
-        self.button_save = CTkButton(
-            master=self,
-            text="Save",
-            width=50,
-            command=self._viewmodel.save_configuration,
-        )
-
-    def _place_widgets(self) -> None:
-        self.tabview.grid(row=0, column=0, columnspan=2, sticky=tkinter.NSEW)
 
 
 class TabviewConfiguration(CustomCTkTabview):
