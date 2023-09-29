@@ -3,6 +3,10 @@ from abc import ABC, abstractmethod
 
 class AbstractFrame(ABC):
     @abstractmethod
+    def set_enabled_general_buttons(self, enabled: bool) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def set_enabled_add_buttons(self, enabled: bool) -> None:
         raise NotImplementedError
 

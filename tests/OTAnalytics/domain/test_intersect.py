@@ -4,23 +4,23 @@ import pytest
 
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.intersect import Intersector
-from OTAnalytics.domain.track import Detection, TrackId
+from OTAnalytics.domain.track import Detection, PythonDetection, TrackId
 
 
 @pytest.fixture
 def detection() -> Detection:
-    return Detection(
-        classification="car",
-        confidence=0.5,
-        x=0.0,
-        y=5.0,
-        w=15.3,
-        h=30.5,
-        frame=1,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        interpolated_detection=False,
-        track_id=TrackId("1"),
-        video_name="myhostname_something.mp4",
+    return PythonDetection(
+        _classification="car",
+        _confidence=0.5,
+        _x=0.0,
+        _y=5.0,
+        _w=15.3,
+        _h=30.5,
+        _frame=1,
+        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+        _interpolated_detection=False,
+        _track_id=TrackId("1"),
+        _video_name="myhostname_something.mp4",
     )
 
 
