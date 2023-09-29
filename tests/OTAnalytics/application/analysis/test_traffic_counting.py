@@ -7,8 +7,11 @@ from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
     LEVEL_END_TIME,
     LEVEL_FLOW,
+    LEVEL_FROM_SECTION,
     LEVEL_START_TIME,
+    LEVEL_TO_SECTION,
     UNCLASSIFIED,
+    AddSectionInformation,
     CombinedTagger,
     Count,
     CountableAssignments,
@@ -36,8 +39,10 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
+    FlowNameDto,
 )
 from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -132,6 +137,47 @@ class TestFillEmptyCount:
 
         assert dict(actual) == dict(filled_dict)
         other.to_dict.assert_called_once()
+
+
+class TestAddSectionInformation:
+    @pytest.fixture
+    def flow_name_info(self) -> dict[str, FlowNameDto]:
+        first_flow_dto = FlowNameDto("First Flow", "section a", "section b")
+        # second_flow_dto = FlowNameDto("Second Flow", "section c", "section d")
+        return {
+            first_flow_dto.name: first_flow_dto,
+            # second_flow_dto.name: second_flow_dto,
+        }
+
+    def test_add_section_info(self, flow_name_info: dict[str, FlowNameDto]) -> None:
+        mode = "mode"
+        flow = "First Flow"
+        tag = MultiTag(
+            frozenset(
+                [
+                    SingleTag(LEVEL_CLASSIFICATION, id=mode),
+                    SingleTag(LEVEL_FLOW, id=flow),
+                ]
+            )
+        )
+
+        count = Mock()
+        count.to_dict.return_value = {tag: 1}
+        add_section_info = AddSectionInformation(count, flow_name_info)
+        result = add_section_info.to_dict()
+        expected_tag = tag.combine(
+            MultiTag(
+                frozenset(
+                    [
+                        SingleTag(
+                            LEVEL_FROM_SECTION, flow_name_info[flow].from_section
+                        ),
+                        SingleTag(LEVEL_TO_SECTION, flow_name_info[flow].to_section),
+                    ]
+                )
+            )
+        )
+        assert result == {expected_tag: 1}
 
 
 def create_event(
@@ -665,6 +711,7 @@ class TestTrafficCounting:
     def test_count_traffic(self) -> None:
         event_repository = Mock(spec=EventRepository)
         flow_repository = Mock(spec=FlowRepository)
+        get_sections_by_ids = Mock(spec=GetSectionsById)
         create_events = Mock(spec=CreateEvents)
         road_user_assigner = Mock(spec=RoadUserAssigner)
         tagger_factory = Mock(spec=TaggerFactory)
@@ -679,6 +726,7 @@ class TestTrafficCounting:
         counts = Mock(spec=Count)
         event_repository.get_all.return_value = events
         flow_repository.get_all.return_value = flows
+        get_sections_by_ids.return_value = []
         road_user_assigner.assign.return_value = assignments
         tagger_factory.create_tagger.return_value = tagger
         assignments.tag.return_value = tagged_assignments
@@ -695,11 +743,12 @@ class TestTrafficCounting:
             output_file="counts.csv",
         )
         export_specification = create_export_specification(
-            flows, counting_specification
+            flows, counting_specification, get_sections_by_ids
         )
         use_case = ExportTrafficCounting(
             event_repository,
             flow_repository,
+            get_sections_by_ids,
             create_events,
             road_user_assigner,
             tagger_factory,
