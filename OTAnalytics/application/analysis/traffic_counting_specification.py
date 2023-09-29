@@ -25,13 +25,20 @@ class CountingSpecificationDto:
 
 
 @dataclass(frozen=True)
+class FlowNameDto:
+    name: str
+    from_section: str
+    to_section: str
+
+
+@dataclass(frozen=True)
 class ExportSpecificationDto:
     """
     Data transfer object to represent the counting.
     """
 
     counting_specification: CountingSpecificationDto
-    flow_names: list[str]
+    flow_name_info: list[FlowNameDto]
 
     @property
     def format(self) -> str:
