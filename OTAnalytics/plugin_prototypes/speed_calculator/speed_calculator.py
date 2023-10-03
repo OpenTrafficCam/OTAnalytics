@@ -80,6 +80,9 @@ class SpeedCalculator:
         distances = []
         sections = self.SECTIONS[0]
 
+        # Import Sectionlist
+        section_dict = {section.id.id: section.name for section in self.SECTIONS[0]}
+
         for flow in self.SECTIONS[1]:
             if flow.distance is not None:
                 from_sections.append(
@@ -136,6 +139,14 @@ class SpeedCalculator:
             q,
             on=["from_section", "to_section", "time_interval"],
             how="left",
+        )
+
+        # Rename sections from id to name
+        self.SPEED_TABLE["from_section"] = self.SPEED_TABLE["from_section"].map(
+            section_dict
+        )
+        self.SPEED_TABLE["to_section"] = self.SPEED_TABLE["to_section"].map(
+            section_dict
         )
 
         if return_table:
