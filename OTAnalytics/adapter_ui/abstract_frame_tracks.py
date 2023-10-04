@@ -1,9 +1,9 @@
 from abc import abstractmethod
 
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 
 
-class AbstractFrameTracks(EmbeddedCTkFrame):
+class AbstractFrameTracks(AbstractCTkFrame):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass

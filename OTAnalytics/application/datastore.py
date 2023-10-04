@@ -23,8 +23,8 @@ from OTAnalytics.domain.section import (
     SectionRepository,
 )
 from OTAnalytics.domain.track import (
-    Track,
     TrackClassificationCalculator,
+    TrackDataset,
     TrackFileRepository,
     TrackId,
     TrackImage,
@@ -46,8 +46,8 @@ class TrackParser(ABC):
         self._track_file_repository = track_file_repository
 
     @abstractmethod
-    def parse(self, file: Path) -> list[Track]:
-        pass
+    def parse(self, file: Path) -> TrackDataset:
+        raise NotImplementedError
 
 
 class FlowParser(ABC):
@@ -229,6 +229,7 @@ class Datastore:
     def __init__(
         self,
         track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
         track_parser: TrackParser,
         section_repository: SectionRepository,
         flow_parser: FlowParser,
@@ -248,6 +249,7 @@ class Datastore:
         self._video_parser = video_parser
         self._track_video_parser = track_video_parser
         self._track_repository = track_repository
+        self._track_file_repository = track_file_repository
         self._section_repository = section_repository
         self._flow_repository = flow_repository
         self._event_repository = event_repository
@@ -304,7 +306,7 @@ class Datastore:
                 raised_exceptions.append(cause)
         if raised_exceptions:
             raise ExceptionGroup(
-                "Errors occured while loading the video files:",
+                "Errors occurred while loading the video files:",
                 raised_exceptions,
             )
         self._video_repository.add_all(videos)
@@ -340,13 +342,14 @@ class Datastore:
         self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(tracks)
+        self._track_file_repository.add(file)
 
     def load_track_files(self, files: list[Path]) -> None:
         """
         Load and parse the given track file together with the corresponding video file.
 
         Args:
-            file (Path): file in ottrk format
+            files (Path): files in ottrk format.
         """
         raised_exceptions: list[Exception] = []
         for file in self._progressbar(
@@ -358,10 +361,10 @@ class Datastore:
                 raised_exceptions.append(cause)
         if raised_exceptions:
             raise ExceptionGroup(
-                "Errors occured while loading the track files:", raised_exceptions
+                "Errors occurred while loading the track files:", raised_exceptions
             )
 
-    def get_all_tracks(self) -> list[Track]:
+    def get_all_tracks(self) -> TrackDataset:
         """
         Retrieve all tracks of the repository as list.
 

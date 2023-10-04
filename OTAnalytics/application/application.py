@@ -156,7 +156,7 @@ class OTAnalyticsApplication:
         """
         Remove the currently selected videos from the repository.
         """
-        if videos := self.track_view_state.selected_videos.get():
+        if videos := self.get_selected_videos():
             self._datastore.remove_videos(videos)
             if videos := self._datastore.get_all_videos():
                 self.track_view_state.selected_videos.set([videos[0]])
@@ -165,6 +165,9 @@ class OTAnalyticsApplication:
 
     def get_all_videos(self) -> list[Video]:
         return self._datastore.get_all_videos()
+
+    def get_selected_videos(self) -> list[Video]:
+        return self.track_view_state.selected_videos.get()
 
     def get_all_track_files(self) -> set[Path]:
         return self._get_all_track_files()

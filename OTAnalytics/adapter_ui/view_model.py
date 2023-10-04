@@ -39,6 +39,10 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def set_video_frame(self, frame: AbstractFrame) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def set_canvas(self, canvas: AbstractCanvas) -> None:
         raise NotImplementedError
 

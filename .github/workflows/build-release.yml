@@ -2,20 +2,23 @@
 name: Build Release Version
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - v*.*.*
+  # Build release assest if release is created.
+  # Needs: secrets.PLATOMO_BUILDER_ACCESS
+  release:
+    types:
+      - created
 
 jobs:
   test:
+    if: github.ref_type == "tag"
     uses: './.github/workflows/test.yml'
-  create_nightly:
+  create_release:
     needs: test
     uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
+    secrets:
+      PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:
       package-version: ${{ github.ref_name }}
-      draft-release: True
-      pre-release: False
-    secrets: inherit
+      draft-release: true
+      pre-release: true
+      delete-existing: false
