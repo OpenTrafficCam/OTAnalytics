@@ -105,17 +105,19 @@ class TagExploder:
 
     def explode(self) -> list[Tag]:
         tags = []
-        maximum = (
-            self._specification.counting_specification.end
-            - self._specification.counting_specification.start
+        start_without_seconds = (
+            self._specification.counting_specification.start.replace(
+                second=0, microsecond=0
+            )
         )
+        maximum = self._specification.counting_specification.end - start_without_seconds
         duration = int(maximum.total_seconds())
         interval = self._specification.counting_specification.interval_in_minutes * 60
         for flow in self._specification.flow_name_info:
             for mode in self._specification.counting_specification.modes:
                 for delta in range(0, duration, interval):
                     offset = timedelta(seconds=delta)
-                    start = self._specification.counting_specification.start + offset
+                    start = start_without_seconds + offset
                     interval_time = timedelta(seconds=interval)
                     tag = (
                         create_flow_tag(flow.name)
