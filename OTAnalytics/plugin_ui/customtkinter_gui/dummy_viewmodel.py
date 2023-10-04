@@ -608,17 +608,20 @@ class DummyViewModel(
             raise ValueError("Configuration file to load has unknown file extension")
 
     def _load_otflow(self, otflow_file: Path) -> None:
-        proceed = InfoBox(
-            message=(
-                "This will load a stored otflow configuration from file. \n"
-                "All configured sections and flows will be removed before "
-                "loading."
-            ),
-            initial_position=self._get_window_position(),
-            show_cancel=True,
-        )
-        if proceed.canceled:
-            return
+        sections = self._application.get_all_sections()
+        flows = self._application.get_all_flows()
+        if sections or flows:
+            proceed = InfoBox(
+                message=(
+                    "This will load a stored otflow configuration from file. \n"
+                    "All configured sections and flows will be removed before "
+                    "loading."
+                ),
+                initial_position=self._get_window_position(),
+                show_cancel=True,
+            )
+            if proceed.canceled:
+                return
         logger().info(f"otflow file to load: {otflow_file}")
         self._application.load_otflow(sections_file=Path(otflow_file))
         self.set_selected_section_ids([])
