@@ -47,8 +47,8 @@ def execute_explode(
 
 class TestTagExploder:
     def test_export_single(self) -> None:
-        start = datetime(2023, 1, 1, 0, 0, 0)
-        end = datetime(2023, 1, 1, 0, 10, 0)
+        start = datetime(2023, 1, 1, 0, 0, 10)
+        end = datetime(2023, 1, 1, 0, 9, 56)
         interval_in_minutes = 10
         modes = ["first-mode"]
         output_format = "csv"
@@ -61,7 +61,9 @@ class TestTagExploder:
         expected_tags: list[Tag] = [
             create_flow_tag(flow_name_dto.name)
             .combine(create_mode_tag("first-mode"))
-            .combine(create_timeslot_tag(start, timedelta(minutes=10)))
+            .combine(
+                create_timeslot_tag(start.replace(second=0), timedelta(minutes=10))
+            )
         ]
         execute_explode(
             start,
