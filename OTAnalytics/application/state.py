@@ -403,7 +403,6 @@ class TracksMetadata(TrackListObserver):
     Listens to changes in the `TrackRepository` and updates the tracks metadata
 
     Args:
-        TrackListObserver (TracListObserver): extends the TrackListObserver interface
         track_repository (TrackRepository): the track repository
     """
 
@@ -418,6 +417,9 @@ class TracksMetadata(TrackListObserver):
         self._classifications: ObservableProperty[set[str]] = ObservableProperty[set](
             set()
         )
+        self._detection_classifications: ObservableProperty[
+            frozenset[str]
+        ] = ObservableProperty[frozenset](frozenset([]))
 
     @property
     def first_detection_occurrence(self) -> Optional[datetime]:
@@ -447,6 +449,15 @@ class TracksMetadata(TrackListObserver):
             set[str]: the classifications.
         """
         return self._classifications.get()
+
+    @property
+    def detection_classifications(self) -> frozenset[str]:
+        """The classifications used by the detection model.
+
+        Returns:
+            set[str]: the classifications.
+        """
+        return self._detection_classifications.get()
 
     def notify_tracks(self, tracks: list[TrackId]) -> None:
         """Update tracks metadata on track repository changes"""
@@ -482,6 +493,11 @@ class TracksMetadata(TrackListObserver):
             detections.extend(track.detections)
 
         return detections
+
+    def update_detection_classes(self, new_classes: frozenset[str]) -> None:
+        """Update the classifications used by the detection model."""
+        updated_classes = self._detection_classifications.get().union(new_classes)
+        self._detection_classifications.set(updated_classes)
 
 
 class ActionState:

@@ -193,8 +193,8 @@ class OTAnalyticsCli:
 
     def _parse_tracks(self, track_files: list[Path]) -> None:
         for track_file in self._progressbar(track_files, "Parsed track files", "files"):
-            tracks = self._track_parser.parse(track_file)
-            self._add_all_tracks(tracks)
+            parse_result = self._track_parser.parse(track_file)
+            self._add_all_tracks(parse_result.tracks)
 
     def _run_analysis(
         self, ottrk_files: set[Path], sections: Iterable[Section], flows: Iterable[Flow]

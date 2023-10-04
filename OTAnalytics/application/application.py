@@ -26,6 +26,7 @@ from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
+from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
@@ -87,6 +88,7 @@ class OTAnalyticsApplication:
         clear_all_events: ClearAllEvents,
         start_new_project: StartNewProject,
         project_updater: ProjectUpdater,
+        load_track_files: LoadTrackFiles,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -110,6 +112,7 @@ class OTAnalyticsApplication:
         self._create_events = create_events
         self._load_otflow = load_otflow
         self._start_new_project = start_new_project
+        self._load_track_files = load_track_files
 
     def connect_observers(self) -> None:
         """
@@ -217,15 +220,6 @@ class OTAnalyticsApplication:
     def load_otconfig(self, file: Path) -> None:
         self._datastore.load_otconfig(file)
 
-    def add_tracks_of_file(self, track_file: Path) -> None:
-        """
-        Load a single track file.
-
-        Args:
-            track_file (Path): file in ottrk format
-        """
-        self._datastore.load_track_file(file=track_file)
-
     def add_tracks_of_files(self, track_files: list[Path]) -> None:
         """
         Load a multiple track files.
@@ -233,7 +227,7 @@ class OTAnalyticsApplication:
         Args:
             track_files (list[Path]): files in ottrk format
         """
-        self._datastore.load_track_files(files=track_files)
+        self._load_track_files(track_files)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""

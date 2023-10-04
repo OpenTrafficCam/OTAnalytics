@@ -32,9 +32,20 @@ from OTAnalytics.domain.track import (
 from OTAnalytics.domain.video import Video, VideoListObserver, VideoRepository
 
 
+@dataclass(frozen=True)
+class DetectionMetadata:
+    detection_classes: frozenset[str]
+
+
+@dataclass(frozen=True)
+class TrackParseResult:
+    tracks: TrackDataset
+    metadata: DetectionMetadata
+
+
 class TrackParser(ABC):
     @abstractmethod
-    def parse(self, file: Path) -> TrackDataset:
+    def parse(self, file: Path) -> TrackParseResult:
         raise NotImplementedError
 
 
@@ -316,41 +327,6 @@ class Datastore:
             observer (FlowListObserver): listener to be notified about changes
         """
         self._flow_repository.register_flows_observer(observer)
-
-    def load_track_file(self, file: Path) -> None:
-        """
-        Load and parse the given track file together with the corresponding video file.
-
-        Args:
-            file (Path): file in ottrk format
-        """
-        tracks = self._track_parser.parse(file)
-        track_ids = [track.id for track in tracks]
-        track_ids, videos = self._track_video_parser.parse(file, track_ids)
-        self._video_repository.add_all(videos)
-        self._track_to_video_repository.add_all(track_ids, videos)
-        self._track_repository.add_all(tracks)
-        self._track_file_repository.add(file)
-
-    def load_track_files(self, files: list[Path]) -> None:
-        """
-        Load and parse the given track file together with the corresponding video file.
-
-        Args:
-            files (Path): files in ottrk format.
-        """
-        raised_exceptions: list[Exception] = []
-        for file in self._progressbar(
-            files, unit="files", description="Processed ottrk files: "
-        ):
-            try:
-                self.load_track_file(file)
-            except Exception as cause:
-                raised_exceptions.append(cause)
-        if raised_exceptions:
-            raise ExceptionGroup(
-                "Errors occurred while loading the track files:", raised_exceptions
-            )
 
     def get_all_tracks(self) -> TrackDataset:
         """
