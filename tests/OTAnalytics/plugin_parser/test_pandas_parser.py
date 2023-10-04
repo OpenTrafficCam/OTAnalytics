@@ -1,7 +1,6 @@
 from unittest.mock import Mock
 
 import pytest
-from conftest import TrackBuilder, assert_equal_track_properties
 
 from OTAnalytics.domain.track import TrackRepository
 from OTAnalytics.plugin_datastore.track_store import (
@@ -15,6 +14,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     TrackLengthLimit,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from tests.conftest import TrackBuilder, assert_equal_track_properties
 
 
 @pytest.fixture
