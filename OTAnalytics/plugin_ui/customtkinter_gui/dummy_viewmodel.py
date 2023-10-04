@@ -197,19 +197,22 @@ class DummyViewModel(
         self._update_enabled_flow_buttons()
 
     def _update_enabled_general_buttons(self) -> None:
-        frames = [
-            self._frame_tracks,
-            self._frame_videos,
-            self._frame_project,
-            self._frame_sections,
-            self._frame_flows,
-        ]
+        frames = self._get_frames()
         action_running = self._application.action_state.action_running.get()
         general_buttons_enabled = not action_running
         for frame in frames:
             if frame is None:
                 raise MissingInjectedInstanceError(type(frame).__name__)
             frame.set_enabled_general_buttons(general_buttons_enabled)
+
+    def _get_frames(self) -> list:
+        return [
+            self._frame_tracks,
+            self._frame_videos,
+            self._frame_project,
+            self._frame_sections,
+            self._frame_flows,
+        ]
 
     def _update_enabled_track_buttons(self) -> None:
         if self._frame_tracks is None:
