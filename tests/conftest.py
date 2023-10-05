@@ -22,8 +22,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     OtFlowParser,
     OttrkParser,
-    PandasDetectionParser,
 )
+from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]

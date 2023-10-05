@@ -101,15 +101,12 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
     ByMaxConfidence,
+    PythonTrackDataset,
     TrackFileRepository,
     TrackIdProvider,
     TrackRepository,
 )
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_datastore.track_store import (
-    PandasByMaxConfidence,
-    PandasTrackDataset,
-)
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
@@ -138,7 +135,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
-    PandasDetectionParser,
+    PythonDetectionParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -146,6 +143,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     AVAILABLE_EVENTLIST_EXPORTERS,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CachedPandasTrackProvider,
     ColorPaletteProvider,
     FilterByClassification,
     FilterById,
@@ -435,6 +433,7 @@ class ApplicationStarter:
             image_updater.notify_section_changed
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
+        event_repository.register_observer(image_updater.notify_events)
 
         for layer in layers:
             layer.register(image_updater.notify_layers)
@@ -446,7 +445,7 @@ class ApplicationStarter:
         track_repository = self._create_track_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
-        track_parser = self._create_track_parser()
+        track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
@@ -525,7 +524,7 @@ class ApplicationStarter:
             track_repository (TrackRepository): the track repository to inject
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
-        track_parser = self._create_track_parser()
+        track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         track_video_parser = OttrkVideoParser(video_parser)
@@ -551,12 +550,14 @@ class ApplicationStarter:
         )
 
     def _create_track_repository(self) -> TrackRepository:
-        return TrackRepository(PandasTrackDataset.from_list([]))
+        # return TrackRepository(PandasTrackDataset.from_list([]))
+        return TrackRepository(PythonTrackDataset())
 
-    def _create_track_parser(self) -> TrackParser:
-        calculator = PandasByMaxConfidence()
-        detection_parser = PandasDetectionParser(
-            calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+    def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
+        # calculator = PandasByMaxConfidence()
+        calculator = ByMaxConfidence()
+        detection_parser = PythonDetectionParser(
+            calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
         )
         return OttrkParser(detection_parser)
 
@@ -588,7 +589,7 @@ class ApplicationStarter:
         progressbar: ProgressbarBuilder,
     ) -> PandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        return PandasTrackProvider(
+        return CachedPandasTrackProvider(
             datastore, track_view_state, dataframe_filter_builder, progressbar
         )
 
@@ -1136,7 +1137,7 @@ class ApplicationStarter:
         progressbar: ProgressbarBuilder,
         tracks_metadata: TracksMetadata,
     ) -> LoadTrackFiles:
-        track_parser = self._create_track_parser()
+        track_parser = self._create_track_parser(track_repository)
         track_video_parser = OttrkVideoParser(video_parser)
         return LoadTrackFiles(
             track_parser,
