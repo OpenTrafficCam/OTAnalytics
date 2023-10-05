@@ -4,17 +4,11 @@ from typing import Any
 from customtkinter import CTkButton
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.config import (
-    DEFAULT_EVENTLIST_FILE_STEM,
-    DEFAULT_EVENTLIST_FILE_TYPE,
-)
-from OTAnalytics.application.logger import logger
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkFrame,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 
 
 class TabviewAnalysis(CustomCTkTabview):
@@ -49,16 +43,6 @@ class FrameAnalysis(EmbeddedCTkFrame):
         self._place_widgets()
 
     def _get_widgets(self) -> None:
-        self._button_create_events = CTkButton(
-            master=self,
-            text="Assign flows",
-            command=self._create_events,
-        )
-        self._button_save_eventlist = CTkButton(
-            master=self,
-            text="Save eventlist",
-            command=self._save_eventlist,
-        )
         self.button_export_eventlist = CTkButton(
             master=self, text="Export eventlist", command=self._viewmodel.export_events
         )
@@ -70,30 +54,9 @@ class FrameAnalysis(EmbeddedCTkFrame):
         # self._label_title.grid(
         #     row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         # )
-        self._button_create_events.grid(
+        self.button_export_eventlist.grid(
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self._button_save_eventlist.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self.button_export_eventlist.grid(
+        self.button_export_counts.grid(
             row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_export_counts.grid(
-            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
-        )
-
-    def _create_events(self) -> None:
-        logger().info("Creating events")
-        self._viewmodel.create_events()
-
-    def _save_eventlist(self) -> None:
-        file = ask_for_save_file_name(
-            title="Save event list file as",
-            filetypes=[("events file", "*.otevents")],
-            defaultextension=".otevents",
-            initialfile=f"{DEFAULT_EVENTLIST_FILE_STEM}.{DEFAULT_EVENTLIST_FILE_TYPE}",
-        )
-        if not file:
-            return
-        self._viewmodel.save_events(file)

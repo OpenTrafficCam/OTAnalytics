@@ -6,6 +6,7 @@ from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
@@ -379,6 +380,9 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._update()
 
     def notify_sections(self, sections: list[SectionId]) -> None:
+        self._update()
+
+    def notify_events(self, _: EventRepositoryEvent) -> None:
         self._update()
 
     def _notify_flow_changed(self, _: list[FlowId]) -> None:
