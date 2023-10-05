@@ -390,7 +390,7 @@ class OTAnalyticsCli:
         match self.cli_args.event_format:
             case EventFormat.CSV:
                 exporter = self._event_list_export_formats[OTC_CSV_FORMAT_NAME]
-                actual_save_path = save_path.with_suffix(".{EventFormat.CSV.value}")
+                actual_save_path = save_path.with_suffix(f".{EventFormat.CSV.value}")
                 exporter.export(events, sections, actual_save_path)
             case EventFormat.EXCEL:
                 exporter = self._event_list_export_formats[OTC_EXCEL_FORMAT_NAME]
