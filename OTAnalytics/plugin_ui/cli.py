@@ -73,6 +73,7 @@ class CliArguments:
     sections_file: str
     eventlist_filename: str
     event_format: EventFormat
+    count_interval: int
 
 
 class CliArgumentParser:
@@ -135,6 +136,13 @@ class CliArgumentParser:
             ),
             required=False,
         )
+        self._parser.add_argument(
+            "--count-interval",
+            default=DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+            type=int,
+            help="Count interval in minutes.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -150,6 +158,7 @@ class CliArgumentParser:
             args.otflow,
             args.save_name,
             self._parse_event_format(args.event_format),
+            args.count_interval,
         )
 
     def _parse_event_format(self, event_format: str) -> EventFormat:
@@ -408,7 +417,6 @@ class OTAnalyticsCli:
             raise ValueError("end is None but has to be defined for exporting counts")
         if modes is None:
             raise ValueError("modes is None but has to be defined for exporting counts")
-        interval: int = DEFAULT_COUNTING_INTERVAL_IN_MINUTES
         if event_list_output_file.stem == DEFAULT_EVENTLIST_FILE_STEM:
             output_file_stem = DEFAULT_COUNTS_FILE_STEM
         else:
@@ -422,7 +430,7 @@ class OTAnalyticsCli:
             start=start,
             end=end,
             modes=list(modes),
-            interval_in_minutes=interval,
+            interval_in_minutes=self.cli_args.count_interval,
             output_file=str(output_file),
             output_format="CSV",
         )

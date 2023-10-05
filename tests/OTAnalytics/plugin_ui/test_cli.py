@@ -143,6 +143,8 @@ class TestCliArgumentParser:
             eventlist_name,
             "--event-format",
             EventFormat.CSV.value,
+            "--count-interval",
+            "15",
         ]
         with patch.object(sys, "argv", cli_args):
             parser = CliArgumentParser()
@@ -154,6 +156,7 @@ class TestCliArgumentParser:
                 sections_file,
                 eventlist_name,
                 EventFormat.CSV,
+                15,
             )
 
 
@@ -283,6 +286,7 @@ class TestOTAnalyticsCli:
             "sections_file.otflow",
             "my_events",
             EventFormat.CSV,
+            1,
         )
         cli = OTAnalyticsCli(cli_args, **mock_cli_dependencies)
         assert cli.cli_args == cli_args
@@ -312,6 +316,7 @@ class TestOTAnalyticsCli:
             sections_file="section_file.otflow",
             eventlist_filename="",
             event_format=EventFormat.OTEVENTS,
+            count_interval=1,
         )
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli(cli_args, **mock_cli_dependencies)
@@ -326,20 +331,27 @@ class TestOTAnalyticsCli:
             sections_file="",
             eventlist_filename="",
             event_format=EventFormat.OTEVENTS,
+            count_interval=1,
         )
         with pytest.raises(CliParseError, match=r"No otflow file passed.*"):
             OTAnalyticsCli(cli_args, **mock_cli_dependencies)
 
     def test_validate_cli_args_no_tracks(self) -> None:
         cli_args = CliArguments(
-            True, False, [], "section.otflow", "", EventFormat.OTEVENTS
+            True, False, [], "section.otflow", "", EventFormat.OTEVENTS, 1
         )
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli._validate_cli_args(cli_args)
 
     def test_validate_cli_args_no_section(self) -> None:
         cli_args = CliArguments(
-            True, False, [f"track.{DEFAULT_TRACK_FILE_TYPE}"], "", "", EventFormat.CSV
+            True,
+            False,
+            [f"track.{DEFAULT_TRACK_FILE_TYPE}"],
+            "",
+            "",
+            EventFormat.CSV,
+            1,
         )
         with pytest.raises(CliParseError, match=r"No otflow file passed.*"):
             OTAnalyticsCli._validate_cli_args(cli_args)
@@ -439,6 +451,7 @@ class TestOTAnalyticsCli:
             str(temp_section),
             eventlist_filename,
             EventFormat.OTEVENTS,
+            1,
         )
         cli = OTAnalyticsCli(cli_args, **cli_dependencies)
         cli.start()
