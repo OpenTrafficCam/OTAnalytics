@@ -16,7 +16,11 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
+from OTAnalytics.adapter_ui.default_values import (
+    DATE_FORMAT,
+    DATETIME_FORMAT,
+    RELATIVE_SECTION_OFFSET,
+)
 from OTAnalytics.adapter_ui.flow_adapter import (
     GeometricCenterCalculator,
     InnerSegmentsCenterCalculator,
@@ -690,9 +694,14 @@ class DummyViewModel(
         initial_position: tuple[int, int],
         input_values: dict | None = None,
     ) -> dict:
+        if not (
+            section_offset := self._application.track_view_state.track_offset.get()
+        ):
+            section_offset = RELATIVE_SECTION_OFFSET
         return ToplevelSections(
             title=title,
             viewmodel=self,
+            section_offset=section_offset,
             initial_position=initial_position,
             input_values=input_values,
             show_offset=self._show_offset(),

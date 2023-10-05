@@ -76,7 +76,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             place_validation_below=True,
         )
         self._button_new_project = CTkButton(
-            master=self, text="New", command=self._viewmodel.start_new_project
+            master=self, text="New Project", command=self._viewmodel.start_new_project
         )
 
     def _place_widgets(self) -> None:
