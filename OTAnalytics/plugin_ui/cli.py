@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Iterable
 
@@ -17,13 +18,14 @@ from OTAnalytics.application.config import (
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
-from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
+from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -38,6 +40,17 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
+from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
+    OTC_CSV_FORMAT_NAME,
+    OTC_EXCEL_FORMAT_NAME,
+    OTC_OTEVENTS_FORMAT_NAME,
+)
+
+
+class EventFormat(Enum):
+    CSV: str = "csv"
+    EXCEL: str = "xlsx"
+    OTEVENTS: str = "otevents"
 
 
 class CliParseError(Exception):
@@ -59,6 +72,7 @@ class CliArguments:
     track_files: list[str]
     sections_file: str
     eventlist_filename: str
+    event_format: EventFormat
 
 
 class CliArgumentParser:
@@ -111,6 +125,16 @@ class CliArgumentParser:
             help="Set log level to DEBUG.",
             required=False,
         )
+        self._parser.add_argument(
+            "--event-format",
+            default=EventFormat.OTEVENTS.value,
+            type=str,
+            help=(
+                "Format to export the event list "
+                "('otevents' (default), 'csv', 'xlsx')."
+            ),
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -120,8 +144,22 @@ class CliArgumentParser:
         """
         args = self._parser.parse_args()
         return CliArguments(
-            args.cli, args.debug, args.ottrks, args.otflow, args.save_name
+            args.cli,
+            args.debug,
+            args.ottrks,
+            args.otflow,
+            args.save_name,
+            self._parse_event_format(args.event_format),
         )
+
+    def _parse_event_format(self, event_format: str) -> EventFormat:
+        match event_format.lower():
+            case EventFormat.CSV.value:
+                return EventFormat.CSV
+            case EventFormat.EXCEL.value:
+                return EventFormat.EXCEL
+            case _:
+                return EventFormat.OTEVENTS
 
 
 class OTAnalyticsCli:
@@ -137,7 +175,6 @@ class OTAnalyticsCli:
         cli_args: CliArguments,
         track_parser: TrackParser,
         flow_parser: FlowParser,
-        event_list_parser: EventListParser,
         event_repository: EventRepository,
         add_section: AddSection,
         get_all_sections: GetAllSections,
@@ -149,13 +186,13 @@ class OTAnalyticsCli:
         get_all_track_ids: GetAllTrackIds,
         clear_all_tracks: ClearAllTracks,
         progressbar: ProgressbarBuilder,
+        event_list_export_formats: dict[str, EventListExporter],
     ) -> None:
         self._validate_cli_args(cli_args)
         self.cli_args = cli_args
 
         self._track_parser = track_parser
         self._flow_parser = flow_parser
-        self._event_list_parser = event_list_parser
         self._event_repository = event_repository
         self._add_section = add_section
         self._get_all_sections = get_all_sections
@@ -167,6 +204,7 @@ class OTAnalyticsCli:
         self._get_all_track_ids = get_all_track_ids
         self._clear_all_tracks = clear_all_tracks
         self._progressbar = progressbar
+        self._event_list_export_formats = event_list_export_formats
 
     def start(self) -> None:
         """Start analysis."""
@@ -217,11 +255,7 @@ class OTAnalyticsCli:
         event_list_output_file = self._determine_eventlist_save_path(
             ottrk_files_sorted[0]
         )
-        self._event_list_parser.serialize(
-            self._event_repository.get_all(), sections, event_list_output_file
-        )
-        logger().info(f"Event list saved at '{event_list_output_file}'")
-
+        self._export_events(sections, event_list_output_file)
         self._do_export_counts(event_list_output_file)
 
     def _apply_cuts(self, sections: Iterable[Section]) -> None:
@@ -341,6 +375,25 @@ class OTAnalyticsCli:
             )
 
         return sections_file
+
+    def _export_events(self, sections: Iterable[Section], save_path: Path) -> None:
+        events = self._event_repository.get_all()
+        match self.cli_args.event_format:
+            case EventFormat.CSV:
+                exporter = self._event_list_export_formats[OTC_CSV_FORMAT_NAME]
+                actual_save_path = save_path.with_suffix(".{EventFormat.CSV.value}")
+                exporter.export(events, sections, actual_save_path)
+            case EventFormat.EXCEL:
+                exporter = self._event_list_export_formats[OTC_EXCEL_FORMAT_NAME]
+                actual_save_path = save_path.with_suffix(f".{EventFormat.EXCEL.value}")
+                exporter.export(events, sections, actual_save_path)
+            case _:
+                exporter = self._event_list_export_formats[OTC_OTEVENTS_FORMAT_NAME]
+                actual_save_path = save_path.with_suffix(
+                    f".{EventFormat.OTEVENTS.value}"
+                )
+                exporter.export(events, sections, actual_save_path)
+        logger().info(f"Event list saved at '{actual_save_path}'")
 
     def _do_export_counts(self, event_list_output_file: Path) -> None:
         logger().info("Create counts ...")
