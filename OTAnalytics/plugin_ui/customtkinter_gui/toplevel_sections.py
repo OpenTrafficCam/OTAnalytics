@@ -2,9 +2,9 @@ from typing import Any
 
 from customtkinter import CTkEntry, CTkLabel
 
-from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import CancelAddSection
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import ID, NAME, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
@@ -23,6 +23,7 @@ class FrameConfigureSection(FrameContent):
     def __init__(
         self,
         viewmodel: ViewModel,
+        section_offset: RelativeOffsetCoordinate,
         input_values: dict | None,
         show_offset: bool = True,
         **kwargs: Any,
@@ -36,8 +37,8 @@ class FrameConfigureSection(FrameContent):
                 NAME: "",
                 RELATIVE_OFFSET_COORDINATES: {
                     EventType.SECTION_ENTER.serialize(): {
-                        "x": RELATIVE_SECTION_OFFSET.x,
-                        "y": RELATIVE_SECTION_OFFSET.y,
+                        "x": section_offset.x,
+                        "y": section_offset.y,
                     },
                 },
             }
@@ -93,11 +94,13 @@ class ToplevelSections(ToplevelTemplate):
     def __init__(
         self,
         viewmodel: ViewModel,
+        section_offset: RelativeOffsetCoordinate,
         input_values: dict | None = None,
         show_offset: bool = True,
         **kwargs: Any,
     ) -> None:
         self._viewmodel = viewmodel
+        self._section_offset = section_offset
         self._input_values = input_values
         self._show_offset = show_offset
         super().__init__(**kwargs)
@@ -105,6 +108,7 @@ class ToplevelSections(ToplevelTemplate):
     def _create_frame_content(self, master: Any) -> FrameContent:
         return FrameConfigureSection(
             master=master,
+            section_offset=self._section_offset,
             viewmodel=self._viewmodel,
             input_values=self._input_values,
             show_offset=self._show_offset,

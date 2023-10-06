@@ -16,7 +16,11 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.default_values import DATE_FORMAT, DATETIME_FORMAT
+from OTAnalytics.adapter_ui.default_values import (
+    DATE_FORMAT,
+    DATETIME_FORMAT,
+    RELATIVE_SECTION_OFFSET,
+)
 from OTAnalytics.adapter_ui.flow_adapter import (
     GeometricCenterCalculator,
     InnerSegmentsCenterCalculator,
@@ -197,19 +201,22 @@ class DummyViewModel(
         self._update_enabled_flow_buttons()
 
     def _update_enabled_general_buttons(self) -> None:
-        frames = [
-            self._frame_tracks,
-            self._frame_videos,
-            self._frame_project,
-            self._frame_sections,
-            self._frame_flows,
-        ]
+        frames = self._get_frames()
         action_running = self._application.action_state.action_running.get()
         general_buttons_enabled = not action_running
         for frame in frames:
             if frame is None:
                 raise MissingInjectedInstanceError(type(frame).__name__)
             frame.set_enabled_general_buttons(general_buttons_enabled)
+
+    def _get_frames(self) -> list:
+        return [
+            self._frame_tracks,
+            self._frame_videos,
+            self._frame_project,
+            self._frame_sections,
+            self._frame_flows,
+        ]
 
     def _update_enabled_track_buttons(self) -> None:
         if self._frame_tracks is None:
@@ -687,9 +694,14 @@ class DummyViewModel(
         initial_position: tuple[int, int],
         input_values: dict | None = None,
     ) -> dict:
+        if not (
+            section_offset := self._application.track_view_state.track_offset.get()
+        ):
+            section_offset = RELATIVE_SECTION_OFFSET
         return ToplevelSections(
             title=title,
             viewmodel=self,
+            section_offset=section_offset,
             initial_position=initial_position,
             input_values=input_values,
             show_offset=self._show_offset(),

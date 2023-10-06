@@ -18,6 +18,7 @@ from OTAnalytics.domain.event import (
     Event,
     EventBuilder,
     EventRepository,
+    EventRepositoryEvent,
     ImproperFormattedFilename,
     IncompleteEventBuilderSetup,
     SceneEventBuilder,
@@ -284,28 +285,38 @@ class TestSceneEventBuilder:
 class TestEventRepository:
     def test_add(self) -> None:
         event = Mock()
-        repository = EventRepository()
+        subject = Mock()
+        repository = EventRepository(subject)
 
         repository.add(event)
 
         assert event in repository.get_all()
+        subject.notify.assert_called_with(EventRepositoryEvent([event], []))
 
     def test_add_all(self) -> None:
         first_event = Mock()
         second_event = Mock()
-        repository = EventRepository()
+        subject = Mock()
+        repository = EventRepository(subject)
 
         repository.add_all([first_event, second_event])
 
         assert first_event in repository.get_all()
         assert second_event in repository.get_all()
+        subject.notify.assert_called_with(
+            EventRepositoryEvent([first_event, second_event], [])
+        )
 
     def test_clear(self) -> None:
         first_event = Mock()
         second_event = Mock()
-        repository = EventRepository()
+        subject = Mock()
+        repository = EventRepository(subject)
 
         repository.add_all([first_event, second_event])
         repository.clear()
 
         assert not list(repository.get_all())
+        subject.notify.assert_called_with(
+            EventRepositoryEvent([], [first_event, second_event])
+        )
