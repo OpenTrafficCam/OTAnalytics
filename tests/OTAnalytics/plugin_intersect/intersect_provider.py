@@ -1,27 +1,39 @@
 from abc import ABC, abstractmethod
+from bisect import bisect
 from typing import Any
 
+import shapely
 from geopandas import GeoDataFrame
 from intersect_data import tracks_as_dataframe
 from pandas import DataFrame, Series
-from pygeos import Geometry, geometrycollections
+from pygeos import Geometry, GeometryType, geometrycollections
+from pygeos import get_coordinates as pygeos_coords
+from pygeos import get_type_id as pygeos_type
+from pygeos import intersection as pygeos_intersection
 from pygeos import intersects as pygeos_intersects
-from pygeos import linestrings, prepare
+from pygeos import is_empty
+from pygeos import line_locate_point as pygeos_project
+from pygeos import linestrings
+from pygeos import points as pygeos_points
+from pygeos import prepare
 from shapely import LineString as ShapelyLineString
 from shapely import MultiLineString as ShapelyMultiLineString
+from shapely import intersection as shapely_intersection
 from shapely import intersects as shapely_intersects
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
-from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,
+    _run_intersect_on_single_track,
 )
 
 OFFSET_X = 0.5
 OFFSET_Y = 0.5
+EVENTS = list[tuple[float, float]]
 
 
 def detection_to_coords(d: Detection) -> tuple[float, float]:
@@ -101,6 +113,22 @@ class IntersectProvider(ABC):
             res = res.union(self.intersects_section(tracks, section))
         return res
 
+    @abstractmethod
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        pass
+
+    @abstractmethod
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        pass
+
+    def events(
+        self, tracks: list[Track], sections: list[Section], by_track: bool = False
+    ) -> EVENTS:
+        if by_track:
+            return [e for t in tracks for e in self.track_events(t, sections)]
+        else:
+            return [e for s in sections for e in self.section_events(tracks, s)]
+
 
 class OTAIntersect(IntersectProvider):
     def use_tracks(self, datastore: Datastore) -> None:
@@ -117,6 +145,32 @@ class OTAIntersect(IntersectProvider):
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
         return set()
 
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        return []
+
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        line_sections = [
+            LineSection(
+                s.id,
+                s.name,
+                s.relative_offset_coordinates,
+                s.plugin_data,
+                s.get_coordinates(),
+            )
+            for s in sections
+        ]
+        return [
+            (e.event_coordinate.x, e.event_coordinate.y)
+            for e in _run_intersect_on_single_track(
+                track, line_sections, ShapelyIntersector()
+            )
+        ]
+
+    def events(
+        self, tracks: list[Track], sections: list[Section], by_track: bool = False
+    ) -> EVENTS:
+        return super().events(tracks, sections, by_track=True)
+
 
 class ShapelyIntersectSingle(IntersectProvider):
     def __init__(self, datastore: Datastore) -> None:
@@ -125,6 +179,13 @@ class ShapelyIntersectSingle(IntersectProvider):
     def use_tracks(self, datastore: Datastore) -> None:
         tracks = datastore.get_all_tracks()
         self.track_geom_map = {track.id: track_to_shapely(track) for track in tracks}
+        self.track_projections = {
+            track.id: [
+                self.track_geom_map[track.id].project(shapely.Point(p))
+                for p in self.track_geom_map[track.id].coords
+            ]
+            for track in tracks
+        }
 
     def use_sections(self, datastore: Datastore) -> None:
         sections = datastore.get_all_sections()
@@ -139,6 +200,35 @@ class ShapelyIntersectSingle(IntersectProvider):
             for track in tracks
             if shapely_intersects(self.track_geom_map[track.id], sec_geom)
         }
+
+    def next_event(
+        self, track: Track, track_geom: Any, point: Any
+    ) -> tuple[float, float]:
+        dist = track_geom.project(point)
+        index = bisect(self.track_projections[track.id], dist)
+        return track_geom.coords[index]  # + 1]
+
+    def single_events(self, track: Track, section: Section) -> EVENTS:
+        track_geom = self.track_geom_map[track.id]
+        section_geom = self.section_geom_map[section.id]
+        points = shapely_intersection(track_geom, section_geom)
+
+        if points.is_empty:
+            return []
+
+        if isinstance(points, shapely.Point):
+            return [self.next_event(track, track_geom, points)]
+
+        if isinstance(points, shapely.MultiPoint):
+            return [self.next_event(track, track_geom, p) for p in points.geoms]
+
+        return []
+
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        return [e for s in sections for e in self.single_events(track, s)]
+
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        return [e for t in tracks for e in self.single_events(t, section)]
 
 
 class ShapelyIntersect(ShapelyIntersectSingle):
@@ -163,10 +253,6 @@ class ShapelyIntersect(ShapelyIntersectSingle):
 
 # todo shapely segment single
 # todo shapley segment
-# todo shapely pandas single
-# todo shapely pandas
-# todo shapely pandas segment single
-# todo shapely pandas segment
 
 
 class PyGeosIntersectSingle(IntersectProvider):
@@ -178,6 +264,13 @@ class PyGeosIntersectSingle(IntersectProvider):
         tracks = datastore.get_all_tracks()
 
         self.track_geom_map = {track.id: track_to_pygeos(track) for track in tracks}
+        self.track_projections = {
+            track.id: [
+                pygeos_project(self.track_geom_map[track.id], pygeos_points(p))
+                for p in pygeos_coords(self.track_geom_map[track.id])
+            ]
+            for track in tracks
+        }
 
         self.prepare_tracks()
 
@@ -208,6 +301,38 @@ class PyGeosIntersectSingle(IntersectProvider):
                 sec_geom,
             )
         }
+
+    def next_event(
+        self, track: Track, track_geom: Any, point: Any
+    ) -> tuple[float, float]:
+        dist = pygeos_project(track_geom, point)
+        index = bisect(self.track_projections[track.id], dist)
+        return pygeos_coords(track_geom)[index]  # + 1]
+
+    def single_events(self, track: Track, section: Section) -> EVENTS:
+        track_geom = self.track_geom_map[track.id]
+        section_geom = self.section_geom_map[section.id]
+        points = pygeos_intersection(track_geom, section_geom)
+
+        if is_empty(points):
+            return []
+
+        if pygeos_type(points) == GeometryType.POINT:
+            return [self.next_event(track, track_geom, points)]
+
+        if pygeos_type(points) == GeometryType.MULTIPOINT:
+            return [
+                self.next_event(track, track_geom, pygeos_points(p))
+                for p in pygeos_coords(points)
+            ]
+
+        return []
+
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        return [e for s in sections for e in self.single_events(track, s)]
+
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        return [e for t in tracks for e in self.single_events(t, section)]
 
 
 class PyGeosIntersect(PyGeosIntersectSingle):

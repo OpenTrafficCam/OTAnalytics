@@ -24,10 +24,17 @@ from tests.OTAnalytics.plugin_intersect.intersect_provider import (
     ShapelyIntersect,
     ShapelyIntersectSingle,
 )
-from tests.OTAnalytics.plugin_intersect.validate import ERRORS, time, validate
+from tests.OTAnalytics.plugin_intersect.validate import (
+    ERRORS,
+    time,
+    validate,
+    validate_events,
+)
 
 REPEAT = 10
 SEED = 42
+TEST_INTERSECT = False
+TEST_EVENTS = True
 
 
 @validate
@@ -36,6 +43,14 @@ def test_intersect_all(
     datastore: Datastore, name: str, provider: IntersectProvider, record: bool = False
 ) -> set[TrackId]:
     return provider.intersect(datastore.get_all_tracks(), datastore.get_all_sections())
+
+
+@validate_events
+@time
+def test_events_all(
+    datastore: Datastore, name: str, provider: IntersectProvider, record: bool = False
+) -> list[tuple[float, float]]:
+    return provider.events(datastore.get_all_tracks(), datastore.get_all_sections())
 
 
 @validate
@@ -48,6 +63,21 @@ def test_intersect_section(
     record: bool = False,
 ) -> set[TrackId]:
     return provider.intersect(
+        datastore.get_all_tracks(),
+        sections,
+    )
+
+
+@validate_events
+@time
+def test_events_section(
+    datastore: Datastore,
+    name: str,
+    provider: IntersectProvider,
+    sections: list[Section],
+    record: bool = False,
+) -> list[tuple[float, float]]:
+    return provider.events(
         datastore.get_all_tracks(),
         sections,
     )
@@ -75,6 +105,27 @@ def test_intersect_random_sections(
 
 
 @time
+def test_events_random_sections(
+    datastore: Datastore,
+    name: str,
+    provider: IntersectProvider,
+    n: int,
+    seed: int,
+    record: bool = False,
+) -> None:
+    random.seed(seed)
+    msg = ""
+    for _ in range(n):
+        sections = datastore.get_all_sections()
+        k = random.randint(1, len(sections))
+        msg += f"{k}, "
+        selected = random.sample(sections, k)
+        test_events_section(
+            datastore, name=name, provider=provider, sections=selected, record=record
+        )
+
+
+@time
 def test_init(
     cons: type[IntersectProvider],
     datastore: Datastore,
@@ -96,10 +147,17 @@ def run_test(
 ) -> None:
     provider = test_init(cons, datastore, name=name, *args, **kwargs)
 
-    test_intersect_all(datastore, name=name, provider=provider, record=record)
-    test_intersect_random_sections(
-        datastore, name=name, provider=provider, n=REPEAT, seed=SEED, record=record
-    )
+    if TEST_INTERSECT:
+        test_intersect_all(datastore, name=name, provider=provider, record=record)
+        test_intersect_random_sections(
+            datastore, name=name, provider=provider, n=REPEAT, seed=SEED, record=record
+        )
+
+    if TEST_EVENTS:
+        test_events_all(datastore, name=name, provider=provider, record=record)
+        test_events_random_sections(
+            datastore, name=name, provider=provider, n=REPEAT, seed=SEED, record=record
+        )
 
 
 def test_comlpete(
@@ -117,6 +175,16 @@ if __name__ == "__main__":
 
     data = load_data(skip_tracks=False, size="medium")
 
+    val.TAG = ""
+    test_comlpete(data, OTAIntersect, record=True)
+    test_comlpete(data, ShapelyIntersect, record=True)
+    test_comlpete(data, ShapelyIntersectSingle)
+
+    # PYGEOS
+    val.TAG = "UNPREPARED"
+    test_comlpete(data, PyGeosIntersectSingle, prepare=False)
+
+    exit()
     val.TAG = ""
     test_comlpete(data, OTAIntersect, record=True)
     test_comlpete(data, ShapelyIntersect, record=True)
