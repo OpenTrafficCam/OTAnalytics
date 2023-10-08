@@ -18,6 +18,6 @@ jobs:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:
       package-version: nightly
-      draft-release: true
+      draft-release: false
       pre-release: true
       delete-existing: true
