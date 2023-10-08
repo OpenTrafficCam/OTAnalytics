@@ -390,11 +390,15 @@ class OTAnalyticsCli:
         match self.cli_args.event_format:
             case EventFormat.CSV:
                 exporter = self._event_list_export_formats[OTC_CSV_FORMAT_NAME]
-                actual_save_path = save_path.with_suffix(f".{EventFormat.CSV.value}")
+                actual_save_path = save_path.with_suffix(
+                    f".events.{EventFormat.CSV.value}"
+                )
                 exporter.export(events, sections, actual_save_path)
             case EventFormat.EXCEL:
                 exporter = self._event_list_export_formats[OTC_EXCEL_FORMAT_NAME]
-                actual_save_path = save_path.with_suffix(f".{EventFormat.EXCEL.value}")
+                actual_save_path = save_path.with_suffix(
+                    f".events.{EventFormat.EXCEL.value}"
+                )
                 exporter.export(events, sections, actual_save_path)
             case _:
                 exporter = self._event_list_export_formats[OTC_OTEVENTS_FORMAT_NAME]
@@ -421,7 +425,7 @@ class OTAnalyticsCli:
             output_file_stem = DEFAULT_COUNTS_FILE_STEM
         else:
             output_file_stem = (
-                f"{event_list_output_file.stem}_{DEFAULT_COUNTS_FILE_STEM}"
+                f"{event_list_output_file.stem}.{DEFAULT_COUNTS_FILE_STEM}"
             )
         output_file = event_list_output_file.with_stem(output_file_stem).with_suffix(
             f".{DEFAULT_COUNTS_FILE_TYPE}"
