@@ -483,7 +483,6 @@ class ApplicationStarter:
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
             progressbar=TqdmBuilder(),
-            event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
         ).start()
 
     def _create_datastore(

@@ -41,6 +41,7 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
+    AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_CSV_FORMAT_NAME,
     OTC_EXCEL_FORMAT_NAME,
     OTC_OTEVENTS_FORMAT_NAME,
@@ -72,7 +73,7 @@ class CliArguments:
     track_files: list[str]
     sections_file: str
     eventlist_filename: str
-    event_format: EventFormat
+    event_list_exporter: EventListExporter
     count_interval: int
 
 
@@ -161,14 +162,14 @@ class CliArgumentParser:
             args.count_interval,
         )
 
-    def _parse_event_format(self, event_format: str) -> EventFormat:
+    def _parse_event_format(self, event_format: str) -> EventListExporter:
         match event_format.lower():
             case EventFormat.CSV.value:
-                return EventFormat.CSV
+                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME]
             case EventFormat.EXCEL.value:
-                return EventFormat.EXCEL
+                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_EXCEL_FORMAT_NAME]
             case _:
-                return EventFormat.OTEVENTS
+                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_OTEVENTS_FORMAT_NAME]
 
 
 class OTAnalyticsCli:
@@ -195,7 +196,6 @@ class OTAnalyticsCli:
         get_all_track_ids: GetAllTrackIds,
         clear_all_tracks: ClearAllTracks,
         progressbar: ProgressbarBuilder,
-        event_list_export_formats: dict[str, EventListExporter],
     ) -> None:
         self._validate_cli_args(cli_args)
         self.cli_args = cli_args
@@ -213,7 +213,6 @@ class OTAnalyticsCli:
         self._get_all_track_ids = get_all_track_ids
         self._clear_all_tracks = clear_all_tracks
         self._progressbar = progressbar
-        self._event_list_export_formats = event_list_export_formats
 
     def start(self) -> None:
         """Start analysis."""
@@ -387,25 +386,11 @@ class OTAnalyticsCli:
 
     def _export_events(self, sections: Iterable[Section], save_path: Path) -> None:
         events = self._event_repository.get_all()
-        match self.cli_args.event_format:
-            case EventFormat.CSV:
-                exporter = self._event_list_export_formats[OTC_CSV_FORMAT_NAME]
-                actual_save_path = save_path.with_suffix(
-                    f".events.{EventFormat.CSV.value}"
-                )
-                exporter.export(events, sections, actual_save_path)
-            case EventFormat.EXCEL:
-                exporter = self._event_list_export_formats[OTC_EXCEL_FORMAT_NAME]
-                actual_save_path = save_path.with_suffix(
-                    f".events.{EventFormat.EXCEL.value}"
-                )
-                exporter.export(events, sections, actual_save_path)
-            case _:
-                exporter = self._event_list_export_formats[OTC_OTEVENTS_FORMAT_NAME]
-                actual_save_path = save_path.with_suffix(
-                    f".{EventFormat.OTEVENTS.value}"
-                )
-                exporter.export(events, sections, actual_save_path)
+        event_list_exporter = self.cli_args.event_list_exporter
+        actual_save_path = save_path.with_suffix(
+            f".events.{event_list_exporter.get_extension()}"
+        )
+        event_list_exporter.export(events, sections, actual_save_path)
         logger().info(f"Event list saved at '{actual_save_path}'")
 
     def _do_export_counts(self, event_list_output_file: Path) -> None:

@@ -30,6 +30,7 @@ from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -76,6 +77,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
+    OTC_CSV_FORMAT_NAME,
+    OTC_OTEVENTS_FORMAT_NAME,
 )
 from OTAnalytics.plugin_ui.cli import (
     CliArgumentParser,
@@ -124,6 +127,11 @@ def temp_section(test_data_tmp_dir: Path, otsection_file: Path) -> YieldFixture[
     temp_otsection.unlink()
 
 
+@pytest.fixture
+def event_list_exporter() -> EventListExporter:
+    return AVAILABLE_EVENTLIST_EXPORTERS[OTC_OTEVENTS_FORMAT_NAME]
+
+
 class TestCliArgumentParser:
     def test_parse_with_valid_cli_args(self) -> None:
         track_file_1 = f"track_file_1.{DEFAULT_TRACK_FILE_TYPE}"
@@ -155,7 +163,7 @@ class TestCliArgumentParser:
                 [track_file_1, track_file_2],
                 sections_file,
                 eventlist_name,
-                EventFormat.CSV,
+                AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME],
                 15,
             )
 
@@ -174,7 +182,6 @@ class TestOTAnalyticsCli:
     GET_ALL_TRACK_IDS: str = "get_all_track_ids"
     CLEAR_ALL_TRACKS: str = "clear_all_tracks"
     PROGRESSBAR: str = "progressbar"
-    EVENT_LIST_EXPORT_FORMATS: str = "event_list_export_formats"
 
     @pytest.fixture
     def mock_cli_dependencies(self) -> dict[str, Any]:
@@ -192,7 +199,6 @@ class TestOTAnalyticsCli:
             self.GET_ALL_TRACK_IDS: Mock(spec=GetAllTrackIds),
             self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
             self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
-            self.EVENT_LIST_EXPORT_FORMATS: Mock(),
         }
 
     @pytest.fixture
@@ -275,17 +281,20 @@ class TestOTAnalyticsCli:
             self.GET_ALL_TRACK_IDS: get_all_track_ids,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
             self.PROGRESSBAR: NoProgressbarBuilder(),
-            self.EVENT_LIST_EXPORT_FORMATS: AVAILABLE_EVENTLIST_EXPORTERS,
         }
 
-    def test_init(self, mock_cli_dependencies: dict[str, Any]) -> None:
+    def test_init(
+        self,
+        mock_cli_dependencies: dict[str, Any],
+        event_list_exporter: EventListExporter,
+    ) -> None:
         cli_args = CliArguments(
             True,
             False,
             [f"track_file.{DEFAULT_TRACK_FILE_TYPE}"],
             "sections_file.otflow",
             "my_events",
-            EventFormat.CSV,
+            event_list_exporter,
             1,
         )
         cli = OTAnalyticsCli(cli_args, **mock_cli_dependencies)
@@ -301,13 +310,11 @@ class TestOTAnalyticsCli:
         assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
         assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
         assert cli._progressbar == mock_cli_dependencies[self.PROGRESSBAR]
-        assert (
-            cli._event_list_export_formats
-            == mock_cli_dependencies[self.EVENT_LIST_EXPORT_FORMATS]
-        )
 
     def test_init_empty_tracks_cli_arg(
-        self, mock_cli_dependencies: dict[str, Any]
+        self,
+        mock_cli_dependencies: dict[str, Any],
+        event_list_exporter: EventListExporter,
     ) -> None:
         cli_args = CliArguments(
             True,
@@ -315,14 +322,16 @@ class TestOTAnalyticsCli:
             track_files=[],
             sections_file="section_file.otflow",
             eventlist_filename="",
-            event_format=EventFormat.OTEVENTS,
+            event_list_exporter=event_list_exporter,
             count_interval=1,
         )
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli(cli_args, **mock_cli_dependencies)
 
     def test_init_no_section_cli_arg(
-        self, mock_cli_dependencies: dict[str, Any]
+        self,
+        mock_cli_dependencies: dict[str, Any],
+        event_list_exporter: EventListExporter,
     ) -> None:
         cli_args = CliArguments(
             True,
@@ -330,27 +339,31 @@ class TestOTAnalyticsCli:
             track_files=[f"ottrk_file.{DEFAULT_TRACK_FILE_TYPE}"],
             sections_file="",
             eventlist_filename="",
-            event_format=EventFormat.OTEVENTS,
+            event_list_exporter=event_list_exporter,
             count_interval=1,
         )
         with pytest.raises(CliParseError, match=r"No otflow file passed.*"):
             OTAnalyticsCli(cli_args, **mock_cli_dependencies)
 
-    def test_validate_cli_args_no_tracks(self) -> None:
+    def test_validate_cli_args_no_tracks(
+        self, event_list_exporter: EventListExporter
+    ) -> None:
         cli_args = CliArguments(
-            True, False, [], "section.otflow", "", EventFormat.OTEVENTS, 1
+            True, False, [], "section.otflow", "", event_list_exporter, 1
         )
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli._validate_cli_args(cli_args)
 
-    def test_validate_cli_args_no_section(self) -> None:
+    def test_validate_cli_args_no_section(
+        self, event_list_exporter: EventListExporter
+    ) -> None:
         cli_args = CliArguments(
             True,
             False,
             [f"track.{DEFAULT_TRACK_FILE_TYPE}"],
             "",
             "",
-            EventFormat.CSV,
+            event_list_exporter,
             1,
         )
         with pytest.raises(CliParseError, match=r"No otflow file passed.*"):
@@ -441,7 +454,11 @@ class TestOTAnalyticsCli:
         )
 
     def test_start_with_no_video_in_folder(
-        self, temp_ottrk: Path, temp_section: Path, cli_dependencies: dict[str, Any]
+        self,
+        temp_ottrk: Path,
+        temp_section: Path,
+        cli_dependencies: dict[str, Any],
+        event_list_exporter: EventListExporter,
     ) -> None:
         eventlist_filename = "my_events"
         cli_args = CliArguments(
@@ -450,14 +467,14 @@ class TestOTAnalyticsCli:
             [str(temp_ottrk)],
             str(temp_section),
             eventlist_filename,
-            EventFormat.OTEVENTS,
+            event_list_exporter,
             1,
         )
         cli = OTAnalyticsCli(cli_args, **cli_dependencies)
         cli.start()
 
         expected_event_list_file = temp_ottrk.with_name(
-            f"{eventlist_filename}.{DEFAULT_EVENTLIST_FILE_TYPE}"
+            f"{eventlist_filename}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
         )
         assert expected_event_list_file.exists()
 
