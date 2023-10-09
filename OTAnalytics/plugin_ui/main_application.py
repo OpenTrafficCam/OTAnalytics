@@ -502,6 +502,7 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
+            tracks_metadata=TracksMetadata(track_repository),
             progressbar=TqdmBuilder(),
         ).start()
 
