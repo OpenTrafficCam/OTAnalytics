@@ -195,6 +195,7 @@ class OTAnalyticsCli:
         add_all_tracks: AddAllTracks,
         get_all_track_ids: GetAllTrackIds,
         clear_all_tracks: ClearAllTracks,
+        tracks_metadata: TracksMetadata,
         progressbar: ProgressbarBuilder,
     ) -> None:
         self._validate_cli_args(cli_args)
@@ -212,6 +213,7 @@ class OTAnalyticsCli:
         self._add_all_tracks = add_all_tracks
         self._get_all_track_ids = get_all_track_ids
         self._clear_all_tracks = clear_all_tracks
+        self._tracks_metadata = tracks_metadata
         self._progressbar = progressbar
 
     def start(self) -> None:
@@ -239,8 +241,11 @@ class OTAnalyticsCli:
 
     def _parse_tracks(self, track_files: list[Path]) -> None:
         for track_file in self._progressbar(track_files, "Parsed track files", "files"):
-            tracks = self._track_parser.parse(track_file)
-            self._add_all_tracks(tracks)
+            parse_result = self._track_parser.parse(track_file)
+            self._add_all_tracks(parse_result.tracks)
+            self._tracks_metadata.update_detection_classes(
+                parse_result.metadata.detection_classes
+            )
 
     def _run_analysis(
         self, ottrk_files: set[Path], sections: Iterable[Section], flows: Iterable[Flow]
@@ -395,11 +400,10 @@ class OTAnalyticsCli:
 
     def _do_export_counts(self, event_list_output_file: Path) -> None:
         logger().info("Create counts ...")
-        tracks_metadata = TracksMetadata(self._add_all_tracks._track_repository)
-        tracks_metadata.notify_tracks(list(self._get_all_track_ids()))
-        start = tracks_metadata.first_detection_occurrence
-        end = tracks_metadata.last_detection_occurrence
-        modes = tracks_metadata.classifications
+        self._tracks_metadata.notify_tracks(list(self._get_all_track_ids()))
+        start = self._tracks_metadata.first_detection_occurrence
+        end = self._tracks_metadata.last_detection_occurrence
+        modes = self._tracks_metadata.detection_classifications
         if start is None:
             raise ValueError("start is None but has to be defined for exporting counts")
         if end is None:

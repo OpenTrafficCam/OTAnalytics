@@ -16,10 +16,12 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import (
     ConfigParser,
+    DetectionMetadata,
     EventListParser,
     FlowParser,
     OtConfig,
     TrackParser,
+    TrackParseResult,
     TrackVideoParser,
     VideoParser,
 )
@@ -277,14 +279,14 @@ class OttrkFormatFixer:
         return Version.from_str(version)
 
     def __fix_detections(self, content: dict, current_otdet_version: Version) -> dict:
-        detections = content[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        detections = content[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS]
         fixed_detections: list[dict] = []
         for detection in detections:
             fixed_detection = detection
             for fixer in self._detection_fixes:
                 fixed_detection = fixer.fix(detection, current_otdet_version)
             fixed_detections.append(fixed_detection)
-        content[ottrk_format.DATA][ottrk_format.DETECTIONS] = fixed_detections
+        content[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS] = fixed_detections
         return content
 
 
@@ -449,7 +451,7 @@ class OttrkParser(TrackParser):
         self._detection_parser = detection_parser
         self._format_fixer = format_fixer
 
-    def parse(self, ottrk_file: Path) -> TrackDataset:
+    def parse(self, ottrk_file: Path) -> TrackParseResult:
         """Parse ottrk file and convert its content to domain level objects namely
         `Track`s.
 
@@ -457,13 +459,26 @@ class OttrkParser(TrackParser):
             ottrk_file (Path): the track file.
 
         Returns:
-            TrackDataset: the tracks.
+            TrackParseResult: contains tracks and track metadata.
         """
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
-        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
+            ottrk_format.DATA_DETECTIONS
+        ]
         metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
-        return self._detection_parser.parse_tracks(dets_list, metadata_video)
+        tracks = self._detection_parser.parse_tracks(dets_list, metadata_video)
+        metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
+        return TrackParseResult(tracks, metadata)
+
+    def _parse_metadata(self, metadata_detection: dict) -> DetectionMetadata:
+        detection_classes_entry: dict[str, str] = metadata_detection[
+            ottrk_format.METADATA_DETECTION
+        ][ottrk_format.MODEL][ottrk_format.CLASSES]
+        detection_classes = frozenset(
+            classification for classification in detection_classes_entry.values()
+        )
+        return DetectionMetadata(detection_classes)
 
 
 class UnknownSectionType(Exception):

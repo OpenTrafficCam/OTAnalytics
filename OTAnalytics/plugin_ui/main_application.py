@@ -20,6 +20,7 @@ from OTAnalytics.application.datastore import (
     FlowParser,
     TrackParser,
     TrackToVideoRepository,
+    VideoParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
@@ -68,6 +69,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksOverlapOccurrenceWindow,
 )
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
+from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -209,9 +211,15 @@ class ApplicationStarter:
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
+        video_parser = self._create_video_parser()
+        video_repository = self._create_video_repository()
+        track_to_video_repository = self._create_track_to_video_repository()
         datastore = self._create_datastore(
+            video_parser,
+            video_repository,
             track_repository,
             track_file_repository,
+            track_to_video_repository,
             section_repository,
             flow_repository,
             event_repository,
@@ -312,6 +320,15 @@ class ApplicationStarter:
             add_section,
             add_flow,
         )
+        load_track_files = self._create_load_tracks_file(
+            video_parser,
+            track_repository,
+            track_file_repository,
+            video_repository,
+            track_to_video_repository,
+            pulling_progressbar_builder,
+            tracks_metadata,
+        )
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
             clear_all_flows,
@@ -359,6 +376,7 @@ class ApplicationStarter:
             clear_all_events,
             start_new_project,
             project_updater,
+            load_track_files,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -482,13 +500,17 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
+            tracks_metadata=TracksMetadata(track_repository),
             progressbar=TqdmBuilder(),
         ).start()
 
     def _create_datastore(
         self,
+        video_parser: VideoParser,
+        video_repository: VideoRepository,
         track_repository: TrackRepository,
         track_file_repository: TrackFileRepository,
+        track_to_video_repository: TrackToVideoRepository,
         section_repository: SectionRepository,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
@@ -504,9 +526,6 @@ class ApplicationStarter:
         track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
-        video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
-        video_repository = VideoRepository()
-        track_to_video_repository = TrackToVideoRepository()
         track_video_parser = OttrkVideoParser(video_parser)
         config_parser = OtConfigParser(
             video_parser=video_parser,
@@ -1106,3 +1125,35 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
+
+    def _create_load_tracks_file(
+        self,
+        video_parser: VideoParser,
+        track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
+        video_repository: VideoRepository,
+        track_to_video_repository: TrackToVideoRepository,
+        progressbar: ProgressbarBuilder,
+        tracks_metadata: TracksMetadata,
+    ) -> LoadTrackFiles:
+        track_parser = self._create_track_parser(track_repository)
+        track_video_parser = OttrkVideoParser(video_parser)
+        return LoadTrackFiles(
+            track_parser,
+            track_video_parser,
+            track_repository,
+            track_file_repository,
+            video_repository,
+            track_to_video_repository,
+            progressbar,
+            tracks_metadata,
+        )
+
+    def _create_video_parser(self) -> VideoParser:
+        return CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
+
+    def _create_video_repository(self) -> VideoRepository:
+        return VideoRepository()
+
+    def _create_track_to_video_repository(self) -> TrackToVideoRepository:
+        return TrackToVideoRepository()
