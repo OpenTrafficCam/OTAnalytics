@@ -429,7 +429,6 @@ class ApplicationStarter:
         flow_repository = self._create_flow_repository()
         track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
-        event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
         add_section = AddSection(section_repository)
         get_sections_by_id = GetSectionsById(section_repository)
@@ -473,7 +472,6 @@ class ApplicationStarter:
             cli_args,
             track_parser=track_parser,
             flow_parser=flow_parser,
-            event_list_parser=event_list_parser,
             event_repository=event_repository,
             get_all_sections=GetAllSections(section_repository),
             add_section=add_section,

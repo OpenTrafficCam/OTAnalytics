@@ -378,7 +378,7 @@ class PythonDetectionParser(DetectionParser):
                     # Skip tracks with no detections
                     logger().warning(build_error)
             else:
-                logger().warning(
+                logger().debug(
                     f"Trying to construct track (track_id={track_id}). "
                     f"Number of detections ({track_length} detections) is outside "
                     f"the allowed bounds ({self._track_length_limit})."
