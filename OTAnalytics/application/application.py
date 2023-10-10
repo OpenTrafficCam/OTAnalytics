@@ -26,7 +26,11 @@ from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
-from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.section_repository import (
+    AddSection,
+    GetSectionOffset,
+    GetSectionsById,
+)
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
@@ -110,6 +114,9 @@ class OTAnalyticsApplication:
         self._create_events = create_events
         self._load_otflow = load_otflow
         self._start_new_project = start_new_project
+        self._get_section_offset = GetSectionOffset(
+            GetSectionsById(self._datastore._section_repository)
+        )
 
     def connect_observers(self) -> None:
         """
@@ -546,6 +553,11 @@ class OTAnalyticsApplication:
             end_date = last_occurrence
 
         return start_date, end_date
+
+    def get_section_offset(
+        self, section_id: SectionId, event_type: EventType
+    ) -> RelativeOffsetCoordinate | None:
+        return self._get_section_offset.get(section_id, event_type)
 
     def start_new_project(self) -> None:
         self._start_new_project()

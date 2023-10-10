@@ -92,6 +92,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
+    COLOR_ORANGE,
     DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
     PRE_EDIT_SECTION_STYLE,
@@ -526,6 +527,7 @@ class DummyViewModel(
     def _update_selected_sections(self, section_ids: list[SectionId]) -> None:
         self._update_selected_section_items()
         self._update_enabled_buttons()
+        self.update_section_offset_button_state()
 
     def _update_selected_section_items(self) -> None:
         if self._treeview_sections is None:
@@ -535,6 +537,33 @@ class DummyViewModel(
 
         self._treeview_sections.update_selected_items(new_section_ids)
         self.refresh_items_on_canvas()
+
+    def update_section_offset_button_state(self) -> None:
+        if self._frame_tracks is None:
+            raise MissingInjectedInstanceError(type(self._frame_tracks).__name__)
+
+        currently_selected_sections = (
+            self._application.section_state.selected_sections.get()
+        )
+        default_color = self._frame_tracks.get_default_offset_button_color()
+        single_section_selected = len(currently_selected_sections) == 1
+
+        if not single_section_selected:
+            self._frame_tracks.configure_offset_button(default_color, False)
+            return
+
+        section_offset = self._application.get_section_offset(
+            currently_selected_sections[0], EventType.SECTION_ENTER
+        )
+        if not section_offset:
+            # No offset entry found in section for EventType.SECTION_ENTER
+            return
+
+        visualization_offset = self._application.track_view_state.track_offset.get()
+        if section_offset == visualization_offset:
+            self._frame_tracks.configure_offset_button(default_color, False)
+        else:
+            self._frame_tracks.configure_offset_button(COLOR_ORANGE, True)
 
     def _update_selected_flows(self, flow_ids: list[FlowId]) -> None:
         self._update_selected_flow_items()
@@ -1293,7 +1322,10 @@ class DummyViewModel(
             self._frame_tracks.update_offset(offset.x, offset.y)
 
     def change_track_offset_to_section_offset(self) -> None:
-        return self._application.change_track_offset_to_section_offset()
+        self._application.change_track_offset_to_section_offset()
+        if self._frame_tracks is None:
+            raise MissingInjectedInstanceError(type(self._frame_tracks).__name__)
+        self.update_section_offset_button_state()
 
     def validate_date(self, date: str) -> bool:
         return validate_date(date, DATE_FORMAT)
@@ -1522,7 +1554,7 @@ class DummyViewModel(
             [track_id.id for track_id in cut_tracks_dto.original_tracks]
         )
         msg = (
-            f"Cut succesful. Cutting section '{cut_tracks_dto.section} '"
+            f"Cut successful. Cutting section '{cut_tracks_dto.section} '"
             " and original tracks deleted.\n"
             f"Deleted original track ids:\n{formatted_ids}"
         )
