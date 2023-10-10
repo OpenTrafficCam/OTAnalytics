@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Iterable
 
@@ -17,13 +18,14 @@ from OTAnalytics.application.config import (
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
-from OTAnalytics.application.datastore import EventListParser, FlowParser, TrackParser
+from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -38,6 +40,18 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
+from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
+    AVAILABLE_EVENTLIST_EXPORTERS,
+    OTC_CSV_FORMAT_NAME,
+    OTC_EXCEL_FORMAT_NAME,
+    OTC_OTEVENTS_FORMAT_NAME,
+)
+
+
+class EventFormat(Enum):
+    CSV: str = "csv"
+    EXCEL: str = "xlsx"
+    OTEVENTS: str = "otevents"
 
 
 class CliParseError(Exception):
@@ -59,6 +73,8 @@ class CliArguments:
     track_files: list[str]
     sections_file: str
     eventlist_filename: str
+    event_list_exporter: EventListExporter
+    count_interval: int
 
 
 class CliArgumentParser:
@@ -111,6 +127,23 @@ class CliArgumentParser:
             help="Set log level to DEBUG.",
             required=False,
         )
+        self._parser.add_argument(
+            "--event-format",
+            default=EventFormat.OTEVENTS.value,
+            type=str,
+            help=(
+                "Format to export the event list "
+                "('otevents' (default), 'csv', 'xlsx')."
+            ),
+            required=False,
+        )
+        self._parser.add_argument(
+            "--count-interval",
+            default=DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+            type=int,
+            help="Count interval in minutes.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -120,8 +153,23 @@ class CliArgumentParser:
         """
         args = self._parser.parse_args()
         return CliArguments(
-            args.cli, args.debug, args.ottrks, args.otflow, args.save_name
+            args.cli,
+            args.debug,
+            args.ottrks,
+            args.otflow,
+            args.save_name,
+            self._parse_event_format(args.event_format),
+            args.count_interval,
         )
+
+    def _parse_event_format(self, event_format: str) -> EventListExporter:
+        match event_format.lower():
+            case EventFormat.CSV.value:
+                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME]
+            case EventFormat.EXCEL.value:
+                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_EXCEL_FORMAT_NAME]
+            case _:
+                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_OTEVENTS_FORMAT_NAME]
 
 
 class OTAnalyticsCli:
@@ -137,7 +185,6 @@ class OTAnalyticsCli:
         cli_args: CliArguments,
         track_parser: TrackParser,
         flow_parser: FlowParser,
-        event_list_parser: EventListParser,
         event_repository: EventRepository,
         add_section: AddSection,
         get_all_sections: GetAllSections,
@@ -148,6 +195,7 @@ class OTAnalyticsCli:
         add_all_tracks: AddAllTracks,
         get_all_track_ids: GetAllTrackIds,
         clear_all_tracks: ClearAllTracks,
+        tracks_metadata: TracksMetadata,
         progressbar: ProgressbarBuilder,
     ) -> None:
         self._validate_cli_args(cli_args)
@@ -155,7 +203,6 @@ class OTAnalyticsCli:
 
         self._track_parser = track_parser
         self._flow_parser = flow_parser
-        self._event_list_parser = event_list_parser
         self._event_repository = event_repository
         self._add_section = add_section
         self._get_all_sections = get_all_sections
@@ -166,6 +213,7 @@ class OTAnalyticsCli:
         self._add_all_tracks = add_all_tracks
         self._get_all_track_ids = get_all_track_ids
         self._clear_all_tracks = clear_all_tracks
+        self._tracks_metadata = tracks_metadata
         self._progressbar = progressbar
 
     def start(self) -> None:
@@ -193,8 +241,11 @@ class OTAnalyticsCli:
 
     def _parse_tracks(self, track_files: list[Path]) -> None:
         for track_file in self._progressbar(track_files, "Parsed track files", "files"):
-            tracks = self._track_parser.parse(track_file)
-            self._add_all_tracks(tracks)
+            parse_result = self._track_parser.parse(track_file)
+            self._add_all_tracks(parse_result.tracks)
+            self._tracks_metadata.update_detection_classes(
+                parse_result.metadata.detection_classes
+            )
 
     def _run_analysis(
         self, ottrk_files: set[Path], sections: Iterable[Section], flows: Iterable[Flow]
@@ -217,11 +268,7 @@ class OTAnalyticsCli:
         event_list_output_file = self._determine_eventlist_save_path(
             ottrk_files_sorted[0]
         )
-        self._event_list_parser.serialize(
-            self._event_repository.get_all(), sections, event_list_output_file
-        )
-        logger().info(f"Event list saved at '{event_list_output_file}'")
-
+        self._export_events(sections, event_list_output_file)
         self._do_export_counts(event_list_output_file)
 
     def _apply_cuts(self, sections: Iterable[Section]) -> None:
@@ -342,25 +389,32 @@ class OTAnalyticsCli:
 
         return sections_file
 
+    def _export_events(self, sections: Iterable[Section], save_path: Path) -> None:
+        events = self._event_repository.get_all()
+        event_list_exporter = self.cli_args.event_list_exporter
+        actual_save_path = save_path.with_suffix(
+            f".events.{event_list_exporter.get_extension()}"
+        )
+        event_list_exporter.export(events, sections, actual_save_path)
+        logger().info(f"Event list saved at '{actual_save_path}'")
+
     def _do_export_counts(self, event_list_output_file: Path) -> None:
         logger().info("Create counts ...")
-        tracks_metadata = TracksMetadata(self._add_all_tracks._track_repository)
-        tracks_metadata.notify_tracks(list(self._get_all_track_ids()))
-        start = tracks_metadata.first_detection_occurrence
-        end = tracks_metadata.last_detection_occurrence
-        modes = tracks_metadata.classifications
+        self._tracks_metadata.notify_tracks(list(self._get_all_track_ids()))
+        start = self._tracks_metadata.first_detection_occurrence
+        end = self._tracks_metadata.last_detection_occurrence
+        modes = self._tracks_metadata.detection_classifications
         if start is None:
             raise ValueError("start is None but has to be defined for exporting counts")
         if end is None:
             raise ValueError("end is None but has to be defined for exporting counts")
         if modes is None:
             raise ValueError("modes is None but has to be defined for exporting counts")
-        interval: int = DEFAULT_COUNTING_INTERVAL_IN_MINUTES
         if event_list_output_file.stem == DEFAULT_EVENTLIST_FILE_STEM:
             output_file_stem = DEFAULT_COUNTS_FILE_STEM
         else:
             output_file_stem = (
-                f"{event_list_output_file.stem}_{DEFAULT_COUNTS_FILE_STEM}"
+                f"{event_list_output_file.stem}.{DEFAULT_COUNTS_FILE_STEM}"
             )
         output_file = event_list_output_file.with_stem(output_file_stem).with_suffix(
             f".{DEFAULT_COUNTS_FILE_TYPE}"
@@ -369,7 +423,7 @@ class OTAnalyticsCli:
             start=start,
             end=end,
             modes=list(modes),
-            interval_in_minutes=interval,
+            interval_in_minutes=self.cli_args.count_interval,
             output_file=str(output_file),
             output_format="CSV",
         )

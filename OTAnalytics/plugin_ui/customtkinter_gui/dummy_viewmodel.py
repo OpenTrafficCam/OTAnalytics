@@ -1473,7 +1473,7 @@ class DummyViewModel(
         default_format = next(iter(export_formats.keys()))
         start = self._application._tracks_metadata.first_detection_occurrence
         end = self._application._tracks_metadata.last_detection_occurrence
-        modes = list(self._application._tracks_metadata.classifications)
+        modes = list(self._application._tracks_metadata.detection_classifications)
         default_values: dict = {
             INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
             START: start,
