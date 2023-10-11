@@ -261,11 +261,14 @@ class TestOttrkParser:
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
         _write_bz2(ottrk_data, ottrk_file)
-        result_tracks = ottrk_parser.parse(ottrk_file)
+        parse_result = ottrk_parser.parse(ottrk_file)
 
         expected_track = track_builder_setup_with_sample_data.build_track()
-
-        assert result_tracks == PythonTrackDataset.from_list([expected_track])
+        expected_detection_classes = frozenset(
+            ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
+        )
+        assert parse_result.tracks == PythonTrackDataset.from_list([expected_track])
+        assert parse_result.metadata.detection_classes == expected_detection_classes
         ottrk_file.unlink()
 
     def test_parse_bz2(self, example_json_bz2: tuple[Path, dict]) -> None:
