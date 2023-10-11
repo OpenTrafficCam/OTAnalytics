@@ -889,7 +889,7 @@ class ApplicationStarter:
         )
         background = PlottingLayer("Background", background_image_plotter, enabled=True)
         all_tracks_layer = PlottingLayer(
-            "Show all tracks", track_geometry_plotter, enabled=True
+            "Show all tracks", track_geometry_plotter, enabled=False
         )
         highlight_tracks_intersecting_sections_layer = PlottingLayer(
             "Highlight tracks intersecting sections",
