@@ -893,6 +893,7 @@ class DummyViewModel(
         section_id = SectionId(selected_section_ids[0])
         if selected_section := self._application.get_section_for(section_id):
             self._update_metadata(selected_section)
+            self.update_section_offset_button_state()
 
     def _update_metadata(self, selected_section: Section) -> None:
         current_data = selected_section.to_dict()
