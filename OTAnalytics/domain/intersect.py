@@ -119,7 +119,16 @@ class IntersectParallelizationStrategy(ABC):
         Returns:
             Iterable[Event]: the generated events.
         """
-        pass
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_num_processes(self, value: int) -> None:
+        """Set number of processes to run intersection in parallel.
+
+        Args:
+            value: the number of processes to run in parallel.
+        """
+        raise NotImplementedError
 
 
 T = TypeVar("T")

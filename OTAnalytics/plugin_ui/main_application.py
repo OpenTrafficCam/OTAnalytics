@@ -14,6 +14,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -299,10 +300,14 @@ class ApplicationStarter:
             clear_all_events,
             get_tracks_without_single_detections,
             add_events,
+            DEFAULT_NUM_PROCESSES,
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
-                section_repository, get_tracks_without_single_detections, add_events
+                section_repository,
+                get_tracks_without_single_detections,
+                add_events,
+                DEFAULT_NUM_PROCESSES,
             )
         )
         export_counts = self._create_export_counts(
@@ -462,6 +467,7 @@ class ApplicationStarter:
             clear_all_events,
             get_tracks_without_single_detections,
             add_events,
+            cli_args.num_processes,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             GetTracksWithoutSingleDetections(track_repository),
@@ -970,15 +976,20 @@ class ApplicationStarter:
         section_repository: SectionRepository,
         get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
+        num_processes: int,
     ) -> CreateIntersectionEvents:
-        intersect = self._create_intersect(get_tracks)
+        intersect = self._create_intersect(get_tracks, num_processes)
         return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
 
     @staticmethod
-    def _create_intersect(get_tracks: GetTracksWithoutSingleDetections) -> RunIntersect:
+    def _create_intersect(
+        get_tracks: GetTracksWithoutSingleDetections, num_processes: int
+    ) -> RunIntersect:
         return SimpleRunIntersect(
             intersect_implementation=ShapelyIntersector(ShapelyMapper()),
-            intersect_parallelizer=MultiprocessingIntersectParallelization(),
+            intersect_parallelizer=MultiprocessingIntersectParallelization(
+                num_processes
+            ),
             get_tracks=get_tracks,
         )
 
@@ -1022,8 +1033,9 @@ class ApplicationStarter:
         clear_events: ClearAllEvents,
         get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
+        num_processes: int,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(get_tracks)
+        run_intersect = self._create_intersect(get_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_repository, add_events
         )
