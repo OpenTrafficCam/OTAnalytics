@@ -55,18 +55,6 @@ class FrameFlows(AbstractCTkFrame):
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_flows
         )
-        self.button_load = CTkButton(
-            master=self,
-            text="Load",
-            width=50,
-            command=self._viewmodel.load_configuration,
-        )
-        self.button_save = CTkButton(
-            master=self,
-            text="Save",
-            width=50,
-            command=self._viewmodel.save_configuration,
-        )
 
     def _place_widgets(self) -> None:
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
@@ -82,11 +70,9 @@ class FrameFlows(AbstractCTkFrame):
         self.button_remove.grid(
             row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_load.grid(row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.button_save.grid(row=4, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _set_button_state_categories(self) -> None:
-        self._general_buttons = [self.button_save, self.button_load]
+        self._general_buttons: list[CTkButton] = []
         self._add_buttons = [
             self.button_add,
             self.button_generate,
