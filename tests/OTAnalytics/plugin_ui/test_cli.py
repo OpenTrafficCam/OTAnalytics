@@ -16,6 +16,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.application.config import (
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
+    DEFAULT_NUM_PROCESSES,
     DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
@@ -146,6 +147,7 @@ def create_cli_args(
         OTC_OTEVENTS_FORMAT_NAME
     ],
     count_interval: int = 1,
+    num_processes: int = DEFAULT_NUM_PROCESSES,
 ) -> CliArguments:
     if track_files is None:
         track_files = [TRACK_FILE]
@@ -158,6 +160,7 @@ def create_cli_args(
         save_suffix,
         event_list_exporter,
         count_interval,
+        num_processes,
     )
 
 
@@ -185,6 +188,8 @@ class TestCliArgumentParser:
             EventFormat.CSV.value,
             "--count-interval",
             "15",
+            "--num-processes",
+            "3",
         ]
         with patch.object(sys, "argv", cli_args):
             parser = CliArgumentParser()
@@ -198,6 +203,7 @@ class TestCliArgumentParser:
                 save_suffix,
                 AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME],
                 15,
+                3,
             )
 
 

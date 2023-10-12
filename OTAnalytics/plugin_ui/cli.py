@@ -13,6 +13,7 @@ from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
+    DEFAULT_NUM_PROCESSES,
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
@@ -74,6 +75,7 @@ class CliArguments:
     save_suffix: str
     event_list_exporter: EventListExporter
     count_interval: int
+    num_processes: int
 
 
 class CliArgumentParser:
@@ -150,6 +152,13 @@ class CliArgumentParser:
             help="Count interval in minutes.",
             required=False,
         )
+        self._parser.add_argument(
+            "--num-processes",
+            default=DEFAULT_NUM_PROCESSES,
+            type=int,
+            help="Number of processes to use in multi-processing.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -167,6 +176,7 @@ class CliArgumentParser:
             args.save_suffix,
             self._parse_event_format(args.event_format),
             args.count_interval,
+            args.num_processes,
         )
 
     def _parse_event_format(self, event_format: str) -> EventListExporter:
