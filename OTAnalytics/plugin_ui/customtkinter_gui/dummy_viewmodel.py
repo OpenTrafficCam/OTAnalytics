@@ -133,6 +133,7 @@ MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
+MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
 OTCONFIG = "otconfig"
 
 
@@ -189,6 +190,7 @@ class DummyViewModel(
         self._frame_sections: Optional[AbstractFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
+        self._frame_analysis: Optional[AbstractFrame] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
@@ -230,6 +232,7 @@ class DummyViewModel(
             self._frame_project,
             self._frame_sections,
             self._frame_flows,
+            self._frame_analysis,
         ]
 
     def _update_enabled_track_buttons(self) -> None:
@@ -1537,3 +1540,6 @@ class DummyViewModel(
         )
         logger().info(msg)
         InfoBox(msg, window_position)
+
+    def set_analysis_frame(self, frame: AbstractFrame) -> None:
+        self._frame_analysis = frame

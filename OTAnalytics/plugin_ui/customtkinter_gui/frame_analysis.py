@@ -4,11 +4,9 @@ from typing import Any
 from customtkinter import CTkButton
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
-    CustomCTkTabview,
-    EmbeddedCTkFrame,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
 
 
 class TabviewAnalysis(CustomCTkTabview):
@@ -35,12 +33,16 @@ class TabviewAnalysis(CustomCTkTabview):
         self.set(self._title)
 
 
-class FrameAnalysis(EmbeddedCTkFrame):
+class FrameAnalysis(AbstractCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
+        self.introduce_to_viewmodel()
+
+    def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_analysis_frame(self)
 
     def _get_widgets(self) -> None:
         self.button_export_eventlist = CTkButton(
@@ -60,3 +62,6 @@ class FrameAnalysis(EmbeddedCTkFrame):
         self.button_export_counts.grid(
             row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def get_general_buttons(self) -> list[CTkButton]:
+        return [self.button_export_counts, self.button_export_eventlist]
