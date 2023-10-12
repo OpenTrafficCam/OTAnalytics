@@ -265,7 +265,7 @@ class DummyViewModel(
         single_section_enabled = add_section_enabled and single_section_selected
         multiple_sections_enabled = add_section_enabled and any_section_selected
 
-        self._frame_sections.set_enabled_add_buttons(videos_exist)
+        self._frame_sections.set_enabled_add_buttons(add_section_enabled)
         self._frame_sections.set_enabled_change_single_item_buttons(
             single_section_enabled
         )
