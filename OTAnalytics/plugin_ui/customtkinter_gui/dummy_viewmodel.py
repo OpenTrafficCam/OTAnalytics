@@ -480,7 +480,7 @@ class DummyViewModel(
     def load_otconfig(self) -> None:
         otconfig_file = Path(
             askopenfilename(
-                title="Load sections file",
+                title="Load configuration file",
                 filetypes=[
                     (f"{OTFLOW} file", f"*.{OTFLOW}"),
                     (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
