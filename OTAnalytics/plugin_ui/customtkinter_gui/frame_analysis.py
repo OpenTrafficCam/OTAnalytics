@@ -44,7 +44,9 @@ class FrameAnalysis(EmbeddedCTkFrame):
 
     def _get_widgets(self) -> None:
         self.button_export_eventlist = CTkButton(
-            master=self, text="Export eventlist ...", command=self._viewmodel.export_events
+            master=self,
+            text="Export eventlist ...",
+            command=self._viewmodel.export_events,
         )
         self.button_export_counts = CTkButton(
             master=self, text="Export counts ...", command=self._viewmodel.export_counts

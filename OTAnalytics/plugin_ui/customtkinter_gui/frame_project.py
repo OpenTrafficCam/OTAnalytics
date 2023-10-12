@@ -102,11 +102,11 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         self._button_frame.grid(
             row=0, column=0, columnspan=2, padx=0, pady=0, sticky=STICKY
         )
-        for column, button in enumerate([self._button_new, self.button_open, self.button_save]):
+        for column, button in enumerate(
+            [self._button_new, self.button_open, self.button_save]
+        ):
             self._button_frame.grid_columnconfigure(column, weight=1)
-            button.grid(
-                row=0, column=column, padx=PADX, pady=PADY, sticky=STICKY
-            )
+            button.grid(row=0, column=column, padx=PADX, pady=PADY, sticky=STICKY)
         self._label_name.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_name.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self._start_date_row.grid(row=2, column=0, columnspan=2, sticky=STICKY_WEST)
@@ -115,10 +115,10 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         self._project_name.trace_add("write", callback=self._update_project_name)
         self._start_date_row.trace_add(callback=self._update_project_start_date)
 
-    def _update_project_name(self) -> None:
+    def _update_project_name(self, name: str, other: str, mode: str) -> None:
         self._viewmodel.update_project_name(self._project_name.get())
 
-    def _update_project_start_date(self) -> None:
+    def _update_project_start_date(self, name: str, other: str, mode: str) -> None:
         with contextlib.suppress(InvalidDatetimeFormatError):
             self._viewmodel.update_project_start_date(
                 self._start_date_row.get_datetime(),
