@@ -504,7 +504,6 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
         Args:
             track_df (DataFrame): tracks to plot
-            alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
         seaborn.lineplot(
@@ -519,8 +518,16 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             alpha=self._alpha,
             ax=axes,
             palette=self._color_palette_provider.get(),
-            legend=self._enable_legend,
         )
+        if self._enable_legend:
+            print("creating legend")
+            legend = axes.legend(loc="upper right")
+            legend.set_alpha(1)
+        else:
+            # Somehow enabling a legend from previous call to this method persists.
+            # Need to manually remove it, if legend exists.
+            if existing_legend := axes.legend_:
+                existing_legend.remove()
 
 
 class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
