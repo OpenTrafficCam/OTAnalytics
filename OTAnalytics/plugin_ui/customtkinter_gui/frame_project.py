@@ -75,8 +75,23 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             name="Start date",
             place_validation_below=True,
         )
+        self._button_frame = EmbeddedCTkFrame(master=self)
         self._button_new_project = CTkButton(
-            master=self, text="New Project", command=self._viewmodel.start_new_project
+            master=self._button_frame,
+            text="New Project",
+            command=self._viewmodel.start_new_project,
+        )
+        self.button_open = CTkButton(
+            master=self._button_frame,
+            text="Open...",
+            width=50,
+            command=self._viewmodel.load_configuration,
+        )
+        self.button_save = CTkButton(
+            master=self._button_frame,
+            text="Save...",
+            width=50,
+            command=self._viewmodel.save_configuration,
         )
 
     def _place_widgets(self) -> None:
@@ -86,9 +101,17 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         self._label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_name.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self._start_date_row.grid(row=1, column=0, columnspan=2, sticky=STICKY_WEST)
-        self._button_new_project.grid(
-            row=2, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        self._button_frame.grid(
+            row=2, column=0, columnspan=2, padx=0, pady=0, sticky=STICKY
         )
+
+        self._button_frame.grid_rowconfigure((0, 1), weight=1)
+        self._button_frame.grid_columnconfigure((0, 1), weight=1)
+        self._button_new_project.grid(
+            row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.button_open.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self.button_save.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _wire_callbacks(self) -> None:
         self._project_name.trace_add("write", callback=self._update_project_name)
@@ -109,7 +132,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
 
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         new_state = STATE_NORMAL if enabled else STATE_DISABLED
-        for button in [self._button_new_project]:
+        for button in [self._button_new_project, self.button_save, self.button_open]:
             button.configure(state=new_state)
 
 
