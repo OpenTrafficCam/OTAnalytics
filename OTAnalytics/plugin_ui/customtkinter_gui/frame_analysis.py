@@ -44,19 +44,16 @@ class FrameAnalysis(EmbeddedCTkFrame):
 
     def _get_widgets(self) -> None:
         self.button_export_eventlist = CTkButton(
-            master=self, text="Export eventlist", command=self._viewmodel.export_events
+            master=self, text="Export eventlist ...", command=self._viewmodel.export_events
         )
         self.button_export_counts = CTkButton(
-            master=self, text="Export counts", command=self._viewmodel.export_counts
+            master=self, text="Export counts ...", command=self._viewmodel.export_counts
         )
 
     def _place_widgets(self) -> None:
-        # self._label_title.grid(
-        #     row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        # )
         self.button_export_eventlist.grid(
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_export_counts.grid(
-            row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
