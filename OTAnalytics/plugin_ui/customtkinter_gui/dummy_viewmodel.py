@@ -1,9 +1,10 @@
 import contextlib
+import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
 from tkinter.filedialog import askopenfilename, askopenfilenames
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
@@ -147,6 +148,19 @@ class MissingInjectedInstanceError(Exception):
 
 def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
+
+
+def action(func: Any) -> Any:
+    @functools.wraps(func)
+    def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
+        self._start_action()
+        try:
+            value = func(self, *args, **kwargs)
+            return value
+        finally:
+            self._finish_action()
+
+    return wrapper_decorator
 
 
 class DummyViewModel(
@@ -579,6 +593,7 @@ class DummyViewModel(
             for section_id in self._application.section_state.selected_sections.get()
         ]
 
+    @action
     def load_tracks(self) -> None:
         track_files = askopenfilenames(
             title="Load track files", filetypes=[("tracks file", "*.ottrk")]
