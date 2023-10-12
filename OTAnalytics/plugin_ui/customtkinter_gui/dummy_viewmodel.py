@@ -880,15 +880,14 @@ class DummyViewModel(
         if selected_section := self._application.get_section_for(section_id):
             self._update_metadata(selected_section)
 
+    @action
     def _update_metadata(self, selected_section: Section) -> None:
         current_data = selected_section.to_dict()
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         position = self._canvas.get_position()
-        self._start_action()
         with contextlib.suppress(CancelAddSection):
             self.__update_section_metadata(selected_section, current_data, position)
-        self._finish_action()
 
     def __update_section_metadata(
         self, selected_section: Section, current_data: dict, position: tuple[int, int]
@@ -913,6 +912,7 @@ class DummyViewModel(
         if not section.name.startswith(CUTTING_SECTION_MARKER):
             self._treeview_sections.update_selected_items([id.serialize()])
 
+    @action
     def remove_sections(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
@@ -925,7 +925,6 @@ class DummyViewModel(
             )
             return
 
-        self._start_action()
         section_ids = [SectionId(id) for id in selected_section_ids]
         for section_id in section_ids:
             if self._application.is_flow_using_section(section_id):
@@ -940,13 +939,11 @@ class DummyViewModel(
                     message=message,
                     initial_position=position,
                 )
-                self._finish_action()
                 return
 
         for section_id in section_ids:
             self._application.remove_section(section_id)
         self.refresh_items_on_canvas()
-        self._finish_action()
 
     def refresh_items_on_canvas(self) -> None:
         self._remove_items_from_canvas()
@@ -1061,13 +1058,12 @@ class DummyViewModel(
     def get_all_flows(self) -> Iterable[Flow]:
         return self._application.get_all_flows()
 
+    @action
     def add_flow(self) -> None:
-        self._start_action()
         with contextlib.suppress(CancelAddFlow):
             flow = self.__create_flow()
             logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
-        self._finish_action()
 
     def __create_flow(self) -> Flow:
         flow_data = self._show_flow_popup()
@@ -1172,8 +1168,8 @@ class DummyViewModel(
         self.set_selected_flow_ids([flow_id.serialize()])
         self.refresh_items_on_canvas()
 
+    @action
     def edit_selected_flow(self) -> None:
-        self._start_action()
         with contextlib.suppress(CancelAddFlow):
             if flows := self._get_selected_flows():
                 if len(flows) != 1:
@@ -1191,7 +1187,6 @@ class DummyViewModel(
                 InfoBox(
                     message="Please select a flow to edit", initial_position=position
                 )
-        self._finish_action()
 
     def _edit_flow(self, flow: Flow) -> None:
         input_data = {
@@ -1208,10 +1203,10 @@ class DummyViewModel(
         ):
             self.__update_flow_data(flow_data=flow_data)
 
+    @action
     def remove_flows(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        self._start_action()
         if flow_ids := self._application.flow_state.selected_flows.get():
             for flow_id in flow_ids:
                 self._application.remove_flow(flow_id)
@@ -1219,7 +1214,6 @@ class DummyViewModel(
         else:
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
-        self._finish_action()
 
     def create_events(self) -> None:
         if self._window is None:
