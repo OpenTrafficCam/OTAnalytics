@@ -66,9 +66,9 @@ class CheckBoxLayer(EmbeddedCTkFrame):
         self._layer = layer
         self._enabled.set(self._layer.is_enabled())
         layer.register(self._on_layer_state_changed)
-        self.get_widgets()
+        self._get_widgets()
 
-    def get_widgets(self) -> None:
+    def _get_widgets(self) -> None:
         self._label = CTkLabel(master=self, text=self._layer.get_name())
         self._checkbox = CTkCheckBox(
             master=self,
