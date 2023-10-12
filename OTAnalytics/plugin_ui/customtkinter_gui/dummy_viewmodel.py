@@ -1,9 +1,10 @@
 import contextlib
+import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
 from tkinter.filedialog import askopenfilename, askopenfilenames
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
@@ -133,6 +134,7 @@ MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
+MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
 OTCONFIG = "otconfig"
 
 
@@ -148,6 +150,19 @@ class MissingInjectedInstanceError(Exception):
 
 def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
+
+
+def action(func: Any) -> Any:
+    @functools.wraps(func)
+    def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
+        self._start_action()
+        try:
+            value = func(self, *args, **kwargs)
+            return value
+        finally:
+            self._finish_action()
+
+    return wrapper_decorator
 
 
 class DummyViewModel(
@@ -176,6 +191,7 @@ class DummyViewModel(
         self._frame_sections: Optional[AbstractFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
+        self._frame_analysis: Optional[AbstractFrame] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
@@ -217,6 +233,7 @@ class DummyViewModel(
             self._frame_project,
             self._frame_sections,
             self._frame_flows,
+            self._frame_analysis,
         ]
 
     def _update_enabled_track_buttons(self) -> None:
@@ -252,7 +269,7 @@ class DummyViewModel(
         single_section_enabled = add_section_enabled and single_section_selected
         multiple_sections_enabled = add_section_enabled and any_section_selected
 
-        self._frame_sections.set_enabled_add_buttons(videos_exist)
+        self._frame_sections.set_enabled_add_buttons(add_section_enabled)
         self._frame_sections.set_enabled_change_single_item_buttons(
             single_section_enabled
         )
@@ -274,7 +291,7 @@ class DummyViewModel(
         single_flow_enabled = add_flow_enabled and single_flow_selected and flows_exist
         multiple_flows_enabled = add_flow_enabled and any_flow_selected and flows_exist
 
-        self._frame_flows.set_enabled_add_buttons(two_sections_exist)
+        self._frame_flows.set_enabled_add_buttons(add_flow_enabled)
         self._frame_flows.set_enabled_change_single_item_buttons(single_flow_enabled)
         self._frame_flows.set_enabled_change_multiple_items_buttons(
             multiple_flows_enabled
@@ -467,7 +484,7 @@ class DummyViewModel(
     def load_otconfig(self) -> None:
         otconfig_file = Path(
             askopenfilename(
-                title="Load sections file",
+                title="Load configuration file",
                 filetypes=[
                     (f"{OTFLOW} file", f"*.{OTFLOW}"),
                     (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
@@ -608,6 +625,7 @@ class DummyViewModel(
             for section_id in self._application.section_state.selected_sections.get()
         ]
 
+    @action
     def load_tracks(self) -> None:
         track_files = askopenfilenames(
             title="Load track files", filetypes=[("tracks file", "*.ottrk")]
@@ -895,15 +913,14 @@ class DummyViewModel(
             self._update_metadata(selected_section)
             self.update_section_offset_button_state()
 
+    @action
     def _update_metadata(self, selected_section: Section) -> None:
         current_data = selected_section.to_dict()
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         position = self._canvas.get_position()
-        self._start_action()
         with contextlib.suppress(CancelAddSection):
             self.__update_section_metadata(selected_section, current_data, position)
-        self._finish_action()
 
     def __update_section_metadata(
         self, selected_section: Section, current_data: dict, position: tuple[int, int]
@@ -928,6 +945,7 @@ class DummyViewModel(
         if not section.name.startswith(CUTTING_SECTION_MARKER):
             self._treeview_sections.update_selected_items([id.serialize()])
 
+    @action
     def remove_sections(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
@@ -940,7 +958,6 @@ class DummyViewModel(
             )
             return
 
-        self._start_action()
         section_ids = [SectionId(id) for id in selected_section_ids]
         for section_id in section_ids:
             if self._application.is_flow_using_section(section_id):
@@ -955,13 +972,11 @@ class DummyViewModel(
                     message=message,
                     initial_position=position,
                 )
-                self._finish_action()
                 return
 
         for section_id in section_ids:
             self._application.remove_section(section_id)
         self.refresh_items_on_canvas()
-        self._finish_action()
 
     def refresh_items_on_canvas(self) -> None:
         self._remove_items_from_canvas()
@@ -1076,13 +1091,12 @@ class DummyViewModel(
     def get_all_flows(self) -> Iterable[Flow]:
         return self._application.get_all_flows()
 
+    @action
     def add_flow(self) -> None:
-        self._start_action()
         with contextlib.suppress(CancelAddFlow):
             flow = self.__create_flow()
             logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
-        self._finish_action()
 
     def __create_flow(self) -> Flow:
         flow_data = self._show_flow_popup()
@@ -1187,8 +1201,8 @@ class DummyViewModel(
         self.set_selected_flow_ids([flow_id.serialize()])
         self.refresh_items_on_canvas()
 
+    @action
     def edit_selected_flow(self) -> None:
-        self._start_action()
         with contextlib.suppress(CancelAddFlow):
             if flows := self._get_selected_flows():
                 if len(flows) != 1:
@@ -1206,7 +1220,6 @@ class DummyViewModel(
                 InfoBox(
                     message="Please select a flow to edit", initial_position=position
                 )
-        self._finish_action()
 
     def _edit_flow(self, flow: Flow) -> None:
         input_data = {
@@ -1223,10 +1236,10 @@ class DummyViewModel(
         ):
             self.__update_flow_data(flow_data=flow_data)
 
+    @action
     def remove_flows(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        self._start_action()
         if flow_ids := self._application.flow_state.selected_flows.get():
             for flow_id in flow_ids:
                 self._application.remove_flow(flow_id)
@@ -1234,7 +1247,6 @@ class DummyViewModel(
         else:
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
-        self._finish_action()
 
     def create_events(self) -> None:
         if self._window is None:
@@ -1562,3 +1574,6 @@ class DummyViewModel(
         )
         logger().info(msg)
         InfoBox(msg, window_position)
+
+    def set_analysis_frame(self, frame: AbstractFrame) -> None:
+        self._frame_analysis = frame
