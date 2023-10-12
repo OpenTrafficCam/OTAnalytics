@@ -287,7 +287,7 @@ class DummyViewModel(
         single_flow_enabled = add_flow_enabled and single_flow_selected and flows_exist
         multiple_flows_enabled = add_flow_enabled and any_flow_selected and flows_exist
 
-        self._frame_flows.set_enabled_add_buttons(two_sections_exist)
+        self._frame_flows.set_enabled_add_buttons(add_flow_enabled)
         self._frame_flows.set_enabled_change_single_item_buttons(single_flow_enabled)
         self._frame_flows.set_enabled_change_multiple_items_buttons(
             multiple_flows_enabled
