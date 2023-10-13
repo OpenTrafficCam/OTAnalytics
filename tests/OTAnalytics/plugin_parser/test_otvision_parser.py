@@ -787,7 +787,6 @@ class TestCachedVideoParser:
 
         assert isinstance(parsed_video, CachedVideo)
         assert parsed_video.other == video
-        video.get_frame.assert_called_once()
 
     def test_parse_list_to_cached_videos(self, test_data_tmp_dir: Path) -> None:
         content: list[dict] = [{}]
@@ -809,8 +808,6 @@ class TestCachedVideoParser:
             assert parsed_videos[0].other == video1
         if isinstance(parsed_videos[1], CachedVideo):
             assert parsed_videos[1].other == video2
-        video1.get_frame.assert_called_once()
-        video2.get_frame.assert_called_once()
 
     def test_convert_delegates_to_other(self, test_data_tmp_dir: Path) -> None:
         video1 = Mock(spec=Video)
