@@ -31,7 +31,7 @@ class OpenCvVideoReader(VideoReader):
         """
         cap = self.__get_clip(video_path)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        frame_to_load = min(index, total_frames)
+        frame_to_load = min(index, (total_frames - 1))
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_to_load)
         is_read, frame = cap.read()
         cap.release()
