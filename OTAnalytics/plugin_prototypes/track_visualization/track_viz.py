@@ -520,7 +520,6 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             palette=self._color_palette_provider.get(),
         )
         if self._enable_legend:
-            print("creating legend")
             legend = axes.legend(loc="upper right")
             legend.set_alpha(1)
         else:
