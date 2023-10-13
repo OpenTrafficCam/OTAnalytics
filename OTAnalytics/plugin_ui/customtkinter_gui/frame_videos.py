@@ -37,7 +37,7 @@ class FrameVideos(AbstractCTkFrame):
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
         self.button_add_videos = CTkButton(
-            master=self, text="Load", command=self._viewmodel.add_video
+            master=self, text="Add...", command=self._viewmodel.add_video
         )
         self.button_remove_videos = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_videos
