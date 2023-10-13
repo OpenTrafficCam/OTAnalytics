@@ -814,9 +814,7 @@ class CachedVideoParser(VideoParser):
         return self.__create_cached_video(other_video)
 
     def __create_cached_video(self, other_video: Video) -> Video:
-        cached_video = CachedVideo(other_video)
-        cached_video.get_frame(0)
-        return cached_video
+        return CachedVideo(other_video)
 
     def parse_list(self, content: list[dict], base_folder: Path) -> Sequence[Video]:
         return [
