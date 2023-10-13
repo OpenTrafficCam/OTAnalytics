@@ -163,7 +163,7 @@ from OTAnalytics.plugin_ui.cli import (
     CliParseError,
     OTAnalyticsCli,
 )
-from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
+from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 
 class ApplicationStarter:
@@ -1162,7 +1162,7 @@ class ApplicationStarter:
         )
 
     def _create_video_parser(self) -> VideoParser:
-        return CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
+        return CachedVideoParser(SimpleVideoParser(OpenCvVideoReader()))
 
     def _create_video_repository(self) -> VideoRepository:
         return VideoRepository()
