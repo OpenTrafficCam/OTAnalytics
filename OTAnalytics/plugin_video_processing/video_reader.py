@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from moviepy.video.io.VideoFileClip import VideoFileClip
+import cv2
+from cv2 import VideoCapture
 from PIL import Image
 
 from OTAnalytics.domain.track import PilImage, TrackImage
@@ -17,30 +18,28 @@ class FrameDoesNotExistError(Exception):
     pass
 
 
-class MoviepyVideoReader(VideoReader):
+class OpenCvVideoReader(VideoReader):
     def get_frame(self, video_path: Path, index: int) -> TrackImage:
         """Get image of video at `frame`.
-
         Args:
             video_path (Path): path to the video_path.
             index (int): the frame of the video to get.
-
         Raises:
             FrameDoesNotExistError: if frame does not exist.
-
         Returns:
             ndarray: the image as an multi-dimensional array.
         """
+        cap = self.__get_clip(video_path)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        frame_to_load = min(index, total_frames)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_to_load)
+        is_read, frame = cap.read()
+        cap.release()
+        return PilImage(Image.fromarray(frame).convert(GRAYSCALE))
+
+    @staticmethod
+    def __get_clip(video_path: Path) -> VideoCapture:
         try:
-            clip = VideoFileClip(str(video_path.absolute()))
+            return VideoCapture(str(video_path.absolute()))
         except IOError as e:
             raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
-        found = None
-        for frame_no, np_frame in enumerate(clip.iter_frames()):
-            if frame_no == index:
-                found = np_frame
-                break
-        clip.close()
-        if found is None:
-            raise FrameDoesNotExistError(f"frame number '{index}' does not exist")
-        return PilImage(Image.fromarray(found).convert(GRAYSCALE))
