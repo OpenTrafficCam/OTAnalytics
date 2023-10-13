@@ -320,3 +320,9 @@ class TestEventRepository:
         subject.notify.assert_called_with(
             EventRepositoryEvent([], [first_event, second_event])
         )
+
+    def test_is_empty(self) -> None:
+        repository = EventRepository()
+        assert repository.is_empty()
+        repository.add(Mock())
+        assert not repository.is_empty()

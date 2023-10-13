@@ -378,3 +378,7 @@ class EventRepository:
             removed = self._events
             self._events = []
             self._subject.notify(EventRepositoryEvent([], removed))
+
+    def is_empty(self) -> bool:
+        """Whether repository is empty."""
+        return not self._events
