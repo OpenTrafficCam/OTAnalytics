@@ -336,3 +336,7 @@ class ViewModel(ABC):
         self, frame_track_plotting: AbstractFrameTrackPlotting
     ) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def set_analysis_frame(self, frame: AbstractFrame) -> None:
+        raise NotImplementedError
