@@ -805,7 +805,7 @@ class ApplicationStarter:
             track_view_state,
             data_provider_all_filters,
             color_palette_provider,
-            alpha=0.2,
+            alpha=0.5,
             enable_legend=True,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
