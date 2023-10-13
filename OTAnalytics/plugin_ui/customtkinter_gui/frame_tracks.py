@@ -29,7 +29,7 @@ class TracksFrame(AbstractFrameTracks):
 
     def _get_widgets(self) -> None:
         self.button_load_tracks = CTkButton(
-            master=self, text="Load", command=self._viewmodel.load_tracks
+            master=self, text="Add...", command=self._viewmodel.load_tracks
         )
         self._frame_bbox_offset = FrameBboxOffset(
             master=self,
