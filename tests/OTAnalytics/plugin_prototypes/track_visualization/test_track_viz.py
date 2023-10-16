@@ -10,8 +10,8 @@ from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.track import (
-    CLASSIFICATION,
     OCCURRENCE,
+    TRACK_CLASSIFICATION,
     TRACK_ID,
     Detection,
     PythonDetection,
@@ -495,7 +495,9 @@ class TestDataFrameProviderFilter:
         result = df_filter.get_data()
         result == filter_result
 
-        filter_builder.set_classification_column.assert_called_once_with(CLASSIFICATION)
+        filter_builder.set_classification_column.assert_called_once_with(
+            TRACK_CLASSIFICATION
+        )
         observable_filter_element.get.assert_called_once()
         filter_element.build_filter.assert_called_once_with(filter_builder)
         filter_imp.apply.assert_called_once_with([filter_input])
