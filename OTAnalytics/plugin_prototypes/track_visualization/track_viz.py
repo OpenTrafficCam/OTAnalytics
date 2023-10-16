@@ -417,16 +417,21 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
             self._cache_df = self._remove_tracks(track_event.removed)
 
         if track_event.added:
+            # filter existing tracks from cache
+            filtered_cache = self._cache_without_existing_tracks(
+                track_ids=track_event.added
+            )
+
             # convert tracks not yet in cache
             new_df = self.__do_convert_tracks(
                 self._fetch_new_track_data(track_ids=track_event.added)
             )
 
             # concat remaining tracks and new tracks
-            if self._cache_df.empty:
+            if filtered_cache.empty:
                 df = new_df
             else:
-                df = pandas.concat([self._cache_df, new_df])
+                df = pandas.concat([filtered_cache, new_df])
             self._cache_df = self._sort_tracks(df)
 
     def _reset_cache(self) -> None:
@@ -463,7 +468,6 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         return cache_without_removed_tracks
 
     def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
-        cut_tracks_dto.original_tracks
         cache_without_cut_tracks = self._remove_tracks(cut_tracks_dto.original_tracks)
         self._cache_df = self._sort_tracks(cache_without_cut_tracks)
 
