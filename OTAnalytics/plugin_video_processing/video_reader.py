@@ -33,9 +33,10 @@ class OpenCvVideoReader(VideoReader):
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         frame_to_load = min(index, (total_frames - 1))
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_to_load)
-        is_read, frame = cap.read()
+        is_read, bgr_frame = cap.read()
         cap.release()
-        return PilImage(Image.fromarray(frame).convert(GRAYSCALE))
+        rgb_frame = bgr_frame[:, :, ::-1]
+        return PilImage(Image.fromarray(rgb_frame).convert(GRAYSCALE))
 
     @staticmethod
     def __get_clip(video_path: Path) -> VideoCapture:
