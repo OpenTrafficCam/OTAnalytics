@@ -39,6 +39,7 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
+from OTAnalytics.domain.track import TrackRepositoryEvent
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_CSV_FORMAT_NAME,
@@ -411,7 +412,9 @@ class OTAnalyticsCli:
 
     def _do_export_counts(self, save_path: Path) -> None:
         logger().info("Create counts ...")
-        self._tracks_metadata.notify_tracks(list(self._get_all_track_ids()))
+        self._tracks_metadata.notify_tracks(
+            TrackRepositoryEvent(list(self._get_all_track_ids()), [])
+        )
         start = self._tracks_metadata.first_detection_occurrence
         end = self._tracks_metadata.last_detection_occurrence
         modes = self._tracks_metadata.detection_classifications
