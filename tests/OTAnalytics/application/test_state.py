@@ -30,6 +30,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackImage,
     TrackRepository,
+    TrackRepositoryEvent,
 )
 
 
@@ -55,7 +56,7 @@ class TestTrackState:
         second_track = TrackId("2")
         state = TrackState()
 
-        state.notify_tracks([first_track, second_track])
+        state.notify_tracks(TrackRepositoryEvent([first_track, second_track], []))
 
         assert state.selected_track == first_track
 
@@ -63,8 +64,8 @@ class TestTrackState:
         first_track = TrackId("1")
         state = TrackState()
 
-        state.notify_tracks([first_track])
-        state.notify_tracks([])
+        state.notify_tracks(TrackRepositoryEvent([first_track], []))
+        state.notify_tracks(TrackRepositoryEvent([], []))
 
         assert state.selected_track is None
 
@@ -202,7 +203,7 @@ class TestTrackImageUpdater:
         )
         tracks: list[TrackId] = [track_id]
 
-        updater.notify_tracks(tracks)
+        updater.notify_tracks(TrackRepositoryEvent(tracks, []))
 
         assert track_view_state.background_image.get() == background_image
 

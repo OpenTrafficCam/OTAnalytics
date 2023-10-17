@@ -560,6 +560,9 @@ class ApplicationStarter:
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
         # calculator = PandasByMaxConfidence()
+        # detection_parser = PandasDetectionParser(
+        #     calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        # )
         calculator = ByMaxConfidence()
         detection_parser = PythonDetectionParser(
             calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
@@ -594,6 +597,9 @@ class ApplicationStarter:
         progressbar: ProgressbarBuilder,
     ) -> PandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
+        # return PandasTrackProvider(
+        #     datastore, track_view_state, dataframe_filter_builder, progressbar
+        # )
         return CachedPandasTrackProvider(
             datastore, track_view_state, dataframe_filter_builder, progressbar
         )
