@@ -7,6 +7,8 @@ from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewI
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
+EMPTY_SELECTION: list[str] = []
+
 
 @dataclass(frozen=True, order=True)
 class ColumnResource:
@@ -62,8 +64,8 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
         self._deselect_all()
 
     def _deselect_all(self) -> None:
-        self.selection_set([])
-        self._notify_viewmodel_about_selected_item_ids([])
+        self.selection_set(EMPTY_SELECTION)
+        self._notify_viewmodel_about_selected_item_ids(EMPTY_SELECTION)
 
     def _on_single_select(self, event: Any) -> None:
         current_selection = self.__get_current_selection()
