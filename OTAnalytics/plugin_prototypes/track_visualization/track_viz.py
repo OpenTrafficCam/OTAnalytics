@@ -100,10 +100,7 @@ class ColorPaletteProvider:
     Updates, whenever track metadata are updated.
     """
 
-    def __init__(
-        self,
-        default_palette: dict[str, str] = DEFAULT_COLOR_PALETTE,
-    ) -> None:
+    def __init__(self, default_palette: dict[str, str]) -> None:
         self._default_palette = default_palette
         self._palette: dict[str, str] = {}
 
@@ -228,7 +225,7 @@ class FilterByClassification(PandasDataFrameProvider):
         Returns:
             DataFrame: filtered by classifications.
         """
-        self._filter_builder.set_classification_column(track.CLASSIFICATION)
+        self._filter_builder.set_classification_column(track.TRACK_CLASSIFICATION)
         filter_element = self._track_view_state.filter_element.get()
         dataframe_filter = filter_element.build_filter(self._filter_builder)
 
@@ -572,7 +569,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
         seaborn.scatterplot(
             x="x",
             y="y",
-            hue=track.CLASSIFICATION,
+            hue=track.TRACK_CLASSIFICATION,
             data=track_df_start_end,
             style="type",
             markers=[">", "$x$"],

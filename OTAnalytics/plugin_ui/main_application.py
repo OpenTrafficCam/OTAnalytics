@@ -144,6 +144,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     AVAILABLE_EVENTLIST_EXPORTERS,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    DEFAULT_COLOR_PALETTE,
     CachedPandasTrackProvider,
     ColorPaletteProvider,
     FilterByClassification,
@@ -237,7 +238,7 @@ class ApplicationStarter:
         pandas_data_provider = self._wrap_pandas_track_offset_provider(
             cached_pandas_track_provider, track_view_state
         )
-        color_palette_provider = ColorPaletteProvider()
+        color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         layers = self._create_layers(
             datastore,
             track_view_state,
