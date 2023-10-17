@@ -40,10 +40,6 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import Video
-from OTAnalytics.plugin_datastore.track_store import (
-    PandasByMaxConfidence,
-    PandasTrackDataset,
-)
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleIntersectBySplittingTrackLine,
 )
@@ -60,14 +56,12 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideo,
     CachedVideoParser,
     DetectionFixer,
-    DetectionParser,
     InvalidSectionData,
     OtConfigParser,
     OtEventListParser,
     OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
-    PandasDetectionParser,
     PythonDetectionParser,
     TrackLengthLimit,
     Version,
@@ -78,7 +72,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     _write_bz2,
     _write_json,
 )
-from tests.conftest import TrackBuilder, assert_equal_track_properties
+from tests.conftest import TrackBuilder
 
 
 @pytest.fixture
@@ -244,9 +238,11 @@ class TestOttrkParser:
     def ottrk_parser(
         self, mocked_track_repository: Mock, mocked_track_file_repository: Mock
     ) -> OttrkParser:
-        calculator = PandasByMaxConfidence()
-        detection_parser = PandasDetectionParser(
-            calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        calculator = ByMaxConfidence()
+        detection_parser = PythonDetectionParser(
+            calculator,
+            mocked_track_repository,
+            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
 
@@ -265,11 +261,14 @@ class TestOttrkParser:
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
         _write_bz2(ottrk_data, ottrk_file)
-        result_tracks = ottrk_parser.parse(ottrk_file)
+        parse_result = ottrk_parser.parse(ottrk_file)
 
         expected_track = track_builder_setup_with_sample_data.build_track()
-
-        assert result_tracks == PandasTrackDataset.from_list([expected_track])
+        expected_detection_classes = frozenset(
+            ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
+        )
+        assert parse_result.tracks == PythonTrackDataset.from_list([expected_track])
+        assert parse_result.metadata.detection_classes == expected_detection_classes
         ottrk_file.unlink()
 
     def test_parse_bz2(self, example_json_bz2: tuple[Path, dict]) -> None:
@@ -417,67 +416,6 @@ class TestPythonDetectionParser:
         assert d1.video_name == d2.video_name
         assert d1.interpolated_detection == d2.interpolated_detection
         assert d1.track_id == d2.track_id
-
-
-class TestPandasDetectionParser:
-    @pytest.fixture
-    def parser(self) -> DetectionParser:
-        return PandasDetectionParser(
-            PandasByMaxConfidence(),
-            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
-        )
-
-    def test_parse_tracks(
-        self,
-        track_builder_setup_with_sample_data: TrackBuilder,
-        parser: DetectionParser,
-    ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
-
-        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
-            ottrk_dataformat.VIDEO
-        ]
-        result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
-        unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = parser.parse_tracks(
-            unsorted_detections, metadata_video
-        ).as_list()
-
-        expected_sorted = PandasTrackDataset.from_list(
-            [track_builder_setup_with_sample_data.build_track()]
-        ).as_list()
-
-        for sorted, expected in zip(result_sorted_input, expected_sorted):
-            assert_equal_track_properties(sorted, expected)
-        for unsorted, expected in zip(result_unsorted_input, expected_sorted):
-            assert_equal_track_properties(unsorted, expected)
-
-    @pytest.mark.parametrize(
-        "track_length_limit",
-        [
-            TrackLengthLimit(20, 12000),
-            TrackLengthLimit(0, 4),
-        ],
-    )
-    def test_parse_tracks_consider_minimum_length(
-        self,
-        mocked_track_repository: Mock,
-        track_builder_setup_with_sample_data: TrackBuilder,
-        track_length_limit: TrackLengthLimit,
-    ) -> None:
-        parser = PandasDetectionParser(PandasByMaxConfidence(), track_length_limit)
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
-
-        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
-            ottrk_dataformat.VIDEO
-        ]
-        result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
-
-        assert len(result_sorted_input) == 0
 
 
 class TestOtFlowParser:
@@ -849,7 +787,6 @@ class TestCachedVideoParser:
 
         assert isinstance(parsed_video, CachedVideo)
         assert parsed_video.other == video
-        video.get_frame.assert_called_once()
 
     def test_parse_list_to_cached_videos(self, test_data_tmp_dir: Path) -> None:
         content: list[dict] = [{}]
@@ -871,8 +808,6 @@ class TestCachedVideoParser:
             assert parsed_videos[0].other == video1
         if isinstance(parsed_videos[1], CachedVideo):
             assert parsed_videos[1].other == video2
-        video1.get_frame.assert_called_once()
-        video2.get_frame.assert_called_once()
 
     def test_convert_delegates_to_other(self, test_data_tmp_dir: Path) -> None:
         video1 = Mock(spec=Video)

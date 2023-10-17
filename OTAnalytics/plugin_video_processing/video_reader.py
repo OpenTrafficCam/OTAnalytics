@@ -2,7 +2,8 @@ from datetime import timedelta
 from math import floor
 from pathlib import Path
 
-from moviepy.video.io.VideoFileClip import VideoFileClip
+import cv2
+from cv2 import VideoCapture
 from PIL import Image
 
 from OTAnalytics.domain.track import PilImage, TrackImage
@@ -19,34 +20,34 @@ class FrameDoesNotExistError(Exception):
     pass
 
 
-class MoviepyVideoReader(VideoReader):
+class OpenCvVideoReader(VideoReader):
     def get_frame(self, video_path: Path, index: int) -> TrackImage:
         """Get image of video at `frame`.
-
         Args:
             video_path (Path): path to the video_path.
             index (int): the frame of the video to get.
-
         Raises:
             FrameDoesNotExistError: if frame does not exist.
-
         Returns:
             ndarray: the image as an multi-dimensional array.
         """
-        clip = self.__get_clip(video_path)
-        found = None
-        max_frames = clip.fps * clip.duration
-        frame_to_load = min(index, max_frames)
-        found = clip.get_frame(frame_to_load / clip.fps)
-        clip.close()
-        return PilImage(Image.fromarray(found).convert(GRAYSCALE))
+        cap = self.__get_clip(video_path)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        frame_to_load = min(index, (total_frames - 1))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_to_load)
+        is_read, bgr_frame = cap.read()
+        cap.release()
+        rgb_frame = bgr_frame[:, :, ::-1]
+        return PilImage(Image.fromarray(rgb_frame).convert(GRAYSCALE))
 
-    def __get_clip(self, video_path: Path) -> VideoFileClip:
+    @staticmethod
+    def __get_clip(video_path: Path) -> VideoCapture:
         try:
-            return VideoFileClip(str(video_path.absolute()))
+            return VideoCapture(str(video_path.absolute()))
         except IOError as e:
             raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
 
     def get_frame_number_for(self, video_path: Path, delta: timedelta) -> int:
         clip = self.__get_clip(video_path)
-        return floor(clip.fps * delta.total_seconds())
+        total_frames = int(clip.get(cv2.CAP_PROP_FRAME_COUNT))
+        return floor(total_frames * delta.total_seconds())

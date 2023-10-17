@@ -2,12 +2,10 @@ import bz2
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from functools import partial
 from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Tuple
 
 import ujson
-from pandas import DataFrame
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
@@ -18,16 +16,18 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import (
     ConfigParser,
+    DetectionMetadata,
     EventListParser,
     FlowParser,
     OtConfig,
     TrackParser,
+    TrackParseResult,
     TrackVideoParser,
     VideoParser,
 )
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.project import Project
-from OTAnalytics.domain import event, flow, geometry, section, track, video
+from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
@@ -47,10 +47,6 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
-from OTAnalytics.plugin_datastore.track_store import (
-    PandasTrackClassificationCalculator,
-    PandasTrackDataset,
-)
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
@@ -283,14 +279,14 @@ class OttrkFormatFixer:
         return Version.from_str(version)
 
     def __fix_detections(self, content: dict, current_otdet_version: Version) -> dict:
-        detections = content[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        detections = content[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS]
         fixed_detections: list[dict] = []
         for detection in detections:
             fixed_detection = detection
             for fixer in self._detection_fixes:
                 fixed_detection = fixer.fix(detection, current_otdet_version)
             fixed_detections.append(fixed_detection)
-        content[ottrk_format.DATA][ottrk_format.DETECTIONS] = fixed_detections
+        content[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS] = fixed_detections
         return content
 
 
@@ -384,7 +380,7 @@ class PythonDetectionParser(DetectionParser):
                     # Skip tracks with no detections
                     logger().warning(build_error)
             else:
-                logger().warning(
+                logger().debug(
                     f"Trying to construct track (track_id={track_id}). "
                     f"Number of detections ({track_length} detections) is outside "
                     f"the allowed bounds ({self._track_length_limit})."
@@ -438,74 +434,6 @@ class PythonDetectionParser(DetectionParser):
         return tracks_dict
 
 
-class PandasDetectionParser(DetectionParser):
-    def __init__(
-        self,
-        calculator: PandasTrackClassificationCalculator,
-        track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
-    ) -> None:
-        self._calculator = calculator
-        self._track_length_limit = track_length_limit
-
-    def parse_tracks(
-        self, detections: list[dict], metadata_video: dict
-    ) -> TrackDataset:
-        return self._parse_as_dataframe(detections, metadata_video)
-
-    def _parse_as_dataframe(
-        self, detections: list[dict], metadata_video: dict
-    ) -> TrackDataset:
-        video_name = (
-            metadata_video[ottrk_format.FILENAME]
-            + metadata_video[ottrk_format.FILETYPE]
-        )
-        data = DataFrame(detections)
-        data.rename(
-            columns={
-                ottrk_format.CLASS: track.CLASSIFICATION,
-                ottrk_format.CONFIDENCE: track.CONFIDENCE,
-                ottrk_format.X: track.X,
-                ottrk_format.Y: track.Y,
-                ottrk_format.W: track.W,
-                ottrk_format.H: track.H,
-                ottrk_format.FRAME: track.FRAME,
-                ottrk_format.OCCURRENCE: track.OCCURRENCE,
-                ottrk_format.INTERPOLATED_DETECTION: track.INTERPOLATED_DETECTION,
-                ottrk_format.TRACK_ID: track.TRACK_ID,
-            },
-            inplace=True,
-        )
-        data[track.TRACK_ID] = data[track.TRACK_ID].astype(str)
-        data[track.VIDEO_NAME] = video_name
-        data[track.OCCURRENCE] = (
-            data[track.OCCURRENCE]
-            .astype(float)
-            .apply(partial(datetime.fromtimestamp, tz=timezone.utc))
-        )
-        tracks_by_size = data.groupby(by=[track.TRACK_ID]).size().reset_index()
-        track_ids_to_remain = tracks_by_size.loc[
-            (tracks_by_size[0] >= self._track_length_limit.lower_bound)
-            & (tracks_by_size[0] <= self._track_length_limit.upper_bound),
-            track.TRACK_ID,
-        ]
-        all_track_ids = tracks_by_size[track.TRACK_ID].unique()
-        too_long_track_ids = set(all_track_ids) - set(track_ids_to_remain)
-        if len(too_long_track_ids) > 0:
-            logger().warning(
-                f"Number of detections of the following tracks exceeds the "
-                f"allowed bounds ({self._track_length_limit})."
-                f"Track ids: {too_long_track_ids}"
-            )
-
-        tracks_to_remain = data.loc[
-            data[track.TRACK_ID].isin(track_ids_to_remain)
-        ].copy()
-        tracks_to_remain.sort_values(
-            by=[track.TRACK_ID, track.OCCURRENCE], inplace=True
-        )
-        return PandasTrackDataset.from_dataframe(tracks_to_remain, self._calculator)
-
-
 class OttrkParser(TrackParser):
     """Parse an ottrk file and convert its contents to our domain objects namely
     `Tracks`.
@@ -523,7 +451,7 @@ class OttrkParser(TrackParser):
         self._detection_parser = detection_parser
         self._format_fixer = format_fixer
 
-    def parse(self, ottrk_file: Path) -> TrackDataset:
+    def parse(self, ottrk_file: Path) -> TrackParseResult:
         """Parse ottrk file and convert its content to domain level objects namely
         `Track`s.
 
@@ -531,13 +459,26 @@ class OttrkParser(TrackParser):
             ottrk_file (Path): the track file.
 
         Returns:
-            TrackDataset: the tracks.
+            TrackParseResult: contains tracks and track metadata.
         """
         ottrk_dict = _parse_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
-        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][ottrk_format.DETECTIONS]
+        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
+            ottrk_format.DATA_DETECTIONS
+        ]
         metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
-        return self._detection_parser.parse_tracks(dets_list, metadata_video)
+        tracks = self._detection_parser.parse_tracks(dets_list, metadata_video)
+        metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
+        return TrackParseResult(tracks, metadata)
+
+    def _parse_metadata(self, metadata_detection: dict) -> DetectionMetadata:
+        detection_classes_entry: dict[str, str] = metadata_detection[
+            ottrk_format.METADATA_DETECTION
+        ][ottrk_format.MODEL][ottrk_format.CLASSES]
+        detection_classes = frozenset(
+            classification for classification in detection_classes_entry.values()
+        )
+        return DetectionMetadata(detection_classes)
 
 
 class UnknownSectionType(Exception):
@@ -876,9 +817,7 @@ class CachedVideoParser(VideoParser):
         return self.__create_cached_video(other_video)
 
     def __create_cached_video(self, other_video: Video) -> Video:
-        cached_video = CachedVideo(other_video)
-        cached_video.get_frame(0)
-        return cached_video
+        return CachedVideo(other_video)
 
     def parse_list(self, content: list[dict], base_folder: Path) -> Sequence[Video]:
         return [

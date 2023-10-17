@@ -1,6 +1,8 @@
 from typing import Iterable
 
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+from OTAnalytics.domain.types import EventType
 
 
 class SectionAlreadyExists(Exception):
@@ -135,3 +137,28 @@ class RemoveSection:
             raise SectionDoesNotExistError(
                 f"Trying to remove a non-existing section with id='{section_id}'."
             )
+
+
+class GetSectionOffset:
+    """Get section offset by event type."""
+
+    def __init__(self, get_sections_by_id: GetSectionsById):
+        self._get_sections_by_id = get_sections_by_id
+
+    def get(
+        self, section_id: SectionId, event_type: EventType
+    ) -> RelativeOffsetCoordinate | None:
+        """Get section offset by event type.
+
+        Args:
+            section_id: the section id.
+            event_type: the event type.
+
+        Returns:
+            RelativeOffsetCoordinate | None: The offset if section exists.
+                Otherwise, None.
+        """
+        sections = self._get_sections_by_id([section_id])
+        if not sections:
+            return None
+        return sections[0].get_offset(event_type)

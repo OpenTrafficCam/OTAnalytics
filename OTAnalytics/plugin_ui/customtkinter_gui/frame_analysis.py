@@ -4,11 +4,9 @@ from typing import Any
 from customtkinter import CTkButton
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
-    CustomCTkTabview,
-    EmbeddedCTkFrame,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import CustomCTkTabview
 
 
 class TabviewAnalysis(CustomCTkTabview):
@@ -35,28 +33,34 @@ class TabviewAnalysis(CustomCTkTabview):
         self.set(self._title)
 
 
-class FrameAnalysis(EmbeddedCTkFrame):
+class FrameAnalysis(AbstractCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
+        self.introduce_to_viewmodel()
+
+    def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_analysis_frame(self)
 
     def _get_widgets(self) -> None:
         self.button_export_eventlist = CTkButton(
-            master=self, text="Export eventlist", command=self._viewmodel.export_events
+            master=self,
+            text="Export eventlist ...",
+            command=self._viewmodel.export_events,
         )
         self.button_export_counts = CTkButton(
-            master=self, text="Export counts", command=self._viewmodel.export_counts
+            master=self, text="Export counts ...", command=self._viewmodel.export_counts
         )
 
     def _place_widgets(self) -> None:
-        # self._label_title.grid(
-        #     row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
-        # )
         self.button_export_eventlist.grid(
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_export_counts.grid(
-            row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def get_general_buttons(self) -> list[CTkButton]:
+        return [self.button_export_counts, self.button_export_eventlist]

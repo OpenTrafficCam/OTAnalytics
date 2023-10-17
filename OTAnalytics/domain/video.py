@@ -190,7 +190,14 @@ class VideoRepository:
 
     def add(self, video: Video) -> None:
         self.__do_add(video)
+        self.__sort()
         self._observers.notify([video])
+
+    def __sort(self) -> None:
+        """
+        Sort the videos in the repository according to their path.
+        """
+        self._videos = dict(sorted(self._videos.items()))
 
     def __do_add(self, video: Video) -> None:
         self._videos[video.get_path()] = video
@@ -198,6 +205,7 @@ class VideoRepository:
     def add_all(self, videos: Iterable[Video]) -> None:
         for video in videos:
             self.__do_add(video)
+        self.__sort()
         self._observers.notify(list(videos))
 
     def get_all(self) -> list[Video]:

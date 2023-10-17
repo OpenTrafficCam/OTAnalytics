@@ -906,7 +906,8 @@ class ExportTrafficCounting(ExportCounts):
         Args:
             specification (CountingSpecificationDto): specification of the export
         """
-        self._create_events()
+        if self._event_repository.is_empty():
+            self._create_events()
         events = self._event_repository.get_all()
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)

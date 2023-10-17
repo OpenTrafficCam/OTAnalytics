@@ -19,6 +19,7 @@ from OTAnalytics.domain.track import (
     TrackListObserver,
     TrackObserver,
     TrackRepository,
+    TrackRepositoryEvent,
     TrackSubject,
 )
 from OTAnalytics.domain.video import Video, VideoListObserver
@@ -62,14 +63,14 @@ class TrackState(TrackListObserver):
         """
         self.observers.notify(self.selected_track)
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """
         Notify the state about changes in the track list.
 
         Args:
-            tracks (list[TrackId]): newly added tracks
+            track_event (TrackRepositoryEvent): newly added or removed tracks.
         """
-        track_to_select = tracks[0] if tracks else None
+        track_to_select = track_event.added[0] if track_event.added else None
         self.select(track_to_select)
 
 
@@ -227,9 +228,9 @@ class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
         self._datastore = datastore
         self._track_view_state = track_view_state
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         all_tracks = self._datastore.get_all_tracks()
-        if tracks:
+        if track_event.added:
             first_track = next(iter(all_tracks))
             if video := self._datastore.get_video_for(first_track.id):
                 self._track_view_state.selected_videos.set([video])
@@ -332,12 +333,12 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         """
         self._update_image()
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """
         Will notify this object about changes in the track repository.
 
         Args:
-            tracks (list[TrackId]): list of changed track ids
+            track_event (list[TrackId]): list of changed track ids
         """
         self._update_image()
 
@@ -418,7 +419,6 @@ class TracksMetadata(TrackListObserver):
     Listens to changes in the `TrackRepository` and updates the tracks metadata
 
     Args:
-        TrackListObserver (TracListObserver): extends the TrackListObserver interface
         track_repository (TrackRepository): the track repository
     """
 
@@ -433,6 +433,9 @@ class TracksMetadata(TrackListObserver):
         self._classifications: ObservableProperty[set[str]] = ObservableProperty[set](
             set()
         )
+        self._detection_classifications: ObservableProperty[
+            frozenset[str]
+        ] = ObservableProperty[frozenset](frozenset([]))
 
     @property
     def first_detection_occurrence(self) -> Optional[datetime]:
@@ -463,10 +466,19 @@ class TracksMetadata(TrackListObserver):
         """
         return self._classifications.get()
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    @property
+    def detection_classifications(self) -> frozenset[str]:
+        """The classifications used by the detection model.
+
+        Returns:
+            set[str]: the classifications.
+        """
+        return self._detection_classifications.get()
+
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """Update tracks metadata on track repository changes"""
         self._update_detection_occurrences()
-        self._update_classifications(tracks)
+        self._update_classifications(track_event.added)
 
     def _update_detection_occurrences(self) -> None:
         """Update the first and last detection occurrences."""
@@ -497,6 +509,11 @@ class TracksMetadata(TrackListObserver):
             detections.extend(track.detections)
 
         return detections
+
+    def update_detection_classes(self, new_classes: frozenset[str]) -> None:
+        """Update the classifications used by the detection model."""
+        updated_classes = self._detection_classifications.get().union(new_classes)
+        self._detection_classifications.set(updated_classes)
 
 
 class ActionState:

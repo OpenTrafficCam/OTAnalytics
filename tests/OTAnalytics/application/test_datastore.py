@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Sequence
-from unittest.mock import MagicMock, Mock, call
+from unittest.mock import Mock
 
 import pytest
 from numpy import array, int32
@@ -29,12 +29,7 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionRepository,
 )
-from OTAnalytics.domain.track import (
-    TrackFileRepository,
-    TrackId,
-    TrackImage,
-    TrackRepository,
-)
+from OTAnalytics.domain.track import TrackFileRepository, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import SimpleVideo, Video, VideoReader, VideoRepository
 
@@ -218,134 +213,6 @@ class TestDatastore:
         video_repository.add_all.called_with(videos)
         section_repository.add_all.called_with(sections)
         flow_repository.add_all.called_with(flows)
-
-    def test_load_track_file(
-        self,
-        track_repository: Mock,
-        track_file_repository: Mock,
-        track_parser: Mock,
-        section_repository: Mock,
-        flow_parser: Mock,
-        flow_repository: Mock,
-        video_parser: Mock,
-        track_video_parser: Mock,
-        event_repository: Mock,
-        event_list_parser: Mock,
-        video_repository: Mock,
-        track_to_video_repository: Mock,
-        progressbar: Mock,
-        config_parser: Mock,
-    ) -> None:
-        some_track = Mock()
-        some_track_id = TrackId("1")
-        some_track.id = some_track_id
-        some_video = SimpleVideo(
-            video_reader=Mock(), path=Path(""), start_date=START_DATE
-        )
-        track_parser.parse.return_value = [some_track]
-        track_video_parser.parse.return_value = [some_track_id], [some_video]
-
-        order = MagicMock()
-        order.track_parser = track_parser
-        order.track_video_parser = track_video_parser
-        order.video_repository = video_repository
-        order.track_repository = track_repository
-        order.track_to_video_repository = track_to_video_repository
-
-        store = Datastore(
-            track_repository=track_repository,
-            track_file_repository=track_file_repository,
-            track_parser=track_parser,
-            section_repository=section_repository,
-            flow_parser=flow_parser,
-            flow_repository=flow_repository,
-            event_repository=event_repository,
-            event_list_parser=event_list_parser,
-            video_repository=video_repository,
-            video_parser=video_parser,
-            track_video_parser=track_video_parser,
-            track_to_video_repository=track_to_video_repository,
-            progressbar=progressbar,
-            config_parser=config_parser,
-        )
-        some_file = Path("some.file.ottrk")
-
-        store.load_track_file(some_file)
-
-        assert order.mock_calls == [
-            call.track_parser.parse(some_file),
-            call.track_video_parser.parse(some_file, [some_track_id]),
-            call.video_repository.add_all([some_video]),
-            call.track_to_video_repository.add_all([some_track_id], [some_video]),
-            call.track_repository.add_all([some_track]),
-        ]
-
-    def test_load_track_files(
-        self,
-        track_repository: Mock,
-        track_file_repository: Mock,
-        track_parser: Mock,
-        section_repository: Mock,
-        flow_parser: Mock,
-        flow_repository: Mock,
-        video_parser: Mock,
-        track_video_parser: Mock,
-        event_repository: Mock,
-        event_list_parser: Mock,
-        video_repository: Mock,
-        track_to_video_repository: Mock,
-        progressbar: Mock,
-        config_parser: Mock,
-    ) -> None:
-        some_track = Mock()
-        some_track_id = TrackId("1")
-        some_track.id = some_track_id
-        some_video = SimpleVideo(
-            video_reader=Mock(), path=Path(""), start_date=START_DATE
-        )
-        other_track = Mock()
-        other_track_id = TrackId("2")
-        other_track.id = other_track_id
-        other_video = SimpleVideo(
-            video_reader=Mock(), path=Path(""), start_date=START_DATE
-        )
-        track_parser.parse.side_effect = [[some_track], [other_track]]
-        track_video_parser.parse.side_effect = [
-            [[some_track_id], [some_video]],
-            [[other_track_id], [other_video]],
-        ]
-        store = Datastore(
-            track_repository=track_repository,
-            track_file_repository=track_file_repository,
-            track_parser=track_parser,
-            section_repository=section_repository,
-            flow_parser=flow_parser,
-            flow_repository=flow_repository,
-            event_repository=event_repository,
-            event_list_parser=event_list_parser,
-            video_parser=video_parser,
-            video_repository=video_repository,
-            track_video_parser=track_video_parser,
-            track_to_video_repository=track_to_video_repository,
-            progressbar=progressbar,
-            config_parser=config_parser,
-        )
-        some_file = Path("some.file.ottrk")
-        other_file = Path("other.file.ottrk")
-        progressbar.return_value = [some_file, other_file]
-
-        store.load_track_files([some_file, other_file])
-
-        track_parser.parse.assert_any_call(some_file)
-        track_parser.parse.assert_any_call(other_file)
-        track_repository.add_all.assert_any_call([some_track])
-        track_repository.add_all.assert_any_call([other_track])
-        track_video_parser.parse.assert_any_call(some_file, [some_track_id])
-        track_video_parser.parse.assert_any_call(other_file, [other_track_id])
-        assert track_to_video_repository.add_all.call_args_list == [
-            call([some_track_id], [some_video]),
-            call([other_track_id], [other_video]),
-        ]
 
     def test_save_section_file(
         self,

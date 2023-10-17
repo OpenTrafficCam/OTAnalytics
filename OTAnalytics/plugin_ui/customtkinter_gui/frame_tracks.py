@@ -1,11 +1,17 @@
 from typing import Any
 
-from customtkinter import CTkButton
+from customtkinter import CTkButton, ThemeManager
 
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STATE_DISABLED,
+    STATE_NORMAL,
+    STICKY,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
 
 
@@ -23,7 +29,7 @@ class TracksFrame(AbstractFrameTracks):
 
     def _get_widgets(self) -> None:
         self.button_load_tracks = CTkButton(
-            master=self, text="Load", command=self._viewmodel.load_tracks
+            master=self, text="Add...", command=self._viewmodel.load_tracks
         )
         self._frame_bbox_offset = FrameBboxOffset(
             master=self,
@@ -69,3 +75,19 @@ class TracksFrame(AbstractFrameTracks):
 
     def get_single_item_buttons(self) -> list[CTkButton]:
         return [self.button_change_to_section_offset]
+
+    def configure_offset_button(self, color: str, enabled: bool) -> None:
+        self.set_offset_button_color(color)
+        self.enable_update_offset_button(enabled)
+
+    def set_offset_button_color(self, color: str) -> None:
+        self.button_change_to_section_offset.configure(fg_color=color)
+
+    def enable_update_offset_button(self, enabled: bool) -> None:
+        if enabled:
+            self.button_change_to_section_offset.configure(state=STATE_NORMAL)
+        else:
+            self.button_change_to_section_offset.configure(state=STATE_DISABLED)
+
+    def get_default_offset_button_color(self) -> str:
+        return ThemeManager.theme["CTkButton"]["fg_color"]

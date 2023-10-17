@@ -338,6 +338,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def set_analysis_frame(self, frame: AbstractFrame) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def next_frame(self) -> None:
         pass
 

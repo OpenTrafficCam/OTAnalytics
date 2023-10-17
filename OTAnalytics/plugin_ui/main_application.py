@@ -14,12 +14,14 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
     FlowParser,
     TrackParser,
     TrackToVideoRepository,
+    VideoParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
@@ -68,6 +70,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksOverlapOccurrenceWindow,
 )
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
+from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -141,6 +144,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     AVAILABLE_EVENTLIST_EXPORTERS,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    DEFAULT_COLOR_PALETTE,
     CachedPandasTrackProvider,
     ColorPaletteProvider,
     FilterByClassification,
@@ -161,7 +165,7 @@ from OTAnalytics.plugin_ui.cli import (
     CliParseError,
     OTAnalyticsCli,
 )
-from OTAnalytics.plugin_video_processing.video_reader import MoviepyVideoReader
+from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 
 class ApplicationStarter:
@@ -210,9 +214,15 @@ class ApplicationStarter:
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         event_repository = self._create_event_repository()
+        video_parser = self._create_video_parser()
+        video_repository = self._create_video_repository()
+        track_to_video_repository = self._create_track_to_video_repository()
         datastore = self._create_datastore(
+            video_parser,
+            video_repository,
             track_repository,
             track_file_repository,
+            track_to_video_repository,
             section_repository,
             flow_repository,
             event_repository,
@@ -226,7 +236,7 @@ class ApplicationStarter:
         cached_pandas_track_provider = self._create_pandas_track_provider(
             datastore, track_view_state, pulling_progressbar_builder
         )
-        color_palette_provider = ColorPaletteProvider()
+        color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         layers = self._create_layers(
             datastore,
             track_view_state,
@@ -291,10 +301,14 @@ class ApplicationStarter:
             clear_all_events,
             get_tracks_without_single_detections,
             add_events,
+            DEFAULT_NUM_PROCESSES,
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
-                section_repository, get_tracks_without_single_detections, add_events
+                section_repository,
+                get_tracks_without_single_detections,
+                add_events,
+                DEFAULT_NUM_PROCESSES,
             )
         )
         export_counts = self._create_export_counts(
@@ -311,6 +325,15 @@ class ApplicationStarter:
             datastore._flow_parser,
             add_section,
             add_flow,
+        )
+        load_track_files = self._create_load_tracks_file(
+            video_parser,
+            track_repository,
+            track_file_repository,
+            video_repository,
+            track_to_video_repository,
+            pulling_progressbar_builder,
+            tracks_metadata,
         )
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
@@ -359,6 +382,7 @@ class ApplicationStarter:
             clear_all_events,
             start_new_project,
             project_updater,
+            load_track_files,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -429,7 +453,6 @@ class ApplicationStarter:
         flow_repository = self._create_flow_repository()
         track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
-        event_list_parser = self._create_event_list_parser()
         event_repository = self._create_event_repository()
         add_section = AddSection(section_repository)
         get_sections_by_id = GetSectionsById(section_repository)
@@ -445,6 +468,7 @@ class ApplicationStarter:
             clear_all_events,
             get_tracks_without_single_detections,
             add_events,
+            cli_args.num_processes,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             GetTracksWithoutSingleDetections(track_repository),
@@ -473,7 +497,6 @@ class ApplicationStarter:
             cli_args,
             track_parser=track_parser,
             flow_parser=flow_parser,
-            event_list_parser=event_list_parser,
             event_repository=event_repository,
             get_all_sections=GetAllSections(section_repository),
             add_section=add_section,
@@ -484,13 +507,17 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
+            tracks_metadata=TracksMetadata(track_repository),
             progressbar=TqdmBuilder(),
         ).start()
 
     def _create_datastore(
         self,
+        video_parser: VideoParser,
+        video_repository: VideoRepository,
         track_repository: TrackRepository,
         track_file_repository: TrackFileRepository,
+        track_to_video_repository: TrackToVideoRepository,
         section_repository: SectionRepository,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
@@ -506,9 +533,6 @@ class ApplicationStarter:
         track_parser = self._create_track_parser(track_repository)
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
-        video_parser = CachedVideoParser(SimpleVideoParser(MoviepyVideoReader()))
-        video_repository = VideoRepository()
-        track_to_video_repository = TrackToVideoRepository()
         track_video_parser = OttrkVideoParser(video_parser)
         config_parser = OtConfigParser(
             video_parser=video_parser,
@@ -537,6 +561,9 @@ class ApplicationStarter:
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
         # calculator = PandasByMaxConfidence()
+        # detection_parser = PandasDetectionParser(
+        #     calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        # )
         calculator = ByMaxConfidence()
         detection_parser = PythonDetectionParser(
             calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
@@ -571,6 +598,9 @@ class ApplicationStarter:
         progressbar: ProgressbarBuilder,
     ) -> PandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
+        # return PandasTrackProvider(
+        #     datastore, track_view_state, dataframe_filter_builder, progressbar
+        # )
         return CachedPandasTrackProvider(
             datastore, track_view_state, dataframe_filter_builder, progressbar
         )
@@ -805,7 +835,7 @@ class ApplicationStarter:
             track_view_state,
             data_provider_all_filters,
             color_palette_provider,
-            alpha=0.2,
+            alpha=0.5,
             enable_legend=True,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
@@ -895,7 +925,7 @@ class ApplicationStarter:
         )
         background = PlottingLayer("Background", background_image_plotter, enabled=True)
         all_tracks_layer = PlottingLayer(
-            "Show all tracks", track_geometry_plotter, enabled=True
+            "Show all tracks", track_geometry_plotter, enabled=False
         )
         bounding_box_layer = PlottingLayer(
             "Show bounding boxes of current frame",
@@ -995,15 +1025,20 @@ class ApplicationStarter:
         section_repository: SectionRepository,
         get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
+        num_processes: int,
     ) -> CreateIntersectionEvents:
-        intersect = self._create_intersect(get_tracks)
+        intersect = self._create_intersect(get_tracks, num_processes)
         return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
 
     @staticmethod
-    def _create_intersect(get_tracks: GetTracksWithoutSingleDetections) -> RunIntersect:
+    def _create_intersect(
+        get_tracks: GetTracksWithoutSingleDetections, num_processes: int
+    ) -> RunIntersect:
         return SimpleRunIntersect(
             intersect_implementation=ShapelyIntersector(ShapelyMapper()),
-            intersect_parallelizer=MultiprocessingIntersectParallelization(),
+            intersect_parallelizer=MultiprocessingIntersectParallelization(
+                num_processes
+            ),
             get_tracks=get_tracks,
         )
 
@@ -1047,8 +1082,9 @@ class ApplicationStarter:
         clear_events: ClearAllEvents,
         get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
+        num_processes: int,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(get_tracks)
+        run_intersect = self._create_intersect(get_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_repository, add_events
         )
@@ -1150,6 +1186,38 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
+
+    def _create_load_tracks_file(
+        self,
+        video_parser: VideoParser,
+        track_repository: TrackRepository,
+        track_file_repository: TrackFileRepository,
+        video_repository: VideoRepository,
+        track_to_video_repository: TrackToVideoRepository,
+        progressbar: ProgressbarBuilder,
+        tracks_metadata: TracksMetadata,
+    ) -> LoadTrackFiles:
+        track_parser = self._create_track_parser(track_repository)
+        track_video_parser = OttrkVideoParser(video_parser)
+        return LoadTrackFiles(
+            track_parser,
+            track_video_parser,
+            track_repository,
+            track_file_repository,
+            video_repository,
+            track_to_video_repository,
+            progressbar,
+            tracks_metadata,
+        )
+
+    def _create_video_parser(self) -> VideoParser:
+        return CachedVideoParser(SimpleVideoParser(OpenCvVideoReader()))
+
+    def _create_video_repository(self) -> VideoRepository:
+        return VideoRepository()
+
+    def _create_track_to_video_repository(self) -> TrackToVideoRepository:
+        return TrackToVideoRepository()
 
 
 class FrameUpdater:

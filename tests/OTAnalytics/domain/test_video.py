@@ -8,6 +8,7 @@ from OTAnalytics.domain.video import (
     PATH,
     DifferentDrivesException,
     SimpleVideo,
+    Video,
     VideoListObserver,
     VideoReader,
     VideoRepository,
@@ -58,6 +59,20 @@ class TestVideo:
 
 
 class TestVideoRepository:
+    @pytest.fixture
+    def video_1(self) -> Video:
+        return self.__create_mock_video(1)
+
+    @pytest.fixture
+    def video_2(self) -> Video:
+        return self.__create_mock_video(2)
+
+    def __create_mock_video(self, suffix: int) -> Video:
+        path = Path(f"./video_{suffix}")
+        video = Mock(spec=Video)
+        video.get_path.return_value = path
+        return video
+
     def test_remove(self, video_reader: VideoReader, test_data_tmp_dir: Path) -> None:
         observer = Mock(spec=VideoListObserver)
         path = test_data_tmp_dir / "dummy.mp4"
@@ -74,3 +89,26 @@ class TestVideoRepository:
 
         assert repository.get(video.path) is None
         assert observer.notify_videos.call_args_list == [call([video]), call([])]
+
+    def test_order_of_videos_single_add(self, video_1: Video, video_2: Video) -> None:
+        repository = VideoRepository()
+        ordered_videos = [video_1, video_2]
+
+        repository.add(video_2)
+        repository.add(video_1)
+
+        result = repository.get_all()
+
+        assert result == ordered_videos
+
+    def test_order_of_videos_multiple_add(self, video_1: Video, video_2: Video) -> None:
+        repository = VideoRepository()
+        unorderd_videos = [video_2, video_1]
+        ordered_videos = [video_1, video_2]
+
+        repository.add_all(unorderd_videos)
+
+        result = repository.get_all()
+
+        assert unorderd_videos != ordered_videos
+        assert result == ordered_videos

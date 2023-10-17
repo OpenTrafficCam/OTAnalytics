@@ -22,8 +22,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     OtFlowParser,
     OttrkParser,
-    PandasDetectionParser,
 )
+from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -242,7 +242,7 @@ class TrackBuilder:
         detections = self.build_serialized_detections()
         return {
             ottrk_dataformat.METADATA: self.get_metadata(),
-            ottrk_dataformat.DATA: {ottrk_dataformat.DETECTIONS: detections},
+            ottrk_dataformat.DATA: {ottrk_dataformat.DATA_DETECTIONS: detections},
         }
 
 
@@ -370,7 +370,7 @@ def tracks(ottrk_path: Path) -> list[Track]:
     detection_parser = PandasDetectionParser(
         calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
     )
-    return OttrkParser(detection_parser).parse(ottrk_path).as_list()
+    return OttrkParser(detection_parser).parse(ottrk_path).tracks.as_list()
     # ottrk_parser = OttrkParser(
     #     ByMaxConfidence(),
     #     TrackRepository(),

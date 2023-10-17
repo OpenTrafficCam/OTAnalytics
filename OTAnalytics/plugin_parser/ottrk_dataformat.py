@@ -4,7 +4,8 @@ DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 
 # Ottrk Data Format
 METADATA = "metadata"
-DETECTIONS = "detections"
+METADATA_DETECTION = "detection"
+DATA_DETECTIONS = "detections"
 DATA = "data"
 
 # METADATA

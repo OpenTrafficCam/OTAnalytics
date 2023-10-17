@@ -1,9 +1,10 @@
 import contextlib
+import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
 from tkinter.filedialog import askopenfilename, askopenfilenames
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
@@ -76,7 +77,7 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
+from OTAnalytics.domain.track import TrackImage, TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
@@ -92,6 +93,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
+    COLOR_ORANGE,
     DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
     PRE_EDIT_SECTION_STYLE,
@@ -132,6 +134,7 @@ MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
+MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
 OTCONFIG = "otconfig"
 
 
@@ -147,6 +150,19 @@ class MissingInjectedInstanceError(Exception):
 
 def flow_id(from_section: str, to_section: str) -> str:
     return f"{from_section} -> {to_section}"
+
+
+def action(func: Any) -> Any:
+    @functools.wraps(func)
+    def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
+        self._start_action()
+        try:
+            value = func(self, *args, **kwargs)
+            return value
+        finally:
+            self._finish_action()
+
+    return wrapper_decorator
 
 
 class DummyViewModel(
@@ -175,6 +191,7 @@ class DummyViewModel(
         self._frame_sections: Optional[AbstractFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
+        self._frame_analysis: Optional[AbstractFrame] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
@@ -201,19 +218,23 @@ class DummyViewModel(
         self._update_enabled_flow_buttons()
 
     def _update_enabled_general_buttons(self) -> None:
-        frames = [
-            self._frame_tracks,
-            self._frame_videos,
-            self._frame_project,
-            self._frame_sections,
-            self._frame_flows,
-        ]
+        frames = self._get_frames()
         action_running = self._application.action_state.action_running.get()
         general_buttons_enabled = not action_running
         for frame in frames:
             if frame is None:
                 raise MissingInjectedInstanceError(type(frame).__name__)
             frame.set_enabled_general_buttons(general_buttons_enabled)
+
+    def _get_frames(self) -> list:
+        return [
+            self._frame_tracks,
+            self._frame_videos,
+            self._frame_project,
+            self._frame_sections,
+            self._frame_flows,
+            self._frame_analysis,
+        ]
 
     def _update_enabled_track_buttons(self) -> None:
         if self._frame_tracks is None:
@@ -248,7 +269,7 @@ class DummyViewModel(
         single_section_enabled = add_section_enabled and single_section_selected
         multiple_sections_enabled = add_section_enabled and any_section_selected
 
-        self._frame_sections.set_enabled_add_buttons(videos_exist)
+        self._frame_sections.set_enabled_add_buttons(add_section_enabled)
         self._frame_sections.set_enabled_change_single_item_buttons(
             single_section_enabled
         )
@@ -270,7 +291,7 @@ class DummyViewModel(
         single_flow_enabled = add_flow_enabled and single_flow_selected and flows_exist
         multiple_flows_enabled = add_flow_enabled and any_flow_selected and flows_exist
 
-        self._frame_flows.set_enabled_add_buttons(two_sections_exist)
+        self._frame_flows.set_enabled_add_buttons(add_flow_enabled)
         self._frame_flows.set_enabled_change_single_item_buttons(single_flow_enabled)
         self._frame_flows.set_enabled_change_multiple_items_buttons(
             multiple_flows_enabled
@@ -309,7 +330,7 @@ class DummyViewModel(
             {"start_date": start_date, "end_date": end_date}
         )
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         self.notify_files()
 
     def _intersect_tracks_with_sections(self) -> None:
@@ -463,7 +484,7 @@ class DummyViewModel(
     def load_otconfig(self) -> None:
         otconfig_file = Path(
             askopenfilename(
-                title="Load sections file",
+                title="Load configuration file",
                 filetypes=[
                     (f"{OTFLOW} file", f"*.{OTFLOW}"),
                     (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
@@ -523,6 +544,7 @@ class DummyViewModel(
     def _update_selected_sections(self, section_ids: list[SectionId]) -> None:
         self._update_selected_section_items()
         self._update_enabled_buttons()
+        self.update_section_offset_button_state()
 
     def _update_selected_section_items(self) -> None:
         if self._treeview_sections is None:
@@ -532,6 +554,33 @@ class DummyViewModel(
 
         self._treeview_sections.update_selected_items(new_section_ids)
         self.refresh_items_on_canvas()
+
+    def update_section_offset_button_state(self) -> None:
+        if self._frame_tracks is None:
+            raise MissingInjectedInstanceError(type(self._frame_tracks).__name__)
+
+        currently_selected_sections = (
+            self._application.section_state.selected_sections.get()
+        )
+        default_color = self._frame_tracks.get_default_offset_button_color()
+        single_section_selected = len(currently_selected_sections) == 1
+
+        if not single_section_selected:
+            self._frame_tracks.configure_offset_button(default_color, False)
+            return
+
+        section_offset = self._application.get_section_offset(
+            currently_selected_sections[0], EventType.SECTION_ENTER
+        )
+        if not section_offset:
+            # No offset entry found in section for EventType.SECTION_ENTER
+            return
+
+        visualization_offset = self._application.track_view_state.track_offset.get()
+        if section_offset == visualization_offset:
+            self._frame_tracks.configure_offset_button(default_color, False)
+        else:
+            self._frame_tracks.configure_offset_button(COLOR_ORANGE, True)
 
     def _update_selected_flows(self, flow_ids: list[FlowId]) -> None:
         self._update_selected_flow_items()
@@ -576,6 +625,7 @@ class DummyViewModel(
             for section_id in self._application.section_state.selected_sections.get()
         ]
 
+    @action
     def load_tracks(self) -> None:
         track_files = askopenfilenames(
             title="Load track files", filetypes=[("tracks file", "*.ottrk")]
@@ -861,16 +911,16 @@ class DummyViewModel(
         section_id = SectionId(selected_section_ids[0])
         if selected_section := self._application.get_section_for(section_id):
             self._update_metadata(selected_section)
+            self.update_section_offset_button_state()
 
+    @action
     def _update_metadata(self, selected_section: Section) -> None:
         current_data = selected_section.to_dict()
         if self._canvas is None:
             raise MissingInjectedInstanceError(AbstractCanvas.__name__)
         position = self._canvas.get_position()
-        self._start_action()
         with contextlib.suppress(CancelAddSection):
             self.__update_section_metadata(selected_section, current_data, position)
-        self._finish_action()
 
     def __update_section_metadata(
         self, selected_section: Section, current_data: dict, position: tuple[int, int]
@@ -895,6 +945,7 @@ class DummyViewModel(
         if not section.name.startswith(CUTTING_SECTION_MARKER):
             self._treeview_sections.update_selected_items([id.serialize()])
 
+    @action
     def remove_sections(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
@@ -907,7 +958,6 @@ class DummyViewModel(
             )
             return
 
-        self._start_action()
         section_ids = [SectionId(id) for id in selected_section_ids]
         for section_id in section_ids:
             if self._application.is_flow_using_section(section_id):
@@ -922,13 +972,11 @@ class DummyViewModel(
                     message=message,
                     initial_position=position,
                 )
-                self._finish_action()
                 return
 
         for section_id in section_ids:
             self._application.remove_section(section_id)
         self.refresh_items_on_canvas()
-        self._finish_action()
 
     def refresh_items_on_canvas(self) -> None:
         self._remove_items_from_canvas()
@@ -1043,13 +1091,12 @@ class DummyViewModel(
     def get_all_flows(self) -> Iterable[Flow]:
         return self._application.get_all_flows()
 
+    @action
     def add_flow(self) -> None:
-        self._start_action()
         with contextlib.suppress(CancelAddFlow):
             flow = self.__create_flow()
             logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
-        self._finish_action()
 
     def __create_flow(self) -> Flow:
         flow_data = self._show_flow_popup()
@@ -1154,8 +1201,8 @@ class DummyViewModel(
         self.set_selected_flow_ids([flow_id.serialize()])
         self.refresh_items_on_canvas()
 
+    @action
     def edit_selected_flow(self) -> None:
-        self._start_action()
         with contextlib.suppress(CancelAddFlow):
             if flows := self._get_selected_flows():
                 if len(flows) != 1:
@@ -1173,7 +1220,6 @@ class DummyViewModel(
                 InfoBox(
                     message="Please select a flow to edit", initial_position=position
                 )
-        self._finish_action()
 
     def _edit_flow(self, flow: Flow) -> None:
         input_data = {
@@ -1190,10 +1236,10 @@ class DummyViewModel(
         ):
             self.__update_flow_data(flow_data=flow_data)
 
+    @action
     def remove_flows(self) -> None:
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
-        self._start_action()
         if flow_ids := self._application.flow_state.selected_flows.get():
             for flow_id in flow_ids:
                 self._application.remove_flow(flow_id)
@@ -1201,7 +1247,6 @@ class DummyViewModel(
         else:
             position = self._treeview_flows.get_position()
             InfoBox(message="Please select a flow to remove", initial_position=position)
-        self._finish_action()
 
     def create_events(self) -> None:
         if self._window is None:
@@ -1274,6 +1319,7 @@ class DummyViewModel(
         self._application.track_view_state.track_offset.set(offset)
         start_msg_popup.update_message(message="Apply offset completed")
         start_msg_popup.close()
+        self.update_section_offset_button_state()
 
     def get_track_offset(self) -> Optional[tuple[float, float]]:
         if current_offset := self._application.get_current_track_offset():
@@ -1290,7 +1336,10 @@ class DummyViewModel(
             self._frame_tracks.update_offset(offset.x, offset.y)
 
     def change_track_offset_to_section_offset(self) -> None:
-        return self._application.change_track_offset_to_section_offset()
+        self._application.change_track_offset_to_section_offset()
+        if self._frame_tracks is None:
+            raise MissingInjectedInstanceError(type(self._frame_tracks).__name__)
+        self.update_section_offset_button_state()
 
     def next_frame(self) -> None:
         self._application.next_frame()
@@ -1444,7 +1493,7 @@ class DummyViewModel(
         default_format = next(iter(export_formats.keys()))
         start = self._application._tracks_metadata.first_detection_occurrence
         end = self._application._tracks_metadata.last_detection_occurrence
-        modes = list(self._application._tracks_metadata.classifications)
+        modes = list(self._application._tracks_metadata.detection_classifications)
         default_values: dict = {
             INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
             START: start,
@@ -1525,9 +1574,12 @@ class DummyViewModel(
             [track_id.id for track_id in cut_tracks_dto.original_tracks]
         )
         msg = (
-            f"Cut succesful. Cutting section '{cut_tracks_dto.section} '"
+            f"Cut successful. Cutting section '{cut_tracks_dto.section} '"
             " and original tracks deleted.\n"
             f"Deleted original track ids:\n{formatted_ids}"
         )
         logger().info(msg)
         InfoBox(msg, window_position)
+
+    def set_analysis_frame(self, frame: AbstractFrame) -> None:
+        self._frame_analysis = frame

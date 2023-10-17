@@ -30,6 +30,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackImage,
     TrackRepository,
+    TrackRepositoryEvent,
 )
 
 
@@ -55,7 +56,7 @@ class TestTrackState:
         second_track = TrackId("2")
         state = TrackState()
 
-        state.notify_tracks([first_track, second_track])
+        state.notify_tracks(TrackRepositoryEvent([first_track, second_track], []))
 
         assert state.selected_track == first_track
 
@@ -63,8 +64,8 @@ class TestTrackState:
         first_track = TrackId("1")
         state = TrackState()
 
-        state.notify_tracks([first_track])
-        state.notify_tracks([])
+        state.notify_tracks(TrackRepositoryEvent([first_track], []))
+        state.notify_tracks(TrackRepositoryEvent([], []))
 
         assert state.selected_track is None
 
@@ -202,7 +203,7 @@ class TestTrackImageUpdater:
         )
         tracks: list[TrackId] = [track_id]
 
-        updater.notify_tracks(tracks)
+        updater.notify_tracks(TrackRepositoryEvent(tracks, []))
 
         assert track_view_state.background_image.get() == background_image
 
@@ -301,6 +302,12 @@ class TestTracksMetadata:
         assert tracks_metadata.classifications == {"car"}
         mock_track_repository.get_for.assert_any_call(track.id)
         assert mock_track_repository.get_for.call_count == 2
+
+    def test_update_detection_classes(self) -> None:
+        tracks_metadata = TracksMetadata(Mock())
+        classes = frozenset(["class 1", "class 2"])
+        tracks_metadata.update_detection_classes(classes)
+        assert classes == tracks_metadata.detection_classifications
 
 
 class TestTrackViewState:
