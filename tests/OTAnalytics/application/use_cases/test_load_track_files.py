@@ -1,9 +1,12 @@
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, call, patch
 
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.video import SimpleVideo
+
+START_DATE = datetime(2023, 1, 1)
 
 
 class TestLoadTrackFile:
@@ -33,7 +36,9 @@ class TestLoadTrackFile:
         some_track = Mock()
         some_track_id = TrackId("1")
         some_track.id = some_track_id
-        some_video = SimpleVideo(video_reader=Mock(), path=Path(""))
+        some_video = SimpleVideo(
+            video_reader=Mock(), path=Path(""), start_date=START_DATE
+        )
         detection_metadata = Mock()
         parse_result = Mock()
         parse_result.tracks = [some_track]
