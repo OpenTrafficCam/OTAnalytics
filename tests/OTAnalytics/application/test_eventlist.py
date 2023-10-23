@@ -3,20 +3,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from OTAnalytics.application.eventlist import SceneActionDetector, SectionActionDetector
-from OTAnalytics.domain.event import (
-    Event,
-    EventType,
-    SceneEventBuilder,
-    SectionEventBuilder,
-)
+from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.domain.event import Event, EventType, SceneEventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
     DirectionVector2D,
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import Intersector
 from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import (
     Detection,
@@ -132,39 +126,6 @@ def line_section() -> LineSection:
         plugin_data={},
         coordinates=[Coordinate(5, 0), Coordinate(5, 10)],
     )
-
-
-class TestSectionActionDetector:
-    def test_detect_action(self, line_section: LineSection, track: Track) -> None:
-        mock_intersector = Mock(spec=Intersector)
-        mock_section_event_builder = Mock(spec=SectionEventBuilder)
-        mock_event = Mock(spec=Event)
-
-        mock_intersector.intersect.return_value = mock_event
-
-        section_action_detector = SectionActionDetector(
-            mock_intersector, mock_section_event_builder
-        )
-        result_event = section_action_detector._detect(line_section, track)
-
-        mock_section_event_builder.add_section_id.assert_called()
-        mock_section_event_builder.add_event_type.assert_called()
-        mock_intersector.intersect.assert_called()
-        assert mock_event == result_event
-
-    def test_detect_actions(self, line_section: LineSection, track: Track) -> None:
-        mock_intersector = Mock(spec=Intersector)
-        mock_section_event_builder = Mock(spec=SectionEventBuilder)
-        mock_event = Mock(spec=Event)
-
-        mock_intersector.intersect.return_value = [mock_event]
-
-        section_action_detector = SectionActionDetector(
-            mock_intersector, mock_section_event_builder
-        )
-
-        result_events = section_action_detector.detect([line_section], [track])
-        assert result_events == [mock_event]
 
 
 class TestSceneActionDetector:

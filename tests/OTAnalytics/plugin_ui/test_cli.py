@@ -51,6 +51,9 @@ from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
 from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
+from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
+    ShapelyRunIntersect,
+)
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
@@ -59,7 +62,6 @@ from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksWithSection,
 )
 from OTAnalytics.plugin_intersect.simple_intersect import (
-    SimpleRunIntersect,
     SimpleTracksIntersectingSections,
 )
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -257,8 +259,7 @@ class TestOTAnalyticsCli:
 
         clear_all_events = ClearAllEvents(event_repository)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            SimpleRunIntersect(
-                ShapelyIntersector(),
+            ShapelyRunIntersect(
                 MultiprocessingIntersectParallelization(),
                 get_all_tracks,
             ),

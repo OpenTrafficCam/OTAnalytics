@@ -1,17 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, Iterable, TypeVar
+from typing import Callable, Iterable, Sequence
 
 from OTAnalytics.domain.event import Event, EventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
-    DirectionVector2D,
     Line,
     Polygon,
     RelativeOffsetCoordinate,
-    calculate_direction_vector,
 )
-from OTAnalytics.domain.section import Area, LineSection, Section
-from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.track import Track
 
 
 class IntersectImplementation(ABC):
@@ -103,9 +101,13 @@ class IntersectParallelizationStrategy(ABC):
     @abstractmethod
     def execute(
         self,
-        intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],
-        tracks: Iterable[Track],
-        sections: Iterable[Section],
+        intersect: Callable[
+            [Iterable[Track], Iterable[Section], RelativeOffsetCoordinate],
+            Iterable[Event],
+        ],
+        tasks: Sequence[
+            tuple[Iterable[Track], Iterable[Section], RelativeOffsetCoordinate]
+        ],
     ) -> list[Event]:
         """Executes the intersection of tracks with sections with the implemented
         parallelization strategy.
@@ -113,8 +115,7 @@ class IntersectParallelizationStrategy(ABC):
         Args:
             intersect (Callable[[Track, Iterable[Section]], Iterable[Event]]): the
                 function to be executed on an iterable of tracks and sections.
-            tracks (Iterable[Track]): the tracks to be processed.
-            sections (Iterable[Section]): the sections to be processed.
+            tasks (Iterable[Track])
 
         Returns:
             Iterable[Event]: the generated events.
@@ -131,106 +132,25 @@ class IntersectParallelizationStrategy(ABC):
         raise NotImplementedError
 
 
-T = TypeVar("T")
-
-
-class Intersector(ABC, Generic[T]):
+class Intersector(ABC):
     """
     Defines an interface to implement a family of algorithms to intersect tracks
     with sections.
-
-    Args:
-        implementation (IntersectImplementation): the intersection implementation
     """
 
     @abstractmethod
-    def __init__(self, implementation: IntersectImplementation) -> None:
-        self.implementation = implementation
-
-    @abstractmethod
-    def intersect(self, track: T, event_builder: EventBuilder) -> list[Event]:
+    def intersect(
+        self, tracks: Iterable[Track], section: Section, event_builder: EventBuilder
+    ) -> list[Event]:
         """Intersect tracks with sections and generate events if they intersect.
 
         Args:
-            track (T): the track
+            tracks (Iterable[Track]): the tracks to be intersected with.
+            section (Section): the section to be intersected with.
             event_builder (EventBuilder): builder to generate events
 
         Returns:
             list[Event]: the events if the track intersects with the section.
-                Otherwise return empty list.
+                Otherwise, return empty list.
         """
-        pass
-
-    @staticmethod
-    def _select_coordinate_in_detection(
-        detection: Detection, offset: RelativeOffsetCoordinate
-    ) -> Coordinate:
-        """Select a coordinate within the bounding box of a detection.
-
-        A coordinate within the bounding box of a detection is selected by applying the
-        offset.
-
-        Args:
-            detection (Detection): the detection containing the bounding box dimensions
-            offset (RelativeOffsetCoordinate): the offset to include in the selection
-                of the coordinate
-
-        Returns:
-            Coordinate: the coordinate
-        """
-        return Coordinate(
-            x=detection.x + detection.w * offset.x,
-            y=detection.y + detection.h * offset.y,
-        )
-
-    @staticmethod
-    def _calculate_direction_vector(
-        first: Coordinate, second: Coordinate
-    ) -> DirectionVector2D:
-        """Calculate direction vector from two coordinates.
-
-        Args:
-            first (Coordinate): the first coordinate
-            second (Coordinate): the second coordinate
-
-        Returns:
-            DirectionVector2D: the direction vector
-        """
-        result = calculate_direction_vector(first.x, first.y, second.x, second.y)
-        return result
-
-
-class LineSectionIntersector(Intersector[T]):
-    """Determines whether a line section intersects with a track.
-
-    Args:
-        implementation (IntersectorImplementation): the intersection implementation
-        line (LineSection): the line to intersect with
-    """
-
-    @abstractmethod
-    def __init__(
-        self,
-        implementation: IntersectImplementation,
-        line_section: LineSection,
-    ) -> None:
-        super().__init__(implementation)
-        self._line_section = line_section
-
-
-class AreaIntersector(Intersector[T]):
-    """Determines whether an area intersects with a track.
-
-    Args:
-        implementation (IntersectorImplementation): the intersection implementation.
-        area (Area): the area to intersect with.
-        detection (Detection): the detection to intersect with.
-    """
-
-    def __init__(
-        self,
-        implementation: IntersectImplementation,
-        area: Area,
-    ) -> None:
-        super().__init__(implementation)
-        self._area = area
+        raise NotImplementedError

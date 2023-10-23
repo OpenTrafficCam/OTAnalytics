@@ -109,6 +109,9 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
+from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
+    ShapelyRunIntersect,
+)
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
@@ -117,7 +120,6 @@ from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksWithSection,
 )
 from OTAnalytics.plugin_intersect.simple_intersect import (
-    SimpleRunIntersect,
     SimpleTracksIntersectingSections,
 )
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -985,8 +987,7 @@ class ApplicationStarter:
     def _create_intersect(
         get_tracks: GetTracksWithoutSingleDetections, num_processes: int
     ) -> RunIntersect:
-        return SimpleRunIntersect(
-            intersect_implementation=ShapelyIntersector(ShapelyMapper()),
+        return ShapelyRunIntersect(
             intersect_parallelizer=MultiprocessingIntersectParallelization(
                 num_processes
             ),

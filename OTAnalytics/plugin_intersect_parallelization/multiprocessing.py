@@ -1,10 +1,11 @@
 import itertools
 from multiprocessing import Pool
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Sequence
 
 from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.intersect import IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
@@ -27,21 +28,19 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
 
     def execute(
         self,
-        intersect: Callable[[Track, Iterable[Section]], Iterable[Event]],
-        tracks: Iterable[Track],
-        sections: Iterable[Section],
+        intersect: Callable[
+            [Iterable[Track], Iterable[Section], RelativeOffsetCoordinate],
+            Iterable[Event],
+        ],
+        tasks: Sequence[
+            tuple[Iterable[Track], Iterable[Section], RelativeOffsetCoordinate]
+        ],
     ) -> list[Event]:
         logger().debug(
             f"Start intersection in parallel with {self._num_processes} processes."
         )
         with Pool(processes=self._num_processes) as pool:
-            events = pool.starmap(
-                intersect,
-                zip(
-                    tracks,
-                    itertools.repeat(sections),
-                ),
-            )
+            events = pool.starmap(intersect, tasks)
         return self._flatten_events(events)
 
     def _flatten_events(self, events: Iterable[Iterable[Event]]) -> list[Event]:
