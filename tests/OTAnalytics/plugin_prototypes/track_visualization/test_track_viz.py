@@ -10,8 +10,8 @@ from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.track import (
-    CLASSIFICATION,
     OCCURRENCE,
+    TRACK_CLASSIFICATION,
     TRACK_ID,
     Detection,
     PythonDetection,
@@ -22,6 +22,7 @@ from OTAnalytics.domain.track import (
     TrackIdProvider,
     TrackImage,
     TrackRepository,
+    TrackRepositoryEvent,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
@@ -220,21 +221,21 @@ class TestCachedPandasTrackProvider:
         """Test clearing cache."""
         provider = self.set_up_provider([track_1], [])
 
-        provider.notify_tracks([])
+        provider.notify_tracks(TrackRepositoryEvent([], [track_1.id]))
         self.check_expected_ids(provider, [])
 
     def test_notify_update_add(self, track_1: Track, track_2: Track) -> None:
-        """Test adding track to non empty cache."""
+        """Test adding track to non-empty cache."""
         provider = self.set_up_provider([track_1], [track_2])
 
-        provider.notify_tracks([track_2.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_2.id], []))
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_add_first(self, track_2: Track) -> None:
         """Test adding first track to cache."""
         provider = self.set_up_provider([], [track_2])
 
-        provider.notify_tracks([track_2.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_2.id], []))
         self.check_expected_ids(provider, [track_2])
 
     def test_notify_update_add_multiple_first(
@@ -243,19 +244,19 @@ class TestCachedPandasTrackProvider:
         """Test adding first tracks to cache."""
         provider = self.set_up_provider([], [track_2, track_1])
 
-        provider.notify_tracks([track_2.id, track_1.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_2.id, track_1.id], []))
         self.check_expected_ids(provider, [track_2, track_1])
 
     def test_notify_update_existing(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_1, track_2], [track_1])
 
-        provider.notify_tracks([track_1.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_1.id], []))
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_mixed(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_2], [track_1, track_2])
 
-        provider.notify_tracks([track_1.id, track_2.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_1.id, track_2.id], []))
         self.check_expected_ids(provider, [track_1, track_2])
 
 
@@ -495,7 +496,9 @@ class TestDataFrameProviderFilter:
         result = df_filter.get_data()
         result == filter_result
 
-        filter_builder.set_classification_column.assert_called_once_with(CLASSIFICATION)
+        filter_builder.set_classification_column.assert_called_once_with(
+            TRACK_CLASSIFICATION
+        )
         observable_filter_element.get.assert_called_once()
         filter_element.build_filter.assert_called_once_with(filter_builder)
         filter_imp.apply.assert_called_once_with([filter_input])

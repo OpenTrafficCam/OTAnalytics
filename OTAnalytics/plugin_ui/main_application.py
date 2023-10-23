@@ -146,6 +146,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     AVAILABLE_EVENTLIST_EXPORTERS,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    DEFAULT_COLOR_PALETTE,
     CachedPandasTrackProvider,
     ColorPaletteProvider,
     FilterByClassification,
@@ -239,7 +240,7 @@ class ApplicationStarter:
         pandas_data_provider = self._wrap_pandas_track_offset_provider(
             cached_pandas_track_provider, track_view_state
         )
-        color_palette_provider = ColorPaletteProvider()
+        color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         layers = self._create_layers(
             datastore,
             track_view_state,
@@ -562,6 +563,9 @@ class ApplicationStarter:
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
         # calculator = PandasByMaxConfidence()
+        # detection_parser = PandasDetectionParser(
+        #     calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        # )
         calculator = ByMaxConfidence()
         detection_parser = PythonDetectionParser(
             calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
@@ -596,6 +600,9 @@ class ApplicationStarter:
         progressbar: ProgressbarBuilder,
     ) -> PandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
+        # return PandasTrackProvider(
+        #     datastore, track_view_state, dataframe_filter_builder, progressbar
+        # )
         return CachedPandasTrackProvider(
             datastore, track_view_state, dataframe_filter_builder, progressbar
         )

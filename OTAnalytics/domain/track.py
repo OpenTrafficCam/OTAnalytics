@@ -31,20 +31,26 @@ class TrackId(DataclassValidation):
     id: str
 
 
+@dataclass(frozen=True)
+class TrackRepositoryEvent:
+    added: list[TrackId]
+    removed: list[TrackId]
+
+
 class TrackListObserver(ABC):
     """
     Interface to listen to changes to a list of tracks.
     """
 
     @abstractmethod
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """
         Notifies that the given tracks have been added.
 
         Args:
-            tracks (list[TrackId]): list of added tracks
+            track_event (TrackRepositoryEvent): list of added or removed tracks.
         """
-        pass
+        raise NotImplementedError
 
 
 class TrackObserver(ABC):
@@ -677,7 +683,7 @@ class PythonTrackDataset(TrackDataset):
 class TrackRepository:
     def __init__(self, dataset: TrackDataset = PythonTrackDataset()) -> None:
         self._dataset = dataset
-        self.observers = Subject[list[TrackId]]()
+        self.observers = Subject[TrackRepositoryEvent]()
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
         """
@@ -698,7 +704,7 @@ class TrackRepository:
         self._dataset = self._dataset.add_all(tracks)
         new_tracks = [track.id for track in tracks]
         if new_tracks:
-            self.observers.notify(new_tracks)
+            self.observers.notify(TrackRepositoryEvent(new_tracks, []))
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
@@ -746,7 +752,7 @@ class TrackRepository:
             )
         # TODO: Pass removed track id to notify when moving observers to
         #  application layer
-        self.observers.notify([])
+        self.observers.notify(TrackRepositoryEvent([], [track_id]))
 
     def remove_multiple(self, track_ids: set[TrackId]) -> None:
         failed_tracks: list[TrackId] = []
@@ -766,14 +772,15 @@ class TrackRepository:
                     f" '{[failed_track.id for failed_track in failed_tracks]}'"
                 ),
             )
-        self.observers.notify([])
+        self.observers.notify(TrackRepositoryEvent([], list(track_ids)))
 
     def clear(self) -> None:
         """
         Clear the repository and inform the observers about the empty repository.
         """
+        removed = list(self._dataset.get_all_ids())
         self._dataset = self._dataset.clear()
-        self.observers.notify([])
+        self.observers.notify(TrackRepositoryEvent([], removed))
 
 
 class TrackFileRepository:

@@ -44,6 +44,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     STICKY_WEST,
 )
 
+EMPTY_SELECTION: list[str] = []
+
 HOUR = "Hour"
 MINUTE = "Minute"
 SECOND = "Second"
@@ -744,7 +746,7 @@ class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
         self.treeview_classes.selection_toggle(current_selection)
 
     def _on_deselect(self, event: Any) -> None:
-        self.treeview_classes.selection_set([])
+        self.treeview_classes.selection_set(EMPTY_SELECTION)
 
     def _set_focus(self) -> None:
         self.after(0, lambda: self.lift())

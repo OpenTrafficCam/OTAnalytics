@@ -20,6 +20,7 @@ from OTAnalytics.domain.track import (
     TrackListObserver,
     TrackObserver,
     TrackRepository,
+    TrackRepositoryEvent,
     TrackSubject,
 )
 from tests.conftest import TrackBuilder
@@ -277,7 +278,9 @@ class TestTrackRepository:
 
         assert all_tracks.as_list() is merged_tracks
         dataset.add_all.assert_called_with(new_tracks)
-        observer.notify_tracks.assert_called_with([track_1.id, track_2.id])
+        observer.notify_tracks.assert_called_with(
+            TrackRepositoryEvent([track_1.id, track_2.id], [])
+        )
 
     def test_add_nothing(self) -> None:
         observer = Mock(spec=TrackListObserver)
@@ -299,18 +302,21 @@ class TestTrackRepository:
         assert track_1 == returned
         dataset.get_for.assert_called_with(track_1.id)
 
-    def test_clear(self, track_1: Mock, track_2: Mock) -> None:
+    def test_clear(self, track_1: Track, track_2: Track) -> None:
         cleared_dataset = Mock(spec=TrackDataset)
         dataset = Mock(spec=TrackDataset)
+        dataset.get_all_ids.return_value = [track_1.id, track_2.id]
         dataset.clear.return_value = cleared_dataset
         observer = Mock(spec=TrackListObserver)
-        repository = TrackRepository()
+        repository = TrackRepository(dataset)
         repository.register_tracks_observer(observer)
 
         repository.clear()
 
-        assert not repository.get_all().as_list()
-        assert observer.notify_tracks.call_args_list == [call([])]
+        assert repository._dataset == cleared_dataset
+        assert observer.notify_tracks.call_args_list == [
+            call(TrackRepositoryEvent([], [track_1.id, track_2.id]))
+        ]
 
     def test_get_all_ids(self, track_1: Mock, track_2: Mock) -> None:
         ids: set[TrackId] = set()
@@ -322,7 +328,7 @@ class TestTrackRepository:
 
         assert actual_ids is ids
 
-    def test_remove(self, track_1: Mock, track_2: Mock) -> None:
+    def test_remove(self, track_1: Track, track_2: Track) -> None:
         dataset = Mock(spec=TrackDataset)
         dataset.remove.return_value = dataset
         repository = TrackRepository(dataset)
@@ -336,7 +342,10 @@ class TestTrackRepository:
         repository.remove(track_2.id)
         assert call(track_2.id) in dataset.remove.call_args_list
 
-        assert observer.notify_tracks.call_args_list == [call([]), call([])]
+        assert observer.notify_tracks.call_args_list == [
+            call(TrackRepositoryEvent([], [track_1.id])),
+            call(TrackRepositoryEvent([], [track_2.id])),
+        ]
 
     def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
         dataset = Mock(spec=TrackDataset)

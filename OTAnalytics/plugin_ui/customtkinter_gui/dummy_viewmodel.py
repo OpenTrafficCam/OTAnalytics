@@ -77,7 +77,7 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage, TrackListObserver
+from OTAnalytics.domain.track import TrackImage, TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
@@ -330,7 +330,7 @@ class DummyViewModel(
             {"start_date": start_date, "end_date": end_date}
         )
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         self.notify_files()
 
     def _intersect_tracks_with_sections(self) -> None:

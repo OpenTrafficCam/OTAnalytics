@@ -25,6 +25,7 @@ from OTAnalytics.domain.track import (
     TrackIdProvider,
     TrackImage,
     TrackListObserver,
+    TrackRepositoryEvent,
 )
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
@@ -99,10 +100,7 @@ class ColorPaletteProvider:
     Updates, whenever track metadata are updated.
     """
 
-    def __init__(
-        self,
-        default_palette: dict[str, str] = DEFAULT_COLOR_PALETTE,
-    ) -> None:
+    def __init__(self, default_palette: dict[str, str]) -> None:
         self._default_palette = default_palette
         self._palette: dict[str, str] = {}
 
@@ -227,7 +225,7 @@ class FilterByClassification(PandasDataFrameProvider):
         Returns:
             DataFrame: filtered by classifications.
         """
-        self._filter_builder.set_classification_column(track.CLASSIFICATION)
+        self._filter_builder.set_classification_column(track.TRACK_CLASSIFICATION)
         filter_element = self._track_view_state.filter_element.get()
         dataframe_filter = filter_element.build_filter(self._filter_builder)
 
@@ -400,36 +398,38 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         """
         return super()._convert_tracks(tracks)
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """Take notice of some change in the track repository.
 
         Update cached tracks matching any given id.
         Add tracks of ids not yet present in cache.
+        Remove from cache if not present anymore in repository.
         Clear cache if no ids are given.
 
         Args:
-            tracks (list[TrackId]): the ids of changed tracks
+            track_event (TrackRepositoryEvent): the ids of added or removed tracks.
         """
         # TODO: Refactor observers - Distinguish between added tracks and removed tracks
-        match (tracks):
-            case []:
-                self._reset_cache()
-            case _:
-                # filter existing tracks from cache
-                filtered_cache = self._cache_without_existing_tracks(track_ids=tracks)
+        if track_event.removed:
+            self._cache_df = self._remove_tracks(track_event.removed)
 
-                # convert tracks not yet in cache
-                new_df = self.__do_convert_tracks(
-                    self._fetch_new_track_data(track_ids=tracks)
-                )
+        if track_event.added:
+            # filter existing tracks from cache
+            filtered_cache = self._cache_without_existing_tracks(
+                track_ids=track_event.added
+            )
 
-                # concat remaining tracks and new tracks
-                if filtered_cache.empty:
-                    df = new_df
-                else:
-                    df = pandas.concat([filtered_cache, new_df])
+            # convert tracks not yet in cache
+            new_df = self.__do_convert_tracks(
+                self._fetch_new_track_data(track_ids=track_event.added)
+            )
 
-                self._cache_df = self._sort_tracks(df)
+            # concat remaining tracks and new tracks
+            if filtered_cache.empty:
+                df = new_df
+            else:
+                df = pandas.concat([filtered_cache, new_df])
+            self._cache_df = self._sort_tracks(df)
 
     def _reset_cache(self) -> None:
         self._cache_df = DataFrame()
@@ -465,7 +465,6 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         return cache_without_removed_tracks
 
     def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
-        cut_tracks_dto.original_tracks
         cache_without_cut_tracks = self._remove_tracks(cut_tracks_dto.original_tracks)
         self._cache_df = self._sort_tracks(cache_without_cut_tracks)
 
@@ -570,7 +569,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
         seaborn.scatterplot(
             x="x",
             y="y",
-            hue=track.CLASSIFICATION,
+            hue=track.TRACK_CLASSIFICATION,
             data=track_df_start_end,
             style="type",
             markers=[">", "$x$"],
