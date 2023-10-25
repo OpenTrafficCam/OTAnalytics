@@ -7,7 +7,13 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel, ThemeManager
 
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STATE_DISABLED,
+    STATE_NORMAL,
+    STICKY,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkFrame,
@@ -69,20 +75,41 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             name="Start date",
             place_validation_below=True,
         )
-        self._button_new_project = CTkButton(
-            master=self, text="New", command=self._viewmodel.start_new_project
+        self._button_frame = EmbeddedCTkFrame(master=self)
+        self._button_new = CTkButton(
+            master=self._button_frame,
+            text="New",
+            width=10,
+            command=self._viewmodel.start_new_project,
+        )
+        self.button_open = CTkButton(
+            master=self._button_frame,
+            text="Open...",
+            width=10,
+            command=self._viewmodel.load_configuration,
+        )
+        self.button_save = CTkButton(
+            master=self._button_frame,
+            text="Save...",
+            width=10,
+            command=self._viewmodel.save_configuration,
         )
 
     def _place_widgets(self) -> None:
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
-        self._label_name.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self._entry_name.grid(row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY)
-        self._start_date_row.grid(row=1, column=0, columnspan=2, sticky=STICKY_WEST)
-        self._button_new_project.grid(
-            row=2, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        self._button_frame.grid(
+            row=0, column=0, columnspan=2, padx=0, pady=0, sticky=STICKY
         )
+        for column, button in enumerate(
+            [self._button_new, self.button_open, self.button_save]
+        ):
+            self._button_frame.grid_columnconfigure(column, weight=1)
+            button.grid(row=0, column=column, padx=PADX, pady=PADY, sticky=STICKY)
+        self._label_name.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self._entry_name.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
+        self._start_date_row.grid(row=2, column=0, columnspan=2, sticky=STICKY_WEST)
 
     def _wire_callbacks(self) -> None:
         self._project_name.trace_add("write", callback=self._update_project_name)
@@ -100,6 +127,11 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         self._project_name.set(name)
         self._start_date_row.set_datetime(start_date)
+
+    def set_enabled_general_buttons(self, enabled: bool) -> None:
+        new_state = STATE_NORMAL if enabled else STATE_DISABLED
+        for button in [self._button_new, self.button_save, self.button_open]:
+            button.configure(state=new_state)
 
 
 def get_default_toplevel_fg_color() -> str:

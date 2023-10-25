@@ -8,7 +8,6 @@ import pytest
 import ujson
 
 from OTAnalytics import version
-from OTAnalytics.adapter_ui.default_values import TRACK_LENGTH_LIMIT
 from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
 from OTAnalytics.application.eventlist import SectionActionDetector
 from OTAnalytics.application.project import Project
@@ -30,8 +29,10 @@ from OTAnalytics.domain.section import (
     SectionId,
 )
 from OTAnalytics.domain.track import (
-    CalculateTrackClassificationByMaxConfidence,
+    ByMaxConfidence,
     Detection,
+    PythonTrack,
+    PythonTrackDataset,
     Track,
     TrackClassificationCalculator,
     TrackId,
@@ -44,6 +45,7 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 )
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
+    DEFAULT_TRACK_LENGTH_LIMIT,
     EVENT_FORMAT_VERSION,
     METADATA,
     PROJECT,
@@ -60,6 +62,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
+    PythonDetectionParser,
+    TrackLengthLimit,
     Version,
     Version_1_0_to_1_1,
     Version_1_1_To_1_2,
@@ -234,12 +238,13 @@ class TestOttrkParser:
     def ottrk_parser(
         self, mocked_track_repository: Mock, mocked_track_file_repository: Mock
     ) -> OttrkParser:
-        return OttrkParser(
-            CalculateTrackClassificationByMaxConfidence(),
+        calculator = ByMaxConfidence()
+        detection_parser = PythonDetectionParser(
+            calculator,
             mocked_track_repository,
-            mocked_track_file_repository,
-            TRACK_LENGTH_LIMIT,
+            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
+        return OttrkParser(detection_parser)
 
     def test_parse_whole_ottrk(
         self, ottrk_parser: OttrkParser, ottrk_path: Path
@@ -256,11 +261,14 @@ class TestOttrkParser:
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
         _write_bz2(ottrk_data, ottrk_file)
-        result_tracks = ottrk_parser.parse(ottrk_file)
+        parse_result = ottrk_parser.parse(ottrk_file)
 
         expected_track = track_builder_setup_with_sample_data.build_track()
-
-        assert result_tracks == [expected_track]
+        expected_detection_classes = frozenset(
+            ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
+        )
+        assert parse_result.tracks == PythonTrackDataset.from_list([expected_track])
+        assert parse_result.metadata.detection_classes == expected_detection_classes
         ottrk_file.unlink()
 
     def test_parse_bz2(self, example_json_bz2: tuple[Path, dict]) -> None:
@@ -273,10 +281,19 @@ class TestOttrkParser:
         result_content = _parse_bz2(example_path)
         assert result_content == expected_content
 
+
+class TestPythonDetectionParser:
+    @pytest.fixture
+    def parser(self, mocked_track_repository: Mock) -> PythonDetectionParser:
+        return PythonDetectionParser(
+            ByMaxConfidence(),
+            mocked_track_repository,
+        )
+
     def test_parse_detections_output_has_same_order_as_input(
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
-        ottrk_parser: OttrkParser,
+        parser: PythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -285,14 +302,14 @@ class TestOttrkParser:
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = ottrk_parser._parse_detections(detections, metadata_video)
+        result_sorted_input = parser._parse_detections(detections, metadata_video)
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = ottrk_parser._parse_detections(
+        result_unsorted_input = parser._parse_detections(
             unsorted_detections, metadata_video
         )
 
         expected_sorted = {
-            TrackId(1): track_builder_setup_with_sample_data.build_detections()
+            TrackId("1"): track_builder_setup_with_sample_data.build_detections()
         }
 
         assert expected_sorted == result_sorted_input
@@ -301,7 +318,7 @@ class TestOttrkParser:
     def test_parse_tracks(
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
-        ottrk_parser: OttrkParser,
+        parser: PythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -310,13 +327,13 @@ class TestOttrkParser:
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = ottrk_parser._parse_tracks(detections, metadata_video)
+        result_sorted_input = parser.parse_tracks(detections, metadata_video)
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = ottrk_parser._parse_tracks(
-            unsorted_detections, metadata_video
-        )
+        result_unsorted_input = parser.parse_tracks(unsorted_detections, metadata_video)
 
-        expected_sorted = [track_builder_setup_with_sample_data.build_track()]
+        expected_sorted = PythonTrackDataset.from_list(
+            [track_builder_setup_with_sample_data.build_track()]
+        )
 
         assert expected_sorted == result_sorted_input
         assert expected_sorted == result_unsorted_input
@@ -325,7 +342,7 @@ class TestOttrkParser:
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
         mocked_track_repository: Mock,
-        ottrk_parser: OttrkParser,
+        parser: PythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -348,13 +365,44 @@ class TestOttrkParser:
         classificator.calculate.return_value = merged_classification
         mocked_track_repository.get_for.return_value = existing_track
         all_detections = deserialized_detections + existing_track.detections
-        merged_track = Track(existing_track.id, merged_classification, all_detections)
+        merged_track = PythonTrack(
+            existing_track.id, merged_classification, all_detections
+        )
 
-        result_sorted_input = ottrk_parser._parse_tracks(detections, metadata_video)
+        result_sorted_input = parser.parse_tracks(detections, metadata_video)
 
-        expected_sorted = [merged_track]
+        expected_sorted = PythonTrackDataset.from_list([merged_track])
 
         assert expected_sorted == result_sorted_input
+
+    @pytest.mark.parametrize(
+        "track_length_limit",
+        [
+            TrackLengthLimit(20, 12000),
+            TrackLengthLimit(0, 4),
+        ],
+    )
+    def test_parse_tracks_consider_minimum_length(
+        self,
+        mocked_track_repository: Mock,
+        track_builder_setup_with_sample_data: TrackBuilder,
+        track_length_limit: TrackLengthLimit,
+    ) -> None:
+        parser = PythonDetectionParser(
+            ByMaxConfidence(),
+            mocked_track_repository,
+            track_length_limit,
+        )
+        detections: list[
+            dict
+        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+
+        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
+            ottrk_dataformat.VIDEO
+        ]
+        result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
+
+        assert len(result_sorted_input) == 0
 
     def assert_detection_equal(self, d1: Detection, d2: Detection) -> None:
         assert d1.classification == d2.classification
@@ -583,7 +631,7 @@ class TestOtFlowParser:
 
 class TestOtEventListParser:
     def test_convert_event(self, test_data_tmp_dir: Path) -> None:
-        road_user_id = 1
+        road_user_id = "1"
         road_user_type = "car"
         hostname = "myhostname"
         section_id = SectionId("N")
@@ -739,7 +787,6 @@ class TestCachedVideoParser:
 
         assert isinstance(parsed_video, CachedVideo)
         assert parsed_video.other == video
-        video.get_frame.assert_called_once()
 
     def test_parse_list_to_cached_videos(self, test_data_tmp_dir: Path) -> None:
         content: list[dict] = [{}]
@@ -761,8 +808,6 @@ class TestCachedVideoParser:
             assert parsed_videos[0].other == video1
         if isinstance(parsed_videos[1], CachedVideo):
             assert parsed_videos[1].other == video2
-        video1.get_frame.assert_called_once()
-        video2.get_frame.assert_called_once()
 
     def test_convert_delegates_to_other(self, test_data_tmp_dir: Path) -> None:
         video1 = Mock(spec=Video)

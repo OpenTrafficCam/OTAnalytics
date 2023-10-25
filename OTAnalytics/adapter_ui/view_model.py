@@ -31,16 +31,16 @@ class MissingCoordinate(Exception):
 
 class ViewModel(ABC):
     @abstractmethod
-    def register_to_subjects(self) -> None:
-        pass
-
-    @abstractmethod
     def set_window(self, window: AbstractMainWindow) -> None:
         pass
 
     @abstractmethod
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         pass
+
+    @abstractmethod
+    def set_video_frame(self, frame: AbstractFrame) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def set_canvas(self, canvas: AbstractCanvas) -> None:
@@ -335,4 +335,8 @@ class ViewModel(ABC):
     def set_frame_track_plotting(
         self, frame_track_plotting: AbstractFrameTrackPlotting
     ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_analysis_frame(self, frame: AbstractFrame) -> None:
         raise NotImplementedError

@@ -1,8 +1,9 @@
 from typing import Iterable
 
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import SectionId, SectionListObserver
-from OTAnalytics.domain.track import TrackId, TrackListObserver
+from OTAnalytics.domain.track import TrackListObserver, TrackRepositoryEvent
 
 
 class AddEvents:
@@ -35,8 +36,11 @@ class ClearAllEvents(SectionListObserver, TrackListObserver):
     def notify_sections(self, sections: list[SectionId]) -> None:
         self.clear()
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         self.clear()
 
     def on_section_changed(self, section_id: SectionId) -> None:
+        self.clear()
+
+    def on_tracks_cut(self, _: CutTracksDto) -> None:
         self.clear()

@@ -8,7 +8,6 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     ColumnResource,
     TreeviewTemplate,
@@ -66,18 +65,6 @@ class FrameSections(AbstractCTkFrame):
             text="Remove",
             command=self._viewmodel.remove_sections,
         )
-        self.button_load = CTkButton(
-            master=self,
-            text="Load",
-            width=50,
-            command=self._viewmodel.load_configuration,
-        )
-        self.button_save = CTkButton(
-            master=self,
-            text="Save",
-            width=50,
-            command=self._viewmodel.save_configuration,
-        )
 
     def _place_widgets(self) -> None:
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
@@ -96,10 +83,9 @@ class FrameSections(AbstractCTkFrame):
         self.button_remove.grid(
             row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self.button_load.grid(row=4, column=0, padx=PADX, pady=PADY, sticky=STICKY)
-        self.button_save.grid(row=4, column=1, padx=PADX, pady=PADY, sticky=STICKY)
 
     def _set_button_state_categories(self) -> None:
+        self._general_buttons: list[CTkButton] = []
         self._add_buttons = [
             self.button_add_line,
             self.button_add_area,
@@ -113,9 +99,13 @@ class FrameSections(AbstractCTkFrame):
         ]
 
     def _set_initial_button_states(self) -> None:
+        self.set_enabled_general_buttons(True)
         self.set_enabled_add_buttons(False)
         self.set_enabled_change_single_item_buttons(False)
         self.set_enabled_change_multiple_items_buttons(False)
+
+    def get_general_buttons(self) -> list[CTkButton]:
+        return self._general_buttons
 
     def get_add_buttons(self) -> list[CTkButton]:
         return self._add_buttons
@@ -125,10 +115,6 @@ class FrameSections(AbstractCTkFrame):
 
     def get_multiple_items_buttons(self) -> list[CTkButton]:
         return self._multiple_items_buttons
-
-    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
-        x, y = get_widget_position(self, offset=offset)
-        return x, y
 
 
 class TreeviewSections(TreeviewTemplate):

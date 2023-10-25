@@ -26,7 +26,12 @@ from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
-from OTAnalytics.application.use_cases.section_repository import AddSection
+from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.application.use_cases.section_repository import (
+    AddSection,
+    GetSectionOffset,
+    GetSectionsById,
+)
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
@@ -87,6 +92,7 @@ class OTAnalyticsApplication:
         clear_all_events: ClearAllEvents,
         start_new_project: StartNewProject,
         project_updater: ProjectUpdater,
+        load_track_files: LoadTrackFiles,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -110,6 +116,10 @@ class OTAnalyticsApplication:
         self._create_events = create_events
         self._load_otflow = load_otflow
         self._start_new_project = start_new_project
+        self._load_track_files = load_track_files
+        self._get_section_offset = GetSectionOffset(
+            GetSectionsById(self._datastore._section_repository)
+        )
 
     def connect_observers(self) -> None:
         """
@@ -156,7 +166,7 @@ class OTAnalyticsApplication:
         """
         Remove the currently selected videos from the repository.
         """
-        if videos := self.track_view_state.selected_videos.get():
+        if videos := self.get_selected_videos():
             self._datastore.remove_videos(videos)
             if videos := self._datastore.get_all_videos():
                 self.track_view_state.selected_videos.set([videos[0]])
@@ -165,6 +175,9 @@ class OTAnalyticsApplication:
 
     def get_all_videos(self) -> list[Video]:
         return self._datastore.get_all_videos()
+
+    def get_selected_videos(self) -> list[Video]:
+        return self.track_view_state.selected_videos.get()
 
     def get_all_track_files(self) -> set[Path]:
         return self._get_all_track_files()
@@ -214,15 +227,6 @@ class OTAnalyticsApplication:
     def load_otconfig(self, file: Path) -> None:
         self._datastore.load_otconfig(file)
 
-    def add_tracks_of_file(self, track_file: Path) -> None:
-        """
-        Load a single track file.
-
-        Args:
-            track_file (Path): file in ottrk format
-        """
-        self._datastore.load_track_file(file=track_file)
-
     def add_tracks_of_files(self, track_files: list[Path]) -> None:
         """
         Load a multiple track files.
@@ -230,7 +234,7 @@ class OTAnalyticsApplication:
         Args:
             track_files (list[Path]): files in ottrk format
         """
-        self._datastore.load_track_files(files=track_files)
+        self._load_track_files(track_files)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""
@@ -375,6 +379,8 @@ class OTAnalyticsApplication:
             file (Path): File to export the events to
             event_list_exporter (EventListExporter): Exporter building the format
         """
+        if self._datastore._event_repository.is_empty():
+            self.create_events()
         self._datastore.export_event_list_file(file, event_list_exporter)
 
     def get_supported_export_formats(self) -> Iterable[ExportFormat]:
@@ -542,6 +548,11 @@ class OTAnalyticsApplication:
             end_date = last_occurrence
 
         return start_date, end_date
+
+    def get_section_offset(
+        self, section_id: SectionId, event_type: EventType
+    ) -> RelativeOffsetCoordinate | None:
+        return self._get_section_offset.get(section_id, event_type)
 
     def start_new_project(self) -> None:
         self._start_new_project()

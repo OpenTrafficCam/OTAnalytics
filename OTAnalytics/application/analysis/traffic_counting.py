@@ -2,20 +2,25 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     ExportCounts,
     ExportFormat,
     ExportSpecificationDto,
+    FlowNameDto,
 )
+from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
-from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import TrackId, TrackRepository
 from OTAnalytics.domain.types import EventType
 
+LEVEL_FROM_SECTION = "from section"
+LEVEL_TO_SECTION = "to section"
 LEVEL_FLOW = "flow"
 LEVEL_CLASSIFICATION = "classification"
 LEVEL_START_TIME = "start time"
@@ -159,6 +164,17 @@ class SingleTag(Tag):
         return {self.level: self.id}
 
 
+def create_section_info_tag(from_section: str, to_section: str) -> Tag:
+    return MultiTag(
+        frozenset(
+            [
+                SingleTag(LEVEL_FROM_SECTION, from_section),
+                SingleTag(LEVEL_TO_SECTION, to_section),
+            ]
+        )
+    )
+
+
 def create_flow_tag(flow_name: str) -> Tag:
     return SingleTag(level=LEVEL_FLOW, id=flow_name)
 
@@ -266,12 +282,47 @@ class FillEmptyCount(CountDecorator):
 
 
 @dataclass(frozen=True)
+class AddSectionInformation(CountDecorator):
+    """Add section information of flows."""
+
+    flow_name_info: dict[str, FlowNameDto]
+
+    def to_dict(self) -> dict[Tag, int]:
+        result: dict[Tag, int] = {}
+        for tag, count in super().to_dict().items():
+            flow_name = self._get_flow_name_from(tag)
+            new_tag = tag.combine(
+                create_section_info_tag(
+                    self.flow_name_info[flow_name].from_section,
+                    self.flow_name_info[flow_name].to_section,
+                )
+            )
+            result[new_tag] = count
+        return result
+
+    def _get_flow_name_from(self, tag: Tag) -> str:
+        found: str = ""
+        for _tags in tag.contained_tags():
+            match _tags:
+                case SingleTag(_) as single_tag:
+                    if single_tag.level == LEVEL_FLOW:
+                        found = single_tag.id
+                        break
+                case MultiTag(_) as multi_tag:
+                    if found := self._get_flow_name_from(multi_tag):
+                        break
+                case invalid_tag:
+                    raise ValueError(f"Unknown tag type '{invalid_tag}'")
+        return found
+
+
+@dataclass(frozen=True)
 class RoadUserAssignment:
     """
     Assignment of a road user to a flow.
     """
 
-    road_user: int
+    road_user: str
     assignment: Flow
     events: EventPair
 
@@ -359,7 +410,7 @@ class CountableAssignments:
         Returns:
             dict[FlowId, int]: count per flow
         """
-        flow_to_user: dict[Flow, list[int]] = defaultdict(list)
+        flow_to_user: dict[Flow, list[str]] = defaultdict(list)
         for assignment in self._assignments:
             flow_to_user[assignment.assignment].append(assignment.road_user)
         return {current: len(users) for current, users in flow_to_user.items()}
@@ -567,7 +618,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
 
     def __group_events_by_road_user(
         self, events: Iterable[Event]
-    ) -> dict[int, list[Event]]:
+    ) -> dict[str, list[Event]]:
         """
         Group events by road user.
 
@@ -577,7 +628,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         Returns:
             dict[int, list[Event]]: events grouped by user
         """
-        events_by_road_user: dict[int, list[Event]] = defaultdict(list)
+        events_by_road_user: dict[str, list[Event]] = defaultdict(list)
         sorted_events = sorted(events, key=lambda event: event.occurrence)
         for event in sorted_events:
             if event.section_id:
@@ -587,7 +638,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
     def __assign_user_to_flow(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        events_by_road_user: dict[int, list[Event]],
+        events_by_road_user: dict[str, list[Event]],
     ) -> RoadUserAssignments:
         """
         Assign each user to exactly one flow.
@@ -595,10 +646,10 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
                 end section
-            events_by_road_user (dict[int, list[Event]]): events by road user
+            events_by_road_user (dict[str, list[Event]]): events by road user
 
         Returns:
-            dict[int, FlowId]: assignment of flow to road user
+            dict[str, FlowId]: assignment of flow to road user
         """
         assignments: list[RoadUserAssignment] = []
         for road_user, events in events_by_road_user.items():
@@ -769,6 +820,7 @@ class Exporter(ABC):
     Interface to abstract various export formats.
     """
 
+    @abstractmethod
     def export(self, counts: Count) -> None:
         """
         Export the given counts.
@@ -784,6 +836,7 @@ class ExporterFactory(ABC):
     Factory to create the exporter for the given CountingSpecificationDto.
     """
 
+    @abstractmethod
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """
         Returns an iterable of the supported export formats.
@@ -793,6 +846,7 @@ class ExporterFactory(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         """
         Create the exporter for the given CountingSpecificationDto.
@@ -807,45 +861,62 @@ class ExporterFactory(ABC):
 
 
 def create_export_specification(
-    flows: list[Flow], counting_specification: CountingSpecificationDto
+    flows: list[Flow],
+    counting_specification: CountingSpecificationDto,
+    get_sections_by_id: Callable[[Iterable[SectionId]], Iterable[Section]],
 ) -> ExportSpecificationDto:
-    flow_names = [flow.name for flow in flows]
-    return ExportSpecificationDto(counting_specification, flow_names)
+    flow_dtos = []
+    for flow in flows:
+        sections = list(get_sections_by_id([flow.start, flow.end]))
+        if len(sections) == 2:
+            from_section_name = sections[0].name
+            to_section_name = sections[1].name
+            flow_dtos.append(FlowNameDto(flow.name, from_section_name, to_section_name))
+
+    return ExportSpecificationDto(counting_specification, flow_dtos)
 
 
 class ExportTrafficCounting(ExportCounts):
     """
-    Use case to export traffic countings.
+    Use case to export traffic counting.
     """
 
     def __init__(
         self,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
+        get_sections_by_id: GetSectionsById,
+        create_events: CreateEvents,
         assigner: RoadUserAssigner,
         tagger_factory: TaggerFactory,
         exporter_factory: ExporterFactory,
     ) -> None:
         self._event_repository = event_repository
         self._flow_repository = flow_repository
+        self._get_sections_by_id = get_sections_by_id
+        self._create_events = create_events
         self._assigner = assigner
         self._tagger_factory = tagger_factory
         self._exporter_factory = exporter_factory
 
     def export(self, specification: CountingSpecificationDto) -> None:
         """
-        Export the traffic countings based on the currently available evens and flows.
+        Export the traffic countings based on the currently available events and flows.
 
         Args:
             specification (CountingSpecificationDto): specification of the export
         """
+        if self._event_repository.is_empty():
+            self._create_events()
         events = self._event_repository.get_all()
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)
         tagger = self._tagger_factory.create_tagger(specification)
         tagged_assignments = assigned_flows.tag(tagger)
         counts = tagged_assignments.count(flows)
-        export_specification = create_export_specification(flows, specification)
+        export_specification = create_export_specification(
+            flows, specification, self._get_sections_by_id
+        )
         exporter = self._exporter_factory.create_exporter(export_specification)
         exporter.export(counts)
 

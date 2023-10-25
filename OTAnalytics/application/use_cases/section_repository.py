@@ -1,6 +1,8 @@
 from typing import Iterable
 
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+from OTAnalytics.domain.types import EventType
 
 
 class SectionAlreadyExists(Exception):
@@ -104,3 +106,59 @@ class ClearAllSections:
 
     def __call__(self) -> None:
         self._section_repository.clear()
+
+
+class SectionDoesNotExistError(Exception):
+    pass
+
+
+class RemoveSection:
+    """Use case to remove a section from the section repository.
+
+    Args:
+        section_repository: the repository to remove the section from.
+    """
+
+    def __init__(self, section_repository: SectionRepository) -> None:
+        self._section_repository = section_repository
+
+    def __call__(self, section_id: SectionId) -> None:
+        """Remove section from section repository.
+
+        Raises:
+            SectionDoesNotExistError: if section with passed id does not exist.
+
+        Args:
+            section_id (SectionId): the id of the section to be removed.
+        """
+        try:
+            self._section_repository.remove(section_id)
+        except KeyError:
+            raise SectionDoesNotExistError(
+                f"Trying to remove a non-existing section with id='{section_id}'."
+            )
+
+
+class GetSectionOffset:
+    """Get section offset by event type."""
+
+    def __init__(self, get_sections_by_id: GetSectionsById):
+        self._get_sections_by_id = get_sections_by_id
+
+    def get(
+        self, section_id: SectionId, event_type: EventType
+    ) -> RelativeOffsetCoordinate | None:
+        """Get section offset by event type.
+
+        Args:
+            section_id: the section id.
+            event_type: the event type.
+
+        Returns:
+            RelativeOffsetCoordinate | None: The offset if section exists.
+                Otherwise, None.
+        """
+        sections = self._get_sections_by_id([section_id])
+        if not sections:
+            return None
+        return sections[0].get_offset(event_type)

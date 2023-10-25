@@ -5,26 +5,27 @@ from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
     ColumnResource,
     TreeviewTemplate,
 )
 
 
-class FrameVideos(EmbeddedCTkFrame):
+class FrameVideos(AbstractCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self._viewmodel = viewmodel
         self._get_widgets()
         self._place_widgets()
+        self._set_initial_button_states()
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        pass
+        self._viewmodel.set_video_frame(self)
 
     def _get_widgets(self) -> None:
         self._frame_tree = CTkFrame(master=self)
@@ -36,7 +37,7 @@ class FrameVideos(EmbeddedCTkFrame):
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
         self.button_add_videos = CTkButton(
-            master=self, text="Load", command=self._viewmodel.add_video
+            master=self, text="Add...", command=self._viewmodel.add_video
         )
         self.button_remove_videos = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_videos
@@ -54,6 +55,18 @@ class FrameVideos(EmbeddedCTkFrame):
         self.button_remove_videos.grid(
             row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def _set_initial_button_states(self) -> None:
+        self.set_enabled_general_buttons(True)
+        self.set_enabled_add_buttons(True)
+        self.set_enabled_change_single_item_buttons(False)
+        self.set_enabled_change_multiple_items_buttons(False)
+
+    def get_general_buttons(self) -> list[CTkButton]:
+        return [self.button_add_videos]
+
+    def get_multiple_items_buttons(self) -> list[CTkButton]:
+        return [self.button_remove_videos]
 
 
 COLUMN_VIDEO = "Video files"

@@ -4,12 +4,14 @@ from typing import Callable, Generic, Iterable, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import VALUE, Subject
-from OTAnalytics.domain.section import SectionId, SectionListObserver
+from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionType
 from OTAnalytics.domain.track import (
     Detection,
     TrackId,
@@ -17,6 +19,7 @@ from OTAnalytics.domain.track import (
     TrackListObserver,
     TrackObserver,
     TrackRepository,
+    TrackRepositoryEvent,
     TrackSubject,
 )
 from OTAnalytics.domain.video import Video, VideoListObserver
@@ -60,14 +63,14 @@ class TrackState(TrackListObserver):
         """
         self.observers.notify(self.selected_track)
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """
         Notify the state about changes in the track list.
 
         Args:
-            tracks (list[TrackId]): newly added tracks
+            track_event (TrackRepositoryEvent): newly added or removed tracks.
         """
-        track_to_select = tracks[0] if tracks else None
+        track_to_select = track_event.added[0] if track_event.added else None
         self.select(track_to_select)
 
 
@@ -224,10 +227,11 @@ class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
         self._datastore = datastore
         self._track_view_state = track_view_state
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         all_tracks = self._datastore.get_all_tracks()
-        if tracks:
-            if video := self._datastore.get_video_for(all_tracks[0].id):
+        if track_event.added:
+            first_track = next(iter(all_tracks))
+            if video := self._datastore.get_video_for(first_track.id):
                 self._track_view_state.selected_videos.set([video])
 
     def notify_videos(self, videos: list[Video]) -> None:
@@ -240,10 +244,11 @@ class SectionState(SectionListObserver):
     This state represents the currently selected sections.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, get_sections_by_id: GetSectionsById) -> None:
         self.selected_sections: ObservableProperty[
             list[SectionId]
         ] = ObservableProperty[list]([])
+        self._get_sections_by_id = get_sections_by_id
 
     def notify_sections(self, sections: list[SectionId]) -> None:
         """
@@ -252,8 +257,17 @@ class SectionState(SectionListObserver):
         Args:
             sections (list[SectionId]): newly added sections
         """
-        if sections:
-            self.selected_sections.set([sections[0]])
+        if not sections:
+            self.selected_sections.set([])
+            return
+
+        no_cutting_sections = [
+            section
+            for section in self._get_sections_by_id(sections)
+            if section.get_type() != SectionType.CUTTING
+        ]
+        if no_cutting_sections:
+            self.selected_sections.set([no_cutting_sections[0].id])
         else:
             self.selected_sections.set([])
 
@@ -317,12 +331,12 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         """
         self._update_image()
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """
         Will notify this object about changes in the track repository.
 
         Args:
-            tracks (list[TrackId]): list of changed track ids
+            track_event (list[TrackId]): list of changed track ids
         """
         self._update_image()
 
@@ -358,6 +372,9 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
     def notify_sections(self, sections: list[SectionId]) -> None:
         self._update()
 
+    def notify_events(self, _: EventRepositoryEvent) -> None:
+        self._update()
+
     def _notify_flow_changed(self, _: list[FlowId]) -> None:
         self._update()
 
@@ -391,7 +408,6 @@ class TracksMetadata(TrackListObserver):
     Listens to changes in the `TrackRepository` and updates the tracks metadata
 
     Args:
-        TrackListObserver (TracListObserver): extends the TrackListObserver interface
         track_repository (TrackRepository): the track repository
     """
 
@@ -406,6 +422,9 @@ class TracksMetadata(TrackListObserver):
         self._classifications: ObservableProperty[set[str]] = ObservableProperty[set](
             set()
         )
+        self._detection_classifications: ObservableProperty[
+            frozenset[str]
+        ] = ObservableProperty[frozenset](frozenset([]))
 
     @property
     def first_detection_occurrence(self) -> Optional[datetime]:
@@ -436,10 +455,19 @@ class TracksMetadata(TrackListObserver):
         """
         return self._classifications.get()
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    @property
+    def detection_classifications(self) -> frozenset[str]:
+        """The classifications used by the detection model.
+
+        Returns:
+            set[str]: the classifications.
+        """
+        return self._detection_classifications.get()
+
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """Update tracks metadata on track repository changes"""
         self._update_detection_occurrences()
-        self._update_classifications(tracks)
+        self._update_classifications(track_event.added)
 
     def _update_detection_occurrences(self) -> None:
         """Update the first and last detection occurrences."""
@@ -470,6 +498,11 @@ class TracksMetadata(TrackListObserver):
             detections.extend(track.detections)
 
         return detections
+
+    def update_detection_classes(self, new_classes: frozenset[str]) -> None:
+        """Update the classifications used by the detection model."""
+        updated_classes = self._detection_classifications.get().union(new_classes)
+        self._detection_classifications.set(updated_classes)
 
 
 class ActionState:

@@ -18,6 +18,7 @@ from OTAnalytics.domain.event import (
     Event,
     EventBuilder,
     EventRepository,
+    EventRepositoryEvent,
     ImproperFormattedFilename,
     IncompleteEventBuilderSetup,
     SceneEventBuilder,
@@ -25,24 +26,24 @@ from OTAnalytics.domain.event import (
 )
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import Detection, TrackId
+from OTAnalytics.domain.track import Detection, PythonDetection, TrackId
 from OTAnalytics.domain.types import EventType, EventTypeParseError
 
 
 @pytest.fixture
 def valid_detection() -> Detection:
-    return Detection(
-        classification="car",
-        confidence=0.5,
-        x=0.0,
-        y=0.0,
-        w=15.3,
-        h=30.5,
-        frame=1,
-        occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        interpolated_detection=False,
-        track_id=TrackId(1),
-        video_name="myhostname_something.mp4",
+    return PythonDetection(
+        _classification="car",
+        _confidence=0.5,
+        _x=0.0,
+        _y=0.0,
+        _w=15.3,
+        _h=30.5,
+        _frame=1,
+        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+        _interpolated_detection=False,
+        _track_id=TrackId("1"),
+        _video_name="myhostname_something.mp4",
     )
 
 
@@ -66,29 +67,11 @@ class TestEvent:
     def test_instantiate_event_with_invalid_frame_number(self, frame: int) -> None:
         with pytest.raises(ValueError):
             Event(
-                road_user_id=1,
+                road_user_id="1",
                 road_user_type="car",
                 hostname="my_hostname",
                 occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
                 frame_number=frame,
-                section_id=SectionId("N"),
-                event_coordinate=ImageCoordinate(0, 0),
-                event_type=EventType.SECTION_ENTER,
-                direction_vector=DirectionVector2D(1, 0),
-                video_name="my_video_name.mp4",
-            )
-
-    @pytest.mark.parametrize("road_user_id", [-1, 0])
-    def test_instantiate_event_with_invalid_road_user_id(
-        self, road_user_id: int
-    ) -> None:
-        with pytest.raises(ValueError):
-            Event(
-                road_user_id=road_user_id,
-                road_user_type="car",
-                hostname="myhostname",
-                occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-                frame_number=1,
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(0, 0),
                 event_type=EventType.SECTION_ENTER,
@@ -101,7 +84,7 @@ class TestEvent:
         event_coordinate = ImageCoordinate(0, 0)
         direction = DirectionVector2D(1, 0)
         event = Event(
-            road_user_id=1,
+            road_user_id="1",
             road_user_type="car",
             hostname="my_hostname",
             occurrence=occurrence,
@@ -112,7 +95,7 @@ class TestEvent:
             direction_vector=direction,
             video_name="my_video_name.mp4",
         )
-        assert event.road_user_id == 1
+        assert event.road_user_id == "1"
         assert event.road_user_type == "car"
         assert event.hostname == "my_hostname"
         assert event.occurrence == occurrence
@@ -124,7 +107,7 @@ class TestEvent:
         assert event.video_name == "my_video_name.mp4"
 
     def test_to_dict(self) -> None:
-        road_user_id = 1
+        road_user_id = "1"
         road_user_type = "car"
         hostname = "myhostname"
         occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
@@ -302,28 +285,44 @@ class TestSceneEventBuilder:
 class TestEventRepository:
     def test_add(self) -> None:
         event = Mock()
-        repository = EventRepository()
+        subject = Mock()
+        repository = EventRepository(subject)
 
         repository.add(event)
 
         assert event in repository.get_all()
+        subject.notify.assert_called_with(EventRepositoryEvent([event], []))
 
     def test_add_all(self) -> None:
         first_event = Mock()
         second_event = Mock()
-        repository = EventRepository()
+        subject = Mock()
+        repository = EventRepository(subject)
 
         repository.add_all([first_event, second_event])
 
         assert first_event in repository.get_all()
         assert second_event in repository.get_all()
+        subject.notify.assert_called_with(
+            EventRepositoryEvent([first_event, second_event], [])
+        )
 
     def test_clear(self) -> None:
         first_event = Mock()
         second_event = Mock()
-        repository = EventRepository()
+        subject = Mock()
+        repository = EventRepository(subject)
 
         repository.add_all([first_event, second_event])
         repository.clear()
 
         assert not list(repository.get_all())
+        subject.notify.assert_called_with(
+            EventRepositoryEvent([], [first_event, second_event])
+        )
+
+    def test_is_empty(self) -> None:
+        repository = EventRepository()
+        assert repository.is_empty()
+        repository.add(Mock())
+        assert not repository.is_empty()

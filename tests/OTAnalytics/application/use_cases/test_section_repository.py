@@ -6,11 +6,15 @@ from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
     GetAllSections,
+    GetSectionOffset,
     GetSectionsById,
+    RemoveSection,
     SectionAlreadyExists,
     SectionIdAlreadyExists,
 )
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+from OTAnalytics.domain.types import EventType
 
 
 @pytest.fixture
@@ -18,6 +22,7 @@ def section_north() -> Mock:
     section = Mock(spec=Section)
     section.name = "North"
     section.id = SectionId("1")
+    section.get_offset.return_value = RelativeOffsetCoordinate(0.5, 0.2)
     return section
 
 
@@ -26,6 +31,7 @@ def section_south() -> Mock:
     section = Mock(spec=Section)
     section.name = "South"
     section.id = SectionId("2")
+    section.get_offset.return_value = RelativeOffsetCoordinate(0.5, 0)
     return section
 
 
@@ -110,3 +116,33 @@ class TestClearAllSections:
         clear_all_sections = ClearAllSections(section_repository)
         clear_all_sections()
         section_repository.clear.assert_called_once()
+
+
+class TestRemoveSection:
+    def test_remove(self, section_repository: Mock, section_north: Section) -> None:
+        remove_section = RemoveSection(section_repository)
+        remove_section(section_north.id)
+        section_repository.remove.assert_called_once_with(section_north.id)
+
+
+class TestGetSectionOffset:
+    def test_get_section_offset(self, section_north: Section) -> None:
+        get_sections_by_id = Mock(return_value=[section_north])
+
+        get_section_offset = GetSectionOffset(get_sections_by_id)
+        section_offset = get_section_offset.get(
+            section_north.id, EventType.SECTION_ENTER
+        )
+        assert section_offset is not None
+        assert section_offset == RelativeOffsetCoordinate(0.5, 0.2)
+        get_sections_by_id.assert_called_once_with([section_north.id])
+
+    def test_get_offset_of_nonexistent_section(self, section_north: Section) -> None:
+        get_sections_by_id = Mock(return_value=[])
+
+        get_section_offset = GetSectionOffset(get_sections_by_id)
+        section_offset = get_section_offset.get(
+            section_north.id, EventType.SECTION_ENTER
+        )
+        assert section_offset is None
+        get_sections_by_id.assert_called_once_with([section_north.id])

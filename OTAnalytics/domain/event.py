@@ -6,6 +6,7 @@ from typing import Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Detection
 from OTAnalytics.domain.types import EventType
@@ -57,7 +58,7 @@ class Event(DataclassValidation):
         ValueError: frame_number < 1
 
     Args:
-        road_user_id (int): the road user id involved with this event. It must be
+        road_user_id (str): the road user id involved with this event. It must be
             greater equal one
         road_user_type (str): the road user type involved with this event
         hostname (str): the OTCamera hostname that the video is associated with
@@ -74,7 +75,7 @@ class Event(DataclassValidation):
 
     """
 
-    road_user_id: int
+    road_user_id: str
     road_user_type: str
     hostname: str
     occurrence: datetime
@@ -86,7 +87,6 @@ class Event(DataclassValidation):
     video_name: str
 
     def _validate(self) -> None:
-        self._validate_road_user_id_greater_zero()
         self._validate_frame_number_greater_equal_one()
 
     def _validate_frame_number_greater_equal_one(self) -> None:
@@ -98,12 +98,6 @@ class Event(DataclassValidation):
                         f"but is {self.frame_number}"
                     )
                 )
-            )
-
-    def _validate_road_user_id_greater_zero(self) -> None:
-        if self.road_user_id < 1:
-            raise ValueError(
-                f"vehicle_id must be at least 1, but is {self.road_user_id}"
             )
 
     def to_dict(self) -> dict:
@@ -318,11 +312,37 @@ class SceneEventBuilder(EventBuilder):
         )
 
 
+@dataclass
+class EventRepositoryEvent:
+    """Holds information on changes made in the event repository.
+
+    `Added` holding an empty iterable indicates remove events.
+
+    Args:
+        added (Iterable[Event]): events added to repository.
+        removed (Iterable[Event]): events removed from the repository.
+    """
+
+    added: Iterable[Event]
+    removed: Iterable[Event]
+
+
 class EventRepository:
     """The repository to store events."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, subject: Subject[EventRepositoryEvent] = Subject[EventRepositoryEvent]()
+    ) -> None:
+        self._subject = subject
         self._events: list[Event] = []
+
+    def register_observer(self, observer: OBSERVER[EventRepositoryEvent]) -> None:
+        """Register observer to listen to repository changes.
+
+        Args:
+            observer (OBSERVER[EventRepositoryEvent]): the observer to registered.
+        """
+        self._subject.register(observer)
 
     def add(self, event: Event) -> None:
         """Add an event to the repository.
@@ -331,6 +351,7 @@ class EventRepository:
             event (Event): the event to add
         """
         self._events.append(event)
+        self._subject.notify(EventRepositoryEvent([event], []))
 
     def add_all(self, events: Iterable[Event]) -> None:
         """Add multiple events at once to the repository.
@@ -339,6 +360,7 @@ class EventRepository:
             events (Iterable[Event]): the events
         """
         self._events.extend(events)
+        self._subject.notify(EventRepositoryEvent(events, []))
 
     def get_all(self) -> Iterable[Event]:
         """Get all events stored in the repository.
@@ -350,6 +372,13 @@ class EventRepository:
 
     def clear(self) -> None:
         """
-        Clear the repository.
+        Clear the repository and notify observers only if repository was filled.
         """
-        self._events.clear()
+        if self._events:
+            removed = self._events
+            self._events = []
+            self._subject.notify(EventRepositoryEvent([], removed))
+
+    def is_empty(self) -> bool:
+        """Whether repository is empty."""
+        return not self._events

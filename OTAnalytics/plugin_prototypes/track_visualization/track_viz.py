@@ -21,6 +21,7 @@ from OTAnalytics.application.state import (
     SectionState,
     TrackViewState,
 )
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.domain import track
 from OTAnalytics.domain.flow import FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
@@ -34,7 +35,9 @@ from OTAnalytics.domain.track import (
     TrackImage,
     TrackListObserver,
     TrackRepository,
+    TrackRepositoryEvent,
 )
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 ENCODING = "UTF-8"
@@ -107,10 +110,7 @@ class ColorPaletteProvider:
     Updates, whenever track metadata are updated.
     """
 
-    def __init__(
-        self,
-        default_palette: dict[str, str] = DEFAULT_COLOR_PALETTE,
-    ) -> None:
+    def __init__(self, default_palette: dict[str, str]) -> None:
         self._default_palette = default_palette
         self._palette: dict[str, str] = {}
 
@@ -226,7 +226,7 @@ class DummyObservableWrapper(ObservableOptionalProperty[Any], TrackListObserver)
     def __init__(self, default: Any | None = None) -> None:
         super().__init__(default)
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, tracks: TrackRepositoryEvent) -> None:
         self._subject.notify(None)
 
 
@@ -299,7 +299,7 @@ class FilterById(PandasDataFrameProvider):
         data = self._other.get_data()
         if data.empty:
             return data
-        ids: set[int] = {track_id.id for track_id in self._filter.get_ids()}
+        ids: set[str] = {track_id.id for track_id in self._filter.get_ids()}
         return data.loc[data[track.TRACK_ID].isin(ids)]
 
 
@@ -333,7 +333,7 @@ class FilterByClassification(PandasDataFrameProvider):
         Returns:
             DataFrame: filtered by classifications.
         """
-        self._filter_builder.set_classification_column(track.CLASSIFICATION)
+        self._filter_builder.set_classification_column(track.TRACK_CLASSIFICATION)
         filter_element = self._track_view_state.filter_element.get()
         dataframe_filter = filter_element.build_filter(self._filter_builder)
 
@@ -394,10 +394,13 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks = self._datastore.get_all_tracks()
-        if not tracks:
+        if isinstance(tracks, PandasTrackDataset):
+            return tracks.as_dataframe()
+        track_list = tracks.as_list()
+        if not track_list:
             return DataFrame()
 
-        return self._convert_tracks(tracks)
+        return self._convert_tracks(track_list)
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
         """
@@ -415,7 +418,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
         ):
             for detection in current_track.detections:
                 detection_dict = detection.to_dict()
-                detection_dict[track.CLASSIFICATION] = current_track.classification
+                detection_dict[
+                    track.TRACK_CLASSIFICATION
+                ] = current_track.classification
                 prepared.append(detection_dict)
 
         return self._sort_tracks(DataFrame(prepared))
@@ -501,35 +506,41 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         """
         return super()._convert_tracks(tracks)
 
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """Take notice of some change in the track repository.
 
         Update cached tracks matching any given id.
         Add tracks of ids not yet present in cache.
+        Remove from cache if not present anymore in repository.
         Clear cache if no ids are given.
 
         Args:
-            tracks (list[TrackId]): the ids of changed tracks
+            track_event (TrackRepositoryEvent): the ids of added or removed tracks.
         """
-        match (tracks):
-            case []:
-                self._cache_df = DataFrame()
-            case _:
-                # filter existing tracks from cache
-                filtered_cache = self._cache_without_existing_tracks(track_ids=tracks)
+        # TODO: Refactor observers - Distinguish between added tracks and removed tracks
+        if track_event.removed:
+            self._cache_df = self._remove_tracks(track_event.removed)
 
-                # convert tracks not yet in cache
-                new_df = self.__do_convert_tracks(
-                    self._fetch_new_track_data(track_ids=tracks)
-                )
+        if track_event.added:
+            # filter existing tracks from cache
+            filtered_cache = self._cache_without_existing_tracks(
+                track_ids=track_event.added
+            )
 
-                # concat remaining tracks and new tracks
-                if filtered_cache.empty:
-                    df = new_df
-                else:
-                    df = pandas.concat([filtered_cache, new_df])
+            # convert tracks not yet in cache
+            new_df = self.__do_convert_tracks(
+                self._fetch_new_track_data(track_ids=track_event.added)
+            )
 
-                self._cache_df = self._sort_tracks(df)
+            # concat remaining tracks and new tracks
+            if filtered_cache.empty:
+                df = new_df
+            else:
+                df = pandas.concat([filtered_cache, new_df])
+            self._cache_df = self._sort_tracks(df)
+
+    def _reset_cache(self) -> None:
+        self._cache_df = DataFrame()
 
     def _fetch_new_track_data(self, track_ids: list[TrackId]) -> list[Track]:
         return [
@@ -552,10 +563,18 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         if self._cache_df.empty:
             return self._cache_df
 
+        return self._remove_tracks(track_ids)
+
+    def _remove_tracks(self, track_ids: Iterable[TrackId]) -> DataFrame:
         track_id_nums = [t.id for t in track_ids]
-        return self._cache_df.drop(
+        cache_without_removed_tracks = self._cache_df.drop(
             self._cache_df.index[self._cache_df[track.TRACK_ID].isin(track_id_nums)]
         )
+        return cache_without_removed_tracks
+
+    def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
+        cache_without_cut_tracks = self._remove_tracks(cut_tracks_dto.original_tracks)
+        self._cache_df = self._sort_tracks(cache_without_cut_tracks)
 
 
 class MatplotlibPlotterImplementation(ABC):
@@ -592,13 +611,12 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
         Args:
             track_df (DataFrame): tracks to plot
-            alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
         seaborn.lineplot(
             x="x",
             y="y",
-            hue=track.CLASSIFICATION,
+            hue=track.TRACK_CLASSIFICATION,
             data=track_df,
             units=track.TRACK_ID,
             linewidth=0.6,
@@ -607,8 +625,15 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             alpha=self._alpha,
             ax=axes,
             palette=self._color_palette_provider.get(),
-            legend=self._enable_legend,
         )
+        if self._enable_legend:
+            legend = axes.legend(loc="upper right")
+            legend.set_alpha(1)
+        else:
+            # Somehow enabling a legend from previous call to this method persists.
+            # Need to manually remove it, if legend exists.
+            if existing_legend := axes.legend_:
+                existing_legend.remove()
 
 
 class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
@@ -652,7 +677,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
         seaborn.scatterplot(
             x="x",
             y="y",
-            hue=track.CLASSIFICATION,
+            hue=track.TRACK_CLASSIFICATION,
             data=track_df_start_end,
             style="type",
             markers=[">", "$x$"],
@@ -770,7 +795,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
         """
         canvas = FigureCanvasAgg(figure)
         canvas.draw()
-        bbox_contents = figure.canvas.copy_from_bbox(axes.bbox)
+        bbox_contents = canvas.copy_from_bbox(axes.bbox)
         left, bottom, right, top = bbox_contents.get_extents()
 
         image_array = numpy.frombuffer(bbox_contents.to_string(), dtype=numpy.uint8)

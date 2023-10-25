@@ -10,15 +10,19 @@ from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.track import (
-    CLASSIFICATION,
     OCCURRENCE,
+    TRACK_CLASSIFICATION,
     TRACK_ID,
     Detection,
+    PythonDetection,
+    PythonTrack,
+    PythonTrackDataset,
     Track,
     TrackId,
     TrackIdProvider,
     TrackImage,
     TrackRepository,
+    TrackRepositoryEvent,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
@@ -40,7 +44,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
 
 class TestPlotterPrototype:
     def test_plot(self) -> None:
-        track_id = TrackId(1)
+        track_id = TrackId("1")
         track = Mock(spec=Track)
         plotted_tracks = Mock(spec=TrackImage)
         track_view_state = TrackViewState()
@@ -71,7 +75,7 @@ class TestPandasDataProvider:
 class TestPandasTrackProvider:
     def test_get_data_empty_track_repository(self) -> None:
         datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = []
+        datastore.get_all_tracks.return_value = PythonTrackDataset.from_list([])
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
@@ -89,18 +93,18 @@ class TestCachedPandasTrackProvider:
     @pytest.fixture
     def track_1(self) -> Track:
         """Create dummy track with id 1 and 5 detections."""
-        return self.set_up_track(1)
+        return self.set_up_track("1")
 
     @pytest.fixture
     def track_2(self) -> Track:
         """Create dummy track with id 2 and 5 detections."""
-        return self.set_up_track(2)
+        return self.set_up_track("2")
 
-    def set_up_track(self, id: int) -> Track:
+    def set_up_track(self, id: str) -> Track:
         """Create a dummy track with the given id and 5 car detections."""
         t_id = TrackId(id)
-        detections = [
-            Detection(
+        detections: list[Detection] = [
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -113,7 +117,7 @@ class TestCachedPandasTrackProvider:
                 t_id,
                 "video_name",
             ),
-            Detection(
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -126,7 +130,7 @@ class TestCachedPandasTrackProvider:
                 t_id,
                 "video_name",
             ),
-            Detection(
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -139,7 +143,7 @@ class TestCachedPandasTrackProvider:
                 t_id,
                 "video_name",
             ),
-            Detection(
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -152,7 +156,7 @@ class TestCachedPandasTrackProvider:
                 t_id,
                 "video_name",
             ),
-            Detection(
+            PythonDetection(
                 "car",
                 0.99,
                 0,
@@ -166,7 +170,7 @@ class TestCachedPandasTrackProvider:
                 "video_name",
             ),
         ]
-        return Track(t_id, "car", detections)
+        return PythonTrack(t_id, "car", detections)
 
     def set_up_provider(
         self, init_tracks: list[Track], query_tracks: list[Track]
@@ -217,21 +221,21 @@ class TestCachedPandasTrackProvider:
         """Test clearing cache."""
         provider = self.set_up_provider([track_1], [])
 
-        provider.notify_tracks([])
+        provider.notify_tracks(TrackRepositoryEvent([], [track_1.id]))
         self.check_expected_ids(provider, [])
 
     def test_notify_update_add(self, track_1: Track, track_2: Track) -> None:
-        """Test adding track to non empty cache."""
+        """Test adding track to non-empty cache."""
         provider = self.set_up_provider([track_1], [track_2])
 
-        provider.notify_tracks([track_2.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_2.id], []))
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_add_first(self, track_2: Track) -> None:
         """Test adding first track to cache."""
         provider = self.set_up_provider([], [track_2])
 
-        provider.notify_tracks([track_2.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_2.id], []))
         self.check_expected_ids(provider, [track_2])
 
     def test_notify_update_add_multiple_first(
@@ -240,19 +244,19 @@ class TestCachedPandasTrackProvider:
         """Test adding first tracks to cache."""
         provider = self.set_up_provider([], [track_2, track_1])
 
-        provider.notify_tracks([track_2.id, track_1.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_2.id, track_1.id], []))
         self.check_expected_ids(provider, [track_2, track_1])
 
     def test_notify_update_existing(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_1, track_2], [track_1])
 
-        provider.notify_tracks([track_1.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_1.id], []))
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_mixed(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_2], [track_1, track_2])
 
-        provider.notify_tracks([track_1.id, track_2.id])
+        provider.notify_tracks(TrackRepositoryEvent([track_1.id, track_2.id], []))
         self.check_expected_ids(provider, [track_1, track_2])
 
 
@@ -315,7 +319,7 @@ class TestColorPaletteProvider:
 class TestBackgroundPlotter:
     def test_plot(self) -> None:
         track = Mock(spec=Track).return_value
-        track.id = TrackId(5)
+        track.id = TrackId("5")
 
         tracks = [track]
         expected_image = Mock()
@@ -492,7 +496,9 @@ class TestDataFrameProviderFilter:
         result = df_filter.get_data()
         result == filter_result
 
-        filter_builder.set_classification_column.assert_called_once_with(CLASSIFICATION)
+        filter_builder.set_classification_column.assert_called_once_with(
+            TRACK_CLASSIFICATION
+        )
         observable_filter_element.get.assert_called_once()
         filter_element.build_filter.assert_called_once_with(filter_builder)
         filter_imp.apply.assert_called_once_with([filter_input])

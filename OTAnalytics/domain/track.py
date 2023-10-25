@@ -2,14 +2,18 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Iterator, Optional
 
 from PIL import Image
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import Subject
 
+MIN_NUMBER_OF_DETECTIONS = 5
 CLASSIFICATION: str = "classification"
+TRACK_CLASSIFICATION: str = "track_classification"
 CONFIDENCE: str = "confidence"
 X: str = "x"
 Y: str = "y"
@@ -19,17 +23,18 @@ FRAME: str = "frame"
 OCCURRENCE: str = "occurrence"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
-
-VALID_TRACK_SIZE: int = 5
+VIDEO_NAME: str = "video_name"
 
 
 @dataclass(frozen=True)
 class TrackId(DataclassValidation):
-    id: int
+    id: str
 
-    def _validate(self) -> None:
-        if self.id < 1:
-            raise ValueError("track id must be greater equal 1")
+
+@dataclass(frozen=True)
+class TrackRepositoryEvent:
+    added: list[TrackId]
+    removed: list[TrackId]
 
 
 class TrackListObserver(ABC):
@@ -38,14 +43,14 @@ class TrackListObserver(ABC):
     """
 
     @abstractmethod
-    def notify_tracks(self, tracks: list[TrackId]) -> None:
+    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """
         Notifies that the given tracks have been added.
 
         Args:
-            tracks (list[TrackId]): list of added tracks
+            track_event (TrackRepositoryEvent): list of added or removed tracks.
         """
-        pass
+        raise NotImplementedError
 
 
 class TrackObserver(ABC):
@@ -97,16 +102,101 @@ class TrackError(Exception):
         self.track_id = track_id
 
 
-class BuildTrackWithLessThanNDetectionsError(TrackError):
-    def __str__(self) -> str:
-        return (
-            f"Trying to construct track (track_id={self.track_id}) with less than "
-            f"{VALID_TRACK_SIZE} detections."
-        )
+class TrackHasNoDetectionError(TrackError):
+    pass
+
+
+class Detection(ABC):
+    @property
+    @abstractmethod
+    def classification(self) -> str:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def confidence(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def x(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def y(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def w(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def h(self) -> float:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def frame(self) -> int:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def occurrence(self) -> datetime:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def interpolated_detection(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def track_id(self) -> TrackId:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def video_name(self) -> str:
+        raise NotImplementedError
+
+    def to_dict(self) -> dict:
+        return {
+            CLASSIFICATION: self.classification,
+            CONFIDENCE: self.confidence,
+            X: self.x,
+            Y: self.y,
+            W: self.w,
+            H: self.h,
+            FRAME: self.frame,
+            OCCURRENCE: self.occurrence,
+            INTERPOLATED_DETECTION: self.interpolated_detection,
+            TRACK_ID: self.track_id.id,
+            VIDEO_NAME: self.video_name,
+        }
+
+    def get_coordinate(self, offset: RelativeOffsetCoordinate | None) -> Coordinate:
+        """Get coordinate of this detection.
+
+        Args:
+            offset (RelativeOffsetCoordinate | None): relative offset to be applied.
+
+        Returns:
+            Coordinate: this detection's coordinate.
+        """
+        if offset:
+            return Coordinate(
+                x=self.x + self.w * offset.x,
+                y=self.y + self.h * offset.y,
+            )
+        else:
+            return Coordinate(self.x, self.y)
 
 
 @dataclass(frozen=True)
-class Detection(DataclassValidation):
+class PythonDetection(Detection, DataclassValidation):
     """Represents a detection belonging to a `Track`.
 
     The detection uses the xywh bounding box format.
@@ -123,30 +213,74 @@ class Detection(DataclassValidation):
 
 
     Args:
-        classification (str): class of detection.
-        confidence (float): the confidence.
-        x (float): the x coordinate component of the bounding box.
-        y (float): the y coordinate component of the bounding box.
-        w (float): the width component of the bounding box.
-        h (float): the height component of the bounding box.
-        frame (int): the frame that the detection belongs to.
-        occurrence (datetime): the time of the detection's occurrence.
-        interpolated_detection (bool): whether this detection is interpolated.
-        track_id (TrackId): the track id this detection belongs to.
-        video_name (str): name of video that this detection belongs.
+        _classification (str): class of detection.
+        _confidence (float): the confidence.
+        _x (float): the x coordinate component of the bounding box.
+        _y (float): the y coordinate component of the bounding box.
+        _w (float): the width component of the bounding box.
+        _h (float): the height component of the bounding box.
+        _frame (int): the frame that the detection belongs to.
+        _occurrence (datetime): the time of the detection's occurrence.
+        _interpolated_detection (bool): whether this detection is interpolated.
+        _track_id (TrackId): the track id this detection belongs to.
+        _video_name (str): name of video that this detection belongs.
     """
 
-    classification: str
-    confidence: float
-    x: float
-    y: float
-    w: float
-    h: float
-    frame: int
-    occurrence: datetime
-    interpolated_detection: bool
-    track_id: TrackId
-    video_name: str
+    _classification: str
+    _confidence: float
+    _x: float
+    _y: float
+    _w: float
+    _h: float
+    _frame: int
+    _occurrence: datetime
+    _interpolated_detection: bool
+    _track_id: TrackId
+    _video_name: str
+
+    @property
+    def classification(self) -> str:
+        return self._classification
+
+    @property
+    def confidence(self) -> float:
+        return self._confidence
+
+    @property
+    def x(self) -> float:
+        return self._x
+
+    @property
+    def y(self) -> float:
+        return self._y
+
+    @property
+    def w(self) -> float:
+        return self._w
+
+    @property
+    def h(self) -> float:
+        return self._h
+
+    @property
+    def frame(self) -> int:
+        return self._frame
+
+    @property
+    def occurrence(self) -> datetime:
+        return self._occurrence
+
+    @property
+    def interpolated_detection(self) -> bool:
+        return self._interpolated_detection
+
+    @property
+    def track_id(self) -> TrackId:
+        return self._track_id
+
+    @property
+    def video_name(self) -> str:
+        return self._video_name
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()
@@ -171,51 +305,42 @@ class Detection(DataclassValidation):
         if self.frame < 1:
             raise ValueError("frame number must be greater equal 1")
 
-    def to_dict(self) -> dict:
-        return {
-            CLASSIFICATION: self.classification,
-            CONFIDENCE: self.confidence,
-            X: self.x,
-            Y: self.y,
-            W: self.w,
-            H: self.h,
-            FRAME: self.frame,
-            OCCURRENCE: self.occurrence,
-            INTERPOLATED_DETECTION: self.interpolated_detection,
-            TRACK_ID: self.track_id.id,
-        }
 
+class Track(ABC):
+    @property
+    @abstractmethod
+    def id(self) -> TrackId:
+        raise NotImplementedError
 
-@dataclass(frozen=True)
-class Track(DataclassValidation):
-    """Represents the the track of an object as seen in the task of object tracking
-    (computer vision).
+    @property
+    @abstractmethod
+    def classification(self) -> str:
+        raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def detections(self) -> list[Detection]:
+        raise NotImplementedError
 
-    Args:
-        id (TrackId): the track id.
-        detections (list[Detection]): the detections belonging to this track.
+    @property
+    @abstractmethod
+    def first_detection(self) -> Detection:
+        """Get first detection of track.
 
-    Raises:
-        ValueError: if detections are not sorted by `occurrence`.
-        ValueError: if an empty detections list has been passed.
-    """
+        Returns:
+            Detection: the first detection.
+        """
+        raise NotImplementedError
 
-    id: TrackId
-    classification: str
-    detections: list[Detection]
+    @property
+    @abstractmethod
+    def last_detection(self) -> Detection:
+        """Get last detection of track.
 
-    def _validate(self) -> None:
-        self._validate_track_has_at_least_five_detections()
-        self._validate_detections_sorted_by_occurrence()
-
-    def _validate_track_has_at_least_five_detections(self) -> None:
-        if len(self.detections) < 5:
-            raise BuildTrackWithLessThanNDetectionsError(self.id)
-
-    def _validate_detections_sorted_by_occurrence(self) -> None:
-        if self.detections != sorted(self.detections, key=lambda det: det.occurrence):
-            raise ValueError("detections must be sorted by occurence")
+        Returns:
+            Detection: the last detection.
+        """
+        raise NotImplementedError
 
     @property
     def start(self) -> datetime:
@@ -224,7 +349,7 @@ class Track(DataclassValidation):
         Returns:
             datetime: the start time.
         """
-        return self.detections[0].occurrence
+        return self.first_detection.occurrence
 
     @property
     def end(self) -> datetime:
@@ -233,7 +358,75 @@ class Track(DataclassValidation):
         Returns:
             datetime: the end time.
         """
-        return self.detections[-1].occurrence
+        return self.last_detection.occurrence
+
+
+@dataclass(frozen=True)
+class PythonTrack(Track, DataclassValidation):
+    """Represents the track of an object as seen in the task of object tracking
+    (computer vision).
+
+    Args:
+        _id (TrackId): the track id.
+        _classification: the max classification of this track.
+        _detections (list[Detection]): the detections belonging to this track.
+
+    Raises:
+        ValueError: if detections are not sorted by `occurrence`.
+        ValueError: if an empty detections list has been passed.
+    """
+
+    _id: TrackId
+    _classification: str
+    _detections: list[Detection]
+
+    @property
+    def id(self) -> TrackId:
+        return self._id
+
+    @property
+    def classification(self) -> str:
+        return self._classification
+
+    @property
+    def detections(self) -> list[Detection]:
+        return self._detections
+
+    def _validate(self) -> None:
+        self._validate_track_has_detections()
+        self._validate_detections_sorted_by_occurrence()
+
+    def _validate_track_has_detections(self) -> None:
+        if not self._detections:
+            raise TrackHasNoDetectionError(
+                self.id,
+                (
+                    f"Trying to construct track (track_id={self.id.id})"
+                    " with no detections."
+                ),
+            )
+
+    def _validate_detections_sorted_by_occurrence(self) -> None:
+        if self._detections != sorted(self._detections, key=lambda det: det.occurrence):
+            raise ValueError("detections must be sorted by occurrence")
+
+    @property
+    def first_detection(self) -> Detection:
+        """Get first detection of track.
+
+        Returns:
+            Detection: the first detection.
+        """
+        return self._detections[0]
+
+    @property
+    def last_detection(self) -> Detection:
+        """Get last detection of track.
+
+        Returns:
+            Detection: the last detection.
+        """
+        return self._detections[-1]
 
 
 @dataclass(frozen=True)
@@ -264,7 +457,7 @@ class TrackImage:
         Convert image into a base python image.
 
         Returns:
-            Image.Image: image as pilow image
+            Image.Image: image as pillow image
         """
         pass
 
@@ -292,7 +485,7 @@ class TrackImage:
 @dataclass(frozen=True)
 class PilImage(TrackImage):
     """
-    Concrete implementation using pilow as image format.
+    Concrete implementation using pillow as image format.
     """
 
     _image: Image.Image
@@ -323,10 +516,10 @@ class TrackClassificationCalculator(ABC):
         Returns:
             str: the track's class
         """
-        pass
+        raise NotImplementedError
 
 
-class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator):
+class ByMaxConfidence(TrackClassificationCalculator):
     """Determine a track's classification by its detections max confidence."""
 
     def calculate(self, detections: list[Detection]) -> str:
@@ -340,37 +533,166 @@ class CalculateTrackClassificationByMaxConfidence(TrackClassificationCalculator)
         return max(classifications, key=lambda x: classifications[x])
 
 
+class TrackRemoveError(Exception):
+    def __init__(self, track_id: TrackId, message: str) -> None:
+        """Exception to be raised if track can not be removed.
+
+        Args:
+            track_id (TrackId): the track id of the track to be removed.
+            message (str): the error message.
+        """
+        super().__init__(message)
+        self._track_id = track_id
+
+
+class RemoveMultipleTracksError(Exception):
+    """Exception to be raised if multiple tracks can not be removed.
+
+    Args:
+        track_ids (list[TrackId]): the track id of the track to be removed.
+        message (str): the error message.
+    """
+
+    def __init__(self, track_ids: list[TrackId], message: str):
+        super().__init__(message)
+        self._track_ids = track_ids
+
+
+class TrackDataset(ABC):
+    def __iter__(self) -> Iterator[Track]:
+        yield from self.as_list()
+
+    @abstractmethod
+    def add_all(self, other: Iterable[Track]) -> "TrackDataset":
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_all_ids(self) -> Iterable[TrackId]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_for(self, id: TrackId) -> Optional[Track]:
+        """
+        Retrieve a track for the given id.
+
+        Args:
+            id (TrackId): id to search for
+
+        Returns:
+            Optional[Track]: track if it exists
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove(self, track_id: TrackId) -> "TrackDataset":
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear(self) -> "TrackDataset":
+        """
+        Return an empty version of the current TrackDataset.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def as_list(self) -> list[Track]:
+        raise NotImplementedError
+
+
+@dataclass
+class PythonTrackDataset(TrackDataset):
+    """Pure Python implementation of a TrackDataset."""
+
+    def __init__(
+        self,
+        values: Optional[dict[TrackId, Track]] = None,
+        calculator: TrackClassificationCalculator = ByMaxConfidence(),
+    ) -> None:
+        if values is None:
+            values = {}
+        self._tracks = values
+        self._calculator = calculator
+
+    @staticmethod
+    def from_list(
+        tracks: list[Track],
+        calculator: TrackClassificationCalculator = ByMaxConfidence(),
+    ) -> TrackDataset:
+        return PythonTrackDataset({track.id: track for track in tracks}, calculator)
+
+    def add_all(self, other: Iterable[Track]) -> "TrackDataset":
+        if isinstance(other, PythonTrackDataset):
+            return self.__merge(other._tracks)
+        new_tracks = {track.id: track for track in other}
+        return self.__merge(new_tracks)
+
+    def __merge(self, other: dict[TrackId, Track]) -> TrackDataset:
+        merged_tracks: dict[TrackId, Track] = {}
+        for track_id, other_track in other.items():
+            existing_detections = self._get_existing_detections(track_id)
+            all_detections = existing_detections + other_track.detections
+            sort_dets_by_occurrence = sorted(
+                all_detections, key=lambda det: det.occurrence
+            )
+            classification = self._calculator.calculate(all_detections)
+            try:
+                current_track = PythonTrack(
+                    _id=track_id,
+                    _classification=classification,
+                    _detections=sort_dets_by_occurrence,
+                )
+                merged_tracks[current_track.id] = current_track
+            except TrackHasNoDetectionError as build_error:
+                logger().exception(build_error, exc_info=True)
+        merged = self._tracks | merged_tracks
+        return PythonTrackDataset(merged)
+
+    def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:
+        """
+        Returns the detections of an already existing track with the same id or
+        an empty list
+
+        Args:
+            track_id (TrackId): track id to search for
+
+        Returns:
+            list[Detection]: detections of the already existing track or an empty list
+        """
+        if existing_track := self._tracks.get(track_id):
+            return existing_track.detections
+        return []
+
+    def get_all_ids(self) -> Iterable[TrackId]:
+        return self._tracks.keys()
+
+    def get_for(self, id: TrackId) -> Optional[Track]:
+        return self._tracks.get(id)
+
+    def remove(self, track_id: TrackId) -> TrackDataset:
+        new_tracks = self._tracks.copy()
+        del new_tracks[track_id]
+        return PythonTrackDataset(new_tracks)
+
+    def clear(self) -> TrackDataset:
+        return PythonTrackDataset()
+
+    def as_list(self) -> list[Track]:
+        return list(self._tracks.values())
+
+
 class TrackRepository:
-    def __init__(self) -> None:
-        self._tracks: dict[TrackId, Track] = {}
-        self.observers = Subject[list[TrackId]]()
+    def __init__(self, dataset: TrackDataset = PythonTrackDataset()) -> None:
+        self._dataset = dataset
+        self.observers = Subject[TrackRepositoryEvent]()
 
     def register_tracks_observer(self, observer: TrackListObserver) -> None:
         """
         Listen to changes of the repository.
 
         Args:
-            observer (TrackListObserver): listener to be notifed about changes
+            observer (TrackListObserver): listener to be notified about changes
         """
         self.observers.register(observer.notify_tracks)
-
-    def add(self, track: Track) -> None:
-        """
-        Add a single track to the repository and notify the observers.
-
-        Args:
-            track (Track): track to be added
-        """
-        self.__add(track)
-        self.observers.notify([track.id])
-
-    def __add(self, track: Track) -> None:
-        """Internal method to add a track without notifying observers.
-
-        Args:
-            track (Track): the track to be added
-        """
-        self._tracks[track.id] = track
 
     def add_all(self, tracks: Iterable[Track]) -> None:
         """
@@ -379,19 +701,10 @@ class TrackRepository:
         Args:
             tracks (Iterable[Track]): tracks to be added
         """
-        if tracks:
-            self.__add_all(tracks)
-
-    def __add_all(self, tracks: Iterable[Track]) -> None:
-        """Internal method to add all tracks to the repository and notify only once
-        about it.
-
-        Args:
-            tracks (list[Track]): tracks to be added
-        """
-        for track in tracks:
-            self.__add(track)
-        self.observers.notify([track.id for track in tracks])
+        self._dataset = self._dataset.add_all(tracks)
+        new_tracks = [track.id for track in tracks]
+        if new_tracks:
+            self.observers.notify(TrackRepositoryEvent(new_tracks, []))
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
@@ -403,16 +716,16 @@ class TrackRepository:
         Returns:
             Optional[Track]: track if it exists
         """
-        return self._tracks.get(id)
+        return self._dataset.get_for(id)
 
-    def get_all(self) -> list[Track]:
+    def get_all(self) -> TrackDataset:
         """
         Retrieve all tracks.
 
         Returns:
             list[Track]: all tracks within the repository
         """
-        return list(self._tracks.values())
+        return self._dataset
 
     def get_all_ids(self) -> Iterable[TrackId]:
         """Get all track ids in this repository.
@@ -420,14 +733,54 @@ class TrackRepository:
         Returns:
             Iterable[TrackId]: the track ids.
         """
-        return self._tracks.keys()
+        return self._dataset.get_all_ids()
+
+    def remove(self, track_id: TrackId) -> None:
+        """Remove track by its id and notify observers
+
+        Raises:
+            TrackRemoveError: if track does not exist in repository.
+
+        Args:
+            track_id (TrackId): the id of the track to be removed.
+        """
+        try:
+            self._dataset = self._dataset.remove(track_id)
+        except KeyError:
+            raise TrackRemoveError(
+                track_id, f"Trying to remove non existing track with id '{track_id.id}'"
+            )
+        # TODO: Pass removed track id to notify when moving observers to
+        #  application layer
+        self.observers.notify(TrackRepositoryEvent([], [track_id]))
+
+    def remove_multiple(self, track_ids: set[TrackId]) -> None:
+        failed_tracks: list[TrackId] = []
+        for track_id in track_ids:
+            try:
+                self._dataset = self._dataset.remove(track_id)
+            except KeyError:
+                failed_tracks.append(track_id)
+            # TODO: Pass removed track id to notify when moving observers to
+            #  application layer
+
+        if failed_tracks:
+            raise RemoveMultipleTracksError(
+                failed_tracks,
+                (
+                    "Multiple tracks with following ids could not be removed."
+                    f" '{[failed_track.id for failed_track in failed_tracks]}'"
+                ),
+            )
+        self.observers.notify(TrackRepositoryEvent([], list(track_ids)))
 
     def clear(self) -> None:
         """
         Clear the repository and inform the observers about the empty repository.
         """
-        self._tracks.clear()
-        self.observers.notify([])
+        removed = list(self._dataset.get_all_ids())
+        self._dataset = self._dataset.clear()
+        self.observers.notify(TrackRepositoryEvent([], removed))
 
 
 class TrackFileRepository:
@@ -474,3 +827,51 @@ class TrackIdProvider(ABC):
             Iterable[TrackId]: the track ids.
         """
         pass
+
+
+class TrackBuilderError(Exception):
+    pass
+
+
+class TrackBuilder(ABC):
+    """Interface to create Tracks with different configuration strategies."""
+
+    @abstractmethod
+    def add_detection(self, detection: Detection) -> None:
+        """Add a detection to the track to be built.
+
+        Args:
+            detection (Detection): the detection.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_id(self, track_id: str) -> None:
+        """Add the id of the track to be built.
+
+        Args:
+            track_id (str): the id.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def build(self) -> Track:
+        """Build a track with the configured settings.
+
+        The builder will be reset after building the track.
+
+        Raises:
+            TrackBuildError: if track id has not been set.
+
+        Returns:
+            Track: the built track.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Resets the builder.
+
+        All configurations made to the builder will be reset.
+        """
+        raise NotImplementedError

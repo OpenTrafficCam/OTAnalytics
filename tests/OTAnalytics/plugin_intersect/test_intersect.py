@@ -31,7 +31,7 @@ from tests.conftest import EventBuilder, TrackBuilder
 @pytest.fixture
 def track(track_builder: TrackBuilder) -> Track:
     classification = "car"
-    track_id = 1
+    track_id = "1"
 
     track_builder.add_track_class(classification)
     track_builder.add_detection_class(classification)
@@ -68,7 +68,7 @@ def track(track_builder: TrackBuilder) -> Track:
 @pytest.fixture
 def closed_track(track_builder: TrackBuilder) -> Track:
     classification = "car"
-    track_id = 2
+    track_id = "2"
 
     track_builder.add_track_class(classification)
     track_builder.add_detection_class(classification)
@@ -634,7 +634,7 @@ class TestIntersectAreaByTrackPoints:
         result_events = intersector.intersect(track, event_builder)
         expected_events = [
             Event(
-                road_user_id=1,
+                road_user_id="1",
                 road_user_type="car",
                 hostname="myhostname",
                 occurrence=datetime(2020, 1, 1, 0, 0, 0, 1, tzinfo=timezone.utc),
@@ -956,6 +956,7 @@ class TestSimpleTracksIntersectingSections:
         section = Mock(spec=Section)
         offset = RelativeOffsetCoordinate(0, 0)
         section.get_offset.return_value = offset
+        section.name = "south"
 
         intersect_implementation = Mock(spec=IntersectImplementation)
         intersect_implementation.line_intersects_line.return_value = True

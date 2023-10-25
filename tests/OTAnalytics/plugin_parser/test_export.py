@@ -13,6 +13,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     ExportSpecificationDto,
+    FlowNameDto,
 )
 from OTAnalytics.plugin_parser.export import FillZerosExporter, TagExploder
 
@@ -21,7 +22,7 @@ def execute_explode(
     start: datetime,
     end: datetime,
     interval_in_minutes: int,
-    flow_names: list[str],
+    flow_names: list[FlowNameDto],
     modes: list[str],
     output_file: str,
     output_format: str,
@@ -37,7 +38,7 @@ def execute_explode(
     )
     specification = ExportSpecificationDto(
         counting_specification=counting_specification,
-        flow_names=flow_names,
+        flow_name_info=flow_names,
     )
     exploder = TagExploder(specification)
     tags = exploder.explode()
@@ -46,17 +47,23 @@ def execute_explode(
 
 class TestTagExploder:
     def test_export_single(self) -> None:
-        start = datetime(2023, 1, 1, 0, 0, 0)
-        end = datetime(2023, 1, 1, 0, 10, 0)
+        start = datetime(2023, 1, 1, 0, 0, 10)
+        end = datetime(2023, 1, 1, 0, 9, 56)
         interval_in_minutes = 10
         modes = ["first-mode"]
         output_format = "csv"
         output_file = "output-file.csv"
-        flow_names = ["first-flow"]
+        flow_name_dto = FlowNameDto(
+            "from first -> to second", "from first", "to second"
+        )
+
+        flow_names = [flow_name_dto]
         expected_tags: list[Tag] = [
-            create_flow_tag("first-flow")
+            create_flow_tag(flow_name_dto.name)
             .combine(create_mode_tag("first-mode"))
-            .combine(create_timeslot_tag(start, timedelta(minutes=10)))
+            .combine(
+                create_timeslot_tag(start.replace(second=0), timedelta(minutes=10))
+            )
         ]
         execute_explode(
             start,
@@ -79,32 +86,32 @@ class TestTagExploder:
         modes = [first_mode, second_mode]
         output_format = "csv"
         output_file = "output-file.csv"
-        first_flow = "first-flow"
-        second_flow = "second-flow"
+        first_flow = FlowNameDto("first-flow", "section a", "section b")
+        second_flow = FlowNameDto("second-flow", "section c", "section d")
         flow_names = [first_flow, second_flow]
         expected_tags: list[Tag] = [
-            create_flow_tag(first_flow)
+            create_flow_tag(first_flow.name)
             .combine(create_mode_tag(first_mode))
             .combine(create_timeslot_tag(start, interval)),
-            create_flow_tag(first_flow)
-            .combine(create_mode_tag(first_mode))
-            .combine(create_timeslot_tag(start + interval, interval)),
-            create_flow_tag(first_flow)
-            .combine(create_mode_tag(second_mode))
-            .combine(create_timeslot_tag(start, interval)),
-            create_flow_tag(first_flow)
-            .combine(create_mode_tag(second_mode))
-            .combine(create_timeslot_tag(start + interval, interval)),
-            create_flow_tag(second_flow)
-            .combine(create_mode_tag(first_mode))
-            .combine(create_timeslot_tag(start, interval)),
-            create_flow_tag(second_flow)
+            create_flow_tag(first_flow.name)
             .combine(create_mode_tag(first_mode))
             .combine(create_timeslot_tag(start + interval, interval)),
-            create_flow_tag(second_flow)
+            create_flow_tag(first_flow.name)
             .combine(create_mode_tag(second_mode))
             .combine(create_timeslot_tag(start, interval)),
-            create_flow_tag(second_flow)
+            create_flow_tag(first_flow.name)
+            .combine(create_mode_tag(second_mode))
+            .combine(create_timeslot_tag(start + interval, interval)),
+            create_flow_tag(second_flow.name)
+            .combine(create_mode_tag(first_mode))
+            .combine(create_timeslot_tag(start, interval)),
+            create_flow_tag(second_flow.name)
+            .combine(create_mode_tag(first_mode))
+            .combine(create_timeslot_tag(start + interval, interval)),
+            create_flow_tag(second_flow.name)
+            .combine(create_mode_tag(second_mode))
+            .combine(create_timeslot_tag(start, interval)),
+            create_flow_tag(second_flow.name)
             .combine(create_mode_tag(second_mode))
             .combine(create_timeslot_tag(start + interval, interval)),
         ]

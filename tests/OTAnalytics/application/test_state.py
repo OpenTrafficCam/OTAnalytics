@@ -23,20 +23,21 @@ from OTAnalytics.application.state import (
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackId,
     TrackImage,
     TrackRepository,
+    TrackRepositoryEvent,
 )
 
 
 class TestTrackState:
     def test_notify_observer(self) -> None:
-        first_track = TrackId(1)
-        changed_track = TrackId(2)
+        first_track = TrackId("1")
+        changed_track = TrackId("2")
         observer = Mock(spec=TrackObserver)
         state = TrackState()
         state.register(observer)
@@ -51,20 +52,20 @@ class TestTrackState:
         ]
 
     def test_update_selected_track_on_notify_tracks(self) -> None:
-        first_track = TrackId(1)
-        second_track = TrackId(2)
+        first_track = TrackId("1")
+        second_track = TrackId("2")
         state = TrackState()
 
-        state.notify_tracks([first_track, second_track])
+        state.notify_tracks(TrackRepositoryEvent([first_track, second_track], []))
 
         assert state.selected_track == first_track
 
     def test_update_selected_track_on_notify_tracks_with_empty_list(self) -> None:
-        first_track = TrackId(1)
+        first_track = TrackId("1")
         state = TrackState()
 
-        state.notify_tracks([first_track])
-        state.notify_tracks([])
+        state.notify_tracks(TrackRepositoryEvent([first_track], []))
+        state.notify_tracks(TrackRepositoryEvent([], []))
 
         assert state.selected_track is None
 
@@ -114,37 +115,72 @@ class TestObservableProperty:
 
 
 class TestOptionalObservableProperty:
-    def test_notify_observer(self) -> None:
-        first_section = SectionId("north")
-        changed_section = SectionId("south")
+    @pytest.fixture
+    def section_north(self) -> Section:
+        section = Mock()
+        section.id = SectionId("north")
+        section.get_type.return_value = SectionType.LINE
+        return section
+
+    @pytest.fixture
+    def section_south(self) -> Section:
+        section = Mock()
+        section.id = SectionId("south")
+        section.get_type.return_value = SectionType.LINE
+        return section
+
+    @pytest.fixture
+    def section_cutting(self) -> Section:
+        section = Mock()
+        section.id = SectionId("#cut")
+        section.get_type.return_value = SectionType.CUTTING
+        return section
+
+    def test_notify_observer(
+        self, section_north: Section, section_south: Section
+    ) -> None:
         observer = Mock(spec=Callable[[Optional[SectionId]], None])
         state = ObservableOptionalProperty[SectionId]()
         state.register(observer)
 
-        state.set(first_section)
-        state.set(changed_section)
-        state.set(changed_section)
+        state.set(section_north.id)
+        state.set(section_south.id)
+        state.set(section_south.id)
 
         assert observer.call_args_list == [
-            call(first_section),
-            call(changed_section),
+            call(section_north.id),
+            call(section_south.id),
         ]
 
-    def test_update_selected_section_on_notify_sections(self) -> None:
-        first = SectionId("north")
-        second = SectionId("south")
-        state = SectionState()
+    def test_update_selected_section_on_notify_sections(
+        self, section_north: Section, section_south: Section
+    ) -> None:
+        get_sections_by_id = Mock()
+        get_sections_by_id.return_value = [section_north, section_south]
+        state = SectionState(get_sections_by_id)
 
-        state.notify_sections([first, second])
+        state.notify_sections([section_north.id, section_south.id])
 
-        assert state.selected_sections.get() == [first]
+        assert state.selected_sections.get() == [section_north.id]
 
-    def test_update_selected_section_on_notify_sections_with_empty_list(self) -> None:
-        first = SectionId("north")
-        state = SectionState()
+    def test_update_selected_section_on_notify_sections_with_empty_list(
+        self, section_north: Section
+    ) -> None:
+        get_sections_by_id = Mock()
+        get_sections_by_id.return_value = [section_north]
+        state = SectionState(get_sections_by_id)
 
-        state.notify_sections([first])
+        state.notify_sections([section_north.id])
         state.notify_sections([])
+
+        assert state.selected_sections.get() == []
+
+    def test_update_with_cutting_section(self, section_cutting: Section) -> None:
+        get_sections_by_id = Mock()
+        get_sections_by_id.return_value = [section_cutting]
+        state = SectionState(get_sections_by_id)
+
+        state.notify_sections([section_cutting.id])
 
         assert state.selected_sections.get() == []
 
@@ -152,10 +188,10 @@ class TestOptionalObservableProperty:
 class TestTrackImageUpdater:
     def test_update_image(self) -> None:
         plotter = Mock(spec=Plotter)
-        section_state = SectionState()
+        section_state = SectionState(Mock())
         background_image = Mock(spec=TrackImage)
         plotter.plot.return_value = background_image
-        track_id = TrackId(1)
+        track_id = TrackId("1")
         track = Mock(spec=Track)
         datastore = Mock(spec=Datastore)
         track_view_state = TrackViewState()
@@ -167,7 +203,7 @@ class TestTrackImageUpdater:
         )
         tracks: list[TrackId] = [track_id]
 
-        updater.notify_tracks(tracks)
+        updater.notify_tracks(TrackRepositoryEvent(tracks, []))
 
         assert track_view_state.background_image.get() == background_image
 
@@ -201,7 +237,7 @@ class TestTracksMetadata:
         self, first_detection: Mock, second_detection: Mock, third_detection: Mock
     ) -> Mock:
         track = Mock(spec=Track).return_value
-        track.id = TrackId(1)
+        track.id = TrackId("1")
         track.classification = "car"
         track.detections = [first_detection, second_detection, third_detection]
         return track
@@ -266,6 +302,12 @@ class TestTracksMetadata:
         assert tracks_metadata.classifications == {"car"}
         mock_track_repository.get_for.assert_any_call(track.id)
         assert mock_track_repository.get_for.call_count == 2
+
+    def test_update_detection_classes(self) -> None:
+        tracks_metadata = TracksMetadata(Mock())
+        classes = frozenset(["class 1", "class 2"])
+        tracks_metadata.update_detection_classes(classes)
+        assert classes == tracks_metadata.detection_classifications
 
 
 class TestTrackViewState:
