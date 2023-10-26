@@ -124,6 +124,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
+MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
 TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
@@ -452,15 +453,24 @@ class DummyViewModel(
         try:
             self._application.save_otconfig(otconfig_file)
         except NoSectionsToSave as cause:
-            message = "No sections to save, please add new sections first"
+            message = (
+                f"{MESSAGE_CONFIGURATION_NOT_SAVED}"
+                f"No sections to save, please add new sections first."
+            )
             self.__show_error(cause, message)
             return
         except DifferentDrivesException as cause:
-            message = "Configuration and video files are located on different drives."
+            message = (
+                f"{MESSAGE_CONFIGURATION_NOT_SAVED}"
+                f"Configuration and video files are located on different drives."
+            )
             self.__show_error(cause, message)
             return
         except MissingDate as cause:
-            message = "Start date is missing or invalid. Please add a valid start date."
+            message = (
+                f"{MESSAGE_CONFIGURATION_NOT_SAVED}"
+                f"Start date is missing or invalid. Please add a valid start date."
+            )
             self.__show_error(cause, message)
             return
 
