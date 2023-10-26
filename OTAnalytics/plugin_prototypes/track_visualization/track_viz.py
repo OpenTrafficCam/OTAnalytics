@@ -382,18 +382,18 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def __init__(
         self,
-        datastore: Datastore,
+        track_repository: TrackRepository,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
-        self._datastore = datastore
+        self._track_repository = track_repository
         self._track_view_state = track_view_state
         self._filter_builder = filter_builder
         self._progressbar = progressbar
 
     def get_data(self) -> DataFrame:
-        tracks = self._datastore.get_all_tracks()
+        tracks = self._track_repository.get_all()
         if isinstance(tracks, PandasTrackDataset):
             return tracks.as_dataframe()
         track_list = tracks.as_list()
@@ -470,13 +470,15 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
 
     def __init__(
         self,
-        datastore: Datastore,
+        track_repository: TrackRepository,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
-        super().__init__(datastore, track_view_state, filter_builder, progressbar)
-        datastore.register_tracks_observer(self)
+        super().__init__(
+            track_repository, track_view_state, filter_builder, progressbar
+        )
+        track_repository.register_tracks_observer(self)
         self._cache_df: DataFrame = DataFrame()
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
@@ -546,7 +548,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         return [
             track
             for t_id in track_ids
-            if (track := self._datastore._track_repository.get_for(t_id))
+            if (track := self._track_repository.get_for(t_id))
         ]
 
     def _cache_without_existing_tracks(self, track_ids: list[TrackId]) -> DataFrame:

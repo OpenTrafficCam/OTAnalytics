@@ -71,7 +71,7 @@ class VisualizationBuilder:
         color_palette_provider: ColorPaletteProvider,
     ) -> Sequence[PlottingLayer]:
         pandas_data_provider = self._build_pandas_data_provider(
-            datastore, pulling_progressbar_builder, track_view_state
+            pulling_progressbar_builder, track_view_state
         )
         background_image_plotter = TrackBackgroundPlotter(datastore)
         occurrence_data_provider = FilterByOccurrence(
@@ -296,12 +296,11 @@ class VisualizationBuilder:
 
     def _build_pandas_data_provider(
         self,
-        datastore: Datastore,
         pulling_progressbar_builder: ProgressbarBuilder,
         track_view_state: TrackViewState,
     ) -> PandasDataFrameProvider:
         cached_pandas_track_provider = self._create_pandas_track_provider(
-            datastore, track_view_state, pulling_progressbar_builder
+            track_view_state, pulling_progressbar_builder
         )
         pandas_data_provider = self._wrap_pandas_track_offset_provider(
             cached_pandas_track_provider, track_view_state
@@ -337,7 +336,6 @@ class VisualizationBuilder:
 
     def _create_pandas_track_provider(
         self,
-        datastore: Datastore,
         track_view_state: TrackViewState,
         progressbar: ProgressbarBuilder,
     ) -> PandasTrackProvider:
@@ -346,7 +344,10 @@ class VisualizationBuilder:
         #     datastore, track_view_state, dataframe_filter_builder, progressbar
         # )
         return CachedPandasTrackProvider(
-            datastore, track_view_state, dataframe_filter_builder, progressbar
+            self._track_repository,
+            track_view_state,
+            dataframe_filter_builder,
+            progressbar,
         )
 
     @staticmethod
