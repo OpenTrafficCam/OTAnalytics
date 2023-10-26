@@ -1162,7 +1162,8 @@ class DummyViewModel(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
             )
-            flow_data = self.__get_flow_data(input_values, title, position, section_ids)
+            flow_data[FLOW_NAME] = ""
+            flow_data = self.__get_flow_data(flow_data, title, position, section_ids)
         return flow_data
 
     def __is_flow_name_valid(self, flow_data: dict) -> bool:
