@@ -26,7 +26,7 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository
-from OTAnalytics.domain.track import TrackIdProvider, TrackRepository
+from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.simple_intersect import (
@@ -93,9 +93,7 @@ class VisualizationBuilder:
             enable_legend=True,
         )
 
-        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            self._track_repository
-        )
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections()
         tracks_intersecting_selected_sections = (
             self._create_tracks_intersecting_selected_sections(
                 section_state,
@@ -126,8 +124,6 @@ class VisualizationBuilder:
                     enable_legend=False,
                 ),
                 section_state,
-                self._section_repository,
-                self._track_repository,
             )
         )
         highlight_tracks_not_intersecting_sections = (
@@ -144,7 +140,6 @@ class VisualizationBuilder:
                 track_view_state,
                 self._create_tracks_start_end_point_intersecting_given_sections_filter(
                     track_view_state,
-                    self._track_repository,
                     data_provider_class_filter,
                     tracks_intersecting_sections,
                     get_sections_by_id,
@@ -153,8 +148,6 @@ class VisualizationBuilder:
                 enable_legend=False,
             ),
             section_state,
-            self._section_repository,
-            self._track_repository,
         )
 
         start_end_points_tracks_not_intersecting_sections = (
@@ -162,7 +155,6 @@ class VisualizationBuilder:
                 track_view_state,
                 tracks_not_intersecting_sections,
                 data_provider_class_filter,
-                self._track_repository,
                 color_palette_provider,
                 enable_legend=False,
             )
@@ -172,7 +164,6 @@ class VisualizationBuilder:
             self._create_track_start_end_point_data_provider(
                 track_view_state,
                 data_provider_class_filter,
-                self._track_repository,
             ),
             color_palette_provider,
             enable_legend=False,
@@ -199,8 +190,6 @@ class VisualizationBuilder:
                     enable_legend=False,
                 ),
                 flow_state,
-                self._flow_repository,
-                self._track_repository,
             )
         )
         highlight_tracks_not_assigned_to_flow = (
@@ -209,7 +198,6 @@ class VisualizationBuilder:
                 data_provider_all_filters,
                 color_palette_provider,
                 tracks_assigned_to_flow,
-                self._track_repository,
                 enable_legend=False,
             )
         )
@@ -390,14 +378,13 @@ class VisualizationBuilder:
         self,
         state: TrackViewState,
         pandas_data_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
         id_filter: Optional[TrackIdProvider] = None,
     ) -> FilterById:
         return FilterById(
             pandas_data_provider,
             id_filter=TracksOverlapOccurrenceWindow(
                 other=id_filter,
-                track_repository=track_repository,
+                track_repository=self._track_repository,
                 track_view_state=state,
             ),
         )
@@ -463,11 +450,12 @@ class VisualizationBuilder:
         self,
         plotter_factory: Callable[[SectionId], Plotter],
         section_state: SectionState,
-        section_repository: SectionRepository,
-        track_repository: TrackRepository,
     ) -> Plotter:
         return SectionLayerPlotter(
-            plotter_factory, section_state, section_repository, track_repository
+            plotter_factory,
+            section_state,
+            self._section_repository,
+            self._track_repository,
         )
 
     def _create_track_highlight_geometry_plotter_not_intersecting(
@@ -492,7 +480,6 @@ class VisualizationBuilder:
     def _create_tracks_start_end_point_intersecting_given_sections_filter(
         self,
         state: TrackViewState,
-        track_repository: TrackRepository,
         pandas_data_provider: PandasDataFrameProvider,
         tracks_intersecting_sections: TracksIntersectingSections,
         get_sections_by_id: GetSectionsById,
@@ -505,7 +492,7 @@ class VisualizationBuilder:
                     tracks_intersecting_sections,
                     get_sections_by_id,
                 ),
-                track_repository=track_repository,
+                track_repository=self._track_repository,
                 track_view_state=state,
             ),
         )
@@ -529,7 +516,6 @@ class VisualizationBuilder:
         state: TrackViewState,
         tracks_not_intersecting_sections: TracksNotIntersectingSelection,
         pandas_track_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
         color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
     ) -> Plotter:
@@ -538,7 +524,6 @@ class VisualizationBuilder:
             self._create_track_start_end_point_data_provider(
                 state,
                 pandas_track_provider,
-                track_repository,
                 tracks_not_intersecting_sections,
             ),
             color_palette_provider,
@@ -582,11 +567,9 @@ class VisualizationBuilder:
         self,
         plotter_factory: Callable[[FlowId], Plotter],
         flow_state: FlowState,
-        flow_repository: FlowRepository,
-        track_repository: TrackRepository,
     ) -> Plotter:
         return FlowLayerPlotter(
-            plotter_factory, flow_state, flow_repository, track_repository
+            plotter_factory, flow_state, self._flow_repository, self._track_repository
         )
 
     def _create_highlight_tracks_not_assigned_to_flow(
@@ -595,11 +578,10 @@ class VisualizationBuilder:
         pandas_track_provider: PandasDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
-        track_repository: TrackRepository,
         enable_legend: bool,
     ) -> Plotter:
         tracks_not_assigned_to_flow = TracksNotIntersectingSelection(
-            tracks_assigned_to_flow, track_repository
+            tracks_assigned_to_flow, self._track_repository
         )
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=tracks_not_assigned_to_flow
@@ -616,11 +598,8 @@ class VisualizationBuilder:
         return DataFrameFilterBuilder()
 
     # TODO duplicate to main_application.py
-    @staticmethod
-    def _create_tracks_intersecting_sections(
-        track_repository: TrackRepository,
-    ) -> TracksIntersectingSections:
+    def _create_tracks_intersecting_sections(self) -> TracksIntersectingSections:
         return SimpleTracksIntersectingSections(
-            GetTracksWithoutSingleDetections(track_repository),
+            GetTracksWithoutSingleDetections(self._track_repository),
             ShapelyIntersector(),
         )
