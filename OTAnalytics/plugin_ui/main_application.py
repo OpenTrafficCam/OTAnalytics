@@ -1005,7 +1005,6 @@ class ApplicationStarter:
                 track_view_state,
                 data_provider_class_filter,
                 datastore._track_repository,
-                tracks_not_intersecting_sections,
             ),
             color_palette_provider,
             enable_legend=False,
