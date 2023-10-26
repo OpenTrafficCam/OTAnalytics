@@ -573,10 +573,11 @@ class ApplicationStarter:
         road_user_assigner: RoadUserAssigner,
         color_palette_provider: ColorPaletteProvider,
     ) -> Sequence[PlottingLayer]:
-        return VisualizationBuilder(datastore, track_view_state).build(
+        return VisualizationBuilder(
+            datastore, track_view_state, pulling_progressbar_builder
+        ).build(
             flow_state,
             section_state,
-            pulling_progressbar_builder,
             road_user_assigner,
             color_palette_provider,
         )
