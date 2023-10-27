@@ -107,7 +107,7 @@ class VisualizationBuilder:
             ),
             (
                 "Highlight tracks not intersecting sections",
-                self._create_tracks_not_intersecting_sections_plotter(),
+                self._create_highlight_tracks_not_intersecting_sections_plotter(),
                 False,
             ),
             (
@@ -169,7 +169,7 @@ class VisualizationBuilder:
             self._section_state,
         )
 
-    def _create_tracks_not_intersecting_sections_plotter(self) -> Plotter:
+    def _create_highlight_tracks_not_intersecting_sections_plotter(self) -> Plotter:
         highlight_tracks_not_intersecting_sections = (
             self._create_track_highlight_geometry_plotter_not_intersecting(
                 self._get_tracks_not_intersecting_selected_sections(),
