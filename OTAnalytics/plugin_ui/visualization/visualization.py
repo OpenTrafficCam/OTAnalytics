@@ -170,24 +170,15 @@ class VisualizationBuilder:
         )
 
     def _create_highlight_tracks_not_intersecting_sections_plotter(self) -> Plotter:
-        highlight_tracks_not_intersecting_sections = (
-            self._create_track_highlight_geometry_plotter_not_intersecting(
-                self._get_tracks_not_intersecting_selected_sections(),
-                self._get_data_provider_all_filters(),
+        return self._create_cached_section_layer_plotter(
+            self._create_highlight_tracks_intersecting_section_factory(
+                self._get_tracks_not_intersecting_selected_sections_filter(),
                 self._color_palette_provider,
+                alpha=1,
                 enable_legend=False,
-            )
+            ),
+            self._section_state,
         )
-        highlight_tracks_not_intersection_sections_plotter = (
-            self._wrap_plotter_with_cache(
-                highlight_tracks_not_intersecting_sections,
-                tracks=True,
-                sections=True,
-                flows=False,
-                events=False,
-            )
-        )
-        return highlight_tracks_not_intersection_sections_plotter
 
     def _create_start_end_point_intersecting_sections_plotter(self) -> Plotter:
         start_end_points_intersecting = self._create_cached_section_layer_plotter(
@@ -315,6 +306,21 @@ class VisualizationBuilder:
                 self._track_repository,
             )
         return self._tracks_not_intersecting_selection
+
+    def _get_tracks_not_intersecting_selected_sections_filter(
+        self,
+    ) -> Callable[[SectionId], PandasDataFrameProvider]:
+        return lambda section: FilterById(
+            self._get_data_provider_all_filters(),
+            TracksNotIntersectingSelection(
+                TracksIntersectingGivenSections(
+                    [section],
+                    self._create_tracks_intersecting_sections(),
+                    self._create_get_sections_by_id(),
+                ),
+                self._track_repository,
+            ),
+        )
 
     def _build_filter_by_classification(
         self, data_provider: PandasDataFrameProvider
