@@ -74,18 +74,18 @@ class TestPandasDataProvider:
 
 class TestPandasTrackProvider:
     def test_get_data_empty_track_repository(self) -> None:
-        datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = PythonTrackDataset.from_list([])
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_all.return_value = PythonTrackDataset.from_list([])
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
 
         provider = PandasTrackProvider(
-            datastore, track_view_state, filter_builder, NoProgressbarBuilder()
+            track_repository, track_view_state, filter_builder, NoProgressbarBuilder()
         )
         result = provider.get_data()
 
-        datastore.get_all_tracks.assert_called_once()
+        track_repository.get_all.assert_called_once()
         assert result.empty
 
 
@@ -180,17 +180,14 @@ class TestCachedPandasTrackProvider:
         Mocked datastore uses given query_tracks for track repository id queries.
         Initializes provider cache with given init_tracks.
         """
-        datastore = Mock(spec=Datastore)
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_for.side_effect = query_tracks
-
-        datastore._track_repository = track_repository
 
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(spec=FilterBuilder)
         provider = CachedPandasTrackProvider(
-            datastore, track_view_state, filter_builder, NoProgressbarBuilder()
+            track_repository, track_view_state, filter_builder, NoProgressbarBuilder()
         )
 
         assert provider._cache_df.empty
