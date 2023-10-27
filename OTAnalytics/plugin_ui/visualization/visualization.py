@@ -579,8 +579,9 @@ class VisualizationBuilder:
         tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
         enable_legend: bool,
     ) -> Plotter:
-        tracks_not_assigned_to_flow = (
-            self._get_tracks_not_intersecting_selected_sections()
+        tracks_not_assigned_to_flow = TracksNotIntersectingSelection(
+            tracks_assigned_to_flow,
+            self._track_repository,
         )
         filter_by_id = FilterById(
             pandas_track_provider, id_filter=tracks_not_assigned_to_flow
