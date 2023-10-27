@@ -574,12 +574,14 @@ class ApplicationStarter:
         color_palette_provider: ColorPaletteProvider,
     ) -> Sequence[PlottingLayer]:
         return VisualizationBuilder(
-            datastore, track_view_state, pulling_progressbar_builder
+            datastore,
+            track_view_state,
+            section_state,
+            color_palette_provider,
+            pulling_progressbar_builder,
         ).build(
             flow_state,
-            section_state,
             road_user_assigner,
-            color_palette_provider,
         )
 
     @staticmethod
