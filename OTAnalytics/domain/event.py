@@ -7,7 +7,7 @@ from typing import Iterable, Optional
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.observer import OBSERVER, Subject
-from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection
 from OTAnalytics.domain.types import EventType
 
@@ -379,6 +379,17 @@ class EventRepository:
             self._events = []
             self._subject.notify(EventRepositoryEvent([], removed))
 
+    def remove(self, sections: list[SectionId]) -> None:
+        if self._events:
+            removed = [event for event in self._events if event.section_id in sections]
+            for to_remove in removed:
+                self._events.remove(to_remove)
+            self._subject.notify((EventRepositoryEvent([], removed)))
+
     def is_empty(self) -> bool:
         """Whether repository is empty."""
         return not self._events
+
+    def retain_missing(self, all: list[Section]) -> list[Section]:
+        existing_sections = frozenset([event.section_id for event in self._events])
+        return [section for section in all if section.id not in existing_sections]

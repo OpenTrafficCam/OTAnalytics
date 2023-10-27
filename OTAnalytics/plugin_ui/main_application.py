@@ -46,6 +46,8 @@ from OTAnalytics.application.use_cases.clear_repositories import ClearRepositori
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
+    MissingEventsSectionProvider,
+    SectionProvider,
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
@@ -296,8 +298,12 @@ class ApplicationStarter:
             datastore._track_to_video_repository
         )
 
+        # section_provider = section_repository.get_all
+        section_provider = MissingEventsSectionProvider(
+            section_repository, event_repository
+        )
         create_events = self._create_use_case_create_events(
-            section_repository,
+            section_provider,
             clear_all_events,
             get_tracks_without_single_detections,
             add_events,
@@ -305,7 +311,7 @@ class ApplicationStarter:
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
-                section_repository,
+                section_provider,
                 get_tracks_without_single_detections,
                 add_events,
                 DEFAULT_NUM_PROCESSES,
@@ -464,7 +470,7 @@ class ApplicationStarter:
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
         create_events = self._create_use_case_create_events(
-            section_repository,
+            section_repository.get_all,
             clear_all_events,
             get_tracks_without_single_detections,
             add_events,
@@ -980,13 +986,13 @@ class ApplicationStarter:
 
     def _create_use_case_create_intersection_events(
         self,
-        section_repository: SectionRepository,
+        section_provider: SectionProvider,
         get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
         num_processes: int,
     ) -> CreateIntersectionEvents:
         intersect = self._create_intersect(get_tracks, num_processes)
-        return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
+        return SimpleCreateIntersectionEvents(intersect, section_provider, add_events)
 
     @staticmethod
     def _create_intersect(
@@ -1036,7 +1042,7 @@ class ApplicationStarter:
 
     def _create_use_case_create_events(
         self,
-        section_repository: SectionRepository,
+        section_provider: SectionProvider,
         clear_events: ClearAllEvents,
         get_tracks: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
@@ -1044,7 +1050,7 @@ class ApplicationStarter:
     ) -> CreateEvents:
         run_intersect = self._create_intersect(get_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            run_intersect, section_repository, add_events
+            run_intersect, section_provider, add_events
         )
         scene_action_detector = SceneActionDetector(SceneEventBuilder())
         create_scene_events = SimpleCreateSceneEvents(

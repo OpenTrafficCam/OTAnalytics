@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Callable
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.eventlist import SceneActionDetector
@@ -6,7 +7,8 @@ from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearA
 from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
 )
-from OTAnalytics.domain.section import SectionRepository
+from OTAnalytics.domain.event import EventRepository
+from OTAnalytics.domain.section import Section, SectionRepository
 
 
 class CreateIntersectionEvents(ABC):
@@ -30,6 +32,21 @@ class CreateSceneEvents(ABC):
         raise NotImplementedError
 
 
+SectionProvider = Callable[[], list[Section]]
+
+
+class MissingEventsSectionProvider:
+    def __init__(
+        self, section_repository: SectionRepository, event_repository: EventRepository
+    ):
+        self._section_repository = section_repository
+        self._event_repository = event_repository
+
+    def __call__(self) -> list[Section]:
+        all = self._section_repository.get_all()
+        return self._event_repository.retain_missing(all)
+
+
 class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
     """Intersect tracks with sections to create intersection events and add them to the
     event repository.
@@ -43,16 +60,16 @@ class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
     def __init__(
         self,
         run_intersect: RunIntersect,
-        section_repository: SectionRepository,
+        section_provider: SectionProvider,
         add_events: AddEvents,
     ) -> None:
         self._run_intersect = run_intersect
-        self._section_repository = section_repository
+        self._section_provider = section_provider
         self._add_events = add_events
 
     def __call__(self) -> None:
         """Runs the intersection of tracks with sections in the repository."""
-        sections = self._section_repository.get_all()
+        sections = self._section_provider()
         if not sections:
             return
         events = self._run_intersect(sections)
@@ -102,6 +119,6 @@ class CreateEvents:
         Intersect all tracks with all sections and write the events into the event
         repository.
         """
-        self._clear_event_repository()
+        # self._clear_event_repository()
         self._create_intersection_events()
         self._create_scene_events()
