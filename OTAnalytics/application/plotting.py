@@ -170,6 +170,7 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
     ) -> None:
         self._plotter_factory = plotter_factory
         self._entity_lookup = entity_lookup
+        self._visibility_subject = visibility_subject
 
         self._layer_mapping: dict[ENTITY, PlottingLayer] = dict()
         self._plotter_mapping: dict[ENTITY, CachedPlotter] = dict()
@@ -224,7 +225,12 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
             else:
                 plotter = CachedPlotter(self._plotter_factory(entity), [])
                 self._plotter_mapping[entity] = plotter
-                self._layer_mapping[entity] = PlottingLayer(str(entity), plotter, False)
+                self._layer_mapping[entity] = PlottingLayer(
+                    str(entity), plotter, self._is_visible(entity)
+                )
+
+    def _is_visible(self, entity: ENTITY) -> bool:
+        return entity in self._visibility_subject.get()
 
     def _handle_remove(self, entities: Iterable[ENTITY]) -> None:
         """
