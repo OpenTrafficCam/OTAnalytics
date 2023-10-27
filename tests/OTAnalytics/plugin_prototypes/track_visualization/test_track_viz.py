@@ -6,9 +6,12 @@ from pandas import DataFrame
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import ObservableProperty, TrackViewState
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
+from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import NoProgressbarBuilder
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
     OCCURRENCE,
     TRACK_CLASSIFICATION,
@@ -27,6 +30,7 @@ from OTAnalytics.domain.track import (
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
     ColorPaletteProvider,
+    EventToFlowResolver,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
@@ -40,6 +44,23 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackPlotter,
     TrackStartEndPointPlotter,
 )
+
+
+class TestEventToFlowResolver:
+    def test_resolve(self) -> None:
+        flow_repository = Mock(spec=FlowRepository)
+        flow_1 = Mock(spec=Flow)
+        flow_1.id = FlowId("flow-1")
+        flow_1.start = SectionId("section-1")
+        event_1 = Mock(spec=Event)
+        event_1.section_id = SectionId("section-1")
+        events = [event_1]
+        event_to_flow = EventToFlowResolver(flow_repository)
+        flow_repository.flows_using_section.return_value = [flow_1]
+
+        flows = event_to_flow.resolve(events)
+
+        assert flow_1.id in flows
 
 
 class TestPlotterPrototype:

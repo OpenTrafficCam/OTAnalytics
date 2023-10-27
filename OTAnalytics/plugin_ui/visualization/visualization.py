@@ -33,6 +33,7 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
     ColorPaletteProvider,
+    EventToFlowResolver,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
@@ -534,6 +535,7 @@ class VisualizationBuilder:
             self._flow_repository,
             self._track_repository,
             self._event_repository,
+            EventToFlowResolver(self._flow_repository),
         )
 
     def _create_tracks_not_assigned_to_flows_filter(

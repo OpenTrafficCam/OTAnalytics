@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Callable, Generic, Optional, Sequence, TypeVar
+from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
@@ -201,11 +201,18 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
         # TODO: Refactor observers - update code if [] no longer indicates deletion
         match entities:
             case []:
-                self._handle_remove()
+                self._handle_remove(self._get_entities_to_remove())
             case _:
                 self._handle_add_update(entities)
 
-    def _handle_add_update(self, entities: list[ENTITY]) -> None:
+    def _get_entities_to_remove(self) -> list[ENTITY]:
+        return [
+            entity
+            for entity in self._layer_mapping
+            if entity not in self._entity_lookup()
+        ]
+
+    def _handle_add_update(self, entities: Iterable[ENTITY]) -> None:
         """
         If entity was updated: invalidate cache.
         If entity was added: create new cached plotter + layer for new entity.
@@ -219,10 +226,10 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
                 self._plotter_mapping[entity] = plotter
                 self._layer_mapping[entity] = PlottingLayer(str(entity), plotter, False)
 
-    def _handle_remove(self) -> None:
-        remaining_entities = self._entity_lookup()
-
-        for entity in self._layer_mapping:
-            if entity not in remaining_entities:
-                del self._plotter_mapping[entity]
-                del self._layer_mapping[entity]
+    def _handle_remove(self, entities: Iterable[ENTITY]) -> None:
+        """
+        Remove layers for all specified entities.
+        """
+        for entity in entities:
+            del self._plotter_mapping[entity]
+            del self._layer_mapping[entity]

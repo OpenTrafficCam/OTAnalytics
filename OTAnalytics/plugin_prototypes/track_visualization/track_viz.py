@@ -22,7 +22,7 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.domain import track
-from OTAnalytics.domain.event import EventRepository, EventRepositoryEvent
+from OTAnalytics.domain.event import Event, EventRepository, EventRepositoryEvent
 from OTAnalytics.domain.flow import FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -132,6 +132,28 @@ class ColorPaletteProvider:
         return self._palette
 
 
+class EventToFlowResolver:
+    def __init__(self, flow_repository: FlowRepository) -> None:
+        self._flow_repository = flow_repository
+
+    def resolve(self, events: Iterable[Event]) -> Iterable[FlowId]:
+        flow_ids: set[FlowId] = set()
+        for event in events:
+            flow_ids.update(self._resolve_flow_id_for(event.section_id))
+
+        return flow_ids
+
+    def _resolve_flow_id_for(self, section_id: Optional[SectionId]) -> set[FlowId]:
+        if section_id:
+            return set(
+                [
+                    flow.id
+                    for flow in self._flow_repository.flows_using_section(section_id)
+                ]
+            )
+        return set()
+
+
 class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
     def __init__(
         self,
@@ -140,6 +162,7 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
         flow_repository: FlowRepository,
         track_repository: TrackRepository,
         event_repository: EventRepository,
+        flow_id_resolver: EventToFlowResolver,
     ) -> None:
         super().__init__(plotter_factory, flow_state.selected_flows, self.get_flow_ids)
 
@@ -149,6 +172,7 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
         event_repository.register_observer(self.notify_events)
 
         self._repository = flow_repository
+        self._flow_id_resolver = flow_id_resolver
 
     def notify_flow(self, flow: FlowId) -> None:
         self.notify_layers_changed([flow])
@@ -157,7 +181,10 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
         self.notify_layers_changed(flows)
 
     def notify_events(self, events: EventRepositoryEvent) -> None:
-        pass
+        flows_to_add = self._flow_id_resolver.resolve(events.added)
+        self._handle_add_update(flows_to_add)
+        flows_to_remove = self._flow_id_resolver.resolve(events.removed)
+        self._handle_remove(flows_to_remove)
 
     def get_flow_ids(self) -> set[FlowId]:
         return {flow.id for flow in self._repository.get_all()}
