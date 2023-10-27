@@ -97,59 +97,49 @@ class VisualizationBuilder:
                 road_user_assigner, flow_state
             )
         )
-        background_layer = PlottingLayer(
-            "Background", background_image_plotter, enabled=True
-        )
-        all_tracks_layer = PlottingLayer(
-            "Show all tracks", all_tracks_plotter, enabled=False
-        )
-        highlight_tracks_intersecting_sections_layer = PlottingLayer(
-            "Highlight tracks intersecting sections",
-            self._create_highlight_tracks_intersecting_sections_plotter(),
-            enabled=False,
-        )
-
-        highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
-            "Highlight tracks not intersecting sections",
-            self._create_tracks_not_intersecting_sections_plotter(),
-            enabled=False,
-        )
-        start_end_points_tracks_intersecting_sections_layer = PlottingLayer(
-            "Show start and end point of tracks intersecting sections",
-            self._create_start_end_points_intersecting_sections_plotter(),
-            enabled=False,
-        )
-        start_end_points_tracks_not_intersecting_sections_layer = PlottingLayer(
-            "Show start and end point of tracks not intersecting sections",
-            self._create_start_end_points_not_intersection_sections_plotter(),
-            enabled=False,
-        )
-        start_end_point_layer = PlottingLayer(
-            "Show start and end point",
-            self._create_start_end_points_plotter(),
-            enabled=False,
-        )
-        highlight_tracks_assigned_to_flow_layer = PlottingLayer(
-            "Highlight tracks assigned to flow",
-            highlight_tracks_assigned_to_flow_plotter,
-            enabled=False,
-        )
-        highlight_tracks_not_assigned_to_flow_layer = PlottingLayer(
-            "Highlight tracks not assigned to flow",
-            highlight_tracks_not_assigned_to_flow_plotter,
-            enabled=False,
-        )
+        layer_definitions = [
+            ("Background", background_image_plotter, True),
+            ("Show all tracks", all_tracks_plotter, False),
+            (
+                "Highlight tracks intersecting sections",
+                self._create_highlight_tracks_intersecting_sections_plotter(),
+                False,
+            ),
+            (
+                "Highlight tracks not intersecting sections",
+                self._create_tracks_not_intersecting_sections_plotter(),
+                False,
+            ),
+            (
+                "Show start and end point of tracks intersecting sections",
+                self._create_start_end_points_intersecting_sections_plotter(),
+                False,
+            ),
+            (
+                "Show start and end point of tracks not intersecting sections",
+                self._create_start_end_points_not_intersection_sections_plotter(),
+                False,
+            ),
+            (
+                "Show start and end point",
+                self._create_start_end_points_plotter(),
+                False,
+            ),
+            (
+                "Highlight tracks assigned to flow",
+                highlight_tracks_assigned_to_flow_plotter,
+                False,
+            ),
+            (
+                "Highlight tracks not assigned to flow",
+                highlight_tracks_not_assigned_to_flow_plotter,
+                False,
+            ),
+        ]
 
         return [
-            background_layer,
-            all_tracks_layer,
-            highlight_tracks_intersecting_sections_layer,
-            highlight_tracks_not_intersecting_sections_layer,
-            start_end_point_layer,
-            start_end_points_tracks_intersecting_sections_layer,
-            start_end_points_tracks_not_intersecting_sections_layer,
-            highlight_tracks_assigned_to_flow_layer,
-            highlight_tracks_not_assigned_to_flow_layer,
+            PlottingLayer(name, plotter, enabled)
+            for name, plotter, enabled in layer_definitions
         ]
 
     def _get_data_provider_class_filter(self) -> PandasDataFrameProvider:
