@@ -12,7 +12,6 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToGivenFlows,
-    TracksAssignedToSelectedFlows,
     TracksIntersectingGivenSections,
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelection,
@@ -271,16 +270,6 @@ class VisualizationBuilder:
     def _create_get_sections_by_id(self) -> GetSectionsById:
         return GetSectionsById(self._section_repository)
 
-    def _get_tracks_not_intersecting_selected_sections(
-        self,
-    ) -> TracksNotIntersectingSelection:
-        if not self._tracks_not_intersecting_selection:
-            self._tracks_not_intersecting_selection = TracksNotIntersectingSelection(
-                self._get_tracks_intersecting_selected_sections(),
-                self._track_repository,
-            )
-        return self._tracks_not_intersecting_selection
-
     def _get_tracks_not_intersecting_selected_sections_filter(
         self,
     ) -> Callable[[SectionId], PandasDataFrameProvider]:
@@ -388,19 +377,6 @@ class VisualizationBuilder:
             ),
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
-
-    def _get_tracks_intersecting_selected_sections(
-        self,
-    ) -> TracksIntersectingSelectedSections:
-        if not self._tracks_intersection_selected_sections:
-            self._tracks_intersecting_selected_sections = (
-                TracksIntersectingSelectedSections(
-                    self._section_state,
-                    self._create_tracks_intersecting_sections(),
-                    self._create_get_sections_by_id(),
-                )
-            )
-        return self._tracks_intersecting_selected_sections
 
     def _get_tracks_intersecting_sections_filter(
         self,
@@ -570,24 +546,6 @@ class VisualizationBuilder:
                 ),
                 self._track_repository,
             ),
-        )
-
-    def _create_highlight_tracks_not_assigned_to_flow(
-        self,
-        pandas_track_provider: PandasDataFrameProvider,
-        color_palette_provider: ColorPaletteProvider,
-        tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
-        enable_legend: bool,
-    ) -> Plotter:
-        tracks_not_assigned_to_flow = TracksNotIntersectingSelection(
-            tracks_assigned_to_flow,
-            self._track_repository,
-        )
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_not_assigned_to_flow
-        )
-        return self._create_track_geometry_plotter(
-            filter_by_id, color_palette_provider, alpha=1, enable_legend=enable_legend
         )
 
     def _create_dataframe_filter_builder(self) -> DataFrameFilterBuilder:
