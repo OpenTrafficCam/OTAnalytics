@@ -247,28 +247,17 @@ class VisualizationBuilder:
     def _create_highlight_tracks_not_assigned_to_flows_plotter(
         self, road_user_assigner: RoadUserAssigner, flow_state: FlowState
     ) -> Plotter:
-        tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
-            road_user_assigner,
-            self._event_repository,
-            self._flow_repository,
+        return self._create_highlight_tracks_assigned_to_flow(
+            self._create_highlight_tracks_assigned_to_flows_factory(
+                self._create_tracks_not_assigned_to_flows_filter(
+                    self._get_data_provider_all_filters(), road_user_assigner
+                ),
+                self._color_palette_provider,
+                alpha=1,
+                enable_legend=False,
+            ),
             flow_state,
         )
-        highlight_tracks_not_assigned_to_flow = (
-            self._create_highlight_tracks_not_assigned_to_flow(
-                self._get_data_provider_all_filters(),
-                self._color_palette_provider,
-                tracks_assigned_to_flow,
-                enable_legend=False,
-            )
-        )
-        highlight_tracks_not_assigned_to_flow_plotter = self._wrap_plotter_with_cache(
-            highlight_tracks_not_assigned_to_flow,
-            tracks=True,
-            sections=True,
-            flows=True,
-            events=True,
-        )
-        return highlight_tracks_not_assigned_to_flow_plotter
 
     def _get_data_provider_class_filter(self) -> PandasDataFrameProvider:
         if not self._data_provider_class_filter:
@@ -595,6 +584,22 @@ class VisualizationBuilder:
     ) -> Plotter:
         return FlowLayerPlotter(
             plotter_factory, flow_state, self._flow_repository, self._track_repository
+        )
+
+    def _create_tracks_not_assigned_to_flows_filter(
+        self, pandas_data_provider: PandasDataFrameProvider, assigner: RoadUserAssigner
+    ) -> Callable[[FlowId], PandasDataFrameProvider]:
+        return lambda flow: FilterById(
+            pandas_data_provider,
+            TracksNotIntersectingSelection(
+                TracksAssignedToGivenFlows(
+                    assigner,
+                    self._event_repository,
+                    self._flow_repository,
+                    [flow],
+                ),
+                self._track_repository,
+            ),
         )
 
     def _create_highlight_tracks_not_assigned_to_flow(
