@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+from math import ceil
 from pathlib import Path
 from typing import Iterable, Iterator, Optional
 
+from more_itertools import batched
 from PIL import Image
 
 from OTAnalytics.application.logger import logger
@@ -598,6 +600,15 @@ class TrackDataset(ABC):
     def as_list(self) -> list[Track]:
         raise NotImplementedError
 
+    @abstractmethod
+    def split(self, chunks: int) -> list["TrackDataset"]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """Number of tracks in the dataset."""
+        raise NotImplementedError
+
 
 @dataclass
 class PythonTrackDataset(TrackDataset):
@@ -678,6 +689,18 @@ class PythonTrackDataset(TrackDataset):
 
     def as_list(self) -> list[Track]:
         return list(self._tracks.values())
+
+    def split(self, batches: int) -> list["TrackDataset"]:
+        dataset_size = len(self._tracks)
+        batch_size = ceil(dataset_size / batches)
+
+        return [
+            PythonTrackDataset(dict(batch), self._calculator)
+            for batch in batched(self._tracks.items(), batch_size)
+        ]
+
+    def __len__(self) -> int:
+        return len(self._tracks)
 
 
 class TrackRepository:
@@ -773,6 +796,9 @@ class TrackRepository:
                 ),
             )
         self.observers.notify(TrackRepositoryEvent([], list(track_ids)))
+
+    def split(self, chunks: int) -> Iterable[TrackDataset]:
+        return self._dataset.split(chunks)
 
     def clear(self) -> None:
         """

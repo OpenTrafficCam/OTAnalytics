@@ -219,6 +219,12 @@ class PandasTrackDataset(TrackDataset):
     def as_dataframe(self) -> DataFrame:
         return self._dataset
 
+    def split(self, chunks: int) -> list["TrackDataset"]:
+        raise NotImplementedError
+
+    def __len__(self) -> int:
+        raise NotImplementedError
+
 
 def _assign_track_classification(
     data: DataFrame, calculator: PandasTrackClassificationCalculator

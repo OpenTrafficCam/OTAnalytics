@@ -384,3 +384,35 @@ class TestTrackFileRepository:
         repository = TrackFileRepository()
         repository.add_all([mock_file, mock_other_file])
         assert repository._files == {mock_file, mock_other_file}
+
+
+class TestPythonTrackDataset:
+    @staticmethod
+    def create_track_dataset(size: int) -> PythonTrackDataset:
+        dataset: dict[TrackId, Track] = {}
+        for i in range(0, size):
+            track_id = TrackId(str(i))
+            track = Mock()
+            track.id = track_id
+            dataset[track_id] = track
+
+        return PythonTrackDataset(dataset)
+
+    @pytest.mark.parametrize(
+        "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]
+    )
+    def test_split(self, num_tracks: int, batches: int, expected_batches: int) -> None:
+        dataset = self.create_track_dataset(num_tracks)
+        assert len(dataset) == num_tracks
+        split_datasets = dataset.split(batches)
+
+        assert len(split_datasets) == expected_batches
+        assert len(dataset._tracks) == sum(
+            [len(_dataset) for _dataset in split_datasets]
+        )
+
+        it = iter(dataset)
+        for idx, _dataset in enumerate(split_datasets):
+            for track in _dataset:
+                it_track = next(it)
+                assert track == it_track
