@@ -38,14 +38,12 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FilterById,
     FilterByOccurrence,
     FlowLayerPlotter,
-    FlowListObserverWrapper,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
     PandasTrackProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
     SectionLayerPlotter,
-    SectionListObserverWrapper,
     TrackBackgroundPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
@@ -149,13 +147,7 @@ class VisualizationBuilder:
             alpha=0.5,
             enable_legend=True,
         )
-        all_tracks_plotter = self._wrap_plotter_with_cache(
-            track_geometry_plotter,
-            tracks=True,
-            sections=False,
-            flows=False,
-            events=False,
-        )
+        all_tracks_plotter = self._wrap_plotter_with_cache(track_geometry_plotter)
         return all_tracks_plotter
 
     def _create_highlight_tracks_intersecting_sections_plotter(self) -> Plotter:
@@ -221,11 +213,7 @@ class VisualizationBuilder:
             enable_legend=False,
         )
         start_end_point_plotter = self._wrap_plotter_with_cache(
-            track_start_end_point_plotter,
-            tracks=True,
-            sections=True,
-            flows=False,
-            events=False,
+            track_start_end_point_plotter
         )
         return start_end_point_plotter
 
@@ -327,31 +315,13 @@ class VisualizationBuilder:
             )
         return self._pandas_data_provider
 
-    def _wrap_plotter_with_cache(
-        self, other: Plotter, tracks: bool, sections: bool, flows: bool, events: bool
-    ) -> Plotter:
+    def _wrap_plotter_with_cache(self, other: Plotter) -> Plotter:
+        """
+        Create a caching plotter that invalidates the cache on track repository changes.
+        """
         cached_plotter: CachedPlotter = CachedPlotter(other, subjects=[])
         invalidate = cached_plotter.invalidate_cache
-
-        if tracks:
-            self._track_repository.observers.register(invalidate)
-
-        if sections:
-            self._section_repository.register_sections_observer(
-                SectionListObserverWrapper(invalidate)
-            )
-            self._section_repository._section_content_observers.register(invalidate)
-
-        if flows:
-            self._flow_repository.register_flows_observer(
-                FlowListObserverWrapper(invalidate)
-            )
-            self._flow_repository._flow_content_observers.register(invalidate)
-
-        # if events:
-        #     event_repository = datastore._event_repository
-        #     event_repository.register_observer(invalidate)
-
+        self._track_repository.observers.register(invalidate)
         return cached_plotter
 
     def _create_pandas_track_provider(
