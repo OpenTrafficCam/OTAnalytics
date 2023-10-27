@@ -196,24 +196,21 @@ class VisualizationBuilder:
         return start_end_points_intersecting
 
     def _create_start_end_point_not_intersection_sections_plotter(self) -> Plotter:
-        start_end_points_tracks_not_intersecting_sections = (
-            self._create_start_end_point_tracks_not_intersecting_sections_plotter(
-                self._get_tracks_not_intersecting_selected_sections(),
+        section_filter = (
+            self._create_tracks_start_end_point_not_intersecting_given_sections_filter(
                 self._get_data_provider_class_filter(),
+                self._create_tracks_intersecting_sections(),
+                self._create_get_sections_by_id(),
+            )
+        )
+        return self._create_cached_section_layer_plotter(
+            self._create_start_end_point_intersecting_section_factory(
+                section_filter,
                 self._color_palette_provider,
                 enable_legend=False,
-            )
+            ),
+            self._section_state,
         )
-        start_end_points_not_intersection_sections_plotter = (
-            self._wrap_plotter_with_cache(
-                start_end_points_tracks_not_intersecting_sections,
-                tracks=True,
-                sections=True,
-                flows=False,
-                events=False,
-            )
-        )
-        return start_end_points_not_intersection_sections_plotter
 
     def _create_start_end_point_plotter(self) -> Plotter:
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
@@ -540,6 +537,28 @@ class VisualizationBuilder:
             ),
             color_palette_provider,
             enable_legend,
+        )
+
+    def _create_tracks_start_end_point_not_intersecting_given_sections_filter(
+        self,
+        pandas_data_provider: PandasDataFrameProvider,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_sections_by_id: GetSectionsById,
+    ) -> Callable[[SectionId], PandasDataFrameProvider]:
+        return lambda section: FilterById(
+            pandas_data_provider,
+            id_filter=TracksOverlapOccurrenceWindow(
+                other=TracksNotIntersectingSelection(
+                    TracksIntersectingGivenSections(
+                        [section],
+                        tracks_intersecting_sections,
+                        get_sections_by_id,
+                    ),
+                    self._track_repository,
+                ),
+                track_repository=self._track_repository,
+                track_view_state=self._track_view_state,
+            ),
         )
 
     def _create_tracks_assigned_to_flows_filter(
