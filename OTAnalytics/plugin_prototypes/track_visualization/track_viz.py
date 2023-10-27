@@ -1,6 +1,6 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Iterable, Optional
+from typing import Iterable, Optional
 
 import numpy
 import pandas
@@ -16,13 +16,13 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import DynamicLayersPlotter, EntityPlotterFactory
 from OTAnalytics.application.state import (
     FlowState,
-    ObservableOptionalProperty,
     Plotter,
     SectionState,
     TrackViewState,
 )
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.domain import track
+from OTAnalytics.domain.event import EventRepository, EventRepositoryEvent
 from OTAnalytics.domain.flow import FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -132,15 +132,6 @@ class ColorPaletteProvider:
         return self._palette
 
 
-class FlowListObserverWrapper(FlowListObserver):
-    def __init__(self, callback: Callable[[list[FlowId]], None]) -> None:
-        super().__init__()
-        self.callback = callback
-
-    def notify_flows(self, flows: list[FlowId]) -> None:
-        return self.callback(flows)
-
-
 class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
     def __init__(
         self,
@@ -148,12 +139,14 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
         flow_state: FlowState,
         flow_repository: FlowRepository,
         track_repository: TrackRepository,
+        event_repository: EventRepository,
     ) -> None:
         super().__init__(plotter_factory, flow_state.selected_flows, self.get_flow_ids)
 
         flow_repository.register_flows_observer(self)
         flow_repository.register_flow_changed_observer(self.notify_flow)
         track_repository.observers.register(self.notify_invalidate)
+        event_repository.register_observer(self.notify_events)
 
         self._repository = flow_repository
 
@@ -163,17 +156,11 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
     def notify_flows(self, flows: list[FlowId]) -> None:
         self.notify_layers_changed(flows)
 
+    def notify_events(self, events: EventRepositoryEvent) -> None:
+        pass
+
     def get_flow_ids(self) -> set[FlowId]:
         return {flow.id for flow in self._repository.get_all()}
-
-
-class SectionListObserverWrapper(SectionListObserver):
-    def __init__(self, callback: Callable[[list[SectionId]], None]) -> None:
-        super().__init__()
-        self.callback = callback
-
-    def notify_sections(self, sections: list[SectionId]) -> None:
-        return self.callback(sections)
 
 
 class SectionLayerPlotter(DynamicLayersPlotter[SectionId], SectionListObserver):
@@ -201,33 +188,6 @@ class SectionLayerPlotter(DynamicLayersPlotter[SectionId], SectionListObserver):
 
     def get_section_ids(self) -> set[SectionId]:
         return {section.id for section in self._repository.get_all()}
-
-    # section list notifications
-    # -> add section: notify([new_id])
-    # -> add all sections -> notify([new_id_1, new_id_2,...])
-    # -> remove section -> notify([])
-    # -> clear -> notify([])
-    #
-    # section content notification
-    # -> update section -> notify(exist_id)
-    # -> set plugin data -> notify(exist_id)
-    #
-    # flow list notifications
-    # -> clear -> notify([])
-    # -> add flow -> notify([new_id])
-    # -> add all flows -> notify([new_id_1, new_id_2,...])
-    # -> remove -> notify([])
-    #
-    # flow content notifications:
-    # -> update -> notify(exist.id)
-
-
-class DummyObservableWrapper(ObservableOptionalProperty[Any], TrackListObserver):
-    def __init__(self, default: Any | None = None) -> None:
-        super().__init__(default)
-
-    def notify_tracks(self, tracks: TrackRepositoryEvent) -> None:
-        self._subject.notify(None)
 
 
 class TrackPlotter(ABC):

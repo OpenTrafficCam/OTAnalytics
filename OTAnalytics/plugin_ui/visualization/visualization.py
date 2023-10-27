@@ -529,7 +529,11 @@ class VisualizationBuilder:
         flow_state: FlowState,
     ) -> Plotter:
         return FlowLayerPlotter(
-            plotter_factory, flow_state, self._flow_repository, self._track_repository
+            plotter_factory,
+            flow_state,
+            self._flow_repository,
+            self._track_repository,
+            self._event_repository,
         )
 
     def _create_tracks_not_assigned_to_flows_filter(
