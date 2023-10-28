@@ -54,10 +54,15 @@ class TestTracksIntersectingSelectedSections:
         get_section_by_id = Mock(spec=GetSectionsById)
         get_section_by_id.return_value = [section]
         tracks_intersecting_sections = Mock(spec=TracksIntersectingSections)
-        tracks_intersecting_sections.return_value = [track_id]
+        tracks_intersecting_sections.return_value = {section_id: {track_id}}
+        intersection_repository = Mock(spec=IntersectionRepository)
+        intersection_repository.get.return_value = {}
 
         tracks_intersecting_selected_sections = TracksIntersectingSelectedSections(
-            section_state, tracks_intersecting_sections, get_section_by_id
+            section_state,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
         )
         track_ids = list(tracks_intersecting_selected_sections.get_ids())
 

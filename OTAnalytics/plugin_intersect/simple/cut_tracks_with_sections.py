@@ -1,4 +1,3 @@
-import itertools
 from typing import Iterable
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
@@ -72,7 +71,7 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
         self._remove_section = remove_section
 
     def __call__(self, cutting_section: Section) -> None:
-        intersecting_track_ids = itertools.chain(
+        intersecting_track_ids = set.union(
             *self._tracks_intersecting_sections([cutting_section]).values()
         )
         new_tracks = self._cut_tracks_with_section(

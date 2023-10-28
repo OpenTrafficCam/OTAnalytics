@@ -210,8 +210,9 @@ class TestSimpleCutTracksIntersectingSection:
 
         get_sections_by_id = Mock(spec=GetSectionsById)
         get_tracks = Mock(spec=GetTracksWithoutSingleDetections, return_value=[track])
+        intersections = {cutting_section.id: {track_id}}
         tracks_intersecting_sections = Mock(
-            spec=TracksIntersectingSections, return_value={track_id}
+            spec=TracksIntersectingSections, return_value=intersections
         )
         cut_tracks_with_section = Mock(
             spec=CutTracksWithSection, return_value=cut_tracks

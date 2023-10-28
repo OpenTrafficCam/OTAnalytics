@@ -12,6 +12,14 @@ from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider, TrackRepository
 
 
+class IntersectionRepository(ABC):
+    def store(self, intersections: dict[SectionId, set[TrackId]]) -> None:
+        raise NotImplementedError
+
+    def get(self, sections: list[SectionId]) -> list[TrackId]:
+        raise NotImplementedError
+
+
 class TracksIntersectingSelectedSections(TrackIdProvider):
     """Returns track ids intersecting selected sections.
     Args:
@@ -26,25 +34,21 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
         section_state: SectionState,
         tracks_intersecting_sections: TracksIntersectingSections,
         get_section_by_id: GetSectionsById,
+        intersection_repository: IntersectionRepository,
     ) -> None:
         self._section_state = section_state
         self._tracks_intersecting_sections = tracks_intersecting_sections
         self._get_section_by_id = get_section_by_id
+        self._intersection_repository = intersection_repository
 
     def get_ids(self) -> set[TrackId]:
         currently_selected_sections = self._section_state.selected_sections.get()
-        sections = self._get_section_by_id(currently_selected_sections)
-
-        intersections = self._tracks_intersecting_sections(sections)
-        return set.union(*intersections.values())
-
-
-class IntersectionRepository(ABC):
-    def store(self, intersections: dict[SectionId, set[TrackId]]) -> None:
-        raise NotImplementedError
-
-    def get(self, sections: list[SectionId]) -> list[TrackId]:
-        raise NotImplementedError
+        return TracksIntersectingGivenSections(
+            currently_selected_sections,
+            self._tracks_intersecting_sections,
+            self._get_section_by_id,
+            self._intersection_repository,
+        ).get_ids()
 
 
 class TracksIntersectingGivenSections(TrackIdProvider):
