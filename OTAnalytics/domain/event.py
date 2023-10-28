@@ -365,13 +365,19 @@ class EventRepository:
         else:
             self._non_section_events.append(event)
 
-    def add_all(self, events: Iterable[Event], sections: list[SectionId] = []) -> None:
-        """Add multiple events at once to the repository. Preserve the sections used
+    def add_all(
+        self, events: Iterable[Event], sections: list[SectionId] | None = None
+    ) -> None:
+        """
+        Add multiple events at once to the repository. Preserve the sections used
         to generate the events for later usage.
 
-        Args: events (Iterable[Event]): the events sections (list[SectionId]): the
-        sections which have been used to generate the events
+        Args:
+            events (Iterable[Event]): the events sections (list[SectionId]): the
+            sections which have been used to generate the events
         """
+        if sections is None:
+            sections = []
         for event in events:
             self.__do_add(event)
         for section in sections:

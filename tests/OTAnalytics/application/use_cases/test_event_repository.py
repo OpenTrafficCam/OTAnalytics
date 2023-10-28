@@ -13,15 +13,22 @@ def events() -> list[Mock]:
 
 
 @pytest.fixture
+def sections() -> list[SectionId]:
+    return [SectionId("section")]
+
+
+@pytest.fixture
 def event_repository() -> Mock:
     return Mock(spec=EventRepository)
 
 
 class TestAddEvents:
-    def test_add(self, event_repository: Mock, events: list[Event]) -> None:
+    def test_add(
+        self, event_repository: Mock, events: list[Event], sections: list[SectionId]
+    ) -> None:
         add_events = AddEvents(event_repository)
-        add_events(events)
-        event_repository.add_all.assert_called_once_with(events)
+        add_events(events, sections)
+        event_repository.add_all.assert_called_once_with(events, sections)
 
 
 class TestClearAllEvents:

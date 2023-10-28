@@ -73,7 +73,8 @@ class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
         if not sections:
             return
         events = self._run_intersect(sections)
-        self._add_events(events)
+        section_ids = [section.id for section in sections]
+        self._add_events(events, section_ids)
 
 
 class SimpleCreateSceneEvents(CreateSceneEvents):

@@ -15,7 +15,7 @@ from OTAnalytics.application.use_cases.create_events import (
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track
 
 
@@ -26,7 +26,9 @@ def track() -> Mock:
 
 @pytest.fixture
 def section() -> Mock:
-    return Mock(spec=Section)
+    section = Mock(spec=Section)
+    section.id = SectionId("section")
+    return section
 
 
 @pytest.fixture
@@ -37,7 +39,8 @@ def event() -> Mock:
 class TestSimpleCreateIntersectionEvents:
     def test_intersection_event_creation(self, section: Mock, event: Mock) -> None:
         section_provider = Mock(spec=SectionProvider)
-        section_provider.return_value = [section]
+        provided_sections = [section]
+        section_provider.return_value = provided_sections
 
         run_intersect = Mock(spec=RunIntersect)
         run_intersect.return_value = [event]
@@ -50,8 +53,14 @@ class TestSimpleCreateIntersectionEvents:
         create_intersections_events()
 
         section_provider.assert_called_once()
-        run_intersect.assert_called_once_with([section])
-        add_events.assert_called_once_with([event])
+        run_intersect.assert_called_once_with(provided_sections)
+        add_events.assert_called_once()
+        assert add_events.call_args == call([event], [section.id])
+
+    def test_dummy(self) -> None:
+        mock = Mock()
+        mock.method(1, 2, 3, test="wow")
+        mock.method.assert_called_once_with(1, 2, 3, test="wow")
 
     def test_empty_section_repository_should_not_run_intersection(self) -> None:
         section_provider = Mock(spec=SectionProvider)

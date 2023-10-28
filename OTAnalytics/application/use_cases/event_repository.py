@@ -12,9 +12,13 @@ class AddEvents:
     def __init__(self, event_repository: EventRepository) -> None:
         self._event_repository = event_repository
 
-    def __call__(self, events: Iterable[Event]) -> None:
+    def __call__(
+        self, events: Iterable[Event], sections: list[SectionId] | None = None
+    ) -> None:
+        if sections is None:
+            sections = []
         if events:
-            self._event_repository.add_all(events)
+            self._event_repository.add_all(events, sections)
 
 
 class ClearAllEvents(SectionListObserver, TrackListObserver):
