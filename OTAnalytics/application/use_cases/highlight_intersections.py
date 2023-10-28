@@ -75,15 +75,19 @@ class TracksIntersectingGivenSections(TrackIdProvider):
     def get_ids(self) -> set[TrackId]:
         existing_intersections = self._intersection_repository.get(self._section_ids)
         section_ids_to_process = self._section_ids - existing_intersections.keys()
-        all_intersections = set()
-        for intersection in existing_intersections.values():
-            all_intersections.update(intersection)
+        new_intersections = self._calculate_new_intersections(section_ids_to_process)
+        return set.union(new_intersections, *existing_intersections.values())
+
+    def _calculate_new_intersections(
+        self, section_ids_to_process: set[SectionId]
+    ) -> set[TrackId]:
+        new_intersections: set[TrackId] = set()
         if section_ids_to_process:
             sections = self._get_section_by_id(section_ids_to_process)
             intersections = self._tracks_intersecting_sections(sections)
             self._intersection_repository.store(intersections)
-            all_intersections.update(*intersections.values())
-        return all_intersections
+            new_intersections.update(*intersections.values())
+        return new_intersections
 
 
 class TracksNotIntersectingSelection(TrackIdProvider):
