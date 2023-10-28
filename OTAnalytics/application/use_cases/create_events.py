@@ -36,6 +36,17 @@ SectionProvider = Callable[[], list[Section]]
 
 
 class MissingEventsSectionProvider:
+    """
+    Calculates the section to be intersected with. All sections which have already
+    been intersected are retrieved from the event repository.
+
+    Args:
+        section_repository (SectionRepository): section repository to get all
+            sections from
+        event_repository (EventRepository): event repository to calculate
+            the sections to intersect
+    """
+
     def __init__(
         self, section_repository: SectionRepository, event_repository: EventRepository
     ):
