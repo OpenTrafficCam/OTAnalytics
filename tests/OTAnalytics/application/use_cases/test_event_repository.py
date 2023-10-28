@@ -4,6 +4,7 @@ import pytest
 
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.section import SectionId
 
 
 @pytest.fixture
@@ -29,3 +30,12 @@ class TestClearAllEvents:
         clear_all_events = ClearAllEvents(repository)
         clear_all_events()
         repository.clear.assert_called_once()
+
+    def test_remove_events_of_changed_sections(self) -> None:
+        section_1 = SectionId("1")
+        repository = Mock(spec=EventRepository)
+        clear_all_events = ClearAllEvents(repository)
+
+        clear_all_events.notify_sections([section_1])
+
+        repository.remove.assert_called_once()

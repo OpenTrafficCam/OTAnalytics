@@ -25,7 +25,7 @@ from OTAnalytics.domain.event import (
     SectionEventBuilder,
 )
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
-from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, PythonDetection, TrackId
 from OTAnalytics.domain.types import EventType, EventTypeParseError
 
@@ -306,6 +306,23 @@ class TestEventRepository:
         subject.notify.assert_called_with(
             EventRepositoryEvent([first_event, second_event], [])
         )
+
+    def test_no_event_for_intersected_section(self) -> None:
+        section_id_1 = SectionId("1")
+        section_id_2 = SectionId("2")
+        section_1 = Mock(spec=Section)
+        section_1.id = section_id_1
+        section_2 = Mock(spec=Section)
+        section_2.id = section_id_2
+        first_event = Mock()
+        first_event.section_id = section_id_1
+        repository = EventRepository()
+
+        repository.add_all([first_event], [section_id_1, section_id_2])
+        missing_sections = repository.retain_missing([section_1, section_2])
+
+        assert first_event in repository.get_all()
+        assert not missing_sections
 
     def test_clear(self) -> None:
         first_event = Mock()

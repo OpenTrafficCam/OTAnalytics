@@ -1,5 +1,7 @@
+import itertools
 import re
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable, Optional
@@ -334,7 +336,8 @@ class EventRepository:
         self, subject: Subject[EventRepositoryEvent] = Subject[EventRepositoryEvent]()
     ) -> None:
         self._subject = subject
-        self._events: list[Event] = []
+        self._events: dict[SectionId, list[Event]] = defaultdict(list)
+        # self._non_section_events = XXX
 
     def register_observer(self, observer: OBSERVER[EventRepositoryEvent]) -> None:
         """Register observer to listen to repository changes.
@@ -350,16 +353,27 @@ class EventRepository:
         Args:
             event (Event): the event to add
         """
-        self._events.append(event)
+        self.__do_add(event)
         self._subject.notify(EventRepositoryEvent([event], []))
 
-    def add_all(self, events: Iterable[Event]) -> None:
-        """Add multiple events at once to the repository.
-
-        Args:
-            events (Iterable[Event]): the events
+    def __do_add(self, event: Event) -> None:
         """
-        self._events.extend(events)
+        Internal add method that does not notify observers.
+        """
+        if event.section_id:
+            self._events[event.section_id].append(event)
+
+    def add_all(self, events: Iterable[Event], sections: list[SectionId] = []) -> None:
+        """Add multiple events at once to the repository. Preserve the sections used
+        to generate the events for later usage.
+
+        Args: events (Iterable[Event]): the events sections (list[SectionId]): the
+        sections which have been used to generate the events
+        """
+        for event in events:
+            self.__do_add(event)
+        for section in sections:
+            self._events.setdefault(section, [])
         self._subject.notify(EventRepositoryEvent(events, []))
 
     def get_all(self) -> Iterable[Event]:
@@ -368,22 +382,24 @@ class EventRepository:
         Returns:
             Iterable[Event]: the events
         """
-        return self._events
+        return itertools.chain(*self._events.values())
 
     def clear(self) -> None:
         """
         Clear the repository and notify observers only if repository was filled.
         """
         if self._events:
-            removed = self._events
-            self._events = []
+            removed = list(self.get_all())
+            self._events = defaultdict(list)
             self._subject.notify(EventRepositoryEvent([], removed))
 
     def remove(self, sections: list[SectionId]) -> None:
         if self._events:
-            removed = [event for event in self._events if event.section_id in sections]
-            for to_remove in removed:
-                self._events.remove(to_remove)
+            removed = [
+                event for event in self.get_all() if event.section_id in sections
+            ]
+            for section in sections:
+                del self._events[section]
             self._subject.notify((EventRepositoryEvent([], removed)))
 
     def is_empty(self) -> bool:
@@ -391,5 +407,8 @@ class EventRepository:
         return not self._events
 
     def retain_missing(self, all: list[Section]) -> list[Section]:
-        existing_sections = frozenset([event.section_id for event in self._events])
-        return [section for section in all if section.id not in existing_sections]
+        """
+        Returns a new list of sections. The list contains all Sections from the input
+        except the ones event have been generated for.
+        """
+        return [section for section in all if section.id not in self._events.keys()]
