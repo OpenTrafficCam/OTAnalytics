@@ -11,6 +11,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
+    IntersectionRepository,
     TracksAssignedToGivenFlows,
     TracksIntersectingGivenSections,
     TracksIntersectingSelectedSections,
@@ -54,6 +55,7 @@ class VisualizationBuilder:
     def __init__(
         self,
         datastore: Datastore,
+        intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
         section_state: SectionState,
         color_palette_provider: ColorPaletteProvider,
@@ -67,6 +69,7 @@ class VisualizationBuilder:
         self._track_repository = datastore._track_repository
         self._section_repository = datastore._section_repository
         self._flow_repository = datastore._flow_repository
+        self._intersection_repository = intersection_repository
         self._event_repository = datastore._event_repository
         self._pandas_data_provider: Optional[PandasDataFrameProvider] = None
         self._data_provider_all_filters: Optional[PandasDataFrameProvider] = None
@@ -281,6 +284,7 @@ class VisualizationBuilder:
                     [section],
                     self._create_tracks_intersecting_sections(),
                     self._create_get_sections_by_id(),
+                    self._intersection_repository,
                 ),
                 self._track_repository,
             ),
@@ -388,6 +392,7 @@ class VisualizationBuilder:
                 [section],
                 self._create_tracks_intersecting_sections(),
                 self._create_get_sections_by_id(),
+                self._intersection_repository,
             ),
         )
 
@@ -444,6 +449,7 @@ class VisualizationBuilder:
                     [section],
                     tracks_intersecting_sections,
                     get_sections_by_id,
+                    self._intersection_repository,
                 ),
                 track_repository=self._track_repository,
                 track_view_state=self._track_view_state,
@@ -489,6 +495,7 @@ class VisualizationBuilder:
                         [section],
                         tracks_intersecting_sections,
                         get_sections_by_id,
+                        self._intersection_repository,
                     ),
                     self._track_repository,
                 ),

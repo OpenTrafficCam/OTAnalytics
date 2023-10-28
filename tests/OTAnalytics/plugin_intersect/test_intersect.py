@@ -954,6 +954,7 @@ class TestSimpleTracksIntersectingSections:
         get_all_tracks.return_value = [track]
 
         section = Mock(spec=Section)
+        section.id = SectionId("section-1")
         offset = RelativeOffsetCoordinate(0, 0)
         section.get_offset.return_value = offset
         section.name = "south"
@@ -977,7 +978,7 @@ class TestSimpleTracksIntersectingSections:
         )
         intersecting = tracks_intersecting_sections([section])
 
-        assert intersecting == {track.id}
+        assert intersecting == {section.id: {track.id}}
         get_all_tracks.assert_called_once()
         section.get_offset.assert_called_once_with(EventType.SECTION_ENTER)
         track_geometry_builder.build.assert_called_once_with(track, offset)

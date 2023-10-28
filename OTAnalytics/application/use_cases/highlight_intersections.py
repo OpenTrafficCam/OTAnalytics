@@ -1,3 +1,4 @@
+from abc import ABC
 from datetime import datetime
 from typing import Iterable, Optional
 
@@ -34,7 +35,16 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
         currently_selected_sections = self._section_state.selected_sections.get()
         sections = self._get_section_by_id(currently_selected_sections)
 
-        return self._tracks_intersecting_sections(sections)
+        intersections = self._tracks_intersecting_sections(sections)
+        return set.union(*intersections.values())
+
+
+class IntersectionRepository(ABC):
+    def store(self, intersections: dict[SectionId, set[TrackId]]) -> None:
+        raise NotImplementedError
+
+    def get(self, sections: list[SectionId]) -> list[TrackId]:
+        raise NotImplementedError
 
 
 class TracksIntersectingGivenSections(TrackIdProvider):
@@ -51,12 +61,18 @@ class TracksIntersectingGivenSections(TrackIdProvider):
         section_ids: list[SectionId],
         tracks_intersecting_sections: TracksIntersectingSections,
         get_section_by_id: GetSectionsById,
+        intersection_repository: IntersectionRepository,
     ) -> None:
-        self._sections = get_section_by_id(section_ids)
+        self._section_ids = section_ids
         self._tracks_intersecting_sections = tracks_intersecting_sections
+        self._get_section_by_id = get_section_by_id
+        self._intersection_repository = intersection_repository
 
     def get_ids(self) -> set[TrackId]:
-        return self._tracks_intersecting_sections(self._sections)
+        sections = self._get_section_by_id(self._section_ids)
+        intersections = self._tracks_intersecting_sections(sections)
+        self._intersection_repository.store(intersections)
+        return set.union(*intersections.values())
 
 
 class TracksNotIntersectingSelection(TrackIdProvider):

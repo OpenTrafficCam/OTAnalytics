@@ -17,7 +17,9 @@ from OTAnalytics.application.state import (
     TrackViewState,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
+    IntersectionRepository,
     TracksAssignedToSelectedFlows,
+    TracksIntersectingGivenSections,
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelection,
     TracksOverlapOccurrenceWindow,
@@ -63,6 +65,36 @@ class TestTracksIntersectingSelectedSections:
         section_state.selected_sections.get.assert_called_once()
         get_section_by_id.assert_called_once_with([section_id])
         tracks_intersecting_sections.assert_called_once_with([section])
+
+
+class TestTracksIntersectingGivenSections:
+    def test_get_ids(self) -> None:
+        section_id_1 = SectionId("section-1")
+        section_ids = [section_id_1]
+        section_1 = Mock(spec=Section)
+        section_1.id = section_id_1
+        sections = [section_1]
+        section_1_tracks = {TrackId("track-1")}
+        original_track_ids = {section_id_1: section_1_tracks}
+        tracks_intersecting_sections = Mock(spec=TracksIntersectingSections)
+        get_section_by_id = Mock(spec=GetSectionsById)
+        intersection_repository = Mock(spec=IntersectionRepository)
+        intersection_repository.get.return_value = {}
+        get_section_by_id.return_value = sections
+        tracks_intersecting_sections.return_value = original_track_ids
+        provider = TracksIntersectingGivenSections(
+            section_ids,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
+        )
+
+        track_ids = provider.get_ids()
+
+        assert track_ids == section_1_tracks
+        get_section_by_id.assert_called_once_with(section_ids)
+        tracks_intersecting_sections.assert_called_once_with(sections)
+        intersection_repository.store.assert_called_once_with(original_track_ids)
 
 
 class TestTracksNotIntersectingSelection:

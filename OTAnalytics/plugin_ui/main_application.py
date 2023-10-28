@@ -60,6 +60,9 @@ from OTAnalytics.application.use_cases.generate_flows import (
     GenerateFlows,
     RepositoryFlowIdGenerator,
 )
+from OTAnalytics.application.use_cases.highlight_intersections import (
+    IntersectionRepository,
+)
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
@@ -142,6 +145,7 @@ from OTAnalytics.plugin_ui.cli import (
     CliParseError,
     OTAnalyticsCli,
 )
+from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 
@@ -190,6 +194,7 @@ class ApplicationStarter:
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
+        intersection_repository = self._create_intersection_repository()
         event_repository = self._create_event_repository()
         video_parser = self._create_video_parser()
         video_repository = self._create_video_repository()
@@ -213,6 +218,7 @@ class ApplicationStarter:
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         layers = self._create_layers(
             datastore,
+            intersection_repository,
             track_view_state,
             flow_state,
             section_state,
@@ -551,6 +557,9 @@ class ApplicationStarter:
     def _create_flow_repository(self) -> FlowRepository:
         return FlowRepository()
 
+    def _create_intersection_repository(self) -> IntersectionRepository:
+        return PythonIntersectionRepository()
+
     def _create_event_repository(self) -> EventRepository:
         return EventRepository()
 
@@ -566,6 +575,7 @@ class ApplicationStarter:
     def _create_layers(
         self,
         datastore: Datastore,
+        intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
         flow_state: FlowState,
         section_state: SectionState,
@@ -575,6 +585,7 @@ class ApplicationStarter:
     ) -> Sequence[PlottingLayer]:
         return VisualizationBuilder(
             datastore,
+            intersection_repository,
             track_view_state,
             section_state,
             color_palette_provider,
