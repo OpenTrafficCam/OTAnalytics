@@ -293,6 +293,17 @@ class TestEventRepository:
         assert event in repository.get_all()
         subject.notify.assert_called_with(EventRepositoryEvent([event], []))
 
+    def test_add_without_section_id(self) -> None:
+        event = Mock()
+        event.section_id = None
+        subject = Mock()
+        repository = EventRepository(subject)
+
+        repository.add(event)
+
+        assert event in repository.get_all()
+        subject.notify.assert_called_with(EventRepositoryEvent([event], []))
+
     def test_add_all(self) -> None:
         first_event = Mock()
         second_event = Mock()

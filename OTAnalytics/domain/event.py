@@ -337,7 +337,7 @@ class EventRepository:
     ) -> None:
         self._subject = subject
         self._events: dict[SectionId, list[Event]] = defaultdict(list)
-        # self._non_section_events = XXX
+        self._non_section_events = list[Event]()
 
     def register_observer(self, observer: OBSERVER[EventRepositoryEvent]) -> None:
         """Register observer to listen to repository changes.
@@ -362,6 +362,8 @@ class EventRepository:
         """
         if event.section_id:
             self._events[event.section_id].append(event)
+        else:
+            self._non_section_events.append(event)
 
     def add_all(self, events: Iterable[Event], sections: list[SectionId] = []) -> None:
         """Add multiple events at once to the repository. Preserve the sections used
@@ -382,7 +384,9 @@ class EventRepository:
         Returns:
             Iterable[Event]: the events
         """
-        return itertools.chain(*self._events.values())
+        return itertools.chain(
+            *[self._non_section_events, itertools.chain(*self._events.values())]
+        )
 
     def clear(self) -> None:
         """
