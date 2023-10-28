@@ -19,3 +19,13 @@ class PythonIntersectionRepository(IntersectionRepository):
         return {
             key: value for key, value in self._intersections.items() if key in sections
         }
+
+    def get_all(self) -> dict[SectionId, set[TrackId]]:
+        return self._intersections.copy()
+
+    def clear(self) -> None:
+        self._intersections.clear()
+
+    def remove(self, sections: set[SectionId]) -> None:
+        for section in sections:
+            del self._intersections[section]

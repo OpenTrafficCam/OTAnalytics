@@ -19,6 +19,12 @@ class IntersectionRepository(ABC):
     def get(self, sections: set[SectionId]) -> dict[SectionId, set[TrackId]]:
         raise NotImplementedError
 
+    def clear(self) -> None:
+        raise NotImplementedError
+
+    def remove(self, sections: set[SectionId]) -> None:
+        raise NotImplementedError
+
 
 class TracksIntersectingSelectedSections(TrackIdProvider):
     """Returns track ids intersecting selected sections.
