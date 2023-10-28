@@ -26,7 +26,12 @@ from OTAnalytics.domain.event import Event, EventRepository, EventRepositoryEven
 from OTAnalytics.domain.flow import FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
-from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionRepository
+from OTAnalytics.domain.section import (
+    SectionId,
+    SectionListObserver,
+    SectionRepository,
+    SectionRepositoryEvent,
+)
 from OTAnalytics.domain.track import (
     PilImage,
     Track,
@@ -208,10 +213,11 @@ class SectionLayerPlotter(DynamicLayersPlotter[SectionId], SectionListObserver):
         self._repository = section_repository
 
     def notify_section(self, section: SectionId) -> None:
-        self.notify_layers_changed([section])
+        self._handle_add_update([section])
 
-    def notify_sections(self, sections: list[SectionId]) -> None:
-        self.notify_layers_changed(sections)
+    def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
+        self._handle_remove(section_event.removed)
+        self._handle_add_update(section_event.added)
 
     def get_section_ids(self) -> set[SectionId]:
         return {section.id for section in self._repository.get_all()}

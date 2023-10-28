@@ -58,3 +58,10 @@ class TestPythonIntersectionRepository:
         repository.remove({section_id_1})
 
         assert repository.get_all() == {section_id_2: {track_id_2}}
+
+    def test_remove_missing(self, section_id_1: SectionId) -> None:
+        repository = PythonIntersectionRepository()
+
+        repository.remove({section_id_1})
+
+        assert repository.get_all() == {}

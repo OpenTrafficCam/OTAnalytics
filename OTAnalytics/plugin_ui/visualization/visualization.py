@@ -281,7 +281,7 @@ class VisualizationBuilder:
             self._get_data_provider_all_filters(),
             TracksNotIntersectingSelection(
                 TracksIntersectingGivenSections(
-                    [section],
+                    {section},
                     self._create_tracks_intersecting_sections(),
                     self._create_get_sections_by_id(),
                     self._intersection_repository,
@@ -389,7 +389,7 @@ class VisualizationBuilder:
         return lambda section: FilterById(
             self._get_data_provider_all_filters(),
             TracksIntersectingGivenSections(
-                [section],
+                {section},
                 self._create_tracks_intersecting_sections(),
                 self._create_get_sections_by_id(),
                 self._intersection_repository,
@@ -446,7 +446,7 @@ class VisualizationBuilder:
             pandas_data_provider,
             id_filter=TracksOverlapOccurrenceWindow(
                 other=TracksIntersectingGivenSections(
-                    [section],
+                    {section},
                     tracks_intersecting_sections,
                     get_sections_by_id,
                     self._intersection_repository,
@@ -492,7 +492,7 @@ class VisualizationBuilder:
             id_filter=TracksOverlapOccurrenceWindow(
                 other=TracksNotIntersectingSelection(
                     TracksIntersectingGivenSections(
-                        [section],
+                        {section},
                         tracks_intersecting_sections,
                         get_sections_by_id,
                         self._intersection_repository,

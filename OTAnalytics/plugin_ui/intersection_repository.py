@@ -28,4 +28,5 @@ class PythonIntersectionRepository(IntersectionRepository):
 
     def remove(self, sections: set[SectionId]) -> None:
         for section in sections:
-            del self._intersections[section]
+            if section in self._intersections.keys():
+                del self._intersections[section]

@@ -18,7 +18,12 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
 )
 from OTAnalytics.domain.observer import OBSERVER, Subject
-from OTAnalytics.domain.section import Section, SectionId, SectionType
+from OTAnalytics.domain.section import (
+    Section,
+    SectionId,
+    SectionRepositoryEvent,
+    SectionType,
+)
 from OTAnalytics.domain.track import (
     Detection,
     PythonDetection,
@@ -87,13 +92,16 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
     def register(self, observer: OBSERVER[CutTracksDto]) -> None:
         self._subject.register(observer)
 
-    def notify_sections(self, sections: list[SectionId]) -> None:
+    def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
+        self.__do(section_event.added)
+
+    def __do(self, sections: Iterable[SectionId]) -> None:
         for section in self._get_sections_by_id(sections):
             if section.get_type() == SectionType.CUTTING:
                 self.__call__(section)
 
     def notify_section_changed(self, section_id: SectionId) -> None:
-        self.notify_sections([section_id])
+        self.__do([section_id])
 
 
 class SimpleCutTracksWithSection(CutTracksWithSection):

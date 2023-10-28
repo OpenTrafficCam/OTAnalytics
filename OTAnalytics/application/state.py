@@ -11,7 +11,12 @@ from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import VALUE, Subject
-from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionType
+from OTAnalytics.domain.section import (
+    SectionId,
+    SectionListObserver,
+    SectionRepositoryEvent,
+    SectionType,
+)
 from OTAnalytics.domain.track import (
     Detection,
     TrackId,
@@ -250,20 +255,20 @@ class SectionState(SectionListObserver):
         ] = ObservableProperty[list]([])
         self._get_sections_by_id = get_sections_by_id
 
-    def notify_sections(self, sections: list[SectionId]) -> None:
+    def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
         """
         Notify the state about changes in the section list.
 
-        Args:
-            sections (list[SectionId]): newly added sections
+        Args: section_event (SectionRepositoryEvent): notification about section
+            repository changes
         """
-        if not sections:
+        if not section_event.added:
             self.selected_sections.set([])
             return
 
         no_cutting_sections = [
             section
-            for section in self._get_sections_by_id(sections)
+            for section in self._get_sections_by_id(section_event.added)
             if section.get_type() != SectionType.CUTTING
         ]
         if no_cutting_sections:
@@ -369,7 +374,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
     def notify_section_changed(self, _: SectionId) -> None:
         self._update()
 
-    def notify_sections(self, sections: list[SectionId]) -> None:
+    def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
         self._update()
 
     def notify_events(self, _: EventRepositoryEvent) -> None:
@@ -395,9 +400,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
     def _update_image(self) -> None:
         """
         Updates the current background image with or without tracks and sections.
-
-        Args:
-            track_id (TrackId): track id used to get the video image
         """
         self._track_view_state.background_image.set(self._plotter.plot())
 

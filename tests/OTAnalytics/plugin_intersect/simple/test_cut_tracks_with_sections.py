@@ -19,7 +19,13 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
 )
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Area, LineSection, SectionId, SectionType
+from OTAnalytics.domain.section import (
+    Area,
+    LineSection,
+    SectionId,
+    SectionRepositoryEvent,
+    SectionType,
+)
 from OTAnalytics.domain.track import (
     Detection,
     PythonDetection,
@@ -252,7 +258,9 @@ class TestSimpleCutTracksIntersectingSection:
             cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
                 get_sections_by_id, Mock(), Mock(), Mock(), Mock(), Mock(), Mock()
             )
-            cut_tracks_intersecting_section.notify_sections(section_ids)
+            cut_tracks_intersecting_section.notify_sections(
+                SectionRepositoryEvent.create_added(section_ids)
+            )
 
             get_sections_by_id.assert_called_once_with(section_ids)
             call_mock.assert_called_once_with(cutting_section)

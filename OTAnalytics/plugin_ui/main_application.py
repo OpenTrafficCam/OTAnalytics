@@ -1,8 +1,6 @@
 import logging
 from typing import Sequence
 
-from plugin_ui.visualization.visualization import VisualizationBuilder
-
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -62,6 +60,9 @@ from OTAnalytics.application.use_cases.generate_flows import (
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
+)
+from OTAnalytics.application.use_cases.intersection_repository import (
+    ClearAllIntersections,
 )
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
@@ -146,6 +147,7 @@ from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsCli,
 )
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
+from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 
@@ -216,6 +218,12 @@ class ApplicationStarter:
         flow_state = self._create_flow_state()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
+        clear_all_intersections = ClearAllIntersections(intersection_repository)
+        track_repository.register_tracks_observer(clear_all_intersections)
+        section_repository.register_sections_observer(clear_all_intersections)
+        section_repository.register_section_changed_observer(
+            clear_all_intersections.on_section_changed
+        )
         layers = self._create_layers(
             datastore,
             intersection_repository,
@@ -316,6 +324,7 @@ class ApplicationStarter:
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
             clear_all_flows,
+            clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
             clear_all_tracks,
@@ -725,6 +734,7 @@ class ApplicationStarter:
     def _create_use_case_clear_all_repositories(
         clear_all_events: ClearAllEvents,
         clear_all_flows: ClearAllFlows,
+        clear_all_intersections: ClearAllIntersections,
         clear_all_sections: ClearAllSections,
         clear_all_track_to_videos: ClearAllTrackToVideos,
         clear_all_tracks: ClearAllTracks,
@@ -733,6 +743,7 @@ class ApplicationStarter:
         return ClearRepositories(
             clear_all_events,
             clear_all_flows,
+            clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
             clear_all_tracks,

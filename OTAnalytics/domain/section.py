@@ -35,13 +35,36 @@ class SectionId:
         return self.id
 
 
+@dataclass
+class SectionRepositoryEvent:
+    """Holds information on changes made in the event repository.
+
+    `Added` holding an empty iterable indicates remove events.
+
+    Args:
+        added (Iterable[Event]): events added to repository.
+        removed (Iterable[Event]): events removed from the repository.
+    """
+
+    added: Iterable[SectionId]
+    removed: Iterable[SectionId]
+
+    @staticmethod
+    def create_added(sections: list[SectionId]) -> "SectionRepositoryEvent":
+        return SectionRepositoryEvent(sections, [])
+
+    @staticmethod
+    def create_removed(sections: list[SectionId]) -> "SectionRepositoryEvent":
+        return SectionRepositoryEvent([], sections)
+
+
 class SectionListObserver(ABC):
     """
     Interface to listen to changes to a list of sections.
     """
 
     @abstractmethod
-    def notify_sections(self, sections: list[SectionId]) -> None:
+    def notify_sections(self, sections: SectionRepositoryEvent) -> None:
         """
         Notifies that the given sections have been added.
 
@@ -71,7 +94,7 @@ class SectionListSubject:
         """
         self.observers.append(observer)
 
-    def notify(self, sections: list[SectionId]) -> None:
+    def notify(self, sections: SectionRepositoryEvent) -> None:
         """
         Notifies observers about the list of sections.
 
@@ -361,7 +384,9 @@ class SectionRepository:
             section (Section): the section to add
         """
         self._add(section)
-        self._repository_content_observers.notify([section.id])
+        self._repository_content_observers.notify(
+            SectionRepositoryEvent.create_added([section.id])
+        )
 
     def _add(self, section: Section) -> None:
         """Internal method to add sections without notifying observers.
@@ -379,7 +404,9 @@ class SectionRepository:
         """
         for section in sections:
             self._add(section)
-        self._repository_content_observers.notify([section.id for section in sections])
+        self._repository_content_observers.notify(
+            SectionRepositoryEvent.create_added([section.id for section in sections])
+        )
 
     def get_all(self) -> list[Section]:
         """Get all sections from the repository.
@@ -415,7 +442,9 @@ class SectionRepository:
             section (Section): the section to be removed
         """
         del self._sections[section]
-        self._repository_content_observers.notify([])
+        self._repository_content_observers.notify(
+            SectionRepositoryEvent.create_removed([section])
+        )
 
     def update(self, section: Section) -> None:
         """Update the section in the repository.
@@ -445,5 +474,8 @@ class SectionRepository:
         """
         Clear the repository and inform the observers about the empty repository.
         """
+        removed = list(self._sections.keys())
         self._sections.clear()
-        self._repository_content_observers.notify([])
+        self._repository_content_observers.notify(
+            SectionRepositoryEvent.create_removed(removed)
+        )
