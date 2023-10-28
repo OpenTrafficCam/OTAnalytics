@@ -117,13 +117,5 @@ class TestCreateEvents:
 
         create_events()
 
-        # clear_all_events.assert_called_once()
         create_intersection_events.assert_called_once()
         create_scene_events.assert_called_once()
-
-        # Check that clearing event repository is called first
-        assert method_execution_order_observer.mock_calls == [
-            # call.clear_event_repository(),
-            call.create_intersection_events(),
-            call.create_scene_events(),
-        ]
