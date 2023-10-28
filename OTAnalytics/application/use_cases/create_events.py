@@ -131,6 +131,5 @@ class CreateEvents:
         Intersect all tracks with all sections and write the events into the event
         repository.
         """
-        # self._clear_event_repository()
         self._create_intersection_events()
         self._create_scene_events()
