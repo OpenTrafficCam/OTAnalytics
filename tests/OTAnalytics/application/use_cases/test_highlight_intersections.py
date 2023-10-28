@@ -39,23 +39,89 @@ from OTAnalytics.domain.track import (
 )
 
 
-class TestTracksIntersectingSelectedSections:
-    def test_get_ids(self) -> None:
-        track_id = TrackId("2")
-        section_id = Mock(spec=SectionId)
-        section = Mock(spec=Section)
-        section.id = section_id
+@pytest.fixture
+def track_id_1() -> TrackId:
+    return TrackId("1")
 
+
+@pytest.fixture
+def track_id_2() -> TrackId:
+    return TrackId("2")
+
+
+@pytest.fixture
+def track_1(track_id_1: TrackId) -> Mock:
+    return create_track_with(track_id_1)
+
+
+@pytest.fixture
+def track_2(track_id_2: TrackId) -> Mock:
+    return create_track_with(track_id_2)
+
+
+def create_track_with(id: TrackId) -> Mock:
+    track = Mock(spec=Track)
+    track.id = id
+    return track
+
+
+@pytest.fixture
+def section_id_1() -> SectionId:
+    return SectionId("section-1")
+
+
+@pytest.fixture
+def section_1(section_id_1: SectionId) -> Mock:
+    return create_section_with(section_id_1)
+
+
+@pytest.fixture
+def section_id_2() -> SectionId:
+    return SectionId("section-2")
+
+
+@pytest.fixture
+def section_2(section_id_2: SectionId) -> Mock:
+    return create_section_with(section_id_2)
+
+
+def create_section_with(id: SectionId) -> Mock:
+    section = Mock(spec=Section)
+    section.id = id
+    return section
+
+
+@pytest.fixture
+def tracks_intersecting_sections() -> Mock:
+    return Mock(spec=TracksIntersectingSections)
+
+
+@pytest.fixture
+def get_section_by_id() -> Mock:
+    return Mock(spec=GetSectionsById)
+
+
+@pytest.fixture
+def intersection_repository() -> Mock:
+    return Mock(spec=IntersectionRepository)
+
+
+class TestTracksIntersectingSelectedSections:
+    def test_get_ids(
+        self,
+        track_id_2: TrackId,
+        section_2: Mock,
+        tracks_intersecting_sections: Mock,
+        get_section_by_id: Mock,
+        intersection_repository: Mock,
+    ) -> None:
         section_state = Mock(spec=SectionState)
         selected_sections = Mock(spec=ObservableProperty)
-        selected_sections.get.return_value = [section_id]
+        selected_sections.get.return_value = [(section_2.id)]
         section_state.selected_sections = selected_sections
 
-        get_section_by_id = Mock(spec=GetSectionsById)
-        get_section_by_id.return_value = [section]
-        tracks_intersecting_sections = Mock(spec=TracksIntersectingSections)
-        tracks_intersecting_sections.return_value = {section_id: {track_id}}
-        intersection_repository = Mock(spec=IntersectionRepository)
+        get_section_by_id.return_value = [section_2]
+        tracks_intersecting_sections.return_value = {(section_2.id): {track_id_2}}
         intersection_repository.get.return_value = {}
 
         tracks_intersecting_selected_sections = TracksIntersectingSelectedSections(
@@ -66,24 +132,25 @@ class TestTracksIntersectingSelectedSections:
         )
         track_ids = list(tracks_intersecting_selected_sections.get_ids())
 
-        assert track_ids == [track_id]
+        assert track_ids == [track_id_2]
         section_state.selected_sections.get.assert_called_once()
-        get_section_by_id.assert_called_once_with([section_id])
-        tracks_intersecting_sections.assert_called_once_with([section])
+        get_section_by_id.assert_called_once_with({section_2.id})
+        tracks_intersecting_sections.assert_called_once_with([section_2])
 
 
 class TestTracksIntersectingGivenSections:
-    def test_get_ids(self) -> None:
-        section_id_1 = SectionId("section-1")
-        section_ids = [section_id_1]
-        section_1 = Mock(spec=Section)
-        section_1.id = section_id_1
+    def test_get_ids(
+        self,
+        section_1: Mock,
+        track_id_1: TrackId,
+        tracks_intersecting_sections: Mock,
+        get_section_by_id: Mock,
+        intersection_repository: Mock,
+    ) -> None:
+        section_ids = {section_1.id}
         sections = [section_1]
-        section_1_tracks = {TrackId("track-1")}
-        original_track_ids = {section_id_1: section_1_tracks}
-        tracks_intersecting_sections = Mock(spec=TracksIntersectingSections)
-        get_section_by_id = Mock(spec=GetSectionsById)
-        intersection_repository = Mock(spec=IntersectionRepository)
+        section_1_tracks = {track_id_1}
+        original_track_ids = {section_1.id: section_1_tracks}
         intersection_repository.get.return_value = {}
         get_section_by_id.return_value = sections
         tracks_intersecting_sections.return_value = original_track_ids
@@ -97,43 +164,101 @@ class TestTracksIntersectingGivenSections:
         track_ids = provider.get_ids()
 
         assert track_ids == section_1_tracks
+        intersection_repository.get.assert_called_once_with(section_ids)
         get_section_by_id.assert_called_once_with(section_ids)
         tracks_intersecting_sections.assert_called_once_with(sections)
         intersection_repository.store.assert_called_once_with(original_track_ids)
 
+    def test_get_existing_ids(
+        self,
+        section_1: Mock,
+        track_id_1: TrackId,
+        tracks_intersecting_sections: Mock,
+        get_section_by_id: Mock,
+        intersection_repository: Mock,
+    ) -> None:
+        section_ids = {section_1.id}
+        sections = [section_1]
+        section_1_tracks = {track_id_1}
+        original_intersections = {section_1.id: section_1_tracks}
+        intersection_repository.get.return_value = original_intersections
+        get_section_by_id.return_value = sections
+        tracks_intersecting_sections.return_value = original_intersections
+        provider = TracksIntersectingGivenSections(
+            section_ids,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
+        )
+
+        track_ids = provider.get_ids()
+
+        assert track_ids == section_1_tracks
+        intersection_repository.get.assert_called_once_with(section_ids)
+        get_section_by_id.assert_not_called()
+        tracks_intersecting_sections.assert_not_called()
+        intersection_repository.store.assert_not_called()
+
+    def test_get_merged_ids(
+        self,
+        section_1: Mock,
+        section_2: Mock,
+        track_id_1: TrackId,
+        track_id_2: TrackId,
+        tracks_intersecting_sections: Mock,
+        get_section_by_id: Mock,
+        intersection_repository: Mock,
+    ) -> None:
+        section_ids = {section_1.id, section_2.id}
+        sections_to_process = [section_2]
+        section_ids_to_process = {section_2.id}
+        section_1_tracks = {track_id_1}
+        section_2_tracks = {track_id_2}
+        existing_intersections = {section_1.id: section_1_tracks}
+        new_intersections = {section_2.id: section_2_tracks}
+        intersection_repository.get.return_value = existing_intersections
+        get_section_by_id.return_value = sections_to_process
+        tracks_intersecting_sections.return_value = new_intersections
+        provider = TracksIntersectingGivenSections(
+            section_ids,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
+        )
+
+        track_ids = provider.get_ids()
+
+        assert track_ids == {track_id_1, track_id_2}
+        intersection_repository.get.assert_called_once_with(section_ids)
+        get_section_by_id.assert_called_once_with(section_ids_to_process)
+        tracks_intersecting_sections.assert_called_once_with(sections_to_process)
+        intersection_repository.store.assert_called_once_with(new_intersections)
+
 
 class TestTracksNotIntersectingSelection:
-    def test_get_ids(self) -> None:
-        first_track_id = TrackId("1")
-        second_track_id = TrackId("2")
-        first_track = Mock(spec=Track)
-        first_track.id = first_track_id
-        second_track = Mock(spec=Track)
-        second_track.id = second_track_id
+    def test_get_ids(self, track_1: Mock, track_2: Mock) -> None:
         track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = [first_track, second_track]
+        track_repository.get_all.return_value = [track_1, track_2]
 
         tracks_intersecting_sections = Mock(spec=TrackIdProvider)
-        tracks_intersecting_sections.get_ids.return_value = {first_track_id}
+        tracks_intersecting_sections.get_ids.return_value = {track_1.id}
 
         tracks_not_intersecting_sections = TracksNotIntersectingSelection(
             tracks_intersecting_sections, track_repository
         )
         track_ids = list(tracks_not_intersecting_sections.get_ids())
 
-        assert track_ids == [second_track_id]
+        assert track_ids == [track_2.id]
         track_repository.get_all.assert_called_once()
         tracks_intersecting_sections.get_ids.assert_called_once()
 
-    def test_no_selection_returns_all_tracks(self) -> None:
-        first_track_id = TrackId("1")
-        second_track_id = TrackId("2")
-        first_track = Mock(spec=Track)
-        first_track.id = first_track_id
-        second_track = Mock(spec=Track)
-        second_track.id = second_track_id
+    def test_no_selection_returns_all_tracks(
+        self, track_1: Mock, track_2: Mock
+    ) -> None:
+        track_1 = Mock(spec=Track)
+        track_2 = Mock(spec=Track)
         track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = [first_track, second_track]
+        track_repository.get_all.return_value = [track_1, track_2]
 
         tracks_intersecting_sections = Mock(spec=TrackIdProvider)
         tracks_intersecting_sections.get_ids.return_value = {}
@@ -143,7 +268,7 @@ class TestTracksNotIntersectingSelection:
         )
         track_ids = tracks_not_intersecting_sections.get_ids()
 
-        assert set(track_ids) == {first_track_id, second_track_id}
+        assert set(track_ids) == {track_1.id, track_2.id}
         track_repository.get_all.assert_called_once()
         tracks_intersecting_sections.get_ids.assert_called_once()
 

@@ -15,5 +15,5 @@ class PythonIntersectionRepository(IntersectionRepository):
         for section, tracks in intersections.items():
             self._intersections[section].update(tracks)
 
-    def get(self, sections: list[SectionId]) -> list[TrackId]:
+    def get(self, sections: set[SectionId]) -> dict[SectionId, set[TrackId]]:
         raise NotImplementedError

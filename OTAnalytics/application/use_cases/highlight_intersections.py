@@ -16,7 +16,7 @@ class IntersectionRepository(ABC):
     def store(self, intersections: dict[SectionId, set[TrackId]]) -> None:
         raise NotImplementedError
 
-    def get(self, sections: list[SectionId]) -> list[TrackId]:
+    def get(self, sections: set[SectionId]) -> dict[SectionId, set[TrackId]]:
         raise NotImplementedError
 
 
@@ -44,7 +44,7 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
     def get_ids(self) -> set[TrackId]:
         currently_selected_sections = self._section_state.selected_sections.get()
         return TracksIntersectingGivenSections(
-            currently_selected_sections,
+            set(currently_selected_sections),
             self._tracks_intersecting_sections,
             self._get_section_by_id,
             self._intersection_repository,
@@ -62,7 +62,7 @@ class TracksIntersectingGivenSections(TrackIdProvider):
 
     def __init__(
         self,
-        section_ids: list[SectionId],
+        section_ids: set[SectionId],
         tracks_intersecting_sections: TracksIntersectingSections,
         get_section_by_id: GetSectionsById,
         intersection_repository: IntersectionRepository,
@@ -73,10 +73,17 @@ class TracksIntersectingGivenSections(TrackIdProvider):
         self._intersection_repository = intersection_repository
 
     def get_ids(self) -> set[TrackId]:
-        sections = self._get_section_by_id(self._section_ids)
-        intersections = self._tracks_intersecting_sections(sections)
-        self._intersection_repository.store(intersections)
-        return set.union(*intersections.values())
+        existing_intersections = self._intersection_repository.get(self._section_ids)
+        section_ids_to_process = self._section_ids - existing_intersections.keys()
+        all_intersections = set()
+        for intersection in existing_intersections.values():
+            all_intersections.update(intersection)
+        if section_ids_to_process:
+            sections = self._get_section_by_id(section_ids_to_process)
+            intersections = self._tracks_intersecting_sections(sections)
+            self._intersection_repository.store(intersections)
+            all_intersections.update(*intersections.values())
+        return all_intersections
 
 
 class TracksNotIntersectingSelection(TrackIdProvider):
