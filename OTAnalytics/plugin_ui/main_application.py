@@ -298,7 +298,6 @@ class ApplicationStarter:
             datastore._track_to_video_repository
         )
 
-        # section_provider = section_repository.get_all
         section_provider = MissingEventsSectionProvider(
             section_repository, event_repository
         )
