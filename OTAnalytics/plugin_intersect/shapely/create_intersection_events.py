@@ -260,49 +260,48 @@ class ShapelyRunIntersect(RunIntersect):
         self._get_tracks = get_tracks
 
     def __call__(self, sections: Iterable[Section]) -> list[Event]:
-        tracks = self._get_tracks()
-        grouped_sections = self.group_sections_by_offset(sections)
-        tasks = []
-        for offset, section_group in grouped_sections.items():
-            tasks.append((tracks, section_group, offset))
+        filtered_tracks = self._get_tracks.as_dataset()
 
+        batches = filtered_tracks.split(self._intersect_parallelizer.num_processes)
+
+        tasks = [(batch, sections) for batch in batches]
         return self._intersect_parallelizer.execute(_create_events, tasks)
 
-    @staticmethod
-    def group_sections_by_offset(
-        sections: Iterable[Section],
-    ) -> Mapping[RelativeOffsetCoordinate, Iterable[Section]]:
-        grouped_sections: dict[RelativeOffsetCoordinate, list[Section]] = {}
-        for section in sections:
-            offset = section.get_offset(EventType.SECTION_ENTER)
-            if section_group := grouped_sections.get(offset, []):
-                section_group.append(section)
-            else:
-                grouped_sections[offset] = [section]
-        return grouped_sections
+
+def _create_events(tracks: Iterable[Track], sections: Iterable[Section]) -> list[Event]:
+    grouped_sections = group_sections_by_offset(sections)
+    events = []
+    for offset, section_group in grouped_sections.items():
+        geometry_builder = ShapelyGeometryBuilder()
+        track_lookup_table = ShapelyTrackLookupTable(dict(), geometry_builder, offset)
+        line_section_intersection_strategy = ShapelyIntersectBySmallestTrackSegments(
+            geometry_builder, track_lookup_table
+        )
+        area_section_intersection_strategy = ShapelyIntersectAreaByTrackPoints(
+            geometry_builder, track_lookup_table
+        )
+        event_builder = SectionEventBuilder()
+
+        create_intersection_events = ShapelyCreateIntersectionEvents(
+            intersect_line_section=line_section_intersection_strategy,
+            intersect_area_section=area_section_intersection_strategy,
+            geometry_builder=geometry_builder,
+            tracks=tracks,
+            sections=section_group,
+            event_builder=event_builder,
+        )
+        events.extend(create_intersection_events.create())
+    return events
 
 
-def _create_events(
-    tracks: Iterable[Track],
+def group_sections_by_offset(
     sections: Iterable[Section],
-    offset: RelativeOffsetCoordinate,
-) -> list[Event]:
-    geometry_builder = ShapelyGeometryBuilder()
-    track_lookup_table = ShapelyTrackLookupTable(dict(), geometry_builder, offset)
-    line_section_intersection_strategy = ShapelyIntersectBySmallestTrackSegments(
-        geometry_builder, track_lookup_table
-    )
-    area_section_intersection_strategy = ShapelyIntersectAreaByTrackPoints(
-        geometry_builder, track_lookup_table
-    )
-    event_builder = SectionEventBuilder()
-
-    create_intersection_events = ShapelyCreateIntersectionEvents(
-        intersect_line_section=line_section_intersection_strategy,
-        intersect_area_section=area_section_intersection_strategy,
-        geometry_builder=geometry_builder,
-        tracks=tracks,
-        sections=sections,
-        event_builder=event_builder,
-    )
-    return create_intersection_events.create()
+) -> Mapping[RelativeOffsetCoordinate, Iterable[Section]]:
+    grouped_sections: dict[RelativeOffsetCoordinate, list[Section]] = {}
+    for section in sections:
+        offset = section.get_offset(EventType.SECTION_ENTER)
+        if section_group := grouped_sections.get(offset, []):
+            section_group.append(section)
+        else:
+            grouped_sections[offset] = [section]
+    return grouped_sections

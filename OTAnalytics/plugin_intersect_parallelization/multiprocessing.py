@@ -5,7 +5,6 @@ from typing import Callable, Iterable, Sequence
 from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.intersect import IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
@@ -32,13 +31,8 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
 
     def execute(
         self,
-        intersect: Callable[
-            [Iterable[Track], Iterable[Section], RelativeOffsetCoordinate],
-            Iterable[Event],
-        ],
-        tasks: Sequence[
-            tuple[Iterable[Track], Iterable[Section], RelativeOffsetCoordinate]
-        ],
+        intersect: Callable[[Iterable[Track], Iterable[Section]], Iterable[Event]],
+        tasks: Sequence[tuple[Iterable[Track], Iterable[Section]]],
     ) -> list[Event]:
         logger().debug(
             f"Start intersection in parallel with {self._num_processes} processes."

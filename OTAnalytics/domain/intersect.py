@@ -2,12 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable, Iterable, Sequence
 
 from OTAnalytics.domain.event import Event, EventBuilder
-from OTAnalytics.domain.geometry import (
-    Coordinate,
-    Line,
-    Polygon,
-    RelativeOffsetCoordinate,
-)
+from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
 
@@ -106,13 +101,8 @@ class IntersectParallelizationStrategy(ABC):
     @abstractmethod
     def execute(
         self,
-        intersect: Callable[
-            [Iterable[Track], Iterable[Section], RelativeOffsetCoordinate],
-            Iterable[Event],
-        ],
-        tasks: Sequence[
-            tuple[Iterable[Track], Iterable[Section], RelativeOffsetCoordinate]
-        ],
+        intersect: Callable[[Iterable[Track], Iterable[Section]], Iterable[Event]],
+        tasks: Sequence[tuple[Iterable[Track], Iterable[Section]]],
     ) -> list[Event]:
         """Executes the intersection of tracks with sections with the implemented
         parallelization strategy.
@@ -120,7 +110,7 @@ class IntersectParallelizationStrategy(ABC):
         Args:
             intersect (Callable[[Track, Iterable[Section]], Iterable[Event]]): the
                 function to be executed on an iterable of tracks and sections.
-            tasks (Iterable[Track])
+            tasks (tuple[Iterable[Track], Iterable[Section])
 
         Returns:
             Iterable[Event]: the generated events.
