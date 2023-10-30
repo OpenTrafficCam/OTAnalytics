@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Iterable, Optional
+from math import ceil
+from typing import Any, Iterable, Optional, Sequence
 
 import pandas
+from more_itertools import batched
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
@@ -219,8 +221,17 @@ class PandasTrackDataset(TrackDataset):
     def as_dataframe(self) -> DataFrame:
         return self._dataset
 
-    def split(self, chunks: int) -> list["TrackDataset"]:
-        raise NotImplementedError
+    def split(self, batches: int) -> Sequence["TrackDataset"]:
+        all_ids = self._dataset[track.TRACK_ID].unique()
+        dataset_size = len(all_ids)
+        batch_size = ceil(dataset_size / batches)
+
+        new_batches: list["TrackDataset"] = []
+        for batch_ids in batched(all_ids, batch_size):
+            batch_dataset = self._dataset[self._dataset[track.TRACK_ID].isin(batch_ids)]
+            new_batches.append(PandasTrackDataset(batch_dataset, self._calculator))
+
+        return new_batches
 
     def __len__(self) -> int:
         return len(self._dataset[track.TRACK_ID].unique())

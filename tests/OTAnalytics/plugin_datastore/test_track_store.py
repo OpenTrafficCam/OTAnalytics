@@ -1,7 +1,8 @@
+import pytest
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track import Track, TrackDataset, TrackId
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
@@ -44,6 +45,14 @@ class TestPandasTrack:
 
 
 class TestPandasTrackDataset:
+    def _create_dataset(self, size: int) -> TrackDataset:
+        tracks = []
+        for i in range(1, size + 1):
+            tracks.append(self.__build_track(str(i)))
+
+        dataset = PandasTrackDataset.from_list(tracks)
+        return dataset
+
     def test_use_track_classificator(self) -> None:
         first_detection_class = "car"
         track_class = "pedestrian"
@@ -169,3 +178,27 @@ class TestPandasTrackDataset:
         dataset = PandasTrackDataset.from_list([first_track, second_track])
 
         assert len(dataset) == 2
+
+    @pytest.mark.parametrize(
+        "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]
+    )
+    def test_split(self, num_tracks: int, batches: int, expected_batches: int) -> None:
+        dataset = self._create_dataset(num_tracks)
+        assert len(dataset) == num_tracks
+        split_datasets = dataset.split(batches)
+
+        assert len(dataset) == sum([len(_dataset) for _dataset in split_datasets])
+        assert len(split_datasets) == expected_batches
+
+        it = iter(dataset)
+
+        for idx, _dataset in enumerate(split_datasets):
+            for expected_track in _dataset:
+                it_track = next(it)
+                assert expected_track.id == it_track.id
+                assert len(expected_track.detections) == len(it_track.detections)
+
+                for detection, expected_detection in zip(
+                    expected_track.detections, it_track.detections
+                ):
+                    assert_equal_detection_properties(detection, expected_detection)

@@ -385,5 +385,5 @@ class TestPythonTrackDataset:
         it = iter(dataset)
         for idx, _dataset in enumerate(split_datasets):
             for track in _dataset:
-                it_track = next(it)
-                assert track == it_track
+                expected_track = next(it)
+                assert track == expected_track

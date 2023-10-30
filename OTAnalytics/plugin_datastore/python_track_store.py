@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Sequence
 
 from more_itertools import batched
 
@@ -290,7 +290,7 @@ class PythonTrackDataset(TrackDataset):
     def as_list(self) -> list[Track]:
         return list(self._tracks.values())
 
-    def split(self, batches: int) -> list["TrackDataset"]:
+    def split(self, batches: int) -> Sequence["TrackDataset"]:
         dataset_size = len(self._tracks)
         batch_size = ceil(dataset_size / batches)
 

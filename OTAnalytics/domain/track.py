@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Iterator, Optional
+from typing import Iterable, Iterator, Optional, Sequence
 
 from PIL import Image
 
@@ -405,7 +405,7 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def split(self, chunks: int) -> list["TrackDataset"]:
+    def split(self, chunks: int) -> Sequence["TrackDataset"]:
         raise NotImplementedError
 
     @abstractmethod
