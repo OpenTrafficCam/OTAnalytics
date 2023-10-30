@@ -5,6 +5,7 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track import (
     RemoveMultipleTracksError,
     Track,
+    TrackDataset,
     TrackFileRepository,
     TrackId,
     TrackRepository,
@@ -147,3 +148,19 @@ class GetTracksFromIds:
                 tracks.append(track)
 
         return tracks
+
+
+class GetTracksAsBatches:
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository: TrackRepository = track_repository
+
+    def get(self, batches: int) -> Iterable[TrackDataset]:
+        """Get tracks in the repository as a batches.
+
+        Args:
+            batches (int): the number of batches.
+
+        Returns:
+            Iterable[TrackDataset]: the batches of tracks.
+        """
+        return self._track_repository.split(batches)

@@ -9,6 +9,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     GetAllTrackIds,
     GetAllTracks,
+    GetTracksAsBatches,
     GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
@@ -113,6 +114,18 @@ class TestGetTracksWithoutSingleDetections:
 
         assert actual_tracks == [track]
         track_repository.get_all.assert_called_once()
+
+
+class TestGetTrackBatches:
+    def test_get(self, track_repository: Mock) -> None:
+        expected_batches = [Mock(), Mock()]
+        track_repository.split.return_value = expected_batches
+
+        get_track_batches = GetTracksAsBatches(track_repository)
+        result = get_track_batches.get(batches=4)
+
+        assert result == expected_batches
+        track_repository.split.assert_called_once_with(4)
 
 
 class TestGetAllTrackFiles:
