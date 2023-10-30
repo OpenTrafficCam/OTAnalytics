@@ -155,7 +155,7 @@ class GetTracksAsBatches:
         self._track_repository: TrackRepository = track_repository
 
     def get(self, batches: int) -> Iterable[TrackDataset]:
-        """Get tracks in the repository as a batches.
+        """Get tracks in the repository as batches.
 
         Args:
             batches (int): the number of batches.

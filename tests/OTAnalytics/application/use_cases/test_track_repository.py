@@ -116,7 +116,7 @@ class TestGetTracksWithoutSingleDetections:
         track_repository.get_all.assert_called_once()
 
 
-class TestGetTrackBatches:
+class TestGetTracksAsBatches:
     def test_get(self, track_repository: Mock) -> None:
         expected_batches = [Mock(), Mock()]
         track_repository.split.return_value = expected_batches
