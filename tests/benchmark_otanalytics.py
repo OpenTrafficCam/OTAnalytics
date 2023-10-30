@@ -47,6 +47,11 @@ def ottrk_file(test_data_dir: Path) -> Path:
 
 
 @pytest.fixture
+def ottrk_file_2hours(test_data_dir: Path) -> Path:
+    return Path(test_data_dir / "OTCamera19_FR20_2023-05-24_11-15-00.ottrk")
+
+
+@pytest.fixture
 def otflow_file(test_data_dir: Path) -> Path:
     return test_data_dir / Path("OTCamera19_FR20_2023-05-24.otflow")
 
@@ -249,6 +254,72 @@ class TestProfile:
         otflow_file: Path,
     ) -> None:
         track_parse_result = python_ottrk_parser.parse(ottrk_file)
+        track_repository.add_all(track_parse_result.tracks)
+        sections, _ = otflow_parser.parse(otflow_file)
+
+        benchmark.pedantic(
+            tracks_intersecting_sections,
+            args=(sections,),
+            rounds=2,
+            iterations=4,
+            warmup_rounds=1,
+        )
+
+    def test_load_ottrks_with_python_parser_2hour(
+        self,
+        benchmark: BenchmarkFixture,
+        python_ottrk_parser: TrackParser,
+        ottrk_file_2hours: Path,
+    ) -> None:
+        benchmark.pedantic(python_ottrk_parser.parse, args=(ottrk_file_2hours,))
+
+    def test_load_ottrks_with_pandas_parser_2hour(
+        self,
+        benchmark: BenchmarkFixture,
+        panda_ottrk_parser: TrackParser,
+        ottrk_file_2hours: Path,
+    ) -> None:
+        benchmark.pedantic(panda_ottrk_parser.parse, args=(ottrk_file_2hours,))
+
+    def test_create_events_2hour(
+        self,
+        benchmark: BenchmarkFixture,
+        create_events: CreateEvents,
+        clear_events: ClearAllEvents,
+        python_ottrk_parser: OttrkParser,
+        otflow_parser: FlowParser,
+        track_repository: TrackRepository,
+        flow_repository: FlowRepository,
+        section_repository: SectionRepository,
+        ottrk_file_2hours: Path,
+        otflow_file: Path,
+    ) -> None:
+        def setup() -> None:
+            clear_events()
+
+        track_parse_result = python_ottrk_parser.parse(ottrk_file_2hours)
+        track_repository.add_all(track_parse_result.tracks)
+        sections, flows = otflow_parser.parse(otflow_file)
+        section_repository.add_all(sections)
+        flow_repository.add_all(flows)
+
+        benchmark.pedantic(
+            create_events, setup=setup, rounds=5, iterations=1, warmup_rounds=1
+        )
+
+    def test_tracks_intersecting_sections_2hour(
+        self,
+        benchmark: BenchmarkFixture,
+        python_ottrk_parser: TrackParser,
+        otflow_parser: FlowParser,
+        track_repository: TrackRepository,
+        section_repository: SectionRepository,
+        flow_repository: FlowRepository,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        ottrk_file_2hours: Path,
+        otflow_file: Path,
+    ) -> None:
+        track_parse_result = python_ottrk_parser.parse(ottrk_file_2hours)
         track_repository.add_all(track_parse_result.tracks)
         sections, _ = otflow_parser.parse(otflow_file)
 
