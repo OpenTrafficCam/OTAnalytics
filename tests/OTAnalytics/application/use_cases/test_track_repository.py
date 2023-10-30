@@ -14,13 +14,13 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
 )
 from OTAnalytics.domain.track import (
-    PythonTrackDataset,
     Track,
     TrackDataset,
     TrackFileRepository,
     TrackId,
     TrackRepository,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 
 
 @pytest.fixture

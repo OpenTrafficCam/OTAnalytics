@@ -27,10 +27,7 @@ from OTAnalytics.domain.section import (
     SectionId,
 )
 from OTAnalytics.domain.track import (
-    ByMaxConfidence,
     Detection,
-    PythonTrack,
-    PythonTrackDataset,
     Track,
     TrackClassificationCalculator,
     TrackId,
@@ -38,6 +35,11 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_datastore.python_track_store import (
+    ByMaxConfidence,
+    PythonTrack,
+    PythonTrackDataset,
+)
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,

@@ -50,7 +50,11 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
-from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
+from OTAnalytics.domain.track import TrackRepository
+from OTAnalytics.plugin_datastore.python_track_store import (
+    ByMaxConfidence,
+    PythonTrackDataset,
+)
 from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
     ShapelyRunIntersect,
 )
@@ -246,7 +250,7 @@ class TestOTAnalyticsCli:
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
-        track_repository = TrackRepository()
+        track_repository = TrackRepository(PythonTrackDataset())
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()

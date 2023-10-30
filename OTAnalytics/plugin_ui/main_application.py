@@ -101,13 +101,15 @@ from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import (
-    ByMaxConfidence,
-    PythonTrackDataset,
     TrackFileRepository,
     TrackIdProvider,
     TrackRepository,
 )
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.python_track_store import (
+    ByMaxConfidence,
+    PythonTrackDataset,
+)
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
     ShapelyRunIntersect,

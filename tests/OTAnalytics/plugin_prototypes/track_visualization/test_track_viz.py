@@ -14,15 +14,17 @@ from OTAnalytics.domain.track import (
     TRACK_CLASSIFICATION,
     TRACK_ID,
     Detection,
-    PythonDetection,
-    PythonTrack,
-    PythonTrackDataset,
     Track,
     TrackId,
     TrackIdProvider,
     TrackImage,
     TrackRepository,
     TrackRepositoryEvent,
+)
+from OTAnalytics.plugin_datastore.python_track_store import (
+    PythonDetection,
+    PythonTrack,
+    PythonTrackDataset,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,

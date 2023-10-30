@@ -1,7 +1,8 @@
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import PythonTrackDataset, Track, TrackId
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
     PandasTrack,

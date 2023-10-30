@@ -26,8 +26,9 @@ from OTAnalytics.domain.event import (
 )
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import Detection, PythonDetection, TrackId
+from OTAnalytics.domain.track import Detection, TrackId
 from OTAnalytics.domain.types import EventType, EventTypeParseError
+from OTAnalytics.plugin_datastore.python_track_store import PythonDetection
 
 
 @pytest.fixture

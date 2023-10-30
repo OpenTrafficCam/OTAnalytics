@@ -35,9 +35,6 @@ from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     Detection,
-    PythonDetection,
-    PythonTrack,
-    PythonTrackDataset,
     Track,
     TrackClassificationCalculator,
     TrackDataset,
@@ -47,6 +44,11 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
+from OTAnalytics.plugin_datastore.python_track_store import (
+    PythonDetection,
+    PythonTrack,
+    PythonTrackDataset,
+)
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"

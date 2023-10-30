@@ -12,13 +12,8 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
 )
 from OTAnalytics.domain.section import LineSection, SectionId
-from OTAnalytics.domain.track import (
-    Detection,
-    PythonDetection,
-    PythonTrack,
-    Track,
-    TrackId,
-)
+from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 
 
 @pytest.fixture
