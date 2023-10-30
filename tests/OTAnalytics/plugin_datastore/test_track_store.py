@@ -162,3 +162,10 @@ class TestPandasTrackDataset:
         removed_track_set = dataset.remove(first_track.id)
 
         assert PandasTrackDataset.from_list([second_track]) == removed_track_set
+
+    def test_len(self) -> None:
+        first_track = self.__build_track("1")
+        second_track = self.__build_track("2")
+        dataset = PandasTrackDataset.from_list([first_track, second_track])
+
+        assert len(dataset) == 2

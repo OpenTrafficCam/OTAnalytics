@@ -223,7 +223,7 @@ class PandasTrackDataset(TrackDataset):
         raise NotImplementedError
 
     def __len__(self) -> int:
-        raise NotImplementedError
+        return len(self._dataset[track.TRACK_ID].unique())
 
 
 def _assign_track_classification(
