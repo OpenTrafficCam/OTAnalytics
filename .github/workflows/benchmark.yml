@@ -21,13 +21,13 @@ jobs:
         run: gh release download release -R platomo/OpenTrafficCam-testdata -D tests/data
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: unzip
+      - name: Unzip test data
         run: |
           cd tests/data
           unzip \*.zip
           rm *.zip
           cd ..
-      - name: Run benchmark
+      - name: Install requirements
         run: |
           python -m pip install --upgrade pip
           if [ -f "requirements.txt" ]; then
@@ -36,7 +36,7 @@ jobs:
           if [ -f "requirements-dev.txt" ]; then
               pip install -r requirements-dev.txt
           fi
-      - name: Run test
+      - name: Run benchmark tests
         run: pytest ./tests/benchmark_otanalytics.py --benchmark-json output.json
       - name: Store benchmark result - separate results repo
         uses: benchmark-action/github-action-benchmark@v1
@@ -46,7 +46,6 @@ jobs:
           output-file-path: output.json
           github-token: ${{ secrets.OTANALYTICS_GITHUBPAGE_TOKEN }}
           auto-push: true
-          # Show alert with commit comment on detecting possible performance regression
           alert-threshold: '200%'
           comment-on-alert: true
           fail-on-alert: true
