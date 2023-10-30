@@ -42,8 +42,14 @@ class GetTracksWithoutSingleDetections:
         Returns:
             list[Track]: tracks with at least two detections.
         """
+        return self.as_list()
+
+    def as_list(self) -> list[Track]:
+        return self.as_dataset().as_list()
+
+    def as_dataset(self) -> TrackDataset:
         tracks = self._track_repository.get_all()
-        return [track for track in tracks.as_list() if len(track.detections) > 1]
+        return tracks.filter_by_min_detection_length(1)
 
 
 class GetAllTrackIds:

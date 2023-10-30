@@ -387,3 +387,12 @@ class TestPythonTrackDataset:
             for track in _dataset:
                 expected_track = next(it)
                 assert track == expected_track
+
+    def test_filter_by_minimum_detection_length(
+        self, first_track: Track, second_track: Track
+    ) -> None:
+        dataset = PythonTrackDataset().add_all([first_track, second_track])
+
+        filtered_dataset = dataset.filter_by_min_detection_length(3)
+
+        assert list(filtered_dataset) == [second_track]

@@ -301,3 +301,11 @@ class PythonTrackDataset(TrackDataset):
 
     def __len__(self) -> int:
         return len(self._tracks)
+
+    def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
+        filtered_tracks = {
+            _id: track
+            for _id, track in self._tracks.items()
+            if len(track.detections) >= length
+        }
+        return PythonTrackDataset(filtered_tracks, self._calculator)

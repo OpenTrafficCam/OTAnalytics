@@ -127,14 +127,11 @@ class TestPandasTrackDataset:
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
 
-    def __build_track(self, track_id: str) -> Track:
+    def __build_track(self, track_id: str, length: int = 5) -> Track:
         builder = TrackBuilder()
         builder.add_track_id(track_id)
-        builder.append_detection()
-        builder.append_detection()
-        builder.append_detection()
-        builder.append_detection()
-        builder.append_detection()
+        for i in range(0, length):
+            builder.append_detection()
         return builder.build_track()
 
     def test_get_by_id(self) -> None:
@@ -202,3 +199,13 @@ class TestPandasTrackDataset:
                     expected_track.detections, it_track.detections
                 ):
                     assert_equal_detection_properties(detection, expected_detection)
+
+    def test_filter_by_minimum_detection_length(self) -> None:
+        first_track = self.__build_track("1", length=5)
+        second_track = self.__build_track("2", length=10)
+        dataset = PandasTrackDataset.from_list([first_track, second_track])
+
+        filtered_dataset = dataset.filter_by_min_detection_length(7)
+        assert len(filtered_dataset) == 1
+        for actual_track, expected_track in zip(filtered_dataset, [second_track]):
+            assert_equal_track_properties(actual_track, expected_track)

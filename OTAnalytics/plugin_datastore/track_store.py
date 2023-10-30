@@ -236,6 +236,19 @@ class PandasTrackDataset(TrackDataset):
     def __len__(self) -> int:
         return len(self._dataset[track.TRACK_ID].unique())
 
+    def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
+        detection_counts_per_track = self._dataset.groupby([track.TRACK_ID])[
+            track.CLASSIFICATION
+        ].count()
+        filtered_ids = detection_counts_per_track[
+            detection_counts_per_track > length
+        ].index
+
+        filtered_dataset = self._dataset.loc[
+            self._dataset[track.TRACK_ID].isin(filtered_ids)
+        ]
+        return PandasTrackDataset(filtered_dataset, self._calculator)
+
 
 def _assign_track_classification(
     data: DataFrame, calculator: PandasTrackClassificationCalculator

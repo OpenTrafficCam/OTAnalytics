@@ -413,6 +413,18 @@ class TrackDataset(ABC):
         """Number of tracks in the dataset."""
         raise NotImplementedError
 
+    @abstractmethod
+    def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
+        """Filter tracks by the minimum length of detections.
+
+        Args:
+            length (int): minimum number detections a track should have.
+
+        Returns:
+             TrackDataset: the filtered dataset.
+        """
+        raise NotImplementedError
+
 
 class TrackRepository:
     def __init__(self, dataset: TrackDataset) -> None:
