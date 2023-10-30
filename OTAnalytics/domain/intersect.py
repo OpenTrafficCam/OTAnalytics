@@ -98,6 +98,11 @@ class IntersectImplementation(ABC):
 
 
 class IntersectParallelizationStrategy(ABC):
+    @property
+    @abstractmethod
+    def num_processes(self) -> int:
+        raise NotImplementedError
+
     @abstractmethod
     def execute(
         self,

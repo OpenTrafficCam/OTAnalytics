@@ -18,6 +18,10 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
         self._validate_num_processes(num_processes)
         self._num_processes = num_processes
 
+    @property
+    def num_processes(self) -> int:
+        return self._num_processes
+
     def _validate_num_processes(self, value: int) -> None:
         if value < 1:
             raise ValueError("Number of processes must be greater than zero.")
