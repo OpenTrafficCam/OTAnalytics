@@ -69,13 +69,15 @@ class CustomCTkTabview(CTkTabview):
 
         self.grid_rowconfigure(0, weight=0, minsize=0)
         self.grid_rowconfigure(
-            1, weight=0, minsize=self._apply_widget_scaling(self._top_button_overhang)
+            1,
+            weight=0,
+            minsize=self._apply_widget_scaling(self._outer_button_overhang),
         )
         self.grid_rowconfigure(
             2,
             weight=0,
             minsize=self._apply_widget_scaling(
-                self._button_height - self._top_button_overhang
+                self._button_height - self._outer_button_overhang
             ),
         )
         self.grid_rowconfigure(3, weight=1)
