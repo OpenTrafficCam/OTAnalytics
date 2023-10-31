@@ -28,11 +28,12 @@ class IntersectionRepository(ABC):
 
 class TracksIntersectingSelectedSections(TrackIdProvider):
     """Returns track ids intersecting selected sections.
+
     Args:
-        section_state (SectionState): the section state
+        section_state (SectionState): the section state.
         tracks_intersecting_sections (TracksIntersectingSections): get track ids
-            intersecting sections
-        get_section_by_id (GetSectionsById): use case to get sections by id
+            intersecting sections.
+        get_section_by_id (GetSectionsById): use case to get sections by id.
     """
 
     def __init__(
@@ -59,11 +60,12 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
 
 class TracksIntersectingGivenSections(TrackIdProvider):
     """Returns track ids intersecting given sections.
+
     Args:
-        section_ids (list[SectionId]): the sections to identify intersection tracks
+        section_ids (list[SectionId]): the sections to identify intersection tracks.
         tracks_intersecting_sections (TracksIntersectingSections): get track ids
-            intersecting sections
-        get_section_by_id (GetSectionsById): use case to get sections by id
+            intersecting sections.
+        get_section_by_id (GetSectionsById): use case to get sections by id.
     """
 
     def __init__(
@@ -98,9 +100,10 @@ class TracksIntersectingGivenSections(TrackIdProvider):
 
 class TracksNotIntersectingSelection(TrackIdProvider):
     """Returns track ids that are not intersecting the current selection sections.
+
     Args:
-        track_id_provider (TrackIdProvider): tracks intersecting the current selection
-        track_repository (EventRepository): the track repository
+        track_id_provider (TrackIdProvider): tracks intersecting the current selection.
+        track_repository (EventRepository): the track repository.
     """
 
     def __init__(
@@ -119,11 +122,12 @@ class TracksNotIntersectingSelection(TrackIdProvider):
 
 class TracksAssignedToSelectedFlows(TrackIdProvider):
     """Returns track ids that are assigned to the currently selected flows.
+
     Args:
-        assigner (RoadUserAssigner): to assign tracks to flows
-        event_repository (EventRepository): the event repository
-        flow_repository (FlowRepository): the track repository
-        flow_state (FlowState): the currently selected flows
+        assigner (RoadUserAssigner): to assign tracks to flows.
+        event_repository (EventRepository): the event repository.
+        flow_repository (FlowRepository): the track repository.
+        flow_state (FlowState): the currently selected flows.
     """
 
     def __init__(
@@ -155,11 +159,12 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
 
 class TracksAssignedToGivenFlows(TrackIdProvider):
     """Returns track ids that are assigned to the given flows.
+
     Args:
-        assigner (RoadUserAssigner): to assign tracks to flows
-        event_repository (EventRepository): the event repository
-        flow_repository (FlowRepository): the track repository
-        flow_ids (list[FlowId]): the flows fo identify assigned tracks for
+        assigner (RoadUserAssigner): to assign tracks to flows.
+        event_repository (EventRepository): the event repository.
+        flow_repository (FlowRepository): the track repository.
+        flow_ids (list[FlowId]): the flows fo identify assigned tracks for.
     """
 
     def __init__(
