@@ -118,7 +118,7 @@ class CachedPlotter(Plotter):
 
     It can listen to changes of observable properties to invalidate the cache.
     It can also be registered at subjects via:
-        ubject.register(cached_plotter.invalidate_cache)
+        subject.register(cached_plotter.invalidate_cache)
     """
 
     def __init__(
@@ -155,11 +155,12 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
 
     Args:
         plotter_factory (EntityPlotterFactory): used to create delegate plotters for
-        each managed entity.
+            each managed entity.
         visibility_subject (VisibilitySubject): listen to changes of the
-        VisibilitySubject to toggle the visibility of the entity layers.
+            VisibilitySubject to toggle the visibility of the entity layers.
         entity_lookup (AvailableEntityProvider): used to check which entities are
-        remaining (since entity deletion is notified by "[]" in entity repositories).
+            remaining (since entity deletion is notified by "[]"
+            in entity repositories).
     """
 
     def __init__(
