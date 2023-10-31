@@ -150,12 +150,10 @@ class EventToFlowResolver:
 
     def _resolve_flow_id_for(self, section_id: Optional[SectionId]) -> set[FlowId]:
         if section_id:
-            return set(
-                [
-                    flow.id
-                    for flow in self._flow_repository.flows_using_section(section_id)
-                ]
-            )
+            return {
+                flow.id
+                for flow in self._flow_repository.flows_using_section(section_id)
+            }
         return set()
 
 
