@@ -260,7 +260,7 @@ class SectionState(SectionListObserver):
         Notify the state about changes in the section list.
 
         Args: section_event (SectionRepositoryEvent): notification about section
-            repository changes
+            repository changes.
         """
         if not section_event.added:
             self.selected_sections.set([])
@@ -387,7 +387,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         """Will update the image
 
         Args:
-            _ (bool): weather layer is enabled or disabled.
+            _ (bool): whether layer is enabled or disabled.
         """
         self._update()
 
