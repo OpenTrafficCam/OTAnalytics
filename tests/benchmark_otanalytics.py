@@ -228,9 +228,6 @@ class TestProfile:
         ottrk_file: Path,
         otflow_file: Path,
     ) -> None:
-        def setup() -> None:
-            clear_events()
-
         track_parse_result = python_ottrk_parser.parse(ottrk_file)
         track_repository.add_all(track_parse_result.tracks)
         sections, flows = otflow_parser.parse(otflow_file)
@@ -238,7 +235,7 @@ class TestProfile:
         flow_repository.add_all(flows)
 
         benchmark.pedantic(
-            create_events, setup=setup, rounds=5, iterations=1, warmup_rounds=1
+            create_events, setup=clear_events, rounds=5, iterations=1, warmup_rounds=1
         )
 
     def test_tracks_intersecting_sections(
@@ -294,9 +291,6 @@ class TestProfile:
         ottrk_file_2hours: Path,
         otflow_file: Path,
     ) -> None:
-        def setup() -> None:
-            clear_events()
-
         track_parse_result = python_ottrk_parser.parse(ottrk_file_2hours)
         track_repository.add_all(track_parse_result.tracks)
         sections, flows = otflow_parser.parse(otflow_file)
@@ -304,7 +298,7 @@ class TestProfile:
         flow_repository.add_all(flows)
 
         benchmark.pedantic(
-            create_events, setup=setup, rounds=5, iterations=1, warmup_rounds=1
+            create_events, setup=clear_events, rounds=5, iterations=1, warmup_rounds=1
         )
 
     def test_tracks_intersecting_sections_2hour(
