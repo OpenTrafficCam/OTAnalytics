@@ -5,7 +5,6 @@ import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
-from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.datastore import (
     FlowParser,
     TrackParser,
@@ -191,14 +190,6 @@ def filter_detection_count_ge(
 
 
 class TestProfile:
-    def fill_track_repository(self, app: OTAnalyticsApplication, ottrk: Path) -> None:
-        app.add_tracks_of_files([ottrk])
-
-    def fill_section_repository(
-        self, app: OTAnalyticsApplication, otflow: Path
-    ) -> None:
-        app.load_otflow(otflow)
-
     def test_load_ottrks_with_python_parser(
         self,
         benchmark: BenchmarkFixture,
