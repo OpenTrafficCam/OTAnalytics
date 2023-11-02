@@ -92,7 +92,7 @@ def starter() -> ApplicationStarter:
 
 
 @pytest.fixture
-def get_sections_by_id() -> GetSectionsById:
+def get_sections_by_id(section_repository: SectionRepository) -> GetSectionsById:
     return GetSectionsById(section_repository)
 
 
