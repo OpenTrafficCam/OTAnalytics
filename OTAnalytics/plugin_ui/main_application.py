@@ -1,8 +1,6 @@
 import logging
 from typing import Sequence
 
-from plugin_ui.visualization.visualization import VisualizationBuilder
-
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -142,6 +140,7 @@ from OTAnalytics.plugin_ui.cli import (
     CliParseError,
     OTAnalyticsCli,
 )
+from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 
