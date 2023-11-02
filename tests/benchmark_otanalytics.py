@@ -147,7 +147,7 @@ def python_ottrk_parser(track_repository: TrackRepository) -> TrackParser:
 
 
 @pytest.fixture
-def panda_ottrk_parser(track_repository: TrackRepository) -> TrackParser:
+def pandas_ottrk_parser(track_repository: TrackRepository) -> TrackParser:
     calculator = PandasByMaxConfidence()
     detection_parser = PandasDetectionParser(calculator)
     return OttrkParser(detection_parser)
@@ -210,10 +210,10 @@ class TestProfile:
     def test_load_ottrks_with_pandas_parser(
         self,
         benchmark: BenchmarkFixture,
-        panda_ottrk_parser: TrackParser,
+        pandas_ottrk_parser: TrackParser,
         ottrk_file: Path,
     ) -> None:
-        benchmark.pedantic(panda_ottrk_parser.parse, args=(ottrk_file,))
+        benchmark.pedantic(pandas_ottrk_parser.parse, args=(ottrk_file,))
 
     def test_create_events(
         self,
@@ -276,10 +276,10 @@ class TestProfile:
     def test_load_ottrks_with_pandas_parser_2hour(
         self,
         benchmark: BenchmarkFixture,
-        panda_ottrk_parser: TrackParser,
+        pandas_ottrk_parser: TrackParser,
         ottrk_file_2hours: Path,
     ) -> None:
-        benchmark.pedantic(panda_ottrk_parser.parse, args=(ottrk_file_2hours,))
+        benchmark.pedantic(pandas_ottrk_parser.parse, args=(ottrk_file_2hours,))
 
     def test_create_events_2hour(
         self,
