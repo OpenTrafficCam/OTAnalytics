@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -13,6 +13,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    TrackRepositorySize,
 )
 from OTAnalytics.domain.track import (
     Track,
@@ -153,3 +154,15 @@ class TestGetAllTrackFiles:
 
         assert track_files == files
         track_file_repository.get_all.assert_called_once()
+
+
+class TestTrackRepositorySize:
+    def test_get(self) -> None:
+        expected_size = 3
+        track_repository = MagicMock()
+        track_repository.__len__.return_value = expected_size
+
+        track_repository_size = TrackRepositorySize(track_repository)
+        result = track_repository_size.get()
+        assert result == expected_size
+        track_repository.__len__.assert_called_once()

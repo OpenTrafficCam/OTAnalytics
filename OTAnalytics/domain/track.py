@@ -531,6 +531,9 @@ class TrackRepository:
         self._dataset = self._dataset.clear()
         self.observers.notify(TrackRepositoryEvent([], removed))
 
+    def __len__(self) -> int:
+        return len(self._dataset)
+
 
 class TrackFileRepository:
     def __init__(self) -> None:
