@@ -123,11 +123,11 @@ class ShapelyIntersectBySmallestTrackSegments(Intersector):
         section_geometry: LineString = self._geometry_builder.create_section(section)
         for track in tracks:
             track_geometry = self._track_table.look_up(track)
-            track_segments = self._lookup_segment(track)
             if not track_geometry.intersects(section_geometry):
                 continue
             event_builder.add_road_user_type(track.classification)
 
+            track_segments = self._lookup_segment(track)
             for index, segment in enumerate(track_segments):
                 if segment.intersects(section_geometry):
                     x1, y1 = segment.coords[0]
