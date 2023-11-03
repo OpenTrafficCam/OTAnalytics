@@ -433,9 +433,6 @@ class DummyViewModel(
         project = self._application._datastore.project
         self._frame_project.update(name=project.name, start_date=project.start_date)
 
-    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
-        self._application.update_project(name, start_date)
-
     def save_otconfig(self) -> None:
         title = "Save configuration as"
         file_types = [(f"{OTCONFIG} file", f"*.{OTCONFIG}")]
