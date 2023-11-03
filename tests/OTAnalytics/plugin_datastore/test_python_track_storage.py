@@ -378,9 +378,7 @@ class TestPythonTrackDataset:
         split_datasets = dataset.split(batches)
 
         assert len(split_datasets) == expected_batches
-        assert len(dataset._tracks) == sum(
-            [len(_dataset) for _dataset in split_datasets]
-        )
+        assert num_tracks == sum([len(_dataset) for _dataset in split_datasets])
 
         it = iter(dataset)
         for idx, _dataset in enumerate(split_datasets):
