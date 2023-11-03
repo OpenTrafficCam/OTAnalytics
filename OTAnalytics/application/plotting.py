@@ -118,7 +118,7 @@ class CachedPlotter(Plotter):
 
     It can listen to changes of observable properties to invalidate the cache.
     It can also be registered at subjects via:
-        ubject.register(cached_plotter.invalidate_cache)
+        object.register(cached_plotter.invalidate_cache)
     """
 
     def __init__(
