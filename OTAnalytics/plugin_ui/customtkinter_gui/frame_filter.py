@@ -17,7 +17,7 @@ from customtkinter import (
 
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.default_values import (
-    DATE_FORMAT_PLACEHOLDER,
+    DATE_FORMAT_PLACEHOLDER_GERMAN,
     DATETIME_FORMAT,
     SUPPORTED_FORMATS,
 )
@@ -473,7 +473,7 @@ class DateRow(EmbeddedCTkFrame):
         )
         self.date_entry = CTkEntry(
             master=self,
-            placeholder_text=DATE_FORMAT_PLACEHOLDER,
+            placeholder_text=DATE_FORMAT_PLACEHOLDER_GERMAN,
             width=95,
             textvariable=self._date_var,
             validate="key",
@@ -559,7 +559,7 @@ class DateRow(EmbeddedCTkFrame):
         else:
             widget.configure(border_color=COLOR_RED)
             self._display_invalid_validation_info(
-                f"Date must be of format: '{DATE_FORMAT_PLACEHOLDER}'"
+                f"Date must be of format: '{DATE_FORMAT_PLACEHOLDER_GERMAN}'"
             )
         return True
 
