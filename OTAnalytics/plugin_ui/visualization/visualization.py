@@ -316,6 +316,7 @@ class VisualizationBuilder:
         cached_plotter: CachedPlotter = CachedPlotter(other, subjects=[])
         invalidate = cached_plotter.invalidate_cache
         self._track_repository.observers.register(invalidate)
+        self._track_view_state.filter_element.register(invalidate)
         return cached_plotter
 
     def _create_pandas_track_provider(
@@ -415,12 +416,15 @@ class VisualizationBuilder:
         plotter_factory: Callable[[SectionId], Plotter],
         section_state: SectionState,
     ) -> Plotter:
-        return SectionLayerPlotter(
+        plotter = SectionLayerPlotter(
             plotter_factory,
             section_state,
             self._section_repository,
             self._track_repository,
         )
+
+        self._track_view_state.filter_element.register(plotter.notify_invalidate)
+        return plotter
 
     def _create_track_highlight_geometry_plotter_not_intersecting(
         self,
