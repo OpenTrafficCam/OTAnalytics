@@ -187,7 +187,7 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
         flows_to_add = self._flow_id_resolver.resolve(events.added)
         self._handle_add_update(flows_to_add)
         flows_to_remove = self._flow_id_resolver.resolve(events.removed)
-        self._handle_remove(flows_to_remove)
+        self._handle_add_update(flows_to_remove)
 
     def get_flow_ids(self) -> set[FlowId]:
         return {flow.id for flow in self._repository.get_all()}
