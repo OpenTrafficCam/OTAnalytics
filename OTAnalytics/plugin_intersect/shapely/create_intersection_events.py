@@ -1,3 +1,4 @@
+from collections import defaultdict
 from functools import singledispatchmethod
 from typing import Callable, Iterable, Mapping
 
@@ -297,11 +298,8 @@ def _create_events(tracks: Iterable[Track], sections: Iterable[Section]) -> list
 def group_sections_by_offset(
     sections: Iterable[Section],
 ) -> Mapping[RelativeOffsetCoordinate, Iterable[Section]]:
-    grouped_sections: dict[RelativeOffsetCoordinate, list[Section]] = {}
+    grouped_sections: dict[RelativeOffsetCoordinate, list[Section]] = defaultdict(list)
     for section in sections:
         offset = section.get_offset(EventType.SECTION_ENTER)
-        if section_group := grouped_sections.get(offset, []):
-            section_group.append(section)
-        else:
-            grouped_sections[offset] = [section]
+        grouped_sections[offset].append(section)
     return grouped_sections
