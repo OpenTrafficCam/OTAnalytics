@@ -533,7 +533,7 @@ class VisualizationBuilder:
         plotter_factory: Callable[[FlowId], Plotter],
         flow_state: FlowState,
     ) -> Plotter:
-        return FlowLayerPlotter(
+        plotter = FlowLayerPlotter(
             plotter_factory,
             flow_state,
             self._flow_repository,
@@ -541,6 +541,8 @@ class VisualizationBuilder:
             self._event_repository,
             EventToFlowResolver(self._flow_repository),
         )
+        self._track_view_state.filter_element.register(plotter.notify_invalidate)
+        return plotter
 
     def _create_tracks_not_assigned_to_flows_filter(
         self, pandas_data_provider: PandasDataFrameProvider, assigner: RoadUserAssigner
