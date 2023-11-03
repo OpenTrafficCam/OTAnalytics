@@ -18,9 +18,9 @@ from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import (
-    DATE_FORMAT,
     DATETIME_FORMAT,
     RELATIVE_SECTION_OFFSET,
+    SUPPORTED_FORMATS,
 )
 from OTAnalytics.adapter_ui.flow_adapter import (
     GeometricCenterCalculator,
@@ -1350,7 +1350,9 @@ class DummyViewModel(
         self.update_section_offset_button_state()
 
     def validate_date(self, date: str) -> bool:
-        return validate_date(date, DATE_FORMAT)
+        return any(
+            [validate_date(date, date_format) for date_format in SUPPORTED_FORMATS]
+        )
 
     def validate_hour(self, hour: str) -> bool:
         try:
