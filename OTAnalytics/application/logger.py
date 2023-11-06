@@ -3,12 +3,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from OTAnalytics.application.config import LOG_DIR
+from OTAnalytics.application.config import DEFAULT_LOG_DIR
 
 LOGGER_NAME = "OTAnalytics"
 LOG_NAME = f"{datetime.now().strftime(r'%Y-%m-%d_%H-%M-%S')}"
 LOG_EXT = "log"
-LOG_FILE = Path(LOG_DIR, f"{LOG_NAME}.{LOG_EXT}")
+LOG_FILE = Path(DEFAULT_LOG_DIR, f"{LOG_NAME}.{LOG_EXT}")
 LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
@@ -22,7 +22,7 @@ def logger() -> logging.Logger:
 
 
 def setup_logger(log_level: int = logging.INFO) -> None:
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    DEFAULT_LOG_DIR.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         format=LOG_FORMAT,
         datefmt="%Y-%m-%d %H:%M:%S",
