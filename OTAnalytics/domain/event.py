@@ -402,6 +402,7 @@ class EventRepository:
         if self._events:
             removed = list(self.get_all())
             self._events = defaultdict(list)
+            self._non_section_events = list[Event]()
             self._subject.notify(EventRepositoryEvent([], removed))
 
     def remove(self, sections: list[SectionId]) -> None:

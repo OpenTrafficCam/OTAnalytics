@@ -337,16 +337,21 @@ class TestEventRepository:
 
     def test_clear(self) -> None:
         first_event = Mock()
+        first_event.section_id = SectionId("1")
         second_event = Mock()
+        second_event.section_id = SectionId("2")
+        non_section_event = Mock()
+        non_section_event.section_id = None
+
         subject = Mock()
         repository = EventRepository(subject)
 
-        repository.add_all([first_event, second_event])
+        repository.add_all([first_event, second_event, non_section_event])
         repository.clear()
 
         assert not list(repository.get_all())
         subject.notify.assert_called_with(
-            EventRepositoryEvent([], [first_event, second_event])
+            EventRepositoryEvent([], [non_section_event, first_event, second_event])
         )
 
     def test_remove(self) -> None:
