@@ -8,21 +8,16 @@ from OTAnalytics.domain.types import EventType
 from tests.OTAnalytics.plugin_intersect.intersect_data import load_data
 from tests.OTAnalytics.plugin_intersect.intersect_provider import (
     GeoPandasIntersect,
-    GeoPandasIntersectSingle,
     GeoPandasSegmentIntersect,
-    GeoPandasSegmentIntersectSingle,
     IntersectProvider,
     OTAIntersect,
     PyGeosIntersect,
-    PyGeosIntersectSingle,
-    PyGeosPandasCollectionIntersect,
     PyGeosPandasIntersect,
-    PyGeosPandasIntersectSingle,
-    PyGeosPandasSegmentsIntersect,
+    PyGeosPandasSegmentIntersect,
     PyGeosSegmentIntersect,
-    PyGeosSegmentIntersectSingle,
     ShapelyIntersect,
-    ShapelyIntersectSingle,
+    ShapelySegmentIntersect,
+    detection_to_coords,
 )
 
 LOG = False
@@ -95,8 +90,8 @@ def validate_events(func: Any) -> Any:
         provider = kwargs.get("name", "unknown")
 
         if "sections" in kwargs:
-            key = str([section.id for section in kwargs["sections"]])
-            KEY = str(len(kwargs["sections"]))
+            key = "events-" + str([section.id for section in kwargs["sections"]])
+            KEY = "events-" + str(len(kwargs["sections"]))
 
         res: list = func(*args, **kwargs)
 
@@ -117,7 +112,7 @@ def validate_events(func: Any) -> Any:
                 for x, y in res:
                     assert any(
                         abs(x - e[0]) < 0.01 and abs(y - e[1]) < 0.01 for e in expected
-                    )
+                    ), f"{key}: {res} != {expected}"
                 for x, y in expected:
                     assert any(
                         abs(x - r[0]) < 0.01 and abs(y - r[1]) < 0.01 for r in res
@@ -148,13 +143,22 @@ def time(func: Any) -> Any:
     def inner(*args: Any, **kwargs: Any) -> Any:
         global KEY, TAG
 
+        mode = kwargs.get("mode", -1)
+        suffix = ""
+        if mode == 0:
+            suffix = "_combined"
+        elif mode == 1:
+            suffix = "_per-section"
+        elif mode == 2:
+            suffix = "_per-track"
+
         name = kwargs.get("name", "unknown")
 
         start = perf_counter()
         res = func(*args, **kwargs)
         end = perf_counter()
 
-        print(f"{name};{TAG};{KEY};{func.__name__};{end-start}")
+        print(f"{name};{TAG}{suffix};{KEY};{func.__name__};{end-start}")
         return res
 
     return inner
@@ -168,12 +172,14 @@ def validate_provider(provider: IntersectProvider) -> None:
         if track and section:
             tracks = [track]
             sections = [section]
-            res = provider.intersect(tracks, sections)
-            assert (track.id in res) == expected, (
-                f"{track.id} in {res} should be {expected} "
-                + f"when intersecting {sections}"
-                + f"({sections[0].get_offset(EventType.SECTION_ENTER)})"
-            )
+
+            for mode in provider.intersect_modes():
+                res = provider.intersect(tracks, sections, mode)
+                assert (track.id in res) == expected, (
+                    f"{track.id} in {res} should be {expected} "
+                    + f"when intersecting {sections} (mode {mode}) "
+                    + f"({sections[0].get_offset(EventType.SECTION_ENTER)})"
+                )
         else:
             print(f"Could not find track {track_id} or section{section_id}")
 
@@ -181,7 +187,6 @@ def validate_provider(provider: IntersectProvider) -> None:
         track_id: int,
         section_id: int,
         expected: list[tuple[float, float]],
-        by_track: bool,
     ) -> None:
         track = data._track_repository.get_for(TrackId(track_id))
         section = data.get_section_for(SectionId(str(section_id)))
@@ -189,18 +194,26 @@ def validate_provider(provider: IntersectProvider) -> None:
         if track and section:
             tracks = [track]
             sections = [section]
-            res = provider.events(tracks, sections, by_track=by_track)
 
-            assert len(res) == len(expected), (
-                f"Actual number of events {len(res)}"
-                + f" does not match expected number of events {len(expected)}:"
-                + f" {res} != {expected}"
-            )
+            for mode in provider.event_modes():
+                res = provider.events(tracks, sections, mode)
 
-            for x, y in res:
-                assert any(
-                    abs(x - e[0]) < 0.01 and abs(y - e[1]) < 0.01 for e in expected
-                ), f"Actual result {(x,y)} not in list of expected results {expected}!"
+                assert len(res) == len(expected), (
+                    f"Scenario {track_id} X {section_id}:\n"
+                    + f"{[detection_to_coords(d) for d in track.detections]}\n"
+                    + f" X {section.get_coordinates()} (mode {mode}):\n"
+                    + f"Actual number of events {len(res)}"
+                    + f" does not match expected number of events {len(expected)}:"
+                    + f" {res} != {expected}"
+                )
+
+                for x, y in res:
+                    assert any(
+                        abs(x - e[0]) < 0.01 and abs(y - e[1]) < 0.01 for e in expected
+                    ), (
+                        f"(mode {mode}) Actual result {(x,y)} not in list of "
+                        + "expected results {expected}!"
+                    )
 
         else:
             print(f"Could not find track {track_id} or section{section_id}")
@@ -226,48 +239,25 @@ def validate_provider(provider: IntersectProvider) -> None:
             validate_intersects(track, section, expected)
 
             events = expected_events.get((track, section), [])
-            validate_events(track, section, events, by_track=True)
-            validate_events(track, section, events, by_track=False)
+            validate_events(track, section, events)
 
 
 if __name__ == "__main__":
     data = load_data(skip_tracks=False, size="small")
 
     validate_provider(OTAIntersect(data))
-    validate_provider(ShapelyIntersectSingle(data))
     validate_provider(ShapelyIntersect(data))
+    validate_provider(ShapelySegmentIntersect(data))
 
-    validate_provider(PyGeosIntersectSingle(data, prepare=False))
-    validate_provider(PyGeosIntersectSingle(data, prepare=True))
-    exit(1)
+    validate_provider(PyGeosIntersect(data, False))
+    validate_provider(PyGeosIntersect(data, True))
+    validate_provider(PyGeosSegmentIntersect(data, False))
+    validate_provider(PyGeosSegmentIntersect(data, True))
 
-    # todo X pandas X segments
-
-    validate_provider(PyGeosIntersect(data, prepare=False))
-    validate_provider(PyGeosIntersect(data, prepare=True))
-
-    validate_provider(PyGeosSegmentIntersect(data, prepare=False))
-    validate_provider(PyGeosSegmentIntersect(data, prepare=True))
-    validate_provider(PyGeosSegmentIntersectSingle(data, prepare=False))
-    validate_provider(PyGeosSegmentIntersectSingle(data, prepare=True))
-
-    validate_provider(PyGeosPandasIntersect(data, prepare=False))
-    validate_provider(PyGeosPandasIntersect(data, prepare=True))
-    validate_provider(PyGeosPandasIntersectSingle(data, prepare=False))
-    validate_provider(PyGeosPandasIntersectSingle(data, prepare=True))
-
-    validate_provider(PyGeosPandasSegmentsIntersect(data, prepare=False))
-    validate_provider(PyGeosPandasSegmentsIntersect(data, prepare=True))
-
-    # todo single
-
-    validate_provider(PyGeosPandasCollectionIntersect(data, prepare=False))
-    validate_provider(PyGeosPandasCollectionIntersect(data, prepare=True))
-    # todo single
+    validate_provider(PyGeosPandasIntersect(data, False))
+    validate_provider(PyGeosPandasIntersect(data, True))
+    validate_provider(PyGeosPandasSegmentIntersect(data, False))
+    validate_provider(PyGeosPandasSegmentIntersect(data, True))
 
     validate_provider(GeoPandasIntersect(data))
-    validate_provider(GeoPandasIntersectSingle(data))
     validate_provider(GeoPandasSegmentIntersect(data))
-    validate_provider(GeoPandasSegmentIntersectSingle(data))
-
-    pass

@@ -23,7 +23,7 @@ from shapely import intersects as shapely_intersects
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
-from OTAnalytics.domain.section import LineSection, Section, SectionId
+from OTAnalytics.domain.section import LineSection, Section
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.simple_intersect import (
@@ -54,6 +54,18 @@ def section_to_shapely(section: Section) -> ShapelyLineString:
     return ShapelyLineString([(c.x, c.y) for c in section.get_coordinates()])
 
 
+def track_segment_list_to_shapely(track: Track) -> list[ShapelyLineString]:
+    return [
+        ShapelyLineString(
+            [
+                detection_to_coords(f),
+                detection_to_coords(s),
+            ]
+        )
+        for f, s in zip(track.detections[:-1], track.detections[1:])
+    ]
+
+
 def sections_to_shapely_multi(sections: list[Section]) -> ShapelyMultiLineString:
     return ShapelyMultiLineString([section_to_shapely(sec) for sec in sections])
 
@@ -69,6 +81,18 @@ def track_segments_to_pygeos(track: Track) -> Geometry:
                 for f, s in zip(track.detections[:-1], track.detections[1:])
             ]
         )
+    )
+
+
+def track_segment_list_to_pygeos(track: Track) -> list[Geometry]:
+    return linestrings(
+        [
+            [
+                detection_to_coords(f),
+                detection_to_coords(s),
+            ]
+            for f, s in zip(track.detections[:-1], track.detections[1:])
+        ]
     )
 
 
@@ -90,28 +114,44 @@ def sections_to_pygeos_multi(sections: list[Section]) -> Geometry:
 
 class IntersectProvider(ABC):
     def __init__(self, datastore: Datastore) -> None:
-        self.track_geom_map: dict[TrackId, Any]
-        self.section_geom_map: dict[SectionId, Any]
-        self.use_tracks(datastore)
-        self.use_sections(datastore)
-
-    @abstractmethod
-    def use_tracks(self, datastore: Datastore) -> None:
         pass
 
     @abstractmethod
-    def use_sections(self, datastore: Datastore) -> None:
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
         pass
 
     @abstractmethod
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
         pass
 
-    def intersect(self, tracks: list[Track], sections: list[Section]) -> set[TrackId]:
+    @abstractmethod
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        pass
+
+    def intersect(
+        self, tracks: list[Track], sections: list[Section], mode: int
+    ) -> set[TrackId]:
+        if mode == 0:
+            return self.do_intersect(tracks, sections)
+
         res: set[TrackId] = set()
-        for section in sections:
-            res = res.union(self.intersects_section(tracks, section))
+        if mode == 1:
+            for section in sections:
+                res = res.union(self.intersects_section(tracks, section))
+        else:
+            for track in tracks:
+                res = res.union(self.intersects_track(track, sections))
         return res
+
+    @abstractmethod
+    def intersect_modes(self) -> list[int]:
+        pass
+
+    @abstractmethod
+    def do_events(self, tracks: list[Track], sections: list[Section]) -> EVENTS:
+        pass
 
     @abstractmethod
     def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
@@ -121,29 +161,44 @@ class IntersectProvider(ABC):
     def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
         pass
 
-    def events(
-        self, tracks: list[Track], sections: list[Section], by_track: bool = False
-    ) -> EVENTS:
-        if by_track:
-            return [e for t in tracks for e in self.track_events(t, sections)]
-        else:
+    def events(self, tracks: list[Track], sections: list[Section], mode: int) -> EVENTS:
+        if mode == 0:
+            return self.do_events(tracks, sections)
+
+        if mode == 1:
             return [e for s in sections for e in self.section_events(tracks, s)]
+        else:
+            return [e for t in tracks for e in self.track_events(t, sections)]
+
+    @abstractmethod
+    def event_modes(self) -> list[int]:
+        pass
 
 
 class OTAIntersect(IntersectProvider):
-    def use_tracks(self, datastore: Datastore) -> None:
+    def __init__(self, datastore: Datastore) -> None:
         self.intersector = SimpleTracksIntersectingSections(
             GetAllTracks(datastore._track_repository), ShapelyIntersector()
         )
 
-    def use_sections(self, datastore: Datastore) -> None:
-        pass
-
-    def intersect(self, tracks: list[Track], sections: list[Section]) -> set[TrackId]:
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
         return self.intersector._intersect(tracks, sections)
 
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
-        return set()
+        return self.do_intersect(tracks, [section])
+
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        return self.do_intersect([track], sections)
+
+    def intersect_modes(self) -> list[int]:
+        return [0, 1, 2]
+
+    def do_events(
+        self, tracks: list[Track], sections: list[Section], by_track: bool = False
+    ) -> EVENTS:
+        return []
 
     def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
         return []
@@ -166,17 +221,15 @@ class OTAIntersect(IntersectProvider):
             )
         ]
 
-    def events(
-        self, tracks: list[Track], sections: list[Section], by_track: bool = False
-    ) -> EVENTS:
-        return super().events(tracks, sections, by_track=True)
+    def event_modes(self) -> list[int]:
+        return [2]
 
 
-class ShapelyIntersectSingle(IntersectProvider):
+# Shapely
+
+
+class ShapelyIntersect(IntersectProvider):
     def __init__(self, datastore: Datastore) -> None:
-        super().__init__(datastore)
-
-    def use_tracks(self, datastore: Datastore) -> None:
         tracks = datastore.get_all_tracks()
         self.track_geom_map = {track.id: track_to_shapely(track) for track in tracks}
         self.track_projections = {
@@ -187,10 +240,23 @@ class ShapelyIntersectSingle(IntersectProvider):
             for track in tracks
         }
 
-    def use_sections(self, datastore: Datastore) -> None:
         sections = datastore.get_all_sections()
         self.section_geom_map = {
             section.id: section_to_shapely(section) for section in sections
+        }
+
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
+        return {
+            track.id
+            for track in tracks
+            if any(
+                shapely_intersects(
+                    self.track_geom_map[track.id], self.section_geom_map[section.id]
+                )
+                for section in sections
+            )
         }
 
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
@@ -200,6 +266,20 @@ class ShapelyIntersectSingle(IntersectProvider):
             for track in tracks
             if shapely_intersects(self.track_geom_map[track.id], sec_geom)
         }
+
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        track_geom = self.track_geom_map[track.id]
+        return (
+            {track.id}
+            if any(
+                shapely_intersects(track_geom, self.section_geom_map[section.id])
+                for section in sections
+            )
+            else set()
+        )
+
+    def intersect_modes(self) -> list[int]:
+        return [0, 1, 2]
 
     def next_event(
         self, track: Track, track_geom: Any, point: Any
@@ -224,45 +304,124 @@ class ShapelyIntersectSingle(IntersectProvider):
 
         return []
 
+    def do_events(self, tracks: list[Track], sections: list[Section]) -> EVENTS:
+        return [e for t in tracks for s in sections for e in self.single_events(t, s)]
+
     def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
         return [e for s in sections for e in self.single_events(track, s)]
 
     def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
         return [e for t in tracks for e in self.single_events(t, section)]
 
+    def event_modes(self) -> list[int]:
+        return [0, 1, 2]
 
-class ShapelyIntersect(ShapelyIntersectSingle):
+
+class ShapelySegmentIntersect(IntersectProvider):
     def __init__(self, datastore: Datastore) -> None:
-        super().__init__(datastore)
+        tracks = datastore.get_all_tracks()
+        self.track_geom_map = {
+            track.id: track_segment_list_to_shapely(track) for track in tracks
+        }
 
-    def intersect(self, tracks: list[Track], sections: list[Section]) -> set[TrackId]:
+        sections = datastore.get_all_sections()
+        self.section_geom_map = {
+            section.id: section_to_shapely(section) for section in sections
+        }
+
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
         return {
             track.id
             for track in tracks
             if any(
-                shapely_intersects(
-                    self.track_geom_map[track.id], self.section_geom_map[section.id]
+                any(
+                    shapely_intersects(
+                        segment,
+                        self.section_geom_map[section.id],
+                    )
+                    for segment in self.track_geom_map[track.id]
                 )
                 for section in sections
             )
         }
 
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
-        return set()
+        sec_geom = self.section_geom_map[section.id]
+        return {
+            track.id
+            for track in tracks
+            if any(
+                shapely_intersects(
+                    segment,
+                    sec_geom,
+                )
+                for segment in self.track_geom_map[track.id]
+            )
+        }
+
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        track_geom = self.track_geom_map[track.id]
+        return (
+            {track.id}
+            if any(
+                any(
+                    shapely_intersects(
+                        segment,
+                        self.section_geom_map[section.id],
+                    )
+                    for segment in track_geom
+                )
+                for section in sections
+            )
+            else set()
+        )
+
+    def intersect_modes(self) -> list[int]:
+        return [0, 1, 2]
+
+    def do_events(self, tracks: list[Track], sections: list[Section]) -> EVENTS:
+        return [
+            segment.coords[1]
+            for track in tracks
+            for segment in self.track_geom_map[track.id]
+            if any(
+                shapely_intersects(segment, self.section_geom_map[section.id])
+                for section in sections
+            )
+        ]
+
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        sec_geom = self.section_geom_map[section.id]
+        return [
+            segment.coords[1]
+            for track in tracks
+            for segment in self.track_geom_map[track.id]
+            if shapely_intersects(segment, sec_geom)
+        ]
+
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        track_geom = self.track_geom_map[track.id]
+        return [
+            segment.coords[1]
+            for segment in track_geom
+            if any(
+                shapely_intersects(segment, self.section_geom_map[section.id])
+                for section in sections
+            )
+        ]
+
+    def event_modes(self) -> list[int]:
+        return [0, 1, 2]
 
 
-# todo shapely segment single
-# todo shapley segment
+# PyGeos
 
 
-class PyGeosIntersectSingle(IntersectProvider):
-    def __init__(self, datastore: Datastore, prepare: bool) -> None:
-        self._prepare = prepare
-        super().__init__(datastore)
-
-    def use_tracks(self, datastore: Datastore) -> None:
+class PyGeosIntersect(IntersectProvider):
+    def __init__(self, datastore: Datastore, _prepare: bool) -> None:
         tracks = datastore.get_all_tracks()
-
         self.track_geom_map = {track.id: track_to_pygeos(track) for track in tracks}
         self.track_projections = {
             track.id: [
@@ -272,24 +431,29 @@ class PyGeosIntersectSingle(IntersectProvider):
             for track in tracks
         }
 
-        self.prepare_tracks()
-
-    def use_sections(self, datastore: Datastore) -> None:
         sections = datastore.get_all_sections()
-
         self.section_geom_map = {
             section.id: section_to_pygeos(section) for section in sections
         }
 
-        self.prepare_sections()
-
-    def prepare_tracks(self) -> None:
-        if self._prepare:
+        if _prepare:
             (prepare(geom) for geom in self.track_geom_map.values())
-
-    def prepare_sections(self) -> None:
-        if self._prepare:
             (prepare(geom) for geom in self.section_geom_map.values())
+
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
+        return {
+            track.id
+            for track in tracks
+            if any(
+                pygeos_intersects(
+                    self.track_geom_map[track.id],
+                    self.section_geom_map[section.id],
+                )
+                for section in sections
+            )
+        }
 
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
         sec_geom = self.section_geom_map[section.id]
@@ -301,6 +465,23 @@ class PyGeosIntersectSingle(IntersectProvider):
                 sec_geom,
             )
         }
+
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        track_geom = self.track_geom_map[track.id]
+        return (
+            {track.id}
+            if any(
+                pygeos_intersects(
+                    track_geom,
+                    self.section_geom_map[section.id],
+                )
+                for section in sections
+            )
+            else set()
+        )
+
+    def intersect_modes(self) -> list[int]:
+        return [0, 1, 2]
 
     def next_event(
         self, track: Track, track_geom: Any, point: Any
@@ -334,62 +515,120 @@ class PyGeosIntersectSingle(IntersectProvider):
     def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
         return [e for t in tracks for e in self.single_events(t, section)]
 
+    def do_events(self, tracks: list[Track], sections: list[Section]) -> EVENTS:
+        return [e for t in tracks for s in sections for e in self.single_events(t, s)]
 
-class PyGeosIntersect(PyGeosIntersectSingle):
-    def __init__(self, datastore: Datastore, prepare: bool) -> None:
-        super().__init__(datastore, prepare)
+    def event_modes(self) -> list[int]:
+        return [0, 1, 2]
 
-    def intersect(self, tracks: list[Track], sections: list[Section]) -> set[TrackId]:
+
+class PyGeosSegmentIntersect(IntersectProvider):
+    def __init__(self, datastore: Datastore, _prepare: bool) -> None:
+        tracks = datastore.get_all_tracks()
+        self.track_geom_map = {
+            track.id: track_segment_list_to_pygeos(track) for track in tracks
+        }
+
+        sections = datastore.get_all_sections()
+        self.section_geom_map = {
+            section.id: section_to_pygeos(section) for section in sections
+        }
+
+        if _prepare:
+            (
+                prepare(geom)
+                for segments in self.track_geom_map.values()
+                for geom in segments
+            )
+            (prepare(geom) for geom in self.section_geom_map.values())
+
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
         return {
             track.id
             for track in tracks
             if any(
-                pygeos_intersects(
-                    self.track_geom_map[track.id],
-                    self.section_geom_map[section.id],
+                any(
+                    pygeos_intersects(
+                        self.track_geom_map[track.id],
+                        self.section_geom_map[section.id],
+                    )
                 )
                 for section in sections
             )
         }
 
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
-        return super().intersects_section(tracks, section)
-
-
-class PyGeosSegmentIntersect(PyGeosIntersect):
-    def __init__(self, datastore: Datastore, prepare: bool) -> None:
-        super().__init__(datastore, prepare)
-
-    def use_tracks(self, datastore: Datastore) -> None:
-        tracks = datastore.get_all_tracks()
-
-        self.track_geom_map = {
-            track.id: track_segments_to_pygeos(track) for track in tracks
+        sec_geom = self.section_geom_map[section.id]
+        return {
+            track.id
+            for track in tracks
+            if any(
+                pygeos_intersects(
+                    self.track_geom_map[track.id],
+                    sec_geom,
+                )
+            )
         }
 
-        self.prepare_tracks()
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        track_geom = self.track_geom_map[track.id]
+        return (
+            {track.id}
+            if any(
+                any(
+                    pygeos_intersects(
+                        track_geom,
+                        self.section_geom_map[section.id],
+                    )
+                )
+                for section in sections
+            )
+            else set()
+        )
+
+    def intersect_modes(self) -> list[int]:
+        return [0, 1, 2]
+
+    def do_events(self, tracks: list[Track], sections: list[Section]) -> EVENTS:
+        return [
+            pygeos_coords(s)[1]
+            for track in tracks
+            for s in self.track_geom_map[track.id]
+            if any(
+                pygeos_intersects(s, self.section_geom_map[section.id])
+                for section in sections
+            )
+        ]
+
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        sec_geom = self.section_geom_map[section.id]
+        return [
+            pygeos_coords(s)[1]
+            for track in tracks
+            for s in self.track_geom_map[track.id]
+            if pygeos_intersects(s, sec_geom)
+        ]
+
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        track_geom = self.track_geom_map[track.id]
+        return [
+            pygeos_coords(s)[1]
+            for s in track_geom
+            if any(
+                pygeos_intersects(s, self.section_geom_map[section.id])
+                for section in sections
+            )
+        ]
+
+    def event_modes(self) -> list[int]:
+        return [0, 1, 2]
 
 
-class PyGeosSegmentIntersectSingle(PyGeosIntersectSingle):
-    def __init__(self, datastore: Datastore, prepare: bool) -> None:
-        super().__init__(datastore, prepare)
-
-    def use_tracks(self, datastore: Datastore) -> None:
-        tracks = datastore.get_all_tracks()
-
-        self.track_geom_map = {
-            track.id: track_segments_to_pygeos(track) for track in tracks
-        }
-
-        self.prepare_tracks()
-
-
-class PyGeosPandasIntersectSingle(PyGeosIntersectSingle):
-    def __init__(self, datastore: Datastore, prepare: bool) -> None:
+class PyGeosPandasIntersect(IntersectProvider):
+    def __init__(self, datastore: Datastore, _prepare: bool) -> None:
         self.track_geom_df = DataFrame(columns=["id", "track", "geom"])
-        super().__init__(datastore, prepare)
-
-    def use_tracks(self, datastore: Datastore) -> None:
         tracks = datastore.get_all_tracks()
 
         self.track_geom_df["track"] = Series(tracks)
@@ -398,28 +637,25 @@ class PyGeosPandasIntersectSingle(PyGeosIntersectSingle):
             lambda t: track_to_pygeos(t)
         )
 
-        self.prepare_tracks()
-
-    def prepare_tracks(self) -> None:
-        if self._prepare:
-            self.track_geom_df["geom"].apply(prepare)
-
-    def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
-        track_ids = [track.id for track in tracks]
-        df = self.track_geom_df[self.track_geom_df["id"].isin(track_ids)]
-
-        sec_geom = self.section_geom_map[section.id]
-        df["intersects"] = (
-            df["geom"]
-            .apply(lambda line: pygeos_intersects(line, sec_geom))
-            .astype(bool)
+        self.track_geom_df["projection"] = self.track_geom_df["geom"].apply(
+            lambda track_geom: [
+                pygeos_project(track_geom, pygeos_points(p))
+                for p in pygeos_coords(track_geom)
+            ]
         )
 
-        return set(df[df["intersects"]]["id"].unique())
+        sections = datastore.get_all_sections()
+        self.section_geom_map = {
+            section.id: section_to_pygeos(section) for section in sections
+        }
 
+        if _prepare:
+            self.track_geom_df["geom"].apply(prepare)
+            (prepare(geom) for geom in self.section_geom_map.values())
 
-class PyGeosPandasIntersect(PyGeosPandasIntersectSingle):
-    def intersect(self, tracks: list[Track], sections: list[Section]) -> set[TrackId]:
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
         track_ids = [track.id for track in tracks]
         df = self.track_geom_df[self.track_geom_df["id"].isin(track_ids)]
 
@@ -435,32 +671,102 @@ class PyGeosPandasIntersect(PyGeosPandasIntersectSingle):
 
         return set(df[df["intersects"]]["id"].unique())
 
+    def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
+        track_ids = [track.id for track in tracks]
+        df = self.track_geom_df[self.track_geom_df["id"].isin(track_ids)]
 
-class PyGeosPandasCollectionIntersect(PyGeosPandasIntersect):
-    def __init__(self, datastore: Datastore, prepare: bool) -> None:
-        super().__init__(datastore, prepare)
-
-    def use_tracks(self, datastore: Datastore) -> None:
-        tracks = datastore.get_all_tracks()
-
-        self.track_geom_df["track"] = Series(tracks)
-        self.track_geom_df["id"] = self.track_geom_df["track"].apply(lambda t: t.id)
-        self.track_geom_df["geom"] = self.track_geom_df["track"].apply(
-            lambda t: track_segments_to_pygeos(t)
+        sec_geom = self.section_geom_map[section.id]
+        df["intersects"] = (
+            df["geom"]
+            .apply(lambda line: pygeos_intersects(line, sec_geom))
+            .astype(bool)
         )
 
-        self.prepare_tracks()
+        return set(df[df["intersects"]]["id"].unique())
+
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        return set()
+
+    def intersect_modes(self) -> list[int]:
+        return [0, 1]
+
+    def next_event(
+        self, track: Track, track_geom: Any, point: Any, projection: Any
+    ) -> tuple[float, float]:
+        dist = pygeos_project(track_geom, point)
+        index = bisect(projection, dist)
+        return pygeos_coords(track_geom)[index]  # + 1]
+
+    def do_events(
+        self, tracks: list[Track], sections: list[Section], by_track: bool = False
+    ) -> EVENTS:
+        track_ids = [track.id for track in tracks]
+        df = self.track_geom_df[self.track_geom_df["id"].isin(track_ids)]
+        sec_geoms = sections_to_pygeos_multi(
+            sections
+        )  # [self.section_geom_map[section.id] for section in sections]
+        df["intersections"] = df["geom"].apply(
+            lambda line: [
+                i for i in pygeos_intersection(line, sec_geoms) if not is_empty(i)
+            ]
+        )
+
+        vs = (
+            df[df["intersections"].apply(lambda i: len(i) > 0)]
+            .apply(
+                lambda r: [
+                    self.next_event(
+                        r["track"], r["geom"], pygeos_points(p), r["projection"]
+                    )
+                    for p in pygeos_coords(r["intersections"])
+                ],
+                axis=1,
+            )
+            .values
+        )
+
+        return [v for list in vs for v in list]
+
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        sec_geom = self.section_geom_map[section.id]
+        track_ids = [track.id for track in tracks]
+        df = self.track_geom_df[self.track_geom_df["id"].isin(track_ids)]
+
+        df["intersections"] = df["geom"].apply(
+            lambda line: pygeos_intersection(line, sec_geom)
+        )
+
+        vs = (
+            df[df["intersections"].apply(lambda i: not is_empty(i))]
+            .apply(
+                lambda r: [
+                    self.next_event(
+                        r["track"], r["geom"], r["intersections"], r["projection"]
+                    )
+                ]
+                if pygeos_type(r["intersections"]) == GeometryType.POINT
+                else [
+                    self.next_event(
+                        r["track"], r["geom"], pygeos_points(p), r["projection"]
+                    )
+                    for p in pygeos_coords(r["intersections"])
+                ],
+                axis=1,
+            )
+            .values
+        )
+
+        return [v for list in vs for v in list]
+
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        return []
+
+    def event_modes(self) -> list[int]:
+        return [0, 1]
 
 
-# todo single
-
-
-class PyGeosPandasSegmentsIntersect(PyGeosIntersect):
-    def __init__(self, datastore: Datastore, prepare: bool) -> None:
-        super().__init__(datastore, prepare)
-        self.detection_df: DataFrame
-
-    def use_tracks(self, datastore: Datastore) -> None:
+class PyGeosPandasSegmentIntersect(IntersectProvider):
+    def __init__(self, datastore: Datastore, _prepare: bool) -> None:
         self.detection_df = tracks_as_dataframe(datastore)
 
         self.detection_df["coord"] = self.detection_df.apply(
@@ -481,37 +787,107 @@ class PyGeosPandasSegmentsIntersect(PyGeosIntersect):
             lambda r: coords_to_pygeos([r["coord"], r["next"]]), axis=1
         )
 
-        if self._prepare:
+        sections = datastore.get_all_sections()
+        self.section_geom_map = {
+            section.id: section_to_pygeos(section) for section in sections
+        }
+        if _prepare:
             self.detection_df["segment"].apply(prepare)
+            (prepare(geom) for geom in self.section_geom_map.values())
 
-    def intersect(self, tracks: list[Track], sections: list[Section]) -> set[TrackId]:
-        res: set[TrackId] = set()
-        for section in sections:
-            res = res.union(self.intersects_section(tracks, section))
-        return res
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
+        track_ids = [track.id.id for track in tracks]
+        df = self.detection_df[self.detection_df["track_id"].isin(track_ids)]
+        intersect = (
+            df["segment"]
+            .apply(
+                lambda s: any(
+                    pygeos_intersects(s, self.section_geom_map[section.id])
+                    for section in sections
+                )
+            )
+            .astype(bool)
+        )
+        return {TrackId(i) for i in df[intersect]["track_id"].unique()}
 
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
         sec_geom = self.section_geom_map[section.id]
+        track_ids = [track.id.id for track in tracks]
+        df = self.detection_df[self.detection_df["track_id"].isin(track_ids)]
         intersect = (
-            self.detection_df["segment"]
-            .apply(lambda s: pygeos_intersects(s, sec_geom))
+            df["segment"].apply(lambda s: pygeos_intersects(s, sec_geom)).astype(bool)
+        )
+        return {TrackId(i) for i in df[intersect]["track_id"].unique()}
+
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        df = self.detection_df[self.detection_df["track_id"] == track.id.id]
+        intersect = (
+            df["segment"]
+            .apply(
+                lambda s: any(
+                    pygeos_intersects(s, self.section_geom_map[section.id])
+                    for section in sections
+                )
+            )
             .astype(bool)
         )
-        return {TrackId(i) for i in self.detection_df[intersect]["track_id"].unique()}
+        return {TrackId(i) for i in df[intersect]["track_id"].unique()}
 
+    def intersect_modes(self) -> list[int]:
+        return [0, 1]
 
-# todo single
+    def do_events(
+        self, tracks: list[Track], sections: list[Section], by_track: bool = False
+    ) -> EVENTS:
+        track_ids = [t.id.id for t in tracks]
+        df = self.detection_df[self.detection_df["track_id"].isin(track_ids)]
+
+        return df[
+            df["segment"]
+            .apply(
+                lambda s: any(
+                    pygeos_intersects(s, self.section_geom_map[sec.id])
+                    for sec in sections
+                )
+            )
+            .astype(bool)
+        ]["next"].values
+
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        track_ids = [t.id.id for t in tracks]
+        df = self.detection_df[self.detection_df["track_id"].isin(track_ids)]
+        sec_geom = self.section_geom_map[section.id]
+
+        return df[
+            df["segment"].apply(lambda s: pygeos_intersects(s, sec_geom)).astype(bool)
+        ]["next"].values
+
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        df = self.detection_df[self.detection_df["track_id"] == track.id.id]
+
+        return df[
+            df["segment"]
+            .apply(
+                lambda s: any(
+                    pygeos_intersects(s, self.section_geom_map[sec.id])
+                    for sec in sections
+                )
+            )
+            .astype(bool)
+        ]["next"].values
+
+    def event_modes(self) -> list[int]:
+        return [0, 1]
+
 
 # GEOPANDAS
 
 
-class GeoPandasIntersectSingle(IntersectProvider):
+class GeoPandasIntersect(IntersectProvider):
     def __init__(self, datastore: Datastore) -> None:
         self.track_df = DataFrame(columns=["id", "track"])
-        self.geom_df: GeoDataFrame
-        super().__init__(datastore)
-
-    def use_tracks(self, datastore: Datastore) -> None:
         tracks = datastore.get_all_tracks()
 
         self.track_df["track"] = Series(tracks)
@@ -522,28 +898,18 @@ class GeoPandasIntersectSingle(IntersectProvider):
             geometry=self.track_df["track"].apply(track_to_shapely),
         )
 
-    def use_sections(self, datastore: Datastore) -> None:
-        sections = datastore.get_all_sections()
+        self.geom_df["projection"] = self.geom_df.geometry.apply(
+            lambda g: [g.project(shapely.Point(p)) for p in g.coords]
+        )
 
+        sections = datastore.get_all_sections()
         self.section_geom_map = {
             section.id: section_to_shapely(section) for section in sections
         }
 
-    def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
-        track_ids = [track.id for track in tracks]
-        df = self.geom_df[self.geom_df["id"].isin(track_ids)]
-
-        sec_geom = self.section_geom_map[section.id]
-        df["intersects"] = self.geom_df.geometry.intersects(sec_geom).astype(bool)
-
-        return set(df[df["intersects"]]["id"].unique())
-
-
-class GeoPandasIntersect(GeoPandasIntersectSingle):
-    def __init__(self, datastore: Datastore) -> None:
-        super().__init__(datastore)
-
-    def intersect(self, tracks: list[Track], sections: list[Section]) -> set[TrackId]:
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
         track_ids = [track.id for track in tracks]
         df = self.geom_df[self.geom_df["id"].isin(track_ids)]
 
@@ -555,18 +921,77 @@ class GeoPandasIntersect(GeoPandasIntersectSingle):
         return set(df[df["intersects"]]["id"].unique())
 
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
+        track_ids = [track.id for track in tracks]
+        df = self.geom_df[self.geom_df["id"].isin(track_ids)]
+
+        sec_geom = self.section_geom_map[section.id]
+        df["intersects"] = self.geom_df.geometry.intersects(sec_geom).astype(bool)
+
+        return set(df[df["intersects"]]["id"].unique())
+
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
         return set()
 
+    def intersect_modes(self) -> list[int]:
+        return [0, 1]
 
-class GeoPandasSegmentIntersectSingle(IntersectProvider):
+    def next_event(self, row: Any, point: Any) -> tuple[float, float]:
+        dist = row["geometry"].project(point)
+        index = bisect(row["projection"], dist)
+        return row["geometry"].coords[index]  # + 1]
+
+    def single_events(self, row: Any) -> EVENTS:
+        points = row["intersection"]
+        if isinstance(points, shapely.Point):
+            return [self.next_event(row, points)]
+
+        if isinstance(points, shapely.MultiPoint):
+            return [self.next_event(row, p) for p in points.geoms]
+
+        return []
+
+    def do_events(self, tracks: list[Track], sections: list[Section]) -> EVENTS:
+        track_ids = [track.id for track in tracks]
+        df = self.geom_df[self.geom_df["id"].isin(track_ids)]
+
+        sec_geoms = sections_to_shapely_multi(
+            sections
+        )  # [self.section_geom_map[section.id] for section in sections]
+        df["intersection"] = self.geom_df.geometry.intersection(sec_geoms)
+
+        df = df[df["intersection"].apply(lambda g: not g.is_empty).astype(bool)]
+        if df.empty:
+            return []
+
+        lists = df.apply(lambda row: self.single_events(row), axis=1).values
+
+        return [v for res in lists for v in res]
+
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        track_ids = [track.id for track in tracks]
+        df = self.geom_df[self.geom_df["id"].isin(track_ids)]
+        sec_geom = self.section_geom_map[section.id]
+
+        df["intersection"] = self.geom_df.geometry.intersection(sec_geom)
+        df = df[df["intersection"].apply(lambda g: not g.is_empty).astype(bool)]
+
+        if df.empty:
+            return []
+
+        lists = df.apply(lambda row: self.single_events(row), axis=1).values
+        return [v for res in lists for v in res]
+
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        return []
+
+    def event_modes(self) -> list[int]:
+        return [0, 1]
+
+
+class GeoPandasSegmentIntersect(IntersectProvider):
     def __init__(self, datastore: Datastore) -> None:
         self.track_df = DataFrame(columns=["id", "detection"])
-        self.geom_df: GeoDataFrame
-        super().__init__(datastore)
-
-    def use_tracks(self, datastore: Datastore) -> None:
         tracks = datastore.get_all_tracks()
-
         track_detections = [
             (track.id, detection_to_coords(d))
             for track in tracks
@@ -592,12 +1017,21 @@ class GeoPandasSegmentIntersectSingle(IntersectProvider):
             ),
         )
 
-    def use_sections(self, datastore: Datastore) -> None:
         sections = datastore.get_all_sections()
-
         self.section_geom_map = {
             section.id: section_to_shapely(section) for section in sections
         }
+
+    def do_intersect(
+        self, tracks: list[Track], sections: list[Section]
+    ) -> set[TrackId]:
+        track_ids = [track.id for track in tracks]
+        df = self.geom_df[self.geom_df["id"].isin(track_ids)]
+
+        sec_geoms = sections_to_shapely_multi(sections)
+        df["intersects"] = self.geom_df.geometry.intersects(sec_geoms).astype(bool)
+
+        return set(df[df["intersects"]]["id"].unique())
 
     def intersects_section(self, tracks: list[Track], section: Section) -> set[TrackId]:
         track_ids = [track.id for track in tracks]
@@ -608,59 +1042,42 @@ class GeoPandasSegmentIntersectSingle(IntersectProvider):
 
         return set(df[df["intersects"]]["id"].unique())
 
+    def intersects_track(self, track: Track, sections: list[Section]) -> set[TrackId]:
+        df = self.geom_df[self.geom_df["id"] == track.id]
 
-class GeoPandasSegmentIntersect(GeoPandasSegmentIntersectSingle):
-    def __init__(self, datastore: Datastore) -> None:
-        super().__init__(datastore)
+        sec_geoms = sections_to_shapely_multi(sections)
+        df["intersects"] = self.geom_df.geometry.intersects(sec_geoms).astype(bool)
 
-    def intersect(self, tracks: list[Track], sections: list[Section]) -> set[TrackId]:
+        return set(df[df["intersects"]]["id"].unique())
+
+    def intersect_modes(self) -> list[int]:
+        return [0, 1]
+
+    def do_events(self, tracks: list[Track], sections: list[Section]) -> EVENTS:
         track_ids = [track.id for track in tracks]
         df = self.geom_df[self.geom_df["id"].isin(track_ids)]
 
-        result: list[TrackId] = []
-        for section in sections:
-            sec_geom = self.section_geom_map[section.id]
-            df["intersects"] = self.geom_df.geometry.intersects(sec_geom).astype(bool)
+        sec_geoms = sections_to_shapely_multi(sections)
+        df["intersects"] = self.geom_df.geometry.intersects(sec_geoms).astype(bool)
 
-            result += list(df[df["intersects"]]["id"].unique())
+        return df[df["intersects"]]["next"].values
 
-        return set(result)
+    def section_events(self, tracks: list[Track], section: Section) -> EVENTS:
+        track_ids = [track.id for track in tracks]
+        df = self.geom_df[self.geom_df["id"].isin(track_ids)]
 
+        sec_geom = self.section_geom_map[section.id]
+        df["intersects"] = self.geom_df.geometry.intersects(sec_geom).astype(bool)
 
-# TODO
-# @time
-# def tracks_to_segment_linestrings_bulk(tracks: list[Track]):
-#    return pygeos.linestrings(
-#        [
-#            [(f.x, f.y), (s.x, s.y)]
-#            for track in tracks
-#            for f, s in zip(track.detections[:-1], track.detections[1:])
-#        ]
-#    )
+        return df[df["intersects"]]["next"].values
 
+    def track_events(self, track: Track, sections: list[Section]) -> EVENTS:
+        df = self.geom_df[self.geom_df["id"] == track.id]
 
-# @time
-# def tracks_to_segment_linestrings_bulk(tracks: list[Track]):
-#    return pygeos.linestrings(
-#        [
-#            [(f.x, f.y), (s.x, s.y)]
-#            for track in tracks
-#            for f, s in zip(track.detections[:-1], track.detections[1:])
-#        ]
-#    )
+        sec_geoms = sections_to_shapely_multi(sections)
+        df["intersects"] = self.geom_df.geometry.intersects(sec_geoms).astype(bool)
 
-# todo intersect segments
-#    def intersect_todo(
-#        self, tracks: list[Track], sections: list[Section]
-#    ) -> set[TrackId]:
-#        return set(
-#            track.id
-#            for track in tracks
-#            if any(
-#                any(
-#                    intersects(segment, self.section_geom_map[section.id])
-#                    for segment in self.track_geom_map[track.id]
-#                )
-#                for section in sections
-#            )
-#        )
+        return df[df["intersects"]]["next"].values
+
+    def event_modes(self) -> list[int]:
+        return [0, 1]

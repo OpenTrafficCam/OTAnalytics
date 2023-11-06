@@ -8,21 +8,15 @@ from OTAnalytics.domain.track import TrackId
 from tests.OTAnalytics.plugin_intersect.intersect_data import load_data
 from tests.OTAnalytics.plugin_intersect.intersect_provider import (
     GeoPandasIntersect,
-    GeoPandasIntersectSingle,
     GeoPandasSegmentIntersect,
-    GeoPandasSegmentIntersectSingle,
     IntersectProvider,
     OTAIntersect,
     PyGeosIntersect,
-    PyGeosIntersectSingle,
-    PyGeosPandasCollectionIntersect,
     PyGeosPandasIntersect,
-    PyGeosPandasIntersectSingle,
-    PyGeosPandasSegmentsIntersect,
+    PyGeosPandasSegmentIntersect,
     PyGeosSegmentIntersect,
-    PyGeosSegmentIntersectSingle,
     ShapelyIntersect,
-    ShapelyIntersectSingle,
+    ShapelySegmentIntersect,
 )
 from tests.OTAnalytics.plugin_intersect.validate import (
     ERRORS,
@@ -33,24 +27,36 @@ from tests.OTAnalytics.plugin_intersect.validate import (
 
 REPEAT = 10
 SEED = 42
-TEST_INTERSECT = False
+TEST_INTERSECT = True
 TEST_EVENTS = True
 
 
 @validate
 @time
 def test_intersect_all(
-    datastore: Datastore, name: str, provider: IntersectProvider, record: bool = False
+    datastore: Datastore,
+    name: str,
+    provider: IntersectProvider,
+    mode: int,
+    record: bool = False,
 ) -> set[TrackId]:
-    return provider.intersect(datastore.get_all_tracks(), datastore.get_all_sections())
+    return provider.intersect(
+        datastore.get_all_tracks(), datastore.get_all_sections(), mode=mode
+    )
 
 
 @validate_events
 @time
 def test_events_all(
-    datastore: Datastore, name: str, provider: IntersectProvider, record: bool = False
+    datastore: Datastore,
+    name: str,
+    provider: IntersectProvider,
+    mode: int,
+    record: bool = False,
 ) -> list[tuple[float, float]]:
-    return provider.events(datastore.get_all_tracks(), datastore.get_all_sections())
+    return provider.events(
+        datastore.get_all_tracks(), datastore.get_all_sections(), mode=mode
+    )
 
 
 @validate
@@ -59,13 +65,11 @@ def test_intersect_section(
     datastore: Datastore,
     name: str,
     provider: IntersectProvider,
+    mode: int,
     sections: list[Section],
     record: bool = False,
 ) -> set[TrackId]:
-    return provider.intersect(
-        datastore.get_all_tracks(),
-        sections,
-    )
+    return provider.intersect(datastore.get_all_tracks(), sections, mode=mode)
 
 
 @validate_events
@@ -74,13 +78,11 @@ def test_events_section(
     datastore: Datastore,
     name: str,
     provider: IntersectProvider,
+    mode: int,
     sections: list[Section],
     record: bool = False,
 ) -> list[tuple[float, float]]:
-    return provider.events(
-        datastore.get_all_tracks(),
-        sections,
-    )
+    return provider.events(datastore.get_all_tracks(), sections, mode=mode)
 
 
 @time
@@ -88,6 +90,7 @@ def test_intersect_random_sections(
     datastore: Datastore,
     name: str,
     provider: IntersectProvider,
+    mode: int,
     n: int,
     seed: int,
     record: bool = False,
@@ -100,7 +103,12 @@ def test_intersect_random_sections(
         msg += f"{k}, "
         selected = random.sample(sections, k)
         test_intersect_section(
-            datastore, name=name, provider=provider, sections=selected, record=record
+            datastore,
+            name=name,
+            provider=provider,
+            mode=mode,
+            sections=selected,
+            record=record,
         )
 
 
@@ -109,6 +117,7 @@ def test_events_random_sections(
     datastore: Datastore,
     name: str,
     provider: IntersectProvider,
+    mode: int,
     n: int,
     seed: int,
     record: bool = False,
@@ -121,7 +130,12 @@ def test_events_random_sections(
         msg += f"{k}, "
         selected = random.sample(sections, k)
         test_events_section(
-            datastore, name=name, provider=provider, sections=selected, record=record
+            datastore,
+            name=name,
+            provider=provider,
+            mode=mode,
+            sections=selected,
+            record=record,
         )
 
 
@@ -148,16 +162,34 @@ def run_test(
     provider = test_init(cons, datastore, name=name, *args, **kwargs)
 
     if TEST_INTERSECT:
-        test_intersect_all(datastore, name=name, provider=provider, record=record)
-        test_intersect_random_sections(
-            datastore, name=name, provider=provider, n=REPEAT, seed=SEED, record=record
-        )
+        for mode in provider.intersect_modes():
+            test_intersect_all(
+                datastore, name=name, provider=provider, mode=mode, record=record
+            )
+            # test_intersect_random_sections(
+            #    datastore,
+            #    name=name,
+            #    provider=provider,
+            #    mode=mode,
+            #    n=REPEAT,
+            #    seed=SEED,
+            #    record=record,
+            # )
 
     if TEST_EVENTS:
-        test_events_all(datastore, name=name, provider=provider, record=record)
-        test_events_random_sections(
-            datastore, name=name, provider=provider, n=REPEAT, seed=SEED, record=record
-        )
+        for mode in provider.event_modes():
+            test_events_all(
+                datastore, name=name, provider=provider, mode=mode, record=record
+            )
+            # test_events_random_sections(
+            #    datastore,
+            #    name=name,
+            #    provider=provider,
+            #    mode=mode,
+            #    n=REPEAT,
+            #    seed=SEED,
+            #    record=record,
+            # )
 
 
 def test_comlpete(
@@ -177,66 +209,25 @@ if __name__ == "__main__":
 
     val.TAG = ""
     test_comlpete(data, OTAIntersect, record=True)
-    test_comlpete(data, ShapelyIntersect, record=True)
-    test_comlpete(data, ShapelyIntersectSingle)
 
-    # PYGEOS
-    val.TAG = "UNPREPARED"
-    test_comlpete(data, PyGeosIntersectSingle, prepare=False)
-
-    exit()
-    val.TAG = ""
-    test_comlpete(data, OTAIntersect, record=True)
-    test_comlpete(data, ShapelyIntersect, record=True)
-    test_comlpete(data, ShapelyIntersectSingle)
+    test_comlpete(data, ShapelyIntersect)
+    test_comlpete(data, ShapelySegmentIntersect)
 
     # GEOPANDAS
-    test_comlpete(data, GeoPandasIntersectSingle)
     test_comlpete(data, GeoPandasIntersect)
-
-    test_comlpete(data, GeoPandasSegmentIntersectSingle)
     test_comlpete(data, GeoPandasSegmentIntersect)
 
     # PYGEOS
     val.TAG = "UNPREPARED"
-    test_comlpete(data, PyGeosIntersectSingle, prepare=False)
-    test_comlpete(data, PyGeosIntersect, prepare=False)
-    test_comlpete(data, PyGeosSegmentIntersect, prepare=False)
-    test_comlpete(data, PyGeosSegmentIntersectSingle, prepare=False)
-    test_comlpete(data, PyGeosPandasIntersectSingle, prepare=False)
-    test_comlpete(data, PyGeosPandasIntersect, prepare=False)
-    test_comlpete(
-        data,
-        PyGeosPandasSegmentsIntersect,
-        prepare=False,
-    )
-    test_comlpete(
-        data,
-        PyGeosPandasCollectionIntersect,
-        prepare=False,
-    )
+    test_comlpete(data, PyGeosIntersect, _prepare=False)
+    test_comlpete(data, PyGeosSegmentIntersect, _prepare=False)
+    test_comlpete(data, PyGeosPandasIntersect, _prepare=False)
+    test_comlpete(data, PyGeosPandasSegmentIntersect, _prepare=False)
 
     val.TAG = "PREPARED"
-    test_comlpete(data, PyGeosIntersectSingle, prepare=True)
-    test_comlpete(data, PyGeosIntersect, prepare=True)
-    test_comlpete(data, PyGeosSegmentIntersect, prepare=True)
-    test_comlpete(data, PyGeosSegmentIntersectSingle, prepare=True)
-    test_comlpete(data, PyGeosPandasIntersectSingle, prepare=True)
-    test_comlpete(data, PyGeosPandasIntersect, prepare=True)
-    test_comlpete(
-        data,
-        PyGeosPandasSegmentsIntersect,
-        prepare=True,
-    )
-    test_comlpete(
-        data,
-        PyGeosPandasCollectionIntersect,
-        prepare=True,
-    )
-
-    # todo pygeos segments pandas
-    # todo shapely pandas
-    # todo shapely segments pandas
-    # todo geopandas segments
+    test_comlpete(data, PyGeosIntersect, _prepare=True)
+    test_comlpete(data, PyGeosSegmentIntersect, _prepare=True)
+    test_comlpete(data, PyGeosPandasIntersect, _prepare=True)
+    test_comlpete(data, PyGeosPandasSegmentIntersect, _prepare=True)
 
     print(f"Found {ERRORS} errors during validation!")
