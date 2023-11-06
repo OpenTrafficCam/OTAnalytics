@@ -17,9 +17,9 @@ from customtkinter import (
 
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.default_values import (
-    DATE_FORMAT,
-    DATE_FORMAT_PLACEHOLDER,
+    DATE_FORMAT_PLACEHOLDER_GERMAN,
     DATETIME_FORMAT,
+    SUPPORTED_FORMATS,
 )
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
@@ -437,6 +437,10 @@ class DateRow(EmbeddedCTkFrame):
             self.reset()
 
     def get_datetime(self) -> Optional[datetime]:
+        """
+        Get the currently set date and time as datetime. If the date can not be parsed,
+        an InvalidDatetimeFormatError will be raised.
+        """
         if (
             self.date == ""
             and self.hour == ""
@@ -444,19 +448,21 @@ class DateRow(EmbeddedCTkFrame):
             and self.second == ""
         ):
             return None
-        try:
-            date = datetime.strptime(self.date, DATE_FORMAT)
-            return datetime(
-                year=date.year,
-                month=date.month,
-                day=date.day,
-                hour=int(self.hour),
-                minute=int(self.minute),
-                second=int(self.second),
-                tzinfo=timezone.utc,
-            )
-        except ValueError:
-            raise InvalidDatetimeFormatError(f"{self._name} datetime is not valid.")
+        for date_format in SUPPORTED_FORMATS:
+            try:
+                date = datetime.strptime(self.date, date_format)
+                return datetime(
+                    year=date.year,
+                    month=date.month,
+                    day=date.day,
+                    hour=int(self.hour),
+                    minute=int(self.minute),
+                    second=int(self.second),
+                    tzinfo=timezone.utc,
+                )
+            except ValueError:
+                pass
+        raise InvalidDatetimeFormatError(f"{self._name} datetime is not valid.")
 
     def _get_widgets(self) -> None:
         self.validation_info_label = CTkLabel(
@@ -467,7 +473,7 @@ class DateRow(EmbeddedCTkFrame):
         )
         self.date_entry = CTkEntry(
             master=self,
-            placeholder_text=DATE_FORMAT_PLACEHOLDER,
+            placeholder_text=DATE_FORMAT_PLACEHOLDER_GERMAN,
             width=95,
             textvariable=self._date_var,
             validate="key",
@@ -553,7 +559,7 @@ class DateRow(EmbeddedCTkFrame):
         else:
             widget.configure(border_color=COLOR_RED)
             self._display_invalid_validation_info(
-                f"Date must be of format: '{DATE_FORMAT_PLACEHOLDER}'"
+                f"Date must be of format: '{DATE_FORMAT_PLACEHOLDER_GERMAN}'"
             )
         return True
 
