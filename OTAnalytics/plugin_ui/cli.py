@@ -18,7 +18,7 @@ from OTAnalytics.application.config import (
     DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
-from OTAnalytics.application.logger import logger
+from OTAnalytics.application.logger import DEFAULT_LOG_FILE, logger
 from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
@@ -77,6 +77,8 @@ class CliArguments:
     event_list_exporter: EventListExporter
     count_interval: int
     num_processes: int
+    log_file: str
+    logfile_overwrite: bool
 
 
 class CliArgumentParser:
@@ -160,6 +162,19 @@ class CliArgumentParser:
             help="Number of processes to use in multi-processing.",
             required=False,
         )
+        self._parser.add_argument(
+            "--logfile",
+            default=DEFAULT_LOG_FILE,
+            type=str,
+            help="Specify log file directory.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--logfile_overwrite",
+            action="store_true",
+            help="Overwrite log file if it already exists.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -178,6 +193,8 @@ class CliArgumentParser:
             self._parse_event_format(args.event_format),
             args.count_interval,
             args.num_processes,
+            args.logfile,
+            args.logfile_overwrite,
         )
 
     def _parse_event_format(self, event_format: str) -> EventListExporter:

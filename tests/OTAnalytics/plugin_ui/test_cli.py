@@ -21,6 +21,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.state import TracksMetadata, TrackViewState
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -148,6 +149,8 @@ def create_cli_args(
     ],
     count_interval: int = 1,
     num_processes: int = DEFAULT_NUM_PROCESSES,
+    logfile: str = str(DEFAULT_LOG_FILE),
+    logfile_overwrite: bool = False,
 ) -> CliArguments:
     if track_files is None:
         track_files = [TRACK_FILE]
@@ -161,6 +164,8 @@ def create_cli_args(
         event_list_exporter,
         count_interval,
         num_processes,
+        logfile,
+        logfile_overwrite,
     )
 
 
@@ -171,6 +176,7 @@ class TestCliArgumentParser:
         sections_file = "section_file.otflow"
         save_name = "stem"
         save_suffix = "suffix"
+        log_file = "path/to/my_log.log"
 
         cli_args: list[str] = [
             "path",
@@ -190,6 +196,9 @@ class TestCliArgumentParser:
             "15",
             "--num-processes",
             "3",
+            "--logfile",
+            log_file,
+            "--logfile_overwrite",
         ]
         with patch.object(sys, "argv", cli_args):
             parser = CliArgumentParser()
@@ -204,6 +213,8 @@ class TestCliArgumentParser:
                 AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME],
                 15,
                 3,
+                log_file,
+                True,
             )
 
 

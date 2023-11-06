@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Optional, Sequence
 
 from OTAnalytics.application.analysis.intersect import (
@@ -171,7 +172,9 @@ class ApplicationStarter:
     def start(self) -> None:
         parser = self._build_cli_argument_parser()
         cli_args = parser.parse()
-        self._setup_logger(cli_args.debug)
+        self._setup_logger(
+            Path(cli_args.log_file), cli_args.logfile_overwrite, cli_args.debug
+        )
 
         if cli_args.start_cli:
             try:
@@ -184,11 +187,13 @@ class ApplicationStarter:
     def _build_cli_argument_parser(self) -> CliArgumentParser:
         return CliArgumentParser()
 
-    def _setup_logger(self, debug: bool) -> None:
+    def _setup_logger(self, log_file: Path, overwrite: bool, debug: bool) -> None:
         if debug:
-            setup_logger(logging.DEBUG)
+            setup_logger(
+                log_file=log_file, overwrite=overwrite, log_level=logging.DEBUG
+            )
         else:
-            setup_logger(logging.INFO)
+            setup_logger(log_file=log_file, overwrite=overwrite, log_level=logging.INFO)
 
     def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
