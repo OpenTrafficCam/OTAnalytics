@@ -2,6 +2,8 @@ name: Benchmark Test With Pytest
 on:
   schedule:
     - cron: '0 0 * * *'
+  workflow_dispatch:
+
 
 permissions:
   contents: write
@@ -20,7 +22,7 @@ jobs:
       - name: Download test data
         run: gh release download release -R platomo/OpenTrafficCam-testdata -D tests/data
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.PLATOMO_OTC_TESTDATA_ACCESS }}
       - name: Unzip test data
         run: |
           cd tests/data
@@ -33,15 +35,14 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run benchmark tests
         run: pytest ./tests/benchmark_otanalytics.py --benchmark-json output.json
-      - name: Store benchmark result - separate results repo
+      - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
           output-file-path: output.json
-          github-token: ${{ secrets.OTANALYTICS_GITHUBPAGE_TOKEN }}
           auto-push: true
           alert-threshold: '200%'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           comment-on-alert: true
           fail-on-alert: true
-          gh-repository: 'github.com/OpenTrafficCam/OTAnalytics_Page.github.io'
