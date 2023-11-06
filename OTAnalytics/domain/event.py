@@ -373,8 +373,9 @@ class EventRepository:
         to generate the events for later usage.
 
         Args:
-            events (Iterable[Event]): the events sections (list[SectionId]): the
-            sections which have been used to generate the events
+            events (Iterable[Event]): the events
+            sections (list[SectionId]): the  sections which have been used to generate
+                the events
         """
         if sections is None:
             sections = []
