@@ -45,4 +45,4 @@ class TestClearAllEvents:
 
         clear_all_events.notify_sections([section_1])
 
-        repository.remove.assert_called_once()
+        repository.remove.assert_called_once_with([section_1])
