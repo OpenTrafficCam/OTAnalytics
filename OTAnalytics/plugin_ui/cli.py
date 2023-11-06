@@ -335,11 +335,13 @@ class OTAnalyticsCli:
         save_stem = cli_args.save_name if cli_args.save_name else otflow.stem
         save_suffix = f"_{cli_args.save_suffix}" if cli_args.save_suffix else ""
 
-        if (
-            (valid_path := Path(cli_args.save_name)).parent
-        ).is_absolute() or valid_path.is_symlink():
-            return valid_path.with_name(valid_path.stem + save_suffix)
-        return otflow.with_name(save_stem + save_suffix)
+        if not self.cli_args.save_name:
+            # No save name specified. Take otflow name as stem for save path.
+            return otflow.with_name(save_stem + save_suffix)
+
+        # Save name is either absolute or relative path.
+        save_path = Path(self.cli_args.save_name).expanduser()
+        return save_path.with_name(save_path.stem + save_suffix)
 
     @staticmethod
     def _validate_cli_args(args: CliArguments) -> None:
@@ -373,7 +375,7 @@ class OTAnalyticsCli:
         """
         ottrk_files: set[Path] = set()
         for file in files:
-            ottrk_file = Path(file)
+            ottrk_file = Path(file).expanduser().resolve()
             if ottrk_file.is_dir():
                 files_in_directory = ottrk_file.rglob(f"*.{DEFAULT_TRACK_FILE_TYPE}")
                 ottrk_files.update(files_in_directory)
@@ -404,7 +406,7 @@ class OTAnalyticsCli:
         Returns:
             Path: the sections file.
         """
-        sections_file = Path(file)
+        sections_file = Path(file).expanduser().resolve()
         if not sections_file.exists():
             raise SectionsFileDoesNotExist(
                 f"Sections file '{sections_file}' does not exist. "

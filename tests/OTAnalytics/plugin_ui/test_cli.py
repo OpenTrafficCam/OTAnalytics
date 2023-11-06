@@ -443,10 +443,11 @@ class TestOTAnalyticsCli:
     @pytest.mark.parametrize(
         "save_name,save_suffix,section_file,expected_file",
         [
-            ("stem", "suffix", SECTION_FILE, "path/to/stem_suffix"),
+            ("stem", "suffix", SECTION_FILE, "stem_suffix"),
             ("", "", SECTION_FILE, "path/to/section"),
-            ("stem", "", SECTION_FILE, "path/to/stem"),
+            ("stem", "", SECTION_FILE, "stem"),
             ("", "suffix", SECTION_FILE, "path/to/section_suffix"),
+            ("~/stem", "suffix", SECTION_FILE, str(Path.home() / "stem_suffix")),
             (
                 str(Path.cwd().with_name("stem")),
                 "suffix",
@@ -474,28 +475,29 @@ class TestOTAnalyticsCli:
 
     def test_start_with_no_video_in_folder(
         self,
+        test_data_tmp_dir: Path,
         temp_ottrk: Path,
         temp_section: Path,
         cli_dependencies: dict[str, Any],
         event_list_exporter: EventListExporter,
     ) -> None:
-        save_name = "stem"
+        save_name = test_data_tmp_dir / "stem"
         save_suffix = "suffix"
         cli_args = create_cli_args(
             track_files=[str(temp_ottrk)],
             sections_file=str(temp_section),
-            save_name=save_name,
+            save_name=str(save_name),
             save_suffix=save_suffix,
         )
         cli = OTAnalyticsCli(cli_args, **cli_dependencies)
         cli.start()
+        expected_event_list_file = save_name.with_name(
+            f"stem_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
+        )
+        expected_counts_file = save_name.with_name(
+            f"stem_{save_suffix}.counts.{DEFAULT_COUNTS_FILE_TYPE}"
+        )
 
-        expected_event_list_file = temp_section.with_name(
-            f"{save_name}_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
-        )
-        expected_counts_file = temp_section.with_name(
-            f"{save_name}_{save_suffix}.counts.{DEFAULT_COUNTS_FILE_TYPE}"
-        )
         assert expected_event_list_file.exists()
         assert expected_counts_file.exists()
 
