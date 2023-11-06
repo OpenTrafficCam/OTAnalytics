@@ -332,7 +332,7 @@ class TestEventRepository:
         repository.add_all([first_event], [section_id_1, section_id_2])
         missing_sections = repository.retain_missing([section_1, section_2])
 
-        assert first_event in repository.get_all()
+        assert [first_event] == list(repository.get_all())
         assert not missing_sections
 
     def test_clear(self) -> None:
