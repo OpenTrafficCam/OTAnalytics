@@ -22,7 +22,7 @@ jobs:
       - name: Download test data
         run: gh release download release -R platomo/OpenTrafficCam-testdata -D tests/data
         env:
-          GH_TOKEN: ${{ github.PLATOMO_OTC_TESTDATA_ACCESS }}
+          GH_TOKEN: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
       - name: Unzip test data
         run: |
           cd tests/data
