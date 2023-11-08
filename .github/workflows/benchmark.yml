@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: 3.11
       - name: Download test data
-        run: gh release download -R platomo/OpenTrafficCam-testdata -D tests/data
+        run: gh release download --pattern '*.zip' -R platomo/OpenTrafficCam-testdata -D tests/data
         env:
           GH_TOKEN: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
       - name: Unzip test data
