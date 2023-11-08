@@ -21,7 +21,6 @@ from OTAnalytics.domain.video import Video
 
 DISTANCES: str = "distances"
 
-
 MetadataProvider = Callable[[], dict]
 
 
@@ -72,10 +71,6 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
-        pass
-
-    @abstractmethod
-    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
         pass
 
     @abstractmethod

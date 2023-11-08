@@ -18,9 +18,9 @@ from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import (
-    DATE_FORMAT,
     DATETIME_FORMAT,
     RELATIVE_SECTION_OFFSET,
+    SUPPORTED_FORMATS,
 )
 from OTAnalytics.adapter_ui.flow_adapter import (
     GeometricCenterCalculator,
@@ -432,9 +432,6 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._frame_project).__name__)
         project = self._application._datastore.project
         self._frame_project.update(name=project.name, start_date=project.start_date)
-
-    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
-        self._application.update_project(name, start_date)
 
     def save_otconfig(self) -> None:
         title = "Save configuration as"
@@ -1359,7 +1356,9 @@ class DummyViewModel(
         self._application.previous_frame()
 
     def validate_date(self, date: str) -> bool:
-        return validate_date(date, DATE_FORMAT)
+        return any(
+            [validate_date(date, date_format) for date_format in SUPPORTED_FORMATS]
+        )
 
     def validate_hour(self, hour: str) -> bool:
         try:
