@@ -313,6 +313,7 @@ class VisualizationBuilder:
         invalidate = cached_plotter.invalidate_cache
         self._track_repository.observers.register(invalidate)
         self._track_view_state.filter_element.register(invalidate)
+        self._track_view_state.track_offset.register(invalidate)
         return cached_plotter
 
     def _create_pandas_track_provider(
@@ -419,6 +420,7 @@ class VisualizationBuilder:
         )
 
         self._track_view_state.filter_element.register(plotter.notify_invalidate)
+        self._track_view_state.track_offset.register(plotter.notify_invalidate)
         return plotter
 
     def _create_track_highlight_geometry_plotter_not_intersecting(
@@ -542,6 +544,7 @@ class VisualizationBuilder:
             EventToFlowResolver(self._flow_repository),
         )
         self._track_view_state.filter_element.register(plotter.notify_invalidate)
+        self._track_view_state.track_offset.register(plotter.notify_invalidate)
         return plotter
 
     def _create_tracks_not_assigned_to_flows_filter(
