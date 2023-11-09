@@ -18,7 +18,7 @@ from OTAnalytics.application.config import (
     DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
-from OTAnalytics.application.logger import logger
+from OTAnalytics.application.logger import DEFAULT_LOG_FILE, logger
 from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
@@ -77,6 +77,8 @@ class CliArguments:
     event_list_exporter: EventListExporter
     count_interval: int
     num_processes: int
+    log_file: str
+    logfile_overwrite: bool
 
 
 class CliArgumentParser:
@@ -160,6 +162,19 @@ class CliArgumentParser:
             help="Number of processes to use in multi-processing.",
             required=False,
         )
+        self._parser.add_argument(
+            "--logfile",
+            default=DEFAULT_LOG_FILE,
+            type=str,
+            help="Specify log file directory.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--logfile_overwrite",
+            action="store_true",
+            help="Overwrite log file if it already exists.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -178,6 +193,8 @@ class CliArgumentParser:
             self._parse_event_format(args.event_format),
             args.count_interval,
             args.num_processes,
+            args.logfile,
+            args.logfile_overwrite,
         )
 
     def _parse_event_format(self, event_format: str) -> EventListExporter:
@@ -318,11 +335,13 @@ class OTAnalyticsCli:
         save_stem = cli_args.save_name if cli_args.save_name else otflow.stem
         save_suffix = f"_{cli_args.save_suffix}" if cli_args.save_suffix else ""
 
-        if (
-            (valid_path := Path(cli_args.save_name)).parent
-        ).is_absolute() or valid_path.is_symlink():
-            return valid_path.with_name(valid_path.stem + save_suffix)
-        return otflow.with_name(save_stem + save_suffix)
+        if not self.cli_args.save_name:
+            # No save name specified. Take otflow name as stem for save path.
+            return otflow.with_name(save_stem + save_suffix)
+
+        # Save name is either absolute or relative path.
+        save_path = Path(self.cli_args.save_name).expanduser()
+        return save_path.with_name(save_path.stem + save_suffix)
 
     @staticmethod
     def _validate_cli_args(args: CliArguments) -> None:
@@ -356,7 +375,7 @@ class OTAnalyticsCli:
         """
         ottrk_files: set[Path] = set()
         for file in files:
-            ottrk_file = Path(file)
+            ottrk_file = Path(file).expanduser()
             if ottrk_file.is_dir():
                 files_in_directory = ottrk_file.rglob(f"*.{DEFAULT_TRACK_FILE_TYPE}")
                 ottrk_files.update(files_in_directory)
@@ -387,7 +406,7 @@ class OTAnalyticsCli:
         Returns:
             Path: the sections file.
         """
-        sections_file = Path(file)
+        sections_file = Path(file).expanduser()
         if not sections_file.exists():
             raise SectionsFileDoesNotExist(
                 f"Sections file '{sections_file}' does not exist. "
