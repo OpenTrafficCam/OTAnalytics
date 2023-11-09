@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -9,18 +9,19 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     GetAllTrackIds,
     GetAllTracks,
+    GetTracksAsBatches,
     GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
 )
 from OTAnalytics.domain.track import (
-    PythonTrackDataset,
     Track,
     TrackDataset,
     TrackFileRepository,
     TrackId,
     TrackRepository,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 
 
 @pytest.fixture
@@ -99,20 +100,48 @@ class TestGetTracksFromIds:
 
 
 class TestGetTracksWithoutSingleDetections:
-    def test_get_tracks(self, track_repository: Mock) -> None:
-        track = Mock(spec=Track)
-        track.detections = [Mock(), Mock(), Mock()]
-        track_single_detection = Mock(spec=Track)
-        track_single_detection.detections = [Mock()]
-        track_repository.get_all.return_value = PythonTrackDataset.from_list(
-            [track, track_single_detection]
-        )
+    def test_get_as_dataset(self) -> None:
+        expected_dataset = Mock()
+        dataset = Mock()
+        dataset.filter_by_min_detection_length.return_value = expected_dataset
+        track_repository = Mock()
+        track_repository.get_all.return_value = dataset
 
         get_tracks = GetTracksWithoutSingleDetections(track_repository)
-        actual_tracks = get_tracks()
-
-        assert actual_tracks == [track]
+        result_dataset = get_tracks.as_dataset()
+        assert result_dataset == expected_dataset
         track_repository.get_all.assert_called_once()
+        dataset.filter_by_min_detection_length.assert_called_once_with(1)
+
+    def test_get_as_list(self) -> None:
+        track_repository = Mock()
+
+        get_tracks = GetTracksWithoutSingleDetections(track_repository)
+        with patch.object(
+            GetTracksWithoutSingleDetections, "as_dataset"
+        ) as mock_as_dataset:
+            expected_list = Mock()
+            filtered_dataset = Mock()
+            filtered_dataset.as_list.return_value = expected_list
+
+            mock_as_dataset.return_value = filtered_dataset
+            result = get_tracks.as_list()
+
+            assert result == expected_list
+            mock_as_dataset.assert_called_once()
+            filtered_dataset.as_list.assert_called_once()
+
+
+class TestGetTracksAsBatches:
+    def test_get(self, track_repository: Mock) -> None:
+        expected_batches = [Mock(), Mock()]
+        track_repository.split.return_value = expected_batches
+
+        get_track_batches = GetTracksAsBatches(track_repository)
+        result = get_track_batches.get(batches=4)
+
+        assert result == expected_batches
+        track_repository.split.assert_called_once_with(4)
 
 
 class TestGetAllTrackFiles:

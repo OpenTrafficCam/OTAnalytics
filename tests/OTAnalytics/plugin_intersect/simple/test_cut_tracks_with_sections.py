@@ -22,11 +22,11 @@ from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import (
     Detection,
-    PythonDetection,
     Track,
     TrackClassificationCalculator,
     TrackId,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonDetection
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTrackSegmentBuilder,

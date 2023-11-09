@@ -7,6 +7,7 @@ from OTAnalytics.domain.geometry import (
     Line,
     Polygon,
     RelativeOffsetCoordinate,
+    apply_offset,
     calculate_direction_vector,
 )
 
@@ -97,3 +98,9 @@ class TestRelativeOffset:
 def test_calculate_direction_vector() -> None:
     result = calculate_direction_vector(0, 0, 1, 1)
     assert result == DirectionVector2D(1, 1)
+
+
+def test_apply_offset() -> None:
+    result = apply_offset(x=0, y=0, w=1, h=1, offset=RelativeOffsetCoordinate(0.5, 0.5))
+
+    assert result == (0.5, 0.5)

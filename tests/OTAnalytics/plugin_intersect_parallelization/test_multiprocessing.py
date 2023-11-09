@@ -3,8 +3,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -15,19 +13,18 @@ class TestMultiprocessingIntersectParallelization:
     def test_execute(self, mock_pool_init: Mock) -> None:
         event_1 = Mock(spec=Event)
         event_2 = Mock(spec=Event)
-        sections = [Mock(spec=Section)]
 
         mock_pool_instance = mock_pool_init.return_value.__enter__.return_value
         mock_pool_instance.starmap.return_value = [[event_1], [event_2]]
 
         mock_intersect = Mock()
-        tracks = [Mock(spec=Track), Mock(spec=Track)]
+        tasks = Mock()
 
-        intersect = MultiprocessingIntersectParallelization()
-        result = intersect.execute(mock_intersect, tracks, sections)
+        parallelizer = MultiprocessingIntersectParallelization()
+        result = parallelizer.execute(mock_intersect, tasks)
 
         assert result == [event_1, event_2]
-        mock_pool_instance.starmap.assert_called_once()
+        mock_pool_instance.starmap.assert_called_once_with(mock_intersect, tasks)
 
     def test_flatten_events(self) -> None:
         intersect = MultiprocessingIntersectParallelization()

@@ -1,8 +1,6 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect_parallelization.sequential import SequentialIntersect
 
 
@@ -13,13 +11,19 @@ class TestSequentialIntersect:
         side_effect = [[event_1], [event_2]]
 
         mock_intersect = Mock(spec=callable, side_effect=side_effect)
-        tracks = [Mock(spec=Track), Mock(spec=Track)]
+        first_track = Mock()
+        second_track = Mock()
+        sections = [Mock()]
 
-        sections = [Mock(spec=Section)]
+        tasks = [
+            ([first_track], sections),
+            ([second_track], sections),
+        ]
         sequential_intersect = SequentialIntersect()
 
-        result = sequential_intersect.execute(mock_intersect, tracks, sections)
+        result = sequential_intersect.execute(mock_intersect, tasks)
         assert result == [event_1, event_2]
-        mock_intersect.assert_any_call(tracks[0], sections)
-        mock_intersect.assert_any_call(tracks[1], sections)
-        assert mock_intersect.call_count == 2
+        assert mock_intersect.call_args_list == [
+            call([first_track], sections),
+            call([second_track], sections),
+        ]
