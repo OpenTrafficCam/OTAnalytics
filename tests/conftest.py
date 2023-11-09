@@ -9,13 +9,8 @@ import pytest
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import (
-    Detection,
-    PythonDetection,
-    PythonTrack,
-    Track,
-    TrackId,
-)
+from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (

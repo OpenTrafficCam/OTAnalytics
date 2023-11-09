@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Sequence
 
 from OTAnalytics.application.analysis.intersect import (
@@ -89,13 +90,15 @@ from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import (
+from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
+from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
-    TrackFileRepository,
-    TrackRepository,
 )
-from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
+    ShapelyRunIntersect,
+)
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
@@ -104,7 +107,6 @@ from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksWithSection,
 )
 from OTAnalytics.plugin_intersect.simple_intersect import (
-    SimpleRunIntersect,
     SimpleTracksIntersectingSections,
 )
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -148,7 +150,9 @@ class ApplicationStarter:
     def start(self) -> None:
         parser = self._build_cli_argument_parser()
         cli_args = parser.parse()
-        self._setup_logger(cli_args.debug)
+        self._setup_logger(
+            Path(cli_args.log_file), cli_args.logfile_overwrite, cli_args.debug
+        )
 
         if cli_args.start_cli:
             try:
@@ -161,11 +165,13 @@ class ApplicationStarter:
     def _build_cli_argument_parser(self) -> CliArgumentParser:
         return CliArgumentParser()
 
-    def _setup_logger(self, debug: bool) -> None:
+    def _setup_logger(self, log_file: Path, overwrite: bool, debug: bool) -> None:
         if debug:
-            setup_logger(logging.DEBUG)
+            setup_logger(
+                log_file=log_file, overwrite=overwrite, log_level=logging.DEBUG
+            )
         else:
-            setup_logger(logging.INFO)
+            setup_logger(log_file=log_file, overwrite=overwrite, log_level=logging.INFO)
 
     def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
@@ -625,8 +631,7 @@ class ApplicationStarter:
     def _create_intersect(
         get_tracks: GetTracksWithoutSingleDetections, num_processes: int
     ) -> RunIntersect:
-        return SimpleRunIntersect(
-            intersect_implementation=ShapelyIntersector(ShapelyMapper()),
+        return ShapelyRunIntersect(
             intersect_parallelizer=MultiprocessingIntersectParallelization(
                 num_processes
             ),
