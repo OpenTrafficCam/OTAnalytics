@@ -375,7 +375,7 @@ class OTAnalyticsCli:
         """
         ottrk_files: set[Path] = set()
         for file in files:
-            ottrk_file = Path(file).expanduser().resolve()
+            ottrk_file = Path(file).expanduser()
             if ottrk_file.is_dir():
                 files_in_directory = ottrk_file.rglob(f"*.{DEFAULT_TRACK_FILE_TYPE}")
                 ottrk_files.update(files_in_directory)
@@ -406,7 +406,7 @@ class OTAnalyticsCli:
         Returns:
             Path: the sections file.
         """
-        sections_file = Path(file).expanduser().resolve()
+        sections_file = Path(file).expanduser()
         if not sections_file.exists():
             raise SectionsFileDoesNotExist(
                 f"Sections file '{sections_file}' does not exist. "
