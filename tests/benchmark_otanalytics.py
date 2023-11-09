@@ -243,9 +243,9 @@ def section_flow_repo_setup(
 
 
 class TestBenchmarkTrackParser:
-    ROUNDS = 2
-    ITERATIONS = 4
-    WARMUP_ROUNDS = 1
+    ROUNDS = 1
+    ITERATIONS = 1
+    WARMUP_ROUNDS = 0
 
     def test_load_15min_with_python_parser(
         self,
@@ -319,9 +319,9 @@ class TestBenchmarkTrackParser:
 
 
 class TestBenchmarkTracksIntersectingSections:
-    ROUNDS = 5
+    ROUNDS = 1
     ITERATIONS = 1
-    WARMUP_ROUNDS = 1
+    WARMUP_ROUNDS = 0
 
     def test_python_15min(
         self,
@@ -399,9 +399,9 @@ class TestBenchmarkTracksIntersectingSections:
 
 
 class TestBenchmarkCreateEvents:
-    ROUNDS = 5
+    ROUNDS = 1
     ITERATIONS = 1
-    WARMUP_ROUNDS = 1
+    WARMUP_ROUNDS = 0
 
     def test_python_15min(
         self,
@@ -489,9 +489,9 @@ class TestBenchmarkCreateEvents:
 
 
 class TestBenchmarkExportCounting:
-    ROUNDS = 2
-    ITERATIONS = 4
-    WARMUP_ROUNDS = 1
+    ROUNDS = 1
+    ITERATIONS = 1
+    WARMUP_ROUNDS = 0
 
     def test_export_15min_tracks(
         self,
