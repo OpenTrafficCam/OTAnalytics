@@ -28,24 +28,23 @@ from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Detection, TrackId
 from OTAnalytics.domain.types import EventType, EventTypeParseError
-from OTAnalytics.plugin_datastore.python_track_store import PythonDetection
 
 
 @pytest.fixture
 def valid_detection() -> Detection:
-    return PythonDetection(
-        _classification="car",
-        _confidence=0.5,
-        _x=0.0,
-        _y=0.0,
-        _w=15.3,
-        _h=30.5,
-        _frame=1,
-        _occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
-        _interpolated_detection=False,
-        _track_id=TrackId("1"),
-        _video_name="myhostname_something.mp4",
-    )
+    detection = Mock(spec=Detection)
+    detection.classification = "car"
+    detection.confidence = 0.5
+    detection.x = 0.0
+    detection.y = 0.0
+    detection.w = 15.3
+    detection.h = 30.5
+    detection.frame = 1
+    detection.occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
+    detection.interpolated_detection = False
+    detection.track_id = TrackId("1")
+    detection.video_name = "myhostname_something.mp4"
+    return detection
 
 
 class TestEventType:
