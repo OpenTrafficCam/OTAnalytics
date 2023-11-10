@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Sequence
 
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
@@ -26,15 +26,10 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
-from OTAnalytics.application.plotting import (
-    LayeredPlotter,
-    PlottingLayer,
-    TrackBackgroundPlotter,
-)
+from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
-    Plotter,
     SectionState,
     SelectedVideoUpdate,
     TrackImageUpdater,
@@ -65,10 +60,10 @@ from OTAnalytics.application.use_cases.generate_flows import (
     RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
-    TracksAssignedToSelectedFlows,
-    TracksIntersectingSelectedSections,
-    TracksNotIntersectingSelection,
-    TracksOverlapOccurrenceWindow,
+    IntersectionRepository,
+)
+from OTAnalytics.application.use_cases.intersection_repository import (
+    ClearAllIntersections,
 )
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
@@ -101,17 +96,12 @@ from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import (
-    TrackFileRepository,
-    TrackIdProvider,
-    TrackRepository,
-)
+from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
     ShapelyRunIntersect,
 )
@@ -150,18 +140,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     DEFAULT_COLOR_PALETTE,
-    CachedPandasTrackProvider,
     ColorPaletteProvider,
-    FilterByClassification,
-    FilterById,
-    FilterByOccurrence,
-    MatplotlibTrackPlotter,
-    PandasDataFrameProvider,
-    PandasTrackProvider,
-    PandasTracksOffsetProvider,
-    PlotterPrototype,
-    TrackGeometryPlotter,
-    TrackStartEndPointPlotter,
 )
 from OTAnalytics.plugin_ui.cli import (
     CliArgumentParser,
@@ -169,6 +148,8 @@ from OTAnalytics.plugin_ui.cli import (
     CliParseError,
     OTAnalyticsCli,
 )
+from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
+from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 
@@ -221,6 +202,7 @@ class ApplicationStarter:
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
+        intersection_repository = self._create_intersection_repository()
         event_repository = self._create_event_repository()
         video_parser = self._create_video_parser()
         video_repository = self._create_video_repository()
@@ -241,19 +223,20 @@ class ApplicationStarter:
         section_state = self._create_section_state(section_repository)
         flow_state = self._create_flow_state()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-        cached_pandas_track_provider = self._create_pandas_track_provider(
-            datastore, track_view_state, pulling_progressbar_builder
-        )
-        pandas_data_provider = self._wrap_pandas_track_offset_provider(
-            cached_pandas_track_provider, track_view_state
-        )
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
+        clear_all_intersections = ClearAllIntersections(intersection_repository)
+        track_repository.register_tracks_observer(clear_all_intersections)
+        section_repository.register_sections_observer(clear_all_intersections)
+        section_repository.register_section_changed_observer(
+            clear_all_intersections.on_section_changed
+        )
         layers = self._create_layers(
             datastore,
+            intersection_repository,
             track_view_state,
             flow_state,
             section_state,
-            pandas_data_provider,
+            pulling_progressbar_builder,
             road_user_assigner,
             color_palette_provider,
         )
@@ -347,6 +330,7 @@ class ApplicationStarter:
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
             clear_all_flows,
+            clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
             clear_all_tracks,
@@ -588,6 +572,9 @@ class ApplicationStarter:
     def _create_flow_repository(self) -> FlowRepository:
         return FlowRepository()
 
+    def _create_intersection_repository(self) -> IntersectionRepository:
+        return PythonIntersectionRepository()
+
     def _create_event_repository(self) -> EventRepository:
         return EventRepository()
 
@@ -600,364 +587,28 @@ class ApplicationStarter:
     def _create_track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_pandas_track_provider(
-        self,
-        datastore: Datastore,
-        track_view_state: TrackViewState,
-        progressbar: ProgressbarBuilder,
-    ) -> PandasTrackProvider:
-        dataframe_filter_builder = self._create_dataframe_filter_builder()
-        # return PandasTrackProvider(
-        #     datastore, track_view_state, dataframe_filter_builder, progressbar
-        # )
-        return CachedPandasTrackProvider(
-            datastore, track_view_state, dataframe_filter_builder, progressbar
-        )
-
-    @staticmethod
-    def _wrap_pandas_track_offset_provider(
-        other: PandasDataFrameProvider,
-        track_view_state: TrackViewState,
-    ) -> PandasDataFrameProvider:
-        return PandasTracksOffsetProvider(other, track_view_state)
-
-    def _create_track_geometry_plotter(
-        self,
-        state: TrackViewState,
-        pandas_data_provider: PandasDataFrameProvider,
-        color_palette_provider: ColorPaletteProvider,
-        alpha: float,
-        enable_legend: bool,
-    ) -> Plotter:
-        track_plotter = MatplotlibTrackPlotter(
-            TrackGeometryPlotter(
-                pandas_data_provider,
-                color_palette_provider,
-                alpha=alpha,
-                enable_legend=enable_legend,
-            ),
-        )
-        return PlotterPrototype(state, track_plotter)
-
-    def _create_track_start_end_point_plotter(
-        self,
-        state: TrackViewState,
-        pandas_data_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
-        color_palette_provider: ColorPaletteProvider,
-        enable_legend: bool,
-        id_filter: Optional[TrackIdProvider] = None,
-    ) -> Plotter:
-        data_provider = pandas_data_provider
-        data_provider = FilterById(
-            pandas_data_provider,
-            id_filter=TracksOverlapOccurrenceWindow(
-                other=id_filter,
-                track_repository=track_repository,
-                track_view_state=state,
-            ),
-        )
-        track_plotter = MatplotlibTrackPlotter(
-            TrackStartEndPointPlotter(
-                data_provider,
-                color_palette_provider,
-                enable_legend=enable_legend,
-            ),
-        )
-        return PlotterPrototype(state, track_plotter)
-
-    def _create_track_highlight_geometry_plotter(
-        self,
-        state: TrackViewState,
-        tracks_intersecting_selected_sections: TracksIntersectingSelectedSections,
-        pandas_track_provider: PandasDataFrameProvider,
-        color_palette_provider: ColorPaletteProvider,
-        enable_legend: bool,
-    ) -> Plotter:
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_intersecting_selected_sections
-        )
-        return self._create_track_geometry_plotter(
-            state,
-            filter_by_id,
-            color_palette_provider,
-            alpha=1,
-            enable_legend=enable_legend,
-        )
-
-    def _create_tracks_intersecting_selected_sections(
-        self,
-        section_state: SectionState,
-        tracks_intersecting_sections: TracksIntersectingSections,
-        get_sections_by_id: GetSectionsById,
-    ) -> TracksIntersectingSelectedSections:
-        return TracksIntersectingSelectedSections(
-            section_state, tracks_intersecting_sections, get_sections_by_id
-        )
-
-    def _create_track_highlight_geometry_plotter_not_intersecting(
-        self,
-        state: TrackViewState,
-        tracks_not_intersecting_sections: TracksNotIntersectingSelection,
-        pandas_track_provider: PandasDataFrameProvider,
-        color_palette_provider: ColorPaletteProvider,
-        enable_legend: bool,
-    ) -> Plotter:
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_not_intersecting_sections
-        )
-        return self._create_track_geometry_plotter(
-            state,
-            filter_by_id,
-            color_palette_provider,
-            alpha=1,
-            enable_legend=enable_legend,
-        )
-
-    def _create_start_end_point_tracks_intersecting_sections_plotter(
-        self,
-        state: TrackViewState,
-        tracks_intersecting_sections: TracksIntersectingSelectedSections,
-        pandas_track_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
-        color_palette_provider: ColorPaletteProvider,
-        enable_legend: bool,
-    ) -> Plotter:
-        return self._create_track_start_end_point_plotter(
-            state,
-            pandas_track_provider,
-            track_repository,
-            color_palette_provider,
-            enable_legend=enable_legend,
-            id_filter=tracks_intersecting_sections,
-        )
-
-    def _create_start_end_point_tracks_not_intersecting_sections_plotter(
-        self,
-        state: TrackViewState,
-        tracks_not_intersecting_sections: TracksNotIntersectingSelection,
-        pandas_track_provider: PandasDataFrameProvider,
-        track_repository: TrackRepository,
-        color_palette_provider: ColorPaletteProvider,
-        enable_legend: bool,
-    ) -> Plotter:
-        return self._create_track_start_end_point_plotter(
-            state,
-            pandas_track_provider,
-            track_repository,
-            color_palette_provider,
-            enable_legend=enable_legend,
-            id_filter=tracks_not_intersecting_sections,
-        )
-
-    def _create_highlight_tracks_assigned_to_flow(
-        self,
-        state: TrackViewState,
-        pandas_track_provider: PandasDataFrameProvider,
-        color_palette_provider: ColorPaletteProvider,
-        tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
-        enable_legend: bool,
-    ) -> Plotter:
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_assigned_to_flow
-        )
-        return self._create_track_geometry_plotter(
-            state,
-            filter_by_id,
-            color_palette_provider,
-            alpha=1,
-            enable_legend=enable_legend,
-        )
-
-    def _create_highlight_tracks_not_assigned_to_flow(
-        self,
-        state: TrackViewState,
-        pandas_track_provider: PandasDataFrameProvider,
-        color_palette_provider: ColorPaletteProvider,
-        tracks_assigned_to_flow: TracksAssignedToSelectedFlows,
-        track_repository: TrackRepository,
-        enable_legend: bool,
-    ) -> Plotter:
-        tracks_not_assigned_to_flow = TracksNotIntersectingSelection(
-            tracks_assigned_to_flow, track_repository
-        )
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_not_assigned_to_flow
-        )
-        return self._create_track_geometry_plotter(
-            state,
-            filter_by_id,
-            color_palette_provider,
-            alpha=1,
-            enable_legend=enable_legend,
-        )
-
     def _create_layers(
         self,
         datastore: Datastore,
+        intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
         flow_state: FlowState,
         section_state: SectionState,
-        pandas_data_provider: PandasDataFrameProvider,
+        pulling_progressbar_builder: ProgressbarBuilder,
         road_user_assigner: RoadUserAssigner,
         color_palette_provider: ColorPaletteProvider,
     ) -> Sequence[PlottingLayer]:
-        background_image_plotter = TrackBackgroundPlotter(track_view_state, datastore)
-        data_provider_all_filters = FilterByClassification(
-            FilterByOccurrence(
-                pandas_data_provider,
-                track_view_state,
-                self._create_dataframe_filter_builder(),
-            ),
+        return VisualizationBuilder(
+            datastore,
+            intersection_repository,
             track_view_state,
-            self._create_dataframe_filter_builder(),
-        )
-        data_provider_class_filter = FilterByClassification(
-            pandas_data_provider,
-            track_view_state,
-            self._create_dataframe_filter_builder(),
-        )
-        track_geometry_plotter = self._create_track_geometry_plotter(
-            track_view_state,
-            data_provider_all_filters,
+            section_state,
             color_palette_provider,
-            alpha=0.5,
-            enable_legend=True,
-        )
-        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            GetTracksWithoutSingleDetections(datastore._track_repository),
-            ShapelyIntersector(),
-        )
-        tracks_intersecting_selected_sections = (
-            self._create_tracks_intersecting_selected_sections(
-                section_state,
-                tracks_intersecting_sections,
-                GetSectionsById(datastore._section_repository),
-            )
-        )
-        tracks_not_intersecting_sections = TracksNotIntersectingSelection(
-            tracks_intersecting_selected_sections, datastore._track_repository
-        )
-
-        highlight_tracks_intersecting_sections = (
-            self._create_track_highlight_geometry_plotter(
-                track_view_state,
-                tracks_intersecting_selected_sections,
-                data_provider_all_filters,
-                color_palette_provider,
-                enable_legend=False,
-            )
-        )
-        highlight_tracks_not_intersecting_sections = (
-            self._create_track_highlight_geometry_plotter_not_intersecting(
-                track_view_state,
-                tracks_not_intersecting_sections,
-                data_provider_all_filters,
-                color_palette_provider,
-                enable_legend=False,
-            )
-        )
-        start_end_points_tracks_intersecting_sections = (
-            self._create_start_end_point_tracks_intersecting_sections_plotter(
-                track_view_state,
-                tracks_intersecting_selected_sections,
-                data_provider_class_filter,
-                datastore._track_repository,
-                color_palette_provider,
-                enable_legend=False,
-            )
-        )
-        start_end_points_tracks_not_intersecting_sections = (
-            self._create_start_end_point_tracks_not_intersecting_sections_plotter(
-                track_view_state,
-                tracks_not_intersecting_sections,
-                data_provider_class_filter,
-                datastore._track_repository,
-                color_palette_provider,
-                enable_legend=False,
-            )
-        )
-        track_start_end_point_plotter = self._create_track_start_end_point_plotter(
-            track_view_state,
-            data_provider_class_filter,
-            datastore._track_repository,
-            color_palette_provider,
-            enable_legend=False,
-        )
-        tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
-            road_user_assigner,
-            datastore._event_repository,
-            datastore._flow_repository,
+            pulling_progressbar_builder,
+        ).build(
             flow_state,
+            road_user_assigner,
         )
-        highlight_tracks_assigned_to_flow = (
-            self._create_highlight_tracks_assigned_to_flow(
-                track_view_state,
-                data_provider_all_filters,
-                color_palette_provider,
-                tracks_assigned_to_flow,
-                enable_legend=False,
-            )
-        )
-        highlight_tracks_not_assigned_to_flow = (
-            self._create_highlight_tracks_not_assigned_to_flow(
-                track_view_state,
-                data_provider_all_filters,
-                color_palette_provider,
-                tracks_assigned_to_flow,
-                datastore._track_repository,
-                enable_legend=False,
-            )
-        )
-        background = PlottingLayer("Background", background_image_plotter, enabled=True)
-        all_tracks_layer = PlottingLayer(
-            "Show all tracks", track_geometry_plotter, enabled=False
-        )
-        highlight_tracks_intersecting_sections_layer = PlottingLayer(
-            "Highlight tracks intersecting sections",
-            highlight_tracks_intersecting_sections,
-            enabled=False,
-        )
-        highlight_tracks_not_intersecting_sections_layer = PlottingLayer(
-            "Highlight tracks not intersecting sections",
-            highlight_tracks_not_intersecting_sections,
-            enabled=False,
-        )
-        start_end_points_tracks_intersecting_sections_layer = PlottingLayer(
-            "Show start and end point of tracks intersecting sections",
-            start_end_points_tracks_intersecting_sections,
-            enabled=False,
-        )
-        start_end_points_tracks_not_intersecting_sections_layer = PlottingLayer(
-            "Show start and end point of tracks not intersecting sections",
-            start_end_points_tracks_not_intersecting_sections,
-            enabled=False,
-        )
-        start_end_point_layer = PlottingLayer(
-            "Show start and end point", track_start_end_point_plotter, enabled=False
-        )
-        highlight_tracks_assigned_to_flow_layer = PlottingLayer(
-            "Highlight tracks assigned to flow",
-            highlight_tracks_assigned_to_flow,
-            enabled=False,
-        )
-        highlight_tracks_not_assigned_to_flow_layer = PlottingLayer(
-            "Highlight tracks not assigned to flow",
-            highlight_tracks_not_assigned_to_flow,
-            enabled=False,
-        )
-
-        return [
-            background,
-            all_tracks_layer,
-            highlight_tracks_intersecting_sections_layer,
-            highlight_tracks_not_intersecting_sections_layer,
-            start_end_point_layer,
-            start_end_points_tracks_intersecting_sections_layer,
-            start_end_points_tracks_not_intersecting_sections_layer,
-            highlight_tracks_assigned_to_flow_layer,
-            highlight_tracks_not_assigned_to_flow_layer,
-        ]
 
     @staticmethod
     def _create_section_state(section_repository: SectionRepository) -> SectionState:
@@ -1015,9 +666,6 @@ class ApplicationStarter:
 
     def _create_action_state(self) -> ActionState:
         return ActionState()
-
-    def _create_dataframe_filter_builder(self) -> DataFrameFilterBuilder:
-        return DataFrameFilterBuilder()
 
     def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
         return FilterElementSettingRestorer()
@@ -1091,6 +739,7 @@ class ApplicationStarter:
     def _create_use_case_clear_all_repositories(
         clear_all_events: ClearAllEvents,
         clear_all_flows: ClearAllFlows,
+        clear_all_intersections: ClearAllIntersections,
         clear_all_sections: ClearAllSections,
         clear_all_track_to_videos: ClearAllTrackToVideos,
         clear_all_tracks: ClearAllTracks,
@@ -1099,6 +748,7 @@ class ApplicationStarter:
         return ClearRepositories(
             clear_all_events,
             clear_all_flows,
+            clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
             clear_all_tracks,
