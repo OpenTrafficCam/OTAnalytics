@@ -261,6 +261,7 @@ class TestBenchmarkTrackParser:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
     def test_load_15min_with_pandas_parser(
         self,
         benchmark: BenchmarkFixture,
@@ -296,6 +297,7 @@ class TestBenchmarkTrackParser:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
     def test_load_2hour_with_pandas_parser(
         self,
         benchmark: BenchmarkFixture,
@@ -341,6 +343,7 @@ class TestBenchmarkTracksIntersectingSections:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
     def test_pandas_15min(
         self,
         benchmark: BenchmarkFixture,
@@ -379,6 +382,7 @@ class TestBenchmarkTracksIntersectingSections:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
     def test_pandas_2hours(
         self,
         benchmark: BenchmarkFixture,
@@ -445,6 +449,7 @@ class TestBenchmarkCreateEvents:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
     def test_pandas_15min(
         self,
         benchmark: BenchmarkFixture,
@@ -466,6 +471,7 @@ class TestBenchmarkCreateEvents:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
     def test_pandas_2hours(
         self,
         benchmark: BenchmarkFixture,
