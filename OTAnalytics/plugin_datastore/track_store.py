@@ -9,7 +9,9 @@ from more_itertools import batched
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
+    INTERSECTION_COORDINATE,
     MIN_NUMBER_OF_DETECTIONS,
     Detection,
     Track,
@@ -138,7 +140,6 @@ class PandasByMaxConfidence(PandasTrackClassificationCalculator):
 DEFAULT_CLASSIFICATOR = PandasByMaxConfidence()
 
 
-@dataclass
 class PandasTrackDataset(TrackDataset):
     def __init__(
         self,
@@ -248,6 +249,14 @@ class PandasTrackDataset(TrackDataset):
             self._dataset[track.TRACK_ID].isin(filtered_ids)
         ]
         return PandasTrackDataset(filtered_dataset, self._calculator)
+
+    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+        raise NotImplementedError
+
+    def intersection_points(
+        self, sections: list[Section]
+    ) -> dict[TrackId, list[tuple[SectionId, INTERSECTION_COORDINATE]]]:
+        raise NotImplementedError
 
 
 def _assign_track_classification(

@@ -9,6 +9,7 @@ from PIL import Image
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import Subject
+from OTAnalytics.domain.section import Section, SectionId
 
 MIN_NUMBER_OF_DETECTIONS = 5
 CLASSIFICATION: str = "classification"
@@ -364,6 +365,9 @@ class RemoveMultipleTracksError(Exception):
         self._track_ids = track_ids
 
 
+INTERSECTION_COORDINATE = tuple[float, float]
+
+
 class TrackDataset(ABC):
     def __iter__(self) -> Iterator[Track]:
         yield from self.as_list()
@@ -402,6 +406,17 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def as_list(self) -> list[Track]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def intersection_points(
+        self,
+        sections: list[Section],
+    ) -> dict[TrackId, list[tuple[SectionId, INTERSECTION_COORDINATE]]]:
         raise NotImplementedError
 
     @abstractmethod

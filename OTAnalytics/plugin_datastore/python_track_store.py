@@ -7,7 +7,9 @@ from more_itertools import batched
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
+    INTERSECTION_COORDINATE,
     Detection,
     Track,
     TrackClassificationCalculator,
@@ -210,7 +212,6 @@ class ByMaxConfidence(TrackClassificationCalculator):
         return max(classifications, key=lambda x: classifications[x])
 
 
-@dataclass
 class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
@@ -309,3 +310,11 @@ class PythonTrackDataset(TrackDataset):
             if len(track.detections) >= length
         }
         return PythonTrackDataset(filtered_tracks, self._calculator)
+
+    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+        raise NotImplementedError
+
+    def intersection_points(
+        self, sections: list[Section]
+    ) -> dict[TrackId, list[tuple[SectionId, INTERSECTION_COORDINATE]]]:
+        raise NotImplementedError
