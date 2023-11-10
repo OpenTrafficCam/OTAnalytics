@@ -1,7 +1,9 @@
+import pytest
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import PythonTrackDataset, Track, TrackId
+from OTAnalytics.domain.track import Track, TrackDataset, TrackId
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
     PandasTrack,
@@ -43,6 +45,14 @@ class TestPandasTrack:
 
 
 class TestPandasTrackDataset:
+    def _create_dataset(self, size: int) -> TrackDataset:
+        tracks = []
+        for i in range(1, size + 1):
+            tracks.append(self.__build_track(str(i)))
+
+        dataset = PandasTrackDataset.from_list(tracks)
+        return dataset
+
     def test_use_track_classificator(self) -> None:
         first_detection_class = "car"
         track_class = "pedestrian"
@@ -117,14 +127,11 @@ class TestPandasTrackDataset:
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
 
-    def __build_track(self, track_id: str) -> Track:
+    def __build_track(self, track_id: str, length: int = 5) -> Track:
         builder = TrackBuilder()
         builder.add_track_id(track_id)
-        builder.append_detection()
-        builder.append_detection()
-        builder.append_detection()
-        builder.append_detection()
-        builder.append_detection()
+        for i in range(0, length):
+            builder.append_detection()
         return builder.build_track()
 
     def test_get_by_id(self) -> None:
@@ -161,3 +168,44 @@ class TestPandasTrackDataset:
         removed_track_set = dataset.remove(first_track.id)
 
         assert PandasTrackDataset.from_list([second_track]) == removed_track_set
+
+    def test_len(self) -> None:
+        first_track = self.__build_track("1")
+        second_track = self.__build_track("2")
+        dataset = PandasTrackDataset.from_list([first_track, second_track])
+
+        assert len(dataset) == 2
+
+    @pytest.mark.parametrize(
+        "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]
+    )
+    def test_split(self, num_tracks: int, batches: int, expected_batches: int) -> None:
+        dataset = self._create_dataset(num_tracks)
+        assert len(dataset) == num_tracks
+        split_datasets = dataset.split(batches)
+
+        assert len(dataset) == sum([len(_dataset) for _dataset in split_datasets])
+        assert len(split_datasets) == expected_batches
+
+        it = iter(dataset)
+
+        for idx, _dataset in enumerate(split_datasets):
+            for expected_track in _dataset:
+                it_track = next(it)
+                assert expected_track.id == it_track.id
+                assert len(expected_track.detections) == len(it_track.detections)
+
+                for detection, expected_detection in zip(
+                    expected_track.detections, it_track.detections
+                ):
+                    assert_equal_detection_properties(detection, expected_detection)
+
+    def test_filter_by_minimum_detection_length(self) -> None:
+        first_track = self.__build_track("1", length=5)
+        second_track = self.__build_track("2", length=10)
+        dataset = PandasTrackDataset.from_list([first_track, second_track])
+
+        filtered_dataset = dataset.filter_by_min_detection_length(7)
+        assert len(filtered_dataset) == 1
+        for actual_track, expected_track in zip(filtered_dataset, [second_track]):
+            assert_equal_track_properties(actual_track, expected_track)

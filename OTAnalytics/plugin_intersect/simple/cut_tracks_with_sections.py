@@ -26,14 +26,13 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import (
     Detection,
-    PythonDetection,
-    PythonTrack,
     Track,
     TrackBuilder,
     TrackBuilderError,
     TrackClassificationCalculator,
     TrackId,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 

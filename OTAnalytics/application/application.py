@@ -218,9 +218,6 @@ class OTAnalyticsApplication:
     def update_flow(self, flow: Flow) -> None:
         self._datastore.update_flow(flow)
 
-    def update_project(self, name: str, start_date: Optional[datetime]) -> None:
-        self._project_updater(name, start_date)
-
     def save_otconfig(self, file: Path) -> None:
         self._save_otconfig(file)
 

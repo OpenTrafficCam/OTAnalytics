@@ -21,6 +21,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.state import TracksMetadata, TrackViewState
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -50,7 +51,14 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
-from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
+from OTAnalytics.domain.track import TrackRepository
+from OTAnalytics.plugin_datastore.python_track_store import (
+    ByMaxConfidence,
+    PythonTrackDataset,
+)
+from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
+    ShapelyRunIntersect,
+)
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
@@ -59,7 +67,6 @@ from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksWithSection,
 )
 from OTAnalytics.plugin_intersect.simple_intersect import (
-    SimpleRunIntersect,
     SimpleTracksIntersectingSections,
 )
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -148,6 +155,8 @@ def create_cli_args(
     ],
     count_interval: int = 1,
     num_processes: int = DEFAULT_NUM_PROCESSES,
+    logfile: str = str(DEFAULT_LOG_FILE),
+    logfile_overwrite: bool = False,
 ) -> CliArguments:
     if track_files is None:
         track_files = [TRACK_FILE]
@@ -161,6 +170,8 @@ def create_cli_args(
         event_list_exporter,
         count_interval,
         num_processes,
+        logfile,
+        logfile_overwrite,
     )
 
 
@@ -171,6 +182,7 @@ class TestCliArgumentParser:
         sections_file = "section_file.otflow"
         save_name = "stem"
         save_suffix = "suffix"
+        log_file = "path/to/my_log.log"
 
         cli_args: list[str] = [
             "path",
@@ -190,6 +202,9 @@ class TestCliArgumentParser:
             "15",
             "--num-processes",
             "3",
+            "--logfile",
+            log_file,
+            "--logfile_overwrite",
         ]
         with patch.object(sys, "argv", cli_args):
             parser = CliArgumentParser()
@@ -204,6 +219,8 @@ class TestCliArgumentParser:
                 AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME],
                 15,
                 3,
+                log_file,
+                True,
             )
 
 
@@ -244,7 +261,7 @@ class TestOTAnalyticsCli:
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
-        track_repository = TrackRepository()
+        track_repository = TrackRepository(PythonTrackDataset())
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()
@@ -257,8 +274,7 @@ class TestOTAnalyticsCli:
 
         clear_all_events = ClearAllEvents(event_repository)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            SimpleRunIntersect(
-                ShapelyIntersector(),
+            ShapelyRunIntersect(
                 MultiprocessingIntersectParallelization(),
                 get_all_tracks,
             ),
@@ -432,10 +448,11 @@ class TestOTAnalyticsCli:
     @pytest.mark.parametrize(
         "save_name,save_suffix,section_file,expected_file",
         [
-            ("stem", "suffix", SECTION_FILE, "path/to/stem_suffix"),
+            ("stem", "suffix", SECTION_FILE, "stem_suffix"),
             ("", "", SECTION_FILE, "path/to/section"),
-            ("stem", "", SECTION_FILE, "path/to/stem"),
+            ("stem", "", SECTION_FILE, "stem"),
             ("", "suffix", SECTION_FILE, "path/to/section_suffix"),
+            ("~/stem", "suffix", SECTION_FILE, str(Path.home() / "stem_suffix")),
             (
                 str(Path.cwd().with_name("stem")),
                 "suffix",
@@ -463,28 +480,29 @@ class TestOTAnalyticsCli:
 
     def test_start_with_no_video_in_folder(
         self,
+        test_data_tmp_dir: Path,
         temp_ottrk: Path,
         temp_section: Path,
         cli_dependencies: dict[str, Any],
         event_list_exporter: EventListExporter,
     ) -> None:
-        save_name = "stem"
+        save_name = test_data_tmp_dir / "stem"
         save_suffix = "suffix"
         cli_args = create_cli_args(
             track_files=[str(temp_ottrk)],
             sections_file=str(temp_section),
-            save_name=save_name,
+            save_name=str(save_name),
             save_suffix=save_suffix,
         )
         cli = OTAnalyticsCli(cli_args, **cli_dependencies)
         cli.start()
+        expected_event_list_file = save_name.with_name(
+            f"stem_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
+        )
+        expected_counts_file = save_name.with_name(
+            f"stem_{save_suffix}.counts.{DEFAULT_COUNTS_FILE_TYPE}"
+        )
 
-        expected_event_list_file = temp_section.with_name(
-            f"{save_name}_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
-        )
-        expected_counts_file = temp_section.with_name(
-            f"{save_name}_{save_suffix}.counts.{DEFAULT_COUNTS_FILE_TYPE}"
-        )
         assert expected_event_list_file.exists()
         assert expected_counts_file.exists()
 

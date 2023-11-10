@@ -169,3 +169,22 @@ def calculate_direction_vector(
         DirectionVector2D: the two dimensional direction vector
     """
     return DirectionVector2D(x1=y1 - x1, x2=y2 - x2)
+
+
+def apply_offset(
+    x: float, y: float, w: float, h: float, offset: RelativeOffsetCoordinate
+) -> tuple[float, float]:
+    """Apply offset to coordinates.
+
+    Args:
+        x (float): x coordinate.
+        y (float): y coordinate.
+        w (float): width.
+        h (float): height.
+        offset (RelativeOffsetCoordinate): the offset to include in the selection
+            of the coordinate.
+
+    Returns:
+        tuple[float, float]: the coordinate with the offset applied.
+    """
+    return x + w * offset.x, y + h * offset.y

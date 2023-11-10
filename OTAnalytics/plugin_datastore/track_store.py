@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Iterable, Optional
+from math import ceil
+from typing import Any, Iterable, Optional, Sequence
 
 import pandas
+from more_itertools import batched
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
@@ -218,6 +220,34 @@ class PandasTrackDataset(TrackDataset):
 
     def as_dataframe(self) -> DataFrame:
         return self._dataset
+
+    def split(self, batches: int) -> Sequence["TrackDataset"]:
+        all_ids = self._dataset[track.TRACK_ID].unique()
+        dataset_size = len(all_ids)
+        batch_size = ceil(dataset_size / batches)
+
+        new_batches: list["TrackDataset"] = []
+        for batch_ids in batched(all_ids, batch_size):
+            batch_dataset = self._dataset[self._dataset[track.TRACK_ID].isin(batch_ids)]
+            new_batches.append(PandasTrackDataset(batch_dataset, self._calculator))
+
+        return new_batches
+
+    def __len__(self) -> int:
+        return len(self._dataset[track.TRACK_ID].unique())
+
+    def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
+        detection_counts_per_track = self._dataset.groupby([track.TRACK_ID])[
+            track.CLASSIFICATION
+        ].count()
+        filtered_ids = detection_counts_per_track[
+            detection_counts_per_track > length
+        ].index
+
+        filtered_dataset = self._dataset.loc[
+            self._dataset[track.TRACK_ID].isin(filtered_ids)
+        ]
+        return PandasTrackDataset(filtered_dataset, self._calculator)
 
 
 def _assign_track_classification(
