@@ -17,7 +17,9 @@ class PythonIntersectionRepository(IntersectionRepository):
 
     def get(self, sections: set[SectionId]) -> dict[SectionId, set[TrackId]]:
         return {
-            key: value for key, value in self._intersections.items() if key in sections
+            section: self._intersections[section]
+            for section in sections
+            if section in self._intersections.keys()
         }
 
     def get_all(self) -> dict[SectionId, set[TrackId]]:

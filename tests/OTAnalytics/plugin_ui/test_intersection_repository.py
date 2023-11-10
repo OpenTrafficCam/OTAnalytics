@@ -65,3 +65,17 @@ class TestPythonIntersectionRepository:
         repository.remove({section_id_1})
 
         assert repository.get_all() == {}
+
+    def test_get(
+        self,
+        section_id_1: SectionId,
+        section_id_2: SectionId,
+        track_id_1: TrackId,
+        track_id_2: TrackId,
+    ) -> None:
+        intersections = {section_id_1: {track_id_1}, section_id_2: {track_id_2}}
+        repository = PythonIntersectionRepository()
+        repository.store(intersections)
+        actual = repository.get({section_id_1, section_id_2})
+        assert actual == intersections
+        assert repository.get({SectionId("None")}) == {}
