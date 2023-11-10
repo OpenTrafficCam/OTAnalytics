@@ -26,7 +26,12 @@ from OTAnalytics.domain.event import Event, EventRepository, EventRepositoryEven
 from OTAnalytics.domain.flow import FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
-from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionRepository
+from OTAnalytics.domain.section import (
+    SectionId,
+    SectionListObserver,
+    SectionRepository,
+    SectionRepositoryEvent,
+)
 from OTAnalytics.domain.track import (
     PilImage,
     Track,
@@ -145,12 +150,10 @@ class EventToFlowResolver:
 
     def _resolve_flow_id_for(self, section_id: Optional[SectionId]) -> set[FlowId]:
         if section_id:
-            return set(
-                [
-                    flow.id
-                    for flow in self._flow_repository.flows_using_section(section_id)
-                ]
-            )
+            return {
+                flow.id
+                for flow in self._flow_repository.flows_using_section(section_id)
+            }
         return set()
 
 
@@ -184,7 +187,7 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
         flows_to_add = self._flow_id_resolver.resolve(events.added)
         self._handle_add_update(flows_to_add)
         flows_to_remove = self._flow_id_resolver.resolve(events.removed)
-        self._handle_remove(flows_to_remove)
+        self._handle_add_update(flows_to_remove)
 
     def get_flow_ids(self) -> set[FlowId]:
         return {flow.id for flow in self._repository.get_all()}
@@ -208,10 +211,11 @@ class SectionLayerPlotter(DynamicLayersPlotter[SectionId], SectionListObserver):
         self._repository = section_repository
 
     def notify_section(self, section: SectionId) -> None:
-        self.notify_layers_changed([section])
+        self._handle_add_update([section])
 
-    def notify_sections(self, sections: list[SectionId]) -> None:
-        self.notify_layers_changed(sections)
+    def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
+        self._handle_remove(section_event.removed)
+        self._handle_add_update(section_event.added)
 
     def get_section_ids(self) -> set[SectionId]:
         return {section.id for section in self._repository.get_all()}

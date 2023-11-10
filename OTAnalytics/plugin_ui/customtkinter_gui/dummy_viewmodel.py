@@ -76,6 +76,7 @@ from OTAnalytics.domain.section import (
     Section,
     SectionId,
     SectionListObserver,
+    SectionRepositoryEvent,
 )
 from OTAnalytics.domain.track import TrackImage, TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
@@ -298,8 +299,8 @@ class DummyViewModel(
             multiple_flows_enabled
         )
 
-    def _on_section_changed(self, section_id: SectionId) -> None:
-        self.notify_sections([section_id])
+    def _on_section_changed(self, section: SectionId) -> None:
+        self._refresh_sections_in_ui()
 
     def _on_flow_changed(self, flow_id: FlowId) -> None:
         self.notify_flows([flow_id])
@@ -346,7 +347,10 @@ class DummyViewModel(
         start_msg_popup.update_message(message="Creating events completed")
         start_msg_popup.close()
 
-    def notify_sections(self, sections: list[SectionId]) -> None:
+    def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
+        self._refresh_sections_in_ui()
+
+    def _refresh_sections_in_ui(self) -> None:
         if self._treeview_sections is None:
             raise MissingInjectedInstanceError(type(self._treeview_sections).__name__)
         self.refresh_items_on_canvas()

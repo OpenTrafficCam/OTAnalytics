@@ -59,6 +59,12 @@ from OTAnalytics.application.use_cases.generate_flows import (
     GenerateFlows,
     RepositoryFlowIdGenerator,
 )
+from OTAnalytics.application.use_cases.highlight_intersections import (
+    IntersectionRepository,
+)
+from OTAnalytics.application.use_cases.intersection_repository import (
+    ClearAllIntersections,
+)
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
@@ -142,6 +148,7 @@ from OTAnalytics.plugin_ui.cli import (
     CliParseError,
     OTAnalyticsCli,
 )
+from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
@@ -195,6 +202,7 @@ class ApplicationStarter:
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
+        intersection_repository = self._create_intersection_repository()
         event_repository = self._create_event_repository()
         video_parser = self._create_video_parser()
         video_repository = self._create_video_repository()
@@ -216,8 +224,15 @@ class ApplicationStarter:
         flow_state = self._create_flow_state()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
+        clear_all_intersections = ClearAllIntersections(intersection_repository)
+        track_repository.register_tracks_observer(clear_all_intersections)
+        section_repository.register_sections_observer(clear_all_intersections)
+        section_repository.register_section_changed_observer(
+            clear_all_intersections.on_section_changed
+        )
         layers = self._create_layers(
             datastore,
+            intersection_repository,
             track_view_state,
             flow_state,
             section_state,
@@ -315,6 +330,7 @@ class ApplicationStarter:
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
             clear_all_flows,
+            clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
             clear_all_tracks,
@@ -556,6 +572,9 @@ class ApplicationStarter:
     def _create_flow_repository(self) -> FlowRepository:
         return FlowRepository()
 
+    def _create_intersection_repository(self) -> IntersectionRepository:
+        return PythonIntersectionRepository()
+
     def _create_event_repository(self) -> EventRepository:
         return EventRepository()
 
@@ -571,6 +590,7 @@ class ApplicationStarter:
     def _create_layers(
         self,
         datastore: Datastore,
+        intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
         flow_state: FlowState,
         section_state: SectionState,
@@ -580,6 +600,7 @@ class ApplicationStarter:
     ) -> Sequence[PlottingLayer]:
         return VisualizationBuilder(
             datastore,
+            intersection_repository,
             track_view_state,
             section_state,
             color_palette_provider,
@@ -718,6 +739,7 @@ class ApplicationStarter:
     def _create_use_case_clear_all_repositories(
         clear_all_events: ClearAllEvents,
         clear_all_flows: ClearAllFlows,
+        clear_all_intersections: ClearAllIntersections,
         clear_all_sections: ClearAllSections,
         clear_all_track_to_videos: ClearAllTrackToVideos,
         clear_all_tracks: ClearAllTracks,
@@ -726,6 +748,7 @@ class ApplicationStarter:
         return ClearRepositories(
             clear_all_events,
             clear_all_flows,
+            clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
             clear_all_tracks,
