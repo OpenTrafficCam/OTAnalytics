@@ -49,7 +49,7 @@ class GetTracksWithoutSingleDetections:
 
     def as_dataset(self) -> TrackDataset:
         tracks = self._track_repository.get_all()
-        return tracks.filter_by_min_detection_length(1)
+        return tracks.filter_by_min_detection_length(2)
 
 
 class GetAllTrackIds:

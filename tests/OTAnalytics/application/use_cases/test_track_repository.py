@@ -112,7 +112,7 @@ class TestGetTracksWithoutSingleDetections:
         result_dataset = get_tracks.as_dataset()
         assert result_dataset == expected_dataset
         track_repository.get_all.assert_called_once()
-        dataset.filter_by_min_detection_length.assert_called_once_with(1)
+        dataset.filter_by_min_detection_length.assert_called_once_with(2)
 
     def test_get_as_list(self) -> None:
         track_repository = Mock()
