@@ -13,11 +13,20 @@ from pandas import DataFrame
 from PIL import Image
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import Plotter, TrackViewState
+from OTAnalytics.application.plotting import DynamicLayersPlotter, EntityPlotterFactory
+from OTAnalytics.application.state import (
+    FlowState,
+    Plotter,
+    SectionState,
+    TrackViewState,
+)
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.domain import track
+from OTAnalytics.domain.event import Event, EventRepository, EventRepositoryEvent
+from OTAnalytics.domain.flow import FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.section import SectionId, SectionListObserver, SectionRepository
 from OTAnalytics.domain.track import (
     PilImage,
     Track,
@@ -25,6 +34,7 @@ from OTAnalytics.domain.track import (
     TrackIdProvider,
     TrackImage,
     TrackListObserver,
+    TrackRepository,
     TrackRepositoryEvent,
 )
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
@@ -120,6 +130,91 @@ class ColorPaletteProvider:
 
     def get(self) -> dict[str, str]:
         return self._palette
+
+
+class EventToFlowResolver:
+    def __init__(self, flow_repository: FlowRepository) -> None:
+        self._flow_repository = flow_repository
+
+    def resolve(self, events: Iterable[Event]) -> Iterable[FlowId]:
+        flow_ids: set[FlowId] = set()
+        for event in events:
+            flow_ids.update(self._resolve_flow_id_for(event.section_id))
+
+        return flow_ids
+
+    def _resolve_flow_id_for(self, section_id: Optional[SectionId]) -> set[FlowId]:
+        if section_id:
+            return set(
+                [
+                    flow.id
+                    for flow in self._flow_repository.flows_using_section(section_id)
+                ]
+            )
+        return set()
+
+
+class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
+    def __init__(
+        self,
+        plotter_factory: EntityPlotterFactory,
+        flow_state: FlowState,
+        flow_repository: FlowRepository,
+        track_repository: TrackRepository,
+        event_repository: EventRepository,
+        flow_id_resolver: EventToFlowResolver,
+    ) -> None:
+        super().__init__(plotter_factory, flow_state.selected_flows, self.get_flow_ids)
+
+        flow_repository.register_flows_observer(self)
+        flow_repository.register_flow_changed_observer(self.notify_flow)
+        track_repository.observers.register(self.notify_invalidate)
+        event_repository.register_observer(self.notify_events)
+
+        self._repository = flow_repository
+        self._flow_id_resolver = flow_id_resolver
+
+    def notify_flow(self, flow: FlowId) -> None:
+        self.notify_layers_changed([flow])
+
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        self.notify_layers_changed(flows)
+
+    def notify_events(self, events: EventRepositoryEvent) -> None:
+        flows_to_add = self._flow_id_resolver.resolve(events.added)
+        self._handle_add_update(flows_to_add)
+        flows_to_remove = self._flow_id_resolver.resolve(events.removed)
+        self._handle_remove(flows_to_remove)
+
+    def get_flow_ids(self) -> set[FlowId]:
+        return {flow.id for flow in self._repository.get_all()}
+
+
+class SectionLayerPlotter(DynamicLayersPlotter[SectionId], SectionListObserver):
+    def __init__(
+        self,
+        plotter_factory: EntityPlotterFactory,
+        section_state: SectionState,
+        section_repository: SectionRepository,
+        track_repository: TrackRepository,
+    ) -> None:
+        super().__init__(
+            plotter_factory, section_state.selected_sections, self.get_section_ids
+        )
+        section_repository.register_sections_observer(self)
+        section_repository.register_section_changed_observer(self.notify_section)
+        track_repository.observers.register(self.notify_invalidate)
+
+        self._repository = section_repository
+
+    def notify_section(self, section: SectionId) -> None:
+        self.notify_layers_changed([section])
+
+    def notify_sections(self, sections: list[SectionId]) -> None:
+        self.notify_layers_changed(sections)
+
+    def get_section_ids(self) -> set[SectionId]:
+        return {section.id for section in self._repository.get_all()}
 
 
 class TrackPlotter(ABC):
@@ -274,18 +369,18 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def __init__(
         self,
-        datastore: Datastore,
+        track_repository: TrackRepository,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
-        self._datastore = datastore
+        self._track_repository = track_repository
         self._track_view_state = track_view_state
         self._filter_builder = filter_builder
         self._progressbar = progressbar
 
     def get_data(self) -> DataFrame:
-        tracks = self._datastore.get_all_tracks()
+        tracks = self._track_repository.get_all()
         if isinstance(tracks, PandasTrackDataset):
             return tracks.as_dataframe()
         track_list = tracks.as_list()
@@ -362,13 +457,15 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
 
     def __init__(
         self,
-        datastore: Datastore,
+        track_repository: TrackRepository,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
-        super().__init__(datastore, track_view_state, filter_builder, progressbar)
-        datastore.register_tracks_observer(self)
+        super().__init__(
+            track_repository, track_view_state, filter_builder, progressbar
+        )
+        track_repository.register_tracks_observer(self)
         self._cache_df: DataFrame = DataFrame()
 
     def _convert_tracks(self, tracks: Iterable[Track]) -> DataFrame:
@@ -438,7 +535,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         return [
             track
             for t_id in track_ids
-            if (track := self._datastore._track_repository.get_for(t_id))
+            if (track := self._track_repository.get_for(t_id))
         ]
 
     def _cache_without_existing_tracks(self, track_ids: list[TrackId]) -> DataFrame:

@@ -382,7 +382,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         """Will update the image
 
         Args:
-            _ (bool): wether layer is enabled or disabled.
+            _ (bool): weather layer is enabled or disabled.
         """
         self._update()
 

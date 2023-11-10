@@ -1,8 +1,13 @@
 from abc import abstractmethod
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.state import ObservableProperty, Plotter, TrackViewState
+from OTAnalytics.application.state import (
+    ObservableOptionalProperty,
+    ObservableProperty,
+    Plotter,
+    TrackViewState,
+)
 from OTAnalytics.domain.track import TrackImage
 
 
@@ -106,3 +111,131 @@ class TrackBackgroundPlotter(Plotter):
             if len(videos) > 0:
                 return videos[0].get_frame(0)
         return None
+
+
+class CachedPlotter(Plotter):
+    """A plotter caching the generated track image.
+
+    It can listen to changes of observable properties to invalidate the cache.
+    It can also be registered at subjects via:
+        object.register(cached_plotter.invalidate_cache)
+    """
+
+    def __init__(
+        self,
+        other: Plotter,
+        subjects: list[ObservableProperty | ObservableOptionalProperty],
+    ) -> None:
+        self._other = other
+        self._cache: Optional[TrackImage] = None
+
+        for subject in subjects:
+            subject.register(self.invalidate_cache)
+
+    def plot(self) -> Optional[TrackImage]:
+        if self._cache is None:
+            self._cache = self._other.plot()
+
+        return self._cache
+
+    def invalidate_cache(self, _: Any) -> None:
+        self._cache = None
+
+
+ENTITY = TypeVar("ENTITY")
+EntityPlotterFactory = Callable[[ENTITY], Plotter]
+AvailableEntityProvider = Callable[[], set[ENTITY]]
+VisibilitySubject = ObservableProperty[list[ENTITY]]
+
+
+class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
+    """A plotter managing entity specific, toggleable, cached plot layers.
+
+    Entities can e.g. be SectionIds or FlowIds.
+
+    Args:
+        plotter_factory (EntityPlotterFactory): used to create delegate plotters for
+        each managed entity.
+        visibility_subject (VisibilitySubject): listen to changes of the
+        VisibilitySubject to toggle the visibility of the entity layers.
+        entity_lookup (AvailableEntityProvider): used to check which entities are
+        remaining (since entity deletion is notified by "[]" in entity repositories).
+    """
+
+    def __init__(
+        self,
+        plotter_factory: EntityPlotterFactory,
+        visibility_subject: VisibilitySubject,
+        entity_lookup: AvailableEntityProvider,
+    ) -> None:
+        self._plotter_factory = plotter_factory
+        self._entity_lookup = entity_lookup
+        self._visibility_subject = visibility_subject
+
+        self._layer_mapping: dict[ENTITY, PlottingLayer] = dict()
+        self._plotter_mapping: dict[ENTITY, CachedPlotter] = dict()
+        # additional plotter mapping could be avoided
+        # if PlottingLayer were Generic in the used plotter type
+
+        visibility_subject.register(self.notify_visibility)
+
+    def plot(self) -> Optional[TrackImage]:
+        layer_plotter = LayeredPlotter(list(self._layer_mapping.values()))
+        return layer_plotter.plot()
+
+    def notify_visibility(self, visible_entities: list[ENTITY]) -> None:
+        """Set visibility of given entities to true, others to false."""
+        for entity, layer in self._layer_mapping.items():
+            layer.set_enabled(entity in visible_entities)
+
+    def notify_invalidate(self, _: Any) -> None:
+        """Invalidate all caches."""
+        for plotter in self._plotter_mapping.values():
+            plotter.invalidate_cache(_)
+
+    def notify_layers_changed(self, entities: list[ENTITY]) -> None:
+        """
+        Handle change in the set of entities:
+        entities = [] indicates deletion
+        otherwise entities were added or updated.
+        """
+        # TODO: Refactor observers - update code if [] no longer indicates deletion
+        match entities:
+            case []:
+                self._handle_remove(self._get_entities_to_remove())
+            case _:
+                self._handle_add_update(entities)
+
+    def _get_entities_to_remove(self) -> list[ENTITY]:
+        return [
+            entity
+            for entity in self._layer_mapping
+            if entity not in self._entity_lookup()
+        ]
+
+    def _handle_add_update(self, entities: Iterable[ENTITY]) -> None:
+        """
+        If entity was updated: invalidate cache.
+        If entity was added: create new cached plotter + layer for new entity.
+        """
+        for entity in entities:
+            if entity in self._layer_mapping:
+                plotter: CachedPlotter = self._plotter_mapping[entity]
+                plotter.invalidate_cache(None)
+            else:
+                plotter = CachedPlotter(self._plotter_factory(entity), [])
+                self._plotter_mapping[entity] = plotter
+                self._layer_mapping[entity] = PlottingLayer(
+                    str(entity), plotter, self._is_visible(entity)
+                )
+
+    def _is_visible(self, entity: ENTITY) -> bool:
+        return entity in self._visibility_subject.get()
+
+    def _handle_remove(self, entities: Iterable[ENTITY]) -> None:
+        """
+        Remove layers for all specified entities.
+        """
+        for entity in entities:
+            del self._plotter_mapping[entity]
+            del self._layer_mapping[entity]
