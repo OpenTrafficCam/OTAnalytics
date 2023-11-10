@@ -7,6 +7,11 @@ from typing import Any, Iterable, Optional, Sequence
 import pandas
 from more_itertools import batched
 from pandas import DataFrame, Series
+from pygeos import get_coordinates as pygeos_coords
+from pygeos import line_locate_point as pygeos_project
+from pygeos import linestrings
+from pygeos import points as pygeos_points
+from pygeos import prepare
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.section import Section, SectionId
@@ -147,7 +152,27 @@ class PandasTrackDataset(TrackDataset):
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
     ):
         self._dataset = dataset
+        self._track_geom_df = self._create_track_geom_df(self._dataset)
         self._calculator = calculator
+
+    def _create_track_geom_df(self, dataset: DataFrame) -> DataFrame:
+        if dataset.empty:
+            return DataFrame(columns=["id", "geom"])
+        track_geom_df = DataFrame.from_records(
+            [
+                (track_id, linestrings(list(zip(detections.x, detections.y))))
+                for track_id, detections in dataset.groupby(track.TRACK_ID)
+            ],
+            columns=["id", "geom"],
+        )
+        track_geom_df["projection"] = track_geom_df["geom"].apply(
+            lambda track_geom: [
+                pygeos_project(track_geom, pygeos_points(p))
+                for p in pygeos_coords(track_geom)
+            ]
+        )
+        track_geom_df["geom"].apply(prepare)
+        return track_geom_df
 
     @staticmethod
     def from_list(
@@ -256,6 +281,30 @@ class PandasTrackDataset(TrackDataset):
     def intersection_points(
         self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, INTERSECTION_COORDINATE]]]:
+        # sec_geoms = sections_to_pygeos_multi(
+        #     sections
+        # )  # [self.section_geom_map[section.id] for section in sections]
+        # df["intersections"] = df["geom"].apply(
+        #     lambda line: [
+        #         i for i in pygeos_intersection(line, sec_geoms) if not is_empty(i)
+        #     ]
+        # )
+        #
+        # vs = (
+        #     df[df["intersections"].apply(lambda i: len(i) > 0)]
+        #     .apply(
+        #         lambda r: [
+        #             self.next_event(
+        #                 r["track"], r["geom"], pygeos_points(p), r["projection"]
+        #             )
+        #             for p in pygeos_coords(r["intersections"])
+        #         ],
+        #         axis=1,
+        #     )
+        #     .values
+        # )
+        #
+        # return [v for list in vs for v in list]
         raise NotImplementedError
 
 
