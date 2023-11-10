@@ -10,7 +10,7 @@ from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import EventType
 from OTAnalytics.domain.geometry import Line, RelativeOffsetCoordinate
 from OTAnalytics.domain.intersect import IntersectImplementation
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,
@@ -61,6 +61,7 @@ class TestSimpleTracksIntersectingSections:
         get_all_tracks.return_value = [track]
 
         section = Mock(spec=Section)
+        section.id = SectionId("section-1")
         offset = RelativeOffsetCoordinate(0, 0)
         section.get_offset.return_value = offset
         section.name = "south"
@@ -84,7 +85,7 @@ class TestSimpleTracksIntersectingSections:
         )
         intersecting = tracks_intersecting_sections([section])
 
-        assert intersecting == {track.id}
+        assert intersecting == {section.id: {track.id}}
         get_all_tracks.assert_called_once()
         section.get_offset.assert_called_once_with(EventType.SECTION_ENTER)
         track_geometry_builder.build.assert_called_once_with(track, offset)
