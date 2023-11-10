@@ -32,7 +32,6 @@ class TestMultiprocessingIntersectParallelization:
         event_2 = Mock(spec=Event)
 
         mock_pool_instance = mock_pool_init.return_value.__enter__.return_value
-        # mock_pool_instance.starmap.return_value = [[event_1], [event_2]]
 
         intersect = Mock()
         intersect.side_effect = [[event_1, event_2]]
