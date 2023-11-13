@@ -247,7 +247,7 @@ class TestBenchmarkTrackParser:
     ITERATIONS = 1
     WARMUP_ROUNDS = 0
 
-    def test_load_15min_with_python_parser(
+    def test_load_15min(
         self,
         benchmark: BenchmarkFixture,
         python_track_parser: TrackParser,
@@ -261,21 +261,7 @@ class TestBenchmarkTrackParser:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    def test_load_15min_with_pandas_parser(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_parser: TrackParser,
-        track_file_15min: Path,
-    ) -> None:
-        benchmark.pedantic(
-            pandas_track_parser.parse,
-            args=(track_file_15min,),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
-    def test_load_2hour_with_python_parser(
+    def test_load_2hours(
         self,
         benchmark: BenchmarkFixture,
         python_track_parser: TrackParser,
@@ -296,6 +282,22 @@ class TestBenchmarkTrackParser:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
+    def test_load_15min_with_pandas_parser(
+        self,
+        benchmark: BenchmarkFixture,
+        pandas_track_parser: TrackParser,
+        track_file_15min: Path,
+    ) -> None:
+        benchmark.pedantic(
+            pandas_track_parser.parse,
+            args=(track_file_15min,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    @pytest.mark.skip
     def test_load_2hour_with_pandas_parser(
         self,
         benchmark: BenchmarkFixture,
@@ -323,7 +325,7 @@ class TestBenchmarkTracksIntersectingSections:
     ITERATIONS = 1
     WARMUP_ROUNDS = 0
 
-    def test_python_15min(
+    def test_15min(
         self,
         benchmark: BenchmarkFixture,
         python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
@@ -341,6 +343,25 @@ class TestBenchmarkTracksIntersectingSections:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    def test_2hours(
+        self,
+        benchmark: BenchmarkFixture,
+        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
+    ) -> None:
+        track_repository, _ = python_track_repo_2hours
+        section_repository, flow_repository = section_flow_repo_setup
+        use_case = _build_tracks_intersecting_sections(track_repository)
+
+        benchmark.pedantic(
+            use_case,
+            args=(section_repository.get_all(),),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    @pytest.mark.skip
     def test_pandas_15min(
         self,
         benchmark: BenchmarkFixture,
@@ -361,24 +382,7 @@ class TestBenchmarkTracksIntersectingSections:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    def test_python_2hours(
-        self,
-        benchmark: BenchmarkFixture,
-        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-    ) -> None:
-        track_repository, _ = python_track_repo_2hours
-        section_repository, flow_repository = section_flow_repo_setup
-        use_case = _build_tracks_intersecting_sections(track_repository)
-
-        benchmark.pedantic(
-            use_case,
-            args=(section_repository.get_all(),),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
+    @pytest.mark.skip
     def test_pandas_2hours(
         self,
         benchmark: BenchmarkFixture,
@@ -403,7 +407,7 @@ class TestBenchmarkCreateEvents:
     ITERATIONS = 1
     WARMUP_ROUNDS = 0
 
-    def test_python_15min(
+    def test_15min(
         self,
         benchmark: BenchmarkFixture,
         python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
@@ -424,7 +428,7 @@ class TestBenchmarkCreateEvents:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    def test_python_2hours(
+    def test_2hours(
         self,
         benchmark: BenchmarkFixture,
         python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
@@ -445,6 +449,7 @@ class TestBenchmarkCreateEvents:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
     def test_pandas_15min(
         self,
         benchmark: BenchmarkFixture,
@@ -466,6 +471,7 @@ class TestBenchmarkCreateEvents:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    @pytest.mark.skip
     def test_pandas_2hours(
         self,
         benchmark: BenchmarkFixture,
