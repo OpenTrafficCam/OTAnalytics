@@ -1,10 +1,12 @@
-from collections import defaultdict
 from functools import singledispatchmethod
-from typing import Callable, Iterable, Mapping
+from typing import Callable, Iterable
 
 from shapely import LineString, Polygon, contains_xy, prepare
 
-from OTAnalytics.application.analysis.intersect import RunIntersect
+from OTAnalytics.application.analysis.intersect import (
+    RunIntersect,
+    group_sections_by_offset,
+)
 from OTAnalytics.application.geometry import GeometryBuilder
 from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
@@ -293,13 +295,3 @@ def _create_events(tracks: Iterable[Track], sections: Iterable[Section]) -> list
         )
         events.extend(create_intersection_events.create())
     return events
-
-
-def group_sections_by_offset(
-    sections: Iterable[Section],
-) -> Mapping[RelativeOffsetCoordinate, Iterable[Section]]:
-    grouped_sections: dict[RelativeOffsetCoordinate, list[Section]] = defaultdict(list)
-    for section in sections:
-        offset = section.get_offset(EventType.SECTION_ENTER)
-        grouped_sections[offset].append(section)
-    return grouped_sections

@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Iterable
+from collections import defaultdict
+from typing import Iterable, Mapping
 
 from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.types import EventType
 
 
 class RunIntersect(ABC):
@@ -22,3 +25,13 @@ class TracksIntersectingSections(ABC):
     @abstractmethod
     def __call__(self, sections: Iterable[Section]) -> dict[SectionId, set[TrackId]]:
         raise NotImplementedError
+
+
+def group_sections_by_offset(
+    sections: Iterable[Section],
+) -> Mapping[RelativeOffsetCoordinate, Iterable[Section]]:
+    grouped_sections: dict[RelativeOffsetCoordinate, list[Section]] = defaultdict(list)
+    for section in sections:
+        offset = section.get_offset(EventType.SECTION_ENTER)
+        grouped_sections[offset].append(section)
+    return grouped_sections
