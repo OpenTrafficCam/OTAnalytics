@@ -13,7 +13,9 @@ from pygeos import linestrings
 from pygeos import points as pygeos_points
 from pygeos import prepare
 
+from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.domain import track
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     INTERSECTION_COORDINATE,
@@ -150,9 +152,13 @@ class PandasTrackDataset(TrackDataset):
         self,
         dataset: DataFrame = DataFrame(),
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
+        default_track_offset: RelativeOffsetCoordinate = DEFAULT_TRACK_OFFSET,
     ):
         self._dataset = dataset
-        self._track_geom_df = self._create_track_geom_df(self._dataset)
+        self._default_track_offset = default_track_offset
+        self._track_geometries = {
+            self._default_track_offset: self._create_track_geom_df(self._dataset)
+        }
         self._calculator = calculator
 
     def _create_track_geom_df(self, dataset: DataFrame) -> DataFrame:
@@ -160,7 +166,19 @@ class PandasTrackDataset(TrackDataset):
             return DataFrame(columns=["id", "geom"])
         track_geom_df = DataFrame.from_records(
             [
-                (track_id, linestrings(list(zip(detections.x, detections.y))))
+                (
+                    track_id,
+                    linestrings(
+                        list(
+                            zip(
+                                detections.x
+                                + detections.x * self._default_track_offset.x,
+                                detections.y
+                                + detections.y * self._default_track_offset.y,
+                            )
+                        )
+                    ),
+                )
                 for track_id, detections in dataset.groupby(track.TRACK_ID)
             ],
             columns=["id", "geom"],
