@@ -424,8 +424,7 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def intersection_points(
-        self,
-        sections: list[Section],
+        self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         """
         Return the intersection points resulting from the tracks and the
@@ -436,6 +435,21 @@ class TrackDataset(ABC):
 
         Returns:
             dict[TrackId, list[tuple[SectionId]]]: the intersection points.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def contained_by_sections(
+        self, sections: Iterable[Section]
+    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
+        """Return whether track coordinates are contained by the given sections.
+
+        Args:
+             sections (Iterable[Section]): the sections.
+
+        Returns:
+            dict[TrackId, tuple[SectionId, Sequence[bool]]]: boolean mask of track
+                coordinates contained by given sections.
         """
         raise NotImplementedError
 

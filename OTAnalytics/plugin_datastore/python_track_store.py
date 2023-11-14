@@ -318,3 +318,8 @@ class PythonTrackDataset(TrackDataset):
         self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         raise NotImplementedError
+
+    def contained_by_sections(
+        self, sections: Iterable[Section]
+    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
+        raise NotImplementedError
