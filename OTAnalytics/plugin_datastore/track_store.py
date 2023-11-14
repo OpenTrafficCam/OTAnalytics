@@ -13,6 +13,7 @@ from pandas import DataFrame, Series
 from pygeos import Geometry, geometrycollections
 from pygeos import get_coordinates as pygeos_coords
 from pygeos import intersection as pygeos_intersection
+from pygeos import intersects as pygeos_intersects
 from pygeos import is_empty
 from pygeos import line_locate_point as pygeos_project
 from pygeos import linestrings
@@ -304,7 +305,26 @@ class PandasTrackDataset(TrackDataset):
         return PandasTrackDataset(filtered_dataset, self._calculator)
 
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
-        raise NotImplementedError
+        intersecting_tracks = set()
+        sections_grouped_by_offset = group_sections_by_offset(sections)
+        for offset, _sections in sections_grouped_by_offset.items():
+            section_geoms = sections_to_pygeos_multi(_sections)
+            if (track_df := self._track_geometries.get(offset, None)) is None:
+                track_df = self._create_track_geom_df(self._dataset, offset)
+                self._track_geometries[offset] = track_df
+
+            track_df["intersects"] = (
+                track_df["geom"]
+                .apply(lambda line: pygeos_intersects(line, section_geoms))
+                .map(any)
+                .astype(bool)
+            )
+            track_ids = [
+                TrackId(_id) for _id in track_df[track_df["intersects"]]["id"].unique()
+            ]
+            intersecting_tracks.update(track_ids)
+
+        return intersecting_tracks
 
     def intersection_points(
         self, sections: list[Section]

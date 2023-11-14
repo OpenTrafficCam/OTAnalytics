@@ -394,3 +394,25 @@ class TestPandasTrackDataset:
                 (third_section.id, IntersectionPoint(3)),
             ],
         }
+
+    def test_intersecting_tracks(
+        self,
+        not_intersecting_track: Track,
+        first_track: Track,
+        second_track: Track,
+        not_intersecting_section: Section,
+        first_section: Section,
+        second_section: Section,
+        third_section: Section,
+    ) -> None:
+        sections = [
+            not_intersecting_section,
+            first_section,
+            second_section,
+            third_section,
+        ]
+        dataset = PandasTrackDataset.from_list(
+            [not_intersecting_track, first_track, second_track]
+        )
+        result = dataset.intersecting_tracks(list(sections))
+        assert result == {first_track.id, second_track.id}
