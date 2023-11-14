@@ -412,6 +412,14 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+        """Return a set of tracks intersecting a set of sections.
+
+        Args:
+            sections (list[Section]): the list of sections to intersect.
+
+        Returns:
+            set[TrackId]: the track ids intersecting the given sections.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -419,6 +427,16 @@ class TrackDataset(ABC):
         self,
         sections: list[Section],
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+        """
+        Return the intersection points resulting from the tracks and the
+        given sections.
+
+        Args:
+            sections (list[Section]): the sections to intersect with.
+
+        Returns:
+            dict[TrackId, list[tuple[SectionId]]]: the intersection points.
+        """
         raise NotImplementedError
 
     @abstractmethod
