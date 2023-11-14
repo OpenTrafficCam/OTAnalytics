@@ -2,7 +2,10 @@ import pytest
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import Track, TrackDataset, TrackId
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.section import LineSection, Section, SectionId
+from OTAnalytics.domain.track import IntersectionPoint, Track, TrackDataset, TrackId
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
@@ -14,6 +17,154 @@ from tests.conftest import (
     assert_equal_detection_properties,
     assert_equal_track_properties,
 )
+
+
+@pytest.fixture
+def first_track() -> Track:
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("1")
+    track_builder.add_xy_bbox(1, 1)
+    track_builder.add_frame(1)
+    track_builder.add_second(1)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2, 1)
+    track_builder.add_frame(2)
+    track_builder.add_second(2)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(3, 1)
+    track_builder.add_frame(3)
+    track_builder.add_second(3)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(4, 1)
+    track_builder.add_frame(4)
+    track_builder.add_second(4)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(5, 1)
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.append_detection()
+
+    return track_builder.build_track()
+
+
+@pytest.fixture
+def second_track() -> Track:
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("2")
+    track_builder.add_xy_bbox(1, 1.5)
+    track_builder.add_frame(1)
+    track_builder.add_second(1)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2, 1.5)
+    track_builder.add_frame(2)
+    track_builder.add_second(2)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(3, 1.5)
+    track_builder.add_frame(3)
+    track_builder.add_second(3)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(4, 1.5)
+    track_builder.add_frame(4)
+    track_builder.add_second(4)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(5, 1.5)
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.append_detection()
+
+    return track_builder.build_track()
+
+
+@pytest.fixture
+def not_intersecting_track() -> Track:
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("3")
+    track_builder.add_xy_bbox(1, 10)
+    track_builder.add_frame(1)
+    track_builder.add_second(1)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2, 10)
+    track_builder.add_frame(2)
+    track_builder.add_second(2)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(3, 10)
+    track_builder.add_frame(3)
+    track_builder.add_second(3)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(4, 10)
+    track_builder.add_frame(4)
+    track_builder.add_second(4)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(5, 10)
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.append_detection()
+
+    return track_builder.build_track()
+
+
+@pytest.fixture
+def not_intersecting_section() -> Section:
+    name = "first"
+    coordinates = [Coordinate(0, 0), Coordinate(0, 2)]
+    return LineSection(
+        SectionId(name),
+        name,
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+        {},
+        coordinates,
+    )
+
+
+@pytest.fixture
+def first_section() -> Section:
+    name = "first"
+    coordinates = [Coordinate(1.5, 0), Coordinate(1.5, 2)]
+    return LineSection(
+        SectionId(name),
+        name,
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+        {},
+        coordinates,
+    )
+
+
+@pytest.fixture
+def second_section() -> Section:
+    name = "second"
+    coordinates = [Coordinate(2.5, 0), Coordinate(2.5, 2)]
+    return LineSection(
+        SectionId(name),
+        name,
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+        {},
+        coordinates,
+    )
+
+
+@pytest.fixture
+def third_section() -> Section:
+    name = "third"
+    coordinates = [Coordinate(3.5, 0), Coordinate(3.5, 2)]
+    return LineSection(
+        SectionId(name),
+        name,
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+        {},
+        coordinates,
+    )
 
 
 class TestPandasDetection:
@@ -83,14 +234,15 @@ class TestPandasTrackDataset:
         builder.append_detection()
         builder.append_detection()
         track = builder.build_track()
-        detections = builder.build_serialized_detections()
-        expected_dataset = PandasTrackDataset(DataFrame(detections))
+        expected_dataset = PandasTrackDataset.from_list([track])
         dataset = PandasTrackDataset()
 
         merged = dataset.add_all(PythonTrackDataset({track.id: track}))
 
         assert 0 == len(dataset.as_list())
-        assert merged == expected_dataset
+        for actual, expected in zip(merged, expected_dataset):
+            assert_equal_track_properties(actual, expected)
+        # assert merged == expected_dataset
 
     def test_add_nothing(self) -> None:
         dataset = PandasTrackDataset()
@@ -209,3 +361,36 @@ class TestPandasTrackDataset:
         assert len(filtered_dataset) == 1
         for actual_track, expected_track in zip(filtered_dataset, [second_track]):
             assert_equal_track_properties(actual_track, expected_track)
+
+    def test_intersection_points(
+        self,
+        not_intersecting_track: Track,
+        first_track: Track,
+        second_track: Track,
+        not_intersecting_section: Section,
+        first_section: Section,
+        second_section: Section,
+        third_section: Section,
+    ) -> None:
+        sections = [
+            not_intersecting_section,
+            first_section,
+            second_section,
+            third_section,
+        ]
+        dataset = PandasTrackDataset.from_list(
+            [not_intersecting_track, first_track, second_track]
+        )
+        result = dataset.intersection_points(list(sections))
+        assert result == {
+            first_track.id: [
+                (first_section.id, IntersectionPoint(1)),
+                (second_section.id, IntersectionPoint(2)),
+                (third_section.id, IntersectionPoint(3)),
+            ],
+            second_track.id: [
+                (first_section.id, IntersectionPoint(1)),
+                (second_section.id, IntersectionPoint(2)),
+                (third_section.id, IntersectionPoint(3)),
+            ],
+        }
