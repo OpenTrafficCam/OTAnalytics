@@ -350,6 +350,11 @@ class PandasTrackDataset(TrackDataset):
 
         return intersection_points
 
+    def contained_by_sections(
+        self, sections: Iterable[Section]
+    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
+        raise NotImplementedError
+
     def _next_event(
         self,
         track_id: str,
