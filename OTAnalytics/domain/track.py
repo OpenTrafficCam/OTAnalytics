@@ -365,7 +365,9 @@ class RemoveMultipleTracksError(Exception):
         self._track_ids = track_ids
 
 
-INTERSECTION_COORDINATE = tuple[float, float]
+@dataclass
+class IntersectionPoint:
+    index: int
 
 
 class TrackDataset(ABC):
@@ -416,7 +418,7 @@ class TrackDataset(ABC):
     def intersection_points(
         self,
         sections: list[Section],
-    ) -> dict[TrackId, list[tuple[SectionId, INTERSECTION_COORDINATE]]]:
+    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         raise NotImplementedError
 
     @abstractmethod

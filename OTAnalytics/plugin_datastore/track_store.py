@@ -1,26 +1,33 @@
 from abc import ABC, abstractmethod
+from bisect import bisect
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import chain
 from math import ceil
 from typing import Any, Iterable, Optional, Sequence
 
 import pandas
 from more_itertools import batched
 from pandas import DataFrame, Series
+from pygeos import Geometry, geometrycollections
 from pygeos import get_coordinates as pygeos_coords
+from pygeos import intersection as pygeos_intersection
+from pygeos import is_empty
 from pygeos import line_locate_point as pygeos_project
 from pygeos import linestrings
 from pygeos import points as pygeos_points
 from pygeos import prepare
 
+from OTAnalytics.application.analysis.intersect import group_sections_by_offset
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
-    INTERSECTION_COORDINATE,
     MIN_NUMBER_OF_DETECTIONS,
     Detection,
+    IntersectionPoint,
     Track,
     TrackDataset,
     TrackId,
@@ -157,11 +164,16 @@ class PandasTrackDataset(TrackDataset):
         self._dataset = dataset
         self._default_track_offset = default_track_offset
         self._track_geometries = {
-            self._default_track_offset: self._create_track_geom_df(self._dataset)
+            self._default_track_offset: self._create_track_geom_df(
+                self._dataset, self._default_track_offset
+            )
         }
         self._calculator = calculator
 
-    def _create_track_geom_df(self, dataset: DataFrame) -> DataFrame:
+    @staticmethod
+    def _create_track_geom_df(
+        dataset: DataFrame, offset: RelativeOffsetCoordinate
+    ) -> DataFrame:
         if dataset.empty:
             return DataFrame(columns=["id", "geom"])
         track_geom_df = DataFrame.from_records(
@@ -171,10 +183,8 @@ class PandasTrackDataset(TrackDataset):
                     linestrings(
                         list(
                             zip(
-                                detections.x
-                                + detections.x * self._default_track_offset.x,
-                                detections.y
-                                + detections.y * self._default_track_offset.y,
+                                detections.x + detections.x * offset.x,
+                                detections.y + detections.y * offset.y,
                             )
                         )
                     ),
@@ -298,32 +308,62 @@ class PandasTrackDataset(TrackDataset):
 
     def intersection_points(
         self, sections: list[Section]
-    ) -> dict[TrackId, list[tuple[SectionId, INTERSECTION_COORDINATE]]]:
-        # sec_geoms = sections_to_pygeos_multi(
-        #     sections
-        # )  # [self.section_geom_map[section.id] for section in sections]
-        # df["intersections"] = df["geom"].apply(
-        #     lambda line: [
-        #         i for i in pygeos_intersection(line, sec_geoms) if not is_empty(i)
-        #     ]
-        # )
-        #
-        # vs = (
-        #     df[df["intersections"].apply(lambda i: len(i) > 0)]
-        #     .apply(
-        #         lambda r: [
-        #             self.next_event(
-        #                 r["track"], r["geom"], pygeos_points(p), r["projection"]
-        #             )
-        #             for p in pygeos_coords(r["intersections"])
-        #         ],
-        #         axis=1,
-        #     )
-        #     .values
-        # )
-        #
-        # return [v for list in vs for v in list]
-        raise NotImplementedError
+    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+        sections_grouped_by_offset = group_sections_by_offset(sections)
+
+        intersection_points = defaultdict(list)
+        for offset, _sections in sections_grouped_by_offset.items():
+            section_geoms = sections_to_pygeos_multi(_sections)
+            if (track_df := self._track_geometries.get(offset, None)) is None:
+                track_df = self._create_track_geom_df(self._dataset, offset)
+                self._track_geometries[offset] = track_df
+
+            track_df["intersections"] = track_df["geom"].apply(
+                lambda line: [
+                    (_sections[index].id, ip)
+                    for index, ip in enumerate(pygeos_intersection(line, section_geoms))
+                    if not is_empty(ip)
+                ]
+            )
+            intersections = (
+                track_df[track_df["intersections"].apply(lambda i: len(i) > 0)]
+                .apply(
+                    lambda r: [
+                        self._next_event(
+                            r["id"],
+                            _section_id,
+                            r["geom"],
+                            pygeos_points(p),
+                            r["projection"],
+                        )
+                        for _section_id, ip in r["intersections"]
+                        for p in pygeos_coords(ip)
+                    ],
+                    axis=1,
+                )
+                .values
+            )
+            for _id, section_id, intersection_point in chain.from_iterable(
+                intersections
+            ):
+                intersection_points[_id].append((section_id, intersection_point))
+
+        return intersection_points
+
+    def _next_event(
+        self,
+        track_id: str,
+        section_id: SectionId,
+        track_geom: Geometry,
+        point: Geometry,
+        projection: Any,
+    ) -> tuple[TrackId, SectionId, IntersectionPoint]:
+        dist = pygeos_project(track_geom, point)
+        return (
+            TrackId(track_id),
+            section_id,
+            IntersectionPoint(bisect(projection, dist)),
+        )
 
 
 def _assign_track_classification(
@@ -372,3 +412,11 @@ def _sort_tracks(track_df: DataFrame) -> DataFrame:
         return track_df.sort_values([track.TRACK_ID, track.FRAME])
     else:
         return track_df
+
+
+def sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
+    return geometrycollections([section_to_pygeos(s) for s in sections])
+
+
+def section_to_pygeos(section: Section) -> Geometry:
+    return linestrings([[(c.x, c.y) for c in section.get_coordinates()]])

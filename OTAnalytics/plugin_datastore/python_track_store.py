@@ -9,8 +9,8 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
-    INTERSECTION_COORDINATE,
     Detection,
+    IntersectionPoint,
     Track,
     TrackClassificationCalculator,
     TrackDataset,
@@ -316,5 +316,5 @@ class PythonTrackDataset(TrackDataset):
 
     def intersection_points(
         self, sections: list[Section]
-    ) -> dict[TrackId, list[tuple[SectionId, INTERSECTION_COORDINATE]]]:
+    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         raise NotImplementedError
