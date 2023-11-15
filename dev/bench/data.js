@@ -20,6 +20,70 @@ window.BENCHMARK_DATA = {
           "timestamp": "2023-11-13T08:50:50Z",
           "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/b2306fa31728e319fd5ef66c3cabfb876b1c5166"
         },
+        "date": 1699866688831,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.10896155903642323,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 9.177548567065969 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.015071643049951297,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 66.34976669005118 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.07317553299319518,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 13.665769952000119 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.008371797570591404,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 119.44865980907343 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.0438654383564715,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 22.796990921953693 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.007155876671273665,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 139.7452815270517 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "b2306fa31728e319fd5ef66c3cabfb876b1c5166",
+          "message": "Merge pull request #402 from OpenTrafficCam/refactor-benchmarks\n\nRefactor benchmarks",
+          "timestamp": "2023-11-13T08:50:50Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/b2306fa31728e319fd5ef66c3cabfb876b1c5166"
+        },
         "date": 1699873819934,
         "tool": "pytest",
         "benches": [
