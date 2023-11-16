@@ -329,3 +329,9 @@ class TestPygeosTrackGeometryDataset:
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
         assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
         assert not geometry_dataset.empty
+
+    def test_get_track_ids(self, first_track: Track) -> None:
+        track_dataset = create_track_dataset([first_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
+        assert geometry_dataset.track_ids == {first_track.id.id}
