@@ -108,6 +108,13 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         except KeyError:
             raise InvalidTrackGeometryDataset(f"Missing entry for key {BASE_GEOMETRY}")
 
+    @property
+    def empty(self) -> bool:
+        return self._get_base_geometry().empty
+
+    def _get_base_geometry(self) -> DataFrame:
+        return self._dataset[BASE_GEOMETRY]
+
     @staticmethod
     def from_track_dataset(dataset: TrackDataset) -> TrackGeometryDataset:
         if len(dataset) == 0:

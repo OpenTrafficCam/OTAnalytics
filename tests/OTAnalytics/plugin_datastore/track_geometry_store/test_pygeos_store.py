@@ -314,3 +314,18 @@ class TestPygeosTrackGeometryDataset:
             .to_dict(orient="index")
         }
         assert result == expected
+
+    def test_get_base_geometry(self) -> None:
+        base_geometry = Mock()
+        geometry_dataset = PygeosTrackGeometryDataset({BASE_GEOMETRY: base_geometry})
+        assert geometry_dataset._get_base_geometry() == base_geometry
+
+    def test_empty_on_empty_dataset(self) -> None:
+        geometry_dataset = PygeosTrackGeometryDataset()
+        assert geometry_dataset.empty
+
+    def test_empty_on_filled_dataset(self, first_track: Track) -> None:
+        track_dataset = create_track_dataset([first_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
+        assert not geometry_dataset.empty
