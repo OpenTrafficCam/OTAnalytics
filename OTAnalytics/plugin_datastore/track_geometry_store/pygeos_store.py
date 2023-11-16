@@ -271,6 +271,6 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
     def as_dict(self) -> dict:
         result = {}
         for offset, track_geom_df in self._dataset.items():
-            result[offset] = track_geom_df.to_dict(orient=ORIENTATION_INDEX)
+            result[offset] = track_geom_df[COLUMNS].to_dict(orient=ORIENTATION_INDEX)
 
         return result
