@@ -48,28 +48,28 @@ def section_to_pygeos(section: Section) -> Geometry:
 
 
 def create_pygeos_track(
-    track: Track, offset: RelativeOffsetCoordinate | None = None
+    track: Track, offset: RelativeOffsetCoordinate = BASE_GEOMETRY
 ) -> Geometry:
     """Creates a prepared pygeos LINESTRING for given track.
 
     Args:
         track (Track): the track.
-        offset (RelativeOffsetCoordinate | None): the offset to be applied to
-            geometry. Defaults to None.
+        offset (RelativeOffsetCoordinate): the offset to be applied to
+            geometry.
 
     Returns:
         Geometry: the prepared pygeos geometry.
     """
-    if offset:
+    if offset == BASE_GEOMETRY:
+        geometry = linestrings(
+            [(detection.x, detection.y) for detection in track.detections]
+        )
+    else:
         geometry = linestrings(
             [
                 apply_offset(detection.x, detection.y, detection.w, detection.h, offset)
                 for detection in track.detections
             ]
-        )
-    else:
-        geometry = linestrings(
-            [(detection.x, detection.y) for detection in track.detections]
         )
     prepare(geometry)
     return geometry
@@ -120,7 +120,9 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         return PygeosTrackGeometryDataset({BASE_GEOMETRY: track_geom_df})
 
     @staticmethod
-    def _create_entries(tracks: Iterable[Track]) -> dict:
+    def _create_entries(
+        tracks: Iterable[Track], offset: RelativeOffsetCoordinate = BASE_GEOMETRY
+    ) -> dict:
         """Create track geometry entries from given tracks.
 
         The resulting dictionary has following the structure:
@@ -128,6 +130,8 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
         Args:
             tracks (Iterable[Track]): the tracks to create the entries from.
+            offset (RelativeOffsetCoordinate): the offset to apply to the tracks.
+                Defaults to BASE_GEOMETRY.
 
         Returns:
             dict: the entries.
@@ -135,7 +139,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         entries = dict()
         for track in tracks:
             track_id = track.id.id
-            geometry = create_pygeos_track(track)
+            geometry = create_pygeos_track(track, offset)
             projection = [
                 line_locate_point(geometry, points(p))
                 for p in get_coordinates(geometry)

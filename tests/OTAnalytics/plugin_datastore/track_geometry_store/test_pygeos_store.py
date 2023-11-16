@@ -17,6 +17,7 @@ from OTAnalytics.domain.track import (
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     BASE_GEOMETRY,
+    COLUMNS,
     GEOMETRY,
     PROJECTION,
     TRACK_ID,
@@ -309,7 +310,7 @@ class TestPygeosTrackGeometryDataset:
         result = geometry_dataset.as_dict()
         expected = {
             BASE_GEOMETRY: create_geometry_dataset_from(tracks)
-            ._dataset[BASE_GEOMETRY]
+            ._dataset[BASE_GEOMETRY][COLUMNS]
             .to_dict(orient="index")
         }
         assert result == expected
