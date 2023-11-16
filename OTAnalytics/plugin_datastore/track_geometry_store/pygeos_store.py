@@ -34,6 +34,7 @@ GEOMETRY = "geom"
 PROJECTION = "projection"
 INTERSECTIONS = "intersections"
 INTERSECTS = "intersects"
+COLUMNS = [GEOMETRY, PROJECTION]
 BASE_GEOMETRY = RelativeOffsetCoordinate(0, 0)
 ORIENTATION_INDEX: Literal["index"] = "index"
 
@@ -64,28 +65,58 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
     def from_track_dataset(dataset: TrackDataset) -> TrackGeometryDataset:
         if len(dataset) == 0:
             return PygeosTrackGeometryDataset(
-                {BASE_GEOMETRY: DataFrame(columns=[TRACK_ID, GEOMETRY])}
+                {BASE_GEOMETRY: DataFrame(columns=COLUMNS)}
             )
-
-        tracks = [PygeosTrackGeometryDataset._create_track(track) for track in dataset]
-        # Question: Is DataFrame.from_dict faster than DataFrame.from_records
-        track_geom_df = DataFrame.from_records(tracks, columns=[TRACK_ID, GEOMETRY])
-        track_geom_df[PROJECTION] = track_geom_df[GEOMETRY].apply(
-            lambda track_geom: [
-                line_locate_point(track_geom, points(p))
-                for p in get_coordinates(track_geom)
-            ]
+        track_geom_df = DataFrame.from_dict(
+            PygeosTrackGeometryDataset._create_entries(dataset),
+            columns=COLUMNS,
+            orient=ORIENTATION_INDEX,
         )
-        track_geom_df[GEOMETRY].apply(prepare)
-
         return PygeosTrackGeometryDataset({BASE_GEOMETRY: track_geom_df})
+
+    @staticmethod
+    def _create_entries(tracks: Iterable[Track]) -> dict:
+        """Create track geometry entries from given tracks.
+
+        The resulting dictionary has following the structure:
+        {TRACK_ID: {GEOMETRY: Geometry, PROJECTION: list[float]}}
+
+        Args:
+            tracks (Iterable[Track]): the tracks to create the entries from.
+
+        Returns:
+            dict: the entries.
+        """
+        entries = dict()
+        for track in tracks:
+            track_id = track.id.id
+            geometry = PygeosTrackGeometryDataset._create_track(track)
+            projection = [
+                line_locate_point(geometry, points(p))
+                for p in get_coordinates(geometry)
+            ]
+            entries[track_id] = {
+                GEOMETRY: geometry,
+                PROJECTION: projection,
+            }
+        return entries
 
     @staticmethod
     def _create_track(
         track: Track, offset: RelativeOffsetCoordinate | None = None
-    ) -> tuple[str, Geometry]:
+    ) -> Geometry:
+        """Creates a prepared pygeos LINESTRING for given track.
+
+        Args:
+            track (Track): the track.
+            offset (RelativeOffsetCoordinate | None): the offset to be applied to
+                geometry. Defaults to None.
+
+        Returns:
+            Geometry: the prepared pygeos geometry.
+        """
         if offset:
-            return track.id.id, linestrings(
+            geometry = linestrings(
                 [
                     apply_offset(
                         detection.x, detection.y, detection.w, detection.h, offset
@@ -93,9 +124,12 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
                     for detection in track.detections
                 ]
             )
-        return track.id.id, linestrings(
-            [(detection.x, detection.y) for detection in track.detections]
-        )
+        else:
+            geometry = linestrings(
+                [(detection.x, detection.y) for detection in track.detections]
+            )
+        prepare(geometry)
+        return geometry
 
     def add_all(self, tracks: Iterable[Track]) -> TrackGeometryDataset:
         raise NotImplementedError

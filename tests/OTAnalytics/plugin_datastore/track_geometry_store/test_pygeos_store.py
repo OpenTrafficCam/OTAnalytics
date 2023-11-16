@@ -50,7 +50,7 @@ def create_geometry_dataset_from(tracks: Iterable[Track]) -> PygeosTrackGeometry
             BASE_GEOMETRY: DataFrame.from_records(
                 entries,
                 columns=[TRACK_ID, GEOMETRY, PROJECTION],
-            )
+            ).set_index(TRACK_ID)
         }
     )
 
