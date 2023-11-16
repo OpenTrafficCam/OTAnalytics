@@ -1,7 +1,7 @@
 from bisect import bisect
 from collections import defaultdict
 from itertools import chain
-from typing import Any, Iterable, Sequence, TypedDict
+from typing import Any, Iterable, Literal, Sequence, TypedDict
 
 from pandas import DataFrame
 from pygeos import (
@@ -35,6 +35,7 @@ PROJECTION = "projection"
 INTERSECTIONS = "intersections"
 INTERSECTS = "intersects"
 BASE_GEOMETRY = RelativeOffsetCoordinate(0, 0)
+ORIENTATION_INDEX: Literal["index"] = "index"
 
 
 def sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
@@ -207,3 +208,10 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         self, sections: Iterable[Section]
     ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
         raise NotImplementedError
+
+    def as_dict(self) -> dict:
+        result = {}
+        for offset, track_geom_df in self._dataset.items():
+            result[offset] = track_geom_df.to_dict(orient=ORIENTATION_INDEX)
+
+        return result

@@ -1,8 +1,9 @@
+from typing import Iterable
 from unittest.mock import MagicMock, Mock
 
 import pytest
 from pandas import DataFrame
-from pygeos import Geometry, linestrings
+from pygeos import Geometry, get_coordinates, line_locate_point, linestrings, points
 
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection, Section, SectionId
@@ -33,6 +34,25 @@ def create_track_dataset(tracks: list[Track]) -> TrackDataset:
     dataset.__iter__.return_value = iter(tracks)
     dataset.__len__.return_value = len(tracks)
     return dataset
+
+
+def create_geometry_dataset_from(tracks: Iterable[Track]) -> PygeosTrackGeometryDataset:
+    entries = []
+    for track in tracks:
+        _id = track.id.id
+        geometry = create_pygeos_track(track)
+        projection = [
+            line_locate_point(geometry, points(p)) for p in get_coordinates(geometry)
+        ]
+        entries.append((_id, geometry, projection))
+    return PygeosTrackGeometryDataset(
+        {
+            BASE_GEOMETRY: DataFrame.from_records(
+                entries,
+                columns=[TRACK_ID, GEOMETRY, PROJECTION],
+            )
+        }
+    )
 
 
 @pytest.fixture
@@ -212,20 +232,8 @@ class TestPygeosTrackGeometryDataset:
         track_dataset = create_track_dataset([simple_track])
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
         assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
-        expected = PygeosTrackGeometryDataset(
-            {
-                BASE_GEOMETRY: DataFrame.from_records(
-                    [
-                        (
-                            simple_track.id.id,
-                            create_pygeos_track(simple_track),
-                            [0.0, 1.0],
-                        ),
-                    ],
-                    columns=[TRACK_ID, GEOMETRY, PROJECTION],
-                )
-            }
-        )
+
+        expected = create_geometry_dataset_from([simple_track])
         assert_track_geometry_dataset_equals(geometry_dataset, expected)
 
     @pytest.mark.skip
@@ -233,25 +241,7 @@ class TestPygeosTrackGeometryDataset:
         track_dataset = create_track_dataset([first_track, second_track])
         geometry_dataset = PygeosTrackGeometryDataset({})
         geometry_dataset.add_all(track_dataset)
-
-        expected = PygeosTrackGeometryDataset(
-            {
-                BASE_GEOMETRY: DataFrame.from_records(
-                    [
-                        (
-                            first_track.id.id,
-                            create_pygeos_track(first_track),
-                            [0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
-                        ),
-                        (
-                            second_track.id.id,
-                            create_pygeos_track(second_track),
-                            [0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
-                        ),
-                    ]
-                )
-            }
-        )
+        expected = create_geometry_dataset_from([first_track, second_track])
         assert_track_geometry_dataset_equals(geometry_dataset, expected)
 
     def test_intersection_points(
@@ -310,3 +300,16 @@ class TestPygeosTrackGeometryDataset:
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
         result = geometry_dataset.intersecting_tracks(list(sections))
         assert result == {first_track.id, second_track.id}
+
+    def test_as_dict(self, first_track: Track, second_track: Track) -> None:
+        tracks = [first_track, second_track]
+        track_dataset = create_track_dataset(tracks)
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
+        result = geometry_dataset.as_dict()
+        expected = {
+            BASE_GEOMETRY: create_geometry_dataset_from(tracks)
+            ._dataset[BASE_GEOMETRY]
+            .to_dict(orient="index")
+        }
+        assert result == expected
