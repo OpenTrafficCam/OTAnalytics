@@ -153,10 +153,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
                 .map(any)
                 .astype(bool)
             )
-            track_ids = [
-                TrackId(_id)
-                for _id in track_df[track_df[INTERSECTS]][TRACK_ID].unique()
-            ]
+            track_ids = [TrackId(_id) for _id in track_df[track_df[INTERSECTS]].index]
             intersecting_tracks.update(track_ids)
 
         return intersecting_tracks
@@ -183,7 +180,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
                 .apply(
                     lambda r: [
                         self._next_event(
-                            r[TRACK_ID],
+                            r.name,  # the track id (track ids is used as df index)
                             _section_id,
                             r[GEOMETRY],
                             points(p),
