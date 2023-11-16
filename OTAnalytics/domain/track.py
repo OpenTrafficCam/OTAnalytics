@@ -683,6 +683,17 @@ class TrackGeometryDataset(ABC):
 
     @abstractmethod
     def add_all(self, tracks: Iterable[Track]) -> "TrackGeometryDataset":
+        """Add tracks to existing dataset.
+
+        Pre-existing tracks will be overwritten.
+
+        Args:
+            tracks (Iterable[Track]): the tracks to add.
+
+        Returns:
+            TrackGeometryDataset: the dataset with tracks added.
+
+        """
         raise NotImplementedError
 
     @abstractmethod

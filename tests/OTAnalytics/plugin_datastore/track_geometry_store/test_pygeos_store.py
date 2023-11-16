@@ -89,6 +89,41 @@ def first_track() -> Track:
 
 
 @pytest.fixture
+def first_track_merged(first_track: Track) -> Track:
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("1")
+    track_builder.add_xy_bbox(6, 1)
+    track_builder.add_frame(6)
+    track_builder.add_second(6)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(7, 1)
+    track_builder.add_frame(7)
+    track_builder.add_second(7)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(8, 1)
+    track_builder.add_frame(8)
+    track_builder.add_second(8)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(9, 1)
+    track_builder.add_frame(9)
+    track_builder.add_second(9)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(10, 1)
+    track_builder.add_frame(10)
+    track_builder.add_second(10)
+    track_builder.append_detection()
+    track = track_builder.build_track()
+    merged_track = Mock()
+    merged_track.detections = first_track.detections + track.detections
+    merged_track.id = first_track.id
+    return merged_track
+
+
+@pytest.fixture
 def second_track() -> Track:
     track_builder = TrackBuilder()
     track_builder.add_track_id("2")
@@ -237,13 +272,32 @@ class TestPygeosTrackGeometryDataset:
         expected = create_geometry_dataset_from([simple_track])
         assert_track_geometry_dataset_equals(geometry_dataset, expected)
 
-    @pytest.mark.skip
-    def test_add_all(self, first_track: Track, second_track: Track) -> None:
-        track_dataset = create_track_dataset([first_track, second_track])
-        geometry_dataset = PygeosTrackGeometryDataset({})
-        geometry_dataset.add_all(track_dataset)
+    def test_add_all_on_empty_dataset(
+        self, first_track: Track, second_track: Track
+    ) -> None:
+        track_dataset = create_track_dataset([])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        result = geometry_dataset.add_all([first_track, second_track])
         expected = create_geometry_dataset_from([first_track, second_track])
-        assert_track_geometry_dataset_equals(geometry_dataset, expected)
+        assert_track_geometry_dataset_equals(result, expected)
+
+    def test_add_all_on_filled_dataset(
+        self, first_track: Track, second_track: Track
+    ) -> None:
+        track_dataset = create_track_dataset([first_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        result = geometry_dataset.add_all([second_track])
+        expected = create_geometry_dataset_from([first_track, second_track])
+        assert_track_geometry_dataset_equals(result, expected)
+
+    def test_add_all_merge_track(
+        self, first_track: Track, first_track_merged: Track, second_track: Track
+    ) -> None:
+        track_dataset = create_track_dataset([first_track, second_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        result = geometry_dataset.add_all([first_track_merged])
+        expected = create_geometry_dataset_from([first_track_merged, second_track])
+        assert_track_geometry_dataset_equals(result, expected)
 
     def test_intersection_points(
         self,

@@ -172,7 +172,26 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         return entries
 
     def add_all(self, tracks: Iterable[Track]) -> TrackGeometryDataset:
-        raise NotImplementedError
+        if self.empty:
+            new_entries = self._create_entries(tracks)
+            return PygeosTrackGeometryDataset(
+                {
+                    BASE_GEOMETRY: DataFrame.from_dict(
+                        new_entries, orient=ORIENTATION_INDEX
+                    )
+                }
+            )
+        new_dataset = {}
+        existing_entries = self.as_dict()
+        for offset in existing_entries.keys():
+            new_entries = self._create_entries(tracks, offset)
+            for track_id, entry in new_entries.items():
+                existing_entries[offset][track_id] = entry
+            new_dataset[offset] = DataFrame.from_dict(
+                existing_entries[offset], orient=ORIENTATION_INDEX
+            )
+
+        return PygeosTrackGeometryDataset(new_dataset)
 
     def remove(self, ids: Iterable[TrackId]) -> TrackGeometryDataset:
         raise NotImplementedError
