@@ -29,6 +29,13 @@ from OTAnalytics.domain.track import (
     TrackId,
 )
 
+TRACK_ID = "track_id"
+GEOMETRY = "geom"
+PROJECTION = "projection"
+INTERSECTIONS = "intersections"
+INTERSECTS = "intersects"
+BASE_GEOMETRY = RelativeOffsetCoordinate(0, 0)
+
 
 def sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
     return geometrycollections([section_to_pygeos(s) for s in sections])
@@ -36,14 +43,6 @@ def sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
 
 def section_to_pygeos(section: Section) -> Geometry:
     return linestrings([[(c.x, c.y) for c in section.get_coordinates()]])
-
-
-TRACK_ID = "track_id"
-GEOMETRY = "geom"
-PROJECTION = "projection"
-INTERSECTIONS = "intersections"
-INTERSECTS = "intersects"
-BASE_GEOMETRY = RelativeOffsetCoordinate(0, 0)
 
 
 class TrackGeometryEntry(TypedDict):
