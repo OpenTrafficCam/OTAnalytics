@@ -82,19 +82,36 @@ class TrackGeometryEntry(TypedDict):
     intersects: list
 
 
+class InvalidTrackGeometryDataset(Exception):
+    pass
+
+
 class PygeosTrackGeometryDataset(TrackGeometryDataset):
     def __init__(
         self,
-        dataset: dict[RelativeOffsetCoordinate, DataFrame],
+        dataset: dict[RelativeOffsetCoordinate, DataFrame] | None = None,
     ):
-        self._dataset: dict[RelativeOffsetCoordinate, DataFrame] = dataset
+        if dataset is not None:
+            self._check_is_valid(dataset)
+            self._dataset: dict[RelativeOffsetCoordinate, DataFrame] = dataset
+        else:
+            self._dataset = self._create_empty()
+
+    def _create_empty(self) -> dict[RelativeOffsetCoordinate, DataFrame]:
+        return {BASE_GEOMETRY: DataFrame(columns=COLUMNS)}
+
+    def _check_is_valid(
+        self, dataset: dict[RelativeOffsetCoordinate, DataFrame]
+    ) -> None:
+        try:
+            dataset[BASE_GEOMETRY]
+        except KeyError:
+            raise InvalidTrackGeometryDataset(f"Missing entry for key {BASE_GEOMETRY}")
 
     @staticmethod
     def from_track_dataset(dataset: TrackDataset) -> TrackGeometryDataset:
         if len(dataset) == 0:
-            return PygeosTrackGeometryDataset(
-                {BASE_GEOMETRY: DataFrame(columns=COLUMNS)}
-            )
+            return PygeosTrackGeometryDataset()
         track_geom_df = DataFrame.from_dict(
             PygeosTrackGeometryDataset._create_entries(dataset),
             columns=COLUMNS,
