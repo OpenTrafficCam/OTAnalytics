@@ -673,3 +673,65 @@ class TrackBuilder(ABC):
         All configurations made to the builder will be reset.
         """
         raise NotImplementedError
+
+
+class TrackGeometryDataset(ABC):
+    @staticmethod
+    @abstractmethod
+    def from_track_dataset(dataset: TrackDataset) -> "TrackGeometryDataset":
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_all(self, tracks: Iterable[Track]) -> "TrackGeometryDataset":
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove(self, ids: Iterable[TrackId]) -> "TrackGeometryDataset":
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear(self) -> "TrackGeometryDataset":
+        raise NotImplementedError
+
+    @abstractmethod
+    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+        """Return a set of tracks intersecting a set of sections.
+
+        Args:
+            sections (list[Section]): the list of sections to intersect.
+
+        Returns:
+            set[TrackId]: the track ids intersecting the given sections.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def intersection_points(
+        self, sections: list[Section]
+    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+        """
+        Return the intersection points resulting from the tracks and the
+        given sections.
+
+        Args:
+            sections (list[Section]): the sections to intersect with.
+
+        Returns:
+            dict[TrackId, list[tuple[SectionId]]]: the intersection points.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def contained_by_sections(
+        self, sections: Iterable[Section]
+    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
+        """Return whether track coordinates are contained by the given sections.
+
+        Args:
+             sections (Iterable[Section]): the sections.
+
+        Returns:
+            dict[TrackId, tuple[SectionId, Sequence[bool]]]: boolean mask of track
+                coordinates contained by given sections.
+        """
+        raise NotImplementedError
