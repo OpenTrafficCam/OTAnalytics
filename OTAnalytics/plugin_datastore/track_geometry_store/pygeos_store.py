@@ -119,6 +119,11 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
     @property
     def empty(self) -> bool:
+        """Whether dataset is empty.
+
+        Returns:
+            bool: True if dataset is empty, False otherwise.
+        """
         return self._get_base_geometry().empty
 
     def _get_base_geometry(self) -> DataFrame:
