@@ -171,36 +171,6 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             }
         return entries
 
-    @staticmethod
-    def _create_track(
-        track: Track, offset: RelativeOffsetCoordinate | None = None
-    ) -> Geometry:
-        """Creates a prepared pygeos LINESTRING for given track.
-
-        Args:
-            track (Track): the track.
-            offset (RelativeOffsetCoordinate | None): the offset to be applied to
-                geometry. Defaults to None.
-
-        Returns:
-            Geometry: the prepared pygeos geometry.
-        """
-        if offset:
-            geometry = linestrings(
-                [
-                    apply_offset(
-                        detection.x, detection.y, detection.w, detection.h, offset
-                    )
-                    for detection in track.detections
-                ]
-            )
-        else:
-            geometry = linestrings(
-                [(detection.x, detection.y) for detection in track.detections]
-            )
-        prepare(geometry)
-        return geometry
-
     def add_all(self, tracks: Iterable[Track]) -> TrackGeometryDataset:
         raise NotImplementedError
 
