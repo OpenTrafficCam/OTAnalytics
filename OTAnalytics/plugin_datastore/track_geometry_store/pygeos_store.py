@@ -47,6 +47,34 @@ def section_to_pygeos(section: Section) -> Geometry:
     return linestrings([[(c.x, c.y) for c in section.get_coordinates()]])
 
 
+def create_pygeos_track(
+    track: Track, offset: RelativeOffsetCoordinate | None = None
+) -> Geometry:
+    """Creates a prepared pygeos LINESTRING for given track.
+
+    Args:
+        track (Track): the track.
+        offset (RelativeOffsetCoordinate | None): the offset to be applied to
+            geometry. Defaults to None.
+
+    Returns:
+        Geometry: the prepared pygeos geometry.
+    """
+    if offset:
+        geometry = linestrings(
+            [
+                apply_offset(detection.x, detection.y, detection.w, detection.h, offset)
+                for detection in track.detections
+            ]
+        )
+    else:
+        geometry = linestrings(
+            [(detection.x, detection.y) for detection in track.detections]
+        )
+    prepare(geometry)
+    return geometry
+
+
 class TrackGeometryEntry(TypedDict):
     geometry: Geometry
     projection: list[float]
@@ -90,7 +118,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         entries = dict()
         for track in tracks:
             track_id = track.id.id
-            geometry = PygeosTrackGeometryDataset._create_track(track)
+            geometry = create_pygeos_track(track)
             projection = [
                 line_locate_point(geometry, points(p))
                 for p in get_coordinates(geometry)
