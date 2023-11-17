@@ -299,6 +299,27 @@ class TestPygeosTrackGeometryDataset:
         expected = create_geometry_dataset_from([first_track_merged, second_track])
         assert_track_geometry_dataset_equals(result, expected)
 
+    def test_remove_from_filled_dataset(
+        self, first_track: Track, second_track: Track
+    ) -> None:
+        track_dataset = create_track_dataset([first_track, second_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        result = geometry_dataset.remove([first_track.id])
+        expected = create_geometry_dataset_from([second_track])
+        assert_track_geometry_dataset_equals(result, expected)
+
+    def test_remove_from_empty_dataset(self, first_track: Track) -> None:
+        geometry_dataset = PygeosTrackGeometryDataset()
+        result = geometry_dataset.remove([first_track.id])
+        assert_track_geometry_dataset_equals(result, PygeosTrackGeometryDataset())
+
+    def test_remove_missing(self, first_track: Track, second_track: Track) -> None:
+        track_dataset = create_track_dataset([first_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        result = geometry_dataset.remove([second_track.id])
+        expected = create_geometry_dataset_from([first_track])
+        assert_track_geometry_dataset_equals(result, expected)
+
     def test_intersection_points(
         self,
         not_intersecting_track: Track,

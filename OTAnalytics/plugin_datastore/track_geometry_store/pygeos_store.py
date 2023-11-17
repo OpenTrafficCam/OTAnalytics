@@ -76,10 +76,9 @@ def create_pygeos_track(
 
 
 class TrackGeometryEntry(TypedDict):
+    # TODO: Remove if not needed
     geometry: Geometry
     projection: list[float]
-    intersection: list
-    intersects: list
 
 
 class InvalidTrackGeometryDataset(Exception):
@@ -194,10 +193,12 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         return PygeosTrackGeometryDataset(new_dataset)
 
     def remove(self, ids: Iterable[TrackId]) -> TrackGeometryDataset:
-        raise NotImplementedError
-
-    def clear(self) -> TrackGeometryDataset:
-        raise NotImplementedError
+        updated = {}
+        for offset, geometry_df in self._dataset.items():
+            updated[offset] = geometry_df.drop(
+                index=[track_id.id for track_id in ids], errors="ignore"
+            )
+        return PygeosTrackGeometryDataset(updated)
 
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
         intersecting_tracks = set()
