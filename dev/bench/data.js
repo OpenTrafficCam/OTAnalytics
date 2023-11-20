@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1700357151847,
+  "lastUpdate": 1700443332324,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -512,6 +512,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 133.85178193403408 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Sebastian Buck",
+            "username": "frunika",
+            "email": "38660441+frunika@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "39c25dbb44eb14f195904f78b15268cd9b83983e",
+          "message": "Merge pull request #405 from OpenTrafficCam/bug/3569-otvision-build-process-crashes-on-building-assets\n\nchange config because of new build to always having a source",
+          "timestamp": "2023-11-13T13:04:07Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/39c25dbb44eb14f195904f78b15268cd9b83983e"
+        },
+        "date": 1700443331775,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.10992687410094147,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 9.096956573892385 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.015242658980111491,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 65.60535148787312 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.07494577266358009,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 13.342980724060908 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.008546964062691115,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 117.0006089489907 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.0448362165150249,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 22.30339840706438 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.0073980633751980955,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 135.17051007598639 sec\nrounds: 1"
           }
         ]
       }
