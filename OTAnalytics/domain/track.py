@@ -441,14 +441,14 @@ class TrackDataset(ABC):
     @abstractmethod
     def contained_by_sections(
         self, sections: Iterable[Section]
-    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
+    ) -> dict[TrackId, dict[SectionId, Sequence[bool]]]:
         """Return whether track coordinates are contained by the given sections.
 
         Args:
              sections (Iterable[Section]): the sections.
 
         Returns:
-            dict[TrackId, tuple[SectionId, Sequence[bool]]]: boolean mask of track
+            dict[TrackId, dict[SectionId, Sequence[bool]]]: boolean mask of track
                 coordinates contained by given sections.
         """
         raise NotImplementedError
@@ -739,14 +739,14 @@ class TrackGeometryDataset(ABC):
     @abstractmethod
     def contained_by_sections(
         self, sections: Iterable[Section]
-    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
+    ) -> dict[TrackId, dict[SectionId, Sequence[bool]]]:
         """Return whether track coordinates are contained by the given sections.
 
         Args:
              sections (Iterable[Section]): the sections.
 
         Returns:
-            dict[TrackId, tuple[SectionId, Sequence[bool]]]: boolean mask of track
+            dict[TrackId, dict[SectionId, Sequence[bool]]]: boolean mask of track
                 coordinates contained by given sections.
         """
         raise NotImplementedError

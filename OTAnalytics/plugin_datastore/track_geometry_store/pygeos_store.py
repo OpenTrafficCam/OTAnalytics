@@ -7,6 +7,7 @@ from pandas import DataFrame
 from pygeos import (
     Geometry,
     apply,
+    contains,
     geometrycollections,
     get_coordinates,
     intersection,
@@ -15,6 +16,7 @@ from pygeos import (
     line_locate_point,
     linestrings,
     points,
+    polygons,
     prepare,
 )
 
@@ -39,12 +41,22 @@ BASE_GEOMETRY = RelativeOffsetCoordinate(0, 0)
 ORIENTATION_INDEX: Literal["index"] = "index"
 
 
-def sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
-    return geometrycollections([section_to_pygeos(s) for s in sections])
+def line_sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
+    return geometrycollections([line_section_to_pygeos(s) for s in sections])
 
 
-def section_to_pygeos(section: Section) -> Geometry:
+def line_section_to_pygeos(section: Section) -> Geometry:
     return linestrings([[(c.x, c.y) for c in section.get_coordinates()]])
+
+
+def area_sections_to_pygeos(sections: Iterable[Section]) -> list[Geometry]:
+    return [area_section_to_pygeos(s) for s in sections]
+
+
+def area_section_to_pygeos(section: Section) -> Geometry:
+    geometry = polygons([[(c.x, c.y) for c in section.get_coordinates()]])
+    prepare(geometry)
+    return geometry
 
 
 def create_pygeos_track(
@@ -204,7 +216,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         intersecting_tracks = set()
         sections_grouped_by_offset = group_sections_by_offset(sections)
         for offset, _sections in sections_grouped_by_offset.items():
-            section_geoms = sections_to_pygeos_multi(_sections)
+            section_geoms = line_sections_to_pygeos_multi(_sections)
             track_df = self._get_track_geometries_for(offset)
 
             track_df[INTERSECTS] = (
@@ -225,7 +237,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
         intersection_points = defaultdict(list)
         for offset, _sections in sections_grouped_by_offset.items():
-            section_geoms = sections_to_pygeos_multi(_sections)
+            section_geoms = line_sections_to_pygeos_multi(_sections)
             track_df = self._get_track_geometries_for(offset)
 
             track_df[INTERSECTIONS] = track_df[GEOMETRY].apply(
@@ -297,8 +309,29 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
     def contained_by_sections(
         self, sections: Iterable[Section]
-    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
-        raise NotImplementedError
+    ) -> dict[TrackId, dict[SectionId, Sequence[bool]]]:
+        sections_grouped_by_offset = group_sections_by_offset(sections)
+
+        contains_result: dict[TrackId, dict[SectionId, Sequence[bool]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
+        for offset, section_group in sections_grouped_by_offset.items():
+            for _section in section_group:
+                section_geom = area_section_to_pygeos(_section)
+
+                track_df = self._get_track_geometries_for(offset)
+                contains_masks = track_df[GEOMETRY].apply(
+                    lambda line: {
+                        _section.id: [
+                            contains(section_geom, points(p))[0]
+                            for p in get_coordinates(line)
+                        ]
+                    }
+                )
+                contains_masks.index = contains_masks.index.map(TrackId)
+                for track_id, entry in contains_masks.to_dict().items():
+                    contains_result[track_id].update(entry)
+        return contains_result
 
     def as_dict(self) -> dict:
         result = {}

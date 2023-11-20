@@ -156,6 +156,7 @@ class PandasTrackDataset(TrackDataset):
         self._dataset = dataset
         self._calculator = calculator
         self._track_geometry_factory = track_geometry_factory
+        # TODO: Re-use existing track geometries instead of creating new ones
         self._track_geometry_dataset = self._track_geometry_factory(self)
 
     @staticmethod
@@ -269,8 +270,8 @@ class PandasTrackDataset(TrackDataset):
 
     def contained_by_sections(
         self, sections: Iterable[Section]
-    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
-        raise NotImplementedError
+    ) -> dict[TrackId, dict[SectionId, Sequence[bool]]]:
+        return self._track_geometry_dataset.contained_by_sections(sections)
 
 
 def _assign_track_classification(

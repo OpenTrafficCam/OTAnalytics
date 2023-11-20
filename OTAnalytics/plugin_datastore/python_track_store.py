@@ -9,6 +9,7 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
+    TRACK_GEOMETRY_FACTORY,
     Detection,
     IntersectionPoint,
     Track,
@@ -16,6 +17,9 @@ from OTAnalytics.domain.track import (
     TrackDataset,
     TrackHasNoDetectionError,
     TrackId,
+)
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
 )
 
 
@@ -219,11 +223,16 @@ class PythonTrackDataset(TrackDataset):
         self,
         values: Optional[dict[TrackId, Track]] = None,
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
+            PygeosTrackGeometryDataset.from_track_dataset
+        ),
     ) -> None:
         if values is None:
             values = {}
         self._tracks = values
         self._calculator = calculator
+        self._track_geometry_factory = track_geometry_factory
+        self._track_geometry_dataset = track_geometry_factory(self)
 
     @staticmethod
     def from_list(
@@ -312,14 +321,14 @@ class PythonTrackDataset(TrackDataset):
         return PythonTrackDataset(filtered_tracks, self._calculator)
 
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
-        raise NotImplementedError
+        return self._track_geometry_dataset.intersecting_tracks(sections)
 
     def intersection_points(
         self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        raise NotImplementedError
+        return self._track_geometry_dataset.intersection_points(sections)
 
     def contained_by_sections(
         self, sections: Iterable[Section]
-    ) -> dict[TrackId, tuple[SectionId, Sequence[bool]]]:
-        raise NotImplementedError
+    ) -> dict[TrackId, dict[SectionId, Sequence[bool]]]:
+        return self._track_geometry_dataset.contained_by_sections(sections)

@@ -6,7 +6,7 @@ from pandas import DataFrame
 from pygeos import Geometry, get_coordinates, line_locate_point, linestrings, points
 
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import LineSection, Section, SectionId
+from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     IntersectionPoint,
     Track,
@@ -158,7 +158,7 @@ def second_track() -> Track:
 @pytest.fixture
 def not_intersecting_track() -> Track:
     track_builder = TrackBuilder()
-    track_builder.add_track_id("3")
+    track_builder.add_track_id("not_intersecting_track")
     track_builder.add_xy_bbox(1, 10)
     track_builder.add_frame(1)
     track_builder.add_second(1)
@@ -231,6 +231,44 @@ def third_section() -> Section:
     name = "third"
     coordinates = [Coordinate(3.5, 0), Coordinate(3.5, 2)]
     return LineSection(
+        SectionId(name),
+        name,
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+        {},
+        coordinates,
+    )
+
+
+@pytest.fixture
+def area_section() -> Section:
+    name = "area"
+    coordinates = [
+        Coordinate(1.5, 0.5),
+        Coordinate(3, 0.5),
+        Coordinate(3, 2),
+        Coordinate(1.5, 2),
+        Coordinate(1.5, 0.5),
+    ]
+    return Area(
+        SectionId(name),
+        name,
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+        {},
+        coordinates,
+    )
+
+
+@pytest.fixture
+def not_intersecting_area_section() -> Section:
+    name = "not_intersecting_area"
+    coordinates = [
+        Coordinate(20, 20),
+        Coordinate(30, 20),
+        Coordinate(30, 30),
+        Coordinate(20, 30),
+        Coordinate(20, 20),
+    ]
+    return Area(
         SectionId(name),
         name,
         {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
@@ -410,3 +448,34 @@ class TestPygeosTrackGeometryDataset:
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
         assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
         assert geometry_dataset.track_ids == {first_track.id.id}
+
+    def test_contained_by_sections(
+        self,
+        first_track: Track,
+        second_track: Track,
+        not_intersecting_track: Track,
+        area_section: Section,
+        not_intersecting_area_section: Section,
+    ) -> None:
+        track_dataset = create_track_dataset(
+            [not_intersecting_track, first_track, second_track]
+        )
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
+        result = geometry_dataset.contained_by_sections(
+            [not_intersecting_area_section, area_section]
+        )
+        expected = {
+            not_intersecting_track.id: {
+                not_intersecting_area_section.id: [False, False, False, False, False],
+                area_section.id: [False, False, False, False, False],
+            },
+            first_track.id: {
+                not_intersecting_area_section.id: [False, False, False, False, False],
+                area_section.id: [False, True, False, False, False],
+            },
+            second_track.id: {
+                not_intersecting_area_section.id: [False, False, False, False, False],
+                area_section.id: [False, True, False, False, False],
+            },
+        }
+        assert result == expected
