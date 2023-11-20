@@ -12,15 +12,15 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     MIN_NUMBER_OF_DETECTIONS,
+    TRACK_GEOMETRY_FACTORY,
     Detection,
     IntersectionPoint,
     Track,
     TrackDataset,
     TrackId,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store import (
-    TRACK_GEOMETRY_DATASET_FACTORY,
-    TRACK_GEOMETRY_FACTORY,
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
 )
 
 
@@ -149,7 +149,9 @@ class PandasTrackDataset(TrackDataset):
         self,
         dataset: DataFrame = DataFrame(),
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY = TRACK_GEOMETRY_DATASET_FACTORY,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
+            PygeosTrackGeometryDataset.from_track_dataset
+        ),
     ):
         self._dataset = dataset
         self._calculator = calculator

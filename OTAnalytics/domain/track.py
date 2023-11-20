@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 
 from PIL import Image
 
@@ -750,3 +750,6 @@ class TrackGeometryDataset(ABC):
                 coordinates contained by given sections.
         """
         raise NotImplementedError
+
+
+TRACK_GEOMETRY_FACTORY = Callable[[TrackDataset], TrackGeometryDataset]
