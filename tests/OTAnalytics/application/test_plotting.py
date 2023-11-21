@@ -2,9 +2,13 @@ from unittest.mock import Mock, call
 
 import pytest
 
+from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
 from OTAnalytics.application.state import Plotter
-from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track import Track, TrackId, TrackImage
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    TrackBackgroundPlotter,
+)
 
 
 class TestLayeredPlotter:
@@ -66,3 +70,32 @@ class TestPlottingLayer:
         layer.set_enabled(False)
         layer.plot()
         plotter.plot.assert_called_once()
+
+
+class TestBackgroundPlotter:
+    def test_plot(self) -> None:
+        track = Mock(spec=Track).return_value
+        track.id = TrackId("5")
+
+        tracks = [track]
+        expected_image = Mock()
+        datastore = Mock(spec=Datastore)
+        datastore.get_all_tracks.return_value = tracks
+        datastore.get_image_of_track.return_value = expected_image
+
+        background_plotter = TrackBackgroundPlotter(datastore)
+        result = background_plotter.plot()
+
+        datastore.get_all_tracks.assert_called_once()
+        datastore.get_image_of_track.assert_called_once_with(track.id)
+        assert result is not None
+        assert result == expected_image
+
+    def test_plot_empty_track_repository_returns_none(self) -> None:
+        mock_datastore = Mock(spec=Datastore)
+        mock_datastore.get_all_tracks.return_value = []
+        background_plotter = TrackBackgroundPlotter(mock_datastore)
+        result = background_plotter.plot()
+
+        mock_datastore.get_all_tracks.assert_called_once()
+        assert result is None

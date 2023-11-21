@@ -3,7 +3,11 @@ from typing import Callable, Optional, Sequence
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.plotting import CachedPlotter, PlottingLayer
+from OTAnalytics.application.plotting import (
+    CachedPlotter,
+    PlottingLayer,
+    TrackBackgroundPlotter,
+)
 from OTAnalytics.application.state import (
     FlowState,
     Plotter,
@@ -45,7 +49,6 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PandasTracksOffsetProvider,
     PlotterPrototype,
     SectionLayerPlotter,
-    TrackBackgroundPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
@@ -86,7 +89,9 @@ class VisualizationBuilder:
         flow_state: FlowState,
         road_user_assigner: RoadUserAssigner,
     ) -> Sequence[PlottingLayer]:
-        background_image_plotter = TrackBackgroundPlotter(self._datastore)
+        background_image_plotter = TrackBackgroundPlotter(
+            self._track_view_state, self._datastore
+        )
         all_tracks_plotter = self._create_all_tracks_plotter()
         highlight_tracks_assigned_to_flows_plotter = (
             self._create_highlight_tracks_assigned_to_flows_plotter(
