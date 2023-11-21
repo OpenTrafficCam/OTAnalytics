@@ -275,6 +275,7 @@ class TestOttrkParser:
             == expected_detection_classes
         )
         assert parse_result.video_metadata == VideoMetadata(
+            path="myhostname_file.mp4",
             recorded_start_date=datetime(
                 year=2019,
                 month=12,

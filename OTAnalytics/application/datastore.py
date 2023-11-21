@@ -40,6 +40,7 @@ class DetectionMetadata:
 
 @dataclass(frozen=True)
 class VideoMetadata:
+    path: str
     recorded_start_date: datetime
     expected_duration: Optional[timedelta]
     recorded_fps: float

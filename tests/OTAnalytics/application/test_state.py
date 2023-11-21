@@ -210,6 +210,7 @@ class TestVideosMetadata:
     @pytest.fixture
     def first_metadata(self) -> VideoMetadata:
         return VideoMetadata(
+            path="video_path.mp4",
             recorded_start_date=datetime(
                 year=2019,
                 month=12,

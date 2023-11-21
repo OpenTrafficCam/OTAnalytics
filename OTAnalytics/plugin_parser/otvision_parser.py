@@ -476,6 +476,10 @@ class OttrkParser(TrackParser):
         return TrackParseResult(tracks, detection_metadata, video_metadata)
 
     def _parse_video_metadata(self, metadata_video: dict) -> VideoMetadata:
+        video_path = (
+            metadata_video[ottrk_format.FILENAME]
+            + metadata_video[ottrk_format.FILETYPE]
+        )
         recorded_start_date = datetime.fromtimestamp(
             float(metadata_video[ottrk_format.RECORDED_START_DATE]), timezone.utc
         )
@@ -492,6 +496,7 @@ class OttrkParser(TrackParser):
         )
         number_of_frames = int(metadata_video[ottrk_format.NUMBER_OF_FRAMES])
         return VideoMetadata(
+            path=video_path,
             recorded_start_date=recorded_start_date,
             expected_duration=expected_duration,
             recorded_fps=recorded_fps,
