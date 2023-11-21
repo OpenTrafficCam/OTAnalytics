@@ -245,6 +245,8 @@ class PandasTrackDataset(TrackDataset):
         return new_batches
 
     def __len__(self) -> int:
+        if self._dataset.empty:
+            return 0
         return len(self._dataset[track.TRACK_ID].unique())
 
     def filter_by_min_detection_length(self, length: int) -> "TrackDataset":

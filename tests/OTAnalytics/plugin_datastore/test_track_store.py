@@ -174,8 +174,9 @@ class TestPandasTrackDataset:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
         dataset = PandasTrackDataset.from_list([first_track, second_track])
-
         assert len(dataset) == 2
+        empty_dataset = PandasTrackDataset.from_list([])
+        assert len(empty_dataset) == 0
 
     @pytest.mark.parametrize(
         "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]
