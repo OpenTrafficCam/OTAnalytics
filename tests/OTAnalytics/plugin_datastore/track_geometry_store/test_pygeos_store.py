@@ -188,6 +188,19 @@ def not_intersecting_track() -> Track:
 
 
 @pytest.fixture
+def single_detection_track() -> Track:
+    detection = Mock()
+    detection.x = 1
+    detection.y = 1
+    detection.w = 1
+    detection.h = 1
+    track = Mock()
+    track.id = TrackId("Single-Detection")
+    track.detections = [detection]
+    return track
+
+
+@pytest.fixture
 def not_intersecting_section() -> Section:
     name = "first"
     coordinates = [Coordinate(0, 0), Coordinate(0, 2)]
@@ -360,6 +373,7 @@ class TestPygeosTrackGeometryDataset:
 
     def test_intersection_points(
         self,
+        single_detection_track: Track,
         not_intersecting_track: Track,
         first_track: Track,
         second_track: Track,
@@ -375,7 +389,7 @@ class TestPygeosTrackGeometryDataset:
             third_section,
         ]
         track_dataset = create_track_dataset(
-            [not_intersecting_track, first_track, second_track]
+            [single_detection_track, not_intersecting_track, first_track, second_track]
         )
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
         result = geometry_dataset.intersection_points(list(sections))
@@ -394,6 +408,7 @@ class TestPygeosTrackGeometryDataset:
 
     def test_intersecting_tracks(
         self,
+        single_detection_track: Track,
         not_intersecting_track: Track,
         first_track: Track,
         second_track: Track,
@@ -409,7 +424,7 @@ class TestPygeosTrackGeometryDataset:
             third_section,
         ]
         track_dataset = create_track_dataset(
-            [not_intersecting_track, first_track, second_track]
+            [single_detection_track, not_intersecting_track, first_track, second_track]
         )
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(track_dataset)
         result = geometry_dataset.intersecting_tracks(list(sections))

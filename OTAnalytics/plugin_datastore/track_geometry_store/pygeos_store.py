@@ -170,6 +170,9 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         """
         entries = dict()
         for track in tracks:
+            if len(track.detections) < 2:
+                # Disregard single detection tracks
+                continue
             track_id = track.id.id
             geometry = create_pygeos_track(track, offset)
             projection = [
