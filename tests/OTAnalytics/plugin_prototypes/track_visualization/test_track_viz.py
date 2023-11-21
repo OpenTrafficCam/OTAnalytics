@@ -6,17 +6,17 @@ from pandas import DataFrame
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import ObservableProperty, TrackViewState
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
+from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import NoProgressbarBuilder
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
     OCCURRENCE,
     TRACK_CLASSIFICATION,
     TRACK_ID,
     Detection,
-    PythonDetection,
-    PythonTrack,
-    PythonTrackDataset,
     Track,
     TrackId,
     TrackIdProvider,
@@ -24,9 +24,15 @@ from OTAnalytics.domain.track import (
     TrackRepository,
     TrackRepositoryEvent,
 )
+from OTAnalytics.plugin_datastore.python_track_store import (
+    PythonDetection,
+    PythonTrack,
+    PythonTrackDataset,
+)
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
     ColorPaletteProvider,
+    EventToFlowResolver,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
@@ -40,6 +46,23 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackPlotter,
     TrackStartEndPointPlotter,
 )
+
+
+class TestEventToFlowResolver:
+    def test_resolve(self) -> None:
+        flow_repository = Mock(spec=FlowRepository)
+        flow_1 = Mock(spec=Flow)
+        flow_1.id = FlowId("flow-1")
+        flow_1.start = SectionId("section-1")
+        event_1 = Mock(spec=Event)
+        event_1.section_id = SectionId("section-1")
+        events = [event_1]
+        event_to_flow = EventToFlowResolver(flow_repository)
+        flow_repository.flows_using_section.return_value = [flow_1]
+
+        flows = event_to_flow.resolve(events)
+
+        assert flow_1.id in flows
 
 
 class TestPlotterPrototype:
@@ -74,18 +97,18 @@ class TestPandasDataProvider:
 
 class TestPandasTrackProvider:
     def test_get_data_empty_track_repository(self) -> None:
-        datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = PythonTrackDataset.from_list([])
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.get_all.return_value = PythonTrackDataset.from_list([])
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(FilterBuilder)
 
         provider = PandasTrackProvider(
-            datastore, track_view_state, filter_builder, NoProgressbarBuilder()
+            track_repository, track_view_state, filter_builder, NoProgressbarBuilder()
         )
         result = provider.get_data()
 
-        datastore.get_all_tracks.assert_called_once()
+        track_repository.get_all.assert_called_once()
         assert result.empty
 
 
@@ -180,17 +203,14 @@ class TestCachedPandasTrackProvider:
         Mocked datastore uses given query_tracks for track repository id queries.
         Initializes provider cache with given init_tracks.
         """
-        datastore = Mock(spec=Datastore)
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_for.side_effect = query_tracks
-
-        datastore._track_repository = track_repository
 
         track_view_state = Mock(spec=TrackViewState).return_value
         track_view_state.track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
         filter_builder = Mock(spec=FilterBuilder)
         provider = CachedPandasTrackProvider(
-            datastore, track_view_state, filter_builder, NoProgressbarBuilder()
+            track_repository, track_view_state, filter_builder, NoProgressbarBuilder()
         )
 
         assert provider._cache_df.empty
