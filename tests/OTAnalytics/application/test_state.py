@@ -1,11 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, Optional
 from unittest.mock import Mock, call, patch
 
 import pytest
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.datastore import Datastore, VideoMetadata
 from OTAnalytics.application.state import (
     DEFAULT_HEIGHT,
     DEFAULT_WIDTH,
@@ -19,6 +19,7 @@ from OTAnalytics.application.state import (
     TracksMetadata,
     TrackState,
     TrackViewState,
+    VideosMetadata,
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
@@ -203,6 +204,38 @@ class TestTrackImageUpdater:
         assert track_view_state.background_image.get() == background_image
 
         plotter.plot.assert_called_once()
+
+
+class TestVideosMetadata:
+    @pytest.fixture
+    def first_metadata(self) -> VideoMetadata:
+        return VideoMetadata(
+            recorded_start_date=datetime(
+                year=2019,
+                month=12,
+                day=31,
+                hour=23,
+                minute=0,
+                tzinfo=timezone.utc,
+            ),
+            expected_duration=None,
+            recorded_fps=20.0,
+            actual_fps=None,
+            number_of_frames=60,
+        )
+
+    def test_nothing_updated(self) -> None:
+        videosMetadata = VideosMetadata()
+
+        assert videosMetadata.first_video_start is None
+        assert videosMetadata.last_video_end is None
+
+    def test_first_start(self, first_metadata: VideoMetadata) -> None:
+        videosMetadata = VideosMetadata()
+
+        videosMetadata.update(first_metadata)
+
+        assert videosMetadata.first_video_start == first_metadata.recorded_start_date
 
 
 class TestTracksMetadata:

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Callable, Generic, Iterable, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
-from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.datastore import Datastore, VideoMetadata
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import EventRepositoryEvent
@@ -402,6 +402,22 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Updates the current background image with or without tracks and sections.
         """
         self._track_view_state.background_image.set(self._plotter.plot())
+
+
+class VideosMetadata:
+    def __init__(self) -> None:
+        self._metadata: list[VideoMetadata] = []
+
+    def update(self, metadata: VideoMetadata) -> None:
+        self._metadata.append(metadata)
+
+    @property
+    def first_video_start(self) -> Optional[datetime]:
+        return self._metadata[0].recorded_start_date if self._metadata else None
+
+    @property
+    def last_video_end(self) -> Optional[datetime]:
+        return self._metadata[-1].recorded_start_date if self._metadata else None
 
 
 class TracksMetadata(TrackListObserver):

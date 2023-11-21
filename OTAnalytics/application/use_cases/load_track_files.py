@@ -5,7 +5,7 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
     TrackVideoParser,
 )
-from OTAnalytics.application.state import TracksMetadata
+from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
@@ -22,6 +22,7 @@ class LoadTrackFiles:
         track_to_video_repository: TrackToVideoRepository,
         progressbar: ProgressbarBuilder,
         tracks_metadata: TracksMetadata,
+        videos_metadata: VideosMetadata,
     ) -> None:
         self._track_parser = track_parser
         self._track_video_parser = track_video_parser
@@ -31,6 +32,7 @@ class LoadTrackFiles:
         self._track_to_video_repository = track_to_video_repository
         self._progressbar = progressbar
         self._tracks_metadata = tracks_metadata
+        self._videos_metadata = videos_metadata
 
     def __call__(self, files: list[Path]) -> None:
         """
@@ -69,3 +71,4 @@ class LoadTrackFiles:
         self._tracks_metadata.update_detection_classes(
             parse_result.detection_metadata.detection_classes
         )
+        self._videos_metadata.update(parse_result.video_metadata)
