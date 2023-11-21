@@ -215,7 +215,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             )
         return PygeosTrackGeometryDataset(updated)
 
-    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+    def intersecting_tracks(self, sections: Iterable[Section]) -> set[TrackId]:
         intersecting_tracks = set()
         sections_grouped_by_offset = group_sections_by_offset(sections)
         for offset, _sections in sections_grouped_by_offset.items():

@@ -320,7 +320,7 @@ class PythonTrackDataset(TrackDataset):
         }
         return PythonTrackDataset(filtered_tracks, self._calculator)
 
-    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+    def intersecting_tracks(self, sections: Iterable[Section]) -> set[TrackId]:
         return self._track_geometry_dataset.intersecting_tracks(sections)
 
     def intersection_points(

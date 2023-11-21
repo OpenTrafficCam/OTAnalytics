@@ -411,11 +411,11 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+    def intersecting_tracks(self, sections: Iterable[Section]) -> set[TrackId]:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
-            sections (list[Section]): the list of sections to intersect.
+            sections (Iterable[Section]): the list of sections to intersect.
 
         Returns:
             set[TrackId]: the track ids intersecting the given sections.
@@ -676,6 +676,14 @@ class TrackBuilder(ABC):
 
 
 class TrackGeometryDataset(ABC):
+    """Dataset containing track geometries.
+
+    Only tracks of size greater equal two are contained in the dataset.
+    Tracks of size less than two will not be contained in the dataset
+    since it is not possible to construct a track with less than two
+    coordinates.
+    """
+
     @staticmethod
     @abstractmethod
     def from_track_dataset(dataset: TrackDataset) -> "TrackGeometryDataset":
@@ -709,11 +717,11 @@ class TrackGeometryDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+    def intersecting_tracks(self, sections: Iterable[Section]) -> set[TrackId]:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
-            sections (list[Section]): the list of sections to intersect.
+            sections (Iterable[Section]): the list of sections to intersect.
 
         Returns:
             set[TrackId]: the track ids intersecting the given sections.
