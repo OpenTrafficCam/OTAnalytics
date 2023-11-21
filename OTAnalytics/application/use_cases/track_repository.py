@@ -25,6 +25,13 @@ class GetAllTracks:
     def __call__(self) -> Iterable[Track]:
         return self._track_repository.get_all()
 
+    def as_list(self) -> list[Track]:
+        return self.as_dataset().as_list()
+
+    def as_dataset(self) -> TrackDataset:
+        tracks = self._track_repository.get_all()
+        return tracks.filter_by_min_detection_length(2)
+
 
 class GetTracksWithoutSingleDetections:
     """Get tracks that have at least two detections.
