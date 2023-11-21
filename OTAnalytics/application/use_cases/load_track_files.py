@@ -67,5 +67,5 @@ class LoadTrackFiles:
         self._track_repository.add_all(parse_result.tracks)
         self._track_file_repository.add(file)
         self._tracks_metadata.update_detection_classes(
-            parse_result.metadata.detection_classes
+            parse_result.detection_metadata.detection_classes
         )

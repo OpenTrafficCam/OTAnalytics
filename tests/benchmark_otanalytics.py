@@ -49,7 +49,9 @@ def _fill_track_repository(
     for track_file in track_files:
         track_parse_result = track_parser.parse(track_file)
         track_repository.add_all(track_parse_result.tracks)
-        detection_classes.update(track_parse_result.metadata.detection_classes)
+        detection_classes.update(
+            track_parse_result.detection_metadata.detection_classes
+        )
     return DetectionMetadata(frozenset(detection_classes))
 
 

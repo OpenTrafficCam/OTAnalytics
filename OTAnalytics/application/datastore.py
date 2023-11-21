@@ -40,7 +40,7 @@ class DetectionMetadata:
 @dataclass(frozen=True)
 class TrackParseResult:
     tracks: TrackDataset
-    metadata: DetectionMetadata
+    detection_metadata: DetectionMetadata
 
 
 class TrackParser(ABC):

@@ -278,7 +278,7 @@ class OTAnalyticsCli:
             parse_result = self._track_parser.parse(track_file)
             self._add_all_tracks(parse_result.tracks)
             self._tracks_metadata.update_detection_classes(
-                parse_result.metadata.detection_classes
+                parse_result.detection_metadata.detection_classes
             )
 
     def _run_analysis(
