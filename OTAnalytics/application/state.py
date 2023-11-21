@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Callable, Generic, Iterable, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
@@ -417,7 +417,15 @@ class VideosMetadata:
 
     @property
     def last_video_end(self) -> Optional[datetime]:
-        return self._metadata[-1].recorded_start_date if self._metadata else None
+        if self._metadata:
+            last_video = self._metadata[-1]
+            expected_duration = last_video.expected_duration
+            if expected_duration:
+                return last_video.recorded_start_date + expected_duration
+            return last_video.recorded_start_date + timedelta(
+                seconds=last_video.number_of_frames / last_video.recorded_fps
+            )
+        return None
 
 
 class TracksMetadata(TrackListObserver):

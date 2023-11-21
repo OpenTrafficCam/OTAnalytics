@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional
 from unittest.mock import Mock, call, patch
 
@@ -38,6 +38,16 @@ from OTAnalytics.domain.track import (
     TrackRepository,
     TrackRepositoryEvent,
 )
+
+FIRST_START_DATE = datetime(
+    year=2019,
+    month=12,
+    day=31,
+    hour=23,
+    minute=0,
+    tzinfo=timezone.utc,
+)
+SECOND_START_DATE = FIRST_START_DATE + timedelta(seconds=3)
 
 
 class TestTrackState:
@@ -208,17 +218,32 @@ class TestTrackImageUpdater:
 
 class TestVideosMetadata:
     @pytest.fixture
-    def first_metadata(self) -> VideoMetadata:
+    def first_full_metadata(self) -> VideoMetadata:
         return VideoMetadata(
-            path="video_path.mp4",
-            recorded_start_date=datetime(
-                year=2019,
-                month=12,
-                day=31,
-                hour=23,
-                minute=0,
-                tzinfo=timezone.utc,
-            ),
+            path="video_path_1.mp4",
+            recorded_start_date=FIRST_START_DATE,
+            expected_duration=timedelta(seconds=3),
+            recorded_fps=20.0,
+            actual_fps=20.0,
+            number_of_frames=60,
+        )
+
+    @pytest.fixture
+    def second_full_metadata(self) -> VideoMetadata:
+        return VideoMetadata(
+            path="video_path_2.mp4",
+            recorded_start_date=SECOND_START_DATE,
+            expected_duration=timedelta(seconds=3),
+            recorded_fps=20.0,
+            actual_fps=20.0,
+            number_of_frames=60,
+        )
+
+    @pytest.fixture
+    def first_partial_metadata(self) -> VideoMetadata:
+        return VideoMetadata(
+            path="video_path_1.mp4",
+            recorded_start_date=FIRST_START_DATE,
             expected_duration=None,
             recorded_fps=20.0,
             actual_fps=None,
@@ -231,12 +256,44 @@ class TestVideosMetadata:
         assert videosMetadata.first_video_start is None
         assert videosMetadata.last_video_end is None
 
-    def test_first_start(self, first_metadata: VideoMetadata) -> None:
+    def test_update_single_full_item(self, first_full_metadata: VideoMetadata) -> None:
         videosMetadata = VideosMetadata()
 
-        videosMetadata.update(first_metadata)
+        videosMetadata.update(first_full_metadata)
 
-        assert videosMetadata.first_video_start == first_metadata.recorded_start_date
+        assert (
+            videosMetadata.first_video_start == first_full_metadata.recorded_start_date
+        )
+        assert videosMetadata.last_video_end == FIRST_START_DATE + timedelta(seconds=3)
+
+    def test_update_multiple_full_items(
+        self,
+        first_full_metadata: VideoMetadata,
+        second_full_metadata: VideoMetadata,
+    ) -> None:
+        videosMetadata = VideosMetadata()
+
+        videosMetadata.update(first_full_metadata)
+        videosMetadata.update(second_full_metadata)
+
+        assert (
+            videosMetadata.first_video_start == first_full_metadata.recorded_start_date
+        )
+        assert videosMetadata.last_video_end == SECOND_START_DATE + timedelta(seconds=3)
+
+    def test_update_single_partial_item(
+        self, first_partial_metadata: VideoMetadata
+    ) -> None:
+        videosMetadata = VideosMetadata()
+
+        videosMetadata.update(first_partial_metadata)
+
+        assert (
+            videosMetadata.first_video_start
+            == first_partial_metadata.recorded_start_date
+        )
+        expected_video_length = FIRST_START_DATE + timedelta(seconds=3)
+        assert videosMetadata.last_video_end == expected_video_length
 
 
 class TestTracksMetadata:
