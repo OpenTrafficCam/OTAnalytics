@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import Mock, call
+from unittest.mock import MagicMock, Mock, call
 
 import pytest
 
@@ -135,6 +135,17 @@ class TestTrackRepository:
         assert len(dataset.remove.call_args_list) == 2
         assert call(track_1.id) in dataset.remove.call_args_list
         assert call(track_2.id) in dataset.remove.call_args_list
+
+    def test_len(self) -> None:
+        expected_size = 3
+        dataset = MagicMock(spec=TrackDataset)
+        dataset.__len__.return_value = expected_size
+        repository = TrackRepository(dataset)
+
+        result = len(repository)
+
+        assert result == expected_size
+        dataset.__len__.assert_called_once()
 
 
 class TestTrackFileRepository:

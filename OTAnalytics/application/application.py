@@ -33,7 +33,10 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
-from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
+from OTAnalytics.application.use_cases.track_repository import (
+    GetAllTrackFiles,
+    TrackRepositorySize,
+)
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
@@ -119,6 +122,9 @@ class OTAnalyticsApplication:
         self._load_track_files = load_track_files
         self._get_section_offset = GetSectionOffset(
             GetSectionsById(self._datastore._section_repository)
+        )
+        self._track_repository_size = TrackRepositorySize(
+            self._datastore._track_repository
         )
 
     def connect_observers(self) -> None:
@@ -559,6 +565,9 @@ class OTAnalyticsApplication:
 
     def update_project_start_date(self, start_date: datetime | None) -> None:
         self._project_updater.update_start_date(start_date)
+
+    def get_track_repository_size(self) -> int:
+        return self._track_repository_size.get()
 
 
 class MissingTracksError(Exception):
