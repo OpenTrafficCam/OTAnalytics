@@ -57,11 +57,6 @@ class TestSimpleCreateIntersectionEvents:
         add_events.assert_called_once()
         assert add_events.call_args == call([event], [section.id])
 
-    def test_dummy(self) -> None:
-        mock = Mock()
-        mock.method(1, 2, 3, test="wow")
-        mock.method.assert_called_once_with(1, 2, 3, test="wow")
-
     def test_empty_section_repository_should_not_run_intersection(self) -> None:
         section_provider = Mock(spec=SectionProvider)
         section_provider.return_value = []
