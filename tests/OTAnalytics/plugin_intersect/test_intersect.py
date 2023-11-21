@@ -2,14 +2,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.geometry import (
-    SectionGeometryBuilder,
-    TrackGeometryBuilder,
-)
-from OTAnalytics.application.use_cases.track_repository import GetAllTracks
-from OTAnalytics.domain.event import EventType
-from OTAnalytics.domain.geometry import Line, RelativeOffsetCoordinate
-from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.simple_intersect import (
@@ -57,39 +49,19 @@ def track(track_builder: TrackBuilder) -> Track:
 
 class TestSimpleTracksIntersectingSections:
     def test_tracks_intersecting_sections(self, track: Track) -> None:
-        get_all_tracks = Mock(spec=GetAllTracks)
-        get_all_tracks.return_value = [track]
+        track_dataset = Mock()
+        track_dataset.intersecting_tracks.return_value = {track.id}
+        get_all_tracks = Mock()
+        get_all_tracks.as_dataset.return_value = track_dataset
 
         section = Mock(spec=Section)
         section.id = SectionId("section-1")
-        offset = RelativeOffsetCoordinate(0, 0)
-        section.get_offset.return_value = offset
         section.name = "south"
-
-        intersect_implementation = Mock(spec=IntersectImplementation)
-        intersect_implementation.line_intersects_line.return_value = True
-
-        section_geom = Mock(spec=Line)
-        track_geom = Mock(spec=Line)
-
-        track_geometry_builder = Mock(spec=TrackGeometryBuilder)
-        track_geometry_builder.build.return_value = track_geom
-        section_geometry_builder = Mock(spec=SectionGeometryBuilder)
-        section_geometry_builder.build_as_line.return_value = section_geom
 
         tracks_intersecting_sections = SimpleTracksIntersectingSections(
             get_all_tracks,
-            intersect_implementation,
-            track_geometry_builder,
-            section_geometry_builder,
         )
         intersecting = tracks_intersecting_sections([section])
 
         assert intersecting == {section.id: {track.id}}
-        get_all_tracks.assert_called_once()
-        section.get_offset.assert_called_once_with(EventType.SECTION_ENTER)
-        track_geometry_builder.build.assert_called_once_with(track, offset)
-        section_geometry_builder.build_as_line.assert_called_once_with(section)
-        intersect_implementation.line_intersects_line.assert_called_once_with(
-            track_geom, section_geom
-        )
+        get_all_tracks.as_dataset.assert_called_once()

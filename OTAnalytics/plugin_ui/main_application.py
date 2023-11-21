@@ -81,6 +81,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     ClearAllTracks,
     GetAllTrackFiles,
     GetAllTrackIds,
+    GetAllTracks,
     GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
@@ -93,7 +94,6 @@ from OTAnalytics.application.use_cases.video_repository import ClearAllVideos
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
-from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
@@ -105,7 +105,6 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
     ShapelyRunIntersect,
 )
-from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTrackSegmentBuilder,
@@ -261,6 +260,7 @@ class ApplicationStarter:
         )
 
         get_all_track_files = self._create_get_all_track_files(track_file_repository)
+        get_all_tracks = GetAllTracks(track_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             track_repository
         )
@@ -342,8 +342,7 @@ class ApplicationStarter:
             clear_repositories, reset_project_config, track_view_state
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            GetTracksWithoutSingleDetections(track_repository),
-            ShapelyIntersector(),
+            get_all_tracks
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             get_sections_bv_id,
@@ -454,6 +453,7 @@ class ApplicationStarter:
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             track_repository
         )
+        get_all_tracks = GetAllTracks(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
         create_events = self._create_use_case_create_events(
@@ -464,8 +464,7 @@ class ApplicationStarter:
             cli_args.num_processes,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            GetTracksWithoutSingleDetections(track_repository),
-            ShapelyIntersector(),
+            get_all_tracks
         )
         cut_tracks = self._create_cut_tracks_intersecting_section(
             GetSectionsById(section_repository),
@@ -712,10 +711,9 @@ class ApplicationStarter:
 
     @staticmethod
     def _create_tracks_intersecting_sections(
-        get_tracks: GetTracksWithoutSingleDetections,
-        intersect_implementation: IntersectImplementation,
+        get_tracks: GetAllTracks,
     ) -> TracksIntersectingSections:
-        return SimpleTracksIntersectingSections(get_tracks, intersect_implementation)
+        return SimpleTracksIntersectingSections(get_tracks)
 
     @staticmethod
     def _create_use_case_load_otflow(

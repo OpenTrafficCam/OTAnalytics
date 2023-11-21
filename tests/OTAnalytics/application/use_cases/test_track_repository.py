@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -21,12 +21,14 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
-from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 
 
 @pytest.fixture
 def tracks() -> TrackDataset:
-    return PythonTrackDataset.from_list([Mock(spec=Track), Mock(spec=Track)])
+    tracks = [Mock(spec=Track), Mock(spec=Track)]
+    dataset = MagicMock(spec=TrackDataset)
+    dataset.__iter__.return_value = tracks
+    return dataset
 
 
 @pytest.fixture
