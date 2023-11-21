@@ -8,7 +8,12 @@ import pytest
 import ujson
 
 from OTAnalytics import version
-from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
+from OTAnalytics.application.datastore import (
+    FlowParser,
+    OtConfig,
+    VideoMetadata,
+    VideoParser,
+)
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, geometry, section, video
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType
@@ -268,6 +273,20 @@ class TestOttrkParser:
         assert (
             parse_result.detection_metadata.detection_classes
             == expected_detection_classes
+        )
+        assert parse_result.video_metadata == VideoMetadata(
+            recorded_start_date=datetime(
+                year=2019,
+                month=12,
+                day=31,
+                hour=23,
+                minute=0,
+                tzinfo=timezone.utc,
+            ),
+            expected_duration=None,
+            recorded_fps=20.0,
+            actual_fps=None,
+            number_of_frames=60,
         )
         ottrk_file.unlink()
 
