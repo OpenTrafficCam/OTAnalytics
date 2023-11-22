@@ -272,7 +272,7 @@ class PandasTrackDataset(TrackDataset):
 
     def contained_by_sections(
         self, sections: Iterable[Section]
-    ) -> dict[TrackId, dict[SectionId, Sequence[bool]]]:
+    ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         return self._track_geometry_dataset.contained_by_sections(sections)
 
 

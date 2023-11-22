@@ -480,17 +480,11 @@ class TestPygeosTrackGeometryDataset:
             [not_intersecting_area_section, area_section]
         )
         expected = {
-            not_intersecting_track.id: {
-                not_intersecting_area_section.id: [False, False, False, False, False],
-                area_section.id: [False, False, False, False, False],
-            },
-            first_track.id: {
-                not_intersecting_area_section.id: [False, False, False, False, False],
-                area_section.id: [False, True, False, False, False],
-            },
-            second_track.id: {
-                not_intersecting_area_section.id: [False, False, False, False, False],
-                area_section.id: [False, True, False, False, False],
-            },
+            first_track.id: [
+                (area_section.id, [False, True, False, False, False]),
+            ],
+            second_track.id: [
+                (area_section.id, [False, True, False, False, False]),
+            ],
         }
         assert result == expected

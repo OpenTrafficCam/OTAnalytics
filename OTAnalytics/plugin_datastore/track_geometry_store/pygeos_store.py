@@ -1,7 +1,7 @@
 from bisect import bisect
 from collections import defaultdict
 from itertools import chain
-from typing import Any, Iterable, Literal, Sequence, TypedDict
+from typing import Any, Iterable, Literal, TypedDict
 
 from pandas import DataFrame
 from pygeos import (
@@ -312,28 +312,31 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
     def contained_by_sections(
         self, sections: Iterable[Section]
-    ) -> dict[TrackId, dict[SectionId, Sequence[bool]]]:
+    ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         sections_grouped_by_offset = group_sections_by_offset(sections)
 
-        contains_result: dict[TrackId, dict[SectionId, Sequence[bool]]] = defaultdict(
-            lambda: defaultdict(list)
-        )
+        contains_result: dict[
+            TrackId, list[tuple[SectionId, list[bool]]]
+        ] = defaultdict(list)
         for offset, section_group in sections_grouped_by_offset.items():
             for _section in section_group:
                 section_geom = area_section_to_pygeos(_section)
 
                 track_df = self._get_track_geometries_for(offset)
                 contains_masks = track_df[GEOMETRY].apply(
-                    lambda line: {
-                        _section.id: [
-                            contains(section_geom, points(p))[0]
-                            for p in get_coordinates(line)
-                        ]
-                    }
+                    lambda line: [
+                        contains(section_geom, points(p))[0]
+                        for p in get_coordinates(line)
+                    ]
                 )
-                contains_masks.index = contains_masks.index.map(TrackId)
-                for track_id, entry in contains_masks.to_dict().items():
-                    contains_result[track_id].update(entry)
+                tracks_contained = contains_masks[contains_masks.map(any)]
+
+                if tracks_contained.empty:
+                    continue
+
+                tracks_contained.index = tracks_contained.index.map(TrackId)
+                for track_id, contains_mask in tracks_contained.to_dict().items():
+                    contains_result[track_id].append((_section.id, contains_mask))
         return contains_result
 
     def as_dict(self) -> dict:
