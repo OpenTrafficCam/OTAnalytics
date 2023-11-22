@@ -22,7 +22,7 @@ from OTAnalytics.application.config import (
 from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
-from OTAnalytics.application.state import TracksMetadata, TrackViewState
+from OTAnalytics.application.state import TracksMetadata, TrackViewState, VideosMetadata
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
@@ -238,6 +238,7 @@ class TestOTAnalyticsCli:
     GET_ALL_TRACK_IDS: str = "get_all_track_ids"
     CLEAR_ALL_TRACKS: str = "clear_all_tracks"
     TRACKS_METADATA: str = "tracks_metadata"
+    VIDEOS_METADATA: str = "videos_metadata"
     PROGRESSBAR: str = "progressbar"
 
     @pytest.fixture
@@ -256,6 +257,7 @@ class TestOTAnalyticsCli:
             self.GET_ALL_TRACK_IDS: Mock(spec=GetAllTrackIds),
             self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
             self.TRACKS_METADATA: Mock(spec=TracksMetadata),
+            self.VIDEOS_METADATA: Mock(spec=VideosMetadata),
             self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
         }
 
@@ -338,6 +340,7 @@ class TestOTAnalyticsCli:
             self.GET_ALL_TRACK_IDS: get_all_track_ids,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
             self.TRACKS_METADATA: TracksMetadata(track_repository),
+            self.VIDEOS_METADATA: VideosMetadata(),
             self.PROGRESSBAR: NoProgressbarBuilder(),
         }
 
@@ -356,6 +359,7 @@ class TestOTAnalyticsCli:
         assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
         assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
         assert cli._tracks_metadata == mock_cli_dependencies[self.TRACKS_METADATA]
+        assert cli._videos_metadata == mock_cli_dependencies[self.VIDEOS_METADATA]
         assert cli._progressbar == mock_cli_dependencies[self.PROGRESSBAR]
 
     def test_init_empty_tracks_cli_arg(
