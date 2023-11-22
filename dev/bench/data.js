@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1700529810561,
+  "lastUpdate": 1700616263967,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -640,6 +640,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 135.31114585418254 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Lars Briem",
+            "username": "briemla",
+            "email": "lars.briem@platomo.de"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "038409bbd89b2efc44415a1c3f60bb2cb5168d83",
+          "message": "Merge pull request #390 from OpenTrafficCam/feature/3359-show-only-the-number-of-cut-tracks-and-the-number-of-all-tracks-instead-of-all-cut-track-ids\n\nFeature/3359 show only the number of cut tracks and the number of all tracks instead of all cut track ids",
+          "timestamp": "2023-11-21T14:20:03Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/038409bbd89b2efc44415a1c3f60bb2cb5168d83"
+        },
+        "date": 1700616263475,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.10663605844301281,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 9.377690948080271 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.014527694949145728,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 68.83404445787892 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.07189227288724959,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 13.909700720803812 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.008175410270695231,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 122.31802036706358 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.04313023191197529,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 23.185592927969992 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.007086320437549969,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 141.11696031992324 sec\nrounds: 1"
           }
         ]
       }
