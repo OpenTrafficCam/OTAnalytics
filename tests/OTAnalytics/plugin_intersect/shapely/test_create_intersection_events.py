@@ -23,6 +23,7 @@ from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
     ShapelyIntersectAreaByTrackPoints,
     ShapelyIntersectBySmallestTrackSegments,
     ShapelyTrackLookupTable,
+    separate_sections,
 )
 from tests.conftest import TrackBuilder
 
@@ -510,3 +511,29 @@ class TestShapelyIntersectAreaByTrackPoints:
         )
 
         test_case.assert_valid(result_events, event_builder)
+
+
+def test_separate_sections_with_valid_args() -> None:
+    first_line_section = Mock(spec=LineSection)
+    second_line_section = Mock(spec=LineSection)
+
+    first_area_section = Mock(spec=Area)
+    second_area_section = Mock(spec=Area)
+    line_sections, area_sections = separate_sections(
+        [
+            first_line_section,
+            first_area_section,
+            second_line_section,
+            second_area_section,
+        ]
+    )
+    assert line_sections == [first_line_section, second_line_section]
+    assert area_sections == [first_area_section, second_area_section]
+
+
+def test_separate_sections_with_invalid_args() -> None:
+    section = Mock(spec=LineSection)
+    invalid_section = Mock()
+
+    with pytest.raises(TypeError):
+        separate_sections([section, invalid_section])

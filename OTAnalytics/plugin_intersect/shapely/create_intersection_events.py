@@ -295,3 +295,23 @@ def _create_events(tracks: Iterable[Track], sections: Iterable[Section]) -> list
         )
         events.extend(create_intersection_events.create())
     return events
+
+
+def separate_sections(
+    sections: Iterable[Section],
+) -> tuple[Iterable[LineSection], Iterable[Area]]:
+    line_sections = []
+    area_sections = []
+    for section in sections:
+        if isinstance(section, LineSection):
+            line_sections.append(section)
+        elif isinstance(section, Area):
+            area_sections.append(section)
+        else:
+            raise TypeError(
+                "Unable to separate section. "
+                f"Unknown section type for section {section.name} "
+                f"with type {type(section)}"
+            )
+
+    return line_sections, area_sections
