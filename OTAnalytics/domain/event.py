@@ -136,6 +136,7 @@ class EventBuilder(ABC):
         self.event_type: Optional[EventType] = None
         self.direction_vector: Optional[DirectionVector2D] = None
         self.event_coordinate: Optional[ImageCoordinate] = None
+        self.section_id: Optional[SectionId] = None
 
     @abstractmethod
     def create_event(self, detection: Detection) -> Event:
@@ -173,7 +174,7 @@ class EventBuilder(ABC):
         raise ImproperFormattedFilename(f"Could not parse {name}. Hostname is missing.")
 
     def add_road_user_type(self, road_user_type: str) -> None:
-        """Add a road user type to add to the event to be build.
+        """Add a road user type to add to the event to be built.
 
         Args:
             road_user_type (str): the road user type
@@ -181,7 +182,7 @@ class EventBuilder(ABC):
         self.road_user_type = road_user_type
 
     def add_event_type(self, event_type: EventType) -> None:
-        """Add an event type to add to the event to be build.
+        """Add an event type to add to the event to be built.
 
         Args:
             event_type (EventType): the event type
@@ -189,7 +190,7 @@ class EventBuilder(ABC):
         self.event_type = event_type
 
     def add_direction_vector(self, vector: DirectionVector2D) -> None:
-        """Add direction vector to add to the event to be build.
+        """Add direction vector to add to the event to be built.
 
         Args:
             vector (DirectionVector2D): the direction vector to be build
@@ -197,13 +198,21 @@ class EventBuilder(ABC):
         self.direction_vector = vector
 
     def add_event_coordinate(self, x: float, y: float) -> None:
-        """Add event coordinate to the event to be build.
+        """Add event coordinate to the event to be built.
 
         Args:
             x (float): the x component coordinate
             y (float): the y component coordinate
         """
         self.event_coordinate = ImageCoordinate(x, y)
+
+    def add_section_id(self, section_id: SectionId) -> None:
+        """Add a section id to add to the event to be built.
+
+        Args:
+            section_id (SectionId): the section id
+        """
+        self.section_id = section_id
 
 
 class SectionEventBuilder(EventBuilder):
@@ -213,16 +222,8 @@ class SectionEventBuilder(EventBuilder):
         super().__init__()
         self.section_id: Optional[SectionId] = None
 
-    def add_section_id(self, section_id: SectionId) -> None:
-        """Add a section id to add to the event to be build.
-
-        Args:
-            section_id (SectionId): the section id
-        """
-        self.section_id = section_id
-
     def create_event(self, detection: Detection) -> Event:
-        """Creates an section event with the information stored in a detection.
+        """Creates a section event with the information stored in a detection.
 
         Args:
             detection (Detection): the detection holding the information
