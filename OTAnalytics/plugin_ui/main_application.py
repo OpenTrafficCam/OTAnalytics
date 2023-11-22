@@ -37,6 +37,7 @@ from OTAnalytics.application.state import (
     TracksMetadata,
     TrackState,
     TrackViewState,
+    VideosMetadata,
 )
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
@@ -255,6 +256,7 @@ class ApplicationStarter:
         tracks_metadata._classifications.register(
             observer=color_palette_provider.update
         )
+        videos_metadata = VideosMetadata()
         action_state = self._create_action_state()
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
@@ -326,6 +328,7 @@ class ApplicationStarter:
             track_to_video_repository,
             pulling_progressbar_builder,
             tracks_metadata,
+            videos_metadata,
         )
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
@@ -362,6 +365,7 @@ class ApplicationStarter:
             section_state,
             flow_state,
             tracks_metadata,
+            videos_metadata,
             action_state,
             filter_element_settings_restorer,
             get_all_track_files,
@@ -501,6 +505,7 @@ class ApplicationStarter:
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
             tracks_metadata=TracksMetadata(track_repository),
+            videos_metadata=VideosMetadata(),
             progressbar=TqdmBuilder(),
         ).start()
 
@@ -812,6 +817,7 @@ class ApplicationStarter:
         track_to_video_repository: TrackToVideoRepository,
         progressbar: ProgressbarBuilder,
         tracks_metadata: TracksMetadata,
+        videos_metadata: VideosMetadata,
     ) -> LoadTrackFiles:
         track_parser = self._create_track_parser(track_repository)
         track_video_parser = OttrkVideoParser(video_parser)
@@ -824,6 +830,7 @@ class ApplicationStarter:
             track_to_video_repository,
             progressbar,
             tracks_metadata,
+            videos_metadata,
         )
 
     def _create_video_parser(self) -> VideoParser:
