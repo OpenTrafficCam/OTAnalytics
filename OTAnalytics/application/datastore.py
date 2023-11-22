@@ -47,6 +47,20 @@ class VideoMetadata:
     actual_fps: Optional[float]
     number_of_frames: int
 
+    @property
+    def start(self) -> datetime:
+        return self.recorded_start_date
+
+    @property
+    def end(self) -> datetime:
+        return self.start + self.duration
+
+    @property
+    def duration(self) -> timedelta:
+        if self.expected_duration:
+            return self.expected_duration
+        return timedelta(seconds=self.number_of_frames / self.recorded_fps)
+
 
 @dataclass(frozen=True)
 class TrackParseResult:
