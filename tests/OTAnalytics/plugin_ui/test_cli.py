@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
 from typing import Any
@@ -13,7 +14,11 @@ from OTAnalytics.application.analysis.traffic_counting import (
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
 )
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
 from OTAnalytics.application.config import (
+    DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
@@ -51,7 +56,7 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
-from OTAnalytics.domain.track import TrackRepository
+from OTAnalytics.domain.track import TrackId, TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
@@ -534,3 +539,51 @@ class TestOTAnalyticsCli:
             call(cli_cutting_section),
             call(normal_cutting_section),
         ]
+
+    def test_use_video_start_and_end_for_counting(
+        self,
+        test_data_tmp_dir: Path,
+        mock_cli_dependencies: dict[str, Mock],
+    ) -> None:
+        section_1 = Mock()
+        section_1.id = SectionId("Section 1")
+        section_1.name = section_1.id.id
+        section_1.get_type.return_value = SectionType.LINE
+
+        section_2 = Mock()
+        section_2.id = SectionId("Section 2")
+        section_2.name = section_2.id.id
+        section_2.get_type.return_value = SectionType.LINE
+
+        start_date = datetime(2023, 11, 22, 0, 0)
+        end_date = datetime(2023, 11, 22, 1, 0)
+        classifications = frozenset(["car", "bike"])
+        interval = 15
+        filename = "filename"
+        output_file = (
+            test_data_tmp_dir
+            / f"{filename}.{DEFAULT_COUNTS_FILE_STEM}.{DEFAULT_COUNTS_FILE_TYPE}"
+        )
+        mock_cli_dependencies[self.GET_ALL_TRACK_IDS].return_value = [TrackId("1")]
+        mock_cli_dependencies[self.VIDEOS_METADATA].first_video_start = start_date
+        mock_cli_dependencies[self.VIDEOS_METADATA].last_video_end = end_date
+        mock_cli_dependencies[
+            self.TRACKS_METADATA
+        ].detection_classifications = classifications
+
+        cli_args = Mock()
+        cli_args.count_interval = interval
+        cli = OTAnalyticsCli(cli_args, **mock_cli_dependencies)
+        cli._do_export_counts(test_data_tmp_dir / filename)
+
+        export_counts = mock_cli_dependencies[self.EXPORT_COUNTS]
+
+        expected_specification = CountingSpecificationDto(
+            start=start_date,
+            end=end_date,
+            interval_in_minutes=interval,
+            modes=list(classifications),
+            output_format="CSV",
+            output_file=str(output_file),
+        )
+        export_counts.export.assert_called_with(specification=expected_specification)
