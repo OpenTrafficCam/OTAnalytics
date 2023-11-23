@@ -25,7 +25,7 @@ from OTAnalytics.domain.event import (
     SectionEventBuilder,
 )
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
-from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, TrackId
 from OTAnalytics.domain.types import EventType, EventTypeParseError
 
@@ -293,6 +293,17 @@ class TestEventRepository:
         assert event in repository.get_all()
         subject.notify.assert_called_with(EventRepositoryEvent([event], []))
 
+    def test_add_without_section_id(self) -> None:
+        event = Mock()
+        event.section_id = None
+        subject = Mock()
+        repository = EventRepository(subject)
+
+        repository.add(event)
+
+        assert event in repository.get_all()
+        subject.notify.assert_called_with(EventRepositoryEvent([event], []))
+
     def test_add_all(self) -> None:
         first_event = Mock()
         second_event = Mock()
@@ -307,19 +318,57 @@ class TestEventRepository:
             EventRepositoryEvent([first_event, second_event], [])
         )
 
+    def test_no_event_for_intersected_section(self) -> None:
+        section_id_1 = SectionId("1")
+        section_id_2 = SectionId("2")
+        section_1 = Mock(spec=Section)
+        section_1.id = section_id_1
+        section_2 = Mock(spec=Section)
+        section_2.id = section_id_2
+        first_event = Mock()
+        first_event.section_id = section_id_1
+        repository = EventRepository()
+
+        repository.add_all([first_event], [section_id_1, section_id_2])
+        missing_sections = repository.retain_missing([section_1, section_2])
+
+        assert [first_event] == list(repository.get_all())
+        assert not missing_sections
+
     def test_clear(self) -> None:
         first_event = Mock()
+        first_event.section_id = SectionId("1")
         second_event = Mock()
+        second_event.section_id = SectionId("2")
+        non_section_event = Mock()
+        non_section_event.section_id = None
+
         subject = Mock()
         repository = EventRepository(subject)
 
-        repository.add_all([first_event, second_event])
+        repository.add_all([first_event, second_event, non_section_event])
         repository.clear()
 
         assert not list(repository.get_all())
         subject.notify.assert_called_with(
-            EventRepositoryEvent([], [first_event, second_event])
+            EventRepositoryEvent([], [non_section_event, first_event, second_event])
         )
+
+    def test_remove(self) -> None:
+        section_1 = SectionId("1")
+        section_2 = SectionId("2")
+        first_event = Mock()
+        first_event.section_id = section_1
+        second_event = Mock()
+        second_event.section_id = section_2
+        subject = Mock()
+        repository = EventRepository(subject)
+
+        repository.add_all([first_event, second_event])
+        repository.remove([section_1])
+
+        assert [second_event] == list(repository.get_all())
+        subject.notify.assert_called_with(EventRepositoryEvent([], [first_event]))
 
     def test_is_empty(self) -> None:
         repository = EventRepository()
