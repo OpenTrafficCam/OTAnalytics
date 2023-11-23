@@ -285,7 +285,7 @@ class TestOTAnalyticsCli:
                 MultiprocessingIntersectParallelization(),
                 get_all_tracks,
             ),
-            section_repository,
+            section_repository.get_all,
             add_events,
         )
         tracks_intersecting_sections = SimpleTracksIntersectingSections(

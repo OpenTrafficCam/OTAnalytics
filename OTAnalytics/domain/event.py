@@ -1,5 +1,7 @@
+import itertools
 import re
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable, Optional
@@ -7,7 +9,7 @@ from typing import Iterable, Optional
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.observer import OBSERVER, Subject
-from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection
 from OTAnalytics.domain.types import EventType
 
@@ -334,7 +336,8 @@ class EventRepository:
         self, subject: Subject[EventRepositoryEvent] = Subject[EventRepositoryEvent]()
     ) -> None:
         self._subject = subject
-        self._events: list[Event] = []
+        self._events: dict[SectionId, list[Event]] = defaultdict(list)
+        self._non_section_events = list[Event]()
 
     def register_observer(self, observer: OBSERVER[EventRepositoryEvent]) -> None:
         """Register observer to listen to repository changes.
@@ -350,16 +353,36 @@ class EventRepository:
         Args:
             event (Event): the event to add
         """
-        self._events.append(event)
+        self.__do_add(event)
         self._subject.notify(EventRepositoryEvent([event], []))
 
-    def add_all(self, events: Iterable[Event]) -> None:
-        """Add multiple events at once to the repository.
+    def __do_add(self, event: Event) -> None:
+        """
+        Internal add method that does not notify observers.
+        """
+        if event.section_id:
+            self._events[event.section_id].append(event)
+        else:
+            self._non_section_events.append(event)
+
+    def add_all(
+        self, events: Iterable[Event], sections: list[SectionId] | None = None
+    ) -> None:
+        """
+        Add multiple events at once to the repository. Preserve the sections used
+        to generate the events for later usage.
 
         Args:
             events (Iterable[Event]): the events
+            sections (list[SectionId]): the  sections which have been used to generate
+                the events
         """
-        self._events.extend(events)
+        if sections is None:
+            sections = []
+        for event in events:
+            self.__do_add(event)
+        for section in sections:
+            self._events.setdefault(section, [])
         self._subject.notify(EventRepositoryEvent(events, []))
 
     def get_all(self) -> Iterable[Event]:
@@ -368,17 +391,36 @@ class EventRepository:
         Returns:
             Iterable[Event]: the events
         """
-        return self._events
+        return itertools.chain.from_iterable(
+            [self._non_section_events, *self._events.values()]
+        )
 
     def clear(self) -> None:
         """
         Clear the repository and notify observers only if repository was filled.
         """
         if self._events:
-            removed = self._events
-            self._events = []
+            removed = list(self.get_all())
+            self._events = defaultdict(list)
+            self._non_section_events = list[Event]()
             self._subject.notify(EventRepositoryEvent([], removed))
+
+    def remove(self, sections: list[SectionId]) -> None:
+        if self._events:
+            removed = [
+                event for event in self.get_all() if event.section_id in sections
+            ]
+            for section in sections:
+                del self._events[section]
+            self._subject.notify((EventRepositoryEvent([], removed)))
 
     def is_empty(self) -> bool:
         """Whether repository is empty."""
         return not self._events
+
+    def retain_missing(self, all: list[Section]) -> list[Section]:
+        """
+        Returns a new list of sections. The list contains all Sections from the input
+        except the ones event have been generated for.
+        """
+        return [section for section in all if section.id not in self._events.keys()]

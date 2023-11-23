@@ -86,7 +86,7 @@ def _build_create_events(
     get_tracks = GetTracksWithoutSingleDetections(track_repository)
     add_events = AddEvents(event_repository)
     create_events = starter._create_use_case_create_events(
-        section_repository,
+        section_repository.get_all,
         clear_all_events,
         get_tracks,
         add_events,
