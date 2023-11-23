@@ -277,10 +277,10 @@ class TestOttrkParser:
         assert parse_result.video_metadata == VideoMetadata(
             path="myhostname_file.mp4",
             recorded_start_date=datetime(
-                year=2019,
-                month=12,
-                day=31,
-                hour=23,
+                year=2020,
+                month=1,
+                day=1,
+                hour=0,
                 minute=0,
                 tzinfo=timezone.utc,
             ),
