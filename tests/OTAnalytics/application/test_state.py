@@ -251,49 +251,51 @@ class TestVideosMetadata:
         )
 
     def test_nothing_updated(self) -> None:
-        videosMetadata = VideosMetadata()
+        videos_metadata = VideosMetadata()
 
-        assert videosMetadata.first_video_start is None
-        assert videosMetadata.last_video_end is None
+        assert videos_metadata.first_video_start is None
+        assert videos_metadata.last_video_end is None
 
     def test_update_single_full_item(self, first_full_metadata: VideoMetadata) -> None:
-        videosMetadata = VideosMetadata()
+        videos_metadata = VideosMetadata()
 
-        videosMetadata.update(first_full_metadata)
+        videos_metadata.update(first_full_metadata)
 
         assert (
-            videosMetadata.first_video_start == first_full_metadata.recorded_start_date
+            videos_metadata.first_video_start == first_full_metadata.recorded_start_date
         )
-        assert videosMetadata.last_video_end == FIRST_START_DATE + timedelta(seconds=3)
+        assert videos_metadata.last_video_end == FIRST_START_DATE + timedelta(seconds=3)
 
     def test_update_multiple_full_items(
         self,
         first_full_metadata: VideoMetadata,
         second_full_metadata: VideoMetadata,
     ) -> None:
-        videosMetadata = VideosMetadata()
+        videos_metadata = VideosMetadata()
 
-        videosMetadata.update(first_full_metadata)
-        videosMetadata.update(second_full_metadata)
+        videos_metadata.update(first_full_metadata)
+        videos_metadata.update(second_full_metadata)
 
         assert (
-            videosMetadata.first_video_start == first_full_metadata.recorded_start_date
+            videos_metadata.first_video_start == first_full_metadata.recorded_start_date
         )
-        assert videosMetadata.last_video_end == SECOND_START_DATE + timedelta(seconds=3)
+        assert videos_metadata.last_video_end == SECOND_START_DATE + timedelta(
+            seconds=3
+        )
 
     def test_update_single_partial_item(
         self, first_partial_metadata: VideoMetadata
     ) -> None:
-        videosMetadata = VideosMetadata()
+        videos_metadata = VideosMetadata()
 
-        videosMetadata.update(first_partial_metadata)
+        videos_metadata.update(first_partial_metadata)
 
         assert (
-            videosMetadata.first_video_start
+            videos_metadata.first_video_start
             == first_partial_metadata.recorded_start_date
         )
         expected_video_length = FIRST_START_DATE + timedelta(seconds=3)
-        assert videosMetadata.last_video_end == expected_video_length
+        assert videos_metadata.last_video_end == expected_video_length
 
     def test_ensure_order(
         self, first_full_metadata: VideoMetadata, second_full_metadata: VideoMetadata
