@@ -295,6 +295,19 @@ class TestVideosMetadata:
         expected_video_length = FIRST_START_DATE + timedelta(seconds=3)
         assert videosMetadata.last_video_end == expected_video_length
 
+    def test_ensure_order(
+        self, first_full_metadata: VideoMetadata, second_full_metadata: VideoMetadata
+    ) -> None:
+        videosMetadata = VideosMetadata()
+
+        videosMetadata.update(second_full_metadata)
+        videosMetadata.update(first_full_metadata)
+
+        assert (
+            videosMetadata.first_video_start == first_full_metadata.recorded_start_date
+        )
+        assert videosMetadata.last_video_end == SECOND_START_DATE + timedelta(seconds=3)
+
 
 class TestTracksMetadata:
     @pytest.fixture

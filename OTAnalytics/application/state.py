@@ -410,6 +410,7 @@ class VideosMetadata:
 
     def update(self, metadata: VideoMetadata) -> None:
         self._metadata.append(metadata)
+        self._metadata.sort(key=lambda current: current.start)
 
     @property
     def first_video_start(self) -> Optional[datetime]:
