@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
-from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     ObservableOptionalProperty,
     ObservableProperty,
@@ -102,9 +101,8 @@ class LayeredPlotter(Plotter):
 class TrackBackgroundPlotter(Plotter):
     """Plot video frame as background."""
 
-    def __init__(self, track_view_state: TrackViewState, datastore: Datastore) -> None:
+    def __init__(self, track_view_state: TrackViewState) -> None:
         self._track_view_state = track_view_state
-        self._datastore = datastore
 
     def plot(self) -> Optional[TrackImage]:
         if videos := self._track_view_state.selected_videos.get():

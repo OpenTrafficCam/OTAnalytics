@@ -2,13 +2,14 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
-from OTAnalytics.application.state import Plotter
-from OTAnalytics.domain.track import Track, TrackId, TrackImage
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+from OTAnalytics.application.plotting import (
+    LayeredPlotter,
+    PlottingLayer,
     TrackBackgroundPlotter,
 )
+from OTAnalytics.application.state import Plotter, TrackViewState
+from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.video import Video
 
 
 class TestLayeredPlotter:
@@ -74,28 +75,27 @@ class TestPlottingLayer:
 
 class TestBackgroundPlotter:
     def test_plot(self) -> None:
-        track = Mock(spec=Track).return_value
-        track.id = TrackId("5")
+        expected_image = Mock(spec=TrackImage)
+        video = Mock(spec=Video)
+        video.get_frame.return_value = expected_image
+        track_view_state = Mock(spec=TrackViewState)
+        track_view_state.selected_videos = Mock()
+        track_view_state.selected_videos.get.return_value = [video]
 
-        tracks = [track]
-        expected_image = Mock()
-        datastore = Mock(spec=Datastore)
-        datastore.get_all_tracks.return_value = tracks
-        datastore.get_image_of_track.return_value = expected_image
-
-        background_plotter = TrackBackgroundPlotter(datastore)
+        background_plotter = TrackBackgroundPlotter(track_view_state)
         result = background_plotter.plot()
 
-        datastore.get_all_tracks.assert_called_once()
-        datastore.get_image_of_track.assert_called_once_with(track.id)
+        track_view_state.selected_videos.get.assert_called_once()
+        video.get_frame.assert_called_once()
         assert result is not None
         assert result == expected_image
 
     def test_plot_empty_track_repository_returns_none(self) -> None:
-        mock_datastore = Mock(spec=Datastore)
-        mock_datastore.get_all_tracks.return_value = []
-        background_plotter = TrackBackgroundPlotter(mock_datastore)
+        track_view_state = Mock(spec=TrackViewState)
+        track_view_state.selected_videos = Mock()
+        track_view_state.selected_videos.get.return_value = []
+        background_plotter = TrackBackgroundPlotter(track_view_state)
         result = background_plotter.plot()
 
-        mock_datastore.get_all_tracks.assert_called_once()
+        track_view_state.selected_videos.get.assert_called_once()
         assert result is None
