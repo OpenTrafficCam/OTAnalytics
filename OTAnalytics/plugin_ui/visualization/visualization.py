@@ -89,9 +89,7 @@ class VisualizationBuilder:
         flow_state: FlowState,
         road_user_assigner: RoadUserAssigner,
     ) -> Sequence[PlottingLayer]:
-        background_image_plotter = TrackBackgroundPlotter(
-            self._track_view_state, self._datastore
-        )
+        background_image_plotter = TrackBackgroundPlotter(self._track_view_state)
         all_tracks_plotter = self._create_all_tracks_plotter()
         highlight_tracks_assigned_to_flows_plotter = (
             self._create_highlight_tracks_assigned_to_flows_plotter(
