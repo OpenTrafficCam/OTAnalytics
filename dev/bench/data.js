@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1700961915314,
+  "lastUpdate": 1701048112834,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -960,6 +960,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 139.7305327199865 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "c2ec46bf409c9d42f9946fc99456c5a4079aa146",
+          "message": "Merge pull request #383 from OpenTrafficCam/feature/3419-remove-only-events-of-changed-or-deleted-sections\n\nfeature/3419-remove-only-events-of-changed-or-deleted-sections",
+          "timestamp": "2023-11-23T14:52:04Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/c2ec46bf409c9d42f9946fc99456c5a4079aa146"
+        },
+        "date": 1701048112343,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.10758439116501575,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 9.295028666994767 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.014846682425939423,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 67.35511485399911 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.07363830740597442,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 13.579888447013218 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.00831934358817399,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 120.20179109100718 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.05708321093817018,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 17.518285736994585 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.007184344416656174,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 139.19154511601664 sec\nrounds: 1"
           }
         ]
       }
