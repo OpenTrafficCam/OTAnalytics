@@ -19,7 +19,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE, logger
-from OTAnalytics.application.state import TracksMetadata
+from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
@@ -230,6 +230,7 @@ class OTAnalyticsCli:
         get_all_track_ids: GetAllTrackIds,
         clear_all_tracks: ClearAllTracks,
         tracks_metadata: TracksMetadata,
+        videos_metadata: VideosMetadata,
         progressbar: ProgressbarBuilder,
     ) -> None:
         self._validate_cli_args(cli_args)
@@ -248,6 +249,7 @@ class OTAnalyticsCli:
         self._get_all_track_ids = get_all_track_ids
         self._clear_all_tracks = clear_all_tracks
         self._tracks_metadata = tracks_metadata
+        self._videos_metadata = videos_metadata
         self._progressbar = progressbar
 
     def start(self) -> None:
@@ -278,8 +280,9 @@ class OTAnalyticsCli:
             parse_result = self._track_parser.parse(track_file)
             self._add_all_tracks(parse_result.tracks)
             self._tracks_metadata.update_detection_classes(
-                parse_result.metadata.detection_classes
+                parse_result.detection_metadata.detection_classes
             )
+            self._videos_metadata.update(parse_result.video_metadata)
 
     def _run_analysis(
         self, ottrk_files: set[Path], sections: Iterable[Section], flows: Iterable[Flow]
@@ -434,8 +437,8 @@ class OTAnalyticsCli:
         self._tracks_metadata.notify_tracks(
             TrackRepositoryEvent(list(self._get_all_track_ids()), [])
         )
-        start = self._tracks_metadata.first_detection_occurrence
-        end = self._tracks_metadata.last_detection_occurrence
+        start = self._videos_metadata.first_video_start
+        end = self._videos_metadata.last_video_end
         modes = self._tracks_metadata.detection_classifications
         if start is None:
             raise ValueError("start is None but has to be defined for exporting counts")

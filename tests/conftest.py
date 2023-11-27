@@ -203,7 +203,9 @@ class TrackBuilder:
 
     def __to_timestamp(self, date_as_string: str) -> str:
         return str(
-            datetime.strptime(date_as_string, ottrk_dataformat.DATE_FORMAT).timestamp()
+            datetime.strptime(date_as_string, ottrk_dataformat.DATE_FORMAT)
+            .replace(tzinfo=timezone.utc)
+            .timestamp()
         )
 
     def serialize_detection(

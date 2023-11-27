@@ -1499,8 +1499,8 @@ class DummyViewModel(
             for format in self._application.get_supported_export_formats()
         }
         default_format = next(iter(export_formats.keys()))
-        start = self._application._tracks_metadata.first_detection_occurrence
-        end = self._application._tracks_metadata.last_detection_occurrence
+        start = self._application._videos_metadata.first_video_start
+        end = self._application._videos_metadata.last_video_end
         modes = list(self._application._tracks_metadata.detection_classifications)
         default_values: dict = {
             INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
