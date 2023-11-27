@@ -411,11 +411,14 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def intersecting_tracks(self, sections: Iterable[Section]) -> set[TrackId]:
+    def intersecting_tracks(
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
+    ) -> set[TrackId]:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
-            sections (Iterable[Section]): the list of sections to intersect.
+            sections (list[Section]): the list of sections to intersect.
+            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             set[TrackId]: the track ids intersecting the given sections.
@@ -424,7 +427,7 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def intersection_points(
-        self, sections: list[Section]
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         """
         Return the intersection points resulting from the tracks and the
@@ -432,6 +435,7 @@ class TrackDataset(ABC):
 
         Args:
             sections (list[Section]): the sections to intersect with.
+            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             dict[TrackId, list[tuple[SectionId]]]: the intersection points.
@@ -440,12 +444,13 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def contained_by_sections(
-        self, sections: Iterable[Section]
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         """Return whether track coordinates are contained by the given sections.
 
         Args:
-             sections (Iterable[Section]): the sections.
+             sections (list[Section]): the sections.
+             offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             dict[TrackId, list[tuple[SectionId, list[bool]]]]: boolean mask of track
@@ -717,11 +722,14 @@ class TrackGeometryDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def intersecting_tracks(self, sections: Iterable[Section]) -> set[TrackId]:
+    def intersecting_tracks(
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
+    ) -> set[TrackId]:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
-            sections (Iterable[Section]): the list of sections to intersect.
+            sections (list[Section]): the list of sections to intersect.
+            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             set[TrackId]: the track ids intersecting the given sections.
@@ -730,7 +738,7 @@ class TrackGeometryDataset(ABC):
 
     @abstractmethod
     def intersection_points(
-        self, sections: list[Section]
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         """
         Return the intersection points resulting from the tracks and the
@@ -738,6 +746,7 @@ class TrackGeometryDataset(ABC):
 
         Args:
             sections (list[Section]): the sections to intersect with.
+            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             dict[TrackId, list[tuple[SectionId]]]: the intersection points.
@@ -746,12 +755,13 @@ class TrackGeometryDataset(ABC):
 
     @abstractmethod
     def contained_by_sections(
-        self, sections: Iterable[Section]
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         """Return whether track coordinates are contained by the given sections.
 
         Args:
-             sections (Iterable[Section]): the sections.
+             sections (list[Section]): the sections.
+             offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             dict[TrackId, list[tuple[SectionId, list[bool]]]]: boolean mask

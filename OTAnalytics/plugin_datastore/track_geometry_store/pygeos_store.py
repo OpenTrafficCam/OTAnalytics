@@ -20,7 +20,6 @@ from pygeos import (
     prepare,
 )
 
-from OTAnalytics.application.analysis.intersect import group_sections_by_offset
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate, apply_offset
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
@@ -215,63 +214,58 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             )
         return PygeosTrackGeometryDataset(updated)
 
-    def intersecting_tracks(self, sections: Iterable[Section]) -> set[TrackId]:
+    def intersecting_tracks(
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
+    ) -> set[TrackId]:
         intersecting_tracks = set()
-        sections_grouped_by_offset = group_sections_by_offset(sections)
-        for offset, _sections in sections_grouped_by_offset.items():
-            section_geoms = line_sections_to_pygeos_multi(_sections)
-            track_df = self._get_track_geometries_for(offset)
+        section_geoms = line_sections_to_pygeos_multi(sections)
+        track_df = self._get_track_geometries_for(offset)
 
-            track_df[INTERSECTS] = (
-                track_df[GEOMETRY]
-                .apply(lambda line: intersects(line, section_geoms))
-                .map(any)
-                .astype(bool)
-            )
-            track_ids = [TrackId(_id) for _id in track_df[track_df[INTERSECTS]].index]
-            intersecting_tracks.update(track_ids)
+        track_df[INTERSECTS] = (
+            track_df[GEOMETRY]
+            .apply(lambda line: intersects(line, section_geoms))
+            .map(any)
+            .astype(bool)
+        )
+        track_ids = [TrackId(_id) for _id in track_df[track_df[INTERSECTS]].index]
+        intersecting_tracks.update(track_ids)
 
         return intersecting_tracks
 
     def intersection_points(
-        self, sections: list[Section]
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        sections_grouped_by_offset = group_sections_by_offset(sections)
-
         intersection_points = defaultdict(list)
-        for offset, _sections in sections_grouped_by_offset.items():
-            section_geoms = line_sections_to_pygeos_multi(_sections)
-            track_df = self._get_track_geometries_for(offset)
+        section_geoms = line_sections_to_pygeos_multi(sections)
+        track_df = self._get_track_geometries_for(offset)
 
-            track_df[INTERSECTIONS] = track_df[GEOMETRY].apply(
-                lambda line: [
-                    (_sections[index].id, ip)
-                    for index, ip in enumerate(intersection(line, section_geoms))
-                    if not is_empty(ip)
-                ]
+        track_df[INTERSECTIONS] = track_df[GEOMETRY].apply(
+            lambda line: [
+                (sections[index].id, ip)
+                for index, ip in enumerate(intersection(line, section_geoms))
+                if not is_empty(ip)
+            ]
+        )
+        intersections = (
+            track_df[track_df[INTERSECTIONS].apply(lambda i: len(i) > 0)]
+            .apply(
+                lambda r: [
+                    self._next_event(
+                        r.name,  # the track id (track ids is used as df index)
+                        _section_id,
+                        r[GEOMETRY],
+                        points(p),
+                        r[PROJECTION],
+                    )
+                    for _section_id, ip in r[INTERSECTIONS]
+                    for p in get_coordinates(ip)
+                ],
+                axis=1,
             )
-            intersections = (
-                track_df[track_df[INTERSECTIONS].apply(lambda i: len(i) > 0)]
-                .apply(
-                    lambda r: [
-                        self._next_event(
-                            r.name,  # the track id (track ids is used as df index)
-                            _section_id,
-                            r[GEOMETRY],
-                            points(p),
-                            r[PROJECTION],
-                        )
-                        for _section_id, ip in r[INTERSECTIONS]
-                        for p in get_coordinates(ip)
-                    ],
-                    axis=1,
-                )
-                .values
-            )
-            for _id, section_id, intersection_point in chain.from_iterable(
-                intersections
-            ):
-                intersection_points[_id].append((section_id, intersection_point))
+            .values
+        )
+        for _id, section_id, intersection_point in chain.from_iterable(intersections):
+            intersection_points[_id].append((section_id, intersection_point))
 
         return intersection_points
 
@@ -311,32 +305,28 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         )
 
     def contained_by_sections(
-        self, sections: Iterable[Section]
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
-        sections_grouped_by_offset = group_sections_by_offset(sections)
-
         contains_result: dict[
             TrackId, list[tuple[SectionId, list[bool]]]
         ] = defaultdict(list)
-        for offset, section_group in sections_grouped_by_offset.items():
-            for _section in section_group:
-                section_geom = area_section_to_pygeos(_section)
+        for _section in sections:
+            section_geom = area_section_to_pygeos(_section)
 
-                track_df = self._get_track_geometries_for(offset)
-                contains_masks = track_df[GEOMETRY].apply(
-                    lambda line: [
-                        contains(section_geom, points(p))[0]
-                        for p in get_coordinates(line)
-                    ]
-                )
-                tracks_contained = contains_masks[contains_masks.map(any)]
+            track_df = self._get_track_geometries_for(offset)
+            contains_masks = track_df[GEOMETRY].apply(
+                lambda line: [
+                    contains(section_geom, points(p))[0] for p in get_coordinates(line)
+                ]
+            )
+            tracks_contained = contains_masks[contains_masks.map(any)]
 
-                if tracks_contained.empty:
-                    continue
+            if tracks_contained.empty:
+                continue
 
-                tracks_contained.index = tracks_contained.index.map(TrackId)
-                for track_id, contains_mask in tracks_contained.to_dict().items():
-                    contains_result[track_id].append((_section.id, contains_mask))
+            tracks_contained.index = tracks_contained.index.map(TrackId)
+            for track_id, contains_mask in tracks_contained.to_dict().items():
+                contains_result[track_id].append((_section.id, contains_mask))
         return contains_result
 
     def as_dict(self) -> dict:

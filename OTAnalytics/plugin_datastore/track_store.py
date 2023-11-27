@@ -9,6 +9,7 @@ from more_itertools import batched
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     MIN_NUMBER_OF_DETECTIONS,
@@ -262,18 +263,20 @@ class PandasTrackDataset(TrackDataset):
         ]
         return PandasTrackDataset(filtered_dataset, self._calculator)
 
-    def intersecting_tracks(self, sections: Iterable[Section]) -> set[TrackId]:
-        return self._track_geometry_dataset.intersecting_tracks(sections)
+    def intersecting_tracks(
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
+    ) -> set[TrackId]:
+        return self._track_geometry_dataset.intersecting_tracks(sections, offset)
 
     def intersection_points(
-        self, sections: list[Section]
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        return self._track_geometry_dataset.intersection_points(sections)
+        return self._track_geometry_dataset.intersection_points(sections, offset)
 
     def contained_by_sections(
-        self, sections: Iterable[Section]
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
-        return self._track_geometry_dataset.contained_by_sections(sections)
+        return self._track_geometry_dataset.contained_by_sections(sections, offset)
 
 
 def _assign_track_classification(
