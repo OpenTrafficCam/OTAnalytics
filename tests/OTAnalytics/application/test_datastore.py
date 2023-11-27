@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Sequence
 from unittest.mock import Mock
@@ -15,6 +16,7 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     TrackToVideoRepository,
     TrackVideoParser,
+    VideoMetadata,
     VideoParser,
 )
 from OTAnalytics.application.project import Project
@@ -31,6 +33,16 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackFileRepository, TrackImage, TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import SimpleVideo, Video, VideoReader, VideoRepository
+
+FIRST_START_DATE = datetime(
+    year=2019,
+    month=12,
+    day=31,
+    hour=23,
+    minute=0,
+    tzinfo=timezone.utc,
+)
+SECOND_START_DATE = FIRST_START_DATE + timedelta(seconds=3)
 
 
 class MockVideoReader(VideoReader):
@@ -49,6 +61,33 @@ class MockVideoReader(VideoReader):
                 return 2
 
         return MockImage()
+
+
+class TestVideoMetadata:
+    def test_fully_specified_metadata(self) -> None:
+        metadata = VideoMetadata(
+            path="video_path_1.mp4",
+            recorded_start_date=FIRST_START_DATE,
+            expected_duration=timedelta(seconds=3),
+            recorded_fps=20.0,
+            actual_fps=20.0,
+            number_of_frames=60,
+        )
+        assert metadata.start == FIRST_START_DATE
+        assert metadata.end == FIRST_START_DATE + timedelta(seconds=3)
+
+    def test_partially_specified_metadata(self) -> None:
+        metadata = VideoMetadata(
+            path="video_path_1.mp4",
+            recorded_start_date=FIRST_START_DATE,
+            expected_duration=None,
+            recorded_fps=20.0,
+            actual_fps=None,
+            number_of_frames=60,
+        )
+        assert metadata.start == FIRST_START_DATE
+        expected_video_end = FIRST_START_DATE + timedelta(seconds=3)
+        assert metadata.end == expected_video_end
 
 
 class TestSimpleVideo:

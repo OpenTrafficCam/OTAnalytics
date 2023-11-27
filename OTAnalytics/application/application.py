@@ -15,6 +15,7 @@ from OTAnalytics.application.state import (
     TracksMetadata,
     TrackState,
     TrackViewState,
+    VideosMetadata,
 )
 from OTAnalytics.application.use_cases.config import SaveOtconfig
 from OTAnalytics.application.use_cases.create_events import (
@@ -82,6 +83,7 @@ class OTAnalyticsApplication:
         section_state: SectionState,
         flow_state: FlowState,
         tracks_metadata: TracksMetadata,
+        videos_metadata: VideosMetadata,
         action_state: ActionState,
         filter_element_setting_restorer: FilterElementSettingRestorer,
         get_all_track_files: GetAllTrackFiles,
@@ -103,6 +105,7 @@ class OTAnalyticsApplication:
         self.section_state: SectionState = section_state
         self.flow_state: FlowState = flow_state
         self._tracks_metadata = tracks_metadata
+        self._videos_metadata = videos_metadata
         self.action_state = action_state
         self._filter_element_setting_restorer = filter_element_setting_restorer
         self._add_section = add_section
