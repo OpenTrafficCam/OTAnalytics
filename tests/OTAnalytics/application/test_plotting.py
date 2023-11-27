@@ -2,9 +2,14 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
-from OTAnalytics.application.state import Plotter
+from OTAnalytics.application.plotting import (
+    LayeredPlotter,
+    PlottingLayer,
+    TrackBackgroundPlotter,
+)
+from OTAnalytics.application.state import Plotter, TrackViewState
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.video import Video
 
 
 class TestLayeredPlotter:
@@ -66,3 +71,31 @@ class TestPlottingLayer:
         layer.set_enabled(False)
         layer.plot()
         plotter.plot.assert_called_once()
+
+
+class TestBackgroundPlotter:
+    def test_plot(self) -> None:
+        expected_image = Mock(spec=TrackImage)
+        video = Mock(spec=Video)
+        video.get_frame.return_value = expected_image
+        track_view_state = Mock(spec=TrackViewState)
+        track_view_state.selected_videos = Mock()
+        track_view_state.selected_videos.get.return_value = [video]
+
+        background_plotter = TrackBackgroundPlotter(track_view_state)
+        result = background_plotter.plot()
+
+        track_view_state.selected_videos.get.assert_called_once()
+        video.get_frame.assert_called_once()
+        assert result is not None
+        assert result == expected_image
+
+    def test_plot_empty_track_repository_returns_none(self) -> None:
+        track_view_state = Mock(spec=TrackViewState)
+        track_view_state.selected_videos = Mock()
+        track_view_state.selected_videos.get.return_value = []
+        background_plotter = TrackBackgroundPlotter(track_view_state)
+        result = background_plotter.plot()
+
+        track_view_state.selected_videos.get.assert_called_once()
+        assert result is None
