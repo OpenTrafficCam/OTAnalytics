@@ -300,15 +300,17 @@ class TestVideosMetadata:
     def test_ensure_order(
         self, first_full_metadata: VideoMetadata, second_full_metadata: VideoMetadata
     ) -> None:
-        videosMetadata = VideosMetadata()
+        videos_metadata = VideosMetadata()
 
-        videosMetadata.update(second_full_metadata)
-        videosMetadata.update(first_full_metadata)
+        videos_metadata.update(second_full_metadata)
+        videos_metadata.update(first_full_metadata)
 
         assert (
-            videosMetadata.first_video_start == first_full_metadata.recorded_start_date
+            videos_metadata.first_video_start == first_full_metadata.recorded_start_date
         )
-        assert videosMetadata.last_video_end == SECOND_START_DATE + timedelta(seconds=3)
+        assert videos_metadata.last_video_end == SECOND_START_DATE + timedelta(
+            seconds=3
+        )
 
 
 class TestTracksMetadata:
