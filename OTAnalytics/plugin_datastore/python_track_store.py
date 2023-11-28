@@ -16,6 +16,7 @@ from OTAnalytics.domain.track import (
     Track,
     TrackClassificationCalculator,
     TrackDataset,
+    TrackGeometryDataset,
     TrackHasNoDetectionError,
     TrackId,
 )
@@ -223,6 +224,8 @@ class PythonTrackDataset(TrackDataset):
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,
+        geometry_dataset: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
+        | None = None,
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
         track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
             PygeosTrackGeometryDataset.from_track_dataset
@@ -233,14 +236,21 @@ class PythonTrackDataset(TrackDataset):
         self._tracks = values
         self._calculator = calculator
         self._track_geometry_factory = track_geometry_factory
-        self._track_geometry_dataset = track_geometry_factory(self)
+        if geometry_dataset is None:
+            self._geometry_dataset = dict[
+                RelativeOffsetCoordinate, TrackGeometryDataset
+            ]()
+        else:
+            self._geometry_dataset = geometry_dataset
 
     @staticmethod
     def from_list(
         tracks: list[Track],
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
     ) -> TrackDataset:
-        return PythonTrackDataset({track.id: track for track in tracks}, calculator)
+        return PythonTrackDataset(
+            {track.id: track for track in tracks}, calculator=calculator
+        )
 
     def add_all(self, other: Iterable[Track]) -> "TrackDataset":
         if isinstance(other, PythonTrackDataset):
@@ -306,7 +316,7 @@ class PythonTrackDataset(TrackDataset):
         batch_size = ceil(dataset_size / batches)
 
         return [
-            PythonTrackDataset(dict(batch), self._calculator)
+            PythonTrackDataset(dict(batch), calculator=self._calculator)
             for batch in batched(self._tracks.items(), batch_size)
         ]
 
@@ -319,19 +329,43 @@ class PythonTrackDataset(TrackDataset):
             for _id, track in self._tracks.items()
             if len(track.detections) >= length
         }
-        return PythonTrackDataset(filtered_tracks, self._calculator)
+        return PythonTrackDataset(filtered_tracks, calculator=self._calculator)
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> set[TrackId]:
-        return self._track_geometry_dataset.intersecting_tracks(sections, offset)
+        geometry_dataset = self._get_geometry_dataset_for(offset)
+        return geometry_dataset.intersecting_tracks(sections)
+
+    def _get_geometry_dataset_for(
+        self, offset: RelativeOffsetCoordinate
+    ) -> TrackGeometryDataset:
+        """Retrieves track geometries for given offset.
+
+        If offset does not exist, a new TrackGeometryDataset with the applied offset
+        will be created and saved.
+
+        Args:
+            offset (RelativeOffsetCoordinate): the offset to retrieve track geometries
+                for.
+
+        Returns:
+            TrackGeometryDataset: the track geometry dataset with the given offset
+                applied.
+        """
+        if (geometry_dataset := self._geometry_dataset.get(offset, None)) is None:
+            geometry_dataset = self._track_geometry_factory(self, offset)
+            self._geometry_dataset[offset] = geometry_dataset
+        return geometry_dataset
 
     def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        return self._track_geometry_dataset.intersection_points(sections, offset)
+        geometry_dataset = self._get_geometry_dataset_for(offset)
+        return geometry_dataset.intersection_points(sections)
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
-        return self._track_geometry_dataset.contained_by_sections(sections, offset)
+        geometry_dataset = self._get_geometry_dataset_for(offset)
+        return geometry_dataset.contained_by_sections(sections)

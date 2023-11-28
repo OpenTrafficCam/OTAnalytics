@@ -150,7 +150,8 @@ class PandasTrackDataset(TrackDataset):
     def __init__(
         self,
         dataset: DataFrame = DataFrame(),
-        geometry_dataset: TrackGeometryDataset | None = None,
+        geometry_dataset: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
+        | None = None,
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
             PygeosTrackGeometryDataset.from_track_dataset
@@ -159,9 +160,10 @@ class PandasTrackDataset(TrackDataset):
         self._dataset = dataset
         self._calculator = calculator
         self._track_geometry_factory = track_geometry_factory
-        # TODO: Re-use existing track geometries instead of creating new ones
         if geometry_dataset is None:
-            self._geometry_dataset = self._track_geometry_factory(self)
+            self._geometry_dataset = dict[
+                RelativeOffsetCoordinate, TrackGeometryDataset
+            ]()
         else:
             self._geometry_dataset = geometry_dataset
 
@@ -177,7 +179,8 @@ class PandasTrackDataset(TrackDataset):
     @staticmethod
     def from_dataframe(
         tracks: DataFrame,
-        track_geometry_dataset: TrackGeometryDataset | None = None,
+        geometry_dataset: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
+        | None = None,
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
     ) -> TrackDataset:
         if tracks.empty:
@@ -195,7 +198,7 @@ class PandasTrackDataset(TrackDataset):
         valid_tracks = classified_tracks.loc[
             classified_tracks[track.TRACK_ID].isin(valid_track_ids), :
         ]
-        return PandasTrackDataset(valid_tracks, geometry_dataset=track_geometry_dataset)
+        return PandasTrackDataset(valid_tracks, geometry_dataset=geometry_dataset)
 
     def add_all(self, other: Iterable[Track]) -> TrackDataset:
         new_tracks = self.__get_tracks(other)
@@ -208,10 +211,18 @@ class PandasTrackDataset(TrackDataset):
         new_dataset = pandas.concat([self._dataset, new_tracks])
         new_track_ids = new_tracks[track.TRACK_ID].unique()
         new_tracks_df = new_dataset[new_dataset[track.TRACK_ID].isin(new_track_ids)]
-        updated_geometry_dataset = self._geometry_dataset.add_all(
+        updated_geometry_dataset = self._add_to_geometry_dataset(
             PandasTrackDataset.from_dataframe(new_tracks_df)
         )
         return PandasTrackDataset.from_dataframe(new_dataset, updated_geometry_dataset)
+
+    def _add_to_geometry_dataset(
+        self, new_tracks: TrackDataset
+    ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
+        updated = dict[RelativeOffsetCoordinate, TrackGeometryDataset]()
+        for offset, geometries in self._geometry_dataset.items():
+            updated[offset] = geometries.add_all(new_tracks)
+        return updated
 
     def get_all_ids(self) -> Iterable[TrackId]:
         return self._dataset[track.TRACK_ID].apply(lambda track_id: TrackId(track_id))
@@ -282,17 +293,41 @@ class PandasTrackDataset(TrackDataset):
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> set[TrackId]:
-        return self._geometry_dataset.intersecting_tracks(sections, offset)
+        geometry_dataset = self._get_geometry_dataset_for(offset)
+        return geometry_dataset.intersecting_tracks(sections)
+
+    def _get_geometry_dataset_for(
+        self, offset: RelativeOffsetCoordinate
+    ) -> TrackGeometryDataset:
+        """Retrieves track geometries for given offset.
+
+        If offset does not exist, a new TrackGeometryDataset with the applied offset
+        will be created and saved.
+
+        Args:
+            offset (RelativeOffsetCoordinate): the offset to retrieve track geometries
+                for.
+
+        Returns:
+            TrackGeometryDataset: the track geometry dataset with the given offset
+                applied.
+        """
+        if (geometry_dataset := self._geometry_dataset.get(offset, None)) is None:
+            geometry_dataset = self._track_geometry_factory(self, offset)
+            self._geometry_dataset[offset] = geometry_dataset
+        return geometry_dataset
 
     def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        return self._geometry_dataset.intersection_points(sections, offset)
+        geometry_dataset = self._get_geometry_dataset_for(offset)
+        return geometry_dataset.intersection_points(sections)
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
-        return self._geometry_dataset.contained_by_sections(sections, offset)
+        geometry_dataset = self._get_geometry_dataset_for(offset)
+        return geometry_dataset.contained_by_sections(sections)
 
 
 def _assign_track_classification(

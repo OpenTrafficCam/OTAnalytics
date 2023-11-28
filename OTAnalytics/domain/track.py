@@ -701,7 +701,9 @@ class TrackGeometryDataset(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_track_dataset(dataset: TrackDataset) -> "TrackGeometryDataset":
+    def from_track_dataset(
+        dataset: TrackDataset, offset: RelativeOffsetCoordinate
+    ) -> "TrackGeometryDataset":
         raise NotImplementedError
 
     @abstractmethod
@@ -732,14 +734,11 @@ class TrackGeometryDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def intersecting_tracks(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
             sections (list[Section]): the list of sections to intersect.
-            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             set[TrackId]: the track ids intersecting the given sections.
@@ -748,7 +747,7 @@ class TrackGeometryDataset(ABC):
 
     @abstractmethod
     def intersection_points(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
+        self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         """
         Return the intersection points resulting from the tracks and the
@@ -756,7 +755,6 @@ class TrackGeometryDataset(ABC):
 
         Args:
             sections (list[Section]): the sections to intersect with.
-            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             dict[TrackId, list[tuple[SectionId]]]: the intersection points.
@@ -765,13 +763,12 @@ class TrackGeometryDataset(ABC):
 
     @abstractmethod
     def contained_by_sections(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
+        self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         """Return whether track coordinates are contained by the given sections.
 
         Args:
              sections (list[Section]): the sections.
-             offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
             dict[TrackId, list[tuple[SectionId, list[bool]]]]: boolean mask
@@ -780,4 +777,6 @@ class TrackGeometryDataset(ABC):
         raise NotImplementedError
 
 
-TRACK_GEOMETRY_FACTORY = Callable[[TrackDataset], TrackGeometryDataset]
+TRACK_GEOMETRY_FACTORY = Callable[
+    [TrackDataset, RelativeOffsetCoordinate], TrackGeometryDataset
+]

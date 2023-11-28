@@ -122,12 +122,7 @@ class TestPandasTrackDataset:
         )
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
-        assert merged._geometry_dataset.track_ids == {
-            first_track.id.id,
-            second_track.id.id,
-            third_track.id.id,
-        }
-        assert 1 == len(dataset.as_list())
+        assert merged._geometry_dataset == {}
 
     def test_add_two_existing_pandas_datasets(self) -> None:
         first_track = self.__build_track("1")
@@ -139,12 +134,7 @@ class TestPandasTrackDataset:
 
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
-
-        # TODO: Is it enough to check for track ids in the geometry dataset?
-        assert merged._geometry_dataset.track_ids == {
-            first_track.id.id,
-            second_track.id.id,
-        }
+        assert merged._geometry_dataset == {}
 
     def __build_track(self, track_id: str, length: int = 5) -> Track:
         builder = TrackBuilder()

@@ -99,28 +99,21 @@ class InvalidTrackGeometryDataset(Exception):
 class PygeosTrackGeometryDataset(TrackGeometryDataset):
     def __init__(
         self,
-        dataset: dict[RelativeOffsetCoordinate, DataFrame] | None = None,
+        offset: RelativeOffsetCoordinate,
+        dataset: DataFrame | None = None,
     ):
-        if dataset is not None:
-            self._check_is_valid(dataset)
-            self._dataset: dict[RelativeOffsetCoordinate, DataFrame] = dataset
-        else:
+        self._offset = offset
+        if dataset is None:
             self._dataset = self._create_empty()
+        else:
+            self._dataset = dataset
 
-    def _create_empty(self) -> dict[RelativeOffsetCoordinate, DataFrame]:
-        return {BASE_GEOMETRY: DataFrame(columns=COLUMNS)}
-
-    def _check_is_valid(
-        self, dataset: dict[RelativeOffsetCoordinate, DataFrame]
-    ) -> None:
-        try:
-            dataset[BASE_GEOMETRY]
-        except KeyError:
-            raise InvalidTrackGeometryDataset(f"Missing entry for key {BASE_GEOMETRY}")
+    def _create_empty(self) -> DataFrame:
+        return DataFrame(columns=COLUMNS)
 
     @property
     def track_ids(self) -> set[str]:
-        return set(self._dataset[BASE_GEOMETRY].index)
+        return set(self._dataset.index)
 
     @property
     def empty(self) -> bool:
@@ -129,21 +122,20 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         Returns:
             bool: True if dataset is empty, False otherwise.
         """
-        return self._get_base_geometry().empty
-
-    def _get_base_geometry(self) -> DataFrame:
-        return self._dataset[BASE_GEOMETRY]
+        return self._dataset.empty
 
     @staticmethod
-    def from_track_dataset(dataset: TrackDataset) -> TrackGeometryDataset:
+    def from_track_dataset(
+        dataset: TrackDataset, offset: RelativeOffsetCoordinate
+    ) -> TrackGeometryDataset:
         if len(dataset) == 0:
-            return PygeosTrackGeometryDataset()
+            return PygeosTrackGeometryDataset(offset)
         track_geom_df = DataFrame.from_dict(
-            PygeosTrackGeometryDataset._create_entries(dataset),
+            PygeosTrackGeometryDataset._create_entries(dataset, offset),
             columns=COLUMNS,
             orient=ORIENTATION_INDEX,
         )
-        return PygeosTrackGeometryDataset({BASE_GEOMETRY: track_geom_df})
+        return PygeosTrackGeometryDataset(offset, track_geom_df)
 
     @staticmethod
     def _create_entries(
@@ -181,60 +173,48 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
     def add_all(self, tracks: Iterable[Track]) -> TrackGeometryDataset:
         if self.empty:
-            new_entries = self._create_entries(tracks)
+            new_entries = self._create_entries(tracks, self._offset)
             return PygeosTrackGeometryDataset(
-                {
-                    BASE_GEOMETRY: DataFrame.from_dict(
-                        new_entries, orient=ORIENTATION_INDEX
-                    )
-                }
+                self._offset, DataFrame.from_dict(new_entries, orient=ORIENTATION_INDEX)
             )
-        new_dataset = {}
         existing_entries = self.as_dict()
-        for offset in existing_entries.keys():
-            new_entries = self._create_entries(tracks, offset)
-            for track_id, entry in new_entries.items():
-                existing_entries[offset][track_id] = entry
-            new_dataset[offset] = DataFrame.from_dict(
-                existing_entries[offset], orient=ORIENTATION_INDEX
-            )
+        new_entries = self._create_entries(tracks, self._offset)
+        for track_id, entry in new_entries.items():
+            existing_entries[track_id] = entry
+        new_dataset = DataFrame.from_dict(existing_entries, orient=ORIENTATION_INDEX)
 
-        return PygeosTrackGeometryDataset(new_dataset)
+        return PygeosTrackGeometryDataset(self._offset, new_dataset)
 
     def remove(self, ids: Iterable[TrackId]) -> TrackGeometryDataset:
-        updated = {}
-        for offset, geometry_df in self._dataset.items():
-            updated[offset] = geometry_df.drop(
-                index=[track_id.id for track_id in ids], errors="ignore"
-            )
-        return PygeosTrackGeometryDataset(updated)
+        updated = self._dataset.drop(
+            index=[track_id.id for track_id in ids], errors="ignore"
+        )
+        return PygeosTrackGeometryDataset(self._offset, updated)
 
-    def intersecting_tracks(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
         intersecting_tracks = set()
         section_geoms = line_sections_to_pygeos_multi(sections)
-        track_df = self._get_track_geometries_for(offset)
 
-        track_df[INTERSECTS] = (
-            track_df[GEOMETRY]
+        self._dataset[INTERSECTS] = (
+            self._dataset[GEOMETRY]
             .apply(lambda line: intersects(line, section_geoms))
             .map(any)
             .astype(bool)
         )
-        track_ids = [TrackId(_id) for _id in track_df[track_df[INTERSECTS]].index]
+        track_ids = [
+            TrackId(_id) for _id in self._dataset[self._dataset[INTERSECTS]].index
+        ]
         intersecting_tracks.update(track_ids)
 
         return intersecting_tracks
 
     def intersection_points(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
+        self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         intersection_points = defaultdict(list)
         section_geoms = line_sections_to_pygeos_multi(sections)
-        track_df = self._get_track_geometries_for(offset)
 
-        track_df[INTERSECTIONS] = track_df[GEOMETRY].apply(
+        self._dataset[INTERSECTIONS] = self._dataset[GEOMETRY].apply(
             lambda line: [
                 (sections[index].id, ip)
                 for index, ip in enumerate(intersection(line, section_geoms))
@@ -242,7 +222,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             ]
         )
         intersections = (
-            track_df[track_df[INTERSECTIONS].apply(lambda i: len(i) > 0)]
+            self._dataset[self._dataset[INTERSECTIONS].apply(lambda i: len(i) > 0)]
             .apply(
                 lambda r: [
                     self._next_event(
@@ -282,6 +262,12 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         new_track_df[GEOMETRY] = new_track_df[GEOMETRY].apply(
             lambda geom: apply(geom, lambda coord: coord + coord * [offset.x, offset.y])
         )
+        new_track_df[PROJECTION] = new_track_df[GEOMETRY].apply(
+            lambda track_geom: [
+                line_locate_point(track_geom, points(p))
+                for p in get_coordinates(track_geom)
+            ]
+        )
         return new_track_df
 
     def _next_event(
@@ -300,7 +286,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         )
 
     def contained_by_sections(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
+        self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         contains_result: dict[
             TrackId, list[tuple[SectionId, list[bool]]]
@@ -308,8 +294,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         for _section in sections:
             section_geom = area_section_to_pygeos(_section)
 
-            track_df = self._get_track_geometries_for(offset)
-            contains_masks = track_df[GEOMETRY].apply(
+            contains_masks = self._dataset[GEOMETRY].apply(
                 lambda line: [
                     contains(section_geom, points(p))[0] for p in get_coordinates(line)
                 ]
@@ -325,8 +310,4 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         return contains_result
 
     def as_dict(self) -> dict:
-        result = {}
-        for offset, track_geom_df in self._dataset.items():
-            result[offset] = track_geom_df[COLUMNS].to_dict(orient=ORIENTATION_INDEX)
-
-        return result
+        return self._dataset[COLUMNS].to_dict(orient=ORIENTATION_INDEX)
