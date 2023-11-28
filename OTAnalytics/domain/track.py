@@ -689,6 +689,16 @@ class TrackGeometryDataset(ABC):
     coordinates.
     """
 
+    @property
+    @abstractmethod
+    def track_ids(self) -> set[str]:
+        """Get track ids of tracks stored in dataset.
+
+        Returns:
+            set[str]: the track ids stored.
+        """
+        raise NotImplementedError
+
     @staticmethod
     @abstractmethod
     def from_track_dataset(dataset: TrackDataset) -> "TrackGeometryDataset":

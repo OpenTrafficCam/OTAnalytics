@@ -120,11 +120,6 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
     @property
     def track_ids(self) -> set[str]:
-        """Get track ids of tracks stored in dataset.
-
-        Returns:
-            set[str]: the track ids stored.
-        """
         return set(self._dataset[BASE_GEOMETRY].index)
 
     @property
