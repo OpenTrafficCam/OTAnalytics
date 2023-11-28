@@ -1,3 +1,5 @@
+from typing import cast
+
 import pytest
 from pandas import DataFrame, Series
 
@@ -91,7 +93,6 @@ class TestPandasTrackDataset:
         assert 0 == len(dataset.as_list())
         for actual, expected in zip(merged, expected_dataset):
             assert_equal_track_properties(actual, expected)
-        # assert merged == expected_dataset
 
     def test_add_nothing(self) -> None:
         dataset = PandasTrackDataset()
@@ -103,18 +104,30 @@ class TestPandasTrackDataset:
     def test_add_all(self) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
-        expected_dataset = PandasTrackDataset.from_list([first_track, second_track])
-        dataset = PandasTrackDataset()
-        merged = dataset.add_all(
-            PythonTrackDataset(
-                {first_track.id: first_track, second_track.id: second_track}
-            )
+        third_track = self.__build_track("3")
+        expected_dataset = PandasTrackDataset.from_list(
+            [first_track, second_track, third_track]
         )
-
-        assert merged == expected_dataset
+        dataset = PandasTrackDataset.from_list([])
+        assert len(dataset) == 0
+        dataset = dataset.add_all([first_track])
+        assert len(dataset) == 1
+        merged = cast(
+            PandasTrackDataset,
+            dataset.add_all(
+                PythonTrackDataset(
+                    {second_track.id: second_track, third_track.id: third_track}
+                )
+            ),
+        )
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
-        assert 0 == len(dataset.as_list())
+        assert merged._geometry_dataset.track_ids == {
+            first_track.id.id,
+            second_track.id.id,
+            third_track.id.id,
+        }
+        assert 1 == len(dataset.as_list())
 
     def test_add_two_existing_pandas_datasets(self) -> None:
         first_track = self.__build_track("1")
@@ -122,11 +135,16 @@ class TestPandasTrackDataset:
         expected_dataset = PandasTrackDataset.from_list([first_track, second_track])
         first = PandasTrackDataset.from_list([first_track])
         second = PandasTrackDataset.from_list([second_track])
-        merged = first.add_all(second)
+        merged = cast(PandasTrackDataset, first.add_all(second))
 
-        assert merged == expected_dataset
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
+
+        # TODO: Is it enough to check for track ids in the geometry dataset?
+        assert merged._geometry_dataset.track_ids == {
+            first_track.id.id,
+            second_track.id.id,
+        }
 
     def __build_track(self, track_id: str, length: int = 5) -> Track:
         builder = TrackBuilder()
@@ -167,8 +185,11 @@ class TestPandasTrackDataset:
         dataset = PandasTrackDataset.from_list([first_track, second_track])
 
         removed_track_set = dataset.remove(first_track.id)
-
-        assert PandasTrackDataset.from_list([second_track]) == removed_track_set
+        for actual, expected in zip(
+            removed_track_set.as_list(),
+            PandasTrackDataset.from_list([second_track]).as_list(),
+        ):
+            assert_equal_track_properties(actual, expected)
 
     def test_len(self) -> None:
         first_track = self.__build_track("1")

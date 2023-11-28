@@ -18,6 +18,7 @@ from OTAnalytics.domain.track import (
     IntersectionPoint,
     Track,
     TrackDataset,
+    TrackGeometryDataset,
     TrackId,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
@@ -149,6 +150,7 @@ class PandasTrackDataset(TrackDataset):
     def __init__(
         self,
         dataset: DataFrame = DataFrame(),
+        geometry_dataset: TrackGeometryDataset | None = None,
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
             PygeosTrackGeometryDataset.from_track_dataset
@@ -158,18 +160,24 @@ class PandasTrackDataset(TrackDataset):
         self._calculator = calculator
         self._track_geometry_factory = track_geometry_factory
         # TODO: Re-use existing track geometries instead of creating new ones
-        self._track_geometry_dataset = self._track_geometry_factory(self)
+        if geometry_dataset is None:
+            self._geometry_dataset = self._track_geometry_factory(self)
+        else:
+            self._geometry_dataset = geometry_dataset
 
     @staticmethod
     def from_list(
         tracks: list[Track],
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
     ) -> TrackDataset:
-        return PandasTrackDataset.from_dataframe(_convert_tracks(tracks), calculator)
+        return PandasTrackDataset.from_dataframe(
+            _convert_tracks(tracks), calculator=calculator
+        )
 
     @staticmethod
     def from_dataframe(
         tracks: DataFrame,
+        track_geometry_dataset: TrackGeometryDataset | None = None,
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
     ) -> TrackDataset:
         if tracks.empty:
@@ -187,16 +195,23 @@ class PandasTrackDataset(TrackDataset):
         valid_tracks = classified_tracks.loc[
             classified_tracks[track.TRACK_ID].isin(valid_track_ids), :
         ]
-        return PandasTrackDataset(valid_tracks)
+        return PandasTrackDataset(valid_tracks, geometry_dataset=track_geometry_dataset)
 
     def add_all(self, other: Iterable[Track]) -> TrackDataset:
         new_tracks = self.__get_tracks(other)
         if new_tracks.empty:
             return self
         if self._dataset.empty:
-            return PandasTrackDataset.from_dataframe(new_tracks, self._calculator)
+            return PandasTrackDataset.from_dataframe(
+                new_tracks, calculator=self._calculator
+            )
         new_dataset = pandas.concat([self._dataset, new_tracks])
-        return PandasTrackDataset.from_dataframe(new_dataset)
+        new_track_ids = new_tracks[track.TRACK_ID].unique()
+        new_tracks_df = new_dataset[new_dataset[track.TRACK_ID].isin(new_track_ids)]
+        updated_geometry_dataset = self._geometry_dataset.add_all(
+            PandasTrackDataset.from_dataframe(new_tracks_df)
+        )
+        return PandasTrackDataset.from_dataframe(new_dataset, updated_geometry_dataset)
 
     def get_all_ids(self) -> Iterable[TrackId]:
         return self._dataset[track.TRACK_ID].apply(lambda track_id: TrackId(track_id))
@@ -241,8 +256,9 @@ class PandasTrackDataset(TrackDataset):
         new_batches: list["TrackDataset"] = []
         for batch_ids in batched(all_ids, batch_size):
             batch_dataset = self._dataset[self._dataset[track.TRACK_ID].isin(batch_ids)]
-            new_batches.append(PandasTrackDataset(batch_dataset, self._calculator))
-
+            new_batches.append(
+                PandasTrackDataset(batch_dataset, calculator=self._calculator)
+            )
         return new_batches
 
     def __len__(self) -> int:
@@ -261,22 +277,22 @@ class PandasTrackDataset(TrackDataset):
         filtered_dataset = self._dataset.loc[
             self._dataset[track.TRACK_ID].isin(filtered_ids)
         ]
-        return PandasTrackDataset(filtered_dataset, self._calculator)
+        return PandasTrackDataset(filtered_dataset, calculator=self._calculator)
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> set[TrackId]:
-        return self._track_geometry_dataset.intersecting_tracks(sections, offset)
+        return self._geometry_dataset.intersecting_tracks(sections, offset)
 
     def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        return self._track_geometry_dataset.intersection_points(sections, offset)
+        return self._geometry_dataset.intersection_points(sections, offset)
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
-        return self._track_geometry_dataset.contained_by_sections(sections, offset)
+        return self._geometry_dataset.contained_by_sections(sections, offset)
 
 
 def _assign_track_classification(
@@ -322,6 +338,5 @@ def _sort_tracks(track_df: DataFrame) -> DataFrame:
         DataFrame: sorted dataframe by track id and frame
     """
     if (track.TRACK_ID in track_df.columns) and (track.FRAME in track_df.columns):
-        return track_df.sort_values([track.TRACK_ID, track.FRAME])
-    else:
-        return track_df
+        track_df.sort_values([track.FRAME], inplace=True)
+    return track_df

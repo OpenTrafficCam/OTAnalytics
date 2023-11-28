@@ -83,4 +83,6 @@ class PandasDetectionParser(DetectionParser):
         tracks_to_remain.sort_values(
             by=[track.TRACK_ID, track.OCCURRENCE], inplace=True
         )
-        return PandasTrackDataset.from_dataframe(tracks_to_remain, self._calculator)
+        return PandasTrackDataset.from_dataframe(
+            tracks_to_remain, calculator=self._calculator
+        )
