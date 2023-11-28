@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Iterable, Mapping, Sequence
+from typing import Iterable, Mapping
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
@@ -28,10 +28,10 @@ class TracksIntersectingSections(ABC):
 
 
 def group_sections_by_offset(
-    sections: Iterable[Section],
-) -> Mapping[RelativeOffsetCoordinate, Sequence[Section]]:
+    sections: Iterable[Section], offset_type: EventType = EventType.SECTION_ENTER
+) -> Mapping[RelativeOffsetCoordinate, list[Section]]:
     grouped_sections: dict[RelativeOffsetCoordinate, list[Section]] = defaultdict(list)
     for section in sections:
-        offset = section.get_offset(EventType.SECTION_ENTER)
+        offset = section.get_offset(offset_type)
         grouped_sections[offset].append(section)
     return grouped_sections

@@ -16,13 +16,11 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionType,
 )
-from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.track import Detection, IntersectionPoint, Track, TrackDataset
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
-    ShapelyGeometryBuilder,
     ShapelyIntersectAreaByTrackPoints,
     ShapelyIntersectBySmallestTrackSegments,
-    ShapelyTrackLookupTable,
     separate_sections,
 )
 from tests.conftest import TrackBuilder
@@ -52,12 +50,20 @@ class _ExpectedEventCoord:
         return _ExpectedEventCoord(detection_index, x, y, event_type)
 
 
-@dataclass
 class _TestCase:
-    track: Track
-    section: Section
-    expected_event_coords: list[_ExpectedEventCoord]
-    direction_vectors: list[tuple[float, float]]
+    def __init__(
+        self,
+        track: Track,
+        track_dataset: Mock,
+        section: Section,
+        expected_event_coords: list[_ExpectedEventCoord],
+        direction_vectors: list[tuple[float, float]],
+    ):
+        self.track = track
+        self.track_dataset = track_dataset
+        self.section = section
+        self.expected_event_coords = expected_event_coords
+        self.direction_vectors = direction_vectors
 
     def assert_valid(self, event_results: list, event_builder: Mock) -> None:
         assert len(event_results) == len(self.expected_event_coords)
@@ -92,6 +98,52 @@ class _TestCase:
         event_builder.add_event_type.assert_not_called()
         event_builder.add_event.assert_not_called()
         event_builder.add_event.assert_not_called()
+
+
+class LineSectionTestCase(_TestCase):
+    def __init__(
+        self,
+        track: Track,
+        track_dataset: Mock,
+        section: Section,
+        expected_event_coords: list[_ExpectedEventCoord],
+        direction_vectors: list[tuple[float, float]],
+    ):
+        super().__init__(
+            track, track_dataset, section, expected_event_coords, direction_vectors
+        )
+
+    def assert_valid(self, event_results: list, event_builder: Mock) -> None:
+        super().assert_valid(event_results, event_builder)
+        self._assert_valid()
+
+    def _assert_valid(self) -> None:
+        self.track_dataset.intersection_points.assert_called_once_with(
+            [self.section], self.section.get_offset(EventType.SECTION_ENTER)
+        )
+
+
+class AreaSectionTestCase(_TestCase):
+    def __init__(
+        self,
+        track: Track,
+        track_dataset: Mock,
+        section: Section,
+        expected_event_coords: list[_ExpectedEventCoord],
+        direction_vectors: list[tuple[float, float]],
+    ):
+        super().__init__(
+            track, track_dataset, section, expected_event_coords, direction_vectors
+        )
+
+    def assert_valid(self, event_results: list, event_builder: Mock) -> None:
+        super().assert_valid(event_results, event_builder)
+        self._assert_valid()
+
+    def _assert_valid(self) -> None:
+        self.track_dataset.contained_by_sections.assert_called_once_with(
+            [self.section], self.section.get_offset(EventType.SECTION_ENTER)
+        )
 
 
 def create_section(
@@ -167,39 +219,42 @@ def closed_track(track_builder: TrackBuilder) -> Track:
 
     track_builder.add_frame(1)
     track_builder.add_second(1)
-    track_builder.add_xy_bbox(1, 1)
+    track_builder.add_xy_bbox(1.0, 1.0)
     track_builder.append_detection()
 
     track_builder.add_frame(2)
     track_builder.add_second(2)
-    track_builder.add_xy_bbox(2, 1)
+    track_builder.add_xy_bbox(2.0, 1.0)
     track_builder.append_detection()
 
     track_builder.add_frame(3)
     track_builder.add_second(3)
-    track_builder.add_xy_bbox(2, 2)
+    track_builder.add_xy_bbox(2.0, 2.0)
     track_builder.append_detection()
 
     track_builder.add_frame(5)
     track_builder.add_second(5)
-    track_builder.add_xy_bbox(1, 2)
+    track_builder.add_xy_bbox(1.0, 2.0)
     track_builder.append_detection()
 
     track_builder.add_frame(5)
     track_builder.add_second(5)
-    track_builder.add_xy_bbox(1, 1)
+    track_builder.add_xy_bbox(1.0, 1.0)
     track_builder.append_detection()
     return track_builder.build_track()
 
 
 @pytest.fixture
-def test_case_track_line_section(
-    track: Track,
-) -> _TestCase:
+def test_case_track_line_section(track: Track) -> _TestCase:
     offset = (0, 0.5)
     section = create_section([(1.5, 0), (1.5, 1.5)], SectionType.LINE, offset)
     detection_index = 2
     detection = track.detections[detection_index]
+    track_dataset = Mock(spec=TrackDataset)
+    track_dataset.intersection_points.return_value = {
+        track.id: [(section.id, IntersectionPoint(detection_index))]
+    }
+    track_dataset.get_for.return_value = track
     expected_event_coords = [
         _ExpectedEventCoord.from_detection(
             detection,
@@ -210,7 +265,9 @@ def test_case_track_line_section(
     ]
     direction_vectors = [(1.0, 0.0)]
 
-    return _TestCase(track, section, expected_event_coords, direction_vectors)
+    return LineSectionTestCase(
+        track, track_dataset, section, expected_event_coords, direction_vectors
+    )
 
 
 @pytest.fixture
@@ -218,31 +275,41 @@ def test_case_closed_track_line_section(
     closed_track: Track,
 ) -> _TestCase:
     section = create_section([(0, 1.5), (3, 1.5)], SectionType.LINE)
+    track_dataset = Mock(spec=TrackDataset)
+    track_dataset.intersection_points.return_value = {
+        closed_track.id: [
+            (section.id, IntersectionPoint(2)),
+            (section.id, IntersectionPoint(4)),
+        ]
+    }
+    track_dataset.get_for.return_value = track
     expected_event_coords = [
         _ExpectedEventCoord(2, 2.0, 2.0),
         _ExpectedEventCoord(4, 1.0, 1.0),
     ]
     expected_dir_vectors = [(0.0, 1.0), (0.0, -1.0)]
-    return _TestCase(closed_track, section, expected_event_coords, expected_dir_vectors)
+    return _TestCase(
+        closed_track,
+        track_dataset,
+        section,
+        expected_event_coords,
+        expected_dir_vectors,
+    )
 
 
 @pytest.fixture
 def test_case_line_section_no_intersection(track: Track) -> _TestCase:
     section = create_section([(0, 0), (10, 0)], SectionType.LINE)
+    track_dataset = Mock(spec=TrackDataset)
+    track_dataset.intersection_points.return_value = {}
+    track_dataset.get_for.return_value = track
 
-    return _TestCase(track, section, [], [])
+    return _TestCase(track, track_dataset, section, [], [])
 
 
 class TestShapelyIntersectBySmallestTrackSegments:
-    def _create_intersector(
-        self, offset: RelativeOffsetCoordinate
-    ) -> ShapelyIntersectBySmallestTrackSegments:
-        geometry_builder = ShapelyGeometryBuilder()
-        track_lookup_table = ShapelyTrackLookupTable(dict(), geometry_builder, offset)
-
-        return ShapelyIntersectBySmallestTrackSegments(
-            geometry_builder, track_lookup_table
-        )
+    def _create_intersector(self) -> ShapelyIntersectBySmallestTrackSegments:
+        return ShapelyIntersectBySmallestTrackSegments()
 
     @pytest.mark.parametrize(
         "test_case_name",
@@ -264,24 +331,17 @@ class TestShapelyIntersectBySmallestTrackSegments:
         event_builder = Mock()
         event_builder.create_event.return_value = event
 
-        intersector = self._create_intersector(
-            test_case.section.get_offset(EventType.SECTION_ENTER)
-        )
+        intersector = self._create_intersector()
         result_events = intersector.intersect(
-            [test_case.track], test_case.section, event_builder
+            test_case.track_dataset, [test_case.section], event_builder
         )
 
         test_case.assert_valid(result_events, event_builder)
 
 
 class TestShapelyIntersectAreaByTrackPoints:
-    def _create_intersector(
-        self, offset: RelativeOffsetCoordinate
-    ) -> ShapelyIntersectAreaByTrackPoints:
-        geometry_builder = ShapelyGeometryBuilder()
-        track_lookup_table = ShapelyTrackLookupTable(dict(), geometry_builder, offset)
-
-        return ShapelyIntersectAreaByTrackPoints(geometry_builder, track_lookup_table)
+    def _create_intersector(self) -> ShapelyIntersectAreaByTrackPoints:
+        return ShapelyIntersectAreaByTrackPoints()
 
     @pytest.fixture
     def straight_track(self, track_builder: TrackBuilder) -> Track:
@@ -343,6 +403,11 @@ class TestShapelyIntersectAreaByTrackPoints:
             SectionType.AREA,
             offset,
         )
+        track_dataset = Mock(spec=TrackDataset)
+        track_dataset.contained_by_sections.return_value = {
+            straight_track.id: [(section.id, [False, True, False])]
+        }
+        track_dataset.get_for.return_value = straight_track
         expected_event_coords = [
             _ExpectedEventCoord.from_detection(
                 straight_track.detections[1], 1, EventType.SECTION_ENTER, offset
@@ -352,8 +417,12 @@ class TestShapelyIntersectAreaByTrackPoints:
             ),
         ]
         expected_direction_vectors = [(1.0, 0.0), (1.0, 0)]
-        return _TestCase(
-            straight_track, section, expected_event_coords, expected_direction_vectors
+        return AreaSectionTestCase(
+            straight_track,
+            track_dataset,
+            section,
+            expected_event_coords,
+            expected_direction_vectors,
         )
 
     @pytest.fixture
@@ -362,13 +431,22 @@ class TestShapelyIntersectAreaByTrackPoints:
             [(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5), (0.5, 0.5)],
             SectionType.AREA,
         )
+        track_dataset = Mock(spec=TrackDataset)
+        track_dataset.contained_by_sections.return_value = {
+            straight_track.id: [(section.id, [True, False, False])]
+        }
+        track_dataset.get_for.return_value = straight_track
         expected_event_coords = [
             _ExpectedEventCoord(0, 1.0, 1.0, EventType.SECTION_ENTER),
             _ExpectedEventCoord(1, 2.0, 1.0, EventType.SECTION_LEAVE),
         ]
         expected_direction_vectors = [(1.0, 0.0), (1.0, 0.0)]
-        return _TestCase(
-            straight_track, section, expected_event_coords, expected_direction_vectors
+        return AreaSectionTestCase(
+            straight_track,
+            track_dataset,
+            section,
+            expected_event_coords,
+            expected_direction_vectors,
         )
 
     @pytest.fixture
@@ -377,12 +455,21 @@ class TestShapelyIntersectAreaByTrackPoints:
             [(0.0, 0.0), (0.0, 2.0), (4.0, 2.0), (4.0, 0.0), (0.0, 0.0)],
             SectionType.AREA,
         )
+        track_dataset = Mock(spec=TrackDataset)
+        track_dataset.contained_by_sections.return_value = {
+            straight_track.id: [(section.id, [True, True, True])]
+        }
+        track_dataset.get_for.return_value = straight_track
         expected_event_coords = [
             _ExpectedEventCoord(0, 1.0, 1.0, EventType.SECTION_ENTER)
         ]
         expected_direction_vectors = [(1.0, 0.0)]
-        return _TestCase(
-            straight_track, section, expected_event_coords, expected_direction_vectors
+        return AreaSectionTestCase(
+            straight_track,
+            track_dataset,
+            section,
+            expected_event_coords,
+            expected_direction_vectors,
         )
 
     @pytest.fixture
@@ -391,12 +478,21 @@ class TestShapelyIntersectAreaByTrackPoints:
             [(1.5, 0.5), (1.5, 1.5), (4.0, 1.5), (4.0, 0.5), (1.5, 0.5)],
             SectionType.AREA,
         )
+        track_dataset = Mock(spec=TrackDataset)
+        track_dataset.contained_by_sections.return_value = {
+            straight_track.id: [(section.id, [False, True, True])]
+        }
+        track_dataset.get_for.return_value = straight_track
         expected_event_coords = [
             _ExpectedEventCoord(1, 2.0, 1.0, EventType.SECTION_ENTER)
         ]
         expected_direction_vectors = [(1.0, 0.0)]
-        return _TestCase(
-            straight_track, section, expected_event_coords, expected_direction_vectors
+        return AreaSectionTestCase(
+            straight_track,
+            track_dataset,
+            section,
+            expected_event_coords,
+            expected_direction_vectors,
         )
 
     @pytest.fixture
@@ -408,14 +504,23 @@ class TestShapelyIntersectAreaByTrackPoints:
             [(1.5, 0.5), (1.5, 2.5), (2.5, 2.5), (2.5, 0.5), (1.5, 0.5)],
             SectionType.AREA,
         )
+        track_dataset = Mock(spec=TrackDataset)
+        track_dataset.contained_by_sections.return_value = {
+            complex_track.id: [(section.id, [False, True, True, False, False, True])]
+        }
+        track_dataset.get_for.return_value = complex_track
         expected_event_coords = [
             _ExpectedEventCoord(1, 2.0, 1.0, EventType.SECTION_ENTER),
             _ExpectedEventCoord(3, 1.0, 1.5, EventType.SECTION_LEAVE),
             _ExpectedEventCoord(5, 2.0, 2.0, EventType.SECTION_ENTER),
         ]
         expected_direction_vectors = [(1.0, 0.0), (-1.0, 0), (1.0, 0.0)]
-        return _TestCase(
-            complex_track, section, expected_event_coords, expected_direction_vectors
+        return AreaSectionTestCase(
+            complex_track,
+            track_dataset,
+            section,
+            expected_event_coords,
+            expected_direction_vectors,
         )
 
     @pytest.fixture
@@ -427,6 +532,11 @@ class TestShapelyIntersectAreaByTrackPoints:
             [(0.5, 0.5), (0.5, 2.5), (1.5, 2.5), (1.5, 0.5), (0.5, 0.5)],
             SectionType.AREA,
         )
+        track_dataset = Mock(spec=TrackDataset)
+        track_dataset.contained_by_sections.return_value = {
+            complex_track.id: [(section.id, [True, False, False, True, True, False])]
+        }
+        track_dataset.get_for.return_value = complex_track
         expected_event_coords = [
             _ExpectedEventCoord(0, 1.0, 1.0, EventType.SECTION_ENTER),
             _ExpectedEventCoord(1, 2.0, 1.0, EventType.SECTION_LEAVE),
@@ -434,49 +544,36 @@ class TestShapelyIntersectAreaByTrackPoints:
             _ExpectedEventCoord(5, 2.0, 2.0, EventType.SECTION_LEAVE),
         ]
         expected_direction_vectors = [(1.0, 0.0), (1.0, 0.0), (-1.0, 0), (1, 0)]
-        return _TestCase(
-            complex_track, section, expected_event_coords, expected_direction_vectors
+        return AreaSectionTestCase(
+            complex_track,
+            track_dataset,
+            section,
+            expected_event_coords,
+            expected_direction_vectors,
         )
 
     @pytest.fixture
-    def test_case_intersect_closed_track(
-        self, track_builder: TrackBuilder
-    ) -> _TestCase:
-        track_builder.add_xy_bbox(1.0, 1.0)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(2.0, 1.0)
-        track_builder.add_frame(2)
-        track_builder.add_microsecond(1)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(2.0, 1.5)
-        track_builder.add_frame(3)
-        track_builder.add_microsecond(2)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(1.0, 1.5)
-        track_builder.add_frame(4)
-        track_builder.add_microsecond(3)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(1.0, 1.0)
-        track_builder.add_frame(5)
-        track_builder.add_microsecond(4)
-        track_builder.append_detection()
-
-        track = track_builder.build_track()
+    def test_case_intersect_closed_track(self, closed_track: Track) -> _TestCase:
         section = create_section(
             [(1.5, 0.5), (1.5, 2.0), (2.5, 2.0), (2.5, 0.5), (1.5, 0.5)],
             SectionType.AREA,
         )
+        track_dataset = Mock(spec=TrackDataset)
+        track_dataset.contained_by_sections.return_value = {
+            closed_track.id: [(section.id, [False, True, False, False, False])]
+        }
+        track_dataset.get_for.return_value = closed_track
         expected_event_coords = [
             _ExpectedEventCoord(1, 2.0, 1.0, EventType.SECTION_ENTER),
-            _ExpectedEventCoord(3, 1.0, 1.5, EventType.SECTION_LEAVE),
+            _ExpectedEventCoord(2, 2.0, 2.0, EventType.SECTION_LEAVE),
         ]
-        expected_direction_vectors = [(1.0, 0.0), (-1.0, 0.0)]
-        return _TestCase(
-            track, section, expected_event_coords, expected_direction_vectors
+        expected_direction_vectors = [(1.0, 0.0), (0.0, 1.0)]
+        return AreaSectionTestCase(
+            closed_track,
+            track_dataset,
+            section,
+            expected_event_coords,
+            expected_direction_vectors,
         )
 
     @pytest.mark.parametrize(
@@ -503,11 +600,9 @@ class TestShapelyIntersectAreaByTrackPoints:
         event_builder = Mock()
         event_builder.create_event.return_value = event
 
-        intersector = self._create_intersector(
-            test_case.section.get_offset(EventType.SECTION_ENTER)
-        )
+        intersector = self._create_intersector()
         result_events = intersector.intersect(
-            [test_case.track], test_case.section, event_builder
+            test_case.track_dataset, [test_case.section], event_builder
         )
 
         test_case.assert_valid(result_events, event_builder)

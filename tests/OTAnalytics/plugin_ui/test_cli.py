@@ -44,6 +44,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackIds,
+    GetAllTracks,
     GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
@@ -59,7 +60,6 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
     ShapelyRunIntersect,
 )
-from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTrackSegmentBuilder,
@@ -267,7 +267,10 @@ class TestOTAnalyticsCli:
         flow_repository = FlowRepository()
         add_events = AddEvents(event_repository)
 
-        get_all_tracks = GetTracksWithoutSingleDetections(track_repository)
+        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+            track_repository
+        )
+        get_all_tracks = GetAllTracks(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
@@ -281,9 +284,7 @@ class TestOTAnalyticsCli:
             section_repository,
             add_events,
         )
-        tracks_intersecting_sections = SimpleTracksIntersectingSections(
-            get_all_tracks, ShapelyIntersector()
-        )
+        tracks_intersecting_sections = SimpleTracksIntersectingSections(get_all_tracks)
         cut_tracks_with_section = SimpleCutTracksWithSection(
             GetTracksFromIds(track_repository),
             ShapelyMapper(),
@@ -293,7 +294,7 @@ class TestOTAnalyticsCli:
         cut_tracks = (
             SimpleCutTracksIntersectingSection(
                 GetSectionsById(section_repository),
-                get_all_tracks,
+                get_tracks_without_single_detections,
                 tracks_intersecting_sections,
                 cut_tracks_with_section,
                 add_all_tracks,
@@ -302,7 +303,7 @@ class TestOTAnalyticsCli:
             ),
         )
         create_scene_events = SimpleCreateSceneEvents(
-            get_all_tracks,
+            get_tracks_without_single_detections,
             SceneActionDetector(SceneEventBuilder()),
             add_events,
         )

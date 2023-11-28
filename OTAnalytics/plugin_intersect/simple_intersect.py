@@ -5,6 +5,7 @@ from OTAnalytics.application.analysis.intersect import TracksIntersectingSection
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.types import EventType
 
 
 class SimpleTracksIntersectingSections(TracksIntersectingSections):
@@ -20,7 +21,11 @@ class SimpleTracksIntersectingSections(TracksIntersectingSections):
         total_tracks_intersected = 0
         print("Number of intersecting tracks per section")
         for section in sections:
-            result[section.id].update(track_dataset.intersecting_tracks([section]))
+            result[section.id].update(
+                track_dataset.intersecting_tracks(
+                    [section], section.get_offset(EventType.SECTION_ENTER)
+                )
+            )
             num_tracks_intersected = len(result[section.id])
             total_tracks_intersected += num_tracks_intersected
             print(f"{section.name}: {num_tracks_intersected} tracks")

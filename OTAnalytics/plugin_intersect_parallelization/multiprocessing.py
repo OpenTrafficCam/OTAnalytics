@@ -7,7 +7,7 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.intersect import IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import TrackDataset
 
 
 class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
@@ -31,8 +31,8 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
 
     def execute(
         self,
-        intersect: Callable[[Iterable[Track], Iterable[Section]], Iterable[Event]],
-        tasks: Sequence[tuple[Iterable[Track], Iterable[Section]]],
+        intersect: Callable[[TrackDataset, Iterable[Section]], Iterable[Event]],
+        tasks: Sequence[tuple[TrackDataset, Iterable[Section]]],
     ) -> list[Event]:
         logger().debug(
             f"Start intersection in parallel with {self._num_processes} processes."

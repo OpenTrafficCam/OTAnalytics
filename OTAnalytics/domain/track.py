@@ -186,13 +186,13 @@ class Detection(ABC):
         Returns:
             Coordinate: this detection's coordinate.
         """
-        if offset:
+        if not offset or offset == RelativeOffsetCoordinate(0, 0):
+            return Coordinate(self.x, self.y)
+        else:
             return Coordinate(
                 x=self.x + self.w * offset.x,
                 y=self.y + self.h * offset.y,
             )
-        else:
-            return Coordinate(self.x, self.y)
 
 
 class Track(ABC):
