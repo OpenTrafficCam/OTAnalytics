@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701048112834,
+  "lastUpdate": 1701134556298,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1024,6 +1024,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 139.19154511601664 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "65451c0d16d2cea259049faf90a75c3526f835a4",
+          "message": "Merge pull request #411 from OpenTrafficCam/bug/3670-background-image-is-not-updated-when-video-is-added\n\nbug/3670-background-image-is-not-updated-when-video-is-added",
+          "timestamp": "2023-11-27T12:09:23Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/65451c0d16d2cea259049faf90a75c3526f835a4"
+        },
+        "date": 1701134555819,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.10765531984178749,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 9.288904640008695 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.014891125815963998,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 67.15408978197956 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.07249292927411234,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 13.794448782980908 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.008273797216102437,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 120.86348914302653 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.05582761122163341,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 17.91228351200698 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.007072457630994677,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 141.3935653170338 sec\nrounds: 1"
           }
         ]
       }
