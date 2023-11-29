@@ -137,9 +137,9 @@ class ShapelyIntersectBySmallestTrackSegments(Intersector):
                     "Track not found. Unable to create intersection event "
                     f"for track {track_id}."
                 )
+            event_builder.add_road_user_type(track.classification)
             for section_id, intersection_point in intersection_points:
                 event_builder.add_section_id(section_id)
-                event_builder.add_road_user_type(track.classification)
                 detection = track.detections[intersection_point.index]
                 current_coord = detection.get_coordinate(offset)
                 prev_coord = track.detections[
