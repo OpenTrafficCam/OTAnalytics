@@ -17,7 +17,7 @@ from OTAnalytics.domain.geometry import (
     calculate_direction_vector,
 )
 from OTAnalytics.domain.intersect import Intersector, IntersectParallelizationStrategy
-from OTAnalytics.domain.section import Area, IntersectionVisitor, LineSection, Section
+from OTAnalytics.domain.section import Area, LineSection, Section
 from OTAnalytics.domain.track import Track, TrackDataset, TrackId
 from OTAnalytics.domain.types import EventType
 
@@ -265,7 +265,7 @@ class ShapelyIntersectAreaByTrackPoints(Intersector):
         return events
 
 
-class ShapelyCreateIntersectionEvents(IntersectionVisitor[Event]):
+class ShapelyCreateIntersectionEvents:
     def __init__(
         self,
         intersect_line_section: Intersector,
@@ -294,12 +294,6 @@ class ShapelyCreateIntersectionEvents(IntersectionVisitor[Event]):
             )
         )
         return events
-
-    def intersect_line_section(self, section: LineSection) -> list[Event]:
-        raise NotImplementedError
-
-    def intersect_area_section(self, section: Area) -> list[Event]:
-        raise NotImplementedError
 
 
 class ShapelyRunIntersect(RunIntersect):
