@@ -282,7 +282,7 @@ def test_case_closed_track_line_section(
             (section.id, IntersectionPoint(4)),
         ]
     }
-    track_dataset.get_for.return_value = track
+    track_dataset.get_for.return_value = closed_track
     expected_event_coords = [
         _ExpectedEventCoord(2, 2.0, 2.0),
         _ExpectedEventCoord(4, 1.0, 1.0),
