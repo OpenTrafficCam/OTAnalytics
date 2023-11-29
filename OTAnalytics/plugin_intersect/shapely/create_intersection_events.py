@@ -153,7 +153,7 @@ class ShapelyIntersectBySmallestTrackSegments(Intersector):
                 )
                 event_builder.add_event_type(EventType.SECTION_ENTER)
                 event_builder.add_direction_vector(direction_vector)
-                event_builder.add_event_coordinate(detection.x, detection.y)
+                event_builder.add_event_coordinate(current_coord.x, current_coord.y)
                 events.append(event_builder.create_event(detection))
         return events
 
