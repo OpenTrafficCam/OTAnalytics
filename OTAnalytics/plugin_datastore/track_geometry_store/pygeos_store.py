@@ -6,7 +6,6 @@ from typing import Any, Iterable, Literal, TypedDict
 from pandas import DataFrame
 from pygeos import (
     Geometry,
-    apply,
     contains,
     geometrycollections,
     get_coordinates,
@@ -243,32 +242,6 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             intersection_points[_id].append((section_id, intersection_point))
 
         return intersection_points
-
-    def _get_track_geometries_for(self, offset: RelativeOffsetCoordinate) -> DataFrame:
-        if (track_df := self._dataset.get(offset, None)) is None:
-            self._create_tracks_for(offset)
-            track_df = self._dataset[offset]
-        return track_df
-
-    def _create_tracks_for(self, offset: RelativeOffsetCoordinate) -> None:
-        base_track_geometry = self._dataset[BASE_GEOMETRY]
-        self._dataset[offset] = self._apply_offset(base_track_geometry, offset)
-
-    @staticmethod
-    def _apply_offset(
-        base_track_geometries: DataFrame, offset: RelativeOffsetCoordinate
-    ) -> DataFrame:
-        new_track_df = base_track_geometries.copy()
-        new_track_df[GEOMETRY] = new_track_df[GEOMETRY].apply(
-            lambda geom: apply(geom, lambda coord: coord + coord * [offset.x, offset.y])
-        )
-        new_track_df[PROJECTION] = new_track_df[GEOMETRY].apply(
-            lambda track_geom: [
-                line_locate_point(track_geom, points(p))
-                for p in get_coordinates(track_geom)
-            ]
-        )
-        return new_track_df
 
     def _next_event(
         self,
