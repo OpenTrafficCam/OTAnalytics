@@ -9,7 +9,7 @@ import pytest
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.domain.track import Detection, Track, TrackDataset, TrackId
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import ottrk_dataformat
@@ -413,6 +413,11 @@ def assert_equal_track_properties(actual: Track, expected: Track) -> None:
         expected.detections, actual.detections
     ):
         assert_equal_detection_properties(second_detection, first_detection)
+
+
+def assert_track_datasets_equal(actual: TrackDataset, expected: TrackDataset) -> None:
+    for actual_track, expected_track in zip(actual.as_list(), expected.as_list()):
+        assert_equal_track_properties(actual_track, expected_track)
 
 
 def append_sample_data(

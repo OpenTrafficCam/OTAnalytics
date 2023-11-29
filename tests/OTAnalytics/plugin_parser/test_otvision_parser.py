@@ -69,7 +69,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     _write_bz2,
     _write_json,
 )
-from tests.conftest import TrackBuilder
+from tests.conftest import TrackBuilder, assert_track_datasets_equal
 
 
 @pytest.fixture
@@ -264,7 +264,9 @@ class TestOttrkParser:
         expected_detection_classes = frozenset(
             ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
         )
-        assert parse_result.tracks == PythonTrackDataset.from_list([expected_track])
+        assert_track_datasets_equal(
+            parse_result.tracks, PythonTrackDataset.from_list([expected_track])
+        )
         assert parse_result.metadata.detection_classes == expected_detection_classes
         ottrk_file.unlink()
 
@@ -331,9 +333,8 @@ class TestPythonDetectionParser:
         expected_sorted = PythonTrackDataset.from_list(
             [track_builder_setup_with_sample_data.build_track()]
         )
-
-        assert expected_sorted == result_sorted_input
-        assert expected_sorted == result_unsorted_input
+        assert_track_datasets_equal(result_sorted_input, expected_sorted)
+        assert_track_datasets_equal(result_unsorted_input, expected_sorted)
 
     def test_parse_tracks_merge_with_existing(
         self,
@@ -370,7 +371,7 @@ class TestPythonDetectionParser:
 
         expected_sorted = PythonTrackDataset.from_list([merged_track])
 
-        assert expected_sorted == result_sorted_input
+        assert_track_datasets_equal(result_sorted_input, expected_sorted)
 
     @pytest.mark.parametrize(
         "track_length_limit",
