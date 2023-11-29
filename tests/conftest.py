@@ -6,10 +6,11 @@ from typing import Generator, Sequence, TypeVar
 
 import pytest
 
-from OTAnalytics.domain.event import Event, EventType
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackDataset, TrackId
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import ottrk_dataformat
@@ -389,6 +390,97 @@ def track_builder() -> TrackBuilder:
 @pytest.fixture
 def event_builder() -> EventBuilder:
     return EventBuilder()
+
+
+@pytest.fixture
+def straight_track() -> Track:
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("straight-track")
+    track_builder.add_wh_bbox(0.5, 0.5)
+    track_builder.add_xy_bbox(1.0, 1.0)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2.0, 1.0)
+    track_builder.add_frame(2)
+    track_builder.add_microsecond(1)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(3.0, 1.0)
+    track_builder.add_frame(3)
+    track_builder.add_microsecond(2)
+    track_builder.append_detection()
+
+    return track_builder.build_track()
+
+
+@pytest.fixture
+def complex_track() -> Track:
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("complex-track")
+    track_builder.add_xy_bbox(1.0, 1.0)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2.0, 1.0)
+    track_builder.add_frame(2)
+    track_builder.add_microsecond(1)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2.0, 1.5)
+    track_builder.add_frame(3)
+    track_builder.add_microsecond(2)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(1.0, 1.5)
+    track_builder.add_frame(4)
+    track_builder.add_microsecond(3)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(1.0, 2.0)
+    track_builder.add_frame(5)
+    track_builder.add_microsecond(4)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2.0, 2.0)
+    track_builder.add_frame(5)
+    track_builder.add_microsecond(4)
+    track_builder.append_detection()
+
+    return track_builder.build_track()
+
+
+@pytest.fixture
+def closed_track() -> Track:
+    classification = "car"
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("closed-track")
+    track_builder.add_track_class(classification)
+    track_builder.add_detection_class(classification)
+
+    track_builder.add_frame(1)
+    track_builder.add_second(1)
+    track_builder.add_xy_bbox(1.0, 1.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(2)
+    track_builder.add_second(2)
+    track_builder.add_xy_bbox(2.0, 1.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(3)
+    track_builder.add_second(3)
+    track_builder.add_xy_bbox(2.0, 2.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.add_xy_bbox(1.0, 2.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.add_xy_bbox(1.0, 1.0)
+    track_builder.append_detection()
+    return track_builder.build_track()
 
 
 def assert_equal_detection_properties(actual: Detection, expected: Detection) -> None:

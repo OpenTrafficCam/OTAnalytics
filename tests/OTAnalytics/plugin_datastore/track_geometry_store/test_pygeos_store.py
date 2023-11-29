@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 from unittest.mock import MagicMock, Mock
@@ -37,6 +38,17 @@ def create_track_dataset(tracks: list[Track]) -> TrackDataset:
     dataset.__iter__.return_value = iter(tracks)
     dataset.__len__.return_value = len(tracks)
     return dataset
+
+
+def create_line_section(
+    section_id: str, coordinates: list[tuple[float, float]]
+) -> Section:
+    section = Mock(spec=LineSection)
+    section.get_coordinates.return_value = [
+        Coordinate(coord[0], coord[1]) for coord in coordinates
+    ]
+    section.id = SectionId(section_id)
+    return section
 
 
 def create_geometry_dataset_from(
@@ -301,6 +313,95 @@ def assert_track_geometry_dataset_equals(
     assert to_compare._dataset.equals(other._dataset)  # noqa
 
 
+@dataclass
+class ContainedBySectionTestCase:
+    tracks: list[Track]
+    sections: list[Section]
+    expected_result: dict[TrackId, list[tuple[SectionId, list[bool]]]]
+
+
+@pytest.fixture
+def contained_by_section_test_case(
+    straight_track: Track, complex_track: Track, closed_track: Track
+) -> ContainedBySectionTestCase:
+    # Straight track starts outside section
+    first_section = create_line_section(
+        "1", [(1.5, 0.5), (1.5, 1.5), (2.5, 1.5), (2.5, 0.5), (1.5, 0.5)]
+    )
+    # Straight track starts inside section
+    second_section = create_line_section(
+        "2", [(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5), (0.5, 0.5)]
+    )
+    # Straight track is inside section
+    third_section = create_line_section(
+        "3", [(0.0, 0.0), (0.0, 2.0), (4.0, 2.0), (4.0, 0.0), (0.0, 0.0)]
+    )
+    # Straight track starts outside stays inside section
+    fourth_section = create_line_section(
+        "4", [(1.5, 0.5), (1.5, 1.5), (4.0, 1.5), (4.0, 0.5), (1.5, 0.5)]
+    )
+    # Complex track starts outside section with multiple intersections
+    fifth_section = create_line_section(
+        "5",
+        [(1.5, 0.5), (1.5, 2.5), (2.5, 2.5), (2.5, 0.5), (1.5, 0.5)],
+    )
+    # Complex track starts inside section with multiple intersections
+    sixth_section = create_line_section(
+        "6", [(0.5, 0.5), (0.5, 2.5), (1.5, 2.5), (1.5, 0.5), (0.5, 0.5)]
+    )
+    # Closed track
+    seventh_section = create_line_section(
+        "7", [(1.5, 0.5), (1.5, 2.0), (2.5, 2.0), (2.5, 0.5), (1.5, 0.5)]
+    )
+    # Not contained track
+    eighth_section = create_line_section(
+        "not-contained", [(3.0, 1.0), (3.0, 2.0), (4.0, 2.0), (4.0, 1.0), (3.0, 1.0)]
+    )
+    expected = {
+        straight_track.id: [
+            (first_section.id, [False, True, False]),
+            (second_section.id, [True, False, False]),
+            (third_section.id, [True, True, True]),
+            (fourth_section.id, [False, True, True]),
+            (fifth_section.id, [False, True, False]),
+            (sixth_section.id, [True, False, False]),
+            (seventh_section.id, [False, True, False]),
+        ],
+        complex_track.id: [
+            (first_section.id, [False, True, False, False, False, False]),
+            (second_section.id, [True, False, False, False, False, False]),
+            (third_section.id, [True, True, True, True, False, False]),
+            (fourth_section.id, [False, True, False, False, False, False]),
+            (fifth_section.id, [False, True, True, False, False, True]),
+            (sixth_section.id, [True, False, False, True, True, False]),
+            (seventh_section.id, [False, True, True, False, False, False]),
+        ],
+        closed_track.id: [
+            (first_section.id, [False, True, False, False, False]),
+            (second_section.id, [True, False, False, False, True]),
+            (third_section.id, [True, True, False, False, True]),
+            (fourth_section.id, [False, True, False, False, False]),
+            (fifth_section.id, [False, True, True, False, False]),
+            (sixth_section.id, [True, False, False, True, True]),
+            (seventh_section.id, [False, True, False, False, False]),
+        ],
+    }
+    return ContainedBySectionTestCase(
+        [straight_track, complex_track, closed_track],
+        [
+            first_section,
+            second_section,
+            third_section,
+            fourth_section,
+            fifth_section,
+            sixth_section,
+            seventh_section,
+            eighth_section,
+        ],
+        expected,
+    )
+
+
 class TestPygeosTrackGeometryDataset:
     @pytest.fixture
     def simple_track(self) -> Track:
@@ -491,30 +592,16 @@ class TestPygeosTrackGeometryDataset:
 
     def test_contained_by_sections(
         self,
-        first_track: Track,
-        second_track: Track,
-        not_intersecting_track: Track,
-        area_section: Section,
-        not_intersecting_area_section: Section,
+        contained_by_section_test_case: ContainedBySectionTestCase,
     ) -> None:
-        track_dataset = create_track_dataset(
-            [not_intersecting_track, first_track, second_track]
-        )
+        track_dataset = create_track_dataset(contained_by_section_test_case.tracks)
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
         result = geometry_dataset.contained_by_sections(
-            [not_intersecting_area_section, area_section]
+            contained_by_section_test_case.sections
         )
-        expected = {
-            first_track.id: [
-                (area_section.id, [False, True, False, False, False]),
-            ],
-            second_track.id: [
-                (area_section.id, [False, True, False, False, False]),
-            ],
-        }
-        assert result == expected
+        assert result == contained_by_section_test_case.expected_result
 
 
 class TestProfiling:

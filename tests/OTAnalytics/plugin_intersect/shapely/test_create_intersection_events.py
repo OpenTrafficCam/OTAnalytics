@@ -209,42 +209,6 @@ def track(track_builder: TrackBuilder) -> Track:
 
 
 @pytest.fixture
-def closed_track(track_builder: TrackBuilder) -> Track:
-    classification = "car"
-    track_id = "2"
-
-    track_builder.add_track_class(classification)
-    track_builder.add_detection_class(classification)
-    track_builder.add_track_id(track_id)
-
-    track_builder.add_frame(1)
-    track_builder.add_second(1)
-    track_builder.add_xy_bbox(1.0, 1.0)
-    track_builder.append_detection()
-
-    track_builder.add_frame(2)
-    track_builder.add_second(2)
-    track_builder.add_xy_bbox(2.0, 1.0)
-    track_builder.append_detection()
-
-    track_builder.add_frame(3)
-    track_builder.add_second(3)
-    track_builder.add_xy_bbox(2.0, 2.0)
-    track_builder.append_detection()
-
-    track_builder.add_frame(5)
-    track_builder.add_second(5)
-    track_builder.add_xy_bbox(1.0, 2.0)
-    track_builder.append_detection()
-
-    track_builder.add_frame(5)
-    track_builder.add_second(5)
-    track_builder.add_xy_bbox(1.0, 1.0)
-    track_builder.append_detection()
-    return track_builder.build_track()
-
-
-@pytest.fixture
 def test_case_track_line_section(track: Track) -> _TestCase:
     offset = (0, 0.5)
     section = create_section([(1.5, 0), (1.5, 1.5)], SectionType.LINE, offset)
@@ -342,56 +306,6 @@ class TestShapelyIntersectBySmallestTrackSegments:
 class TestShapelyIntersectAreaByTrackPoints:
     def _create_intersector(self) -> ShapelyIntersectAreaByTrackPoints:
         return ShapelyIntersectAreaByTrackPoints()
-
-    @pytest.fixture
-    def straight_track(self, track_builder: TrackBuilder) -> Track:
-        track_builder.add_wh_bbox(0.5, 0.5)
-        track_builder.add_xy_bbox(1.0, 1.0)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(2.0, 1.0)
-        track_builder.add_frame(2)
-        track_builder.add_microsecond(1)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(3.0, 1.0)
-        track_builder.add_frame(3)
-        track_builder.add_microsecond(2)
-        track_builder.append_detection()
-
-        return track_builder.build_track()
-
-    @pytest.fixture
-    def complex_track(self, track_builder: TrackBuilder) -> Track:
-        track_builder.add_xy_bbox(1.0, 1.0)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(2.0, 1.0)
-        track_builder.add_frame(2)
-        track_builder.add_microsecond(1)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(2.0, 1.5)
-        track_builder.add_frame(3)
-        track_builder.add_microsecond(2)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(1.0, 1.5)
-        track_builder.add_frame(4)
-        track_builder.add_microsecond(3)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(1.0, 2.0)
-        track_builder.add_frame(5)
-        track_builder.add_microsecond(4)
-        track_builder.append_detection()
-
-        track_builder.add_xy_bbox(2.0, 2.0)
-        track_builder.add_frame(5)
-        track_builder.add_microsecond(4)
-        track_builder.append_detection()
-
-        return track_builder.build_track()
 
     @pytest.fixture
     def test_case_track_starts_outside_section(
