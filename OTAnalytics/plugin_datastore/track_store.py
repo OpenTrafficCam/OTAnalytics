@@ -12,7 +12,6 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
-    MIN_NUMBER_OF_DETECTIONS,
     TRACK_GEOMETRY_FACTORY,
     Detection,
     IntersectionPoint,
@@ -186,19 +185,7 @@ class PandasTrackDataset(TrackDataset):
         if tracks.empty:
             return PandasTrackDataset()
         classified_tracks = _assign_track_classification(tracks, calculator)
-        detections_per_track = (
-            classified_tracks.groupby(by=track.TRACK_ID)[track.FRAME]
-            .count()
-            .reset_index()
-        )
-        valid_track_ids = detections_per_track.loc[
-            detections_per_track[track.FRAME] >= MIN_NUMBER_OF_DETECTIONS,
-            track.TRACK_ID,
-        ]
-        valid_tracks = classified_tracks.loc[
-            classified_tracks[track.TRACK_ID].isin(valid_track_ids), :
-        ]
-        return PandasTrackDataset(valid_tracks, geometry_datasets=geometry_dataset)
+        return PandasTrackDataset(classified_tracks, geometry_datasets=geometry_dataset)
 
     def add_all(self, other: Iterable[Track]) -> TrackDataset:
         new_tracks = self.__get_tracks(other)
