@@ -1,20 +1,27 @@
 from typing import cast
+from unittest.mock import Mock
 
 import pytest
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import Track, TrackDataset, TrackId
-from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.track import Track, TrackDataset, TrackGeometryDataset, TrackId
+from OTAnalytics.plugin_datastore.python_track_store import (
+    PythonTrack,
+    PythonTrackDataset,
+)
 from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,
+    _convert_tracks,
 )
 from tests.conftest import (
     TrackBuilder,
     assert_equal_detection_properties,
     assert_equal_track_properties,
+    assert_track_datasets_equal,
 )
 
 
@@ -135,6 +142,60 @@ class TestPandasTrackDataset:
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
         assert merged._geometry_datasets == {}
+
+    def test_add_all_merge_tracks(
+        self, first_track: Track, first_track_continuing: Track, second_track: Track
+    ) -> None:
+        geometry_dataset_no_offset = Mock(spec=TrackGeometryDataset)
+        updated_geometry_dataset_no_offset = Mock()
+        geometry_dataset_no_offset.add_all.return_value = (
+            updated_geometry_dataset_no_offset
+        )
+        geometry_dataset_with_offset = Mock(spec=TrackGeometryDataset)
+        updated_geometry_dataset_with_offset = Mock()
+        geometry_dataset_with_offset.add_all.return_value = (
+            updated_geometry_dataset_with_offset
+        )
+        geometry_datasets = {
+            RelativeOffsetCoordinate(0, 0): cast(
+                TrackGeometryDataset, geometry_dataset_no_offset
+            ),
+            RelativeOffsetCoordinate(0.5, 0.5): cast(
+                TrackGeometryDataset, geometry_dataset_with_offset
+            ),
+        }
+        dataset = PandasTrackDataset.from_dataframe(
+            _convert_tracks([first_track]), geometry_datasets
+        )
+        dataset_merged_track = cast(
+            PandasTrackDataset, dataset.add_all([first_track_continuing, second_track])
+        )
+        expected_merged_track = PythonTrack(
+            first_track.id,
+            first_track_continuing.classification,
+            first_track.detections + first_track_continuing.detections,
+        )
+        expected_dataset = PandasTrackDataset.from_list(
+            [expected_merged_track, second_track]
+        )
+        assert_track_datasets_equal(dataset_merged_track, expected_dataset)
+
+        for actual_track, expected_track in zip(
+            geometry_dataset_no_offset.add_all.call_args_list[0][0][0],
+            expected_dataset,
+        ):
+            assert_equal_track_properties(actual_track, expected_track)
+
+        for actual_track, expected_track in zip(
+            geometry_dataset_with_offset.add_all.call_args_list[0][0][0],
+            expected_dataset,
+        ):
+            assert_equal_track_properties(actual_track, expected_track)
+
+        assert dataset_merged_track._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset_no_offset,
+            RelativeOffsetCoordinate(0.5, 0.5): updated_geometry_dataset_with_offset,
+        }
 
     def __build_track(self, track_id: str, length: int = 5) -> Track:
         builder = TrackBuilder()

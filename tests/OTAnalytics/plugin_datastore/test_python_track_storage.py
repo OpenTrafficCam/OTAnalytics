@@ -1,11 +1,19 @@
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 from unittest.mock import Mock
 
 import pytest
 
 from OTAnalytics.domain.event import VIDEO_NAME
-from OTAnalytics.domain.track import Detection, Track, TrackHasNoDetectionError, TrackId
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.track import (
+    Detection,
+    Track,
+    TrackGeometryDataset,
+    TrackHasNoDetectionError,
+    TrackId,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonDetection,
@@ -239,31 +247,60 @@ class TestPythonTrackDataset:
 
         return PythonTrackDataset(dataset)
 
-    def test_add_all(self, first_track: Track, second_track: Track) -> None:
+    def test_add_all_to_empty(self, first_track: Track, second_track: Track) -> None:
         tracks = [first_track, second_track]
         dataset = PythonTrackDataset()
-        result_dataset = dataset.add_all(tracks)
+        result_dataset = cast(PythonTrackDataset, dataset.add_all(tracks))
 
         assert list(result_dataset) == tracks
+        assert result_dataset._geometry_datasets == {}
 
     def test_add_all_merge_tracks(
-        self, first_track: Track, first_track_continuing: Track
+        self, first_track: Track, first_track_continuing: Track, second_track: Track
     ) -> None:
-        dataset = PythonTrackDataset()
-        dataset_with_first_track = dataset.add_all([first_track])
-        assert list(dataset_with_first_track) == [first_track]
-
-        dataset_merged_track = dataset_with_first_track.add_all(
-            [first_track_continuing]
+        geometry_dataset_no_offset = Mock(spec=TrackGeometryDataset)
+        updated_geometry_dataset_no_offset = Mock()
+        geometry_dataset_no_offset.add_all.return_value = (
+            updated_geometry_dataset_no_offset
         )
-
+        geometry_dataset_with_offset = Mock(spec=TrackGeometryDataset)
+        updated_geometry_dataset_with_offset = Mock()
+        geometry_dataset_with_offset.add_all.return_value = (
+            updated_geometry_dataset_with_offset
+        )
+        geometry_datasets = {
+            RelativeOffsetCoordinate(0, 0): cast(
+                TrackGeometryDataset, geometry_dataset_no_offset
+            ),
+            RelativeOffsetCoordinate(0.5, 0.5): cast(
+                TrackGeometryDataset, geometry_dataset_with_offset
+            ),
+        }
+        dataset = PythonTrackDataset({first_track.id: first_track}, geometry_datasets)
+        dataset_merged_track = cast(
+            PythonTrackDataset, dataset.add_all([first_track_continuing, second_track])
+        )
+        expected_merged_track = PythonTrack(
+            first_track.id,
+            first_track_continuing.classification,
+            first_track.detections + first_track_continuing.detections,
+        )
         assert list(dataset_merged_track) == [
-            PythonTrack(
-                first_track.id,
-                first_track_continuing.classification,
-                first_track.detections + first_track_continuing.detections,
-            )
+            expected_merged_track,
+            second_track,
         ]
+        assert list(geometry_dataset_no_offset.add_all.call_args_list[0][0][0]) == [
+            expected_merged_track,
+            second_track,
+        ]
+        assert list(geometry_dataset_with_offset.add_all.call_args_list[0][0][0]) == [
+            expected_merged_track,
+            second_track,
+        ]
+        assert dataset_merged_track._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset_no_offset,
+            RelativeOffsetCoordinate(0.5, 0.5): updated_geometry_dataset_with_offset,
+        }
 
     def test_add_nothing(self, first_track: Track) -> None:
         dataset = PythonTrackDataset()
