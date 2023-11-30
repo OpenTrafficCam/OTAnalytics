@@ -224,7 +224,7 @@ class PythonTrackDataset(TrackDataset):
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,
-        geometry_dataset: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
+        geometry_datasets: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
         | None = None,
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
         track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
@@ -236,12 +236,12 @@ class PythonTrackDataset(TrackDataset):
         self._tracks = values
         self._calculator = calculator
         self._track_geometry_factory = track_geometry_factory
-        if geometry_dataset is None:
-            self._geometry_dataset = dict[
+        if geometry_datasets is None:
+            self._geometry_datasets = dict[
                 RelativeOffsetCoordinate, TrackGeometryDataset
             ]()
         else:
-            self._geometry_dataset = geometry_dataset
+            self._geometry_datasets = geometry_datasets
 
     @staticmethod
     def from_list(
@@ -353,9 +353,9 @@ class PythonTrackDataset(TrackDataset):
             TrackGeometryDataset: the track geometry dataset with the given offset
                 applied.
         """
-        if (geometry_dataset := self._geometry_dataset.get(offset, None)) is None:
+        if (geometry_dataset := self._geometry_datasets.get(offset, None)) is None:
             geometry_dataset = self._track_geometry_factory(self, offset)
-            self._geometry_dataset[offset] = geometry_dataset
+            self._geometry_datasets[offset] = geometry_dataset
         return geometry_dataset
 
     def intersection_points(

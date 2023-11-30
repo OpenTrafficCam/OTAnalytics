@@ -150,7 +150,7 @@ class PandasTrackDataset(TrackDataset):
     def __init__(
         self,
         dataset: DataFrame = DataFrame(),
-        geometry_dataset: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
+        geometry_datasets: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
         | None = None,
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
@@ -160,12 +160,12 @@ class PandasTrackDataset(TrackDataset):
         self._dataset = dataset
         self._calculator = calculator
         self._track_geometry_factory = track_geometry_factory
-        if geometry_dataset is None:
-            self._geometry_dataset = dict[
+        if geometry_datasets is None:
+            self._geometry_datasets = dict[
                 RelativeOffsetCoordinate, TrackGeometryDataset
             ]()
         else:
-            self._geometry_dataset = geometry_dataset
+            self._geometry_datasets = geometry_datasets
 
     @staticmethod
     def from_list(
@@ -198,7 +198,7 @@ class PandasTrackDataset(TrackDataset):
         valid_tracks = classified_tracks.loc[
             classified_tracks[track.TRACK_ID].isin(valid_track_ids), :
         ]
-        return PandasTrackDataset(valid_tracks, geometry_dataset=geometry_dataset)
+        return PandasTrackDataset(valid_tracks, geometry_datasets=geometry_dataset)
 
     def add_all(self, other: Iterable[Track]) -> TrackDataset:
         new_tracks = self.__get_tracks(other)
@@ -220,7 +220,7 @@ class PandasTrackDataset(TrackDataset):
         self, new_tracks: TrackDataset
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         updated = dict[RelativeOffsetCoordinate, TrackGeometryDataset]()
-        for offset, geometries in self._geometry_dataset.items():
+        for offset, geometries in self._geometry_datasets.items():
             updated[offset] = geometries.add_all(new_tracks)
         return updated
 
@@ -312,9 +312,9 @@ class PandasTrackDataset(TrackDataset):
             TrackGeometryDataset: the track geometry dataset with the given offset
                 applied.
         """
-        if (geometry_dataset := self._geometry_dataset.get(offset, None)) is None:
+        if (geometry_dataset := self._geometry_datasets.get(offset, None)) is None:
             geometry_dataset = self._track_geometry_factory(self, offset)
-            self._geometry_dataset[offset] = geometry_dataset
+            self._geometry_datasets[offset] = geometry_dataset
         return geometry_dataset
 
     def intersection_points(

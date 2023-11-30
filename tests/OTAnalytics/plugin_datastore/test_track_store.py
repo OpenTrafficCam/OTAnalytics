@@ -122,7 +122,7 @@ class TestPandasTrackDataset:
         )
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
-        assert merged._geometry_dataset == {}
+        assert merged._geometry_datasets == {}
 
     def test_add_two_existing_pandas_datasets(self) -> None:
         first_track = self.__build_track("1")
@@ -134,7 +134,7 @@ class TestPandasTrackDataset:
 
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
-        assert merged._geometry_dataset == {}
+        assert merged._geometry_datasets == {}
 
     def __build_track(self, track_id: str, length: int = 5) -> Track:
         builder = TrackBuilder()
