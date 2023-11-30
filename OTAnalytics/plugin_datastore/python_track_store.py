@@ -277,7 +277,16 @@ class PythonTrackDataset(TrackDataset):
             except TrackHasNoDetectionError as build_error:
                 logger().exception(build_error, exc_info=True)
         merged = self._tracks | merged_tracks
-        return PythonTrackDataset(merged)
+        updated_geometry_dataset = self._add_to_geometry_dataset(merged_tracks.values())
+        return PythonTrackDataset(merged, updated_geometry_dataset)
+
+    def _add_to_geometry_dataset(
+        self, new_tracks: Iterable[Track]
+    ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
+        updated = dict[RelativeOffsetCoordinate, TrackGeometryDataset]()
+        for offset, geometries in self._geometry_datasets.items():
+            updated[offset] = geometries.add_all(new_tracks)
+        return updated
 
     def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:
         """
