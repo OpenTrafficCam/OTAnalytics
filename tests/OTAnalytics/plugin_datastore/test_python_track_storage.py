@@ -22,6 +22,10 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.conftest import TrackBuilder
+from tests.OTAnalytics.plugin_datastore.conftest import (
+    assert_track_geometry_dataset_add_all_called_correctly,
+    create_mock_geometry_dataset,
+)
 
 
 @pytest.fixture
@@ -258,16 +262,14 @@ class TestPythonTrackDataset:
     def test_add_all_merge_tracks(
         self, first_track: Track, first_track_continuing: Track, second_track: Track
     ) -> None:
-        geometry_dataset_no_offset = Mock(spec=TrackGeometryDataset)
-        updated_geometry_dataset_no_offset = Mock()
-        geometry_dataset_no_offset.add_all.return_value = (
-            updated_geometry_dataset_no_offset
-        )
-        geometry_dataset_with_offset = Mock(spec=TrackGeometryDataset)
-        updated_geometry_dataset_with_offset = Mock()
-        geometry_dataset_with_offset.add_all.return_value = (
-            updated_geometry_dataset_with_offset
-        )
+        (
+            geometry_dataset_no_offset,
+            updated_geometry_dataset_no_offset,
+        ) = create_mock_geometry_dataset()
+        (
+            geometry_dataset_with_offset,
+            updated_geometry_dataset_with_offset,
+        ) = create_mock_geometry_dataset()
         geometry_datasets = {
             RelativeOffsetCoordinate(0, 0): cast(
                 TrackGeometryDataset, geometry_dataset_no_offset
@@ -289,14 +291,12 @@ class TestPythonTrackDataset:
             expected_merged_track,
             second_track,
         ]
-        assert list(geometry_dataset_no_offset.add_all.call_args_list[0][0][0]) == [
-            expected_merged_track,
-            second_track,
-        ]
-        assert list(geometry_dataset_with_offset.add_all.call_args_list[0][0][0]) == [
-            expected_merged_track,
-            second_track,
-        ]
+        assert_track_geometry_dataset_add_all_called_correctly(
+            geometry_dataset_no_offset.add_all, [expected_merged_track, second_track]
+        )
+        assert_track_geometry_dataset_add_all_called_correctly(
+            geometry_dataset_with_offset.add_all, [expected_merged_track, second_track]
+        )
         assert dataset_merged_track._geometry_datasets == {
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset_no_offset,
             RelativeOffsetCoordinate(0.5, 0.5): updated_geometry_dataset_with_offset,

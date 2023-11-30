@@ -1,7 +1,27 @@
+from typing import Iterable
+from unittest.mock import Mock
+
 import pytest
 
-from OTAnalytics.domain.track import Track
-from tests.conftest import TrackBuilder
+from OTAnalytics.domain.track import Track, TrackGeometryDataset
+from tests.conftest import TrackBuilder, assert_equal_track_properties
+
+
+def create_mock_geometry_dataset() -> tuple[Mock, Mock]:
+    geometry_dataset = Mock(spec=TrackGeometryDataset)
+    updated_geometry_dataset = Mock()
+    geometry_dataset.add_all.return_value = updated_geometry_dataset
+    geometry_dataset.remove.return_value = updated_geometry_dataset
+    return geometry_dataset, updated_geometry_dataset
+
+
+def assert_track_geometry_dataset_add_all_called_correctly(
+    called_method: Mock, expected_arg: Iterable[Track]
+) -> None:
+    for actual_track, expected_track in zip(
+        called_method.call_args_list[0][0][0], expected_arg
+    ):
+        assert_equal_track_properties(actual_track, expected_track)
 
 
 @pytest.fixture

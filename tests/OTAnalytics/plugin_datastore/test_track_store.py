@@ -1,5 +1,4 @@
 from typing import cast
-from unittest.mock import Mock
 
 import pytest
 from pandas import DataFrame, Series
@@ -22,6 +21,10 @@ from tests.conftest import (
     assert_equal_detection_properties,
     assert_equal_track_properties,
     assert_track_datasets_equal,
+)
+from tests.OTAnalytics.plugin_datastore.conftest import (
+    assert_track_geometry_dataset_add_all_called_correctly,
+    create_mock_geometry_dataset,
 )
 
 
@@ -146,16 +149,14 @@ class TestPandasTrackDataset:
     def test_add_all_merge_tracks(
         self, first_track: Track, first_track_continuing: Track, second_track: Track
     ) -> None:
-        geometry_dataset_no_offset = Mock(spec=TrackGeometryDataset)
-        updated_geometry_dataset_no_offset = Mock()
-        geometry_dataset_no_offset.add_all.return_value = (
-            updated_geometry_dataset_no_offset
-        )
-        geometry_dataset_with_offset = Mock(spec=TrackGeometryDataset)
-        updated_geometry_dataset_with_offset = Mock()
-        geometry_dataset_with_offset.add_all.return_value = (
-            updated_geometry_dataset_with_offset
-        )
+        (
+            geometry_dataset_no_offset,
+            updated_geometry_dataset_no_offset,
+        ) = create_mock_geometry_dataset()
+        (
+            geometry_dataset_with_offset,
+            updated_geometry_dataset_with_offset,
+        ) = create_mock_geometry_dataset()
         geometry_datasets = {
             RelativeOffsetCoordinate(0, 0): cast(
                 TrackGeometryDataset, geometry_dataset_no_offset
@@ -179,19 +180,12 @@ class TestPandasTrackDataset:
             [expected_merged_track, second_track]
         )
         assert_track_datasets_equal(dataset_merged_track, expected_dataset)
-
-        for actual_track, expected_track in zip(
-            geometry_dataset_no_offset.add_all.call_args_list[0][0][0],
-            expected_dataset,
-        ):
-            assert_equal_track_properties(actual_track, expected_track)
-
-        for actual_track, expected_track in zip(
-            geometry_dataset_with_offset.add_all.call_args_list[0][0][0],
-            expected_dataset,
-        ):
-            assert_equal_track_properties(actual_track, expected_track)
-
+        assert_track_geometry_dataset_add_all_called_correctly(
+            geometry_dataset_no_offset.add_all, expected_dataset
+        )
+        assert_track_geometry_dataset_add_all_called_correctly(
+            geometry_dataset_with_offset.add_all, expected_dataset
+        )
         assert dataset_merged_track._geometry_datasets == {
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset_no_offset,
             RelativeOffsetCoordinate(0.5, 0.5): updated_geometry_dataset_with_offset,
