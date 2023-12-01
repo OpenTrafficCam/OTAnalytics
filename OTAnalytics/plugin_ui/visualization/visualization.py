@@ -431,20 +431,6 @@ class VisualizationBuilder:
         self._track_view_state.track_offset.register(plotter.notify_invalidate)
         return plotter
 
-    def _create_track_highlight_geometry_plotter_not_intersecting(
-        self,
-        tracks_not_intersecting_sections: TracksNotIntersectingSelection,
-        pandas_track_provider: PandasDataFrameProvider,
-        color_palette_provider: ColorPaletteProvider,
-        enable_legend: bool,
-    ) -> Plotter:
-        filter_by_id = FilterById(
-            pandas_track_provider, id_filter=tracks_not_intersecting_sections
-        )
-        return self._create_track_geometry_plotter(
-            filter_by_id, color_palette_provider, alpha=1, enable_legend=enable_legend
-        )
-
     def _create_tracks_start_end_point_intersecting_given_sections_filter(
         self,
         pandas_data_provider: PandasDataFrameProvider,
