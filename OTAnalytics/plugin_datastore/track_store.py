@@ -265,10 +265,21 @@ class PandasTrackDataset(TrackDataset):
         new_batches: list["TrackDataset"] = []
         for batch_ids in batched(all_ids, batch_size):
             batch_dataset = self._dataset[self._dataset[track.TRACK_ID].isin(batch_ids)]
+            batch_geometries = self._get_geometries_for(batch_ids)
             new_batches.append(
-                PandasTrackDataset(batch_dataset, calculator=self._calculator)
+                PandasTrackDataset.from_dataframe(
+                    batch_dataset, batch_geometries, calculator=self._calculator
+                )
             )
         return new_batches
+
+    def _get_geometries_for(
+        self, track_ids: Iterable[str]
+    ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
+        geometry_datasets = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            geometry_datasets[offset] = geometry_dataset.get_for(track_ids)
+        return geometry_datasets
 
     def __len__(self) -> int:
         if self._dataset.empty:

@@ -7,11 +7,15 @@ from OTAnalytics.domain.track import Track, TrackGeometryDataset
 from tests.conftest import TrackBuilder, assert_equal_track_properties
 
 
-def create_mock_geometry_dataset() -> tuple[Mock, Mock]:
+def create_mock_geometry_dataset(
+    get_for_side_effect: list[Mock] | None = None,
+) -> tuple[Mock, Mock]:
     geometry_dataset = Mock(spec=TrackGeometryDataset)
     updated_geometry_dataset = Mock()
     geometry_dataset.add_all.return_value = updated_geometry_dataset
     geometry_dataset.remove.return_value = updated_geometry_dataset
+    if get_for_side_effect is not None:
+        geometry_dataset.get_for.side_effect = get_for_side_effect
     return geometry_dataset, updated_geometry_dataset
 
 

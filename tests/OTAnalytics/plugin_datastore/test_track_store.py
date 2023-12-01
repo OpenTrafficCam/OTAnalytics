@@ -1,4 +1,5 @@
 from typing import cast
+from unittest.mock import Mock, call
 
 import pytest
 from pandas import DataFrame, Series
@@ -275,6 +276,50 @@ class TestPandasTrackDataset:
                     expected_track.detections, it_track.detections
                 ):
                     assert_equal_detection_properties(detection, expected_detection)
+
+    def test_split_with_existing_geometries(
+        self, first_track: Track, second_track: Track
+    ) -> None:
+        first_track = self.__build_track("1")
+        second_track = self.__build_track("2")
+        first_batch_geometries_no_offset = Mock()
+        second_batch_geometries_no_offset = Mock()
+        geometry_dataset_no_offset, _ = create_mock_geometry_dataset(
+            [first_batch_geometries_no_offset, second_batch_geometries_no_offset]
+        )
+
+        first_batch_geometries_with_offset = Mock()
+        second_batch_geometries_with_offset = Mock()
+        geometry_dataset_with_offset, _ = create_mock_geometry_dataset(
+            [first_batch_geometries_with_offset, second_batch_geometries_with_offset]
+        )
+
+        geometry_datasets = {
+            RelativeOffsetCoordinate(0, 0): cast(
+                TrackGeometryDataset, geometry_dataset_no_offset
+            ),
+            RelativeOffsetCoordinate(0.5, 0.5): cast(
+                TrackGeometryDataset, geometry_dataset_with_offset
+            ),
+        }
+        tracks_df = _convert_tracks([first_track, second_track])
+
+        dataset = PandasTrackDataset(tracks_df, geometry_datasets)
+        result = cast(list[PythonTrackDataset], dataset.split(batches=2))
+        assert_track_datasets_equal(
+            result[0], PandasTrackDataset.from_list([first_track])
+        )
+        assert_track_datasets_equal(
+            result[1], PandasTrackDataset.from_list([second_track])
+        )
+        assert geometry_dataset_no_offset.get_for.call_args_list == [
+            call((first_track.id.id,)),
+            call((second_track.id.id,)),
+        ]
+        assert geometry_dataset_with_offset.get_for.call_args_list == [
+            call((first_track.id.id,)),
+            call((second_track.id.id,)),
+        ]
 
     def test_filter_by_minimum_detection_length(self) -> None:
         first_track = self.__build_track("1", length=5)

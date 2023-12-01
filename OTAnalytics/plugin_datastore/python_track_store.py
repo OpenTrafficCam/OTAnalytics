@@ -333,10 +333,27 @@ class PythonTrackDataset(TrackDataset):
         dataset_size = len(self._tracks)
         batch_size = ceil(dataset_size / batches)
 
-        return [
-            PythonTrackDataset(dict(batch), calculator=self._calculator)
-            for batch in batched(self._tracks.items(), batch_size)
-        ]
+        dataset_batches = []
+        for batch in batched(self._tracks.items(), batch_size):
+            current_batch = dict(batch)
+            current_geometry_datasets = self._get_geometries_for(current_batch.keys())
+            dataset_batches.append(
+                PythonTrackDataset(
+                    current_batch,
+                    current_geometry_datasets,
+                    calculator=self._calculator,
+                )
+            )
+        return dataset_batches
+
+    def _get_geometries_for(
+        self, track_ids: Iterable[TrackId]
+    ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
+        _ids = [track_id.id for track_id in track_ids]
+        geometry_datasets = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            geometry_datasets[offset] = geometry_dataset.get_for(_ids)
+        return geometry_datasets
 
     def __len__(self) -> int:
         return len(self._tracks)
