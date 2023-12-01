@@ -699,6 +699,11 @@ class TrackGeometryDataset(ABC):
         """
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def offset(self) -> RelativeOffsetCoordinate:
+        raise NotImplementedError
+
     @staticmethod
     @abstractmethod
     def from_track_dataset(

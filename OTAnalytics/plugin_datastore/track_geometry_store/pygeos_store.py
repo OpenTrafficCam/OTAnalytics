@@ -115,6 +115,10 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         return set(self._dataset.index)
 
     @property
+    def offset(self) -> RelativeOffsetCoordinate:
+        return self._offset
+
+    @property
     def empty(self) -> bool:
         """Whether dataset is empty.
 
