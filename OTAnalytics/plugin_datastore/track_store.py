@@ -232,7 +232,9 @@ class PandasTrackDataset(TrackDataset):
             self._dataset[track.TRACK_ID] != track_id.id, :
         ]
         updated_geometry_datasets = self._remove_from_geometry_dataset({track_id})
-        return PandasTrackDataset(remaining_tracks.copy(), updated_geometry_datasets)
+        return PandasTrackDataset.from_dataframe(
+            remaining_tracks.copy(), updated_geometry_datasets
+        )
 
     def _remove_from_geometry_dataset(
         self, track_ids: set[TrackId]
