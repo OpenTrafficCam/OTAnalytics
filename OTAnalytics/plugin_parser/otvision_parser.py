@@ -226,7 +226,7 @@ class Version_1_0_to_1_1(DetectionFixer):
 
 class Version_1_1_To_1_2(DetectionFixer):
     def __init__(self) -> None:
-        super().__init__(VERSION_1_0, VERSION_1_2)
+        super().__init__(VERSION_1_1, VERSION_1_2)
 
     def fix(self, detection: dict, current_version: Version) -> dict:
         return self.__fix_occurrence(detection, current_version)
@@ -241,7 +241,7 @@ class Version_1_1_To_1_2(DetectionFixer):
         Returns:
             dict: fixed dictionary
         """
-        if otdet_format_version <= Version(1, 1):
+        if otdet_format_version <= self.from_version():
             occurrence = datetime.strptime(
                 detection[ottrk_format.OCCURRENCE], ottrk_format.DATE_FORMAT
             ).replace(tzinfo=timezone.utc)
