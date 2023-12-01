@@ -192,7 +192,7 @@ class VisualizationBuilder:
         track_geometry_plotter = self._create_track_geometry_plotter(
             self._get_data_provider_all_filters(),
             self._color_palette_provider,
-            alpha=0.5,
+            alpha=ALPHA_ALL_TRACKS_PLOTTER,
             enable_legend=True,
         )
         all_tracks_plotter = self._wrap_plotter_with_cache(track_geometry_plotter)
@@ -203,7 +203,7 @@ class VisualizationBuilder:
             self._create_highlight_tracks_intersecting_section_factory(
                 self._get_tracks_intersecting_sections_filter(),
                 self._color_palette_provider,
-                alpha=1,
+                alpha=ALPHA_HIGHLIGHT_TRACKS_INTERSECTING_SECTIONS,
                 enable_legend=False,
             ),
             self._section_state,
@@ -214,7 +214,7 @@ class VisualizationBuilder:
             self._create_highlight_tracks_intersecting_section_factory(
                 self._get_tracks_not_intersecting_selected_sections_filter(),
                 self._color_palette_provider,
-                alpha=1,
+                alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_INTERSECTING_SECTIONS,
                 enable_legend=False,
             ),
             self._section_state,
@@ -274,7 +274,7 @@ class VisualizationBuilder:
                     self._get_data_provider_all_filters(), road_user_assigner
                 ),
                 self._color_palette_provider,
-                alpha=1,
+                alpha=ALPHA_HIGHLIGHT_TRACKS_ASSIGNED_TO_FLOWS,
                 enable_legend=False,
             ),
             flow_state,
