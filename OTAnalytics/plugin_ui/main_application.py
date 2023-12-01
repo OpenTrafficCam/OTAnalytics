@@ -291,6 +291,7 @@ class ApplicationStarter:
         create_events = self._create_use_case_create_events(
             section_repository,
             clear_all_events,
+            get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
             DEFAULT_NUM_PROCESSES,
@@ -298,7 +299,7 @@ class ApplicationStarter:
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
                 section_repository,
-                get_tracks_without_single_detections,
+                get_all_tracks,
                 add_events,
                 DEFAULT_NUM_PROCESSES,
             )
@@ -459,6 +460,7 @@ class ApplicationStarter:
         create_events = self._create_use_case_create_events(
             section_repository,
             clear_all_events,
+            get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
             cli_args.num_processes,
@@ -640,7 +642,7 @@ class ApplicationStarter:
     def _create_use_case_create_intersection_events(
         self,
         section_repository: SectionRepository,
-        get_tracks: GetTracksWithoutSingleDetections,
+        get_tracks: GetAllTracks,
         add_events: AddEvents,
         num_processes: int,
     ) -> CreateIntersectionEvents:
@@ -648,9 +650,7 @@ class ApplicationStarter:
         return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
 
     @staticmethod
-    def _create_intersect(
-        get_tracks: GetTracksWithoutSingleDetections, num_processes: int
-    ) -> RunIntersect:
+    def _create_intersect(get_tracks: GetAllTracks, num_processes: int) -> RunIntersect:
         return ShapelyRunIntersect(
             intersect_parallelizer=MultiprocessingIntersectParallelization(
                 num_processes
@@ -693,17 +693,18 @@ class ApplicationStarter:
         self,
         section_repository: SectionRepository,
         clear_events: ClearAllEvents,
-        get_tracks: GetTracksWithoutSingleDetections,
+        get_all_tracks: GetAllTracks,
+        get_all_tracks_without_single_detections: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
         num_processes: int,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(get_tracks, num_processes)
+        run_intersect = self._create_intersect(get_all_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_repository, add_events
         )
         scene_action_detector = SceneActionDetector(SceneEventBuilder())
         create_scene_events = SimpleCreateSceneEvents(
-            get_tracks, scene_action_detector, add_events
+            get_all_tracks_without_single_detections, scene_action_detector, add_events
         )
         return CreateEvents(
             clear_events, create_intersection_events, create_scene_events

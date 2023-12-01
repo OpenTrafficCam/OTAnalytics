@@ -14,6 +14,7 @@ from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.application.use_cases.track_repository import (
+    GetAllTracks,
     GetTracksWithoutSingleDetections,
 )
 from OTAnalytics.domain.event import EventRepository
@@ -28,7 +29,6 @@ from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
-from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
@@ -68,10 +68,8 @@ def _build_tracks_intersecting_sections(
     track_repository: TrackRepository,
 ) -> TracksIntersectingSections:
     starter = ApplicationStarter()
-    get_all_tracks = GetTracksWithoutSingleDetections(track_repository)
-    return starter._create_tracks_intersecting_sections(
-        get_all_tracks, ShapelyIntersector()
-    )
+    get_all_tracks = GetAllTracks(track_repository)
+    return starter._create_tracks_intersecting_sections(get_all_tracks)
 
 
 def _build_create_events(
@@ -81,12 +79,16 @@ def _build_create_events(
 ) -> CreateEvents:
     starter = ApplicationStarter()
     clear_all_events = ClearAllEvents(event_repository)
-    get_tracks = GetTracksWithoutSingleDetections(track_repository)
+    get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+        track_repository
+    )
+    get_tracks = GetAllTracks(track_repository)
     add_events = AddEvents(event_repository)
     create_events = starter._create_use_case_create_events(
         section_repository,
         clear_all_events,
         get_tracks,
+        get_tracks_without_single_detections,
         add_events,
         num_processes=NUM_PROCESSES,
     )

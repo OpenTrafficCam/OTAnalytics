@@ -322,7 +322,10 @@ class VisualizationBuilder:
     ) -> PandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
         # return PandasTrackProvider(
-        #     datastore, self._track_view_state, dataframe_filter_builder, progressbar
+        #     self._track_repository,
+        #     self._track_view_state,
+        #     dataframe_filter_builder,
+        #     progressbar,
         # )
         return CachedPandasTrackProvider(
             self._track_repository,
