@@ -312,7 +312,16 @@ class PythonTrackDataset(TrackDataset):
     def remove(self, track_id: TrackId) -> TrackDataset:
         new_tracks = self._tracks.copy()
         del new_tracks[track_id]
-        return PythonTrackDataset(new_tracks)
+        updated_geometry_datasets = self._remove_from_geometry_datasets({track_id})
+        return PythonTrackDataset(new_tracks, updated_geometry_datasets)
+
+    def _remove_from_geometry_datasets(
+        self, track_ids: set[TrackId]
+    ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
+        updated = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            updated[offset] = geometry_dataset.remove(track_ids)
+        return updated
 
     def clear(self) -> TrackDataset:
         return PythonTrackDataset()

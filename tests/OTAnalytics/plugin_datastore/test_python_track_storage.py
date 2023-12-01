@@ -330,11 +330,17 @@ class TestPythonTrackDataset:
         assert list(result) == []
 
     def test_remove(self, first_track: Track, second_track: Track) -> None:
-        dataset = PythonTrackDataset()
-        result_dataset = dataset.add_all([first_track, second_track])
-
-        result = result_dataset.remove(second_track.id)
+        geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
+        dataset = PythonTrackDataset(
+            {first_track.id: first_track, second_track.id: second_track},
+            {RelativeOffsetCoordinate(0, 0): geometry_dataset},
+        )
+        result = cast(PythonTrackDataset, dataset.remove(second_track.id))
         assert list(result) == [first_track]
+        assert result._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
+        }
+        geometry_dataset.remove.assert_called_once_with({second_track.id})
 
     @pytest.mark.parametrize(
         "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]

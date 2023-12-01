@@ -231,7 +231,16 @@ class PandasTrackDataset(TrackDataset):
         remaining_tracks = self._dataset.loc[
             self._dataset[track.TRACK_ID] != track_id.id, :
         ]
-        return PandasTrackDataset(remaining_tracks.copy())
+        updated_geometry_datasets = self._remove_from_geometry_dataset({track_id})
+        return PandasTrackDataset(remaining_tracks.copy(), updated_geometry_datasets)
+
+    def _remove_from_geometry_dataset(
+        self, track_ids: set[TrackId]
+    ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
+        updated_dataset = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            updated_dataset[offset] = geometry_dataset.remove(track_ids)
+        return updated_dataset
 
     def as_list(self) -> list[Track]:
         if self._dataset.empty:

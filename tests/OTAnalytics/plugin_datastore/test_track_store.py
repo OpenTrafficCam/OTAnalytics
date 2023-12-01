@@ -227,14 +227,22 @@ class TestPandasTrackDataset:
     def test_remove(self) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
-        dataset = PandasTrackDataset.from_list([first_track, second_track])
+        tracks_df = _convert_tracks([first_track, second_track])
+        geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
+        dataset = PandasTrackDataset.from_dataframe(
+            tracks_df, {RelativeOffsetCoordinate(0, 0): geometry_dataset}
+        )
 
-        removed_track_set = dataset.remove(first_track.id)
+        removed_track_set = cast(PandasTrackDataset, dataset.remove(first_track.id))
         for actual, expected in zip(
             removed_track_set.as_list(),
             PandasTrackDataset.from_list([second_track]).as_list(),
         ):
             assert_equal_track_properties(actual, expected)
+        geometry_dataset.remove.assert_called_once_with({first_track.id})
+        assert removed_track_set._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
+        }
 
     def test_len(self) -> None:
         first_track = self.__build_track("1")
