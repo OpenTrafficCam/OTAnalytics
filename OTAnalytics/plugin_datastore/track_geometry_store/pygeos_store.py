@@ -194,6 +194,12 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         )
         return PygeosTrackGeometryDataset(self._offset, updated)
 
+    def get_for(self, track_ids: Iterable[str]) -> "TrackGeometryDataset":
+        _ids = self._dataset.index.intersection(track_ids)
+
+        filtered_df = self._dataset.loc[_ids]
+        return PygeosTrackGeometryDataset(self.offset, filtered_df)
+
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
         intersecting_tracks = set()
         section_geoms = line_sections_to_pygeos_multi(sections)

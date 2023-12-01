@@ -311,6 +311,7 @@ def assert_track_geometry_dataset_equals(
 ) -> None:
     assert isinstance(to_compare, PygeosTrackGeometryDataset)
     assert isinstance(other, PygeosTrackGeometryDataset)
+    assert to_compare.offset == other.offset
     assert to_compare._dataset.equals(other._dataset)  # noqa
 
 
@@ -618,6 +619,26 @@ class TestPygeosTrackGeometryDataset:
             contained_by_section_test_case.sections
         )
         assert result == contained_by_section_test_case.expected_result
+
+    def test_get_for_existing(self, first_track: Track, second_track: Track) -> None:
+        track_dataset = create_track_dataset([first_track, second_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+            track_dataset, BASE_GEOMETRY
+        )
+        result = geometry_dataset.get_for([first_track.id.id])
+        expected = create_geometry_dataset_from([first_track], BASE_GEOMETRY)
+        assert_track_geometry_dataset_equals(result, expected)
+
+    def test_get_for_not_existing(
+        self, first_track: Track, second_track: Track
+    ) -> None:
+        track_dataset = create_track_dataset([first_track, second_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+            track_dataset, BASE_GEOMETRY
+        )
+        result = geometry_dataset.get_for(["not-existing-track"])
+        expected = create_geometry_dataset_from([], BASE_GEOMETRY)
+        assert_track_geometry_dataset_equals(result, expected)
 
 
 class TestProfiling:

@@ -739,6 +739,20 @@ class TrackGeometryDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_for(self, track_ids: Iterable[str]) -> "TrackGeometryDataset":
+        """Get geometries for given track ids if they exist.
+
+        Ids that do not exist will not be included in the dataset.
+
+        Args:
+            track_ids (Iterable[str]): the track ids.
+
+        Returns:
+            TrackGeometryDataset: the dataset with tracks.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
         """Return a set of tracks intersecting a set of sections.
 
