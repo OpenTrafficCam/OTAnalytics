@@ -1,5 +1,7 @@
 from typing import Callable, Optional, Sequence
 
+from pandas import DataFrame
+
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.datastore import Datastore
@@ -26,10 +28,11 @@ from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
 )
-from OTAnalytics.domain.flow import FlowId
+from OTAnalytics.domain.event import EventRepository
+from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track import TrackIdProvider, TrackRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.simple_intersect import (
@@ -52,6 +55,45 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
+
+ALPHA_ALL_TRACKS_PLOTTER = 0.5
+ALPHA_HIGHLIGHT_TRACKS = 1
+ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS = ALPHA_HIGHLIGHT_TRACKS
+ALPHA_HIGHLIGHT_TRACKS_ASSIGNED_TO_FLOWS = ALPHA_HIGHLIGHT_TRACKS
+ALPHA_HIGHLIGHT_TRACKS_NOT_INTERSECTING_SECTIONS = ALPHA_HIGHLIGHT_TRACKS
+ALPHA_HIGHLIGHT_TRACKS_INTERSECTING_SECTIONS = ALPHA_HIGHLIGHT_TRACKS
+
+
+class TracksNotAssignedToSelection(PandasDataFrameProvider):
+    def __init__(
+        self,
+        other: PandasDataFrameProvider,
+        assigner: RoadUserAssigner,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        state: FlowState,
+        track_repository: TrackRepository,
+    ) -> None:
+        self._other = other
+        self._event_repository = event_repository
+        self._flow_repository = flow_repository
+        self._assigner = assigner
+        self._state = state
+        self._track_repository = track_repository
+
+    def get_data(self) -> DataFrame:
+        return FilterById(
+            self._other,
+            TracksNotIntersectingSelection(
+                TracksAssignedToGivenFlows(
+                    self._assigner,
+                    self._event_repository,
+                    self._flow_repository,
+                    self._state.selected_flows.get(),
+                ),
+                self._track_repository,
+            ),
+        ).get_data()
 
 
 class VisualizationBuilder:
@@ -241,16 +283,19 @@ class VisualizationBuilder:
     def _create_highlight_tracks_not_assigned_to_flows_plotter(
         self, road_user_assigner: RoadUserAssigner, flow_state: FlowState
     ) -> Plotter:
-        return self._create_highlight_tracks_assigned_to_flow(
-            self._create_highlight_tracks_assigned_to_flows_factory(
-                self._create_tracks_not_assigned_to_flows_filter(
-                    self._get_data_provider_all_filters(), road_user_assigner
-                ),
-                self._color_palette_provider,
-                alpha=1,
-                enable_legend=False,
-            ),
+        flows_filter = TracksNotAssignedToSelection(
+            self._get_data_provider_all_filters(),
+            road_user_assigner,
+            self._event_repository,
+            self._flow_repository,
             flow_state,
+            self._track_repository,
+        )
+        return self._create_track_geometry_plotter(
+            flows_filter,
+            self._color_palette_provider,
+            alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS,
+            enable_legend=False,
         )
 
     def _get_data_provider_class_filter(self) -> PandasDataFrameProvider:
