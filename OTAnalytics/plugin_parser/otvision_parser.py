@@ -187,7 +187,27 @@ class DetectionFixer(ABC):
         pass
 
 
-class Version_1_0_to_1_1(DetectionFixer):
+class MetadataFixer(ABC):
+    def __init__(
+        self,
+        from_ottrk_version: Version,
+        to_ottrk_version: Version,
+    ) -> None:
+        self._from_ottrk_version: Version = from_ottrk_version
+        self._to_ottrk_version: Version = to_ottrk_version
+
+    def from_version(self) -> Version:
+        return self._from_ottrk_version
+
+    def to_version(self) -> Version:
+        return self._to_ottrk_version
+
+    @abstractmethod
+    def fix(self, metadata: dict, current_version: Version) -> dict:
+        pass
+
+
+class Otdet_Version_1_0_to_1_1(DetectionFixer):
     def __init__(self) -> None:
         super().__init__(VERSION_1_0, VERSION_1_0)
 
@@ -224,7 +244,7 @@ class Version_1_0_to_1_1(DetectionFixer):
         return detection
 
 
-class Version_1_1_To_1_2(DetectionFixer):
+class Otdet_Version_1_1_To_1_2(DetectionFixer):
     def __init__(self) -> None:
         super().__init__(VERSION_1_1, VERSION_1_2)
 
@@ -249,11 +269,16 @@ class Version_1_1_To_1_2(DetectionFixer):
         return detection
 
 
-ALL_FIXES = [Version_1_0_to_1_1(), Version_1_1_To_1_2()]
+ALL_DETECTION_FIXES = [Otdet_Version_1_0_to_1_1(), Otdet_Version_1_1_To_1_2()]
+ALL_METADATA_FIXES: list[MetadataFixer] = []
 
 
 class OttrkFormatFixer:
-    def __init__(self, detection_fixes: list[DetectionFixer] = ALL_FIXES) -> None:
+    def __init__(
+        self,
+        detection_fixes: list[DetectionFixer] = ALL_DETECTION_FIXES,
+        metadata_fixes: list[MetadataFixer] = ALL_METADATA_FIXES,
+    ) -> None:
         self._detection_fixes: list[DetectionFixer] = detection_fixes
 
     def fix(self, content: dict) -> dict:
@@ -266,8 +291,8 @@ class OttrkFormatFixer:
         Returns:
             dict: fixed ottrk file content
         """
-        version = self.__parse_otdet_version(content)
-        return self.__fix_detections(content, version)
+        otdet_version = self.__parse_otdet_version(content)
+        return self.__fix_detections(content, otdet_version)
 
     def __parse_otdet_version(self, content: dict) -> Version:
         """Parse the otdet format version from the input.

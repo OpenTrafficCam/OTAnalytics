@@ -60,6 +60,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     DetectionFixer,
     InvalidSectionData,
     OtConfigParser,
+    Otdet_Version_1_0_to_1_1,
+    Otdet_Version_1_1_To_1_2,
     OtEventListParser,
     OtFlowParser,
     OttrkFormatFixer,
@@ -67,8 +69,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
     TrackLengthLimit,
     Version,
-    Version_1_0_to_1_1,
-    Version_1_1_To_1_2,
     _parse,
     _parse_bz2,
     _write_bz2,
@@ -171,7 +171,7 @@ class TestVersion_1_0_To_1_1:
         expected_detection = serialized_detection.copy()
         expected_detection[ottrk_dataformat.X] = -5
         expected_detection[ottrk_dataformat.Y] = -5
-        fixer = Version_1_0_to_1_1()
+        fixer = Otdet_Version_1_0_to_1_1()
 
         fixed = fixer.fix(serialized_detection, VERSION_1_0)
 
@@ -192,7 +192,7 @@ class TestVersion_1_1_To_1_2:
             ottrk_dataformat.OCCURRENCE
         ] = detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
 
-        fixer = Version_1_1_To_1_2()
+        fixer = Otdet_Version_1_1_To_1_2()
 
         fixed = fixer.fix(serialized_detection, VERSION_1_1)
 
