@@ -8,18 +8,21 @@ import pytest
 import ujson
 
 from OTAnalytics import version
-from OTAnalytics.application.datastore import FlowParser, OtConfig, VideoParser
-from OTAnalytics.application.eventlist import SectionActionDetector
+from OTAnalytics.application.datastore import (
+    FlowParser,
+    OtConfig,
+    VideoMetadata,
+    VideoParser,
+)
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, geometry, section, video
-from OTAnalytics.domain.event import EVENT_LIST, Event, EventType, SectionEventBuilder
+from OTAnalytics.domain.event import EVENT_LIST, Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import (
     DirectionVector2D,
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -29,10 +32,7 @@ from OTAnalytics.domain.section import (
     SectionId,
 )
 from OTAnalytics.domain.track import (
-    ByMaxConfidence,
     Detection,
-    PythonTrack,
-    PythonTrackDataset,
     Track,
     TrackClassificationCalculator,
     TrackId,
@@ -40,8 +40,10 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import Video
-from OTAnalytics.plugin_intersect.simple_intersect import (
-    SimpleIntersectBySplittingTrackLine,
+from OTAnalytics.plugin_datastore.python_track_store import (
+    ByMaxConfidence,
+    PythonTrack,
+    PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
@@ -268,7 +270,25 @@ class TestOttrkParser:
             ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
         )
         assert parse_result.tracks == PythonTrackDataset.from_list([expected_track])
-        assert parse_result.metadata.detection_classes == expected_detection_classes
+        assert (
+            parse_result.detection_metadata.detection_classes
+            == expected_detection_classes
+        )
+        assert parse_result.video_metadata == VideoMetadata(
+            path="myhostname_file.mp4",
+            recorded_start_date=datetime(
+                year=2020,
+                month=1,
+                day=1,
+                hour=0,
+                minute=0,
+                tzinfo=timezone.utc,
+            ),
+            expected_duration=None,
+            recorded_fps=20.0,
+            actual_fps=None,
+            number_of_frames=60,
+        )
         ottrk_file.unlink()
 
     def test_parse_bz2(self, example_json_bz2: tuple[Path, dict]) -> None:
@@ -706,28 +726,9 @@ class TestOtEventListParser:
     def test_serialize_events(
         self, tracks: list[Track], sections: list[Section], test_data_tmp_dir: Path
     ) -> None:
-        # Setup
-        line_section = sections[0]
-        shapely_intersection_adapter = Mock(spec=IntersectImplementation)
-        shapely_intersection_adapter.split_line_with_line.return_value = []
-
-        if isinstance(line_section, LineSection):
-            line_section_intersector = SimpleIntersectBySplittingTrackLine(
-                implementation=shapely_intersection_adapter, line_section=line_section
-            )
-
-        section_event_builder = SectionEventBuilder()
-
-        section_action_detector = SectionActionDetector(
-            intersector=line_section_intersector,
-            section_event_builder=section_event_builder,
-        )
-
-        events = section_action_detector.detect(sections=[line_section], tracks=tracks)
-
         event_list_parser = OtEventListParser()
         event_list_file = test_data_tmp_dir / "eventlist.json"
-        event_list_parser.serialize(events, [line_section], event_list_file)
+        event_list_parser.serialize([], sections, event_list_file)
         assert event_list_file.exists()
 
 

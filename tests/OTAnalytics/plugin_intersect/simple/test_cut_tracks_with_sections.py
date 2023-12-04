@@ -19,14 +19,20 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
 )
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Area, LineSection, SectionId, SectionType
+from OTAnalytics.domain.section import (
+    Area,
+    LineSection,
+    SectionId,
+    SectionRepositoryEvent,
+    SectionType,
+)
 from OTAnalytics.domain.track import (
     Detection,
-    PythonDetection,
     Track,
     TrackClassificationCalculator,
     TrackId,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonDetection
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTrackSegmentBuilder,
@@ -210,8 +216,9 @@ class TestSimpleCutTracksIntersectingSection:
 
         get_sections_by_id = Mock(spec=GetSectionsById)
         get_tracks = Mock(spec=GetTracksWithoutSingleDetections, return_value=[track])
+        intersections = {cutting_section.id: {track_id}}
         tracks_intersecting_sections = Mock(
-            spec=TracksIntersectingSections, return_value={track_id}
+            spec=TracksIntersectingSections, return_value=intersections
         )
         cut_tracks_with_section = Mock(
             spec=CutTracksWithSection, return_value=cut_tracks
@@ -251,7 +258,9 @@ class TestSimpleCutTracksIntersectingSection:
             cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
                 get_sections_by_id, Mock(), Mock(), Mock(), Mock(), Mock(), Mock()
             )
-            cut_tracks_intersecting_section.notify_sections(section_ids)
+            cut_tracks_intersecting_section.notify_sections(
+                SectionRepositoryEvent.create_added(section_ids)
+            )
 
             get_sections_by_id.assert_called_once_with(section_ids)
             call_mock.assert_called_once_with(cutting_section)

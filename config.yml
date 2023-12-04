@@ -5,16 +5,16 @@ base_files:
 configurations:
   - package_path: OTAnalytics
     files:
-      - "install.cmd"
-      - "start_gui.cmd"
+      - source: "install.cmd"
+      - source: "start_gui.cmd"
     suffix: "win"
     output_file_name: otanalytics
     additional_requirements:
       - ""
   - package_path: OTAnalytics
     files:
-      - "install.sh"
-      - "start_gui.sh"
+      - source: "install.sh"
+      - source: "start_gui.sh"
     suffix: "linux"
     output_file_name: otanalytics
     additional_requirements:

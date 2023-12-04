@@ -1,74 +1,8 @@
 from typing import Iterable
 
-from OTAnalytics.domain.event import (
-    Event,
-    EventType,
-    SceneEventBuilder,
-    SectionEventBuilder,
-)
+from OTAnalytics.domain.event import Event, EventType, SceneEventBuilder
 from OTAnalytics.domain.geometry import calculate_direction_vector
-from OTAnalytics.domain.intersect import Intersector
-from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track
-
-
-class SectionActionDetector:
-    """Detect when a track enters or leaves a section and generate events.
-
-    A track enters or leaves a section when they intersect.
-
-    Args:
-        intersector (Intersector): the intersector
-        section_event_builder (SectionEventBuilder): the section event builder
-    """
-
-    def __init__(
-        self, intersector: Intersector, section_event_builder: SectionEventBuilder
-    ) -> None:
-        self.intersector = intersector
-        self.section_event_builder = section_event_builder
-
-    def detect(
-        self,
-        sections: list[Section],
-        tracks: list[Track],
-    ) -> list[Event]:
-        """Detect section events.
-
-        Args:
-            sections (list[Section]): the sections
-            tracks (list[Track]): the tracks
-
-        Returns:
-            list[Event]: the events if tracks intersect with any of the sections.
-                Otherwise return empty list.
-        """
-        event_list: list[Event] = []
-        for section in sections:
-            for track in tracks:
-                enter_event = self._detect(section, track)
-                if enter_event:
-                    event_list.extend(enter_event)
-
-        return event_list
-
-    def _detect(self, section: Section, track: Track) -> list[Event]:
-        """Detect when a track enters a section.
-
-        Args:
-            sections (Section): the section
-            track (Track): the track
-
-        Returns:
-            list[Event]: the event if a track enters a section.
-                Otherwise return empty list.
-        """
-        self.section_event_builder.add_section_id(section.id)
-        self.section_event_builder.add_event_type(EventType.SECTION_ENTER)
-        events: list[Event] = self.intersector.intersect(
-            track, event_builder=self.section_event_builder
-        )
-        return events
 
 
 class SceneActionDetector:

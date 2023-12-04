@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
@@ -39,9 +39,34 @@ class DetectionMetadata:
 
 
 @dataclass(frozen=True)
+class VideoMetadata:
+    path: str
+    recorded_start_date: datetime
+    expected_duration: Optional[timedelta]
+    recorded_fps: float
+    actual_fps: Optional[float]
+    number_of_frames: int
+
+    @property
+    def start(self) -> datetime:
+        return self.recorded_start_date
+
+    @property
+    def end(self) -> datetime:
+        return self.start + self.duration
+
+    @property
+    def duration(self) -> timedelta:
+        if self.expected_duration:
+            return self.expected_duration
+        return timedelta(seconds=self.number_of_frames / self.recorded_fps)
+
+
+@dataclass(frozen=True)
 class TrackParseResult:
     tracks: TrackDataset
-    metadata: DetectionMetadata
+    detection_metadata: DetectionMetadata
+    video_metadata: VideoMetadata
 
 
 class TrackParser(ABC):

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 
-LOG_DIR = Path(".logs").absolute()
+DEFAULT_LOG_DIR = Path("logs").absolute()
 """The log save directory."""
 
 ALLOWED_TRACK_SIZE_PARSING = 5

@@ -1,7 +1,7 @@
 import bz2
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Tuple
 
@@ -23,6 +23,7 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     TrackParseResult,
     TrackVideoParser,
+    VideoMetadata,
     VideoParser,
 )
 from OTAnalytics.application.logger import logger
@@ -35,9 +36,6 @@ from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     Detection,
-    PythonDetection,
-    PythonTrack,
-    PythonTrackDataset,
     Track,
     TrackClassificationCalculator,
     TrackDataset,
@@ -47,6 +45,11 @@ from OTAnalytics.domain.track import (
     TrackRepository,
 )
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
+from OTAnalytics.plugin_datastore.python_track_store import (
+    PythonDetection,
+    PythonTrack,
+    PythonTrackDataset,
+)
 from OTAnalytics.plugin_parser import dataformat_versions
 
 ENCODING: str = "UTF-8"
@@ -467,9 +470,39 @@ class OttrkParser(TrackParser):
             ottrk_format.DATA_DETECTIONS
         ]
         metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
+        video_metadata = self._parse_video_metadata(metadata_video)
         tracks = self._detection_parser.parse_tracks(dets_list, metadata_video)
-        metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
-        return TrackParseResult(tracks, metadata)
+        detection_metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
+        return TrackParseResult(tracks, detection_metadata, video_metadata)
+
+    def _parse_video_metadata(self, metadata_video: dict) -> VideoMetadata:
+        video_path = (
+            metadata_video[ottrk_format.FILENAME]
+            + metadata_video[ottrk_format.FILETYPE]
+        )
+        recorded_start_date = datetime.fromtimestamp(
+            float(metadata_video[ottrk_format.RECORDED_START_DATE]), timezone.utc
+        )
+        expected_duration = (
+            timedelta(seconds=metadata_video[ottrk_format.EXPECTED_DURATION])
+            if ottrk_format.EXPECTED_DURATION in metadata_video.keys()
+            else None
+        )
+        recorded_fps = float(metadata_video[ottrk_format.RECORDED_FPS])
+        actual_fps = (
+            float(metadata_video[ottrk_format.ACTUAL_FPS])
+            if ottrk_format.ACTUAL_FPS in metadata_video.keys()
+            else None
+        )
+        number_of_frames = int(metadata_video[ottrk_format.NUMBER_OF_FRAMES])
+        return VideoMetadata(
+            path=video_path,
+            recorded_start_date=recorded_start_date,
+            expected_duration=expected_duration,
+            recorded_fps=recorded_fps,
+            actual_fps=actual_fps,
+            number_of_frames=number_of_frames,
+        )
 
     def _parse_metadata(self, metadata_detection: dict) -> DetectionMetadata:
         detection_classes_entry: dict[str, str] = metadata_detection[

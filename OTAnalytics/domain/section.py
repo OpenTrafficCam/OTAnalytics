@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
 
 from OTAnalytics.application.config import CUTTING_SECTION_MARKER
 from OTAnalytics.domain.common import DataclassValidation
@@ -20,6 +20,8 @@ COORDINATES: str = "coordinates"
 RELATIVE_OFFSET_COORDINATES: str = "relative_offset_coordinates"
 PLUGIN_DATA: str = "plugin_data"
 
+T = TypeVar("T")
+
 
 class SectionType(Enum):
     AREA = AREA
@@ -35,13 +37,36 @@ class SectionId:
         return self.id
 
 
+@dataclass
+class SectionRepositoryEvent:
+    """Holds information on changes made in the event repository.
+
+    `Added` holding an empty iterable indicates remove events.
+
+    Args:
+        added (Iterable[Event]): events added to repository.
+        removed (Iterable[Event]): events removed from the repository.
+    """
+
+    added: Iterable[SectionId]
+    removed: Iterable[SectionId]
+
+    @staticmethod
+    def create_added(sections: list[SectionId]) -> "SectionRepositoryEvent":
+        return SectionRepositoryEvent(sections, [])
+
+    @staticmethod
+    def create_removed(sections: list[SectionId]) -> "SectionRepositoryEvent":
+        return SectionRepositoryEvent([], sections)
+
+
 class SectionListObserver(ABC):
     """
     Interface to listen to changes to a list of sections.
     """
 
     @abstractmethod
-    def notify_sections(self, sections: list[SectionId]) -> None:
+    def notify_sections(self, sections: SectionRepositoryEvent) -> None:
         """
         Notifies that the given sections have been added.
 
@@ -71,7 +96,7 @@ class SectionListSubject:
         """
         self.observers.append(observer)
 
-    def notify(self, sections: list[SectionId]) -> None:
+    def notify(self, sections: SectionRepositoryEvent) -> None:
         """
         Notifies observers about the list of sections.
 
@@ -180,6 +205,10 @@ class Section(DataclassValidation):
             for event_type, offset in self.relative_offset_coordinates.items()
         }
 
+    @abstractmethod
+    def accept(self, visitor: "IntersectionVisitor[T]") -> list[T]:
+        raise NotImplementedError
+
 
 @dataclass(frozen=True)
 class LineSection(Section):
@@ -262,6 +291,9 @@ class LineSection(Section):
     def _is_cutting_section(self) -> bool:
         return self.name.startswith(CUTTING_SECTION_MARKER)
 
+    def accept(self, visitor: "IntersectionVisitor[T]") -> list[T]:
+        return visitor.intersect_line_section(self)
+
 
 @dataclass(frozen=True)
 class Area(Section):
@@ -327,6 +359,9 @@ class Area(Section):
     def get_type(self) -> SectionType:
         return SectionType.AREA
 
+    def accept(self, visitor: "IntersectionVisitor[T]") -> list[T]:
+        return visitor.intersect_area_section(self)
+
 
 class MissingSection(Exception):
     pass
@@ -361,7 +396,9 @@ class SectionRepository:
             section (Section): the section to add
         """
         self._add(section)
-        self._repository_content_observers.notify([section.id])
+        self._repository_content_observers.notify(
+            SectionRepositoryEvent.create_added([section.id])
+        )
 
     def _add(self, section: Section) -> None:
         """Internal method to add sections without notifying observers.
@@ -379,7 +416,9 @@ class SectionRepository:
         """
         for section in sections:
             self._add(section)
-        self._repository_content_observers.notify([section.id for section in sections])
+        self._repository_content_observers.notify(
+            SectionRepositoryEvent.create_added([section.id for section in sections])
+        )
 
     def get_all(self) -> list[Section]:
         """Get all sections from the repository.
@@ -415,7 +454,9 @@ class SectionRepository:
             section (Section): the section to be removed
         """
         del self._sections[section]
-        self._repository_content_observers.notify([])
+        self._repository_content_observers.notify(
+            SectionRepositoryEvent.create_removed([section])
+        )
 
     def update(self, section: Section) -> None:
         """Update the section in the repository.
@@ -445,5 +486,18 @@ class SectionRepository:
         """
         Clear the repository and inform the observers about the empty repository.
         """
+        removed = list(self._sections.keys())
         self._sections.clear()
-        self._repository_content_observers.notify([])
+        self._repository_content_observers.notify(
+            SectionRepositoryEvent.create_removed(removed)
+        )
+
+
+class IntersectionVisitor(ABC, Generic[T]):
+    @abstractmethod
+    def intersect_area_section(self, section: Area) -> list[T]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def intersect_line_section(self, section: LineSection) -> list[T]:
+        raise NotImplementedError

@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
 from typing import Any
@@ -13,7 +14,11 @@ from OTAnalytics.application.analysis.traffic_counting import (
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
 )
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
 from OTAnalytics.application.config import (
+    DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
@@ -21,7 +26,8 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.state import TracksMetadata, TrackViewState
+from OTAnalytics.application.logger import DEFAULT_LOG_FILE
+from OTAnalytics.application.state import TracksMetadata, TrackViewState, VideosMetadata
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
@@ -50,7 +56,14 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
-from OTAnalytics.domain.track import ByMaxConfidence, TrackRepository
+from OTAnalytics.domain.track import TrackId, TrackRepository
+from OTAnalytics.plugin_datastore.python_track_store import (
+    ByMaxConfidence,
+    PythonTrackDataset,
+)
+from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
+    ShapelyRunIntersect,
+)
 from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
@@ -59,7 +72,6 @@ from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksWithSection,
 )
 from OTAnalytics.plugin_intersect.simple_intersect import (
-    SimpleRunIntersect,
     SimpleTracksIntersectingSections,
 )
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -148,6 +160,8 @@ def create_cli_args(
     ],
     count_interval: int = 1,
     num_processes: int = DEFAULT_NUM_PROCESSES,
+    logfile: str = str(DEFAULT_LOG_FILE),
+    logfile_overwrite: bool = False,
 ) -> CliArguments:
     if track_files is None:
         track_files = [TRACK_FILE]
@@ -161,6 +175,8 @@ def create_cli_args(
         event_list_exporter,
         count_interval,
         num_processes,
+        logfile,
+        logfile_overwrite,
     )
 
 
@@ -171,6 +187,7 @@ class TestCliArgumentParser:
         sections_file = "section_file.otflow"
         save_name = "stem"
         save_suffix = "suffix"
+        log_file = "path/to/my_log.log"
 
         cli_args: list[str] = [
             "path",
@@ -190,6 +207,9 @@ class TestCliArgumentParser:
             "15",
             "--num-processes",
             "3",
+            "--logfile",
+            log_file,
+            "--logfile_overwrite",
         ]
         with patch.object(sys, "argv", cli_args):
             parser = CliArgumentParser()
@@ -204,6 +224,8 @@ class TestCliArgumentParser:
                 AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME],
                 15,
                 3,
+                log_file,
+                True,
             )
 
 
@@ -221,6 +243,7 @@ class TestOTAnalyticsCli:
     GET_ALL_TRACK_IDS: str = "get_all_track_ids"
     CLEAR_ALL_TRACKS: str = "clear_all_tracks"
     TRACKS_METADATA: str = "tracks_metadata"
+    VIDEOS_METADATA: str = "videos_metadata"
     PROGRESSBAR: str = "progressbar"
 
     @pytest.fixture
@@ -239,12 +262,13 @@ class TestOTAnalyticsCli:
             self.GET_ALL_TRACK_IDS: Mock(spec=GetAllTrackIds),
             self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
             self.TRACKS_METADATA: Mock(spec=TracksMetadata),
+            self.VIDEOS_METADATA: Mock(spec=VideosMetadata),
             self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
         }
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
-        track_repository = TrackRepository()
+        track_repository = TrackRepository(PythonTrackDataset())
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()
@@ -257,12 +281,11 @@ class TestOTAnalyticsCli:
 
         clear_all_events = ClearAllEvents(event_repository)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            SimpleRunIntersect(
-                ShapelyIntersector(),
+            ShapelyRunIntersect(
                 MultiprocessingIntersectParallelization(),
                 get_all_tracks,
             ),
-            section_repository,
+            section_repository.get_all,
             add_events,
         )
         tracks_intersecting_sections = SimpleTracksIntersectingSections(
@@ -322,6 +345,7 @@ class TestOTAnalyticsCli:
             self.GET_ALL_TRACK_IDS: get_all_track_ids,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
             self.TRACKS_METADATA: TracksMetadata(track_repository),
+            self.VIDEOS_METADATA: VideosMetadata(),
             self.PROGRESSBAR: NoProgressbarBuilder(),
         }
 
@@ -340,6 +364,7 @@ class TestOTAnalyticsCli:
         assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
         assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
         assert cli._tracks_metadata == mock_cli_dependencies[self.TRACKS_METADATA]
+        assert cli._videos_metadata == mock_cli_dependencies[self.VIDEOS_METADATA]
         assert cli._progressbar == mock_cli_dependencies[self.PROGRESSBAR]
 
     def test_init_empty_tracks_cli_arg(
@@ -432,10 +457,11 @@ class TestOTAnalyticsCli:
     @pytest.mark.parametrize(
         "save_name,save_suffix,section_file,expected_file",
         [
-            ("stem", "suffix", SECTION_FILE, "path/to/stem_suffix"),
+            ("stem", "suffix", SECTION_FILE, "stem_suffix"),
             ("", "", SECTION_FILE, "path/to/section"),
-            ("stem", "", SECTION_FILE, "path/to/stem"),
+            ("stem", "", SECTION_FILE, "stem"),
             ("", "suffix", SECTION_FILE, "path/to/section_suffix"),
+            ("~/stem", "suffix", SECTION_FILE, str(Path.home() / "stem_suffix")),
             (
                 str(Path.cwd().with_name("stem")),
                 "suffix",
@@ -463,28 +489,29 @@ class TestOTAnalyticsCli:
 
     def test_start_with_no_video_in_folder(
         self,
+        test_data_tmp_dir: Path,
         temp_ottrk: Path,
         temp_section: Path,
         cli_dependencies: dict[str, Any],
         event_list_exporter: EventListExporter,
     ) -> None:
-        save_name = "stem"
+        save_name = test_data_tmp_dir / "stem"
         save_suffix = "suffix"
         cli_args = create_cli_args(
             track_files=[str(temp_ottrk)],
             sections_file=str(temp_section),
-            save_name=save_name,
+            save_name=str(save_name),
             save_suffix=save_suffix,
         )
         cli = OTAnalyticsCli(cli_args, **cli_dependencies)
         cli.start()
+        expected_event_list_file = save_name.with_name(
+            f"stem_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
+        )
+        expected_counts_file = save_name.with_name(
+            f"stem_{save_suffix}.counts.{DEFAULT_COUNTS_FILE_TYPE}"
+        )
 
-        expected_event_list_file = temp_section.with_name(
-            f"{save_name}_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
-        )
-        expected_counts_file = temp_section.with_name(
-            f"{save_name}_{save_suffix}.counts.{DEFAULT_COUNTS_FILE_TYPE}"
-        )
         assert expected_event_list_file.exists()
         assert expected_counts_file.exists()
 
@@ -512,3 +539,51 @@ class TestOTAnalyticsCli:
             call(cli_cutting_section),
             call(normal_cutting_section),
         ]
+
+    def test_use_video_start_and_end_for_counting(
+        self,
+        test_data_tmp_dir: Path,
+        mock_cli_dependencies: dict[str, Mock],
+    ) -> None:
+        section_1 = Mock()
+        section_1.id = SectionId("Section 1")
+        section_1.name = section_1.id.id
+        section_1.get_type.return_value = SectionType.LINE
+
+        section_2 = Mock()
+        section_2.id = SectionId("Section 2")
+        section_2.name = section_2.id.id
+        section_2.get_type.return_value = SectionType.LINE
+
+        start_date = datetime(2023, 11, 22, 0, 0)
+        end_date = datetime(2023, 11, 22, 1, 0)
+        classifications = frozenset(["car", "bike"])
+        interval = 15
+        filename = "filename"
+        output_file = (
+            test_data_tmp_dir
+            / f"{filename}.{DEFAULT_COUNTS_FILE_STEM}.{DEFAULT_COUNTS_FILE_TYPE}"
+        )
+        mock_cli_dependencies[self.GET_ALL_TRACK_IDS].return_value = [TrackId("1")]
+        mock_cli_dependencies[self.VIDEOS_METADATA].first_video_start = start_date
+        mock_cli_dependencies[self.VIDEOS_METADATA].last_video_end = end_date
+        mock_cli_dependencies[
+            self.TRACKS_METADATA
+        ].detection_classifications = classifications
+
+        cli_args = Mock()
+        cli_args.count_interval = interval
+        cli = OTAnalyticsCli(cli_args, **mock_cli_dependencies)
+        cli._do_export_counts(test_data_tmp_dir / filename)
+
+        export_counts = mock_cli_dependencies[self.EXPORT_COUNTS]
+
+        expected_specification = CountingSpecificationDto(
+            start=start_date,
+            end=end_date,
+            interval_in_minutes=interval,
+            modes=list(classifications),
+            output_format="CSV",
+            output_file=str(output_file),
+        )
+        export_counts.export.assert_called_with(specification=expected_specification)

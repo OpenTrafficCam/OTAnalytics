@@ -19,6 +19,7 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionListSubject,
     SectionRepository,
+    SectionRepositoryEvent,
     SectionType,
 )
 
@@ -30,9 +31,10 @@ class TestSectionListSubject:
         subject = SectionListSubject()
         subject.register(observer)
 
-        subject.notify(changed_tracks)
+        event = SectionRepositoryEvent.create_added(changed_tracks)
+        subject.notify(event)
 
-        observer.notify_sections.assert_called_with(changed_tracks)
+        observer.notify_sections.assert_called_with(event)
 
 
 class TestSection:
@@ -362,7 +364,9 @@ class TestSectionRepository:
         repository.add(section)
 
         assert section in repository.get_all()
-        observer.notify_sections.assert_called_with([section_id])
+        observer.notify_sections.assert_called_with(
+            SectionRepositoryEvent.create_added([section_id])
+        )
 
     def test_add_all(self) -> None:
         section_id_north = SectionId("north")
@@ -380,7 +384,7 @@ class TestSectionRepository:
         assert first_section in repository.get_all()
         assert second_section in repository.get_all()
         observer.notify_sections.assert_called_with(
-            [section_id_north, section_id_south]
+            SectionRepositoryEvent.create_added([section_id_north, section_id_south])
         )
 
     def test_remove(self) -> None:
@@ -388,13 +392,18 @@ class TestSectionRepository:
         first_section.id = SectionId("first")
         second_section = Mock()
         second_section.id = SectionId("second")
+        observer = Mock(spec=SectionListObserver)
         repository = SectionRepository()
+        repository.register_sections_observer(observer)
         repository.add_all([first_section, second_section])
 
         repository.remove(first_section.id)
 
         assert first_section not in repository.get_all()
         assert second_section in repository.get_all()
+        observer.notify_sections.assert_called_with(
+            SectionRepositoryEvent.create_removed([first_section.id])
+        )
 
     def test_update(self) -> None:
         section_id = Mock()
@@ -481,8 +490,16 @@ class TestSectionRepository:
 
         assert not list(repository.get_all())
         assert observer.notify_sections.call_args_list == [
-            call([section_id_north, section_id_south]),
-            call([]),
+            call(
+                SectionRepositoryEvent.create_added(
+                    [section_id_north, section_id_south]
+                )
+            ),
+            call(
+                SectionRepositoryEvent.create_removed(
+                    [section_id_north, section_id_south]
+                )
+            ),
         ]
 
     def test_get_section_ids(self) -> None:

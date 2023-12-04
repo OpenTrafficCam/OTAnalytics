@@ -18,7 +18,7 @@ class TestLoadTrackFile:
         progressbar.return_value = [some_file, other_file]
 
         load_track_files = LoadTrackFiles(
-            Mock(), Mock(), Mock(), Mock(), Mock(), Mock(), progressbar, Mock()
+            Mock(), Mock(), Mock(), Mock(), Mock(), Mock(), progressbar, Mock(), Mock()
         )
         load_track_files([some_file, other_file])
         assert mock_load.call_args_list == [call(some_file), call(other_file)]
@@ -32,6 +32,7 @@ class TestLoadTrackFile:
         track_to_video_repository = Mock()
         progressbar = Mock()
         tracks_metadata = Mock()
+        videos_metadata = Mock()
 
         some_track = Mock()
         some_track_id = TrackId("1")
@@ -61,6 +62,7 @@ class TestLoadTrackFile:
             track_to_video_repository,
             progressbar,
             tracks_metadata,
+            videos_metadata,
         )
         some_file = Path("some.file.ottrk")
         load_track_file.load(some_file)
