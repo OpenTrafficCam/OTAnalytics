@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable, Optional, Sequence, Tuple
+from typing import Any, Callable, Iterable, Optional, Sequence, Tuple
 
 import ujson
 
@@ -59,6 +59,8 @@ SECTION_FORMAT_VERSION: str = "section_file_version"
 EVENT_FORMAT_VERSION: str = "event_file_version"
 
 PROJECT: str = "project"
+
+TrackIdGenerator = Callable[[str], TrackId]
 
 
 def _parse_bz2(path: Path) -> dict:
@@ -244,9 +246,9 @@ class Otdet_Version_1_0_to_1_1(DetectionFixer):
         return detection
 
 
-class Otdet_Version_1_1_To_1_2(DetectionFixer):
+class Otdet_Version_1_0_To_1_2(DetectionFixer):
     def __init__(self) -> None:
-        super().__init__(VERSION_1_1, VERSION_1_2)
+        super().__init__(VERSION_1_0, VERSION_1_2)
 
     def fix(self, detection: dict, current_version: Version) -> dict:
         return self.__fix_occurrence(detection, current_version)
@@ -261,7 +263,7 @@ class Otdet_Version_1_1_To_1_2(DetectionFixer):
         Returns:
             dict: fixed dictionary
         """
-        if otdet_format_version <= self.from_version():
+        if otdet_format_version < self.to_version():
             occurrence = datetime.strptime(
                 detection[ottrk_format.OCCURRENCE], ottrk_format.DATE_FORMAT
             ).replace(tzinfo=timezone.utc)
@@ -269,8 +271,25 @@ class Otdet_Version_1_1_To_1_2(DetectionFixer):
         return detection
 
 
-ALL_DETECTION_FIXES = [Otdet_Version_1_0_to_1_1(), Otdet_Version_1_1_To_1_2()]
-ALL_METADATA_FIXES: list[MetadataFixer] = []
+class Ottrk_Version_1_0_To_1_1(MetadataFixer):
+    def __init__(self) -> None:
+        super().__init__(VERSION_1_0, VERSION_1_1)
+
+    def fix(self, metadata: dict, current_version: Version) -> dict:
+        return self.__fix_tracking_run_ids(metadata, current_version)
+
+    def __fix_tracking_run_ids(self, metadata: dict, current_version: Version) -> dict:
+        if current_version < self.to_version():
+            metadata[ottrk_format.TRACKING][ottrk_format.TRACKING_RUN_ID] = "legacy"
+            metadata[ottrk_format.TRACKING][ottrk_format.FRAME_GROUP] = "legacy"
+        return metadata
+
+
+ALL_DETECTION_FIXES: list[DetectionFixer] = [
+    Otdet_Version_1_0_to_1_1(),
+    Otdet_Version_1_0_To_1_2(),
+]
+ALL_METADATA_FIXES: list[MetadataFixer] = [Ottrk_Version_1_0_To_1_1()]
 
 
 class OttrkFormatFixer:
@@ -279,7 +298,8 @@ class OttrkFormatFixer:
         detection_fixes: list[DetectionFixer] = ALL_DETECTION_FIXES,
         metadata_fixes: list[MetadataFixer] = ALL_METADATA_FIXES,
     ) -> None:
-        self._detection_fixes: list[DetectionFixer] = detection_fixes
+        self._detection_fixes = detection_fixes
+        self._metadata_fixes = metadata_fixes
 
     def fix(self, content: dict) -> dict:
         """Fix formate changes from older ottrk and otdet format versions to the
@@ -292,6 +312,7 @@ class OttrkFormatFixer:
             dict: fixed ottrk file content
         """
         otdet_version = self.__parse_otdet_version(content)
+        content = self.__fix_metadata(content)
         return self.__fix_detections(content, otdet_version)
 
     def __parse_otdet_version(self, content: dict) -> Version:
@@ -305,6 +326,14 @@ class OttrkFormatFixer:
         """
         version = content[ottrk_format.METADATA][ottrk_format.OTDET_VERSION]
         return Version.from_str(version)
+
+    def __fix_metadata(self, content: dict) -> dict:
+        metadata = content[ottrk_format.METADATA]
+        current_version = Version.from_str(metadata[ottrk_format.OTTRK_VERSION])
+        for fixer in self._metadata_fixes:
+            metadata = fixer.fix(metadata, current_version)
+        content[ottrk_format.METADATA] = metadata
+        return content
 
     def __fix_detections(self, content: dict, current_otdet_version: Version) -> dict:
         detections = content[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS]
@@ -323,7 +352,10 @@ class DetectionParser(ABC):
 
     @abstractmethod
     def parse_tracks(
-        self, detections: list[dict], metadata_video: dict
+        self,
+        detections: list[dict],
+        metadata_video: dict,
+        id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
         """Parse the detections.
 
@@ -333,6 +365,7 @@ class DetectionParser(ABC):
         Args:
             detections (list[dict]): the detections in dict format.
             metadata_video (dict): metadata of the track file in dict format.
+            id_generator (TrackIdGenerator): generator used to create track ids.
 
         Returns:
             TrackDataset: the tracks.
@@ -379,8 +412,13 @@ class PythonDetectionParser(DetectionParser):
         self._track_length_limit = track_length_limit
         self._path_cache: dict[str, Path] = {}
 
-    def parse_tracks(self, dets: list[dict], metadata_video: dict) -> TrackDataset:
-        tracks_dict = self._parse_detections(dets, metadata_video)
+    def parse_tracks(
+        self,
+        dets: list[dict],
+        metadata_video: dict,
+        id_generator: TrackIdGenerator = TrackId,
+    ) -> TrackDataset:
+        tracks_dict = self._parse_detections(dets, metadata_video, id_generator)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
@@ -434,7 +472,10 @@ class PythonDetectionParser(DetectionParser):
         return []
 
     def _parse_detections(
-        self, det_list: list[dict], metadata_video: dict
+        self,
+        det_list: list[dict],
+        metadata_video: dict,
+        id_generator: TrackIdGenerator,
     ) -> dict[TrackId, list[Detection]]:
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
@@ -451,7 +492,7 @@ class PythonDetectionParser(DetectionParser):
                     float(det_dict[ottrk_format.OCCURRENCE]), tz=timezone.utc
                 ),
                 _interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-                _track_id=TrackId(str(det_dict[ottrk_format.TRACK_ID])),
+                _track_id=id_generator(str(det_dict[ottrk_format.TRACK_ID])),
                 _video_name=metadata_video[ottrk_format.FILENAME]
                 + metadata_video[ottrk_format.FILETYPE],
             )
@@ -496,7 +537,10 @@ class OttrkParser(TrackParser):
         ]
         metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
         video_metadata = self._parse_video_metadata(metadata_video)
-        tracks = self._detection_parser.parse_tracks(dets_list, metadata_video)
+        id_generator = self._create_id_generator_from(ottrk_dict[ottrk_format.METADATA])
+        tracks = self._detection_parser.parse_tracks(
+            dets_list, metadata_video, id_generator
+        )
         detection_metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
         return TrackParseResult(tracks, detection_metadata, video_metadata)
 
@@ -528,6 +572,12 @@ class OttrkParser(TrackParser):
             actual_fps=actual_fps,
             number_of_frames=number_of_frames,
         )
+
+    def _create_id_generator_from(self, metadata: dict) -> TrackIdGenerator:
+        tracking_metadata: dict = metadata[ottrk_format.TRACKING]
+        tracking_run_id = tracking_metadata[ottrk_format.TRACKING_RUN_ID]
+        frame_group = tracking_metadata[ottrk_format.FRAME_GROUP]
+        return lambda id: TrackId(f"{tracking_run_id}#{frame_group}#{id}")
 
     def _parse_metadata(self, metadata_detection: dict) -> DetectionMetadata:
         detection_classes_entry: dict[str, str] = metadata_detection[
