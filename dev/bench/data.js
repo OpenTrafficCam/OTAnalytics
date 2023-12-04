@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701566706702,
+  "lastUpdate": 1701652921950,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1344,6 +1344,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 135.34912545303814 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Lars Briem",
+            "username": "briemla",
+            "email": "lars.briem@platomo.de"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "89a11f5c4a501b43e7939008ed150ac7fe8ab1af",
+          "message": "Merge pull request #413 from OpenTrafficCam/feature/3728-run-mypy-on-all-files-during-pre-commit-check\n\nfeature/3728-run-mypy-on-all-files-during-pre-commit-check",
+          "timestamp": "2023-11-29T07:24:53Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/89a11f5c4a501b43e7939008ed150ac7fe8ab1af"
+        },
+        "date": 1701652921445,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.11460081123316487,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 8.725941721000709 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.015784275707147907,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 63.35418986296281 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.07751482969995414,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 12.9007572340779 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.008805843678004768,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 113.56095299508888 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.05976195627751745,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 16.7330533049535 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.007550731962467441,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 132.43749148701318 sec\nrounds: 1"
           }
         ]
       }
