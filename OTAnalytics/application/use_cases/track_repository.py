@@ -29,8 +29,7 @@ class GetAllTracks:
         return self.as_dataset().as_list()
 
     def as_dataset(self) -> TrackDataset:
-        tracks = self._track_repository.get_all()
-        return tracks.filter_by_min_detection_length(2)
+        return self._track_repository.get_all()
 
 
 class GetTracksWithoutSingleDetections:
