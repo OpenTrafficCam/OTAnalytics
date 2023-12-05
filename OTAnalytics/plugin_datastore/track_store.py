@@ -220,7 +220,7 @@ class PandasTrackDataset(TrackDataset):
         return updated
 
     def get_all_ids(self) -> Iterable[TrackId]:
-        return self._dataset[track.TRACK_ID].apply(lambda track_id: TrackId(track_id))
+        return [TrackId(_id) for _id in self._get_track_ids()]
 
     def __get_tracks(self, other: Iterable[Track]) -> DataFrame:
         if isinstance(other, PandasTrackDataset):
