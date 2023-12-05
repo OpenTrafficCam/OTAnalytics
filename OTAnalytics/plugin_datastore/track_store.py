@@ -26,7 +26,9 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
 
 
 class PandasDetection(Detection):
-    def __init__(self, data: Series):
+    def __init__(self, track_id: str, data: Series):
+        self._track_id = track_id
+        self._occurrence: Any = data.name
         self._data = data
 
     @property
@@ -62,7 +64,7 @@ class PandasDetection(Detection):
 
     @property
     def occurrence(self) -> datetime:
-        return self.__get_attribute(track.OCCURRENCE)
+        return self._occurrence
 
     @property
     def interpolated_detection(self) -> bool:
@@ -70,7 +72,7 @@ class PandasDetection(Detection):
 
     @property
     def track_id(self) -> TrackId:
-        return TrackId(self.__get_attribute(track.TRACK_ID))
+        return TrackId(self._track_id)
 
     @property
     def video_name(self) -> str:
@@ -79,11 +81,12 @@ class PandasDetection(Detection):
 
 @dataclass
 class PandasTrack(Track):
+    _id: str
     _data: DataFrame
 
     @property
     def id(self) -> TrackId:
-        return TrackId(self._data[track.TRACK_ID].iloc[0])
+        return TrackId(self._id)
 
     @property
     def classification(self) -> str:
@@ -91,15 +94,15 @@ class PandasTrack(Track):
 
     @property
     def detections(self) -> list[Detection]:
-        return [PandasDetection(row) for index, row in self._data.iterrows()]
+        return [PandasDetection(self._id, row) for _, row in self._data.iterrows()]
 
     @property
     def first_detection(self) -> Detection:
-        return PandasDetection(self._data.iloc[0])
+        return PandasDetection(self._id, self._data.iloc[0])
 
     @property
     def last_detection(self) -> Detection:
-        return PandasDetection(self._data.iloc[-1])
+        return PandasDetection(self._id, self._data.iloc[-1])
 
 
 class PandasTrackClassificationCalculator(ABC):
@@ -128,21 +131,24 @@ class PandasByMaxConfidence(PandasTrackClassificationCalculator):
         if detections.empty:
             return DataFrame()
         classifications = (
-            detections.loc[:, [track.TRACK_ID, track.CLASSIFICATION, track.CONFIDENCE]]
+            detections.loc[:, [track.CLASSIFICATION, track.CONFIDENCE]]
             .groupby(by=[track.TRACK_ID, track.CLASSIFICATION])
             .sum()
             .sort_values(track.CONFIDENCE)
             .groupby(level=0)
             .tail(1)
         )
-        reset = classifications.reset_index()
+        reset = classifications.reset_index(level=[1])
         renamed = reset.rename(
             columns={track.CLASSIFICATION: track.TRACK_CLASSIFICATION}
         )
-        return renamed.loc[:, [track.TRACK_ID, track.TRACK_CLASSIFICATION]]
+        return renamed.loc[:, [track.TRACK_CLASSIFICATION]]
 
 
 DEFAULT_CLASSIFICATOR = PandasByMaxConfidence()
+INDEX_NAMES = [track.TRACK_ID, track.OCCURRENCE]
+LEVEL_TRACK_ID = 0
+LEVEL_OCCURRENCE = 1
 
 
 class PandasTrackDataset(TrackDataset):
@@ -195,13 +201,15 @@ class PandasTrackDataset(TrackDataset):
             return PandasTrackDataset.from_dataframe(
                 new_tracks, calculator=self._calculator
             )
-        new_dataset = pandas.concat([self._dataset, new_tracks])
-        new_track_ids = new_tracks[track.TRACK_ID].unique()
-        new_tracks_df = new_dataset[new_dataset[track.TRACK_ID].isin(new_track_ids)]
+        updated_dataset = pandas.concat([self._dataset, new_tracks]).sort_index()
+        new_track_ids = new_tracks.index.levels[LEVEL_TRACK_ID]
+        new_dataset = updated_dataset.loc[new_track_ids]
         updated_geometry_dataset = self._add_to_geometry_dataset(
-            PandasTrackDataset.from_dataframe(new_tracks_df)
+            PandasTrackDataset.from_dataframe(new_dataset)
         )
-        return PandasTrackDataset.from_dataframe(new_dataset, updated_geometry_dataset)
+        return PandasTrackDataset.from_dataframe(
+            updated_dataset, updated_geometry_dataset
+        )
 
     def _add_to_geometry_dataset(
         self, new_tracks: TrackDataset
@@ -228,12 +236,10 @@ class PandasTrackDataset(TrackDataset):
         return PandasTrackDataset()
 
     def remove(self, track_id: TrackId) -> "TrackDataset":
-        remaining_tracks = self._dataset.loc[
-            self._dataset[track.TRACK_ID] != track_id.id, :
-        ]
+        remaining_tracks = self._dataset.drop(track_id.id, errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset({track_id})
         return PandasTrackDataset.from_dataframe(
-            remaining_tracks.copy(), updated_geometry_datasets
+            remaining_tracks, updated_geometry_datasets
         )
 
     def _remove_from_geometry_dataset(
@@ -247,24 +253,23 @@ class PandasTrackDataset(TrackDataset):
     def as_list(self) -> list[Track]:
         if self._dataset.empty:
             return []
-        track_ids = self._dataset.loc[:, track.TRACK_ID].unique()
+        track_ids = self._get_track_ids()
         return [self.__create_track_flyweight(current) for current in track_ids]
 
     def __create_track_flyweight(self, track_id: str) -> Track:
-        track_frame = self._dataset.loc[self._dataset[track.TRACK_ID] == track_id, :]
-        return PandasTrack(track_frame)
+        track_frame = self._dataset.loc[track_id, :]
+        return PandasTrack(track_id, track_frame)
 
     def as_dataframe(self) -> DataFrame:
         return self._dataset
 
     def split(self, batches: int) -> Sequence["TrackDataset"]:
-        all_ids = self._dataset[track.TRACK_ID].unique()
-        dataset_size = len(all_ids)
+        dataset_size = len(self)
         batch_size = ceil(dataset_size / batches)
 
         new_batches: list["TrackDataset"] = []
-        for batch_ids in batched(all_ids, batch_size):
-            batch_dataset = self._dataset[self._dataset[track.TRACK_ID].isin(batch_ids)]
+        for batch_ids in batched(self._get_track_ids(), batch_size):
+            batch_dataset = self._dataset.loc[list(batch_ids), :]
             batch_geometries = self._get_geometries_for(batch_ids)
             new_batches.append(
                 PandasTrackDataset.from_dataframe(
@@ -272,6 +277,11 @@ class PandasTrackDataset(TrackDataset):
                 )
             )
         return new_batches
+
+    def _get_track_ids(self) -> list[str]:
+        if self._dataset.empty:
+            return []
+        return list(self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique())
 
     def _get_geometries_for(
         self, track_ids: Iterable[str]
@@ -282,21 +292,14 @@ class PandasTrackDataset(TrackDataset):
         return geometry_datasets
 
     def __len__(self) -> int:
-        if self._dataset.empty:
-            return 0
-        return len(self._dataset[track.TRACK_ID].unique())
+        return len(self._get_track_ids())
 
     def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
-        detection_counts_per_track = self._dataset.groupby([track.TRACK_ID])[
-            track.CLASSIFICATION
-        ].count()
+        detection_counts_per_track = self._dataset.groupby(level=LEVEL_TRACK_ID).size()
         filtered_ids = detection_counts_per_track[
             detection_counts_per_track > length
         ].index
-
-        filtered_dataset = self._dataset.loc[
-            self._dataset[track.TRACK_ID].isin(filtered_ids)
-        ]
+        filtered_dataset = self._dataset.loc[filtered_ids]
         return PandasTrackDataset(filtered_dataset, calculator=self._calculator)
 
     def intersecting_tracks(
@@ -344,7 +347,7 @@ def _assign_track_classification(
 ) -> DataFrame:
     dropped = _drop_track_classification(data)
     classification_per_track = calculator.calculate(dropped)
-    return dropped.merge(classification_per_track, on=track.TRACK_ID)
+    return dropped.merge(classification_per_track, left_index=True, right_index=True)
 
 
 def _drop_track_classification(data: DataFrame) -> DataFrame:
@@ -368,12 +371,16 @@ def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
         for detection in current_track.detections:
             prepared.append(detection.to_dict())
 
-    return _sort_tracks(DataFrame(prepared))
+    if not prepared:
+        return DataFrame(prepared)
+
+    df = DataFrame(prepared).set_index(INDEX_NAMES)
+    df.index.names = INDEX_NAMES
+    return _sort_tracks(df)
 
 
 def _sort_tracks(track_df: DataFrame) -> DataFrame:
-    """Sort the given dataframe by trackId and frame,
-    if both columns are available.
+    """Sort the given dataframe by trackId and occurrence.
 
     Args:
         track_df (DataFrame): dataframe of tracks
@@ -381,6 +388,4 @@ def _sort_tracks(track_df: DataFrame) -> DataFrame:
     Returns:
         DataFrame: sorted dataframe by track id and frame
     """
-    if (track.TRACK_ID in track_df.columns) and (track.FRAME in track_df.columns):
-        track_df.sort_values([track.FRAME], inplace=True)
-    return track_df
+    return track_df.sort_index()

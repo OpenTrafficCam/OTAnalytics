@@ -77,12 +77,13 @@ class PandasDetectionParser(DetectionParser):
                 f"Track ids: {too_long_track_ids}"
             )
 
-        tracks_to_remain = data.loc[
-            data[track.TRACK_ID].isin(track_ids_to_remain)
-        ].copy()
-        tracks_to_remain.sort_values(
-            by=[track.TRACK_ID, track.OCCURRENCE], inplace=True
+        tracks_to_remain = (
+            data.loc[data[track.TRACK_ID].isin(track_ids_to_remain)]
+            .copy()
+            .set_index([track.TRACK_ID, track.OCCURRENCE])
         )
+        tracks_to_remain.index.names = [track.TRACK_ID, track.OCCURRENCE]
+        tracks_to_remain = tracks_to_remain.sort_index()
         return PandasTrackDataset.from_dataframe(
             tracks_to_remain, calculator=self._calculator
         )

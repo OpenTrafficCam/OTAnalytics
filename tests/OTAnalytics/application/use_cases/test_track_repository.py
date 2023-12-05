@@ -60,16 +60,13 @@ class TestGetAllTracks:
 
     def test_get_as_dataset(self) -> None:
         expected_dataset = Mock()
-        dataset = Mock()
-        dataset.filter_by_min_detection_length.return_value = expected_dataset
         track_repository = Mock()
-        track_repository.get_all.return_value = dataset
+        track_repository.get_all.return_value = expected_dataset
 
         get_tracks = GetAllTracks(track_repository)
         result_dataset = get_tracks.as_dataset()
         assert result_dataset == expected_dataset
         track_repository.get_all.assert_called_once()
-        dataset.filter_by_min_detection_length.assert_called_once_with(2)
 
     def test_get_as_list(self) -> None:
         track_repository = Mock()

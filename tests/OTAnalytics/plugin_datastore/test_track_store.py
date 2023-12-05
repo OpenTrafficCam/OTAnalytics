@@ -34,8 +34,11 @@ class TestPandasDetection:
         builder = TrackBuilder()
         builder.append_detection()
         python_detection = builder.build_detections()[0]
-        data = Series(python_detection.to_dict())
-        pandas_detection = PandasDetection(data)
+        data = Series(
+            python_detection.to_dict(),
+            name=python_detection.occurrence,
+        )
+        pandas_detection = PandasDetection(python_detection.track_id.id, data)
 
         assert_equal_detection_properties(pandas_detection, python_detection)
 
@@ -50,9 +53,10 @@ class TestPandasTrack:
         builder.append_detection()
         python_track = builder.build_track()
         detections = [detection.to_dict() for detection in python_track.detections]
-        data = DataFrame(detections)
+        data = DataFrame(detections).set_index([track.OCCURRENCE]).sort_index()
         data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
-        pandas_track = PandasTrack(data)
+        data = data.drop([track.TRACK_ID], axis=1)
+        pandas_track = PandasTrack(python_track.id.id, data)
 
         assert_equal_track_properties(pandas_track, python_track)
 
@@ -167,10 +171,10 @@ class TestPandasTrackDataset:
             ),
         }
         dataset = PandasTrackDataset.from_dataframe(
-            _convert_tracks([first_track]), geometry_datasets
+            _convert_tracks([first_track_continuing]), geometry_datasets
         )
         dataset_merged_track = cast(
-            PandasTrackDataset, dataset.add_all([first_track_continuing, second_track])
+            PandasTrackDataset, dataset.add_all([first_track, second_track])
         )
         expected_merged_track = PythonTrack(
             first_track.id,
