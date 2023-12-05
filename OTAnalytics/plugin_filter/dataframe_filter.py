@@ -62,6 +62,9 @@ class NoOpDataFrameFilter(Filter[DataFrame, Series]):
         return iterable
 
 
+INDEX_LEVEL_OCCURRENCE = 1
+
+
 class DataFrameStartsAtOrAfterDate(DataFramePredicate):
     """Checks if the DataFrame rows start at or after date.
 
@@ -79,7 +82,11 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
         self._start_date = start_date
 
     def test(self, to_test: DataFrame) -> Series:
-        return to_test[self.column_name] >= self._start_date
+        # TODO: Only works for DataFrames that have track id and occurrence as
+        # multi-index
+        return (
+            to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) >= self._start_date
+        )
 
 
 class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
@@ -99,7 +106,9 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
         self._end_date = end_date
 
     def test(self, to_test: DataFrame) -> Series:
-        return to_test[self.column_name] <= self._end_date
+        # TODO: Only works for DataFrames that have track id and occurrence as
+        # multi-index
+        return to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) <= self._end_date
 
 
 class DataFrameHasClassifications(DataFramePredicate):
