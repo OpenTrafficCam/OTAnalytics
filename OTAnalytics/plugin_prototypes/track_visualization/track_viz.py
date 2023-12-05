@@ -290,8 +290,12 @@ class FilterById(PandasDataFrameProvider):
         data = self._other.get_data()
         if data.empty:
             return data
-        ids: set[str] = {track_id.id for track_id in self._filter.get_ids()}
-        return data.loc[data[track.TRACK_ID].isin(ids)]
+        ids = [track_id.id for track_id in self._filter.get_ids()]
+        # TODO: This only works for DataFrames with track id and occurrence as
+        #  an multi-index. Could not be working with a CachedPandasTrackProvider
+        #  since no such multi-index is being used there.
+        intersection_of_ids = data.index.get_level_values(0).unique().intersection(ids)
+        return data.loc[intersection_of_ids]
 
 
 class FilterByClassification(PandasDataFrameProvider):
