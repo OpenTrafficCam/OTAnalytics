@@ -654,22 +654,22 @@ class TestProfiling:
         return parse_result.tracks
 
     @pytest.fixture
-    def sections(self, test_data_dir: Path) -> Iterable[Section]:
+    def sections(self, test_data_dir: Path) -> list[Section]:
         flow_file = test_data_dir / "OTCamera19_FR20_2023-05-24.otflow"
         flow_parser = OtFlowParser()
         sections, flows = flow_parser.parse(flow_file)
-        return sections
+        return list(sections)
 
     @pytest.mark.skip
     def test_profile(
         self,
         benchmark: BenchmarkFixture,
         tracks_15min: TrackDataset,
-        sections: Iterable[Section],
+        sections: list[Section],
     ) -> None:
         benchmark.pedantic(
             tracks_15min.intersecting_tracks,
-            args=(sections,),
+            args=(sections, sections[0].get_offset(EventType.SECTION_ENTER)),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
