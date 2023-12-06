@@ -28,6 +28,9 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
+from OTAnalytics.application.use_cases.create_intersection_events import (
+    ShapelyRunIntersect,
+)
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
@@ -56,9 +59,6 @@ from OTAnalytics.domain.track import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
-)
-from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
-    ShapelyRunIntersect,
 )
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (

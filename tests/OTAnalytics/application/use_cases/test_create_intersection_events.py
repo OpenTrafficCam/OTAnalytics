@@ -3,6 +3,11 @@ from unittest.mock import Mock, call
 
 import pytest
 
+from OTAnalytics.application.use_cases.create_intersection_events import (
+    ShapelyIntersectAreaByTrackPoints,
+    ShapelyIntersectBySmallestTrackSegments,
+    separate_sections,
+)
 from OTAnalytics.domain.geometry import (
     Coordinate,
     DirectionVector2D,
@@ -18,11 +23,6 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import Detection, IntersectionPoint, Track, TrackDataset
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
-    ShapelyIntersectAreaByTrackPoints,
-    ShapelyIntersectBySmallestTrackSegments,
-    separate_sections,
-)
 from tests.conftest import TrackBuilder
 
 
