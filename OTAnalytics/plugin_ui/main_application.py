@@ -45,6 +45,9 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
+from OTAnalytics.application.use_cases.create_intersection_events import (
+    BatchedTracksRunIntersect,
+)
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
@@ -98,12 +101,10 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_datastore.python_track_store import (
-    ByMaxConfidence,
-    PythonTrackDataset,
-)
-from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
-    ShapelyRunIntersect,
+from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasByMaxConfidence,
+    PandasTrackDataset,
 )
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
@@ -130,9 +131,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
-    PythonDetectionParser,
     SimpleVideoParser,
 )
+from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -550,18 +551,18 @@ class ApplicationStarter:
         )
 
     def _create_track_repository(self) -> TrackRepository:
-        # return TrackRepository(PandasTrackDataset.from_list([]))
-        return TrackRepository(PythonTrackDataset())
+        return TrackRepository(PandasTrackDataset.from_list([]))
+        # return TrackRepository(PythonTrackDataset())
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
-        # calculator = PandasByMaxConfidence()
-        # detection_parser = PandasDetectionParser(
-        #     calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
-        # )
-        calculator = ByMaxConfidence()
-        detection_parser = PythonDetectionParser(
-            calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        calculator = PandasByMaxConfidence()
+        detection_parser = PandasDetectionParser(
+            calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
         )
+        # calculator = ByMaxConfidence()
+        # detection_parser = PythonDetectionParser(
+        # noqa   calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        # )
         return OttrkParser(detection_parser)
 
     def _create_section_repository(self) -> SectionRepository:
@@ -651,7 +652,7 @@ class ApplicationStarter:
 
     @staticmethod
     def _create_intersect(get_tracks: GetAllTracks, num_processes: int) -> RunIntersect:
-        return ShapelyRunIntersect(
+        return BatchedTracksRunIntersect(
             intersect_parallelizer=MultiprocessingIntersectParallelization(
                 num_processes
             ),
