@@ -45,13 +45,15 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FlowLayerPlotter,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
-    PandasTrackProvider,
     PandasTracksOffsetProvider,
     PlotterPrototype,
     SectionLayerPlotter,
+    TrackBoundingBoxPlotter,
     TrackGeometryPlotter,
     TrackStartEndPointPlotter,
 )
+
+ALPHA_BOUNDING_BOX = 0.5
 
 
 class VisualizationBuilder:
@@ -75,7 +77,11 @@ class VisualizationBuilder:
         self._intersection_repository = intersection_repository
         self._event_repository = datastore._event_repository
         self._pandas_data_provider: Optional[PandasDataFrameProvider] = None
+        self._pandas_data_provider_with_offset: Optional[PandasDataFrameProvider] = None
         self._data_provider_all_filters: Optional[PandasDataFrameProvider] = None
+        self._data_provider_all_filters_with_offset: Optional[
+            PandasDataFrameProvider
+        ] = None
         self._data_provider_class_filter: Optional[PandasDataFrameProvider] = None
         self._tracks_intersection_selected_sections: Optional[
             TracksIntersectingSelectedSections
@@ -103,6 +109,9 @@ class VisualizationBuilder:
                 road_user_assigner, flow_state
             )
         )
+
+        track_bounding_box_plotter = self._create_track_bounding_box_plotter()
+
         layer_definitions = [
             ("Background", background_image_plotter, True),
             ("Show all tracks", all_tracks_plotter, False),
@@ -141,6 +150,11 @@ class VisualizationBuilder:
                 highlight_tracks_not_assigned_to_flows_plotter,
                 False,
             ),
+            (
+                "Show bounding boxes of current frame",
+                track_bounding_box_plotter,
+                False,
+            ),
         ]
 
         return [
@@ -150,7 +164,7 @@ class VisualizationBuilder:
 
     def _create_all_tracks_plotter(self) -> Plotter:
         track_geometry_plotter = self._create_track_geometry_plotter(
-            self._get_data_provider_all_filters(),
+            self._get_data_provider_all_filters_with_offset(),
             self._color_palette_provider,
             alpha=0.5,
             enable_legend=True,
@@ -231,7 +245,8 @@ class VisualizationBuilder:
         return self._create_highlight_tracks_assigned_to_flow(
             self._create_highlight_tracks_assigned_to_flows_factory(
                 self._create_tracks_assigned_to_flows_filter(
-                    self._get_data_provider_all_filters(), road_user_assigner
+                    self._get_data_provider_all_filters_with_offset(),
+                    road_user_assigner,
                 ),
                 self._color_palette_provider,
                 alpha=1,
@@ -246,7 +261,8 @@ class VisualizationBuilder:
         return self._create_highlight_tracks_assigned_to_flow(
             self._create_highlight_tracks_assigned_to_flows_factory(
                 self._create_tracks_not_assigned_to_flows_filter(
-                    self._get_data_provider_all_filters(), road_user_assigner
+                    self._get_data_provider_all_filters_with_offset(),
+                    road_user_assigner,
                 ),
                 self._color_palette_provider,
                 alpha=1,
@@ -258,20 +274,36 @@ class VisualizationBuilder:
     def _get_data_provider_class_filter(self) -> PandasDataFrameProvider:
         if not self._data_provider_class_filter:
             self._data_provider_class_filter = self._build_filter_by_classification(
-                self._get_pandas_data_provider()
+                self._get_pandas_data_provider_with_offset()
             )
         return self._data_provider_class_filter
 
     def _get_data_provider_all_filters(self) -> PandasDataFrameProvider:
         if not self._data_provider_all_filters:
-            self._data_provider_all_filters = self._build_filter_by_classification(
-                self._create_filter_by_occurrence()
+            self._data_provider_all_filters = self._create_all_filters(
+                self._get_pandas_data_provider()
             )
         return self._data_provider_all_filters
 
-    def _create_filter_by_occurrence(self) -> PandasDataFrameProvider:
+    def _get_data_provider_all_filters_with_offset(self) -> PandasDataFrameProvider:
+        if not self._data_provider_all_filters_with_offset:
+            self._data_provider_all_filters_with_offset = self._create_all_filters(
+                self._get_pandas_data_provider_with_offset()
+            )
+        return self._data_provider_all_filters_with_offset
+
+    def _create_all_filters(
+        self, data_provider: PandasDataFrameProvider
+    ) -> PandasDataFrameProvider:
+        return self._build_filter_by_classification(
+            self._create_filter_by_occurrence(data_provider)
+        )
+
+    def _create_filter_by_occurrence(
+        self, data_provider: PandasDataFrameProvider
+    ) -> PandasDataFrameProvider:
         return FilterByOccurrence(
-            self._get_pandas_data_provider(),
+            data_provider,
             self._track_view_state,
             self._create_dataframe_filter_builder(),
         )
@@ -283,7 +315,7 @@ class VisualizationBuilder:
         self,
     ) -> Callable[[SectionId], PandasDataFrameProvider]:
         return lambda section: FilterById(
-            self._get_data_provider_all_filters(),
+            self._get_data_provider_all_filters_with_offset(),
             TracksNotIntersectingSelection(
                 TracksIntersectingGivenSections(
                     {section},
@@ -304,15 +336,14 @@ class VisualizationBuilder:
             self._create_dataframe_filter_builder(),
         )
 
-    def _get_pandas_data_provider(self) -> PandasDataFrameProvider:
-        if not self._pandas_data_provider:
-            cached_pandas_track_provider = self._create_pandas_track_provider(
-                self._pulling_progressbar_builder
+    def _get_pandas_data_provider_with_offset(self) -> PandasDataFrameProvider:
+        if not self._pandas_data_provider_with_offset:
+            self._pandas_data_provider_with_offset = (
+                self._wrap_pandas_track_offset_provider(
+                    self._get_pandas_data_provider()
+                )
             )
-            self._pandas_data_provider = self._wrap_pandas_track_offset_provider(
-                cached_pandas_track_provider
-            )
-        return self._pandas_data_provider
+        return self._pandas_data_provider_with_offset
 
     def _wrap_plotter_with_cache(self, other: Plotter) -> Plotter:
         """
@@ -325,19 +356,19 @@ class VisualizationBuilder:
         self._track_view_state.track_offset.register(invalidate)
         return cached_plotter
 
-    def _create_pandas_track_provider(
-        self, progressbar: ProgressbarBuilder
-    ) -> PandasTrackProvider:
+    def _get_pandas_data_provider(self) -> PandasDataFrameProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
         # return PandasTrackProvider(
         #     datastore, self._track_view_state, dataframe_filter_builder, progressbar
         # )
-        return CachedPandasTrackProvider(
-            self._track_repository,
-            self._track_view_state,
-            dataframe_filter_builder,
-            progressbar,
-        )
+        if not self._pandas_data_provider:
+            self._pandas_data_provider = CachedPandasTrackProvider(
+                self._track_repository,
+                self._track_view_state,
+                dataframe_filter_builder,
+                self._pulling_progressbar_builder,
+            )
+        return self._pandas_data_provider
 
     def _wrap_pandas_track_offset_provider(
         self, other: PandasDataFrameProvider
@@ -394,7 +425,7 @@ class VisualizationBuilder:
         self,
     ) -> Callable[[SectionId], PandasDataFrameProvider]:
         return lambda section: FilterById(
-            self._get_data_provider_all_filters(),
+            self._get_data_provider_all_filters_with_offset(),
             TracksIntersectingGivenSections(
                 {section},
                 self._create_tracks_intersecting_sections(),
@@ -584,3 +615,16 @@ class VisualizationBuilder:
             GetTracksWithoutSingleDetections(self._track_repository),
             ShapelyIntersector(),
         )
+
+    def _create_track_bounding_box_plotter(
+        self,
+    ) -> Plotter:
+        track_plotter = MatplotlibTrackPlotter(
+            TrackBoundingBoxPlotter(
+                self._get_data_provider_all_filters(),
+                self._color_palette_provider,
+                self._track_view_state,
+                alpha=ALPHA_BOUNDING_BOX,
+            ),
+        )
+        return PlotterPrototype(self._track_view_state, track_plotter)
