@@ -12,7 +12,6 @@ from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
 
-from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import DynamicLayersPlotter, EntityPlotterFactory
 from OTAnalytics.application.state import (
     FlowState,
@@ -233,18 +232,6 @@ class TrackPlotter(ABC):
         height: int,
     ) -> TrackImage:
         pass
-
-
-class TrackBackgroundPlotter(Plotter):
-    """Plot video frame as background."""
-
-    def __init__(self, datastore: Datastore) -> None:
-        self._datastore = datastore
-
-    def plot(self) -> Optional[TrackImage]:
-        if track := next(iter(self._datastore.get_all_tracks()), None):
-            return self._datastore.get_image_of_track(track.id)
-        return None
 
 
 class PlotterPrototype(Plotter):

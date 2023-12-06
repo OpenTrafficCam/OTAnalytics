@@ -11,7 +11,8 @@ from OTAnalytics.domain.track import TrackDataset
 
 
 class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
-    """Executes the intersection of tracks and sections in parallel."""
+    """Executes the intersection of tracks and sections in parallel if num_processes
+    is greater than 1. Otherwise, executes sequentially"""
 
     def __init__(self, num_processes: int = DEFAULT_NUM_PROCESSES):
         self._validate_num_processes(num_processes)
@@ -37,8 +38,12 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
         logger().debug(
             f"Start intersection in parallel with {self._num_processes} processes."
         )
-        with Pool(processes=self._num_processes) as pool:
-            events = pool.starmap(intersect, tasks)
+        if self._num_processes > 1:
+            with Pool(processes=self._num_processes) as pool:
+                events = pool.starmap(intersect, tasks)
+        else:
+            events = [intersect(tracks, sections) for tracks, sections in tasks]
+
         return self._flatten_events(events)
 
     def _flatten_events(self, events: Iterable[Iterable[Event]]) -> list[Event]:

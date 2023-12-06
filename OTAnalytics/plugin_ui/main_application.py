@@ -37,11 +37,14 @@ from OTAnalytics.application.state import (
     TracksMetadata,
     TrackState,
     TrackViewState,
+    VideosMetadata,
 )
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
+    MissingEventsSectionProvider,
+    SectionProvider,
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
@@ -255,6 +258,7 @@ class ApplicationStarter:
         tracks_metadata._classifications.register(
             observer=color_palette_provider.update
         )
+        videos_metadata = VideosMetadata()
         action_state = self._create_action_state()
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
@@ -289,8 +293,11 @@ class ApplicationStarter:
             datastore._track_to_video_repository
         )
 
+        section_provider = MissingEventsSectionProvider(
+            section_repository, event_repository
+        )
         create_events = self._create_use_case_create_events(
-            section_repository,
+            section_provider,
             clear_all_events,
             get_all_tracks,
             get_tracks_without_single_detections,
@@ -299,7 +306,7 @@ class ApplicationStarter:
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
-                section_repository,
+                section_provider,
                 get_all_tracks,
                 add_events,
                 DEFAULT_NUM_PROCESSES,
@@ -328,6 +335,7 @@ class ApplicationStarter:
             track_to_video_repository,
             pulling_progressbar_builder,
             tracks_metadata,
+            videos_metadata,
         )
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
@@ -363,6 +371,7 @@ class ApplicationStarter:
             section_state,
             flow_state,
             tracks_metadata,
+            videos_metadata,
             action_state,
             filter_element_settings_restorer,
             get_all_track_files,
@@ -459,7 +468,7 @@ class ApplicationStarter:
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
         create_events = self._create_use_case_create_events(
-            section_repository,
+            section_repository.get_all,
             clear_all_events,
             get_all_tracks,
             get_tracks_without_single_detections,
@@ -503,6 +512,7 @@ class ApplicationStarter:
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
             tracks_metadata=TracksMetadata(track_repository),
+            videos_metadata=VideosMetadata(),
             progressbar=TqdmBuilder(),
         ).start()
 
@@ -642,13 +652,13 @@ class ApplicationStarter:
 
     def _create_use_case_create_intersection_events(
         self,
-        section_repository: SectionRepository,
+        section_provider: SectionProvider,
         get_tracks: GetAllTracks,
         add_events: AddEvents,
         num_processes: int,
     ) -> CreateIntersectionEvents:
         intersect = self._create_intersect(get_tracks, num_processes)
-        return SimpleCreateIntersectionEvents(intersect, section_repository, add_events)
+        return SimpleCreateIntersectionEvents(intersect, section_provider, add_events)
 
     @staticmethod
     def _create_intersect(get_tracks: GetAllTracks, num_processes: int) -> RunIntersect:
@@ -692,7 +702,7 @@ class ApplicationStarter:
 
     def _create_use_case_create_events(
         self,
-        section_repository: SectionRepository,
+        section_provider: SectionProvider,
         clear_events: ClearAllEvents,
         get_all_tracks: GetAllTracks,
         get_all_tracks_without_single_detections: GetTracksWithoutSingleDetections,
@@ -701,7 +711,7 @@ class ApplicationStarter:
     ) -> CreateEvents:
         run_intersect = self._create_intersect(get_all_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            run_intersect, section_repository, add_events
+            run_intersect, section_provider, add_events
         )
         scene_action_detector = SceneActionDetector(SceneEventBuilder())
         create_scene_events = SimpleCreateSceneEvents(
@@ -812,6 +822,7 @@ class ApplicationStarter:
         track_to_video_repository: TrackToVideoRepository,
         progressbar: ProgressbarBuilder,
         tracks_metadata: TracksMetadata,
+        videos_metadata: VideosMetadata,
     ) -> LoadTrackFiles:
         track_parser = self._create_track_parser(track_repository)
         track_video_parser = OttrkVideoParser(video_parser)
@@ -824,6 +835,7 @@ class ApplicationStarter:
             track_to_video_repository,
             progressbar,
             tracks_metadata,
+            videos_metadata,
         )
 
     def _create_video_parser(self) -> VideoParser:

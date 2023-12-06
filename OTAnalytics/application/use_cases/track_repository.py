@@ -176,3 +176,17 @@ class GetTracksAsBatches:
             Iterable[TrackDataset]: the batches of tracks.
         """
         return self._track_repository.split(batches)
+
+
+class TrackRepositorySize:
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+
+    def get(self) -> int:
+        """Get the number of tracks in the repository.
+
+        Returns:
+            int: the number of tracks.
+
+        """
+        return len(self._track_repository)

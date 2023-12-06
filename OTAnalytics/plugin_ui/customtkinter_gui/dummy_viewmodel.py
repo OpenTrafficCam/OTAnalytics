@@ -1499,8 +1499,8 @@ class DummyViewModel(
             for format in self._application.get_supported_export_formats()
         }
         default_format = next(iter(export_formats.keys()))
-        start = self._application._tracks_metadata.first_detection_occurrence
-        end = self._application._tracks_metadata.last_detection_occurrence
+        start = self._application._videos_metadata.first_video_start
+        end = self._application._videos_metadata.last_video_end
         modes = list(self._application._tracks_metadata.detection_classifications)
         default_values: dict = {
             INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
@@ -1578,13 +1578,12 @@ class DummyViewModel(
 
     def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
         window_position = self._get_window_position()
-        formatted_ids = "\n".join(
-            [track_id.id for track_id in cut_tracks_dto.original_tracks]
-        )
         msg = (
-            f"Cut successful. Cutting section '{cut_tracks_dto.section} '"
+            "Cut successful. "
+            f"Cutting section '{cut_tracks_dto.section} '"
             " and original tracks deleted.\n"
-            f"Deleted original track ids:\n{formatted_ids}"
+            f"{len(cut_tracks_dto.original_tracks)} out of "
+            f"{self._application.get_track_repository_size()} tracks successfully cut. "
         )
         logger().info(msg)
         InfoBox(msg, window_position)
