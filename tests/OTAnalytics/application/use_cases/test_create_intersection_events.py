@@ -4,8 +4,8 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.use_cases.create_intersection_events import (
-    ShapelyIntersectAreaByTrackPoints,
-    ShapelyIntersectBySmallestTrackSegments,
+    IntersectAreaByTrackPoints,
+    IntersectBySmallestTrackSegments,
     separate_sections,
 )
 from OTAnalytics.domain.geometry import (
@@ -271,9 +271,9 @@ def test_case_line_section_no_intersection(track: Track) -> _TestCase:
     return _TestCase(track, track_dataset, section, [], [])
 
 
-class TestShapelyIntersectBySmallestTrackSegments:
-    def _create_intersector(self) -> ShapelyIntersectBySmallestTrackSegments:
-        return ShapelyIntersectBySmallestTrackSegments()
+class TestIntersectBySmallestTrackSegments:
+    def _create_intersector(self) -> IntersectBySmallestTrackSegments:
+        return IntersectBySmallestTrackSegments()
 
     @pytest.mark.parametrize(
         "test_case_name",
@@ -303,9 +303,9 @@ class TestShapelyIntersectBySmallestTrackSegments:
         test_case.assert_valid(result_events, event_builder)
 
 
-class TestShapelyIntersectAreaByTrackPoints:
-    def _create_intersector(self) -> ShapelyIntersectAreaByTrackPoints:
-        return ShapelyIntersectAreaByTrackPoints()
+class TestIntersectAreaByTrackPoints:
+    def _create_intersector(self) -> IntersectAreaByTrackPoints:
+        return IntersectAreaByTrackPoints()
 
     @pytest.fixture
     def test_case_track_starts_outside_section(

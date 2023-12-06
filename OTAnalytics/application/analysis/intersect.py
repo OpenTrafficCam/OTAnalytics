@@ -22,7 +22,6 @@ class RunIntersect(ABC):
     @abstractmethod
     def __call__(self, sections: Iterable[Section]) -> list[Event]:
         raise NotImplementedError
-        # bla
 
 
 class TracksIntersectingSections(ABC):

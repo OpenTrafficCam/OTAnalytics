@@ -18,7 +18,7 @@ from OTAnalytics.domain.track import TrackDataset
 from OTAnalytics.domain.types import EventType
 
 
-class ShapelyIntersectBySmallestTrackSegments(Intersector):
+class IntersectBySmallestTrackSegments(Intersector):
     """
     Implements the intersection strategy by splitting up the track in its smallest
     segments and intersecting each of them with the section.
@@ -89,7 +89,7 @@ class ShapelyIntersectBySmallestTrackSegments(Intersector):
         return events
 
 
-class ShapelyIntersectAreaByTrackPoints(Intersector):
+class IntersectAreaByTrackPoints(Intersector):
     def __init__(
         self,
         calculate_direction_vector_: Callable[
@@ -196,7 +196,7 @@ class ShapelyIntersectAreaByTrackPoints(Intersector):
         return events
 
 
-class ShapelyCreateIntersectionEvents:
+class RunCreateIntersectionEvents:
     def __init__(
         self,
         intersect_line_section: Intersector,
@@ -227,7 +227,7 @@ class ShapelyCreateIntersectionEvents:
         return events
 
 
-class ShapelyRunIntersect(RunIntersect):
+class BatchedTracksRunIntersect(RunIntersect):
     def __init__(
         self,
         intersect_parallelizer: IntersectParallelizationStrategy,
@@ -249,9 +249,9 @@ def _create_events(tracks: TrackDataset, sections: Iterable[Section]) -> list[Ev
     events = []
     event_builder = SectionEventBuilder()
 
-    create_intersection_events = ShapelyCreateIntersectionEvents(
-        intersect_line_section=ShapelyIntersectBySmallestTrackSegments(),
-        intersect_area_section=ShapelyIntersectAreaByTrackPoints(),
+    create_intersection_events = RunCreateIntersectionEvents(
+        intersect_line_section=IntersectBySmallestTrackSegments(),
+        intersect_area_section=IntersectAreaByTrackPoints(),
         track_dataset=tracks,
         sections=sections,
         event_builder=event_builder,

@@ -29,7 +29,7 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateSceneEvents,
 )
 from OTAnalytics.application.use_cases.create_intersection_events import (
-    ShapelyRunIntersect,
+    BatchedTracksRunIntersect,
 )
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
@@ -277,7 +277,7 @@ class TestOTAnalyticsCli:
 
         clear_all_events = ClearAllEvents(event_repository)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            ShapelyRunIntersect(
+            BatchedTracksRunIntersect(
                 MultiprocessingIntersectParallelization(),
                 get_all_tracks,
             ),
