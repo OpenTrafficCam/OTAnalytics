@@ -882,7 +882,7 @@ class OttrkVideoParser(TrackVideoParser):
 
     def __parse_recorded_start_date(self, metadata: dict) -> datetime:
         start_date = metadata[ottrk_format.RECORDED_START_DATE]
-        return datetime.fromtimestamp(start_date)
+        return datetime.fromtimestamp(start_date, tz=timezone.utc)
 
 
 class OtEventListParser(EventListParser):
