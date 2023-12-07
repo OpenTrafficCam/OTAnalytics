@@ -254,11 +254,11 @@ class TestBenchmarkTrackParser:
     def test_load_15min(
         self,
         benchmark: BenchmarkFixture,
-        python_track_parser: TrackParser,
+        pandas_track_parser: TrackParser,
         track_file_15min: Path,
     ) -> None:
         benchmark.pedantic(
-            python_track_parser.parse,
+            pandas_track_parser.parse,
             args=(track_file_15min,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
@@ -268,7 +268,7 @@ class TestBenchmarkTrackParser:
     def test_load_2hours(
         self,
         benchmark: BenchmarkFixture,
-        python_track_parser: TrackParser,
+        pandas_track_parser: TrackParser,
         track_files_2hours: list[Path],
     ) -> None:
         def _parse_2hours(parser: TrackParser, ottrk_files: list[Path]) -> None:
@@ -278,7 +278,7 @@ class TestBenchmarkTrackParser:
         benchmark.pedantic(
             _parse_2hours,
             args=(
-                python_track_parser,
+                pandas_track_parser,
                 track_files_2hours,
             ),
             rounds=self.ROUNDS,
@@ -332,10 +332,10 @@ class TestBenchmarkTracksIntersectingSections:
     def test_15min(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
     ) -> None:
-        track_repository, _ = python_track_repo_15min
+        track_repository, _ = pandas_track_repo_15min
         section_repository, flow_repository = section_flow_repo_setup
         use_case = _build_tracks_intersecting_sections(track_repository)
 
@@ -350,10 +350,10 @@ class TestBenchmarkTracksIntersectingSections:
     def test_2hours(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
     ) -> None:
-        track_repository, _ = python_track_repo_2hours
+        track_repository, _ = pandas_track_repo_2hours
         section_repository, flow_repository = section_flow_repo_setup
         use_case = _build_tracks_intersecting_sections(track_repository)
 
@@ -414,12 +414,12 @@ class TestBenchmarkCreateEvents:
     def test_15min(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
         event_repository: EventRepository,
         clear_events: ClearAllEvents,
     ) -> None:
-        track_repository, _ = python_track_repo_15min
+        track_repository, _ = pandas_track_repo_15min
         section_repository, flow_repository = section_flow_repo_setup
         create_events = _build_create_events(
             track_repository, section_repository, event_repository
@@ -435,12 +435,12 @@ class TestBenchmarkCreateEvents:
     def test_2hours(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
         event_repository: EventRepository,
         clear_events: ClearAllEvents,
     ) -> None:
-        track_repository, _ = python_track_repo_2hours
+        track_repository, _ = pandas_track_repo_2hours
         section_repository, flow_repository = section_flow_repo_setup
         create_events = _build_create_events(
             track_repository, section_repository, event_repository
