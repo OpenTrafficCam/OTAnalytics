@@ -52,5 +52,5 @@ class OpenCvVideoReader(VideoReader):
 
     def get_frame_number_for(self, video_path: Path, delta: timedelta) -> int:
         clip = self.__get_clip(video_path)
-        total_frames = int(clip.get(cv2.CAP_PROP_FRAME_COUNT))
+        total_frames = int(clip.get(cv2.CAP_PROP_FPS))
         return floor(total_frames * delta.total_seconds())
