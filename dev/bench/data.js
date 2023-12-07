@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701825721577,
+  "lastUpdate": 1701912110293,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1536,6 +1536,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 130.65975460107438 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "ddd28d840519b8f97ea4012712d439c069167b23",
+          "message": "Merge pull request #414 from OpenTrafficCam/bug/3606-selecting-multiple-flows-when-filtering-for-tracks-assigned-to-flows-shows-wrong-tracks\n\nbug/3606-selecting-multiple-flows-when-filtering-for-tracks-assigned-to-flows-shows-wrong-tracks",
+          "timestamp": "2023-12-06T18:20:49Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/ddd28d840519b8f97ea4012712d439c069167b23"
+        },
+        "date": 1701912109746,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.11342912820670618,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 8.81607763199645 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.015646042946706913,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 63.91392401300254 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.0759069372284241,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 13.174026465996576 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.008713512134411856,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 114.76428615400073 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.05998659165306743,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 16.67039203999957 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.007552179715541021,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 132.4121032160001 sec\nrounds: 1"
           }
         ]
       }
