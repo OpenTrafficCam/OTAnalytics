@@ -727,7 +727,10 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
             )
 
     def __current_frame(self) -> int:
-        return self._track_view_state.frame.get()
+        if end_date := self._track_view_state.filter_element.get().date_range.end_date:
+            video = self._track_view_state.selected_videos.get()[0]
+            return video.get_frame_number_for(end_date)
+        return 0
 
 
 class MatplotlibTrackPlotter(TrackPlotter):

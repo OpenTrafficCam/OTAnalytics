@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -450,12 +450,40 @@ class OTAnalyticsApplication:
         return self.track_view_state.track_offset.get()
 
     def next_frame(self) -> None:
-        if current := self.track_view_state.frame.get():
-            self.track_view_state.frame.set(current + 1)
+        if videos := self.track_view_state.selected_videos.get():
+            fps = videos[0].fps
+            filter_element = self.track_view_state.filter_element.get()
+            skip_time = self.track_view_state.skip_time.get()
+            subseconds = min(skip_time.frames, fps) / fps
+            current_skip = timedelta(seconds=skip_time.seconds) + timedelta(
+                seconds=subseconds
+            )
+            current_date_range = filter_element.date_range
+            if current_date_range.start_date and current_date_range.end_date:
+                next_start = current_date_range.start_date + current_skip
+                next_end = current_date_range.end_date + current_skip
+                next_date_range = DateRange(next_start, next_end)
+                self.track_view_state.filter_element.set(
+                    filter_element.derive_date(next_date_range)
+                )
 
     def previous_frame(self) -> None:
-        if current := self.track_view_state.frame.get():
-            self.track_view_state.frame.set(current - 1)
+        if videos := self.track_view_state.selected_videos.get():
+            fps = videos[0].fps
+            filter_element = self.track_view_state.filter_element.get()
+            skip_time = self.track_view_state.skip_time.get()
+            subseconds = min(skip_time.frames, fps) / fps
+            current_skip = timedelta(seconds=skip_time.seconds) + timedelta(
+                seconds=subseconds
+            )
+            current_date_range = filter_element.date_range
+            if current_date_range.start_date and current_date_range.end_date:
+                next_start = current_date_range.start_date - current_skip
+                next_end = current_date_range.end_date - current_skip
+                next_date_range = DateRange(next_start, next_end)
+                self.track_view_state.filter_element.set(
+                    filter_element.derive_date(next_date_range)
+                )
 
     def update_date_range_tracks_filter(self, date_range: DateRange) -> None:
         """Update the date range of the track filter.

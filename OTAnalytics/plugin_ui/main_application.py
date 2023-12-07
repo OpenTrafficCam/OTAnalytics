@@ -94,7 +94,7 @@ from OTAnalytics.application.use_cases.track_to_video_repository import (
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import ClearAllVideos
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
-from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
+from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -248,8 +248,6 @@ class ApplicationStarter:
         image_updater = TrackImageUpdater(
             datastore, track_view_state, section_state, flow_state, plotter
         )
-        frame_updater = FrameUpdater(track_view_state)
-        track_view_state.filter_element.register(frame_updater.notify_filter_element)
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
@@ -848,14 +846,3 @@ class ApplicationStarter:
 
     def _create_track_to_video_repository(self) -> TrackToVideoRepository:
         return TrackToVideoRepository()
-
-
-class FrameUpdater:
-    def __init__(self, state: TrackViewState) -> None:
-        self._state = state
-
-    def notify_filter_element(self, filter_element: FilterElement) -> None:
-        end_date = filter_element.date_range.end_date
-        video = self._state.selected_videos.get()[0]
-        frame_number = video.get_frame_number_for(end_date) if end_date else 0
-        self._state.frame.set(frame_number)

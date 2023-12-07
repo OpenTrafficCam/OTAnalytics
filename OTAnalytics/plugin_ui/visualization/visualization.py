@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Callable, Optional, Sequence
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
@@ -7,6 +8,7 @@ from OTAnalytics.application.plotting import (
     CachedPlotter,
     PlottingLayer,
     TrackBackgroundPlotter,
+    VisualizationTimeProvider,
 )
 from OTAnalytics.application.state import (
     FlowState,
@@ -53,7 +55,26 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackStartEndPointPlotter,
 )
 
+LONG_IN_THE_PAST = datetime(
+    year=1970,
+    month=1,
+    day=1,
+    hour=0,
+    minute=0,
+    second=0,
+    tzinfo=timezone.utc,
+)
 ALPHA_BOUNDING_BOX = 0.5
+
+
+class FilterEndDateProvider(VisualizationTimeProvider):
+    def __init__(self, state: TrackViewState) -> None:
+        self._state = state
+
+    def get_time(self) -> datetime:
+        if end_date := self._state.filter_element.get().date_range.end_date:
+            return end_date
+        return LONG_IN_THE_PAST
 
 
 class VisualizationBuilder:
@@ -76,6 +97,9 @@ class VisualizationBuilder:
         self._flow_repository = datastore._flow_repository
         self._intersection_repository = intersection_repository
         self._event_repository = datastore._event_repository
+        self._visualization_time_provider: VisualizationTimeProvider = (
+            FilterEndDateProvider(track_view_state)
+        )
         self._pandas_data_provider: Optional[PandasDataFrameProvider] = None
         self._pandas_data_provider_with_offset: Optional[PandasDataFrameProvider] = None
         self._data_provider_all_filters: Optional[PandasDataFrameProvider] = None
@@ -96,7 +120,8 @@ class VisualizationBuilder:
         road_user_assigner: RoadUserAssigner,
     ) -> Sequence[PlottingLayer]:
         background_image_plotter = TrackBackgroundPlotter(
-            self._track_view_state.selected_videos.get, self._track_view_state.frame.get
+            self._track_view_state.selected_videos.get,
+            self._visualization_time_provider,
         )
         all_tracks_plotter = self._create_all_tracks_plotter()
         highlight_tracks_assigned_to_flows_plotter = (

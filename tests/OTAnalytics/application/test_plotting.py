@@ -1,13 +1,14 @@
+from datetime import datetime
 from unittest.mock import Mock, call
 
 import pytest
 
 from OTAnalytics.application.plotting import (
-    FrameProvider,
     LayeredPlotter,
     PlottingLayer,
     TrackBackgroundPlotter,
     VideoProvider,
+    VisualizationTimeProvider,
 )
 from OTAnalytics.application.state import Plotter
 from OTAnalytics.domain.track import TrackImage
@@ -79,19 +80,24 @@ class TestBackgroundPlotter:
     def test_plot(self) -> None:
         expected_image = Mock()
         single_video = Mock(spec=Video)
+        single_video.get_frame_number_for.return_value = 0
         single_video.get_frame.return_value = expected_image
         videos: list[Video] = [single_video]
         video_provider = Mock(spec=VideoProvider)
         video_provider.return_value = videos
-        frame_provider = Mock(spec=FrameProvider)
+        some_time = datetime(2023, 1, 1, 0, 0)
+        visualization_time_provider = Mock(spec=VisualizationTimeProvider)
+        visualization_time_provider.get_time.return_value = some_time
 
         background_plotter = TrackBackgroundPlotter(
-            video_provider=video_provider, frame_provider=frame_provider
+            video_provider=video_provider,
+            visualization_time_provider=visualization_time_provider,
         )
         result = background_plotter.plot()
 
         video_provider.assert_called_once()
-        frame_provider.assert_called_once()
+        visualization_time_provider.get_time.assert_called_once()
+        single_video.get_frame_number_for.assert_called_with(some_time)
         single_video.get_frame.assert_called_once()
         assert result is not None
         assert result == expected_image
@@ -100,12 +106,13 @@ class TestBackgroundPlotter:
         videos: list[Video] = []
         video_provider = Mock(spec=VideoProvider)
         video_provider.return_value = videos
-        frame_provider = Mock(spec=FrameProvider)
+        visualization_time_provider = Mock(spec=VisualizationTimeProvider)
         background_plotter = TrackBackgroundPlotter(
-            video_provider=video_provider, frame_provider=frame_provider
+            video_provider=video_provider,
+            visualization_time_provider=visualization_time_provider,
         )
         result = background_plotter.plot()
 
         video_provider.assert_called_once()
-        frame_provider.assert_not_called()
+        visualization_time_provider.get_time.assert_not_called()
         assert result is None

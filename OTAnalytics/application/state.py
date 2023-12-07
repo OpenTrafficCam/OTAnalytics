@@ -4,6 +4,7 @@ from typing import Callable, Generic, Iterable, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore, VideoMetadata
+from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import EventRepositoryEvent
@@ -187,7 +188,7 @@ class TrackViewState:
         self.selected_videos: ObservableProperty[list[Video]] = ObservableProperty[
             list[Video]
         ](default=[])
-        self.frame = ObservableProperty[int](1)
+        self.skip_time = ObservableProperty[SkipTime](SkipTime(1, 0))
 
     def reset(self) -> None:
         """Reset to default settings."""
@@ -324,7 +325,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._flow_state = flow_state
         self._plotter = plotter
         self._track_view_state.track_offset.register(self._notify_track_offset)
-        self._track_view_state.frame.register(self._notify_frame)
         self._track_view_state.filter_element.register(self._notify_filter_element)
         self._section_state.selected_sections.register(self._notify_section_selection)
         self._flow_state.selected_flows.register(self._notify_flow_changed)
@@ -348,15 +348,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._update_image()
 
     def _notify_track_offset(self, offset: Optional[RelativeOffsetCoordinate]) -> None:
-        """
-        Will update the image according to changes of the track offset property.
-
-        Args:
-            offset (Optional[RelativeOffsetCoordinate]): current value
-        """
-        self._update()
-
-    def _notify_frame(self, frame: Optional[int]) -> None:
         """
         Will update the image according to changes of the track offset property.
 

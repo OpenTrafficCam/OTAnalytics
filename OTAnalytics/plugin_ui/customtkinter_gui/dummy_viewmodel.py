@@ -48,6 +48,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.export_events import (
@@ -1596,3 +1597,12 @@ class DummyViewModel(
 
     def set_analysis_frame(self, frame: AbstractFrame) -> None:
         self._frame_analysis = frame
+
+    def update_skip_time(self, seconds: int, frames: int) -> None:
+        self._application.track_view_state.skip_time.set(SkipTime(seconds, frames))
+
+    def get_skip_seconds(self) -> int:
+        return self._application.track_view_state.skip_time.get().seconds
+
+    def get_skip_frames(self) -> int:
+        return self._application.track_view_state.skip_time.get().frames

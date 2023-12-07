@@ -1,4 +1,5 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
 from OTAnalytics.application.state import (
@@ -98,7 +99,12 @@ class LayeredPlotter(Plotter):
             self._current_image = image
 
 
-FrameProvider = Callable[[], int]
+class VisualizationTimeProvider(ABC):
+    @abstractmethod
+    def get_time(self) -> datetime:
+        raise NotImplementedError
+
+
 VideoProvider = Callable[[], list[Video]]
 
 
@@ -106,15 +112,18 @@ class TrackBackgroundPlotter(Plotter):
     """Plot video frame as background."""
 
     def __init__(
-        self, video_provider: VideoProvider, frame_provider: FrameProvider
+        self,
+        video_provider: VideoProvider,
+        visualization_time_provider: VisualizationTimeProvider,
     ) -> None:
         self._video_provider = video_provider
-        self._frame_provider = frame_provider
+        self._visualization_time_provider = visualization_time_provider
 
     def plot(self) -> Optional[TrackImage]:
         if videos := self._video_provider():
             if len(videos) > 0:
-                frame_number = self._frame_provider()
+                visualization_time = self._visualization_time_provider.get_time()
+                frame_number = videos[0].get_frame_number_for(visualization_time)
                 return videos[0].get_frame(frame_number)
         return None
 
