@@ -191,6 +191,7 @@ class DummyViewModel(
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_videos: Optional[AbstractFrame] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
+        self._frame_video_control: Optional[AbstractFrame] = None
         self._frame_sections: Optional[AbstractFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
@@ -1606,3 +1607,18 @@ class DummyViewModel(
 
     def get_skip_frames(self) -> int:
         return self._application.track_view_state.skip_time.get().frames
+
+    def set_video_control_frame(self, frame: AbstractFrame) -> None:
+        self._frame_video_control = frame
+        self.notify_filter_element_change(
+            self._application.track_view_state.filter_element.get()
+        )
+
+    def notify_filter_element_change(self, filter_element: FilterElement) -> None:
+        if not self._frame_video_control:
+            raise MissingInjectedInstanceError("Frame video control missing")
+        filter_element_is_set = (
+            filter_element.date_range.start_date is not None
+            and filter_element.date_range.end_date is not None
+        )
+        self._frame_video_control.set_enabled_general_buttons(filter_element_is_set)
