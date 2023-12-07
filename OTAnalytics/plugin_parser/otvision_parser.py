@@ -824,6 +824,10 @@ class CachedVideo(Video):
     other: Video
     cache: dict[int, TrackImage] = field(default_factory=dict)
 
+    @property
+    def fps(self) -> float:
+        return self.other.fps
+
     def get_path(self) -> Path:
         return self.other.get_path()
 

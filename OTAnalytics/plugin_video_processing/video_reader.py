@@ -21,6 +21,9 @@ class FrameDoesNotExistError(Exception):
 
 
 class OpenCvVideoReader(VideoReader):
+    def get_fps(self, video_path: Path) -> float:
+        return self.__get_clip(video_path).get(cv2.CAP_PROP_FPS)
+
     def get_frame(self, video_path: Path, index: int) -> TrackImage:
         """Get image of video at `frame`.
         Args:

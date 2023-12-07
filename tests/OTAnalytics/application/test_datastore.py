@@ -46,6 +46,9 @@ SECOND_START_DATE = FIRST_START_DATE + timedelta(seconds=3)
 
 
 class MockVideoReader(VideoReader):
+    def get_fps(self, video: Path) -> float:
+        return 20
+
     def get_frame(self, video: Path, index: int) -> TrackImage:
         del video
         del index

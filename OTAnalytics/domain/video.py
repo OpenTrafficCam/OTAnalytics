@@ -14,6 +14,10 @@ PATH: str = "path"
 
 class VideoReader(ABC):
     @abstractmethod
+    def get_fps(self, video: Path) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_frame(self, video: Path, index: int) -> TrackImage:
         """Get frame of `video` at `index`.
         Args:
@@ -30,6 +34,11 @@ class VideoReader(ABC):
 
 
 class Video(ABC):
+    @property
+    @abstractmethod
+    def fps(self) -> float:
+        raise NotImplementedError
+
     @abstractmethod
     def get_path(self) -> Path:
         pass
@@ -83,6 +92,10 @@ class SimpleVideo(Video):
     video_reader: VideoReader
     path: Path
     start_date: Optional[datetime]
+
+    @property
+    def fps(self) -> float:
+        return self.video_reader.get_fps(self.path)
 
     def __post_init__(self) -> None:
         self.check_path_exists()
