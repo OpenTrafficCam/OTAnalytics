@@ -255,12 +255,15 @@ class OTAnalyticsCli:
     def start(self) -> None:
         """Start analysis."""
         # TODO parse config and add track and section files
-        ottrk_files: set[Path] = self._get_ottrk_files(self.cli_args.track_files)
-        sections_file: Path = self._get_sections_file(self.cli_args.sections_file)
+        try:
+            ottrk_files: set[Path] = self._get_ottrk_files(self.cli_args.track_files)
+            sections_file: Path = self._get_sections_file(self.cli_args.sections_file)
 
-        sections, flows = self._parse_flows(sections_file)
+            sections, flows = self._parse_flows(sections_file)
 
-        self._run_analysis(ottrk_files, sections, flows)
+            self._run_analysis(ottrk_files, sections, flows)
+        except Exception as cause:
+            logger().exception(cause, exc_info=True)
 
     def _parse_flows(self, flow_file: Path) -> tuple[Iterable[Section], Iterable[Flow]]:
         return self._flow_parser.parse(flow_file)
