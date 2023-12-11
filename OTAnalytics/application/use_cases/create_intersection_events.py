@@ -238,6 +238,9 @@ class BatchedTracksRunIntersect(RunIntersect):
 
     def __call__(self, sections: Iterable[Section]) -> list[Event]:
         filtered_tracks = self._get_tracks.as_dataset()
+        filtered_tracks.calculate_geometries_for(
+            {_section.get_offset(EventType.SECTION_ENTER) for _section in sections}
+        )
 
         batches = filtered_tracks.split(self._intersect_parallelizer.num_processes)
 

@@ -479,6 +479,12 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def calculate_geometries_for(
+        self, offsets: Iterable[RelativeOffsetCoordinate]
+    ) -> None:
+        raise NotImplementedError
+
 
 class TrackRepository:
     def __init__(self, dataset: TrackDataset) -> None:

@@ -353,6 +353,13 @@ class PandasTrackDataset(TrackDataset):
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.contained_by_sections(sections)
 
+    def calculate_geometries_for(
+        self, offsets: Iterable[RelativeOffsetCoordinate]
+    ) -> None:
+        for offset in offsets:
+            if offset not in self._geometry_datasets.keys():
+                self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
+
 
 def _assign_track_classification(
     data: DataFrame, calculator: PandasTrackClassificationCalculator
