@@ -1,5 +1,6 @@
 import random
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Iterable, Optional
 
 import numpy
@@ -381,7 +382,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
     def get_data(self) -> DataFrame:
         tracks = self._track_repository.get_all()
         if isinstance(tracks, PandasTrackDataset):
-            return tracks.as_dataframe()
+            data = tracks.as_dataframe()
+            data[track.SECONDS] = data[track.OCCURRENCE].dt.floor("s")
+            return data
         track_list = tracks.as_list()
         if not track_list:
             return DataFrame()
@@ -409,7 +412,11 @@ class PandasTrackProvider(PandasDataFrameProvider):
                 ] = current_track.classification
                 prepared.append(detection_dict)
 
-        return self._sort_tracks(DataFrame(prepared))
+        if len(prepared) == 0:
+            return DataFrame()
+        data = DataFrame(prepared)
+        data[track.SECONDS] = data[track.OCCURRENCE].dt.floor("s")
+        return self._sort_tracks(data)
 
     def _sort_tracks(self, track_df: DataFrame) -> DataFrame:
         """Sort the given dataframe by trackId and frame,
@@ -706,6 +713,9 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
             axes (Axes): axes to plot on
         """
         current_frame = self.__current_frame() + FRAME_OFFSET
+        current_second = self.__current_second(track_df)
+        if current_second:
+            track_df = track_df[track_df[track.SECONDS] == current_second]
         boxes_frame = track_df[track_df[track.FRAME] == current_frame]
         for index, row in boxes_frame.iterrows():
             x = row[X]
@@ -731,6 +741,11 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
             video = self._track_view_state.selected_videos.get()[0]
             return video.get_frame_number_for(end_date)
         return 0
+
+    def __current_second(self, data: DataFrame) -> Optional[datetime]:
+        if end_date := self._track_view_state.filter_element.get().date_range.end_date:
+            return end_date.replace(microsecond=0)
+        return data[track.SECONDS].min()
 
 
 class MatplotlibTrackPlotter(TrackPlotter):

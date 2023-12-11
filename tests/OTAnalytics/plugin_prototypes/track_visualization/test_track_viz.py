@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -123,6 +123,11 @@ class TestCachedPandasTrackProvider:
 
     def set_up_track(self, id: str) -> Track:
         """Create a dummy track with the given id and 5 car detections."""
+        first_detection_occurrence = datetime(2020, 1, 1, 0, 0, tzinfo=timezone.utc)
+        second_occurrence = first_detection_occurrence + timedelta(seconds=1)
+        third_occurrence = second_occurrence + timedelta(seconds=1)
+        fourth_occurrence = third_occurrence + timedelta(seconds=1)
+        fives_occurrence = fourth_occurrence + timedelta(seconds=1)
         t_id = TrackId(id)
         detections: list[Detection] = [
             PythonDetection(
@@ -133,7 +138,7 @@ class TestCachedPandasTrackProvider:
                 2,
                 7,
                 1,
-                datetime.min,
+                first_detection_occurrence,
                 False,
                 t_id,
                 "video_name",
@@ -146,7 +151,7 @@ class TestCachedPandasTrackProvider:
                 2,
                 7,
                 2,
-                datetime.min,
+                second_occurrence,
                 False,
                 t_id,
                 "video_name",
@@ -159,7 +164,7 @@ class TestCachedPandasTrackProvider:
                 2,
                 7,
                 3,
-                datetime.min,
+                third_occurrence,
                 False,
                 t_id,
                 "video_name",
@@ -172,7 +177,7 @@ class TestCachedPandasTrackProvider:
                 2,
                 7,
                 4,
-                datetime.min,
+                fourth_occurrence,
                 False,
                 t_id,
                 "video_name",
@@ -185,7 +190,7 @@ class TestCachedPandasTrackProvider:
                 2,
                 7,
                 5,
-                datetime.min,
+                fives_occurrence,
                 False,
                 t_id,
                 "video_name",
