@@ -370,12 +370,10 @@ class PandasTrackProvider(PandasDataFrameProvider):
     def __init__(
         self,
         track_repository: TrackRepository,
-        track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
         self._track_repository = track_repository
-        self._track_view_state = track_view_state
         self._filter_builder = filter_builder
         self._progressbar = progressbar
 
@@ -464,13 +462,10 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
     def __init__(
         self,
         track_repository: TrackRepository,
-        track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
-        super().__init__(
-            track_repository, track_view_state, filter_builder, progressbar
-        )
+        super().__init__(track_repository, filter_builder, progressbar)
         track_repository.register_tracks_observer(self)
         self._cache_df: DataFrame = DataFrame()
 
@@ -714,9 +709,8 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
         """
         current_frame = self.__current_frame() + FRAME_OFFSET
         current_second = self.__current_second(track_df)
-        if current_second:
-            track_df = track_df[track_df[track.SECONDS] == current_second]
-        boxes_frame = track_df[track_df[track.FRAME] == current_frame]
+        timed_df = track_df[track_df[track.SECONDS] == current_second]
+        boxes_frame = timed_df[timed_df[track.FRAME] == current_frame]
         for index, row in boxes_frame.iterrows():
             x = row[X]
             y = row[Y]

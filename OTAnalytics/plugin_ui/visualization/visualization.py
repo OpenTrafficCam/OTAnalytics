@@ -223,7 +223,7 @@ class VisualizationBuilder:
         start_end_points_intersecting = self._create_cached_section_layer_plotter(
             self._create_start_end_point_intersecting_section_factory(
                 self._create_tracks_start_end_point_intersecting_given_sections_filter(
-                    self._get_data_provider_class_filter(),
+                    self._get_data_provider_class_filter_with_offset(),
                     self._create_tracks_intersecting_sections(),
                     self._create_get_sections_by_id(),
                 ),
@@ -237,7 +237,7 @@ class VisualizationBuilder:
     def _create_start_end_point_not_intersection_sections_plotter(self) -> Plotter:
         section_filter = (
             self._create_tracks_start_end_point_not_intersecting_given_sections_filter(
-                self._get_data_provider_class_filter(),
+                self._get_data_provider_class_filter_with_offset(),
                 self._create_tracks_intersecting_sections(),
                 self._create_get_sections_by_id(),
             )
@@ -254,7 +254,7 @@ class VisualizationBuilder:
     def _create_start_end_point_plotter(self) -> Plotter:
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             self._create_track_start_end_point_data_provider(
-                self._get_data_provider_class_filter()
+                self._get_data_provider_class_filter_with_offset()
             ),
             self._color_palette_provider,
             enable_legend=False,
@@ -297,6 +297,13 @@ class VisualizationBuilder:
         )
 
     def _get_data_provider_class_filter(self) -> PandasDataFrameProvider:
+        if not self._data_provider_class_filter:
+            self._data_provider_class_filter = self._build_filter_by_classification(
+                self._get_pandas_data_provider()
+            )
+        return self._data_provider_class_filter
+
+    def _get_data_provider_class_filter_with_offset(self) -> PandasDataFrameProvider:
         if not self._data_provider_class_filter:
             self._data_provider_class_filter = self._build_filter_by_classification(
                 self._get_pandas_data_provider_with_offset()
@@ -389,7 +396,6 @@ class VisualizationBuilder:
         if not self._pandas_data_provider:
             self._pandas_data_provider = CachedPandasTrackProvider(
                 self._track_repository,
-                self._track_view_state,
                 dataframe_filter_builder,
                 self._pulling_progressbar_builder,
             )
@@ -646,7 +652,7 @@ class VisualizationBuilder:
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackBoundingBoxPlotter(
-                self._get_data_provider_all_filters(),
+                self._get_data_provider_class_filter(),
                 self._color_palette_provider,
                 self._track_view_state,
                 alpha=ALPHA_BOUNDING_BOX,
