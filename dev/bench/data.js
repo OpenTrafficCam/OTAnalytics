@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1702257774701,
+  "lastUpdate": 1702300329848,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1984,6 +1984,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 143.27557282499038 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "id": "33901fee853fee53f441577459a181641efa69b6",
+          "message": "Merge branch 'main' into feature/2485-reimplement-intersection-strategy-for-sections-and-flows",
+          "timestamp": "2023-12-11T12:25:17Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/33901fee853fee53f441577459a181641efa69b6"
+        },
+        "date": 1702300329360,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.13825403918746546,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.233061730978079 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.019472641091563027,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 51.35410216302262 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.037900383298991404,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 26.384957431990188 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.004554103415810385,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 219.58218966401182 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.006586743123065111,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 151.82010005798656 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.0008815636301771782,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 1134.3480671939906 sec\nrounds: 1"
           }
         ]
       }
