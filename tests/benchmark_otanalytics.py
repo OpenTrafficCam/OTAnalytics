@@ -442,14 +442,13 @@ class TestBenchmarkCreateEvents:
         create_events = _build_create_events(
             track_repository, section_repository, event_repository
         )
-        create_events()
-        # benchmark.pedantic(
-        #     create_events,
-        #     setup=clear_events,
-        #     rounds=self.ROUNDS,
-        #     iterations=self.ITERATIONS,
-        #     warmup_rounds=self.WARMUP_ROUNDS,
-        # )
+        benchmark.pedantic(
+            create_events,
+            setup=clear_events,
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
 
     def test_2hours(
         self,
