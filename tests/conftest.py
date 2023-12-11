@@ -412,9 +412,9 @@ def assert_equal_detection_properties(actual: Detection, expected: Detection) ->
 
 
 def assert_equal_track_properties(actual: Track, expected: Track) -> None:
-    assert expected.id == actual.id
-    assert expected.classification == actual.classification
-    assert len(expected.detections) == len(actual.detections)
+    assert actual.id == expected.id
+    assert actual.classification == expected.classification
+    assert len(actual.detections) == len(expected.detections)
     for first_detection, second_detection in zip(
         expected.detections, actual.detections
     ):
