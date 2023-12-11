@@ -62,7 +62,9 @@ class PandasDetectionParser(DetectionParser):
             },
             inplace=True,
         )
-        data[track.TRACK_ID] = data[track.TRACK_ID].astype(str).apply(id_generator)
+        data[track.TRACK_ID] = (
+            data[track.TRACK_ID].astype(str).apply(id_generator).astype(str)
+        )
         data[track.VIDEO_NAME] = video_name
         data[track.OCCURRENCE] = (
             data[track.OCCURRENCE]
