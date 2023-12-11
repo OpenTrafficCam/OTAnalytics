@@ -588,3 +588,21 @@ class TestOTAnalyticsCli:
             output_file=str(output_file),
         )
         export_counts.export.assert_called_with(specification=expected_specification)
+
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._get_ottrk_files")
+    @patch("OTAnalytics.plugin_ui.cli.logger")
+    def test_exceptions_are_being_logged(
+        self,
+        get_logger: Mock,
+        get_ottrk_files: Mock,
+        mock_cli_dependencies: dict[str, Mock],
+    ) -> None:
+        exception = Exception("My Exception")
+        get_ottrk_files.side_effect = exception
+        logger = Mock()
+        get_logger.return_value = logger
+
+        cli = OTAnalyticsCli(Mock(), **mock_cli_dependencies)
+        cli.start()
+        logger.exception.assert_called_once_with(exception, exc_info=True)
+        get_ottrk_files.assert_called_once()
