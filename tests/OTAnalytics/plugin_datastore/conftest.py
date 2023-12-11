@@ -3,7 +3,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.track import Track, TrackGeometryDataset
+from OTAnalytics.domain.track import TRACK_GEOMETRY_FACTORY, Track, TrackGeometryDataset
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from tests.conftest import TrackBuilder, assert_equal_track_properties
 
 
@@ -26,6 +29,11 @@ def assert_track_geometry_dataset_add_all_called_correctly(
         called_method.call_args_list[0][0][0], expected_arg
     ):
         assert_equal_track_properties(actual_track, expected_track)
+
+
+@pytest.fixture
+def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
+    return PygeosTrackGeometryDataset.from_track_dataset
 
 
 @pytest.fixture

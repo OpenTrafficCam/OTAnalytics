@@ -12,6 +12,9 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackDataset, TrackId
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
@@ -366,7 +369,9 @@ def cyclist_video(test_data_dir: Path) -> Path:
 def tracks(ottrk_path: Path) -> list[Track]:
     calculator = PandasByMaxConfidence()
     detection_parser = PandasDetectionParser(
-        calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        calculator,
+        PygeosTrackGeometryDataset.from_track_dataset,
+        track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
     )
     return OttrkParser(detection_parser).parse(ottrk_path).tracks.as_list()
     # ottrk_parser = OttrkParser(

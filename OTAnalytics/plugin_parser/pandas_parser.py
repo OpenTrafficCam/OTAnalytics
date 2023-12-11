@@ -5,7 +5,7 @@ from pandas import DataFrame
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import TrackDataset
+from OTAnalytics.domain.track import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.plugin_datastore.track_store import (
     PandasTrackClassificationCalculator,
     PandasTrackDataset,
@@ -22,9 +22,11 @@ class PandasDetectionParser(DetectionParser):
     def __init__(
         self,
         calculator: PandasTrackClassificationCalculator,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
     ) -> None:
         self._calculator = calculator
+        self._track_geometry_factory = track_geometry_factory
         self._track_length_limit = track_length_limit
 
     def parse_tracks(
@@ -85,5 +87,5 @@ class PandasDetectionParser(DetectionParser):
         tracks_to_remain.index.names = [track.TRACK_ID, track.OCCURRENCE]
         tracks_to_remain = tracks_to_remain.sort_index()
         return PandasTrackDataset.from_dataframe(
-            tracks_to_remain, calculator=self._calculator
+            tracks_to_remain, self._track_geometry_factory, calculator=self._calculator
         )

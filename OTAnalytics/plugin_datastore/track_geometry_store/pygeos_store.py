@@ -3,7 +3,7 @@ from collections import defaultdict
 from itertools import chain
 from typing import Any, Iterable, Literal, TypedDict
 
-from pandas import DataFrame
+from pandas import DataFrame, Series, concat
 from pygeos import (
     Geometry,
     contains,
@@ -19,6 +19,7 @@ from pygeos import (
     prepare,
 )
 
+from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate, apply_offset
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
@@ -28,6 +29,7 @@ from OTAnalytics.domain.track import (
     TrackGeometryDataset,
     TrackId,
 )
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 
 TRACK_ID = "track_id"
 GEOMETRY = "geom"
@@ -133,6 +135,13 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
     ) -> TrackGeometryDataset:
         if len(dataset) == 0:
             return PygeosTrackGeometryDataset(offset)
+        if isinstance(dataset, PandasTrackDataset):
+            return PygeosTrackGeometryDataset(
+                offset,
+                PygeosTrackGeometryDataset.__create_entries_from_dataframe(
+                    dataset, offset
+                ),
+            )
         track_geom_df = DataFrame.from_dict(
             PygeosTrackGeometryDataset._create_entries(dataset, offset),
             columns=COLUMNS,
@@ -158,12 +167,12 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             dict: the entries.
         """
         entries = dict()
-        for track in tracks:
-            if len(track.detections) < 2:
+        for _track in tracks:
+            if len(_track.detections) < 2:
                 # Disregard single detection tracks
                 continue
-            track_id = track.id.id
-            geometry = create_pygeos_track(track, offset)
+            track_id = _track.id.id
+            geometry = create_pygeos_track(_track, offset)
             projection = [
                 line_locate_point(geometry, points(p))
                 for p in get_coordinates(geometry)
@@ -174,14 +183,49 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             }
         return entries
 
+    @staticmethod
+    def __create_entries_from_dataframe(
+        track_dataset: PandasTrackDataset,
+        offset: RelativeOffsetCoordinate,
+    ) -> DataFrame:
+        track_size_mask = track_dataset._dataset.groupby(level=0).transform("size")
+        filtered_tracks = track_dataset._dataset[track_size_mask > 1]
+
+        if offset == BASE_GEOMETRY:
+            new_x = filtered_tracks[track.X]
+            new_y = filtered_tracks[track.Y]
+        else:
+            new_x = filtered_tracks[track.X] + offset.x * filtered_tracks[track.W]
+            new_y = filtered_tracks[track.Y] + offset.y * filtered_tracks[track.H]
+        tracks = concat([new_x, new_y], keys=[track.X, track.Y], axis=1).groupby(
+            level=0, group_keys=True
+        )
+        geometries = tracks.agg(list).apply(
+            lambda coords: linestrings(tuple(zip(coords[track.X], coords[track.Y]))),
+            axis=1,
+        )
+        projections = tracks.apply(calculate_projection)
+        result = concat([geometries, projections], keys=COLUMNS, axis=1)
+        return result
+
     def add_all(self, tracks: Iterable[Track]) -> TrackGeometryDataset:
         if self.empty:
+            if isinstance(tracks, PandasTrackDataset):
+                return PygeosTrackGeometryDataset(
+                    self._offset,
+                    self.__create_entries_from_dataframe(tracks, self.offset),
+                )
             new_entries = self._create_entries(tracks, self._offset)
             return PygeosTrackGeometryDataset(
                 self._offset, DataFrame.from_dict(new_entries, orient=ORIENTATION_INDEX)
             )
         existing_entries = self.as_dict()
-        new_entries = self._create_entries(tracks, self._offset)
+        if isinstance(tracks, PandasTrackDataset):
+            new_entries = self.__create_entries_from_dataframe(
+                tracks, self._offset
+            ).to_dict(orient=ORIENTATION_INDEX)
+        else:
+            new_entries = self._create_entries(tracks, self._offset)
         for track_id, entry in new_entries.items():
             existing_entries[track_id] = entry
         new_dataset = DataFrame.from_dict(existing_entries, orient=ORIENTATION_INDEX)
@@ -294,3 +338,16 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
     def as_dict(self) -> dict:
         return self._dataset[COLUMNS].to_dict(orient=ORIENTATION_INDEX)
+
+
+def calculate_projection(track_df: DataFrame) -> Series:
+    _track = track_df.reset_index()
+    x_1 = _track.iloc[:-1][track.X].reset_index(drop=True)
+    y_1 = _track.iloc[:-1][track.X].reset_index(drop=True)
+    x_2 = _track.iloc[1:][track.X].reset_index(drop=True)
+    y_2 = _track.iloc[1:][track.Y].reset_index(drop=True)
+
+    d = ((x_2 - x_1).pow(2) + (y_2 - y_1).pow(2)).pow(1 / 2)
+
+    projection = concat([Series(0), d], ignore_index=True).cumsum()
+    return projection.agg(list)

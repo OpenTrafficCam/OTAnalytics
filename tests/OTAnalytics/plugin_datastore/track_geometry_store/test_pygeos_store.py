@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 from unittest.mock import MagicMock, Mock
@@ -12,11 +13,15 @@ from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
+    TRACK_CLASSIFICATION,
+    TRACK_GEOMETRY_FACTORY,
     IntersectionPoint,
     Track,
     TrackDataset,
     TrackGeometryDataset,
     TrackId,
+    X,
+    Y,
 )
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
@@ -28,7 +33,10 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
     create_pygeos_track,
 )
-from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasByMaxConfidence,
+    PandasTrackDataset,
+)
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser, OttrkParser
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from tests.conftest import TrackBuilder
@@ -201,6 +209,21 @@ def not_intersecting_track() -> Track:
     track_builder.append_detection()
 
     return track_builder.build_track()
+
+
+@pytest.fixture
+def single_detection_track_dataset() -> PandasTrackDataset:
+    data = {
+        ("Single Detection Track", datetime(2000, 1, 1, 1, 1)): {
+            X: 1.0,
+            Y: 3.0,
+            TRACK_CLASSIFICATION: "car",
+        },
+    }
+    df = DataFrame.from_dict(data, orient="index")
+    track_dataset = Mock(spec=PandasTrackDataset)
+    track_dataset._dataset = df
+    return track_dataset
 
 
 @pytest.fixture
@@ -640,6 +663,16 @@ class TestPygeosTrackGeometryDataset:
         expected = create_geometry_dataset_from([], BASE_GEOMETRY)
         assert_track_geometry_dataset_equals(result, expected)
 
+    def test_add_invalid_track(
+        self, single_detection_track_dataset: PandasTrackDataset
+    ) -> None:
+        empty_dataset = PygeosTrackGeometryDataset(BASE_GEOMETRY)
+        assert not empty_dataset.track_ids
+
+        result = empty_dataset.add_all(single_detection_track_dataset)
+        assert not result.track_ids
+        assert result.empty
+
 
 class TestProfiling:
     ROUNDS = 1
@@ -647,9 +680,13 @@ class TestProfiling:
     WARMUP_ROUNDS = 0
 
     @pytest.fixture
-    def tracks_15min(self, test_data_dir: Path) -> TrackDataset:
+    def tracks_15min(
+        self, test_data_dir: Path, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> TrackDataset:
         ottrk = test_data_dir / "OTCamera19_FR20_2023-05-24_07-00-00.ottrk"
-        ottrk_parser = OttrkParser(PandasDetectionParser(PandasByMaxConfidence()))
+        ottrk_parser = OttrkParser(
+            PandasDetectionParser(PandasByMaxConfidence(), track_geometry_factory)
+        )
         parse_result = ottrk_parser.parse(ottrk)
         return parse_result.tracks
 

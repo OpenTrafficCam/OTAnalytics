@@ -6,10 +6,19 @@ from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.track import Track, TrackDataset, TrackGeometryDataset, TrackId
+from OTAnalytics.domain.track import (
+    TRACK_GEOMETRY_FACTORY,
+    Track,
+    TrackDataset,
+    TrackGeometryDataset,
+    TrackId,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrack,
     PythonTrackDataset,
+)
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
@@ -67,10 +76,14 @@ class TestPandasTrackDataset:
         for i in range(1, size + 1):
             tracks.append(self.__build_track(str(i)))
 
-        dataset = PandasTrackDataset.from_list(tracks)
+        dataset = PandasTrackDataset.from_list(
+            tracks, PygeosTrackGeometryDataset.from_track_dataset
+        )
         return dataset
 
-    def test_use_track_classificator(self) -> None:
+    def test_use_track_classificator(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
         first_detection_class = "car"
         track_class = "pedestrian"
         builder = TrackBuilder()
@@ -85,14 +98,14 @@ class TestPandasTrackDataset:
         builder.append_detection()
         track = builder.build_track()
 
-        dataset = PandasTrackDataset.from_list([track])
+        dataset = PandasTrackDataset.from_list([track], track_geometry_factory)
 
         added_track = dataset.get_for(track.id)
 
         assert added_track is not None
         assert added_track.classification == track_class
 
-    def test_add(self) -> None:
+    def test_add(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         builder = TrackBuilder()
         builder.append_detection()
         builder.append_detection()
@@ -100,8 +113,8 @@ class TestPandasTrackDataset:
         builder.append_detection()
         builder.append_detection()
         track = builder.build_track()
-        expected_dataset = PandasTrackDataset.from_list([track])
-        dataset = PandasTrackDataset()
+        expected_dataset = PandasTrackDataset.from_list([track], track_geometry_factory)
+        dataset = PandasTrackDataset(track_geometry_factory)
 
         merged = dataset.add_all(PythonTrackDataset({track.id: track}))
 
@@ -109,21 +122,21 @@ class TestPandasTrackDataset:
         for actual, expected in zip(merged, expected_dataset):
             assert_equal_track_properties(actual, expected)
 
-    def test_add_nothing(self) -> None:
-        dataset = PandasTrackDataset()
+    def test_add_nothing(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
 
         merged = dataset.add_all(PythonTrackDataset())
 
         assert 0 == len(merged.as_list())
 
-    def test_add_all(self) -> None:
+    def test_add_all(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
         third_track = self.__build_track("3")
         expected_dataset = PandasTrackDataset.from_list(
-            [first_track, second_track, third_track]
+            [first_track, second_track, third_track], track_geometry_factory
         )
-        dataset = PandasTrackDataset.from_list([])
+        dataset = PandasTrackDataset.from_list([], track_geometry_factory)
         assert len(dataset) == 0
         dataset = dataset.add_all([first_track])
         assert len(dataset) == 1
@@ -139,12 +152,16 @@ class TestPandasTrackDataset:
             assert_equal_track_properties(actual, expected)
         assert merged._geometry_datasets == {}
 
-    def test_add_two_existing_pandas_datasets(self) -> None:
+    def test_add_two_existing_pandas_datasets(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
-        expected_dataset = PandasTrackDataset.from_list([first_track, second_track])
-        first = PandasTrackDataset.from_list([first_track])
-        second = PandasTrackDataset.from_list([second_track])
+        expected_dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+        first = PandasTrackDataset.from_list([first_track], track_geometry_factory)
+        second = PandasTrackDataset.from_list([second_track], track_geometry_factory)
         merged = cast(PandasTrackDataset, first.add_all(second))
 
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
@@ -152,7 +169,11 @@ class TestPandasTrackDataset:
         assert merged._geometry_datasets == {}
 
     def test_add_all_merge_tracks(
-        self, first_track: Track, first_track_continuing: Track, second_track: Track
+        self,
+        first_track: Track,
+        first_track_continuing: Track,
+        second_track: Track,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
         (
             geometry_dataset_no_offset,
@@ -171,7 +192,9 @@ class TestPandasTrackDataset:
             ),
         }
         dataset = PandasTrackDataset.from_dataframe(
-            _convert_tracks([first_track_continuing]), geometry_datasets
+            _convert_tracks([first_track_continuing]),
+            track_geometry_factory,
+            geometry_datasets,
         )
         dataset_merged_track = cast(
             PandasTrackDataset, dataset.add_all([first_track, second_track])
@@ -182,7 +205,7 @@ class TestPandasTrackDataset:
             first_track.detections + first_track_continuing.detections,
         )
         expected_dataset = PandasTrackDataset.from_list(
-            [expected_merged_track, second_track]
+            [expected_merged_track, second_track], track_geometry_factory
         )
         assert_track_datasets_equal(dataset_merged_track, expected_dataset)
         assert_track_geometry_dataset_add_all_called_correctly(
@@ -203,45 +226,53 @@ class TestPandasTrackDataset:
             builder.append_detection()
         return builder.build_track()
 
-    def test_get_by_id(self) -> None:
+    def test_get_by_id(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
-        dataset = PandasTrackDataset.from_list([first_track, second_track])
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
 
         returned = dataset.get_for(first_track.id)
 
         assert returned is not None
         assert_equal_track_properties(returned, first_track)
 
-    def test_get_missing(self) -> None:
-        dataset = PandasTrackDataset()
+    def test_get_missing(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
 
         returned = dataset.get_for(TrackId("1"))
 
         assert returned is None
 
-    def test_clear(self) -> None:
+    def test_clear(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
-        dataset = PandasTrackDataset.from_list([first_track, second_track])
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
 
         empty_set = dataset.clear()
 
         assert 0 == len(empty_set.as_list())
 
-    def test_remove(self) -> None:
+    def test_remove(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
         tracks_df = _convert_tracks([first_track, second_track])
         geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
         dataset = PandasTrackDataset.from_dataframe(
-            tracks_df, {RelativeOffsetCoordinate(0, 0): geometry_dataset}
+            tracks_df,
+            track_geometry_factory,
+            {RelativeOffsetCoordinate(0, 0): geometry_dataset},
         )
 
         removed_track_set = cast(PandasTrackDataset, dataset.remove(first_track.id))
         for actual, expected in zip(
             removed_track_set.as_list(),
-            PandasTrackDataset.from_list([second_track]).as_list(),
+            PandasTrackDataset.from_list(
+                [second_track], track_geometry_factory
+            ).as_list(),
         ):
             assert_equal_track_properties(actual, expected)
         geometry_dataset.remove.assert_called_once_with({first_track.id})
@@ -249,12 +280,14 @@ class TestPandasTrackDataset:
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
         }
 
-    def test_len(self) -> None:
+    def test_len(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
-        dataset = PandasTrackDataset.from_list([first_track, second_track])
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
         assert len(dataset) == 2
-        empty_dataset = PandasTrackDataset.from_list([])
+        empty_dataset = PandasTrackDataset.from_list([], track_geometry_factory)
         assert len(empty_dataset) == 0
 
     @pytest.mark.parametrize(
@@ -282,7 +315,10 @@ class TestPandasTrackDataset:
                     assert_equal_detection_properties(detection, expected_detection)
 
     def test_split_with_existing_geometries(
-        self, first_track: Track, second_track: Track
+        self,
+        first_track: Track,
+        second_track: Track,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
@@ -308,13 +344,17 @@ class TestPandasTrackDataset:
         }
         tracks_df = _convert_tracks([first_track, second_track])
 
-        dataset = PandasTrackDataset(tracks_df, geometry_datasets)
+        dataset = PandasTrackDataset(
+            track_geometry_factory, tracks_df, geometry_datasets
+        )
         result = cast(list[PythonTrackDataset], dataset.split(batches=2))
         assert_track_datasets_equal(
-            result[0], PandasTrackDataset.from_list([first_track])
+            result[0],
+            PandasTrackDataset.from_list([first_track], track_geometry_factory),
         )
         assert_track_datasets_equal(
-            result[1], PandasTrackDataset.from_list([second_track])
+            result[1],
+            PandasTrackDataset.from_list([second_track], track_geometry_factory),
         )
         assert geometry_dataset_no_offset.get_for.call_args_list == [
             call((first_track.id.id,)),
@@ -325,10 +365,14 @@ class TestPandasTrackDataset:
             call((second_track.id.id,)),
         ]
 
-    def test_filter_by_minimum_detection_length(self) -> None:
+    def test_filter_by_minimum_detection_length(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
         first_track = self.__build_track("1", length=5)
         second_track = self.__build_track("2", length=10)
-        dataset = PandasTrackDataset.from_list([first_track, second_track])
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
 
         filtered_dataset = dataset.filter_by_min_detection_length(7)
         assert len(filtered_dataset) == 1

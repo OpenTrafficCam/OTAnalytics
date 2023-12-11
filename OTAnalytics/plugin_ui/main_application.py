@@ -105,6 +105,9 @@ from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
@@ -561,13 +564,19 @@ class ApplicationStarter:
         )
 
     def _create_track_repository(self) -> TrackRepository:
-        return TrackRepository(PandasTrackDataset.from_list([]))
+        return TrackRepository(
+            PandasTrackDataset.from_list(
+                [], PygeosTrackGeometryDataset.from_track_dataset
+            )
+        )
         # return TrackRepository(PythonTrackDataset())
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
         calculator = PandasByMaxConfidence()
         detection_parser = PandasDetectionParser(
-            calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+            calculator,
+            PygeosTrackGeometryDataset.from_track_dataset,
+            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         # calculator = ByMaxConfidence()
         # detection_parser = PythonDetectionParser(

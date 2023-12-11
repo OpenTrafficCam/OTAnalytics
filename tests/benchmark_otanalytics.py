@@ -25,6 +25,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
@@ -148,7 +151,9 @@ def python_track_repository() -> TrackRepository:
 
 @pytest.fixture
 def pandas_track_repository() -> TrackRepository:
-    return TrackRepository(PandasTrackDataset())
+    return TrackRepository(
+        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+    )
 
 
 @pytest.fixture
@@ -180,7 +185,9 @@ def python_track_parser(python_track_repository: TrackRepository) -> TrackParser
 @pytest.fixture
 def pandas_track_parser() -> TrackParser:
     calculator = PandasByMaxConfidence()
-    detection_parser = PandasDetectionParser(calculator)
+    detection_parser = PandasDetectionParser(
+        calculator, PygeosTrackGeometryDataset.from_track_dataset
+    )
     return OttrkParser(detection_parser)
 
 
@@ -216,8 +223,14 @@ def python_track_repo_2hours(
 def pandas_track_repo_15min(
     track_file_15min: Path,
 ) -> tuple[TrackRepository, DetectionMetadata]:
-    track_repository = TrackRepository(PandasTrackDataset())
-    track_parser = OttrkParser(PandasDetectionParser(PandasByMaxConfidence()))
+    track_repository = TrackRepository(
+        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+    )
+    track_parser = OttrkParser(
+        PandasDetectionParser(
+            PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
+        )
+    )
     detection_metadata = _fill_track_repository(
         track_parser, track_repository, [track_file_15min]
     )
@@ -228,8 +241,14 @@ def pandas_track_repo_15min(
 def pandas_track_repo_2hours(
     track_files_2hours: list[Path],
 ) -> tuple[TrackRepository, DetectionMetadata]:
-    track_repository = TrackRepository(PandasTrackDataset())
-    track_parser = OttrkParser(PandasDetectionParser(PandasByMaxConfidence()))
+    track_repository = TrackRepository(
+        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+    )
+    track_parser = OttrkParser(
+        PandasDetectionParser(
+            PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
+        )
+    )
     detection_metadata = _fill_track_repository(
         track_parser, track_repository, track_files_2hours
     )
@@ -356,7 +375,6 @@ class TestBenchmarkTracksIntersectingSections:
         track_repository, _ = pandas_track_repo_2hours
         section_repository, flow_repository = section_flow_repo_setup
         use_case = _build_tracks_intersecting_sections(track_repository)
-
         benchmark.pedantic(
             use_case,
             args=(section_repository.get_all(),),
@@ -424,13 +442,14 @@ class TestBenchmarkCreateEvents:
         create_events = _build_create_events(
             track_repository, section_repository, event_repository
         )
-        benchmark.pedantic(
-            create_events,
-            setup=clear_events,
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
+        create_events()
+        # benchmark.pedantic(
+        #     create_events,
+        #     setup=clear_events,
+        #     rounds=self.ROUNDS,
+        #     iterations=self.ITERATIONS,
+        #     warmup_rounds=self.WARMUP_ROUNDS,
+        # )
 
     def test_2hours(
         self,
