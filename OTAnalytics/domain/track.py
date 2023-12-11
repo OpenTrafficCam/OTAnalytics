@@ -29,6 +29,9 @@ VIDEO_NAME: str = "video_name"
 class TrackId(DataclassValidation):
     id: str
 
+    def __str__(self) -> str:
+        return self.id
+
 
 @dataclass(frozen=True)
 class TrackRepositoryEvent:
