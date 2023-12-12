@@ -26,6 +26,7 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseError
 from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
 from OTAnalytics.application.state import (
     ActionState,
@@ -145,12 +146,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
 )
-from OTAnalytics.plugin_ui.cli import (
-    CliArgumentParser,
-    CliArguments,
-    CliParseError,
-    OTAnalyticsCli,
-)
+from OTAnalytics.plugin_ui.cli import CliArgumentParser, OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader

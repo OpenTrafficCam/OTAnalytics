@@ -27,6 +27,7 @@ from OTAnalytics.application.config import (
 from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseError
 from OTAnalytics.application.state import TracksMetadata, TrackViewState, VideosMetadata
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -95,8 +96,6 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 )
 from OTAnalytics.plugin_ui.cli import (
     CliArgumentParser,
-    CliArguments,
-    CliParseError,
     EventFormat,
     InvalidSectionFileType,
     OTAnalyticsCli,

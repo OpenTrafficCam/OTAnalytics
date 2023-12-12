@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Iterable
@@ -19,6 +18,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE, logger
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseError
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
@@ -54,31 +54,12 @@ class EventFormat(Enum):
     OTEVENTS: str = "otevents"
 
 
-class CliParseError(Exception):
-    pass
-
-
 class SectionsFileDoesNotExist(Exception):
     pass
 
 
 class InvalidSectionFileType(Exception):
     pass
-
-
-@dataclass(frozen=True)
-class CliArguments:
-    start_cli: bool
-    debug: bool
-    track_files: list[str]
-    sections_file: str
-    save_name: str
-    save_suffix: str
-    event_list_exporter: EventListExporter
-    count_interval: int
-    num_processes: int
-    log_file: str
-    logfile_overwrite: bool
 
 
 class CliArgumentParser:
