@@ -5,7 +5,7 @@ from OTAnalytics.application.config import (
     DEFAULT_NUM_PROCESSES,
 )
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
-from OTAnalytics.application.parser.cli_parser import CliArguments
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliParser
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -16,7 +16,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 from OTAnalytics.plugin_ui.cli import EventFormat
 
 
-class ArgparseCliParser:
+class ArgparseCliParser(CliParser):
     """OTAnalytics command line interface argument parser.
 
     Acts as a wrapper to `argparse.ArgumentParser`.

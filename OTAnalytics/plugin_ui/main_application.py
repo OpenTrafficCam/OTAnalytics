@@ -26,7 +26,11 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
-from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseError
+from OTAnalytics.application.parser.cli_parser import (
+    CliArguments,
+    CliParseError,
+    CliParser,
+)
 from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
 from OTAnalytics.application.state import (
     ActionState,
@@ -169,7 +173,7 @@ class ApplicationStarter:
         else:
             self.start_gui()
 
-    def _build_cli_argument_parser(self) -> ArgparseCliParser:
+    def _build_cli_argument_parser(self) -> CliParser:
         return ArgparseCliParser()
 
     def _setup_logger(self, log_file: Path, overwrite: bool, debug: bool) -> None:
