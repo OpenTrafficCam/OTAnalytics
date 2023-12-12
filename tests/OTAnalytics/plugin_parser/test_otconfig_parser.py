@@ -4,7 +4,11 @@ from typing import Any, Sequence
 from unittest.mock import Mock, call
 
 from OTAnalytics.application.datastore import FlowParser, VideoParser
-from OTAnalytics.application.parser.config_parser import OtConfig
+from OTAnalytics.application.parser.config_parser import (
+    AnalysisConfig,
+    ExportConfig,
+    OtConfig,
+)
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
@@ -51,7 +55,7 @@ class TestOtConfigParser:
         ]
         assert flow_parser.convert.call_args_list == [call(sections, flows)]
 
-    def test_parse_config(self, test_data_tmp_dir: Path) -> None:
+    def test_parse_config(self, test_data_tmp_dir: Path, otconfig_file: Path) -> None:
         video_parser = Mock(spec=VideoParser)
         flow_parser = Mock(spec=FlowParser)
         config_parser = OtConfigParser(
@@ -59,12 +63,19 @@ class TestOtConfigParser:
             flow_parser=flow_parser,
         )
         project = Project(
-            name="Test Project", start_date=datetime(2020, 1, 1, tzinfo=timezone.utc)
+            name="My Test Project",
+            start_date=(datetime(2020, 1, 1, 11, 11, 17, tzinfo=timezone.utc)),
         )
         videos: Sequence[Video] = ()
         sections: Sequence[Section] = ()
         flows: Sequence[Flow] = ()
-        config_file = test_data_tmp_dir / "config.otconfig"
+        otflow = Path(
+            "tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otflow"
+        )
+        tracks = {
+            Path("tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk")
+        }
+
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
         serialized_flows = {
             section.SECTIONS: {"serialized": "sections"},
@@ -75,17 +86,27 @@ class TestOtConfigParser:
         video_parser.parse_list.return_value = videos
         flow_parser.parse_content.return_value = sections, flows
 
-        config_parser.serialize(
-            project=project,
-            video_files=videos,
-            sections=sections,
-            flows=flows,
-            file=config_file,
+        config = config_parser.parse(file=otconfig_file)
+        expected_export_config = ExportConfig(
+            save_name="my_name",
+            save_suffix="my_suffix",
+            event_format="csv",
+            count_intervals={2, 3, 4},
         )
-        config = config_parser.parse(file=config_file)
+        expected_analysis_config = AnalysisConfig(
+            do_events=True,
+            do_counting=True,
+            otflow_file=otflow,
+            track_files=tracks,
+            export_config=expected_export_config,
+            num_processes=2,
+            logfile=Path("path/to/my/log_dir"),
+            debug=True,
+        )
 
         expected_config = OtConfig(
             project=project,
+            analysis=expected_analysis_config,
             videos=videos,
             sections=sections,
             flows=flows,

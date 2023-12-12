@@ -10,8 +10,29 @@ from OTAnalytics.domain.video import Video
 
 
 @dataclass(frozen=True)
+class ExportConfig:
+    save_name: str
+    save_suffix: str
+    event_format: str
+    count_intervals: set[int]
+
+
+@dataclass(frozen=True)
+class AnalysisConfig:
+    do_events: bool
+    do_counting: bool
+    otflow_file: Path
+    track_files: set[Path]
+    export_config: ExportConfig
+    num_processes: int
+    logfile: Path
+    debug: bool
+
+
+@dataclass(frozen=True)
 class OtConfig:
     project: Project
+    analysis: AnalysisConfig
     videos: Sequence[Video]
     sections: Sequence[Section]
     flows: Sequence[Flow]

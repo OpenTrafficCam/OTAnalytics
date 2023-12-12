@@ -218,6 +218,7 @@ class TestDatastore:
         flows: Sequence[Flow] = []
         config_parser.parse.return_value = OtConfig(
             project=project,
+            analysis=Mock(),
             videos=videos,
             sections=sections,
             flows=flows,

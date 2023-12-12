@@ -4,7 +4,12 @@ from typing import Iterable
 
 from OTAnalytics.application import project
 from OTAnalytics.application.datastore import FlowParser, VideoParser
-from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
+from OTAnalytics.application.parser.config_parser import (
+    AnalysisConfig,
+    ConfigParser,
+    ExportConfig,
+    OtConfig,
+)
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
@@ -14,6 +19,20 @@ from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
 from OTAnalytics.plugin_parser.otvision_parser import _validate_data
 
 PROJECT: str = "project"
+ANALYSIS = "analysis"
+OTFLOW = "otflow"
+TRACKS = "tracks"
+DO_EVENTS = "do_events"
+DO_COUNTING = "do_counting"
+EXPORT = "export"
+EVENT_FORMAT = "event_format"
+SAVE_NAME = "save_name"
+SAVE_SUFFIX = "save_suffix"
+COUNT_INTERVALS = "count_intervals"
+NUM_PROCESSES = "num_processes"
+LOGFILE = "logfile"
+DEBUG = "debug"
+PATH = "path"
 
 
 class OtConfigParser(ConfigParser):
@@ -28,13 +47,15 @@ class OtConfigParser(ConfigParser):
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
         content = parse_json(file)
-        project = self._parse_project(content[PROJECT])
+        _project = self._parse_project(content[PROJECT])
+        analysis_config = self._parse_analysis(content[ANALYSIS])
         videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
         sections, flows = self._flow_parser.parse_content(
             content[section.SECTIONS], content[flow.FLOWS]
         )
         return OtConfig(
-            project=project,
+            project=_project,
+            analysis=analysis_config,
             videos=videos,
             sections=sections,
             flows=flows,
@@ -45,6 +66,46 @@ class OtConfigParser(ConfigParser):
         name = data[project.NAME]
         start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
         return Project(name=name, start_date=start_date)
+
+    def _parse_analysis(self, data: dict) -> AnalysisConfig:
+        _validate_data(
+            data,
+            [
+                DO_EVENTS,
+                DO_COUNTING,
+                OTFLOW,
+                TRACKS,
+                EXPORT,
+                NUM_PROCESSES,
+                LOGFILE,
+                DEBUG,
+            ],
+        )
+        export_config = self._parse_export(data[EXPORT])
+        analysis_config = AnalysisConfig(
+            do_events=data[DO_EVENTS],
+            do_counting=data[DO_COUNTING],
+            otflow_file=Path(data[OTFLOW]),
+            track_files=self._parse_track_files(data[TRACKS]),
+            export_config=export_config,
+            num_processes=data[NUM_PROCESSES],
+            logfile=Path(data[LOGFILE]),
+            debug=data[DEBUG],
+        )
+        return analysis_config
+
+    def _parse_export(self, data: dict) -> ExportConfig:
+        _validate_data(data, [SAVE_NAME, SAVE_SUFFIX, EVENT_FORMAT, COUNT_INTERVALS])
+        export_config = ExportConfig(
+            save_name=data[SAVE_NAME],
+            save_suffix=data[SAVE_SUFFIX],
+            event_format=data[EVENT_FORMAT],
+            count_intervals=set(data[COUNT_INTERVALS]),
+        )
+        return export_config
+
+    def _parse_track_files(self, track_files: list[str]) -> set[Path]:
+        return {Path(_file) for _file in track_files}
 
     def serialize(
         self,
