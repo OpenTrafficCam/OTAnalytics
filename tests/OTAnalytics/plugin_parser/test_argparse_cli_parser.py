@@ -11,7 +11,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 from OTAnalytics.plugin_ui.cli import EventFormat
 
 
-class TestCliArgumentParser:
+class TestArgparseCliParser:
     def test_parse_with_valid_cli_args(self) -> None:
         track_file_1 = f"track_file_1.{DEFAULT_TRACK_FILE_TYPE}"
         track_file_2 = f"track_file_2.{DEFAULT_TRACK_FILE_TYPE}"
