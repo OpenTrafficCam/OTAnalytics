@@ -1305,7 +1305,7 @@ class DummyViewModel(
         self, default_values: dict[str, str], export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
         input_values = ToplevelExportEvents(
-            title="Export counts",
+            title="Export events",
             initial_position=(50, 50),
             input_values=default_values,
             export_format_extensions=export_format_extensions,
