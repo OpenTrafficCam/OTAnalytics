@@ -62,7 +62,7 @@ class InvalidSectionFileType(Exception):
     pass
 
 
-class CliArgumentParser:
+class ArgparseCliParser:
     """OTAnalytics command line interface argument parser.
 
     Acts as a wrapper to `argparse.ArgumentParser`.

@@ -146,7 +146,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
 )
-from OTAnalytics.plugin_ui.cli import CliArgumentParser, OTAnalyticsCli
+from OTAnalytics.plugin_ui.cli import ArgparseCliParser, OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
@@ -168,8 +168,8 @@ class ApplicationStarter:
         else:
             self.start_gui()
 
-    def _build_cli_argument_parser(self) -> CliArgumentParser:
-        return CliArgumentParser()
+    def _build_cli_argument_parser(self) -> ArgparseCliParser:
+        return ArgparseCliParser()
 
     def _setup_logger(self, log_file: Path, overwrite: bool, debug: bool) -> None:
         if debug:

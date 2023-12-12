@@ -95,7 +95,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     OTC_OTEVENTS_FORMAT_NAME,
 )
 from OTAnalytics.plugin_ui.cli import (
-    CliArgumentParser,
+    ArgparseCliParser,
     EventFormat,
     InvalidSectionFileType,
     OTAnalyticsCli,
@@ -211,7 +211,7 @@ class TestCliArgumentParser:
             "--logfile_overwrite",
         ]
         with patch.object(sys, "argv", cli_args):
-            parser = CliArgumentParser()
+            parser = ArgparseCliParser()
             args = parser.parse()
             assert args == CliArguments(
                 True,
