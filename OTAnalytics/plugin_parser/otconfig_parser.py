@@ -3,12 +3,8 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application import project
-from OTAnalytics.application.datastore import (
-    ConfigParser,
-    FlowParser,
-    OtConfig,
-    VideoParser,
-)
+from OTAnalytics.application.datastore import FlowParser, VideoParser
+from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow

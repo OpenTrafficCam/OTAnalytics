@@ -6,12 +6,8 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics import version
-from OTAnalytics.application.datastore import (
-    FlowParser,
-    OtConfig,
-    VideoMetadata,
-    VideoParser,
-)
+from OTAnalytics.application.datastore import FlowParser, VideoMetadata, VideoParser
+from OTAnalytics.application.parser.config_parser import OtConfig
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, geometry, section, video
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType
