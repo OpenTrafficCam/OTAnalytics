@@ -122,6 +122,7 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
+from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
     FillZerosExporterFactory,
@@ -146,7 +147,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
 )
-from OTAnalytics.plugin_ui.cli import ArgparseCliParser, OTAnalyticsCli
+from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader

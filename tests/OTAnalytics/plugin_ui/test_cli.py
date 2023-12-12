@@ -78,6 +78,7 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
+from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
     FillZerosExporterFactory,
@@ -95,7 +96,6 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     OTC_OTEVENTS_FORMAT_NAME,
 )
 from OTAnalytics.plugin_ui.cli import (
-    ArgparseCliParser,
     EventFormat,
     InvalidSectionFileType,
     OTAnalyticsCli,
