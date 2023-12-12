@@ -9,17 +9,14 @@ import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
-from OTAnalytics.application import project
 from OTAnalytics.application.config import (
     ALLOWED_TRACK_SIZE_PARSING,
     TRACK_LENGTH_LIMIT,
 )
 from OTAnalytics.application.datastore import (
-    ConfigParser,
     DetectionMetadata,
     EventListParser,
     FlowParser,
-    OtConfig,
     TrackParser,
     TrackParseResult,
     TrackVideoParser,
@@ -27,7 +24,6 @@ from OTAnalytics.application.datastore import (
     VideoParser,
 )
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.project import Project
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType
@@ -57,8 +53,6 @@ METADATA: str = "metadata"
 VERSION: str = "version"
 SECTION_FORMAT_VERSION: str = "section_file_version"
 EVENT_FORMAT_VERSION: str = "event_file_version"
-
-PROJECT: str = "project"
 
 
 def _parse_bz2(path: Path) -> dict:
@@ -940,67 +934,3 @@ class OtEventListParser(EventListParser):
             list[dict]: list containing raw information of sections
         """
         return [section.to_dict() for section in sections]
-
-
-class OtConfigParser(ConfigParser):
-    def __init__(
-        self,
-        video_parser: VideoParser,
-        flow_parser: FlowParser,
-    ) -> None:
-        self._video_parser = video_parser
-        self._flow_parser = flow_parser
-
-    def parse(self, file: Path) -> OtConfig:
-        base_folder = file.parent
-        content = _parse(file)
-        project = self._parse_project(content[PROJECT])
-        videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
-        sections, flows = self._flow_parser.parse_content(
-            content[section.SECTIONS], content[flow.FLOWS]
-        )
-        return OtConfig(
-            project=project,
-            videos=videos,
-            sections=sections,
-            flows=flows,
-        )
-
-    def _parse_project(self, data: dict) -> Project:
-        _validate_data(data, [project.NAME, project.START_DATE])
-        name = data[project.NAME]
-        start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
-        return Project(name=name, start_date=start_date)
-
-    def serialize(
-        self,
-        project: Project,
-        video_files: Iterable[Video],
-        sections: Iterable[Section],
-        flows: Iterable[Flow],
-        file: Path,
-    ) -> None:
-        """Serializes the project with the given videos, sections and flows into the
-        file.
-
-        Args:
-            project (Project): description of the project
-            video_files (Iterable[Video]): video files to reference
-            sections (Iterable[Section]): sections to store
-            flows (Iterable[Flow]): flows to store
-            file (Path): output file
-
-        Raises:
-            StartDateMissing: if start date is not configured
-        """
-        parent_folder = file.parent
-        project_content = project.to_dict()
-        video_content = self._video_parser.convert(
-            video_files,
-            relative_to=parent_folder,
-        )
-        section_content = self._flow_parser.convert(sections, flows)
-        content: dict[str, list[dict] | dict] = {PROJECT: project_content}
-        content |= video_content
-        content |= section_content
-        _write_json(data=content, path=file)

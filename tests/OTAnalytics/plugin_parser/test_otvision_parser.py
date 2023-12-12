@@ -46,11 +46,11 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
+from OTAnalytics.plugin_parser.otconfig_parser import PROJECT, OtConfigParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     EVENT_FORMAT_VERSION,
     METADATA,
-    PROJECT,
     SECTION_FORMAT_VERSION,
     VERSION,
     VERSION_1_0,
@@ -59,7 +59,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     DetectionFixer,
     InvalidSectionData,
-    OtConfigParser,
     OtEventListParser,
     OtFlowParser,
     OttrkFormatFixer,

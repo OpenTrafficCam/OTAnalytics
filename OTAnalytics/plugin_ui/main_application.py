@@ -126,10 +126,10 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
+from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
-    OtConfigParser,
     OtEventListParser,
     OtFlowParser,
     OttrkParser,
