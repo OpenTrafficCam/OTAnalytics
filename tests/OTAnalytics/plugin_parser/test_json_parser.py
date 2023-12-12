@@ -5,10 +5,10 @@ import pytest
 import ujson
 
 from OTAnalytics.plugin_parser.json_parser import (
-    _parse,
-    _parse_bz2,
-    _write_bz2,
-    _write_json,
+    parse_json,
+    parse_json_bz2,
+    write_json,
+    write_json_bz2,
 )
 
 
@@ -38,10 +38,10 @@ def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> N
     bzip2_file = test_data_tmp_dir / "section.json.bz2"
     json_file.touch()
     bzip2_file.touch()
-    _write_json(content, json_file)
-    _write_bz2(content, bzip2_file)
-    json_content = _parse(json_file)
-    bzip2_content = _parse(bzip2_file)
+    write_json(content, json_file)
+    write_json_bz2(content, bzip2_file)
+    json_content = parse_json(json_file)
+    bzip2_content = parse_json(bzip2_file)
 
     assert json_content == content
     assert bzip2_content == content
@@ -49,11 +49,11 @@ def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> N
 
 def test_parse_bz2(example_json_bz2: tuple[Path, dict]) -> None:
     example_json_bz2_path, expected_content = example_json_bz2
-    result_content = _parse_bz2(example_json_bz2_path)
+    result_content = parse_json_bz2(example_json_bz2_path)
     assert result_content == expected_content
 
 
 def test_parse_bz2_uncompressed_file(example_json: tuple[Path, dict]) -> None:
     example_path, expected_content = example_json
-    result_content = _parse_bz2(example_path)
+    result_content = parse_json_bz2(example_path)
     assert result_content == expected_content

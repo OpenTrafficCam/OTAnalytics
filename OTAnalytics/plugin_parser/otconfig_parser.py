@@ -14,7 +14,7 @@ from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
-from OTAnalytics.plugin_parser.json_parser import _parse, _write_json
+from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
 from OTAnalytics.plugin_parser.otvision_parser import _validate_data
 
 PROJECT: str = "project"
@@ -31,7 +31,7 @@ class OtConfigParser(ConfigParser):
 
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
-        content = _parse(file)
+        content = parse_json(file)
         project = self._parse_project(content[PROJECT])
         videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
         sections, flows = self._flow_parser.parse_content(
@@ -81,4 +81,4 @@ class OtConfigParser(ConfigParser):
         content: dict[str, list[dict] | dict] = {PROJECT: project_content}
         content |= video_content
         content |= section_content
-        _write_json(data=content, path=file)
+        write_json(data=content, path=file)

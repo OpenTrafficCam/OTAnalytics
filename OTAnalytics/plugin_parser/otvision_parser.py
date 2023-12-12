@@ -45,10 +45,10 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 )
 from OTAnalytics.plugin_parser import dataformat_versions
 from OTAnalytics.plugin_parser.json_parser import (
-    _parse,
-    _parse_bz2,
-    _write_bz2,
-    _write_json,
+    parse_json,
+    parse_json_bz2,
+    write_json,
+    write_json_bz2,
 )
 
 ENCODING: str = "UTF-8"
@@ -398,7 +398,7 @@ class OttrkParser(TrackParser):
         Returns:
             TrackParseResult: contains tracks and track metadata.
         """
-        ottrk_dict = _parse_bz2(ottrk_file)
+        ottrk_dict = parse_json_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
             ottrk_format.DATA_DETECTIONS
@@ -483,7 +483,7 @@ class OtFlowParser(FlowParser):
             list[Section]: list of Section objects
             list[Flow]: list of Flow objects
         """
-        content: dict = _parse(file)
+        content: dict = parse_json(file)
         section_content = content.get(section.SECTIONS, [])
         flow_content = content.get(flow.FLOWS, [])
         return self.parse_content(section_content, flow_content)
@@ -692,7 +692,7 @@ class OtFlowParser(FlowParser):
             file (Path): file to serialize flows and sections to
         """
         content = self.convert(sections, flows)
-        _write_json(content, file)
+        write_json(content, file)
 
     def convert(
         self,
@@ -804,7 +804,7 @@ class OttrkVideoParser(TrackVideoParser):
     def parse(
         self, file: Path, track_ids: list[TrackId]
     ) -> Tuple[list[TrackId], list[Video]]:
-        content = _parse_bz2(file)
+        content = parse_json_bz2(file)
         metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
         video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
         video = self._video_parser.parse(file.parent / video_file)
@@ -823,7 +823,7 @@ class OtEventListParser(EventListParser):
             file (Path): file to serialize events and sections to
         """
         content = self._convert(events, sections)
-        _write_bz2(content, file)
+        write_json_bz2(content, file)
 
     def _convert(
         self, events: Iterable[Event], sections: Iterable[Section]

@@ -44,7 +44,7 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
-from OTAnalytics.plugin_parser.json_parser import _parse, _write_bz2, _write_json
+from OTAnalytics.plugin_parser.json_parser import parse_json, write_json, write_json_bz2
 from OTAnalytics.plugin_parser.otconfig_parser import PROJECT, OtConfigParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
@@ -221,7 +221,7 @@ class TestOttrkParser:
     ) -> None:
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
-        _write_bz2(ottrk_data, ottrk_file)
+        write_json_bz2(ottrk_data, ottrk_file)
         parse_result = ottrk_parser.parse(ottrk_file)
 
         expected_track = track_builder_setup_with_sample_data.build_track()
@@ -548,7 +548,7 @@ class TestOtFlowParser:
             flow.FLOWS: [],
         }
         save_path = test_data_tmp_dir / "sections.otflow"
-        _write_json(section_data, save_path)
+        write_json(section_data, save_path)
 
         parser = OtFlowParser()
         sections, _ = parser.parse(save_path)
@@ -590,7 +590,7 @@ class TestOtFlowParser:
             flow.FLOWS: [],
         }
         save_path = test_data_tmp_dir / "sections.otflow"
-        _write_json(section_data, save_path)
+        write_json(section_data, save_path)
 
         parser = OtFlowParser()
         sections, _ = parser.parse(save_path)
@@ -799,7 +799,7 @@ class TestOtConfigParser:
             file=output,
         )
 
-        serialized_content = _parse(output)
+        serialized_content = parse_json(output)
         expected_content: dict[str, Any] = {PROJECT: project.to_dict()}
         expected_content |= serialized_videos
         expected_content |= serialized_sections

@@ -6,7 +6,7 @@ import ujson
 ENCODING: str = "UTF-8"
 
 
-def _parse_bz2(path: Path) -> dict:
+def parse_json_bz2(path: Path) -> dict:
     """Parse JSON bz2.
 
     Args:
@@ -20,7 +20,7 @@ def _parse_bz2(path: Path) -> dict:
         return ujson.load(file)
 
 
-def _write_bz2(data: dict, path: Path) -> None:
+def write_json_bz2(data: dict, path: Path) -> None:
     """Serialize JSON bz2.
 
     Args:
@@ -44,7 +44,7 @@ def _parse_json(path: Path) -> dict:
         return ujson.load(file)
 
 
-def _parse(path: Path) -> dict:
+def parse_json(path: Path) -> dict:
     """Parse file as JSON or bzip2 compressed JSON.
 
     Args:
@@ -56,10 +56,10 @@ def _parse(path: Path) -> dict:
     try:
         return _parse_json(path)
     except UnicodeDecodeError:
-        return _parse_bz2(path)
+        return parse_json_bz2(path)
 
 
-def _write_json(data: dict, path: Path) -> None:
+def write_json(data: dict, path: Path) -> None:
     """Serialize JSON.
 
     Args:
