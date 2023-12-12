@@ -1,11 +1,8 @@
-import bz2
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Tuple
-
-import ujson
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
@@ -47,75 +44,18 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions
+from OTAnalytics.plugin_parser.json_parser import (
+    _parse,
+    _parse_bz2,
+    _write_bz2,
+    _write_json,
+)
 
 ENCODING: str = "UTF-8"
 METADATA: str = "metadata"
 VERSION: str = "version"
 SECTION_FORMAT_VERSION: str = "section_file_version"
 EVENT_FORMAT_VERSION: str = "event_file_version"
-
-
-def _parse_bz2(path: Path) -> dict:
-    """Parse JSON bz2.
-
-    Args:
-        path (Path): Path to bz2 JSON.
-
-    Returns:
-        dict: The content of the JSON file.
-    """
-    with bz2.open(path, "rt", encoding=ENCODING) as file:
-        return ujson.load(file)
-
-
-def _write_bz2(data: dict, path: Path) -> None:
-    """Serialize JSON bz2.
-
-    Args:
-        data (dict): The content of the JSON file.
-        path (Path): Path to bz2 JSON.
-    """
-    with bz2.open(path, "wt", encoding=ENCODING) as file:
-        ujson.dump(data, file)
-
-
-def _parse_json(path: Path) -> dict:
-    """Parse JSON.
-
-    Args:
-        path (Path): Path to JSON.
-
-    Returns:
-        dict: The content of the JSON file.
-    """
-    with open(path, "rt", encoding=ENCODING) as file:
-        return ujson.load(file)
-
-
-def _parse(path: Path) -> dict:
-    """Parse file as JSON or bzip2 compressed JSON.
-
-    Args:
-        path (Path): Path to file
-
-    Returns:
-        dict: The content of the JSON file.
-    """
-    try:
-        return _parse_json(path)
-    except UnicodeDecodeError:
-        return _parse_bz2(path)
-
-
-def _write_json(data: dict, path: Path) -> None:
-    """Serialize JSON.
-
-    Args:
-        data (dict): The content of the JSON file.
-        path (Path): Path to JSON.
-    """
-    with open(path, "wt", encoding=ENCODING) as file:
-        ujson.dump(data, file, indent=4)
 
 
 def _validate_data(data: dict, attributes: list[str]) -> None:

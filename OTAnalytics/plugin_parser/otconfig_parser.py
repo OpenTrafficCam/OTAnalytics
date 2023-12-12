@@ -14,11 +14,8 @@ from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
-from OTAnalytics.plugin_parser.otvision_parser import (
-    _parse,
-    _validate_data,
-    _write_json,
-)
+from OTAnalytics.plugin_parser.json_parser import _parse, _write_json
+from OTAnalytics.plugin_parser.otvision_parser import _validate_data
 
 PROJECT: str = "project"
 

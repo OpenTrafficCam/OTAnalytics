@@ -1,11 +1,9 @@
-import bz2
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 from unittest.mock import Mock, call
 
 import pytest
-import ujson
 
 from OTAnalytics import version
 from OTAnalytics.application.datastore import (
@@ -46,6 +44,7 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
+from OTAnalytics.plugin_parser.json_parser import _parse, _write_bz2, _write_json
 from OTAnalytics.plugin_parser.otconfig_parser import PROJECT, OtConfigParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
@@ -68,10 +67,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     Version,
     Version_1_0_to_1_1,
     Version_1_1_To_1_2,
-    _parse,
-    _parse_bz2,
-    _write_bz2,
-    _write_json,
 )
 from tests.conftest import TrackBuilder
 
@@ -110,26 +105,6 @@ def append_sample_data(
 
 
 @pytest.fixture
-def example_json_bz2(test_data_tmp_dir: Path) -> tuple[Path, dict]:
-    bz2_json_file = test_data_tmp_dir / "bz2_file.json"
-    bz2_json_file.touch()
-    content = {"first_name": "John", "last_name": "Doe"}
-    with bz2.open(bz2_json_file, "wt", encoding="UTF-8") as out:
-        ujson.dump(content, out)
-    return bz2_json_file, content
-
-
-@pytest.fixture
-def example_json(test_data_tmp_dir: Path) -> tuple[Path, dict]:
-    json_file = test_data_tmp_dir / "file.json"
-    json_file.touch()
-    content = {"first_name": "John", "last_name": "Doe"}
-    with bz2.open(json_file, "wt", encoding="UTF-8") as out:
-        ujson.dump(content, out)
-    return json_file, content
-
-
-@pytest.fixture
 def mocked_track_repository() -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_for.return_value = None
@@ -141,21 +116,6 @@ def mocked_track_file_repository() -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_all.return_value = set()
     return repository
-
-
-def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> None:
-    content = {"some": "value", "other": "values"}
-    json_file = test_data_tmp_dir / "section.json"
-    bzip2_file = test_data_tmp_dir / "section.json.bz2"
-    json_file.touch()
-    bzip2_file.touch()
-    _write_json(content, json_file)
-    _write_bz2(content, bzip2_file)
-    json_content = _parse(json_file)
-    bzip2_content = _parse(bzip2_file)
-
-    assert json_content == content
-    assert bzip2_content == content
 
 
 class TestVersion_1_0_To_1_1:
@@ -289,16 +249,6 @@ class TestOttrkParser:
             number_of_frames=60,
         )
         ottrk_file.unlink()
-
-    def test_parse_bz2(self, example_json_bz2: tuple[Path, dict]) -> None:
-        example_json_bz2_path, expected_content = example_json_bz2
-        result_content = _parse_bz2(example_json_bz2_path)
-        assert result_content == expected_content
-
-    def test_parse_bz2_uncompressed_file(self, example_json: tuple[Path, dict]) -> None:
-        example_path, expected_content = example_json
-        result_content = _parse_bz2(example_path)
-        assert result_content == expected_content
 
 
 class TestPythonDetectionParser:
