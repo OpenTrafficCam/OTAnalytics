@@ -72,7 +72,7 @@ def _write_bz2(data: dict, path: Path) -> None:
     """Serialize JSON bz2.
 
     Args:
-        dict: The content of the JSON file.
+        data (dict): The content of the JSON file.
         path (Path): Path to bz2 JSON.
     """
     with bz2.open(path, "wt", encoding=ENCODING) as file:
@@ -111,7 +111,7 @@ def _write_json(data: dict, path: Path) -> None:
     """Serialize JSON.
 
     Args:
-        dict: The content of the JSON file.
+        data (dict): The content of the JSON file.
         path (Path): Path to JSON.
     """
     with open(path, "wt", encoding=ENCODING) as file:
