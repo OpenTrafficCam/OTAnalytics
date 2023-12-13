@@ -146,6 +146,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
+    provide_available_eventlist_exporter,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     DEFAULT_COLOR_PALETTE,
@@ -505,6 +506,7 @@ class ApplicationStarter:
             add_section=add_section,
             create_events=create_events,
             export_counts=export_counts,
+            provide_eventlist_exporter=provide_available_eventlist_exporter,
             cut_tracks=cut_tracks,
             add_all_tracks=add_all_tracks,
             get_all_track_ids=get_all_track_ids,

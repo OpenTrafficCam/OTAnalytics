@@ -4,11 +4,6 @@ from unittest.mock import patch
 from OTAnalytics.application.config import DEFAULT_TRACK_FILE_TYPE
 from OTAnalytics.application.parser.cli_parser import CliArguments
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
-from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
-    AVAILABLE_EVENTLIST_EXPORTERS,
-    OTC_CSV_FORMAT_NAME,
-)
-from OTAnalytics.plugin_ui.cli import EventFormat
 
 
 class TestArgparseCliParser:
@@ -19,6 +14,7 @@ class TestArgparseCliParser:
         save_name = "stem"
         save_suffix = "suffix"
         log_file = "path/to/my_log.log"
+        event_format = "csv"
 
         cli_args: list[str] = [
             "path",
@@ -33,7 +29,7 @@ class TestArgparseCliParser:
             "--save-suffix",
             save_suffix,
             "--event-format",
-            EventFormat.CSV.value,
+            event_format,
             "--count-interval",
             "15",
             "--num-processes",
@@ -52,7 +48,7 @@ class TestArgparseCliParser:
                 sections_file,
                 save_name,
                 save_suffix,
-                AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME],
+                event_format,
                 15,
                 3,
                 log_file,

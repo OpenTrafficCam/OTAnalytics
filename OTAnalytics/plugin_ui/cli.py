@@ -1,4 +1,3 @@
-from enum import Enum
 from pathlib import Path
 from typing import Iterable
 
@@ -21,6 +20,7 @@ from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.export_events import EventListExporterProvider
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -36,12 +36,6 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
 from OTAnalytics.domain.track import TrackRepositoryEvent
-
-
-class EventFormat(Enum):
-    CSV: str = "csv"
-    EXCEL: str = "xlsx"
-    OTEVENTS: str = "otevents"
 
 
 class SectionsFileDoesNotExist(Exception):
@@ -70,6 +64,7 @@ class OTAnalyticsCli:
         add_flow: AddFlow,
         create_events: CreateEvents,
         export_counts: ExportCounts,
+        provide_eventlist_exporter: EventListExporterProvider,
         cut_tracks: CutTracksIntersectingSection,
         add_all_tracks: AddAllTracks,
         get_all_track_ids: GetAllTrackIds,
@@ -89,6 +84,7 @@ class OTAnalyticsCli:
         self._add_flow = add_flow
         self._create_events = create_events
         self._export_counts = export_counts
+        self._provide_eventlist_exporter = provide_eventlist_exporter
         self._cut_tracks = cut_tracks
         self._add_all_tracks = add_all_tracks
         self._get_all_track_ids = get_all_track_ids
@@ -270,7 +266,9 @@ class OTAnalyticsCli:
 
     def _export_events(self, sections: Iterable[Section], save_path: Path) -> None:
         events = self._event_repository.get_all()
-        event_list_exporter = self.cli_args.event_list_exporter
+        event_list_exporter = self._provide_eventlist_exporter(
+            self.cli_args.event_list_format
+        )
         actual_save_path = save_path.with_suffix(
             f".events.{event_list_exporter.get_extension()}"
         )

@@ -91,6 +91,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_OTEVENTS_FORMAT_NAME,
+    provide_available_eventlist_exporter,
 )
 from OTAnalytics.plugin_ui.cli import (
     InvalidSectionFileType,
@@ -150,9 +151,7 @@ def create_cli_args(
     sections_file: str = SECTION_FILE,
     save_name: str = "",
     save_suffix: str = "",
-    event_list_exporter: EventListExporter = AVAILABLE_EVENTLIST_EXPORTERS[
-        OTC_OTEVENTS_FORMAT_NAME
-    ],
+    event_list_format: str = DEFAULT_EVENTLIST_FILE_TYPE,
     count_interval: int = 1,
     num_processes: int = DEFAULT_NUM_PROCESSES,
     logfile: str = str(DEFAULT_LOG_FILE),
@@ -167,7 +166,7 @@ def create_cli_args(
         sections_file,
         save_name,
         save_suffix,
-        event_list_exporter,
+        event_list_format,
         count_interval,
         num_processes,
         logfile,
@@ -184,6 +183,7 @@ class TestOTAnalyticsCli:
     ADD_FLOW: str = "add_flow"
     CREATE_EVENTS: str = "create_events"
     EXPORT_COUNTS: str = "export_counts"
+    PROVIDE_EVENTLIST_EXPORTER: str = "provide_eventlist_exporter"
     CUT_TRACKS: str = "cut_tracks"
     ADD_ALL_TRACKS: str = "add_all_tracks"
     GET_ALL_TRACK_IDS: str = "get_all_track_ids"
@@ -203,6 +203,7 @@ class TestOTAnalyticsCli:
             self.ADD_FLOW: Mock(spec=AddFlow),
             self.CREATE_EVENTS: Mock(spec=CreateEvents),
             self.EXPORT_COUNTS: Mock(spec=ExportCounts),
+            self.PROVIDE_EVENTLIST_EXPORTER: Mock(),
             self.CUT_TRACKS: Mock(spec=CutTracksIntersectingSection),
             self.ADD_ALL_TRACKS: Mock(spec=AddAllTracks),
             self.GET_ALL_TRACK_IDS: Mock(spec=GetAllTrackIds),
@@ -286,6 +287,7 @@ class TestOTAnalyticsCli:
             self.ADD_FLOW: AddFlow(flow_repository),
             self.CREATE_EVENTS: create_events,
             self.EXPORT_COUNTS: export_counts,
+            self.PROVIDE_EVENTLIST_EXPORTER: provide_available_eventlist_exporter,
             self.CUT_TRACKS: cut_tracks,
             self.ADD_ALL_TRACKS: add_all_tracks,
             self.GET_ALL_TRACK_IDS: get_all_track_ids,
@@ -439,7 +441,6 @@ class TestOTAnalyticsCli:
         temp_ottrk: Path,
         temp_section: Path,
         cli_dependencies: dict[str, Any],
-        event_list_exporter: EventListExporter,
     ) -> None:
         save_name = test_data_tmp_dir / "stem"
         save_suffix = "suffix"

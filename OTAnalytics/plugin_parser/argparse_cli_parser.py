@@ -2,18 +2,11 @@ from argparse import ArgumentParser
 
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
 )
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliParser
-from OTAnalytics.application.use_cases.export_events import EventListExporter
-from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
-    AVAILABLE_EVENTLIST_EXPORTERS,
-    OTC_CSV_FORMAT_NAME,
-    OTC_EXCEL_FORMAT_NAME,
-    OTC_OTEVENTS_FORMAT_NAME,
-)
-from OTAnalytics.plugin_ui.cli import EventFormat
 
 
 class ArgparseCliParser(CliParser):
@@ -75,7 +68,7 @@ class ArgparseCliParser(CliParser):
         )
         self._parser.add_argument(
             "--event-format",
-            default=EventFormat.OTEVENTS.value,
+            default=DEFAULT_EVENTLIST_FILE_TYPE,
             type=str,
             help=(
                 "Format to export the event list "
@@ -125,18 +118,9 @@ class ArgparseCliParser(CliParser):
             args.otflow,
             args.save_name,
             args.save_suffix,
-            self._parse_event_format(args.event_format),
+            args.event_format,
             args.count_interval,
             args.num_processes,
             args.logfile,
             args.logfile_overwrite,
         )
-
-    def _parse_event_format(self, event_format: str) -> EventListExporter:
-        match event_format.lower():
-            case EventFormat.CSV.value:
-                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME]
-            case EventFormat.EXCEL.value:
-                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_EXCEL_FORMAT_NAME]
-            case _:
-                return AVAILABLE_EVENTLIST_EXPORTERS[OTC_OTEVENTS_FORMAT_NAME]
