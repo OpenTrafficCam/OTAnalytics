@@ -69,9 +69,6 @@ class TestOtConfigParser:
         videos: Sequence[Video] = ()
         sections: Sequence[Section] = ()
         flows: Sequence[Flow] = ()
-        otflow = Path(
-            "tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otflow"
-        )
         tracks = {
             Path("tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk")
         }
@@ -96,7 +93,6 @@ class TestOtConfigParser:
         expected_analysis_config = AnalysisConfig(
             do_events=True,
             do_counting=True,
-            otflow_file=otflow,
             track_files=tracks,
             export_config=expected_export_config,
             num_processes=2,

@@ -9,7 +9,6 @@
         }
     ],
     "analysis":{
-        "otflow": "tests\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otflow",
         "tracks": [
             "tests\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
         ],

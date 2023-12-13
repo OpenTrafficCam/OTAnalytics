@@ -20,7 +20,6 @@ from OTAnalytics.plugin_parser.otvision_parser import _validate_data
 
 PROJECT: str = "project"
 ANALYSIS = "analysis"
-OTFLOW = "otflow"
 TRACKS = "tracks"
 DO_EVENTS = "do_events"
 DO_COUNTING = "do_counting"
@@ -73,7 +72,6 @@ class OtConfigParser(ConfigParser):
             [
                 DO_EVENTS,
                 DO_COUNTING,
-                OTFLOW,
                 TRACKS,
                 EXPORT,
                 NUM_PROCESSES,
@@ -85,7 +83,6 @@ class OtConfigParser(ConfigParser):
         analysis_config = AnalysisConfig(
             do_events=data[DO_EVENTS],
             do_counting=data[DO_COUNTING],
-            otflow_file=Path(data[OTFLOW]),
             track_files=self._parse_track_files(data[TRACKS]),
             export_config=export_config,
             num_processes=data[NUM_PROCESSES],

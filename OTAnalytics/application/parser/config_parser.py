@@ -21,7 +21,6 @@ class ExportConfig:
 class AnalysisConfig:
     do_events: bool
     do_counting: bool
-    otflow_file: Path
     track_files: set[Path]
     export_config: ExportConfig
     num_processes: int

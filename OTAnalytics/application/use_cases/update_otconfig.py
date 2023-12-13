@@ -15,7 +15,6 @@ class OtConfigUpdater:
             analysis=AnalysisConfig(
                 do_events=otconfig.analysis.do_events,
                 do_counting=otconfig.analysis.do_counting,
-                otflow_file=Path(cli_args.sections_file),
                 track_files={Path(_track) for _track in cli_args.track_files},
                 export_config=ExportConfig(
                     save_name=cli_args.save_name,

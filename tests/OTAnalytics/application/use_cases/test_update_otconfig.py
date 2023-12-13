@@ -43,7 +43,6 @@ def otconfig() -> OtConfig:
         count_intervals={2, 3},
     )
 
-    otflow_file = Path("path/to/config_otflow.otflow")
     track_files = {
         Path("path/to/first_track_config.ottrk"),
         Path("path/to/second_track_config.ottrk"),
@@ -51,7 +50,6 @@ def otconfig() -> OtConfig:
     analysis = AnalysisConfig(
         do_events=True,
         do_counting=True,
-        otflow_file=otflow_file,
         track_files=track_files,
         export_config=export,
         num_processes=2,
@@ -77,7 +75,6 @@ class TestOtConfigUpdater:
             analysis=AnalysisConfig(
                 do_events=otconfig.analysis.do_events,
                 do_counting=otconfig.analysis.do_counting,
-                otflow_file=Path(cli_args.sections_file),
                 track_files={Path(_track) for _track in cli_args.track_files},
                 export_config=ExportConfig(
                     save_name=cli_args.save_name,
