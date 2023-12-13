@@ -90,7 +90,7 @@ class TestOtConfigParser:
         expected_export_config = ExportConfig(
             save_name="my_name",
             save_suffix="my_suffix",
-            event_format="csv",
+            event_formats={"csv", "xlsx"},
             count_intervals={2, 3, 4},
         )
         expected_analysis_config = AnalysisConfig(

@@ -25,7 +25,7 @@ TRACKS = "tracks"
 DO_EVENTS = "do_events"
 DO_COUNTING = "do_counting"
 EXPORT = "export"
-EVENT_FORMAT = "event_format"
+EVENT_FORMATS = "event_formats"
 SAVE_NAME = "save_name"
 SAVE_SUFFIX = "save_suffix"
 COUNT_INTERVALS = "count_intervals"
@@ -95,11 +95,11 @@ class OtConfigParser(ConfigParser):
         return analysis_config
 
     def _parse_export(self, data: dict) -> ExportConfig:
-        _validate_data(data, [SAVE_NAME, SAVE_SUFFIX, EVENT_FORMAT, COUNT_INTERVALS])
+        _validate_data(data, [SAVE_NAME, SAVE_SUFFIX, EVENT_FORMATS, COUNT_INTERVALS])
         export_config = ExportConfig(
             save_name=data[SAVE_NAME],
             save_suffix=data[SAVE_SUFFIX],
-            event_format=data[EVENT_FORMAT],
+            event_formats=set(data[EVENT_FORMATS]),
             count_intervals=set(data[COUNT_INTERVALS]),
         )
         return export_config

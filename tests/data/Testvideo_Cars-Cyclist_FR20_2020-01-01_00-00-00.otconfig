@@ -16,7 +16,7 @@
         "do_events": true,
         "do_counting": true,
         "export":{
-            "event_format": "csv",
+            "event_formats": ["csv", "xlsx"],
             "save_name": "my_name",
             "save_suffix": "my_suffix",
             "count_intervals": [2, 3, 4]

@@ -13,7 +13,7 @@ from OTAnalytics.domain.video import Video
 class ExportConfig:
     save_name: str
     save_suffix: str
-    event_format: str
+    event_formats: set[str]
     count_intervals: set[int]
 
 
