@@ -197,14 +197,15 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         else:
             new_x = filtered_tracks[track.X] + offset.x * filtered_tracks[track.W]
             new_y = filtered_tracks[track.Y] + offset.y * filtered_tracks[track.H]
-        tracks = concat([new_x, new_y], keys=[track.X, track.Y], axis=1).groupby(
-            level=0, group_keys=True
-        )
-        geometries = tracks.agg(list).apply(
+        tracks = concat([new_x, new_y], keys=[track.X, track.Y], axis=1)
+        tracks_by_id = tracks.groupby(level=0, group_keys=True)
+        geometries = tracks_by_id.agg(list).apply(
             lambda coords: linestrings(tuple(zip(coords[track.X], coords[track.Y]))),
             axis=1,
         )
-        projections = tracks.apply(calculate_projection)
+        # projections = tracks_by_id.apply(calculate_projection)
+        projections = calculate_all_projections(tracks)
+
         result = concat([geometries, projections], keys=COLUMNS, axis=1)
         return result
 
@@ -340,10 +341,27 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         return self._dataset[COLUMNS].to_dict(orient=ORIENTATION_INDEX)
 
 
+def calculate_all_projections(tracks: DataFrame) -> DataFrame:
+    tracks_by_id = tracks.groupby(level=0, group_keys=True)
+    tracks["last_x"] = tracks_by_id[track.X].shift(1)
+    tracks["last_y"] = tracks_by_id[track.Y].shift(1)
+    tracks["length_x"] = tracks[track.X] - tracks["last_x"]
+    tracks["length_y"] = tracks[track.Y] - tracks["last_y"]
+    tracks["pow_x"] = tracks["length_x"].pow(2)
+    tracks["pow_y"] = tracks["length_y"].pow(2)
+    tracks["sum_x_y_pow"] = tracks["pow_x"] + tracks["pow_y"]
+    tracks["distance"] = tracks["sum_x_y_pow"].pow(1 / 2)
+    tracks["distance"].fillna(0, inplace=True)
+    tracks["cum-distance"] = tracks.groupby(level=0, group_keys=True)[
+        "distance"
+    ].cumsum()
+    return tracks.groupby(level=0, group_keys=True)["cum-distance"].agg(list)
+
+
 def calculate_projection(track_df: DataFrame) -> Series:
     _track = track_df.reset_index()
     x_1 = _track.iloc[:-1][track.X].reset_index(drop=True)
-    y_1 = _track.iloc[:-1][track.X].reset_index(drop=True)
+    y_1 = _track.iloc[:-1][track.Y].reset_index(drop=True)
     x_2 = _track.iloc[1:][track.X].reset_index(drop=True)
     y_2 = _track.iloc[1:][track.Y].reset_index(drop=True)
 
