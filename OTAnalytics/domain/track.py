@@ -26,9 +26,12 @@ TRACK_ID: str = "track_id"
 VIDEO_NAME: str = "video_name"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class TrackId(DataclassValidation):
     id: str
+
+    def __str__(self) -> str:
+        return self.id
 
 
 @dataclass(frozen=True)
