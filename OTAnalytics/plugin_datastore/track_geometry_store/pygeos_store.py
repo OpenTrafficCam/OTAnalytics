@@ -3,7 +3,7 @@ from collections import defaultdict
 from itertools import chain
 from typing import Any, Iterable, Literal, TypedDict
 
-from pandas import DataFrame, Series, concat
+from pandas import DataFrame, concat
 from pygeos import (
     Geometry,
     contains,
@@ -203,7 +203,6 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             lambda coords: linestrings(tuple(zip(coords[track.X], coords[track.Y]))),
             axis=1,
         )
-        # projections = tracks_by_id.apply(calculate_projection)
         projections = calculate_all_projections(tracks)
 
         result = concat([geometries, projections], keys=COLUMNS, axis=1)
@@ -356,16 +355,3 @@ def calculate_all_projections(tracks: DataFrame) -> DataFrame:
         "distance"
     ].cumsum()
     return tracks.groupby(level=0, group_keys=True)["cum-distance"].agg(list)
-
-
-def calculate_projection(track_df: DataFrame) -> Series:
-    _track = track_df.reset_index()
-    x_1 = _track.iloc[:-1][track.X].reset_index(drop=True)
-    y_1 = _track.iloc[:-1][track.Y].reset_index(drop=True)
-    x_2 = _track.iloc[1:][track.X].reset_index(drop=True)
-    y_2 = _track.iloc[1:][track.Y].reset_index(drop=True)
-
-    d = ((x_2 - x_1).pow(2) + (y_2 - y_1).pow(2)).pow(1 / 2)
-
-    projection = concat([Series(0), d], ignore_index=True).cumsum()
-    return projection.agg(list)
