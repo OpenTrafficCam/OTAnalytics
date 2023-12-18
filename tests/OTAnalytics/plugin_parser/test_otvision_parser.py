@@ -271,20 +271,25 @@ class TestOttrkParser:
         # TODO What is the expected result?
         ottrk_parser.parse(ottrk_path)
 
+    @pytest.mark.parametrize(
+        "version,track_id", [("1.0", "legacy#legacy#1"), ("1.1", "1#1#1")]
+    )
     def test_parse_ottrk_sample(
         self,
         test_data_tmp_dir: Path,
         track_builder_setup_with_sample_data: TrackBuilder,
         ottrk_parser: OttrkParser,
+        version: str,
+        track_id: str,
     ) -> None:
-        # track_builder_setup_with_sample_data.set_ottrk_version("1.0")
+        track_builder_setup_with_sample_data.set_ottrk_version(version)
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
         _write_bz2(ottrk_data, ottrk_file)
         parse_result = ottrk_parser.parse(ottrk_file)
 
         example_track_builder = TrackBuilder()
-        example_track_builder.add_track_id("1#1#1")
+        example_track_builder.add_track_id(track_id)
         append_sample_data(example_track_builder)
         expected_track = example_track_builder.build_track()
         expected_detection_classes = frozenset(
