@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from math import floor
 from os import path
 from os.path import normcase, splitdrive
 from pathlib import Path
@@ -92,10 +93,11 @@ class SimpleVideo(Video):
     video_reader: VideoReader
     path: Path
     start_date: Optional[datetime]
+    _fps: Optional[int] = None
 
     @property
     def fps(self) -> float:
-        return self.video_reader.get_fps(self.path)
+        return self._fps if self._fps else self.video_reader.get_fps(self.path)
 
     def __post_init__(self) -> None:
         self.check_path_exists()
@@ -124,7 +126,8 @@ class SimpleVideo(Video):
         time_in_video = date - self.start_date
         if time_in_video < timedelta(0):
             return 0
-        return self.video_reader.get_frame_number_for(self.path, time_in_video)
+
+        return floor(self.fps * time_in_video.total_seconds())
 
     def to_dict(
         self,
