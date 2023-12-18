@@ -25,7 +25,6 @@ class AnalysisConfig:
     export_config: ExportConfig
     num_processes: int
     logfile: Path
-    debug: bool
 
 
 @dataclass(frozen=True)

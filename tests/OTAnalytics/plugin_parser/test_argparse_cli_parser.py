@@ -15,10 +15,13 @@ class TestArgparseCliParser:
         save_suffix = "suffix"
         log_file = "path/to/my_log.log"
         event_format = "csv"
+        config_file = "path/to/config.otconfig"
 
         cli_args: list[str] = [
             "path",
             "--cli",
+            "--config",
+            config_file,
             "--ottrks",
             track_file_1,
             track_file_2,
@@ -44,6 +47,7 @@ class TestArgparseCliParser:
             assert args == CliArguments(
                 True,
                 False,
+                config_file,
                 [track_file_1, track_file_2],
                 sections_file,
                 save_name,

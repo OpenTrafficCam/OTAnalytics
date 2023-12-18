@@ -97,7 +97,6 @@ class TestOtConfigParser:
             export_config=expected_export_config,
             num_processes=2,
             logfile=Path("path/to/my/log_dir"),
-            debug=True,
         )
 
         expected_config = OtConfig(

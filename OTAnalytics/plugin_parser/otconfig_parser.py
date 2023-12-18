@@ -87,7 +87,6 @@ class OtConfigParser(ConfigParser):
             export_config=export_config,
             num_processes=data[NUM_PROCESSES],
             logfile=Path(data[LOGFILE]),
-            debug=data[DEBUG],
         )
         return analysis_config
 

@@ -1,11 +1,5 @@
 from argparse import ArgumentParser
 
-from OTAnalytics.application.config import (
-    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
-    DEFAULT_EVENTLIST_FILE_TYPE,
-    DEFAULT_NUM_PROCESSES,
-)
-from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliParser
 
 
@@ -30,7 +24,13 @@ class ArgparseCliParser(CliParser):
         self._parser.add_argument(
             "--cli",
             action="store_true",
-            help="Start OTAnalytics CLI. If ommitted OTAnalytics GUI will be started.",
+            help="Start OTAnalytics CLI. If omitted OTAnalytics GUI will be started.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--config",
+            type=str,
+            help="Path to otconfig file.",
             required=False,
         )
         self._parser.add_argument(
@@ -68,7 +68,6 @@ class ArgparseCliParser(CliParser):
         )
         self._parser.add_argument(
             "--event-format",
-            default=DEFAULT_EVENTLIST_FILE_TYPE,
             type=str,
             help=(
                 "Format to export the event list "
@@ -78,21 +77,18 @@ class ArgparseCliParser(CliParser):
         )
         self._parser.add_argument(
             "--count-interval",
-            default=DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
             type=int,
             help="Count interval in minutes.",
             required=False,
         )
         self._parser.add_argument(
             "--num-processes",
-            default=DEFAULT_NUM_PROCESSES,
             type=int,
             help="Number of processes to use in multi-processing.",
             required=False,
         )
         self._parser.add_argument(
             "--logfile",
-            default=DEFAULT_LOG_FILE,
             type=str,
             help="Specify log file directory.",
             required=False,
@@ -114,6 +110,7 @@ class ArgparseCliParser(CliParser):
         return CliArguments(
             args.cli,
             args.debug,
+            args.config,
             args.ottrks,
             args.otflow,
             args.save_name,
