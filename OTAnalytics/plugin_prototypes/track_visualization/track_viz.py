@@ -1,6 +1,5 @@
 import random
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Iterable, Optional
 
 import numpy
@@ -14,7 +13,11 @@ from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
 
-from OTAnalytics.application.plotting import DynamicLayersPlotter, EntityPlotterFactory
+from OTAnalytics.application.plotting import (
+    DynamicLayersPlotter,
+    EntityPlotterFactory,
+    GetCurrentFrame,
+)
 from OTAnalytics.application.state import (
     FlowState,
     Plotter,
@@ -678,6 +681,25 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
         )
 
 
+class FilterByFrame(PandasDataFrameProvider):
+    def __init__(
+        self,
+        data_provider: PandasDataFrameProvider,
+        current_frame: GetCurrentFrame,
+    ) -> None:
+        self._data_provider = data_provider
+        self._current_frame = current_frame
+
+    def get_data(self) -> DataFrame:
+        track_df = self._data_provider.get_data()
+        if track_df.empty:
+            return track_df
+        current_frame = self._current_frame.get_frame_number() + FRAME_OFFSET
+        current_second = self._current_frame.get_second()
+        timed_df = track_df[track_df[track.SECONDS] == current_second]
+        return timed_df[timed_df[track.FRAME] == current_frame]
+
+
 class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
     """Plot bounding boxes of detections."""
 
@@ -707,11 +729,7 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
             alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
-        current_frame = self.__current_frame() + FRAME_OFFSET
-        current_second = self.__current_second(track_df)
-        timed_df = track_df[track_df[track.SECONDS] == current_second]
-        boxes_frame = timed_df[timed_df[track.FRAME] == current_frame]
-        for index, row in boxes_frame.iterrows():
+        for index, row in track_df.iterrows():
             x = row[X]
             y = row[Y]
             width = row[W]
@@ -730,16 +748,44 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
                 )
             )
 
-    def __current_frame(self) -> int:
-        if end_date := self._track_view_state.filter_element.get().date_range.end_date:
-            video = self._track_view_state.selected_videos.get()[0]
-            return video.get_frame_number_for(end_date)
-        return 0
 
-    def __current_second(self, data: DataFrame) -> Optional[datetime]:
-        if end_date := self._track_view_state.filter_element.get().date_range.end_date:
-            return end_date.replace(microsecond=0)
-        return data[track.SECONDS].min()
+class TrackPointPlotter(MatplotlibPlotterImplementation):
+    """Plot point of bounding boxes of detections."""
+
+    def __init__(
+        self,
+        data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        track_view_state: TrackViewState,
+        alpha: float = 0.5,
+    ) -> None:
+        self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
+        self._track_view_state = track_view_state
+        self._alpha = alpha
+
+    def plot(self, axes: Axes) -> None:
+        data = self._data_provider.get_data()
+        if not data.empty:
+            self._plot_dataframe(data, axes)
+
+    def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
+        """
+        Plot given tracks on the given axes with the given transparency (alpha)
+
+        Args:
+            track_df (DataFrame): tracks to plot
+            axes (Axes): axes to plot on
+        """
+        for index, row in track_df.iterrows():
+            classification = row[track.TRACK_CLASSIFICATION]
+            color = self._color_palette_provider.get()[classification]
+            axes.plot(
+                row[X],
+                row[Y],
+                marker="x",
+                color=color,
+            )
 
 
 class MatplotlibTrackPlotter(TrackPlotter):
