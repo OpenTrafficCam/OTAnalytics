@@ -6,9 +6,11 @@ from OTAnalytics.application.state import (
     ObservableOptionalProperty,
     ObservableProperty,
     Plotter,
+    TrackViewState,
+    VideosMetadata,
 )
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.domain.video import Video
+from OTAnalytics.domain.video import Video, VideoRepository
 
 
 class Layer:
@@ -255,3 +257,26 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
         for entity in entities:
             del self._plotter_mapping[entity]
             del self._layer_mapping[entity]
+
+
+class GetCurrentFrame:
+    def __init__(
+        self,
+        state: TrackViewState,
+        videos_metadata: VideosMetadata,
+        video_repository: VideoRepository,
+    ) -> None:
+        self._state = state
+        self._videos_metadata = videos_metadata
+        self._video_repository = video_repository
+
+    def get_frame_number(self) -> int:
+        if end_date := self._state.filter_element.get().date_range.end_date:
+            video = self._state.selected_videos.get()[0]
+            return video.get_frame_number_for(end_date)
+        return 0
+
+    def get_second(self) -> Optional[datetime]:
+        if end_date := self._state.filter_element.get().date_range.end_date:
+            return end_date.replace(microsecond=0)
+        return self._videos_metadata.first_video_start
