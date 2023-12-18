@@ -277,13 +277,16 @@ class TestOttrkParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         ottrk_parser: OttrkParser,
     ) -> None:
-        track_builder_setup_with_sample_data.set_ottrk_version("1.0")
+        # track_builder_setup_with_sample_data.set_ottrk_version("1.0")
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
         _write_bz2(ottrk_data, ottrk_file)
         parse_result = ottrk_parser.parse(ottrk_file)
 
-        expected_track = track_builder_setup_with_sample_data.build_track()
+        example_track_builder = TrackBuilder()
+        example_track_builder.add_track_id("1#1#1")
+        append_sample_data(example_track_builder)
+        expected_track = example_track_builder.build_track()
         expected_detection_classes = frozenset(
             ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
         )

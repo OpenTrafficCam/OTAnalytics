@@ -198,6 +198,8 @@ class TrackBuilder:
                 "last_tracked_video_end": self.__to_timestamp(
                     "2020-01-01 00:00:02.950000"
                 ),
+                "tracking_run_id": "1",
+                "frame_group": "1",
                 "tracker": {
                     "name": "IOU",
                     "sigma_l": 0.27,
