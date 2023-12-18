@@ -233,10 +233,12 @@ class ApplicationStarter:
         section_repository.register_section_changed_observer(
             clear_all_intersections.on_section_changed
         )
+        videos_metadata = VideosMetadata()
         layers = self._create_layers(
             datastore,
             intersection_repository,
             track_view_state,
+            videos_metadata,
             flow_state,
             section_state,
             pulling_progressbar_builder,
@@ -258,7 +260,6 @@ class ApplicationStarter:
         tracks_metadata._classifications.register(
             observer=color_palette_provider.update
         )
-        videos_metadata = VideosMetadata()
         action_state = self._create_action_state()
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
@@ -605,6 +606,7 @@ class ApplicationStarter:
         datastore: Datastore,
         intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
+        videos_metadata: VideosMetadata,
         flow_state: FlowState,
         section_state: SectionState,
         pulling_progressbar_builder: ProgressbarBuilder,
@@ -615,6 +617,7 @@ class ApplicationStarter:
             datastore,
             intersection_repository,
             track_view_state,
+            videos_metadata,
             section_state,
             color_palette_provider,
             pulling_progressbar_builder,

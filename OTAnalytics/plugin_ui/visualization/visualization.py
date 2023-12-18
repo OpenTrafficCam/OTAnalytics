@@ -6,6 +6,7 @@ from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import (
     CachedPlotter,
+    GetCurrentFrame,
     PlottingLayer,
     TrackBackgroundPlotter,
     VisualizationTimeProvider,
@@ -15,6 +16,7 @@ from OTAnalytics.application.state import (
     Plotter,
     SectionState,
     TrackViewState,
+    VideosMetadata,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
@@ -42,6 +44,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     ColorPaletteProvider,
     EventToFlowResolver,
     FilterByClassification,
+    FilterByFrame,
     FilterById,
     FilterByOccurrence,
     FlowLayerPlotter,
@@ -52,6 +55,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     SectionLayerPlotter,
     TrackBoundingBoxPlotter,
     TrackGeometryPlotter,
+    TrackPointPlotter,
     TrackStartEndPointPlotter,
 )
 
@@ -83,6 +87,7 @@ class VisualizationBuilder:
         datastore: Datastore,
         intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
+        videos_metadata: VideosMetadata,
         section_state: SectionState,
         color_palette_provider: ColorPaletteProvider,
         pulling_progressbar_builder: ProgressbarBuilder,
@@ -97,6 +102,9 @@ class VisualizationBuilder:
         self._flow_repository = datastore._flow_repository
         self._intersection_repository = intersection_repository
         self._event_repository = datastore._event_repository
+        self._get_current_frame = GetCurrentFrame(
+            track_view_state, videos_metadata, datastore._video_repository
+        )
         self._visualization_time_provider: VisualizationTimeProvider = (
             FilterEndDateProvider(track_view_state)
         )
@@ -136,6 +144,7 @@ class VisualizationBuilder:
         )
 
         track_bounding_box_plotter = self._create_track_bounding_box_plotter()
+        track_point_plotter = self._create_track_point_plotter()
 
         layer_definitions = [
             ("Background", background_image_plotter, True),
@@ -178,6 +187,11 @@ class VisualizationBuilder:
             (
                 "Show bounding boxes of current frame",
                 track_bounding_box_plotter,
+                False,
+            ),
+            (
+                "Show track point of bounding boxes of current frame",
+                track_point_plotter,
                 False,
             ),
         ]
@@ -652,7 +666,23 @@ class VisualizationBuilder:
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackBoundingBoxPlotter(
-                self._get_data_provider_class_filter(),
+                FilterByFrame(
+                    self._get_data_provider_class_filter(), self._get_current_frame
+                ),
+                self._color_palette_provider,
+                self._track_view_state,
+                alpha=ALPHA_BOUNDING_BOX,
+            ),
+        )
+        return PlotterPrototype(self._track_view_state, track_plotter)
+
+    def _create_track_point_plotter(self) -> Plotter:
+        track_plotter = MatplotlibTrackPlotter(
+            TrackPointPlotter(
+                FilterByFrame(
+                    self._get_data_provider_all_filters_with_offset(),
+                    self._get_current_frame,
+                ),
                 self._color_palette_provider,
                 self._track_view_state,
                 alpha=ALPHA_BOUNDING_BOX,
