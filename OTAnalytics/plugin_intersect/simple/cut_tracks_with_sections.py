@@ -1,7 +1,6 @@
 from typing import Iterable
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
-from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksDto,
     CutTracksIntersectingSection,
@@ -32,6 +31,7 @@ from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
     TrackId,
 )
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
@@ -118,12 +118,10 @@ class SimpleCutTracksWithSection(CutTracksWithSection):
         get_tracks_from_ids: GetTracksFromIds,
         shapely_mapper: ShapelyMapper,
         track_builder: TrackBuilder,
-        track_view_state: TrackViewState,
     ) -> None:
         self._get_tracks_from_ids = get_tracks_from_ids
         self._shapely_mapper = shapely_mapper
         self._track_builder = track_builder
-        self._track_view_state = track_view_state
 
     def __call__(
         self, track_ids: Iterable[TrackId], cutting_section: Section
@@ -142,7 +140,7 @@ class SimpleCutTracksWithSection(CutTracksWithSection):
         section_geometry = self._shapely_mapper.map_coordinates_to_line_string(
             cutting_section.get_coordinates()
         )
-        track_offset = self._track_view_state.track_offset.get()
+        track_offset = cutting_section.get_offset(EventType.SECTION_ENTER)
         for current_detection, next_detection in zip(
             track.detections[0:-1], track.detections[1:]
         ):
