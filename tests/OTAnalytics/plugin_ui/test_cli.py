@@ -23,10 +23,11 @@ from OTAnalytics.application.config import (
     DEFAULT_NUM_PROCESSES,
     DEFAULT_TRACK_FILE_TYPE,
 )
-from OTAnalytics.application.datastore import FlowParser, TrackParser
+from OTAnalytics.application.datastore import FlowParser, TrackParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseError
+from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, TrackViewState, VideosMetadata
 from OTAnalytics.application.use_cases.create_events import (
@@ -83,11 +84,14 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
+from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
+    CachedVideoParser,
     OtFlowParser,
     OttrkParser,
     PythonDetectionParser,
+    SimpleVideoParser,
 )
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -99,6 +103,7 @@ from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsCli,
     SectionsFileDoesNotExist,
 )
+from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 from tests.conftest import YieldFixture
 
 CONFIG_FILE = "path/to/config.otconfig"
@@ -142,6 +147,21 @@ def temp_section(test_data_tmp_dir: Path, otsection_file: Path) -> YieldFixture[
 
 
 @pytest.fixture
+def temp_otconfig(
+    test_data_tmp_dir: Path, otconfig_file: Path, ottrk_path: Path, cyclist_video: Path
+) -> YieldFixture[Path]:
+    temp_dir = test_data_tmp_dir / "temp_otconfig"
+    temp_dir.mkdir(parents=True)
+    temp_otconfig = temp_dir / otconfig_file.name
+    temp_ottrk = temp_dir / ottrk_path.name
+    temp_video = temp_dir / cyclist_video.name
+    copy2(src=otconfig_file, dst=temp_otconfig)
+    copy2(src=ottrk_path, dst=temp_ottrk)
+    copy2(src=cyclist_video, dst=temp_video)
+    yield temp_otconfig
+
+
+@pytest.fixture
 def event_list_exporter() -> EventListExporter:
     return AVAILABLE_EVENTLIST_EXPORTERS[OTC_OTEVENTS_FORMAT_NAME]
 
@@ -156,6 +176,16 @@ def mock_flow_parser() -> Mock:
     parser = Mock()
     parser.parse.return_value = ([], [])
     return parser
+
+
+@pytest.fixture
+def video_parser() -> VideoParser:
+    return CachedVideoParser(SimpleVideoParser(OpenCvVideoReader()))
+
+
+@pytest.fixture
+def config_parser(video_parser: VideoParser, flow_parser: FlowParser) -> ConfigParser:
+    return OtConfigParser(video_parser, flow_parser)
 
 
 def create_run_config(
@@ -542,3 +572,33 @@ class TestOTAnalyticsCli:
             output_file=str(expected_output_file),
         )
         export_counts.export.assert_called_with(specification=expected_specification)
+
+    def test_cli_with_otconfig_has_expected_output_files(
+        self,
+        cli_dependencies: dict[str, Any],
+        flow_parser: FlowParser,
+        config_parser: ConfigParser,
+        temp_otconfig: Path,
+    ) -> None:
+        cli_args = CliArguments(
+            start_cli=True,
+            debug=False,
+            logfile_overwrite=False,
+            config_file=str(temp_otconfig),
+        )
+        otconfig = config_parser.parse(temp_otconfig)
+        run_config = RunConfiguration(flow_parser, cli_args, otconfig)
+        cli = OTAnalyticsCli(run_config, **cli_dependencies)
+
+        cli.start()
+        for event_format in run_config.event_formats:
+            expected_events_file = temp_otconfig.with_name(
+                f"my_name_my_suffix.events.{event_format}"
+            )
+            assert expected_events_file.is_file()
+
+        for count_interval in run_config.count_intervals:
+            expected_counts_file = temp_otconfig.with_name(
+                f"my_name_my_suffix.counts_{count_interval}s.csv"
+            )
+            assert expected_counts_file.is_file()

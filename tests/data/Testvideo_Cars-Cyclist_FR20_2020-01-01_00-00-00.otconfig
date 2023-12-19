@@ -5,12 +5,12 @@
     },
     "videos": [
         {
-            "path": "tests\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+            "path": "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
         }
     ],
     "analysis":{
         "tracks": [
-            "tests\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
+            "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
         ],
         "do_events": true,
         "do_counting": true,
