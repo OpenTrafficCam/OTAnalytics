@@ -77,9 +77,9 @@ class RunConfiguration:
         if self._cli_args.save_dir:
             return Path(self._cli_args.save_dir).expanduser()
         if self.config_file:
-            return self.config_file.parent
+            return self.config_file.parent.expanduser()
         if self.otflow:
-            return self.otflow.parent
+            return self.otflow.parent.expanduser()
         raise RunConfigurationError("No OTConfig nor OTFlow file passed.")
 
     @property
