@@ -47,7 +47,7 @@ class OtConfigParser(ConfigParser):
         base_folder = file.parent
         content = parse_json(file)
         _project = self._parse_project(content[PROJECT])
-        analysis_config = self._parse_analysis(content[ANALYSIS])
+        analysis_config = self._parse_analysis(content[ANALYSIS], base_folder)
         videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
         sections, flows = self._flow_parser.parse_content(
             content[section.SECTIONS], content[flow.FLOWS]
@@ -66,7 +66,7 @@ class OtConfigParser(ConfigParser):
         start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
         return Project(name=name, start_date=start_date)
 
-    def _parse_analysis(self, data: dict) -> AnalysisConfig:
+    def _parse_analysis(self, data: dict, base_folder: Path) -> AnalysisConfig:
         _validate_data(
             data,
             [
@@ -83,7 +83,7 @@ class OtConfigParser(ConfigParser):
         analysis_config = AnalysisConfig(
             do_events=data[DO_EVENTS],
             do_counting=data[DO_COUNTING],
-            track_files=self._parse_track_files(data[TRACKS]),
+            track_files=self._parse_track_files(data[TRACKS], base_folder),
             export_config=export_config,
             num_processes=data[NUM_PROCESSES],
             logfile=Path(data[LOGFILE]),
@@ -100,8 +100,10 @@ class OtConfigParser(ConfigParser):
         )
         return export_config
 
-    def _parse_track_files(self, track_files: list[str]) -> set[Path]:
-        return {Path(_file) for _file in track_files}
+    def _parse_track_files(
+        self, track_files: list[str], base_folder: Path
+    ) -> set[Path]:
+        return {base_folder / _file for _file in track_files}
 
     def serialize(
         self,

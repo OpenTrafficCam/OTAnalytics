@@ -84,6 +84,8 @@ class RunConfiguration:
 
             if self.otflow:
                 return self.otflow.parent
+        if self.config_file:
+            return self.config_file.parent
         # Save name is either absolute or relative path.
         return Path(save_name).expanduser().parent
 
