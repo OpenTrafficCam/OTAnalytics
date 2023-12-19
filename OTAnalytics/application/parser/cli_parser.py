@@ -14,6 +14,7 @@ class CliArguments:
     config_file: str | None = None
     track_files: list[str] | None = None
     otflow_file: str | None = None
+    save_dir: str | None = None
     save_name: str | None = None
     save_suffix: str | None = None
     event_formats: str | None = None

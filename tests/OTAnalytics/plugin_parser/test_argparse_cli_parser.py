@@ -51,6 +51,7 @@ class TestArgparseCliParser:
                 config_file,
                 [track_file_1, track_file_2],
                 sections_file,
+                None,
                 save_name,
                 save_suffix,
                 event_format,

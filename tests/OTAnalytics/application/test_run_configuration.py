@@ -385,3 +385,19 @@ class TestRunConfiguration:
         otconfig.flows = flows
         assert build_config(cli_args, otconfig).flows == flows
         assert not build_config(cli_args, None).flows
+
+    def test_save_dir(self, cli_args: Mock, otconfig: Mock) -> None:
+        cli_save_dir = "path/to/cli_save_dir"
+        config_file = "path/to/otconfig_dir/config_file.otconfig"
+        otflow_file = "path/to/otflow_dir/otflow_file.otflow"
+
+        cli_args.save_dir = None
+        cli_args.otflow_file = otflow_file
+        cli_args.config_file = None
+        assert build_config(cli_args, None).save_dir == Path("path/to/otflow_dir")
+
+        cli_args.config_file = config_file
+        assert build_config(cli_args, otconfig).save_dir == Path("path/to/otconfig_dir")
+
+        cli_args.save_dir = cli_save_dir
+        assert build_config(cli_args, otconfig).save_dir == Path(cli_save_dir)

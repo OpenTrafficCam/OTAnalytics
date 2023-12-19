@@ -47,15 +47,19 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--save-dir",
+            type=str,
+            help="Save directory of output files.",
+            required=False,
+        )
+        self._parser.add_argument(
             "--save-name",
-            default="",
             type=str,
             help="Name of the otevents file.",
             required=False,
         )
         self._parser.add_argument(
             "--save-suffix",
-            default="",
             type=str,
             help="Name of the suffix to be appended to save name.",
             required=False,
@@ -108,16 +112,17 @@ class ArgparseCliParser(CliParser):
         """
         args = self._parser.parse_args()
         return CliArguments(
-            args.cli,
-            args.debug,
-            args.logfile_overwrite,
-            args.config,
-            args.ottrks,
-            args.otflow,
-            args.save_name,
-            args.save_suffix,
-            args.event_format,
-            args.count_interval,
-            args.num_processes,
-            args.logfile,
+            start_cli=args.cli,
+            debug=args.debug,
+            logfile_overwrite=args.logfile_overwrite,
+            config_file=args.config,
+            track_files=args.ottrks,
+            otflow_file=args.otflow,
+            save_dir=args.save_dir,
+            save_name=args.save_name,
+            save_suffix=args.save_suffix,
+            event_formats=args.event_format,
+            count_interval=args.count_interval,
+            num_processes=args.num_processes,
+            log_file=args.logfile,
         )

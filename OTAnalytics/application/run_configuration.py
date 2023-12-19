@@ -16,6 +16,10 @@ from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 
 
+class RunConfigurationError(Exception):
+    pass
+
+
 class RunConfiguration:
     def __init__(
         self,
@@ -67,6 +71,16 @@ class RunConfiguration:
         if self._cli_args.otflow_file:
             return Path(self._cli_args.otflow_file)
         return None
+
+    @property
+    def save_dir(self) -> Path:
+        if self._cli_args.save_dir:
+            return Path(self._cli_args.save_dir).expanduser()
+        if self.config_file:
+            return self.config_file.parent
+        if self.otflow:
+            return self.otflow.parent
+        raise RunConfigurationError("No OTConfig nor OTFlow file passed.")
 
     @property
     def save_name(self) -> Path:
