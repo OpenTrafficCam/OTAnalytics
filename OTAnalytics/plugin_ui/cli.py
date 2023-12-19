@@ -134,8 +134,10 @@ class OTAnalyticsCli:
         logger().info("Event list created.")
 
         save_path = self._run_config.save_dir / self._run_config.save_name
-        self._export_events(sections, save_path)
-        self._do_export_counts(save_path)
+        if self._run_config.do_events:
+            self._export_events(sections, save_path)
+        if self._run_config.do_counting:
+            self._do_export_counts(save_path)
 
     def _apply_cuts(self, sections: Iterable[Section]) -> None:
         cutting_sections = sorted(
