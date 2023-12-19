@@ -47,6 +47,7 @@ class TestArgparseCliParser:
             assert args == CliArguments(
                 True,
                 False,
+                True,
                 config_file,
                 [track_file_1, track_file_2],
                 sections_file,
@@ -56,5 +57,4 @@ class TestArgparseCliParser:
                 15,
                 3,
                 log_file,
-                True,
             )

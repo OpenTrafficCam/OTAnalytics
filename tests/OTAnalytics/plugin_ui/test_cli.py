@@ -189,6 +189,7 @@ def create_run_config(
     cli_args = CliArguments(
         start_cli,
         debug,
+        logfile_overwrite,
         config_file,
         track_files,
         sections_file,
@@ -198,7 +199,6 @@ def create_run_config(
         count_intervals,
         num_processes,
         logfile,
-        logfile_overwrite,
     )
     run_config = RunConfiguration(flow_parser, cli_args)
     return run_config

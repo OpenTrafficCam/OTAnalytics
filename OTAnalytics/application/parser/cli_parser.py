@@ -10,16 +10,16 @@ class CliParseError(Exception):
 class CliArguments:
     start_cli: bool
     debug: bool
-    config_file: str | None
-    track_files: list[str] | None
-    otflow_file: str | None
-    save_name: str
-    save_suffix: str
-    event_formats: str | None
-    count_interval: int | None
-    num_processes: int | None
-    log_file: str | None
     logfile_overwrite: bool
+    config_file: str | None = None
+    track_files: list[str] | None = None
+    otflow_file: str | None = None
+    save_name: str | None = None
+    save_suffix: str | None = None
+    event_formats: str | None = None
+    count_interval: int | None = None
+    num_processes: int | None = None
+    log_file: str | None = None
 
 
 class CliParser(ABC):

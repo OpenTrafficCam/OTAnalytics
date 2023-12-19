@@ -110,6 +110,7 @@ class ArgparseCliParser(CliParser):
         return CliArguments(
             args.cli,
             args.debug,
+            args.logfile_overwrite,
             args.config,
             args.ottrks,
             args.otflow,
@@ -119,5 +120,4 @@ class ArgparseCliParser(CliParser):
             args.count_interval,
             args.num_processes,
             args.logfile,
-            args.logfile_overwrite,
         )
