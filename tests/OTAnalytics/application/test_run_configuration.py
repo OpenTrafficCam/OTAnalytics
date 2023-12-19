@@ -386,18 +386,52 @@ class TestRunConfiguration:
         assert build_config(cli_args, otconfig).flows == flows
         assert not build_config(cli_args, None).flows
 
-    def test_save_dir(self, cli_args: Mock, otconfig: Mock) -> None:
-        cli_save_dir = "path/to/cli_save_dir"
-        config_file = "path/to/otconfig_dir/config_file.otconfig"
-        otflow_file = "path/to/otflow_dir/otflow_file.otflow"
-
-        cli_args.save_dir = None
+    @pytest.mark.parametrize(
+        "save_dir,otflow_file,config_file,expected",
+        [
+            (
+                "path/to/cli_save_dir",
+                "path/to/otflow/flows.otflow",
+                "path/to/otconfig/config.otconfig",
+                "path/to/cli_save_dir",
+            ),
+            (None, "path/to/otflow/flows.otflow", None, "path/to/otflow"),
+            (
+                None,
+                "path/to/otflow/flows.otflow",
+                "path/to/otconfig/config.otconfig",
+                "path/to/otconfig",
+            ),
+            (
+                "~/path/to/cli_save_dir",
+                "path/to/otflow/flows.otflow",
+                "path/to/otconfig/config.otconfig",
+                str(Path("~").expanduser() / "path/to/cli_save_dir"),
+            ),
+            (
+                None,
+                "~/path/to/otflow/flows.otflow",
+                None,
+                str(Path("~").expanduser() / "path/to/otflow"),
+            ),
+            (
+                None,
+                "path/to/otflow/flows.otflow",
+                "~/path/to/otconfig/config.otconfig",
+                str(Path("~").expanduser() / "path/to/otconfig"),
+            ),
+        ],
+    )
+    def test_save_dir(
+        self,
+        save_dir: str | None,
+        otflow_file: str | None,
+        config_file: str | None,
+        expected: str,
+        cli_args: Mock,
+        otconfig: Mock,
+    ) -> None:
+        cli_args.save_dir = save_dir
         cli_args.otflow_file = otflow_file
-        cli_args.config_file = None
-        assert build_config(cli_args, None).save_dir == Path("path/to/otflow_dir")
-
         cli_args.config_file = config_file
-        assert build_config(cli_args, otconfig).save_dir == Path("path/to/otconfig_dir")
-
-        cli_args.save_dir = cli_save_dir
-        assert build_config(cli_args, otconfig).save_dir == Path(cli_save_dir)
+        assert build_config(cli_args, None).save_dir == Path(expected)
