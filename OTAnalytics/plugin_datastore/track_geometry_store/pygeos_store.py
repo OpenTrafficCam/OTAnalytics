@@ -1,7 +1,7 @@
 from bisect import bisect
 from collections import defaultdict
 from itertools import chain
-from typing import Any, Iterable, Literal, TypedDict
+from typing import Any, Iterable, Literal
 
 from pandas import DataFrame, concat
 from pygeos import (
@@ -85,12 +85,6 @@ def create_pygeos_track(
         )
     prepare(geometry)
     return geometry
-
-
-class TrackGeometryEntry(TypedDict):
-    # TODO: Remove if not needed
-    geometry: Geometry
-    projection: list[float]
 
 
 class InvalidTrackGeometryDataset(Exception):
