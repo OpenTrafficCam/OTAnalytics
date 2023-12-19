@@ -391,8 +391,10 @@ class EventRepository:
         Returns:
             Iterable[Event]: the events
         """
-        return itertools.chain.from_iterable(
-            [self._non_section_events, *self._events.values()]
+        return list(
+            itertools.chain.from_iterable(
+                [self._non_section_events, *self._events.values()]
+            )
         )
 
     def clear(self) -> None:
