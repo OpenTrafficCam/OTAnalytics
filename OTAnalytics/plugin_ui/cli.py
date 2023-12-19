@@ -170,7 +170,7 @@ class OTAnalyticsCli:
         if not run_config.track_files:
             raise CliParseError("No ottrk files passed. Abort analysis.")
 
-        if not run_config.config_file or not run_config.otflow:
+        if not run_config.config_file and not run_config.otflow:
             raise CliParseError("No otflow or otconfig file passed. Abort analysis.")
 
     @staticmethod
