@@ -350,10 +350,10 @@ class PythonTrackDataset(TrackDataset):
         self, track_ids: Iterable[TrackId]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         _ids = [track_id.id for track_id in track_ids]
-        geometry_datasets = {}
-        for offset, geometry_dataset in self._geometry_datasets.items():
-            geometry_datasets[offset] = geometry_dataset.get_for(_ids)
-        return geometry_datasets
+        return {
+            offset: geometry_dataset.get_for(_ids)
+            for offset, geometry_dataset in self._geometry_datasets.items()
+        }
 
     def __len__(self) -> int:
         return len(self._tracks)
