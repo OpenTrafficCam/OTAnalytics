@@ -145,64 +145,64 @@ class TestRunConfiguration:
         ),
         [
             (
-                "path/to/cli_save_name",
+                "cli_save_name",
                 "cli_suffix",
                 "cfg_suffix",
-                "path/to/cfg_save_name",
+                "cfg_save_name",
                 "path/to/my_flows.otflow",
                 "path/to/my_config.otconfig",
                 True,
-                "path/to/cli_save_name_cli_suffix",
+                "cli_save_name_cli_suffix",
             ),
             (
-                "path/to/cli_save_name",
+                "cli_save_name",
                 "cli_suffix",
                 "cfg_suffix",
                 "path/to/cfg_save_name",
                 "path/to/my_flows.otflow",
                 "path/to/my_config.otconfig",
                 False,
-                "path/to/cli_save_name_cli_suffix",
+                "cli_save_name_cli_suffix",
             ),
             (
-                "path/to/cli_save_name",
+                "cli_save_name",
                 "",
                 "cfg_suffix",
-                "path/to/cfg_save_name",
+                "cfg_save_name",
                 "path/to/my_flows.otflow",
                 "path/to/my_config.otconfig",
                 False,
-                "path/to/cli_save_name",
+                "cli_save_name",
             ),
             (
                 "",
                 "cli_suffix",
                 "cfg_suffix",
-                "path/to/cfg_save_name",
+                "cfg_save_name",
                 "path/to/my_flows.otflow",
                 None,
                 False,
-                "path/to/my_flows_cli_suffix",
+                "my_flows_cli_suffix",
             ),
             (
                 "",
                 "",
                 "cfg_suffix",
-                "path/to/cfg_save_name",
+                "cfg_save_name",
                 "path/to/my_flows.otflow",
                 None,
                 False,
-                "path/to/my_flows",
+                "my_flows",
             ),
             (
                 "",
                 "cli_suffix",
-                "path/to/cfg_save_name",
+                "cfg_save_name",
                 "cfg_suffix",
                 "path/to/my_flows.otflow",
                 "path/to/my_config.otconfig",
                 True,
-                "path/to/cfg_save_name_cli_suffix",
+                "cfg_save_name_cli_suffix",
             ),
             (
                 "",
@@ -212,7 +212,7 @@ class TestRunConfiguration:
                 "path/to/my_flows.otflow",
                 "path/to/my_config.otconfig",
                 True,
-                "path/to/my_config_cli_suffix",
+                "my_config_cli_suffix",
             ),
             (
                 "",
@@ -222,7 +222,7 @@ class TestRunConfiguration:
                 "path/to/my_flows.otflow",
                 "path/to/my_config.otconfig",
                 True,
-                "path/to/my_config_cfg_suffix",
+                "my_config_cfg_suffix",
             ),
             (
                 "",
@@ -232,7 +232,7 @@ class TestRunConfiguration:
                 "path/to/my_flows.otflow",
                 "path/to/my_config.otconfig",
                 True,
-                "path/to/my_config",
+                "my_config",
             ),
         ],
     )
@@ -261,9 +261,9 @@ class TestRunConfiguration:
         otconfig = Mock()
         otconfig.analysis = analysis
         if has_otconfig:
-            assert build_config(cli_args, otconfig).save_name == Path(expected)
+            assert build_config(cli_args, otconfig).save_name == expected
         else:
-            assert build_config(cli_args, None).save_name == Path(expected)
+            assert build_config(cli_args, None).save_name == expected
 
     def test_save_suffix(self, cli_args: Mock, otconfig: Mock) -> None:
         cli_args.save_suffix = "cli_suffix"

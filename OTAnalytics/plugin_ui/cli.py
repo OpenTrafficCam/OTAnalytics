@@ -133,7 +133,7 @@ class OTAnalyticsCli:
         self._create_events()
         logger().info("Event list created.")
 
-        save_path = self._run_config.save_name
+        save_path = self._run_config.save_dir / self._run_config.save_name
         self._export_events(sections, save_path)
         self._do_export_counts(save_path)
 

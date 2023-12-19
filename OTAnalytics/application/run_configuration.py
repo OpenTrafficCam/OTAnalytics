@@ -83,32 +83,10 @@ class RunConfiguration:
         raise RunConfigurationError("No OTConfig nor OTFlow file passed.")
 
     @property
-    def save_name(self) -> Path:
-        save_dir = self._get_save_dir()
+    def save_name(self) -> str:
         save_stem = self._get_save_stem()
         save_suffix = self.save_suffix
-
-        return save_dir / f"{save_stem}{save_suffix}"
-
-    def _get_save_dir(self) -> Path:
-        save_name = self._get_save_name()
-        if not save_name:
-            if self.config_file:
-                return self.config_file.parent
-
-            if self.otflow:
-                return self.otflow.parent
-        if self.config_file:
-            return self.config_file.parent
-        # Save name is either absolute or relative path.
-        return Path(save_name).expanduser().parent
-
-    def _get_save_name(self) -> str:
-        if cli_save_name := self._cli_args.save_name:
-            return cli_save_name
-        if self._otconfig:
-            return self._otconfig.analysis.export_config.save_name
-        return ""
+        return f"{save_stem}{save_suffix}"
 
     def _get_save_stem(self) -> str:
         save_name = self._get_save_name()
@@ -118,6 +96,13 @@ class RunConfiguration:
             return self.config_file.stem
         if self.otflow:
             return self.otflow.stem
+        return ""
+
+    def _get_save_name(self) -> str:
+        if cli_save_name := self._cli_args.save_name:
+            return cli_save_name
+        if self._otconfig:
+            return self._otconfig.analysis.export_config.save_name
         return ""
 
     @property
