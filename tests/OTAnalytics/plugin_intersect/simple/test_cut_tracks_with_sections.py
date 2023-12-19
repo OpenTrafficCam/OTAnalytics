@@ -32,6 +32,7 @@ from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
     TrackId,
 )
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
@@ -99,12 +100,20 @@ class TestSimpleCutTrackSegmentBuilder:
 class TestSimpleCutTracksWithSection:
     @staticmethod
     def _create_cutting_section(
-        id_name: str, coordinates: Iterable[tuple[float, float]]
+        id_name: str,
+        coordinates: Iterable[tuple[float, float]],
+        offset: RelativeOffsetCoordinate,
     ) -> LineSection:
         section_id = SectionId(id_name)
         converted_coords = [Coordinate(x, y) for x, y in coordinates]
 
-        return LineSection(section_id, section_id.id, {}, {}, converted_coords)
+        return LineSection(
+            section_id,
+            section_id.id,
+            {EventType.SECTION_ENTER: offset},
+            {},
+            converted_coords,
+        )
 
     @staticmethod
     def _create_track(
@@ -120,22 +129,37 @@ class TestSimpleCutTracksWithSection:
         return track_builder.build_track()
 
     @pytest.mark.parametrize(
-        "track_coords,section_coords,expected",
+        "track_coords,section_coords,section_offset,expected",
         [
             (
                 [(0, 1), (1, 1), (2, 1)],
                 [(1.5, 2), (1.5, 0)],
+                RelativeOffsetCoordinate(0, 0),
                 [[(0, 1), (1, 1)], [(2, 1)]],
             ),
             (
                 [(0, 1), (1, 1), (2, 1)],
                 [(5, 2), (5, 0)],
+                RelativeOffsetCoordinate(0, 0),
                 [[(0, 1), (1, 1), (2, 1)]],
             ),
             (
                 [(0, 1), (1, 1), (2, 1), (2, 2), (1, 2), (0, 2)],
                 [(1.5, 3), (1.5, 0)],
+                RelativeOffsetCoordinate(0, 0),
                 [[(0, 1), (1, 1)], [(2, 1), (2, 2)], [(1, 2), (0, 2)]],
+            ),
+            (
+                [(0, 1), (1, 1), (2, 1)],
+                [(1.5, 2), (1.5, 0)],
+                RelativeOffsetCoordinate(1, 1),
+                [[(0, 1), (1, 1), (2, 1)]],
+            ),
+            (
+                [(0, 10), (10, 10), (20, 10)],
+                [(15, 20), (15, 0)],
+                RelativeOffsetCoordinate(0.499, 0.0),
+                [[(0, 10), (10, 10)], [(20, 10)]],
             ),
         ],
     )
@@ -143,27 +167,26 @@ class TestSimpleCutTracksWithSection:
         self,
         track_coords: list[tuple[float, float]],
         section_coords: list[tuple[float, float]],
+        section_offset: RelativeOffsetCoordinate,
         expected: list[list[tuple[float, float]]],
         track_builder: TrackBuilderForTesting,
     ) -> None:
         track = self._create_track(track_builder, "1", track_coords)
-        cutting_section = self._create_cutting_section("#cut_1", section_coords)
+        cutting_section = self._create_cutting_section(
+            "#cut_1",
+            section_coords,
+            section_offset,
+        )
 
         get_tracks_from_ids = Mock(spec=GetTracksFromIds, return_value=[track])
         geometry_mapper = ShapelyMapper()
         class_calculator = Mock(spec=TrackClassificationCalculator, return_value="car")
         cut_track_segment_builder = SimpleCutTrackSegmentBuilder(class_calculator)
 
-        observable_track_offset = Mock()
-        observable_track_offset.get.return_value = RelativeOffsetCoordinate(0, 0)
-        track_view_state = Mock()
-        track_view_state.track_offset = observable_track_offset
-
         cut_tracks_with_section = SimpleCutTracksWithSection(
             get_tracks_from_ids,
             geometry_mapper,
             cut_track_segment_builder,
-            track_view_state,
         )
 
         actual_cut_tracks = cut_tracks_with_section([TrackId("1")], cutting_section)

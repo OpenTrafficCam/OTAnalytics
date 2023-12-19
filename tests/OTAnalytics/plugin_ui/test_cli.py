@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
 from typing import Any
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 
 import pytest
 
@@ -29,7 +29,7 @@ from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseError
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.run_configuration import RunConfiguration
-from OTAnalytics.application.state import TracksMetadata, TrackViewState, VideosMetadata
+from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
@@ -302,7 +302,6 @@ class TestOTAnalyticsCli:
             GetTracksFromIds(track_repository),
             ShapelyMapper(),
             SimpleCutTrackSegmentBuilder(ByMaxConfidence()),
-            TrackViewState(),
         )
         cut_tracks = (
             SimpleCutTracksIntersectingSection(
@@ -604,3 +603,21 @@ class TestOTAnalyticsCli:
                 f"my_name_my_suffix.counts_{count_interval}s.csv"
             )
             assert expected_counts_file.is_file()
+
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._get_ottrk_files")
+    @patch("OTAnalytics.plugin_ui.cli.logger")
+    def test_exceptions_are_being_logged(
+        self,
+        get_logger: Mock,
+        get_ottrk_files: Mock,
+        mock_cli_dependencies: dict[str, Mock],
+    ) -> None:
+        exception = Exception("My Exception")
+        get_ottrk_files.side_effect = exception
+        logger = Mock()
+        get_logger.return_value = logger
+
+        cli = OTAnalyticsCli(Mock(), **mock_cli_dependencies)
+        cli.start()
+        logger.exception.assert_called_once_with(exception, exc_info=True)
+        get_ottrk_files.assert_called_once()

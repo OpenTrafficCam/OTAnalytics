@@ -90,11 +90,14 @@ class OTAnalyticsCli:
 
     def start(self) -> None:
         """Start analysis."""
-        self._run_analysis(
-            self._run_config.track_files,
-            self._run_config.sections,
-            self._run_config.flows,
-        )
+        try:
+            self._run_analysis(
+                self._run_config.track_files,
+                self._run_config.sections,
+                self._run_config.flows,
+            )
+        except Exception as cause:
+            logger().exception(cause, exc_info=True)
 
     def _add_sections(self, sections: Iterable[Section]) -> None:
         """Add sections to section repository."""

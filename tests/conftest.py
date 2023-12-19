@@ -38,6 +38,7 @@ DEFAULT_OCCURRENCE_MICROSECOND: int = 0
 @dataclass
 class TrackBuilder:
     otdet_version = "1.2"
+    ottrk_version = "1.1"
     track_id: str = "1"
     track_class: str = "car"
     detection_class: str = "car"
@@ -68,6 +69,9 @@ class TrackBuilder:
 
     def set_otdet_version(self, otdet_version: str) -> None:
         self.otdet_version = otdet_version
+
+    def set_ottrk_version(self, ottrk_version: str) -> None:
+        self.ottrk_version = ottrk_version
 
     def append_detection(self) -> None:
         self._detections.append(self.create_detection())
@@ -181,7 +185,7 @@ class TrackBuilder:
                 "chunksize": 1,
                 "normalized_bbox": False,
             },
-            "ottrk_version": "1.0",
+            "ottrk_version": self.ottrk_version,
             "tracking": {
                 "otvision_version": "1.0",
                 "first_tracked_video_start": self.__to_timestamp(
@@ -410,13 +414,13 @@ def assert_equal_detection_properties(actual: Detection, expected: Detection) ->
     assert expected.occurrence == actual.occurrence
     assert expected.video_name == actual.video_name
     assert expected.interpolated_detection == actual.interpolated_detection
-    assert expected.track_id == actual.track_id
+    assert actual.track_id == expected.track_id
 
 
 def assert_equal_track_properties(actual: Track, expected: Track) -> None:
-    assert expected.id == actual.id
-    assert expected.classification == actual.classification
-    assert len(expected.detections) == len(actual.detections)
+    assert actual.id == expected.id
+    assert actual.classification == expected.classification
+    assert len(actual.detections) == len(expected.detections)
     for first_detection, second_detection in zip(
         expected.detections, actual.detections
     ):
