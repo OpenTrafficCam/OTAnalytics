@@ -155,6 +155,12 @@ class TestSimpleCutTracksWithSection:
                 RelativeOffsetCoordinate(1, 1),
                 [[(0, 1), (1, 1), (2, 1)]],
             ),
+            (
+                [(0, 10), (10, 10), (20, 10)],
+                [(15, 20), (15, 0)],
+                RelativeOffsetCoordinate(0.499, 0.0),
+                [[(0, 10), (10, 10)], [(20, 10)]],
+            ),
         ],
     )
     def test_cut_tracks(
