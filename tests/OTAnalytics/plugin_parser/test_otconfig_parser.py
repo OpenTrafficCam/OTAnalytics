@@ -70,7 +70,8 @@ class TestOtConfigParser:
         sections: Sequence[Section] = ()
         flows: Sequence[Flow] = ()
         tracks = {
-            Path("tests/data/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk")
+            otconfig_file.parent
+            / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
         }
 
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
