@@ -350,24 +350,30 @@ class TestOTAnalyticsCli:
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli(run_config, **mock_cli_dependencies)
 
-    def test_init_no_section_cli_arg(
+    def test_init_no_otflow_and_otconfig_file_present(
         self, mock_cli_dependencies: dict[str, Any], mock_flow_parser: FlowParser
     ) -> None:
-        cli_args = create_run_config(mock_flow_parser, sections_file="")
+        run_config = create_run_config(
+            mock_flow_parser, config_file="", sections_file=""
+        )
         expected_error_msg = "No otflow or otconfig file passed.*"
         with pytest.raises(CliParseError, match=expected_error_msg):
-            OTAnalyticsCli(cli_args, **mock_cli_dependencies)
+            OTAnalyticsCli(run_config, **mock_cli_dependencies)
 
     def test_validate_cli_args_no_tracks(self, mock_flow_parser: FlowParser) -> None:
-        cli_args = create_run_config(mock_flow_parser, track_files=[])
+        run_config = create_run_config(mock_flow_parser, track_files=[])
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
-            OTAnalyticsCli._validate_cli_args(cli_args)
+            OTAnalyticsCli._validate_cli_args(run_config)
 
-    def test_validate_cli_args_no_section(self, mock_flow_parser: FlowParser) -> None:
-        cli_args = create_run_config(mock_flow_parser, sections_file="")
+    def test_validate_cli_args_no_otflow_and_otconfig(
+        self, mock_flow_parser: FlowParser
+    ) -> None:
+        run_config = create_run_config(
+            mock_flow_parser, config_file="", sections_file=""
+        )
         expected_error_msg = "No otflow or otconfig file passed.*"
         with pytest.raises(CliParseError, match=expected_error_msg):
-            OTAnalyticsCli._validate_cli_args(cli_args)
+            OTAnalyticsCli._validate_cli_args(run_config)
 
     def test_parse_ottrk_files_with_subdirs(self, temp_tracks_directory: Path) -> None:
         tracks = OTAnalyticsCli._get_ottrk_files([temp_tracks_directory])
@@ -447,6 +453,7 @@ class TestOTAnalyticsCli:
             flow_parser,
             track_files=[str(temp_ottrk)],
             sections_file=str(temp_section),
+            config_file="",
             save_name=str(save_name),
             save_suffix=save_suffix,
             count_intervals=count_intervals,
