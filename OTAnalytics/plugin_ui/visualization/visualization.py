@@ -7,6 +7,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import (
     CachedPlotter,
     GetCurrentFrame,
+    GetCurrentVideo,
     PlottingLayer,
     TrackBackgroundPlotter,
     VisualizationTimeProvider,
@@ -47,6 +48,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FilterByFrame,
     FilterById,
     FilterByOccurrence,
+    FilterByVideo,
     FlowLayerPlotter,
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
@@ -103,6 +105,7 @@ class VisualizationBuilder:
         self._intersection_repository = intersection_repository
         self._event_repository = datastore._event_repository
         self._get_current_frame = GetCurrentFrame(track_view_state, videos_metadata)
+        self._get_current_video = GetCurrentVideo(track_view_state, videos_metadata)
         self._visualization_time_provider: VisualizationTimeProvider = (
             FilterEndDateProvider(track_view_state)
         )
@@ -665,7 +668,11 @@ class VisualizationBuilder:
         track_plotter = MatplotlibTrackPlotter(
             TrackBoundingBoxPlotter(
                 FilterByFrame(
-                    self._get_data_provider_class_filter(), self._get_current_frame
+                    FilterByVideo(
+                        self._get_data_provider_class_filter(),
+                        self._get_current_video,
+                    ),
+                    self._get_current_frame,
                 ),
                 self._color_palette_provider,
                 self._track_view_state,
@@ -678,7 +685,10 @@ class VisualizationBuilder:
         track_plotter = MatplotlibTrackPlotter(
             TrackPointPlotter(
                 FilterByFrame(
-                    self._get_data_provider_class_filter_with_offset(),
+                    FilterByVideo(
+                        self._get_data_provider_class_filter_with_offset(),
+                        self._get_current_video,
+                    ),
                     self._get_current_frame,
                 ),
                 self._color_palette_provider,

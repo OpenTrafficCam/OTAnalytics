@@ -260,6 +260,22 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
             del self._layer_mapping[entity]
 
 
+class GetCurrentVideo:
+    def __init__(
+        self,
+        state: TrackViewState,
+        videos_metadata: VideosMetadata,
+    ) -> None:
+        self._state = state
+        self._videos_metadata = videos_metadata
+
+    def get_video(self) -> Optional[str]:
+        if end_date := self._state.filter_element.get().date_range.end_date:
+            if metadata := self._videos_metadata.get_metadata_for(end_date):
+                return metadata.path
+        return None
+
+
 class GetCurrentFrame:
     def __init__(
         self,

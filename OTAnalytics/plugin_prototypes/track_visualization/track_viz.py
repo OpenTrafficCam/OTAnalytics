@@ -17,6 +17,7 @@ from OTAnalytics.application.plotting import (
     DynamicLayersPlotter,
     EntityPlotterFactory,
     GetCurrentFrame,
+    GetCurrentVideo,
 )
 from OTAnalytics.application.state import (
     FlowState,
@@ -679,6 +680,21 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             ax=axes,
             palette=self._color_palette_provider.get(),
         )
+
+
+class FilterByVideo(PandasDataFrameProvider):
+    def __init__(
+        self, data_provider: PandasDataFrameProvider, current_video: GetCurrentVideo
+    ) -> None:
+        self._data_provider = data_provider
+        self._current_video = current_video
+
+    def get_data(self) -> DataFrame:
+        track_df = self._data_provider.get_data()
+        if track_df.empty:
+            return track_df
+        current_video = self._current_video.get_video()
+        return track_df[track_df[track.VIDEO_NAME] == current_video]
 
 
 class FilterByFrame(PandasDataFrameProvider):
