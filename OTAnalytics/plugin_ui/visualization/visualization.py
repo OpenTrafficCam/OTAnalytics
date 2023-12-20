@@ -682,7 +682,6 @@ class VisualizationBuilder:
                     self._get_current_frame,
                 ),
                 self._color_palette_provider,
-                self._track_view_state,
                 alpha=ALPHA_BOUNDING_BOX,
             ),
         )

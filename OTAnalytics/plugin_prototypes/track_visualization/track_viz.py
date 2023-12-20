@@ -754,12 +754,10 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
         self,
         data_provider: PandasDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
-        track_view_state: TrackViewState,
         alpha: float = 0.5,
     ) -> None:
         self._data_provider = data_provider
         self._color_palette_provider = color_palette_provider
-        self._track_view_state = track_view_state
         self._alpha = alpha
 
     def plot(self, axes: Axes) -> None:
