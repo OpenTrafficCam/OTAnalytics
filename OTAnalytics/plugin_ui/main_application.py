@@ -365,7 +365,6 @@ class ApplicationStarter:
             add_all_tracks,
             remove_tracks,
             remove_section,
-            track_view_state,
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -489,7 +488,6 @@ class ApplicationStarter:
             AddAllTracks(track_repository),
             RemoveTracks(track_repository),
             RemoveSection(section_repository),
-            TrackViewState(),
         )
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
@@ -806,11 +804,10 @@ class ApplicationStarter:
         add_all_tracks: AddAllTracks,
         remove_tracks: RemoveTracks,
         remove_section: RemoveSection,
-        track_view_state: TrackViewState,
     ) -> CutTracksIntersectingSection:
         track_builder = SimpleCutTrackSegmentBuilder(ByMaxConfidence())
         cut_tracks_with_section = SimpleCutTracksWithSection(
-            get_tracks_from_ids, ShapelyMapper(), track_builder, track_view_state
+            get_tracks_from_ids, ShapelyMapper(), track_builder
         )
         return SimpleCutTracksIntersectingSection(
             get_sections_by_id,
