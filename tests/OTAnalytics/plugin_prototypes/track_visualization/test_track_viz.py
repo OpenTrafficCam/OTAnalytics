@@ -477,6 +477,15 @@ class TestDataFrameProviderFilter:
         data_provider.get_data.assert_called_once()
         id_filter.get_ids.assert_called_once()
 
+    def test_filter_by_id_with_no_index_set(self, data_provider: Mock) -> None:
+        data_provider.get_data.return_value = DataFrame.from_dict(
+            {1: {"classification": "car", "track_id": "1"}}, orient="index"
+        )
+        id_filter = Mock()
+        filter_by_id = FilterById(data_provider, id_filter)
+        with pytest.raises(ValueError):
+            filter_by_id.get_data()
+
     def test_filter_by_classification(
         self,
         filter_input: DataFrame,

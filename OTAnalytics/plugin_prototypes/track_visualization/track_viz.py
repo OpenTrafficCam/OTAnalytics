@@ -277,6 +277,13 @@ class FilterById(PandasDataFrameProvider):
         data = self._other.get_data()
         if data.empty:
             return data
+
+        if not list(data.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
+            raise ValueError(
+                f"{track.TRACK_ID} and {track.OCCURRENCE} "
+                "must be index of DataFrame for filtering to worked."
+            )
+
         ids = [track_id.id for track_id in self._filter.get_ids()]
         # TODO: This only works for DataFrames with track id and occurrence as
         #  an multi-index. Could not be working with a CachedPandasTrackProvider

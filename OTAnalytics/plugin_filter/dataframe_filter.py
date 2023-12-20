@@ -3,6 +3,7 @@ from typing import Iterable, Optional
 
 from pandas import DataFrame, Series
 
+from OTAnalytics.domain import track
 from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
 
 
@@ -85,9 +86,11 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
         self._start_date = start_date
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        # TODO: Only works for DataFrames that have track id and occurrence as
-        # multi-index
-
+        if not list(to_test.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
+            raise ValueError(
+                f"{track.TRACK_ID} and {track.OCCURRENCE} "
+                "must be index of DataFrame for filtering to worked."
+            )
         return to_test[
             to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) >= self._start_date
         ]
@@ -110,8 +113,11 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
         self._end_date = end_date
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        # TODO: Only works for DataFrames that have track id and occurrence as
-        # multi-index
+        if not list(to_test.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
+            raise ValueError(
+                f"{track.TRACK_ID} and {track.OCCURRENCE} "
+                "must be index of DataFrame for filtering to worked."
+            )
         return to_test[
             to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) <= self._end_date
         ]

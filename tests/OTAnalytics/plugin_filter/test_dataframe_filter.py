@@ -60,6 +60,26 @@ def track_dataframe(simple_track: Track) -> DataFrame:
     return convert_tracks_to_dataframe([simple_track])
 
 
+class TestDataFrameStartsAtOrAfterDate:
+    def test_dataframe_with_wrong_index(self) -> None:
+        df = DataFrame()
+        df_filter = DataFrameStartsAtOrAfterDate(
+            OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
+        )
+        with pytest.raises(ValueError):
+            df_filter.test(df)
+
+
+class TestDataFrameEndsBeforeOrAtDate:
+    def test_dataframe_with_wrong_index(self) -> None:
+        df = DataFrame()
+        df_filter = DataFrameEndsBeforeOrAtDate(
+            OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
+        )
+        with pytest.raises(ValueError):
+            df_filter.test(df)
+
+
 class TestDataFramePredicates:
     @pytest.mark.parametrize(
         "predicate, expected_mask",
