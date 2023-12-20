@@ -695,9 +695,7 @@ class FilterByFrame(PandasDataFrameProvider):
         if track_df.empty:
             return track_df
         current_frame = self._current_frame.get_frame_number() + FRAME_OFFSET
-        current_second = self._current_frame.get_second()
-        timed_df = track_df[track_df[track.SECONDS] == current_second]
-        return timed_df[timed_df[track.FRAME] == current_frame]
+        return track_df[track_df[track.FRAME] == current_frame]
 
 
 class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
