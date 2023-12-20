@@ -15,7 +15,6 @@ from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
     OCCURRENCE,
     TRACK_CLASSIFICATION,
-    TRACK_ID,
     Detection,
     Track,
     TrackId,
@@ -227,7 +226,7 @@ class TestCachedPandasTrackProvider:
             assert provider._cache_df.empty
 
         else:
-            cached_ids = provider._cache_df[TRACK_ID].unique()
+            cached_ids = provider._cache_df.index.get_level_values(0).unique()
 
             expected_detections = sum(len(t.detections) for t in expected_tracks)
             assert expected_detections == len(provider._cache_df)
