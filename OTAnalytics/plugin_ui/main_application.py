@@ -39,6 +39,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
+from OTAnalytics.application.ui.frame_control import GetNextFrame, GetPreviousFrame
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -364,6 +365,8 @@ class ApplicationStarter:
             remove_section,
             track_view_state,
         )
+        get_previous_frame = GetPreviousFrame(track_view_state, videos_metadata)
+        get_next_frame = GetNextFrame(track_view_state, videos_metadata)
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -386,6 +389,8 @@ class ApplicationStarter:
             start_new_project,
             project_updater,
             load_track_files,
+            get_previous_frame,
+            get_next_frame,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
