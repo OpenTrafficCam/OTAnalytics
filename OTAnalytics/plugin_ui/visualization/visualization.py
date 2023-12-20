@@ -678,7 +678,7 @@ class VisualizationBuilder:
         track_plotter = MatplotlibTrackPlotter(
             TrackPointPlotter(
                 FilterByFrame(
-                    self._get_data_provider_all_filters_with_offset(),
+                    self._get_data_provider_class_filter_with_offset(),
                     self._get_current_frame,
                 ),
                 self._color_palette_provider,
