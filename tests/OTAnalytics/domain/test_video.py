@@ -33,9 +33,7 @@ class TestVideo:
         config_path.parent.mkdir(parents=True)
         video_path.touch()
         config_path.touch()
-        video = SimpleVideo(
-            path=video_path, video_reader=video_reader, start_date=START_DATE
-        )
+        video = SimpleVideo(video_reader, video_path, START_DATE)
 
         result = video.to_dict(config_path)
 
@@ -46,9 +44,7 @@ class TestVideo:
     ) -> None:
         video_path = Mock(spec=Path)
         config_path = Mock(spec=Path)
-        video = SimpleVideo(
-            path=video_path, video_reader=video_reader, start_date=START_DATE
-        )
+        video = SimpleVideo(video_reader, video_path, START_DATE)
 
         with patch(
             "OTAnalytics.domain.video.splitdrive",
@@ -77,7 +73,7 @@ class TestVideoRepository:
         observer = Mock(spec=VideoListObserver)
         path = test_data_tmp_dir / "dummy.mp4"
         path.touch()
-        video = SimpleVideo(video_reader, path, start_date=START_DATE)
+        video = SimpleVideo(video_reader, path, START_DATE)
         repository = VideoRepository()
         repository.register_videos_observer(observer)
 

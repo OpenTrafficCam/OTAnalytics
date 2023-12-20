@@ -37,9 +37,7 @@ class TestLoadTrackFile:
         some_track = Mock()
         some_track_id = TrackId("1")
         some_track.id = some_track_id
-        some_video = SimpleVideo(
-            video_reader=Mock(), path=Path(""), start_date=START_DATE
-        )
+        some_video = SimpleVideo(Mock(), Path(""), START_DATE)
         detection_metadata = Mock()
         parse_result = Mock()
         parse_result.tracks = [some_track]

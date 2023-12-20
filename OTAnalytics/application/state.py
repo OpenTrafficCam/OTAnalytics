@@ -1,3 +1,4 @@
+import bisect
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Callable, Generic, Iterable, Optional
@@ -408,12 +409,20 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
 
 class VideosMetadata:
     def __init__(self) -> None:
-        self._metadata: dict[str, VideoMetadata] = {}
+        self._metadata: dict[datetime, VideoMetadata] = {}
         self._first_video_start: Optional[datetime] = None
         self._last_video_end: Optional[datetime] = None
 
     def update(self, metadata: VideoMetadata) -> None:
-        self._metadata[metadata.path] = metadata
+        """
+        Update the stored metadata.
+        """
+        if metadata.start in self._metadata.keys():
+            raise ValueError(
+                f"metadata with start date {metadata.start} already exists."
+            )
+        self._metadata[metadata.start] = metadata
+        self._metadata = dict(sorted(self._metadata.items()))
         self._update_start_end_by(metadata)
 
     def _update_start_end_by(self, metadata: VideoMetadata) -> None:
@@ -421,6 +430,21 @@ class VideosMetadata:
             self._first_video_start = metadata.start
         if (not self._last_video_end) or metadata.end > self._last_video_end:
             self._last_video_end = metadata.end
+
+    def get_metadata_for(self, current: datetime) -> Optional[VideoMetadata]:
+        """
+        Find the metadata for the given datetime. If the datetime matches exactly a
+        start time of a video, the corresponding VideoMetadata is returned. Otherwise,
+        the metadata of the video containing the datetime will be returned.
+        """
+        if current in self._metadata:
+            return self._metadata[current]
+        keys = list(self._metadata.keys())
+        key = bisect.bisect_left(keys, current) - 1
+        metadata = self._metadata[keys[key]]
+        if metadata.start <= current <= metadata.end:
+            return metadata
+        return None
 
     @property
     def first_video_start(self) -> Optional[datetime]:

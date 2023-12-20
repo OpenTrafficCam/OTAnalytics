@@ -37,6 +37,11 @@ class VideoReader(ABC):
 class Video(ABC):
     @property
     @abstractmethod
+    def start_date(self) -> Optional[datetime]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def fps(self) -> float:
         raise NotImplementedError
 
@@ -92,8 +97,12 @@ class SimpleVideo(Video):
 
     video_reader: VideoReader
     path: Path
-    start_date: Optional[datetime]
+    _start_date: Optional[datetime]
     _fps: Optional[int] = None
+
+    @property
+    def start_date(self) -> Optional[datetime]:
+        return self._start_date
 
     @property
     def fps(self) -> float:

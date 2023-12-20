@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
+from math import floor
 from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
 from OTAnalytics.application.state import (
@@ -10,7 +11,7 @@ from OTAnalytics.application.state import (
     VideosMetadata,
 )
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.domain.video import Video, VideoRepository
+from OTAnalytics.domain.video import Video
 
 
 class Layer:
@@ -264,16 +265,19 @@ class GetCurrentFrame:
         self,
         state: TrackViewState,
         videos_metadata: VideosMetadata,
-        video_repository: VideoRepository,
     ) -> None:
         self._state = state
         self._videos_metadata = videos_metadata
-        self._video_repository = video_repository
 
     def get_frame_number(self) -> int:
         if end_date := self._state.filter_element.get().date_range.end_date:
-            video = self._state.selected_videos.get()[0]
-            return video.get_frame_number_for(end_date)
+            if metadata := self._videos_metadata.get_metadata_for(end_date):
+                time_in_video = end_date - metadata.start
+                if time_in_video < timedelta(0):
+                    return 0
+                if time_in_video > metadata.duration:
+                    return metadata.number_of_frames
+                return floor(metadata.fps * time_in_video.total_seconds())
         return 0
 
     def get_second(self) -> Optional[datetime]:

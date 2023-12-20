@@ -825,6 +825,10 @@ class CachedVideo(Video):
     cache: dict[int, TrackImage] = field(default_factory=dict)
 
     @property
+    def start_date(self) -> Optional[datetime]:
+        return self.other.start_date
+
+    @property
     def fps(self) -> float:
         return self.other.fps
 
