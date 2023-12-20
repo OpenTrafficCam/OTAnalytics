@@ -4,7 +4,7 @@ from OTAnalytics.application.state import TrackViewState, VideosMetadata
 from OTAnalytics.domain.date import DateRange
 
 
-class GetNextFrame:
+class SwitchToNextFrame:
     def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
         self._state = state
         self._videos_metadata = videos_metadata
@@ -30,7 +30,7 @@ class GetNextFrame:
                     )
 
 
-class GetPreviousFrame:
+class SwitchToPreviousFrame:
     def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
         self._state = state
         self._videos_metadata = videos_metadata

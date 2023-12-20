@@ -17,7 +17,10 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import GetNextFrame, GetPreviousFrame
+from OTAnalytics.application.ui.frame_control import (
+    SwitchToNextFrame,
+    SwitchToPreviousFrame,
+)
 from OTAnalytics.application.use_cases.config import SaveOtconfig
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -99,8 +102,8 @@ class OTAnalyticsApplication:
         start_new_project: StartNewProject,
         project_updater: ProjectUpdater,
         load_track_files: LoadTrackFiles,
-        previous_frame: GetPreviousFrame,
-        next_frame: GetNextFrame,
+        previous_frame: SwitchToPreviousFrame,
+        next_frame: SwitchToNextFrame,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state

@@ -10,7 +10,10 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import GetNextFrame, GetPreviousFrame
+from OTAnalytics.application.ui.frame_control import (
+    SwitchToNextFrame,
+    SwitchToPreviousFrame,
+)
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 
@@ -58,7 +61,7 @@ def videos_metadata() -> VideosMetadata:
     return videos_metadata
 
 
-class TestGetNextFrame:
+class TestSwitchToNextFrame:
     def test_set_next_frame(
         self,
         track_view_state: Mock,
@@ -71,7 +74,7 @@ class TestGetNextFrame:
         new_date_range = DateRange(
             START_DATE + TIME_OF_A_FRAME, END_DATE + TIME_OF_A_FRAME
         )
-        use_case = GetNextFrame(track_view_state, videos_metadata)
+        use_case = SwitchToNextFrame(track_view_state, videos_metadata)
 
         use_case.set_next_frame()
 
@@ -80,7 +83,7 @@ class TestGetNextFrame:
         videos_metadata.get_metadata_for.assert_called_with(END_DATE)
 
 
-class TestGetPreviousFrame:
+class TestSwitchToPreviousFrame:
     def test_set_next_frame(
         self,
         track_view_state: Mock,
@@ -93,7 +96,7 @@ class TestGetPreviousFrame:
         new_date_range = DateRange(
             START_DATE - TIME_OF_A_FRAME, END_DATE - TIME_OF_A_FRAME
         )
-        use_case = GetPreviousFrame(track_view_state, videos_metadata)
+        use_case = SwitchToPreviousFrame(track_view_state, videos_metadata)
 
         use_case.set_previous_frame()
 
