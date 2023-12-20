@@ -260,7 +260,12 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
             del self._layer_mapping[entity]
 
 
-class GetCurrentVideo:
+class GetCurrentVideoPath:
+    """
+    This use case provides the currently visible video path. It uses the current filters
+    end date to retrieve the corresponding file path.
+    """
+
     def __init__(
         self,
         state: TrackViewState,
@@ -277,6 +282,11 @@ class GetCurrentVideo:
 
 
 class GetCurrentFrame:
+    """
+    This use case provides the currently visible frame. It uses the current filters
+    end date to retrieve the corresponding frame.
+    """
+
     def __init__(
         self,
         state: TrackViewState,
@@ -295,8 +305,3 @@ class GetCurrentFrame:
                     return metadata.number_of_frames
                 return floor(metadata.fps * time_in_video.total_seconds())
         return 0
-
-    def get_second(self) -> Optional[datetime]:
-        if end_date := self._state.filter_element.get().date_range.end_date:
-            return end_date.replace(microsecond=0)
-        return self._videos_metadata.first_video_start

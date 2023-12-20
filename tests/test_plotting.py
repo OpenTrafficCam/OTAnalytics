@@ -2,19 +2,19 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
-from application.datastore import VideoMetadata
-from domain.date import DateRange
-from domain.filter import FilterElement
 
-from OTAnalytics.application.plotting import GetCurrentFrame, GetCurrentVideo
+from OTAnalytics.application.datastore import VideoMetadata
+from OTAnalytics.application.plotting import GetCurrentFrame, GetCurrentVideoPath
 from OTAnalytics.application.state import TrackViewState, VideosMetadata
+from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.filter import FilterElement
 
 
 class TestGetCurrentVideoPath:
     def test_get_video(self) -> None:
         filter_end_date = datetime(2023, 1, 1, 0, 1)
         mocked_filter_element = FilterElement(
-            DateRange(start_date=None, end_date=filter_end_date), classifications={}
+            DateRange(start_date=None, end_date=filter_end_date), classifications=set()
         )
         video_path = "some/path"
         state = TrackViewState()
@@ -23,7 +23,7 @@ class TestGetCurrentVideoPath:
         metadata.path = video_path
         videos_metadata = Mock(spec=VideosMetadata)
         videos_metadata.get_metadata_for.return_value = metadata
-        use_case = GetCurrentVideo(state, videos_metadata)
+        use_case = GetCurrentVideoPath(state, videos_metadata)
 
         actual = use_case.get_video()
 
@@ -47,7 +47,7 @@ class TestGetCurrentFrame:
     ) -> None:
         video_start_date = datetime(2023, 1, 1, 0, 1)
         mocked_filter_element = FilterElement(
-            DateRange(start_date=None, end_date=filter_end_date), classifications={}
+            DateRange(start_date=None, end_date=filter_end_date), classifications=set()
         )
         state = TrackViewState()
         state.filter_element.set(mocked_filter_element)

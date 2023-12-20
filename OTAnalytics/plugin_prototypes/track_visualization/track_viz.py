@@ -17,7 +17,7 @@ from OTAnalytics.application.plotting import (
     DynamicLayersPlotter,
     EntityPlotterFactory,
     GetCurrentFrame,
-    GetCurrentVideo,
+    GetCurrentVideoPath,
 )
 from OTAnalytics.application.state import (
     FlowState,
@@ -683,8 +683,13 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
 
 class FilterByVideo(PandasDataFrameProvider):
+    """
+    Filter the data of the other data provider using the video name / path of the
+    currently displayed video.
+    """
+
     def __init__(
-        self, data_provider: PandasDataFrameProvider, current_video: GetCurrentVideo
+        self, data_provider: PandasDataFrameProvider, current_video: GetCurrentVideoPath
     ) -> None:
         self._data_provider = data_provider
         self._current_video = current_video
@@ -698,6 +703,13 @@ class FilterByVideo(PandasDataFrameProvider):
 
 
 class FilterByFrame(PandasDataFrameProvider):
+    """
+    Filter the data of the other data provider using the frame number of the
+    currently displayed frame. If multiple videos are loaded, the filter will return all
+    detections for the given frame number. If only the frame of the currently displayed
+    video should be shown, combine this filter with FilterByVideo.
+    """
+
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,

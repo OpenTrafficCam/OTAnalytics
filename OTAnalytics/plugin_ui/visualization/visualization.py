@@ -7,7 +7,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import (
     CachedPlotter,
     GetCurrentFrame,
-    GetCurrentVideo,
+    GetCurrentVideoPath,
     PlottingLayer,
     TrackBackgroundPlotter,
     VisualizationTimeProvider,
@@ -105,7 +105,7 @@ class VisualizationBuilder:
         self._intersection_repository = intersection_repository
         self._event_repository = datastore._event_repository
         self._get_current_frame = GetCurrentFrame(track_view_state, videos_metadata)
-        self._get_current_video = GetCurrentVideo(track_view_state, videos_metadata)
+        self._get_current_video = GetCurrentVideoPath(track_view_state, videos_metadata)
         self._visualization_time_provider: VisualizationTimeProvider = (
             FilterEndDateProvider(track_view_state)
         )
