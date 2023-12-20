@@ -22,9 +22,6 @@ class GetAllTracks:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self) -> Iterable[Track]:
-        return self._track_repository.get_all()
-
     def as_list(self) -> list[Track]:
         return self.as_dataset().as_list()
 

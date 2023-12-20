@@ -53,12 +53,6 @@ def track_file_repository(track_files: list[Mock]) -> Mock:
 
 
 class TestGetAllTracks:
-    def test_get_all_tracks(self, track_repository: Mock, tracks: TrackDataset) -> None:
-        get_all_tracks = GetAllTracks(track_repository)
-        result_tracks = get_all_tracks()
-        assert result_tracks == tracks
-        track_repository.get_all.assert_called_once()
-
     def test_get_as_dataset(self) -> None:
         expected_dataset = Mock()
         track_repository = Mock()
@@ -70,20 +64,18 @@ class TestGetAllTracks:
         track_repository.get_all.assert_called_once()
 
     def test_get_as_list(self) -> None:
+        first_track = Mock()
+        second_track = Mock()
+        track_dataset = Mock()
+        track_dataset.as_list.return_value = [first_track, second_track]
         track_repository = Mock()
+        track_repository.get_all.return_value = track_dataset
 
         get_tracks = GetAllTracks(track_repository)
-        with patch.object(GetAllTracks, "as_dataset") as mock_as_dataset:
-            expected_list = Mock()
-            filtered_dataset = Mock()
-            filtered_dataset.as_list.return_value = expected_list
-
-            mock_as_dataset.return_value = filtered_dataset
-            result = get_tracks.as_list()
-
-            assert result == expected_list
-            mock_as_dataset.assert_called_once()
-            filtered_dataset.as_list.assert_called_once()
+        all_tracks = get_tracks.as_list()
+        assert all_tracks == [first_track, second_track]
+        track_repository.get_all.assert_called_once()
+        track_dataset.as_list.assert_called_once()
 
 
 class TestGetAllTrackIds:

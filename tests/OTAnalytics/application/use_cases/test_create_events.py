@@ -77,7 +77,7 @@ class TestSimpleCreateIntersectionEvents:
 class TestSimpleCreateSceneEvents:
     def test_create_scene_events(self, track: Mock, event: Mock) -> None:
         get_all_tracks = Mock(spec=GetAllTracks)
-        get_all_tracks.return_value = [track]
+        get_all_tracks.as_list.return_value = [track]
 
         scene_action_detector = Mock(spec=SceneActionDetector)
         scene_action_detector.detect.return_value = [event]
@@ -88,7 +88,7 @@ class TestSimpleCreateSceneEvents:
         )
         create_scene_events()
 
-        get_all_tracks.assert_called_once()
+        get_all_tracks.as_list.assert_called_once()
         scene_action_detector.detect.assert_called_once_with([track])
         add_events.assert_called_once_with([event])
 
