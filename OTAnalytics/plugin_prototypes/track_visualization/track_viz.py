@@ -416,7 +416,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def _sort_tracks(self, track_df: DataFrame) -> DataFrame:
         """Sort the given dataframe by trackId and frame,
-        if both collumns are available.
+        if both columns are available.
 
         Args:
             track_df (DataFrame): dataframe of tracks
