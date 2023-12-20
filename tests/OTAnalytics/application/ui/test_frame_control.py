@@ -62,7 +62,7 @@ class TestGetNextFrame:
     def test_set_next_frame(
         self,
         track_view_state: Mock,
-        videos_metadata: VideosMetadata,
+        videos_metadata: Mock,
         filter_element: Mock,
     ) -> None:
         derived_filter_element = Mock(spec=FilterElement)
@@ -77,13 +77,14 @@ class TestGetNextFrame:
 
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
+        videos_metadata.get_metadata_for.assert_called_with(END_DATE)
 
 
 class TestGetPreviousFrame:
     def test_set_next_frame(
         self,
         track_view_state: Mock,
-        videos_metadata: VideosMetadata,
+        videos_metadata: Mock,
         filter_element: Mock,
     ) -> None:
         derived_filter_element = Mock(spec=FilterElement)
@@ -98,3 +99,4 @@ class TestGetPreviousFrame:
 
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
+        videos_metadata.get_metadata_for.assert_called_with(END_DATE)
