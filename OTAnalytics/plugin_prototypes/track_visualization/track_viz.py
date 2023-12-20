@@ -384,9 +384,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
     def get_data(self) -> DataFrame:
         tracks = self._track_repository.get_all()
         if isinstance(tracks, PandasTrackDataset):
-            data = tracks.as_dataframe()
-            data[track.SECONDS] = data[track.OCCURRENCE].dt.floor("s")
-            return data
+            return tracks.as_dataframe()
         track_list = tracks.as_list()
         if not track_list:
             return DataFrame()
@@ -416,9 +414,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
         if len(prepared) == 0:
             return DataFrame()
-        data = DataFrame(prepared)
-        data[track.SECONDS] = data[track.OCCURRENCE].dt.floor("s")
-        return self._sort_tracks(data)
+        return self._sort_tracks(DataFrame(prepared))
 
     def _sort_tracks(self, track_df: DataFrame) -> DataFrame:
         """Sort the given dataframe by trackId and frame,
