@@ -5,7 +5,7 @@ import pytest
 
 from OTAnalytics.application.use_cases.create_intersection_events import (
     IntersectAreaByTrackPoints,
-    IntersectBySmallestTrackSegments,
+    IntersectByIntersectionPoints,
     separate_sections,
 )
 from OTAnalytics.domain.geometry import (
@@ -271,9 +271,9 @@ def test_case_line_section_no_intersection(track: Track) -> _TestCase:
     return _TestCase(track, track_dataset, section, [], [])
 
 
-class TestIntersectBySmallestTrackSegments:
-    def _create_intersector(self) -> IntersectBySmallestTrackSegments:
-        return IntersectBySmallestTrackSegments()
+class TestIntersectByIntersectionPoints:
+    def _create_intersector(self) -> IntersectByIntersectionPoints:
+        return IntersectByIntersectionPoints()
 
     @pytest.mark.parametrize(
         "test_case_name",

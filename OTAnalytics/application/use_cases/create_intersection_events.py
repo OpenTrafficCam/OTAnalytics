@@ -18,14 +18,10 @@ from OTAnalytics.domain.track import TrackDataset
 from OTAnalytics.domain.types import EventType
 
 
-class IntersectBySmallestTrackSegments(Intersector):
-    """
-    Implements the intersection strategy by splitting up the track in its smallest
-    segments and intersecting each of them with the section.
+class IntersectByIntersectionPoints(Intersector):
+    """Use intersection points of tracks and sections to create events.
 
-    The smallest segment of a track is to generate a Line with the coordinates of
-    two neighboring detections in the track.
-
+    This strategy is intended to be used with LineSections.
     """
 
     def __init__(
@@ -253,7 +249,7 @@ def _create_events(tracks: TrackDataset, sections: Iterable[Section]) -> list[Ev
     event_builder = SectionEventBuilder()
 
     create_intersection_events = RunCreateIntersectionEvents(
-        intersect_line_section=IntersectBySmallestTrackSegments(),
+        intersect_line_section=IntersectByIntersectionPoints(),
         intersect_area_section=IntersectAreaByTrackPoints(),
         track_dataset=tracks,
         sections=sections,
