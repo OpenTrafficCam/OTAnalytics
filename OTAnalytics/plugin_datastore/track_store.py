@@ -375,13 +375,23 @@ class PandasTrackDataset(TrackDataset):
     def apply_to_first_segments(
         self, consumer: Callable[[Detection, Detection, str], None]
     ) -> None:
-        for actual in self.as_list():
+        track_segments = self._dataset.groupby(track.TRACK_ID).head(2)
+
+        track_ids = list(track_segments.index.get_level_values(LEVEL_TRACK_ID).unique())
+        for track_id in track_ids:
+            track_frame = track_segments.loc[track_id, :]
+            actual = PandasTrack(track_id, track_frame)
             consumer(actual.detections[0], actual.detections[1], actual.classification)
 
     def apply_to_last_segments(
         self, consumer: Callable[[Detection, Detection, str], None]
     ) -> None:
-        for actual in self.as_list():
+        track_segments = self._dataset.groupby(track.TRACK_ID).tail(2)
+
+        track_ids = list(track_segments.index.get_level_values(LEVEL_TRACK_ID).unique())
+        for track_id in track_ids:
+            track_frame = track_segments.loc[track_id, :]
+            actual = PandasTrack(track_id, track_frame)
             consumer(
                 actual.detections[-2], actual.detections[-1], actual.classification
             )
