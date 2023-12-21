@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1703121655699,
+  "lastUpdate": 1703156854124,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -2752,6 +2752,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 145.28157634299714 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Lars Briem",
+            "username": "briemla",
+            "email": "lars.briem@platomo.de"
+          },
+          "committer": {
+            "name": "Lars Briem",
+            "username": "briemla",
+            "email": "lars.briem@platomo.de"
+          },
+          "id": "a856daaf3a71ad8a8c16a06c594e1ae34de0b907",
+          "message": "Reduce number of generated flyweights to create scene events",
+          "timestamp": "2023-12-21T10:32:16Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/a856daaf3a71ad8a8c16a06c594e1ae34de0b907"
+        },
+        "date": 1703156853631,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.12513315334320768,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.991487254039384 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.017661852354808657,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 56.61920278298203 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.11918650373262525,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 8.390211715945043 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.015265524702270621,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 65.50708341202699 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.01131523789998381,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 88.37640081800055 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.0015378621036762742,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 650.2533599140588 sec\nrounds: 1"
           }
         ]
       }
