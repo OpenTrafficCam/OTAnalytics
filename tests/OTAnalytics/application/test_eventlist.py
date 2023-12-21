@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -168,12 +168,8 @@ class TestSceneActionDetector:
             video_name="myhostname_something.mp4",
         )
 
-    @patch.object(SceneActionDetector, "detect_leave_scene")
-    @patch.object(SceneActionDetector, "detect_enter_scene")
     def test_detect(
         self,
-        mock_detect_enter_scene: Mock,
-        mock_detect_leave_scene: Mock,
         track_1: Track,
         track_2: Track,
     ) -> None:
@@ -184,18 +180,5 @@ class TestSceneActionDetector:
         scene_action_detector = SceneActionDetector(mock_event_builder)
         scene_action_detector.detect(mock_tracks)
 
-        mock_detect_enter_scene.assert_any_call(
-            track_1.detections[0], track_1.detections[1], track_1.classification
-        )
-        mock_detect_leave_scene.assert_any_call(
-            track_1.detections[-2], track_1.detections[-1], track_1.classification
-        )
-        mock_detect_enter_scene.assert_any_call(
-            track_2.detections[0], track_2.detections[1], track_2.classification
-        )
-        mock_detect_leave_scene.assert_any_call(
-            track_2.detections[-2], track_2.detections[-1], track_2.classification
-        )
-
-        assert mock_detect_enter_scene.call_count == 2
-        assert mock_detect_leave_scene.call_count == 2
+        mock_tracks.apply_to_first_segments.assert_called_once()
+        mock_tracks.apply_to_last_segments.assert_called_once()

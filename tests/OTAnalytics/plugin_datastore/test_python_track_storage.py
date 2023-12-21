@@ -412,3 +412,45 @@ class TestPythonTrackDataset:
         filtered_dataset = dataset.filter_by_min_detection_length(3)
 
         assert list(filtered_dataset) == [second_track]
+
+    def test_apply_to_first_segments(
+        self,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        mock_consumer = Mock()
+        dataset = PythonTrackDataset.from_list([first_track, second_track])
+
+        dataset.apply_to_first_segments(mock_consumer)
+
+        mock_consumer.assert_any_call(
+            first_track.detections[0],
+            first_track.detections[1],
+            first_track.classification,
+        )
+        mock_consumer.assert_any_call(
+            second_track.detections[0],
+            second_track.detections[1],
+            second_track.classification,
+        )
+
+    def test_apply_to_last_segments(
+        self,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        mock_consumer = Mock()
+        dataset = PythonTrackDataset.from_list([first_track, second_track])
+
+        dataset.apply_to_last_segments(mock_consumer)
+
+        mock_consumer.assert_any_call(
+            first_track.detections[-2],
+            first_track.detections[-1],
+            first_track.classification,
+        )
+        mock_consumer.assert_any_call(
+            second_track.detections[-2],
+            second_track.detections[-1],
+            second_track.classification,
+        )

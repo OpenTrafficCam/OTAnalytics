@@ -320,8 +320,6 @@ class TestPandasTrackDataset:
         second_track: Track,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
-        first_track = self.__build_track("1")
-        second_track = self.__build_track("2")
         first_batch_geometries_no_offset = Mock()
         second_batch_geometries_no_offset = Mock()
         geometry_dataset_no_offset, _ = create_mock_geometry_dataset(
@@ -378,3 +376,55 @@ class TestPandasTrackDataset:
         assert len(filtered_dataset) == 1
         for actual_track, expected_track in zip(filtered_dataset, [second_track]):
             assert_equal_track_properties(actual_track, expected_track)
+
+    def test_apply_to_first_segments(
+        self,
+        first_track: Track,
+        second_track: Track,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        mock_consumer = Mock()
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+        pandas_track_0 = dataset.as_list()[0]
+        pandas_track_1 = dataset.as_list()[1]
+
+        dataset.apply_to_first_segments(mock_consumer)
+
+        mock_consumer.assert_any_call(
+            pandas_track_0.detections[0],
+            pandas_track_0.detections[1],
+            pandas_track_0.classification,
+        )
+        mock_consumer.assert_any_call(
+            pandas_track_1.detections[0],
+            pandas_track_1.detections[1],
+            pandas_track_1.classification,
+        )
+
+    def test_apply_to_last_segments(
+        self,
+        first_track: Track,
+        second_track: Track,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        mock_consumer = Mock()
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+        pandas_track_0 = dataset.as_list()[0]
+        pandas_track_1 = dataset.as_list()[1]
+
+        dataset.apply_to_last_segments(mock_consumer)
+
+        mock_consumer.assert_any_call(
+            pandas_track_0.detections[-2],
+            pandas_track_0.detections[-1],
+            pandas_track_0.classification,
+        )
+        mock_consumer.assert_any_call(
+            pandas_track_1.detections[-2],
+            pandas_track_1.detections[-1],
+            pandas_track_1.classification,
+        )

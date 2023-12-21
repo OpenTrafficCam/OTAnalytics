@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Iterable, Optional, Sequence
+from typing import Callable, Iterable, Optional, Sequence
 
 from more_itertools import batched
 
@@ -411,3 +411,15 @@ class PythonTrackDataset(TrackDataset):
         for offset in offsets:
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
+
+    def apply_to_first_segments(
+        self, consumer: Callable[[Detection, Detection, str], None]
+    ) -> None:
+        for track in self.as_list():
+            consumer(track.detections[0], track.detections[1], track.classification)
+
+    def apply_to_last_segments(
+        self, consumer: Callable[[Detection, Detection, str], None]
+    ) -> None:
+        for track in self.as_list():
+            consumer(track.detections[-2], track.detections[-1], track.classification)

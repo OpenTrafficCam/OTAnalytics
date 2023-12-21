@@ -488,6 +488,18 @@ class TrackDataset(ABC):
     ) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    def apply_to_first_segments(
+        self, consumer: Callable[[Detection, Detection, str], None]
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def apply_to_last_segments(
+        self, consumer: Callable[[Detection, Detection, str], None]
+    ) -> None:
+        raise NotImplementedError
+
 
 class TrackRepository:
     def __init__(self, dataset: TrackDataset) -> None:

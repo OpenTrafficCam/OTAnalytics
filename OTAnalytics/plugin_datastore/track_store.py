@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Callable, Iterable, Optional, Sequence
 
 import pandas
 from more_itertools import batched
@@ -74,6 +74,18 @@ class PandasDetection(Detection):
     @property
     def video_name(self) -> str:
         return self.__get_attribute(track.VIDEO_NAME)
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, PandasDetection):
+            return False
+        return (
+            self._track_id == other._track_id
+            and self._occurrence == other._occurrence
+            and (self._data == other._data).all()
+        )
+
+    def __hash__(self) -> int:
+        return hash(self._track_id) + hash(self._occurrence) + hash(self._data)
 
 
 @dataclass
@@ -359,6 +371,20 @@ class PandasTrackDataset(TrackDataset):
         for offset in offsets:
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
+
+    def apply_to_first_segments(
+        self, consumer: Callable[[Detection, Detection, str], None]
+    ) -> None:
+        for actual in self.as_list():
+            consumer(actual.detections[0], actual.detections[1], actual.classification)
+
+    def apply_to_last_segments(
+        self, consumer: Callable[[Detection, Detection, str], None]
+    ) -> None:
+        for actual in self.as_list():
+            consumer(
+                actual.detections[-2], actual.detections[-1], actual.classification
+            )
 
 
 def _assign_track_classification(
