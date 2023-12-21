@@ -1,8 +1,6 @@
-from typing import Iterable
-
 from OTAnalytics.domain.event import Event, EventType, SceneEventBuilder
 from OTAnalytics.domain.geometry import calculate_direction_vector
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import Track, TrackDataset
 
 
 class SceneActionDetector:
@@ -62,7 +60,7 @@ class SceneActionDetector:
 
         return self._event_builder.create_event(last_detection)
 
-    def detect(self, tracks: Iterable[Track]) -> list[Event]:
+    def detect(self, tracks: TrackDataset) -> list[Event]:
         """Detect all enter and leave scene events.
 
         Args:
@@ -72,7 +70,7 @@ class SceneActionDetector:
             Iterable[Event]: the scene events
         """
         events: list[Event] = []
-        for track in tracks:
+        for track in tracks.as_list():
             events.append(self.detect_enter_scene(track))
             events.append(self.detect_leave_scene(track))
         return events
