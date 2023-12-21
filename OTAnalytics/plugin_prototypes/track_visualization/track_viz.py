@@ -281,7 +281,7 @@ class FilterById(PandasDataFrameProvider):
         if not list(data.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
             raise ValueError(
                 f"{track.TRACK_ID} and {track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to worked."
+                "must be index of DataFrame for filtering to work."
             )
 
         ids = [track_id.id for track_id in self._filter.get_ids()]
