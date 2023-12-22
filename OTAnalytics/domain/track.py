@@ -214,6 +214,10 @@ class Track(ABC):
     def detections(self) -> list[Detection]:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_detection(self, index: int) -> Detection:
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def first_detection(self) -> Detection:

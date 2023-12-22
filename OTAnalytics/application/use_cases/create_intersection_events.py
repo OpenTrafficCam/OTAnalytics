@@ -67,11 +67,11 @@ class IntersectByIntersectionPoints(Intersector):
             event_builder.add_road_user_type(track.classification)
             for section_id, intersection_point in intersection_points:
                 event_builder.add_section_id(section_id)
-                detection = track.detections[intersection_point.index]
+                detection = track.get_detection(intersection_point.index)
                 current_coord = detection.get_coordinate(offset)
-                prev_coord = track.detections[
+                prev_coord = track.get_detection(
                     intersection_point.index - 1
-                ].get_coordinate(offset)
+                ).get_coordinate(offset)
                 direction_vector = self._calculate_direction_vector(
                     prev_coord.x,
                     prev_coord.y,

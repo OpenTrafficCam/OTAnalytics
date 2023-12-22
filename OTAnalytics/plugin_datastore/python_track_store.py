@@ -174,6 +174,9 @@ class PythonTrack(Track, DataclassValidation):
     def detections(self) -> list[Detection]:
         return self._detections
 
+    def get_detection(self, index: int) -> Detection:
+        return self._detections[index]
+
     def _validate(self) -> None:
         self._validate_track_has_detections()
         self._validate_detections_sorted_by_occurrence()

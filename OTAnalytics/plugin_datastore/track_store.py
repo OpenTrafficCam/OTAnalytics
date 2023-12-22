@@ -117,6 +117,9 @@ class PandasTrack(Track):
     def detections(self) -> list[Detection]:
         return [PandasDetection(self._id, row) for _, row in self._data.iterrows()]
 
+    def get_detection(self, index: int) -> Detection:
+        return PandasDetection(self._id, self._data.iloc[index])
+
     @property
     def first_detection(self) -> Detection:
         return PandasDetection(self._id, self._data.iloc[0])
@@ -415,20 +418,25 @@ class PandasTrackDataset(TrackDataset):
             self._dataset.groupby(level=0, group_keys=True).head(1).copy()
         )
 
-        for index, row in first_segments.iterrows():
+        as_dict = first_segments.reset_index().to_dict("index")
+
+        for value in as_dict.values():
             event = Event(
-                road_user_id=index[0],
-                road_user_type=row[track.TRACK_CLASSIFICATION],
-                hostname=extract_hostname(row[track.VIDEO_NAME]),
-                occurrence=index[1].to_pydatetime(),
-                frame_number=row[track.FRAME],
+                road_user_id=value[track.TRACK_ID],
+                road_user_type=value[track.TRACK_CLASSIFICATION],
+                hostname=extract_hostname(value[track.VIDEO_NAME]),
+                occurrence=value[track.OCCURRENCE].to_pydatetime(),
+                frame_number=value[track.FRAME],
                 section_id=None,
-                event_coordinate=ImageCoordinate(row[track.X], row[track.Y]),
+                event_coordinate=ImageCoordinate(value[track.X], value[track.Y]),
                 event_type=EventType.ENTER_SCENE,
                 direction_vector=calculate_direction_vector(
-                    row[track.X], row[track.Y], row["next_x"], row["next_y"]
+                    value[track.X],
+                    value[track.Y],
+                    value["next_x"],
+                    value["next_y"],
                 ),
-                video_name=row[track.VIDEO_NAME],
+                video_name=value[track.VIDEO_NAME],
             )
             consumer(event)
 
@@ -440,20 +448,25 @@ class PandasTrackDataset(TrackDataset):
             level=0, group_keys=True
         ).tail(1)
 
-        for index, row in first_segments.iterrows():
+        as_dict = first_segments.reset_index().to_dict("index")
+
+        for value in as_dict.values():
             event = Event(
-                road_user_id=index[0],
-                road_user_type=row[track.TRACK_CLASSIFICATION],
-                hostname=extract_hostname(row[track.VIDEO_NAME]),
-                occurrence=index[1],
-                frame_number=row[track.FRAME],
+                road_user_id=value[track.TRACK_ID],
+                road_user_type=value[track.TRACK_CLASSIFICATION],
+                hostname=extract_hostname(value[track.VIDEO_NAME]),
+                occurrence=value[track.OCCURRENCE].to_pydatetime(),
+                frame_number=value[track.FRAME],
                 section_id=None,
-                event_coordinate=ImageCoordinate(row[track.X], row[track.Y]),
+                event_coordinate=ImageCoordinate(value[track.X], value[track.Y]),
                 event_type=EventType.LEAVE_SCENE,
                 direction_vector=calculate_direction_vector(
-                    row["previous_x"], row["previous_y"], row[track.X], row[track.Y]
+                    value["previous_x"],
+                    value["previous_y"],
+                    value[track.X],
+                    value[track.Y],
                 ),
-                video_name=row[track.VIDEO_NAME],
+                video_name=value[track.VIDEO_NAME],
             )
             consumer(event)
 
