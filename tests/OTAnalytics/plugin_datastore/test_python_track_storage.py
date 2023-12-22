@@ -5,8 +5,12 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.domain.event import VIDEO_NAME
-from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.event import VIDEO_NAME, Event
+from OTAnalytics.domain.geometry import (
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+    calculate_direction_vector,
+)
 from OTAnalytics.domain.track import (
     Detection,
     Track,
@@ -14,12 +18,14 @@ from OTAnalytics.domain.track import (
     TrackHasNoDetectionError,
     TrackId,
 )
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.conftest import TrackBuilder
 from tests.OTAnalytics.plugin_datastore.conftest import (
@@ -423,16 +429,8 @@ class TestPythonTrackDataset:
 
         dataset.apply_to_first_segments(mock_consumer)
 
-        mock_consumer.assert_any_call(
-            first_track.detections[0],
-            first_track.detections[1],
-            first_track.classification,
-        )
-        mock_consumer.assert_any_call(
-            second_track.detections[0],
-            second_track.detections[1],
-            second_track.classification,
-        )
+        mock_consumer.assert_any_call(self.__create_enter_scene_event(first_track))
+        mock_consumer.assert_any_call(self.__create_enter_scene_event(second_track))
 
     def test_apply_to_last_segments(
         self,
@@ -444,13 +442,47 @@ class TestPythonTrackDataset:
 
         dataset.apply_to_last_segments(mock_consumer)
 
-        mock_consumer.assert_any_call(
-            first_track.detections[-2],
-            first_track.detections[-1],
-            first_track.classification,
+        mock_consumer.assert_any_call(self.__create_leave_scene_event(first_track))
+        mock_consumer.assert_any_call(self.__create_leave_scene_event(second_track))
+
+    def __create_enter_scene_event(self, track: Track) -> Event:
+        return Event(
+            road_user_id=track.id.id,
+            road_user_type=track.classification,
+            hostname=extract_hostname(track.first_detection.video_name),
+            occurrence=track.first_detection.occurrence,
+            frame_number=track.first_detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(
+                track.first_detection.x, track.first_detection.y
+            ),
+            event_type=EventType.ENTER_SCENE,
+            direction_vector=calculate_direction_vector(
+                track.first_detection.x,
+                track.first_detection.y,
+                track.detections[1].x,
+                track.detections[1].y,
+            ),
+            video_name=track.first_detection.video_name,
         )
-        mock_consumer.assert_any_call(
-            second_track.detections[-2],
-            second_track.detections[-1],
-            second_track.classification,
+
+    def __create_leave_scene_event(self, track: Track) -> Event:
+        return Event(
+            road_user_id=track.id.id,
+            road_user_type=track.classification,
+            hostname=extract_hostname(track.last_detection.video_name),
+            occurrence=track.last_detection.occurrence,
+            frame_number=track.last_detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(
+                track.last_detection.x, track.last_detection.y
+            ),
+            event_type=EventType.LEAVE_SCENE,
+            direction_vector=calculate_direction_vector(
+                track.detections[-2].x,
+                track.detections[-2].y,
+                track.last_detection.x,
+                track.last_detection.y,
+            ),
+            video_name=track.last_detection.video_name,
         )

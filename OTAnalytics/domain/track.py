@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, Iterator, Optional, Sequence
+from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
 from PIL import Image
 
@@ -489,15 +489,11 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def apply_to_first_segments(
-        self, consumer: Callable[[Detection, Detection, str], None]
-    ) -> None:
+    def apply_to_first_segments(self, consumer: Callable[[Any], None]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def apply_to_last_segments(
-        self, consumer: Callable[[Detection, Detection, str], None]
-    ) -> None:
+    def apply_to_last_segments(self, consumer: Callable[[Any], None]) -> None:
         raise NotImplementedError
 
 

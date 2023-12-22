@@ -1,13 +1,18 @@
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Any, Callable, Iterable, Optional, Sequence
 
 from more_itertools import batched
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
-from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.geometry import (
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+    calculate_direction_vector,
+)
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     TRACK_GEOMETRY_FACTORY,
@@ -20,9 +25,11 @@ from OTAnalytics.domain.track import (
     TrackHasNoDetectionError,
     TrackId,
 )
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
+from OTAnalytics.plugin_datastore.track_store import extract_hostname
 
 
 @dataclass(frozen=True)
@@ -412,14 +419,54 @@ class PythonTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(
-        self, consumer: Callable[[Detection, Detection, str], None]
-    ) -> None:
+    def apply_to_first_segments(self, consumer: Callable[[Any], None]) -> None:
         for track in self.as_list():
-            consumer(track.detections[0], track.detections[1], track.classification)
+            event = self.__create_enter_scene_event(track)
+            consumer(event)
 
-    def apply_to_last_segments(
-        self, consumer: Callable[[Detection, Detection, str], None]
-    ) -> None:
+    def __create_enter_scene_event(self, track: Track) -> Event:
+        return Event(
+            road_user_id=track.id.id,
+            road_user_type=track.classification,
+            hostname=extract_hostname(track.first_detection.video_name),
+            occurrence=track.first_detection.occurrence,
+            frame_number=track.first_detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(
+                track.first_detection.x, track.first_detection.y
+            ),
+            event_type=EventType.ENTER_SCENE,
+            direction_vector=calculate_direction_vector(
+                track.first_detection.x,
+                track.first_detection.y,
+                track.detections[1].x,
+                track.detections[1].y,
+            ),
+            video_name=track.first_detection.video_name,
+        )
+
+    def apply_to_last_segments(self, consumer: Callable[[Any], None]) -> None:
         for track in self.as_list():
-            consumer(track.detections[-2], track.detections[-1], track.classification)
+            event = self.__create_leave_scene_event(track)
+            consumer(event)
+
+    def __create_leave_scene_event(self, track: Track) -> Event:
+        return Event(
+            road_user_id=track.id.id,
+            road_user_type=track.classification,
+            hostname=extract_hostname(track.last_detection.video_name),
+            occurrence=track.last_detection.occurrence,
+            frame_number=track.last_detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(
+                track.last_detection.x, track.last_detection.y
+            ),
+            event_type=EventType.LEAVE_SCENE,
+            direction_vector=calculate_direction_vector(
+                track.detections[-2].x,
+                track.detections[-2].y,
+                track.last_detection.x,
+                track.last_detection.y,
+            ),
+            video_name=track.last_detection.video_name,
+        )

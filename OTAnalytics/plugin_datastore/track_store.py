@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -9,7 +10,17 @@ from more_itertools import batched
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.event import (
+    FILE_NAME_PATTERN,
+    HOSTNAME,
+    Event,
+    ImproperFormattedFilename,
+)
+from OTAnalytics.domain.geometry import (
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+    calculate_direction_vector,
+)
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     TRACK_GEOMETRY_FACTORY,
@@ -20,6 +31,7 @@ from OTAnalytics.domain.track import (
     TrackGeometryDataset,
     TrackId,
 )
+from OTAnalytics.domain.types import EventType
 
 
 class PandasDetection(Detection):
@@ -158,6 +170,29 @@ DEFAULT_CLASSIFICATOR = PandasByMaxConfidence()
 INDEX_NAMES = [track.TRACK_ID, track.OCCURRENCE]
 LEVEL_TRACK_ID = 0
 LEVEL_OCCURRENCE = 1
+
+
+def extract_hostname(name: str) -> str:
+    """Extract hostname from name.
+
+    Args:
+        name (Path): name containing the hostname.
+
+    Raises:
+        InproperFormattedFilename: if the name is not formatted as expected, an
+            exception will be raised.
+
+    Returns:
+        str: the hostname.
+    """
+    match = re.search(
+        FILE_NAME_PATTERN,
+        name,
+    )
+    if match:
+        hostname: str = match.group(HOSTNAME)
+        return hostname
+    raise ImproperFormattedFilename(f"Could not parse {name}. Hostname is missing.")
 
 
 class PandasTrackDataset(TrackDataset):
@@ -372,29 +407,55 @@ class PandasTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(
-        self, consumer: Callable[[Detection, Detection, str], None]
-    ) -> None:
-        track_segments = self._dataset.groupby(track.TRACK_ID).head(2)
+    def apply_to_first_segments(self, consumer: Callable[[Any], None]) -> None:
+        first_detections = self._dataset.groupby(level=0, group_keys=True)
+        self._dataset["next_x"] = first_detections[track.X].shift(-1)
+        self._dataset["next_y"] = first_detections[track.Y].shift(-1)
+        first_segments: DataFrame = (
+            self._dataset.groupby(level=0, group_keys=True).head(1).copy()
+        )
 
-        track_ids = list(track_segments.index.get_level_values(LEVEL_TRACK_ID).unique())
-        for track_id in track_ids:
-            track_frame = track_segments.loc[track_id, :]
-            actual = PandasTrack(track_id, track_frame)
-            consumer(actual.detections[0], actual.detections[1], actual.classification)
-
-    def apply_to_last_segments(
-        self, consumer: Callable[[Detection, Detection, str], None]
-    ) -> None:
-        track_segments = self._dataset.groupby(track.TRACK_ID).tail(2)
-
-        track_ids = list(track_segments.index.get_level_values(LEVEL_TRACK_ID).unique())
-        for track_id in track_ids:
-            track_frame = track_segments.loc[track_id, :]
-            actual = PandasTrack(track_id, track_frame)
-            consumer(
-                actual.detections[-2], actual.detections[-1], actual.classification
+        for index, row in first_segments.iterrows():
+            event = Event(
+                road_user_id=index[0],
+                road_user_type=row[track.TRACK_CLASSIFICATION],
+                hostname=extract_hostname(row[track.VIDEO_NAME]),
+                occurrence=index[1].to_pydatetime(),
+                frame_number=row[track.FRAME],
+                section_id=None,
+                event_coordinate=ImageCoordinate(row[track.X], row[track.Y]),
+                event_type=EventType.ENTER_SCENE,
+                direction_vector=calculate_direction_vector(
+                    row[track.X], row[track.Y], row["next_x"], row["next_y"]
+                ),
+                video_name=row[track.VIDEO_NAME],
             )
+            consumer(event)
+
+    def apply_to_last_segments(self, consumer: Callable[[Any], None]) -> None:
+        first_detections = self._dataset.groupby(level=0, group_keys=True)
+        self._dataset["previous_x"] = first_detections[track.X].shift(1)
+        self._dataset["previous_y"] = first_detections[track.Y].shift(1)
+        first_segments: DataFrame = self._dataset.groupby(
+            level=0, group_keys=True
+        ).tail(1)
+
+        for index, row in first_segments.iterrows():
+            event = Event(
+                road_user_id=index[0],
+                road_user_type=row[track.TRACK_CLASSIFICATION],
+                hostname=extract_hostname(row[track.VIDEO_NAME]),
+                occurrence=index[1],
+                frame_number=row[track.FRAME],
+                section_id=None,
+                event_coordinate=ImageCoordinate(row[track.X], row[track.Y]),
+                event_type=EventType.LEAVE_SCENE,
+                direction_vector=calculate_direction_vector(
+                    row["previous_x"], row["previous_y"], row[track.X], row[track.Y]
+                ),
+                video_name=row[track.VIDEO_NAME],
+            )
+            consumer(event)
 
 
 def _assign_track_classification(

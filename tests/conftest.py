@@ -47,10 +47,10 @@ class TrackBuilder:
     track_class: str = "car"
     detection_class: str = "car"
     confidence: float = 0.5
-    x: float = 0
-    y: float = 0
-    w: float = 10
-    h: float = 10
+    x: float = 0.0
+    y: float = 0.0
+    w: float = 10.0
+    h: float = 10.0
     frame: int = 1
     occurrence_year: int = DEFAULT_OCCURRENCE_YEAR
     occurrence_month: int = DEFAULT_OCCURRENCE_MONTH

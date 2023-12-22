@@ -67,14 +67,6 @@ class SceneActionDetector:
             Iterable[Event]: the scene events
         """
         events: list[Event] = []
-        tracks.apply_to_first_segments(
-            lambda from_detection, to_detection, classification: events.append(
-                self.detect_enter_scene(from_detection, to_detection, classification)
-            )
-        )
-        tracks.apply_to_last_segments(
-            lambda from_detection, to_detection, classification: events.append(
-                self.detect_leave_scene(from_detection, to_detection, classification)
-            )
-        )
+        tracks.apply_to_first_segments(events.append)
+        tracks.apply_to_last_segments(events.append)
         return events
