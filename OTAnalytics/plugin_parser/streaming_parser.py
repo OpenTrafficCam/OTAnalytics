@@ -1,10 +1,15 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator, Optional, Sequence
 
-from plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from pyparsing import Iterable
 
+from OTAnalytics.application.datastore import (
+    DetectionMetadata,
+    TrackParser,
+    TrackParseResult,
+    VideoMetadata,
+)
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track import (
     Detection,
@@ -15,15 +20,95 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackRepository,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     DetectionParser,
+    OttrkFormatFixer,
     TrackLengthLimit,
+    _parse_bz2,
 )
 
 
-class LazyDetectionParser(DetectionParser):
+class StreamingTrackParser(TrackParser):
+    """Parse an ottrk file and convert its contents to our domain objects namely
+    `Tracks`.
+
+    Args:
+        detection_parser (DetectionParser): parses the given detections.
+        format_fixer (OttrkFormatFixer): to fix older ottrk version files.
+    """
+
+    def __init__(
+        self,
+        detection_parser: DetectionParser,
+        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
+    ) -> None:
+        self._detection_parser = detection_parser
+        self._format_fixer = format_fixer
+
+    def parse(self, ottrk_file: Path) -> TrackParseResult:
+        """Parse ottrk file and convert its content to domain level objects namely
+        `Track`s.
+
+        Args:
+            ottrk_file (Path): the track file.
+
+        Returns:
+            TrackParseResult: contains tracks and track metadata.
+        """
+        ottrk_dict = _parse_bz2(ottrk_file)
+        fixed_ottrk = self._format_fixer.fix(ottrk_dict)
+        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
+            ottrk_format.DATA_DETECTIONS
+        ]
+        metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
+        video_metadata = self._parse_video_metadata(metadata_video)
+        tracks = self._detection_parser.parse_tracks(dets_list, metadata_video)
+        detection_metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
+        return TrackParseResult(tracks, detection_metadata, video_metadata)
+
+    def _parse_video_metadata(self, metadata_video: dict) -> VideoMetadata:
+        video_path = (
+            metadata_video[ottrk_format.FILENAME]
+            + metadata_video[ottrk_format.FILETYPE]
+        )
+        recorded_start_date = datetime.fromtimestamp(
+            float(metadata_video[ottrk_format.RECORDED_START_DATE]), timezone.utc
+        )
+        expected_duration = (
+            timedelta(seconds=metadata_video[ottrk_format.EXPECTED_DURATION])
+            if ottrk_format.EXPECTED_DURATION in metadata_video.keys()
+            else None
+        )
+        recorded_fps = float(metadata_video[ottrk_format.RECORDED_FPS])
+        actual_fps = (
+            float(metadata_video[ottrk_format.ACTUAL_FPS])
+            if ottrk_format.ACTUAL_FPS in metadata_video.keys()
+            else None
+        )
+        number_of_frames = int(metadata_video[ottrk_format.NUMBER_OF_FRAMES])
+        return VideoMetadata(
+            path=video_path,
+            recorded_start_date=recorded_start_date,
+            expected_duration=expected_duration,
+            recorded_fps=recorded_fps,
+            actual_fps=actual_fps,
+            number_of_frames=number_of_frames,
+        )
+
+    def _parse_metadata(self, metadata_detection: dict) -> DetectionMetadata:
+        detection_classes_entry: dict[str, str] = metadata_detection[
+            ottrk_format.METADATA_DETECTION
+        ][ottrk_format.MODEL][ottrk_format.CLASSES]
+        detection_classes = frozenset(
+            classification for classification in detection_classes_entry.values()
+        )
+        return DetectionMetadata(detection_classes)
+
+
+class StreamingDetectionParser(DetectionParser):
     def __init__(
         self,
         track_classification_calculator: TrackClassificationCalculator,
@@ -33,10 +118,9 @@ class LazyDetectionParser(DetectionParser):
         self._track_classification_calculator = track_classification_calculator
         self._track_repository = track_repository
         self._track_length_limit = track_length_limit
-        self._path_cache: dict[str, Path] = {}
 
     def parse_tracks(self, dets: list[dict], metadata_video: dict) -> TrackDataset:
-        return LazyTrackDataset(iterator=self._parse_lazy(dets, metadata_video))
+        return StreamingTrackDataset(iterator=self._parse_lazy(dets, metadata_video))
 
     def _parse_lazy(self, dets: list[dict], metadata_video: dict) -> Iterator[Track]:
         det_list_iterator = self._parse_detections(dets, metadata_video)
@@ -125,7 +209,7 @@ class LazyDetectionParser(DetectionParser):
                 yield (det.track_id, detections)
 
 
-class LazyTrackDataset(TrackDataset):
+class StreamingTrackDataset(TrackDataset):
     def __init__(self, iterator: Iterator[Track]) -> None:
         self._iterator = iterator
 
@@ -157,12 +241,19 @@ class LazyTrackDataset(TrackDataset):
         raise NotImplementedError
 
     def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
-        return LazyTrackDataset(
+        return StreamingTrackDataset(
             FilterIteratorWrapper(length=length, delegate=self._iterator)
         )
 
 
 class FilterIteratorWrapper(Iterator[Track]):
+    """A Track iterator that applies a filter:
+    Tracks of length less than a given threshold are not returned.
+
+    Args:
+        Iterator (Track): a track iterator to be filtered
+    """
+
     def __init__(self, length: int, delegate: Iterator[Track]) -> None:
         self._length = length
         self._iterator = self._create_iterator(delegate)
