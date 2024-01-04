@@ -27,7 +27,7 @@ from OTAnalytics.application.config import (
 from OTAnalytics.application.datastore import FlowParser, TrackParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
-from OTAnalytics.application.state import TracksMetadata, TrackViewState, VideosMetadata
+from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
@@ -295,7 +295,6 @@ class TestOTAnalyticsCli:
             GetTracksFromIds(track_repository),
             ShapelyMapper(),
             SimpleCutTrackSegmentBuilder(ByMaxConfidence()),
-            TrackViewState(),
         )
         cut_tracks = (
             SimpleCutTracksIntersectingSection(

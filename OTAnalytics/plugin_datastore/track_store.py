@@ -63,7 +63,10 @@ class PandasDetection(Detection):
 
     @property
     def track_id(self) -> TrackId:
-        return TrackId(self.__get_attribute(track.TRACK_ID))
+        track_id = self.__get_attribute(track.TRACK_ID)
+        if isinstance(track_id, TrackId):
+            return track_id
+        return TrackId(track_id)
 
     @property
     def video_name(self) -> str:
@@ -76,7 +79,10 @@ class PandasTrack(Track):
 
     @property
     def id(self) -> TrackId:
-        return TrackId(self._data[track.TRACK_ID].iloc[0])
+        track_id = self._data[track.TRACK_ID].iloc[0]
+        if isinstance(track_id, TrackId):
+            return track_id
+        return TrackId(track_id)
 
     @property
     def classification(self) -> str:

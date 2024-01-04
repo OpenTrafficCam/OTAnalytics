@@ -5,7 +5,7 @@ from pandas import DataFrame
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import TrackDataset
+from OTAnalytics.domain.track import TrackDataset, TrackId
 from OTAnalytics.plugin_datastore.track_store import (
     PandasTrackClassificationCalculator,
     PandasTrackDataset,
@@ -14,6 +14,7 @@ from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     DetectionParser,
+    TrackIdGenerator,
     TrackLengthLimit,
 )
 
@@ -28,12 +29,18 @@ class PandasDetectionParser(DetectionParser):
         self._track_length_limit = track_length_limit
 
     def parse_tracks(
-        self, detections: list[dict], metadata_video: dict
+        self,
+        detections: list[dict],
+        metadata_video: dict,
+        id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
-        return self._parse_as_dataframe(detections, metadata_video)
+        return self._parse_as_dataframe(detections, metadata_video, id_generator)
 
     def _parse_as_dataframe(
-        self, detections: list[dict], metadata_video: dict
+        self,
+        detections: list[dict],
+        metadata_video: dict,
+        id_generator: TrackIdGenerator,
     ) -> TrackDataset:
         video_name = (
             metadata_video[ottrk_format.FILENAME]
@@ -55,7 +62,9 @@ class PandasDetectionParser(DetectionParser):
             },
             inplace=True,
         )
-        data[track.TRACK_ID] = data[track.TRACK_ID].astype(str)
+        data[track.TRACK_ID] = (
+            data[track.TRACK_ID].astype(str).apply(id_generator).astype(str)
+        )
         data[track.VIDEO_NAME] = video_name
         data[track.OCCURRENCE] = (
             data[track.OCCURRENCE]
