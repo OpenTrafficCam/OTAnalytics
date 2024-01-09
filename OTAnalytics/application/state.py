@@ -17,10 +17,8 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
     SectionType,
 )
-from OTAnalytics.domain.track import (
-    Detection,
-    TrackId,
-    TrackImage,
+from OTAnalytics.domain.track import Detection, TrackId, TrackImage
+from OTAnalytics.domain.track_repository import (
     TrackListObserver,
     TrackObserver,
     TrackRepository,

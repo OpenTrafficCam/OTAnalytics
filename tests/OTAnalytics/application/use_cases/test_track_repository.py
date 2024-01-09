@@ -15,13 +15,8 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
     TrackRepositorySize,
 )
-from OTAnalytics.domain.track import (
-    Track,
-    TrackDataset,
-    TrackFileRepository,
-    TrackId,
-    TrackRepository,
-)
+from OTAnalytics.domain.track import Track, TrackDataset, TrackId
+from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 
 
 @pytest.fixture

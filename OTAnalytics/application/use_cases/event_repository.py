@@ -7,7 +7,7 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepositoryEvent,
 )
-from OTAnalytics.domain.track import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 
 
 class AddEvents:

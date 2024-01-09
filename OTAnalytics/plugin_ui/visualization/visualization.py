@@ -30,7 +30,8 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import TrackIdProvider, TrackRepository
+from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,

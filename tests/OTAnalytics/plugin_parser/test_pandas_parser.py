@@ -2,7 +2,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.track import TRACK_GEOMETRY_FACTORY, TrackRepository
+from OTAnalytics.domain.track import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )

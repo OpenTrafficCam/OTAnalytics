@@ -78,7 +78,8 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepositoryEvent,
 )
-from OTAnalytics.domain.track import TrackImage, TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events

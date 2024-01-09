@@ -47,7 +47,8 @@ from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import Track, TrackId, TrackRepository
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 from tests.conftest import TrackBuilder
 

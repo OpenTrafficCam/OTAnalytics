@@ -37,6 +37,8 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackIdProvider,
     TrackImage,
+)
+from OTAnalytics.domain.track_repository import (
     TrackListObserver,
     TrackRepository,
     TrackRepositoryEvent,

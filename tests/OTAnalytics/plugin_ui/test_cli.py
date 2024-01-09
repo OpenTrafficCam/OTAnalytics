@@ -60,7 +60,8 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
-from OTAnalytics.domain.track import TrackId, TrackRepository
+from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,

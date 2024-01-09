@@ -2,12 +2,10 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.track import (
+from OTAnalytics.domain.track import Track, TrackDataset, TrackId
+from OTAnalytics.domain.track_repository import (
     RemoveMultipleTracksError,
-    Track,
-    TrackDataset,
     TrackFileRepository,
-    TrackId,
     TrackRepository,
 )
 

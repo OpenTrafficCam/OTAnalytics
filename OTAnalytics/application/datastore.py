@@ -22,11 +22,9 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepository,
 )
-from OTAnalytics.domain.track import (
-    TrackDataset,
+from OTAnalytics.domain.track import TrackDataset, TrackId, TrackImage
+from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
-    TrackId,
-    TrackImage,
     TrackListObserver,
     TrackRepository,
 )

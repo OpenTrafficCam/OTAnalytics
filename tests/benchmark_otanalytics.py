@@ -20,7 +20,7 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import TrackRepository
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,

@@ -37,8 +37,8 @@ from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
     TrackId,
     TrackImage,
-    TrackRepository,
 )
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,

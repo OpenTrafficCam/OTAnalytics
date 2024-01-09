@@ -102,7 +102,7 @@ from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
+from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
