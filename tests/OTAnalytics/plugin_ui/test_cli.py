@@ -57,7 +57,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
     RemoveTracks,
 )
-from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
 from OTAnalytics.domain.track import TrackId
@@ -311,7 +311,7 @@ class TestOTAnalyticsCli:
         )
         create_scene_events = SimpleCreateSceneEvents(
             get_tracks_without_single_detections,
-            SceneActionDetector(SceneEventBuilder()),
+            SceneActionDetector(),
             add_events,
         )
         create_events = CreateEvents(

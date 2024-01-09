@@ -97,7 +97,7 @@ from OTAnalytics.application.use_cases.track_to_video_repository import (
 )
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import ClearAllVideos
-from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -720,7 +720,7 @@ class ApplicationStarter:
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_provider, add_events
         )
-        scene_action_detector = SceneActionDetector(SceneEventBuilder())
+        scene_action_detector = SceneActionDetector()
         create_scene_events = SimpleCreateSceneEvents(
             get_all_tracks_without_single_detections, scene_action_detector, add_events
         )
