@@ -15,14 +15,13 @@ from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     TRACK_CLASSIFICATION,
     TRACK_GEOMETRY_FACTORY,
-    IntersectionPoint,
     Track,
-    TrackDataset,
     TrackGeometryDataset,
     TrackId,
     X,
     Y,
 )
+from OTAnalytics.domain.track_dataset import IntersectionPoint, TrackDataset
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     BASE_GEOMETRY,

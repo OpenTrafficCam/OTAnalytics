@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from OTAnalytics.domain.observer import Subject
-from OTAnalytics.domain.track import Track, TrackDataset, TrackId
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset import TrackDataset
 
 
 @dataclass(frozen=True)

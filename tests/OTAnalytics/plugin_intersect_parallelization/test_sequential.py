@@ -3,7 +3,7 @@ from unittest.mock import Mock, call
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import TrackDataset
+from OTAnalytics.domain.track_dataset import TrackDataset
 from OTAnalytics.plugin_intersect_parallelization.sequential import SequentialIntersect
 
 

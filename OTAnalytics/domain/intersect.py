@@ -4,7 +4,7 @@ from typing import Callable, Iterable, Sequence
 from OTAnalytics.domain.event import Event, EventBuilder
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import TrackDataset
+from OTAnalytics.domain.track_dataset import TrackDataset
 
 
 class IntersectImplementation(ABC):

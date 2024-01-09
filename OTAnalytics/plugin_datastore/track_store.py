@@ -25,12 +25,11 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     TRACK_GEOMETRY_FACTORY,
     Detection,
-    IntersectionPoint,
     Track,
-    TrackDataset,
     TrackGeometryDataset,
     TrackId,
 )
+from OTAnalytics.domain.track_dataset import IntersectionPoint, TrackDataset
 from OTAnalytics.domain.types import EventType
 
 

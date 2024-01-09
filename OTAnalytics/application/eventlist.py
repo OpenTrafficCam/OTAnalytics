@@ -1,6 +1,7 @@
 from OTAnalytics.domain.event import Event, EventType, SceneEventBuilder
 from OTAnalytics.domain.geometry import calculate_direction_vector
-from OTAnalytics.domain.track import Detection, TrackDataset
+from OTAnalytics.domain.track import Detection
+from OTAnalytics.domain.track_dataset import TrackDataset
 
 
 class SceneActionDetector:

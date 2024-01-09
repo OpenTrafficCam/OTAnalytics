@@ -22,13 +22,8 @@ from pygeos import (
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate, apply_offset
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import (
-    IntersectionPoint,
-    Track,
-    TrackDataset,
-    TrackGeometryDataset,
-    TrackId,
-)
+from OTAnalytics.domain.track import Track, TrackGeometryDataset, TrackId
+from OTAnalytics.domain.track_dataset import IntersectionPoint, TrackDataset
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 
 TRACK_ID = "track_id"

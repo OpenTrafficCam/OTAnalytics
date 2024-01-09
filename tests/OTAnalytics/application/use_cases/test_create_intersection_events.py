@@ -21,7 +21,8 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionType,
 )
-from OTAnalytics.domain.track import Detection, IntersectionPoint, Track, TrackDataset
+from OTAnalytics.domain.track import Detection, Track
+from OTAnalytics.domain.track_dataset import IntersectionPoint, TrackDataset
 from OTAnalytics.domain.types import EventType
 from tests.conftest import TrackBuilder
 

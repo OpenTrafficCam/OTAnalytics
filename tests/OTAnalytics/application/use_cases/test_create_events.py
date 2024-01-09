@@ -16,7 +16,8 @@ from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearA
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Track, TrackDataset
+from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track_dataset import TrackDataset
 
 
 @pytest.fixture
