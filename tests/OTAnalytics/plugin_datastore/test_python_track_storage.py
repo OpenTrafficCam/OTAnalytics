@@ -11,13 +11,8 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
     calculate_direction_vector,
 )
-from OTAnalytics.domain.track import (
-    Detection,
-    Track,
-    TrackGeometryDataset,
-    TrackHasNoDetectionError,
-    TrackId,
-)
+from OTAnalytics.domain.track import Detection, Track, TrackHasNoDetectionError, TrackId
+from OTAnalytics.domain.track_dataset import TrackGeometryDataset
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,

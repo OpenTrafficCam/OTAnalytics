@@ -12,16 +12,13 @@ from pytest_benchmark.fixture import BenchmarkFixture
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
-from OTAnalytics.domain.track import (
-    TRACK_CLASSIFICATION,
+from OTAnalytics.domain.track import TRACK_CLASSIFICATION, Track, TrackId, X, Y
+from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
-    Track,
+    IntersectionPoint,
+    TrackDataset,
     TrackGeometryDataset,
-    TrackId,
-    X,
-    Y,
 )
-from OTAnalytics.domain.track_dataset import IntersectionPoint, TrackDataset
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     BASE_GEOMETRY,

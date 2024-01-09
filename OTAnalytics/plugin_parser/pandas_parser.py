@@ -5,8 +5,8 @@ from pandas import DataFrame
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import TRACK_GEOMETRY_FACTORY, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.plugin_datastore.track_store import (
     PandasTrackClassificationCalculator,
     PandasTrackDataset,
