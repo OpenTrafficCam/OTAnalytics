@@ -408,7 +408,7 @@ class PandasTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(self, consumer: Callable[[Any], None]) -> None:
+    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
         first_detections = self._dataset.groupby(level=0, group_keys=True)
         self._dataset["next_x"] = first_detections[track.X].shift(-1)
         self._dataset["next_y"] = first_detections[track.Y].shift(-1)
@@ -438,7 +438,7 @@ class PandasTrackDataset(TrackDataset):
             )
             consumer(event)
 
-    def apply_to_last_segments(self, consumer: Callable[[Any], None]) -> None:
+    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
         first_detections = self._dataset.groupby(level=0, group_keys=True)
         self._dataset["previous_x"] = first_detections[track.X].shift(1)
         self._dataset["previous_y"] = first_detections[track.Y].shift(1)

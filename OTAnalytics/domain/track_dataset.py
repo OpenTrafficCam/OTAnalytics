@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
@@ -128,11 +129,11 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def apply_to_first_segments(self, consumer: Callable[[Any], None]) -> None:
+    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def apply_to_last_segments(self, consumer: Callable[[Any], None]) -> None:
+    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
         raise NotImplementedError
 
 

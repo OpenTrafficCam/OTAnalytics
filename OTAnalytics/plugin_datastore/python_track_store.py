@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Any, Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Optional, Sequence
 
 from more_itertools import batched
 
@@ -424,7 +424,7 @@ class PythonTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(self, consumer: Callable[[Any], None]) -> None:
+    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
         for track in self.as_list():
             event = self.__create_enter_scene_event(track)
             consumer(event)
@@ -450,7 +450,7 @@ class PythonTrackDataset(TrackDataset):
             video_name=track.first_detection.video_name,
         )
 
-    def apply_to_last_segments(self, consumer: Callable[[Any], None]) -> None:
+    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
         for track in self.as_list():
             event = self.__create_leave_scene_event(track)
             consumer(event)
