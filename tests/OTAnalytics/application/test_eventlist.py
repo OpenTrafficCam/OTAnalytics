@@ -174,7 +174,6 @@ class TestSceneActionDetector:
         track_2: Track,
     ) -> None:
         mock_tracks = Mock(spec=TrackDataset)
-        mock_tracks.as_list.return_value = [track_1, track_2]
         mock_event_builder = Mock(spec=SceneEventBuilder)
 
         scene_action_detector = SceneActionDetector(mock_event_builder)
