@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
+from typing import Any, Callable, Iterable, Optional, TypeVar
 
 from OTAnalytics.application.config import CUTTING_SECTION_MARKER
 from OTAnalytics.domain.common import DataclassValidation
@@ -205,10 +205,6 @@ class Section(DataclassValidation):
             for event_type, offset in self.relative_offset_coordinates.items()
         }
 
-    @abstractmethod
-    def accept(self, visitor: "IntersectionVisitor[T]") -> list[T]:
-        raise NotImplementedError
-
 
 @dataclass(frozen=True)
 class LineSection(Section):
@@ -291,9 +287,6 @@ class LineSection(Section):
     def _is_cutting_section(self) -> bool:
         return self.name.startswith(CUTTING_SECTION_MARKER)
 
-    def accept(self, visitor: "IntersectionVisitor[T]") -> list[T]:
-        return visitor.intersect_line_section(self)
-
 
 @dataclass(frozen=True)
 class Area(Section):
@@ -358,9 +351,6 @@ class Area(Section):
 
     def get_type(self) -> SectionType:
         return SectionType.AREA
-
-    def accept(self, visitor: "IntersectionVisitor[T]") -> list[T]:
-        return visitor.intersect_area_section(self)
 
 
 class MissingSection(Exception):
@@ -491,13 +481,3 @@ class SectionRepository:
         self._repository_content_observers.notify(
             SectionRepositoryEvent.create_removed(removed)
         )
-
-
-class IntersectionVisitor(ABC, Generic[T]):
-    @abstractmethod
-    def intersect_area_section(self, section: Area) -> list[T]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def intersect_line_section(self, section: LineSection) -> list[T]:
-        raise NotImplementedError

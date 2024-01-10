@@ -15,7 +15,6 @@ from OTAnalytics.application.state import (
     Plotter,
     SectionState,
     TrackImageUpdater,
-    TrackObserver,
     TracksMetadata,
     TrackState,
     TrackViewState,
@@ -30,11 +29,9 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
     SectionType,
 )
-from OTAnalytics.domain.track import (
-    Detection,
-    Track,
-    TrackId,
-    TrackImage,
+from OTAnalytics.domain.track import Detection, Track, TrackId, TrackImage
+from OTAnalytics.domain.track_repository import (
+    TrackObserver,
     TrackRepository,
     TrackRepositoryEvent,
 )

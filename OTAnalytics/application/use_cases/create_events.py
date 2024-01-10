@@ -110,7 +110,7 @@ class SimpleCreateSceneEvents(CreateSceneEvents):
 
     def __call__(self) -> None:
         """Create scene enter and leave events and save them to the event repository."""
-        tracks = self._get_tracks()
+        tracks = self._get_tracks.as_dataset()
         events = self._scene_action_detector.detect(tracks)
         self._add_events(events)
 

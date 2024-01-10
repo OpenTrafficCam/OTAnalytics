@@ -48,6 +48,9 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
+from OTAnalytics.application.use_cases.create_intersection_events import (
+    BatchedTracksRunIntersect,
+)
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
@@ -84,6 +87,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     ClearAllTracks,
     GetAllTrackFiles,
     GetAllTrackIds,
+    GetAllTracks,
     GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
@@ -93,22 +97,21 @@ from OTAnalytics.application.use_cases.track_to_video_repository import (
 )
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import ClearAllVideos
-from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
+from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
-from OTAnalytics.domain.intersect import IntersectImplementation
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
+from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_datastore.python_track_store import (
-    ByMaxConfidence,
-    PythonTrackDataset,
+from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
 )
-from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
-    ShapelyRunIntersect,
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasByMaxConfidence,
+    PandasTrackDataset,
 )
-from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTrackSegmentBuilder,
@@ -134,9 +137,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
     OttrkVideoParser,
-    PythonDetectionParser,
     SimpleVideoParser,
 )
+from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -265,6 +268,7 @@ class ApplicationStarter:
         )
 
         get_all_track_files = self._create_get_all_track_files(track_file_repository)
+        get_all_tracks = GetAllTracks(track_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             track_repository
         )
@@ -298,6 +302,7 @@ class ApplicationStarter:
         create_events = self._create_use_case_create_events(
             section_provider,
             clear_all_events,
+            get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
             DEFAULT_NUM_PROCESSES,
@@ -305,7 +310,7 @@ class ApplicationStarter:
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
                 section_provider,
-                get_tracks_without_single_detections,
+                get_all_tracks,
                 add_events,
                 DEFAULT_NUM_PROCESSES,
             )
@@ -350,8 +355,7 @@ class ApplicationStarter:
             clear_repositories, reset_project_config, track_view_state
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            GetTracksWithoutSingleDetections(track_repository),
-            ShapelyIntersector(),
+            get_all_tracks
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             get_sections_bv_id,
@@ -462,18 +466,19 @@ class ApplicationStarter:
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             track_repository
         )
+        get_all_tracks = GetAllTracks(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
         create_events = self._create_use_case_create_events(
             section_repository.get_all,
             clear_all_events,
+            get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
             cli_args.num_processes,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            GetTracksWithoutSingleDetections(track_repository),
-            ShapelyIntersector(),
+            get_all_tracks
         )
         cut_tracks = self._create_cut_tracks_intersecting_section(
             GetSectionsById(section_repository),
@@ -557,18 +562,24 @@ class ApplicationStarter:
         )
 
     def _create_track_repository(self) -> TrackRepository:
-        # return TrackRepository(PandasTrackDataset.from_list([]))
-        return TrackRepository(PythonTrackDataset())
+        return TrackRepository(
+            PandasTrackDataset.from_list(
+                [], PygeosTrackGeometryDataset.from_track_dataset
+            )
+        )
+        # return TrackRepository(PythonTrackDataset())
 
     def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
-        # calculator = PandasByMaxConfidence()
-        # detection_parser = PandasDetectionParser(
-        #     calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
-        # )
-        calculator = ByMaxConfidence()
-        detection_parser = PythonDetectionParser(
-            calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        calculator = PandasByMaxConfidence()
+        detection_parser = PandasDetectionParser(
+            calculator,
+            PygeosTrackGeometryDataset.from_track_dataset,
+            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
+        # calculator = ByMaxConfidence()
+        # detection_parser = PythonDetectionParser(
+        # noqa   calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        # )
         return OttrkParser(detection_parser)
 
     def _create_section_repository(self) -> SectionRepository:
@@ -649,7 +660,7 @@ class ApplicationStarter:
     def _create_use_case_create_intersection_events(
         self,
         section_provider: SectionProvider,
-        get_tracks: GetTracksWithoutSingleDetections,
+        get_tracks: GetAllTracks,
         add_events: AddEvents,
         num_processes: int,
     ) -> CreateIntersectionEvents:
@@ -657,10 +668,8 @@ class ApplicationStarter:
         return SimpleCreateIntersectionEvents(intersect, section_provider, add_events)
 
     @staticmethod
-    def _create_intersect(
-        get_tracks: GetTracksWithoutSingleDetections, num_processes: int
-    ) -> RunIntersect:
-        return ShapelyRunIntersect(
+    def _create_intersect(get_tracks: GetAllTracks, num_processes: int) -> RunIntersect:
+        return BatchedTracksRunIntersect(
             intersect_parallelizer=MultiprocessingIntersectParallelization(
                 num_processes
             ),
@@ -702,17 +711,18 @@ class ApplicationStarter:
         self,
         section_provider: SectionProvider,
         clear_events: ClearAllEvents,
-        get_tracks: GetTracksWithoutSingleDetections,
+        get_all_tracks: GetAllTracks,
+        get_all_tracks_without_single_detections: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
         num_processes: int,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(get_tracks, num_processes)
+        run_intersect = self._create_intersect(get_all_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_provider, add_events
         )
-        scene_action_detector = SceneActionDetector(SceneEventBuilder())
+        scene_action_detector = SceneActionDetector()
         create_scene_events = SimpleCreateSceneEvents(
-            get_tracks, scene_action_detector, add_events
+            get_all_tracks_without_single_detections, scene_action_detector, add_events
         )
         return CreateEvents(
             clear_events, create_intersection_events, create_scene_events
@@ -720,10 +730,9 @@ class ApplicationStarter:
 
     @staticmethod
     def _create_tracks_intersecting_sections(
-        get_tracks: GetTracksWithoutSingleDetections,
-        intersect_implementation: IntersectImplementation,
+        get_tracks: GetAllTracks,
     ) -> TracksIntersectingSections:
-        return SimpleTracksIntersectingSections(get_tracks, intersect_implementation)
+        return SimpleTracksIntersectingSections(get_tracks)
 
     @staticmethod
     def _create_use_case_load_otflow(

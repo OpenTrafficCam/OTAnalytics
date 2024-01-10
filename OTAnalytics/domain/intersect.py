@@ -4,7 +4,7 @@ from typing import Callable, Iterable, Sequence
 from OTAnalytics.domain.event import Event, EventBuilder
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track_dataset import TrackDataset
 
 
 class IntersectImplementation(ABC):
@@ -101,16 +101,17 @@ class IntersectParallelizationStrategy(ABC):
     @abstractmethod
     def execute(
         self,
-        intersect: Callable[[Iterable[Track], Iterable[Section]], Iterable[Event]],
-        tasks: Sequence[tuple[Iterable[Track], Iterable[Section]]],
+        intersect: Callable[[TrackDataset, Iterable[Section]], Iterable[Event]],
+        tasks: Sequence[tuple[TrackDataset, Iterable[Section]]],
     ) -> list[Event]:
         """Executes the intersection of tracks with sections with the implemented
         parallelization strategy.
 
         Args:
-            intersect (Callable[[Track, Iterable[Section]], Iterable[Event]]): the
-                function to be executed on an iterable of tracks and sections.
-            tasks (tuple[Iterable[Track], Iterable[Section])
+            intersect (Callable[[TrackDataset, Iterable[Section]], Iterable[Event]]):
+                the function to be executed on an iterable of tracks and sections.
+            tasks (Sequence[tuple[TrackDataset, Iterable[Section]]): the argument
+                to intersect function.
 
         Returns:
             Iterable[Event]: the generated events.
@@ -135,17 +136,20 @@ class Intersector(ABC):
 
     @abstractmethod
     def intersect(
-        self, tracks: Iterable[Track], section: Section, event_builder: EventBuilder
+        self,
+        track_dataset: TrackDataset,
+        sections: Iterable[Section],
+        event_builder: EventBuilder,
     ) -> list[Event]:
         """Intersect tracks with sections and generate events if they intersect.
 
         Args:
-            tracks (Iterable[Track]): the tracks to be intersected with.
-            section (Section): the section to be intersected with.
+            track_dataset (TrackDataset): the tracks to be intersected with.
+            sections (Iterable[Section]): the sections to be intersected with.
             event_builder (EventBuilder): builder to generate events
 
         Returns:
-            list[Event]: the events if the track intersects with the section.
+            list[Event]: the events if the track intersects with the sections.
                 Otherwise, return empty list.
         """
         raise NotImplementedError

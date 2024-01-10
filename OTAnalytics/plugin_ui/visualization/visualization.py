@@ -25,21 +25,18 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksOverlapOccurrenceWindow,
 )
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
-from OTAnalytics.application.use_cases.track_repository import (
-    GetTracksWithoutSingleDetections,
-)
+from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import TrackIdProvider, TrackRepository
+from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
-from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CachedPandasTrackProvider,
     ColorPaletteProvider,
     EventToFlowResolver,
     FilterByClassification,
@@ -372,15 +369,18 @@ class VisualizationBuilder:
         self, progressbar: ProgressbarBuilder
     ) -> PandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        # return PandasTrackProvider(
-        #     datastore, self._track_view_state, dataframe_filter_builder, progressbar
-        # )
-        return CachedPandasTrackProvider(
+        return PandasTrackProvider(
             self._track_repository,
             self._track_view_state,
             dataframe_filter_builder,
             progressbar,
         )
+        # return CachedPandasTrackProvider(
+        #     self._track_repository,
+        #     self._track_view_state,
+        #     dataframe_filter_builder,
+        #     progressbar,
+        # )
 
     def _wrap_pandas_track_offset_provider(
         self, other: PandasDataFrameProvider
@@ -610,6 +610,5 @@ class VisualizationBuilder:
     # TODO duplicate to main_application.py
     def _create_tracks_intersecting_sections(self) -> TracksIntersectingSections:
         return SimpleTracksIntersectingSections(
-            GetTracksWithoutSingleDetections(self._track_repository),
-            ShapelyIntersector(),
+            GetAllTracks(self._track_repository),
         )
