@@ -287,9 +287,6 @@ class FilterById(PandasDataFrameProvider):
             )
 
         ids = [track_id.id for track_id in self._filter.get_ids()]
-        # TODO: This only works for DataFrames with track id and occurrence as
-        #  an multi-index. Could not be working with a CachedPandasTrackProvider
-        #  since no such multi-index is being used there.
         intersection_of_ids = data.index.get_level_values(0).unique().intersection(ids)
         return data.loc[intersection_of_ids]
 
