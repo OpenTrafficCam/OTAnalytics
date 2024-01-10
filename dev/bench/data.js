@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1704763356291,
+  "lastUpdate": 1704849766859,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -4160,6 +4160,70 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 132.6800174700329 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "73cf99ec1562cd57363f7f8aa5750644e9f284d0",
+          "message": "Merge pull request #423 from OpenTrafficCam/bug/3863-cutting-uses-gui-offset-instead-of-section-offset\n\nbug/3863-cutting-uses-gui-offset-instead-of-section-offset",
+          "timestamp": "2023-12-19T11:51:34Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/73cf99ec1562cd57363f7f8aa5750644e9f284d0"
+        },
+        "date": 1704849766357,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.11482691061428643,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 8.708759947039653 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.015922356817891788,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 62.80477265000809 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.07609821740191698,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 13.140912286005914 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.008638394942511276,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 115.76224595599342 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.057734069373953194,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 17.32079534395598 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.007358980241410451,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 135.88839311903575 sec\nrounds: 1"
           }
         ]
       }
