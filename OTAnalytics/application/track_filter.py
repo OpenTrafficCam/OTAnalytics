@@ -92,7 +92,6 @@ class TrackFilter(Filter[Track, bool]):
     """A `Track` filter.
 
     Args:
-        Filter (Filter[Track, bool]): extends the `Filter` interface
         predicate (Predicate[Track, bool]): the predicate to test against during
             filtering
     """
