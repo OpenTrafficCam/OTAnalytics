@@ -197,6 +197,14 @@ def extract_hostname(name: str) -> str:
 
 
 class PandasTrackDataset(TrackDataset):
+    @property
+    def first_occurrence(self) -> datetime:
+        raise NotImplementedError
+
+    @property
+    def last_occurrence(self) -> datetime:
+        raise NotImplementedError
+
     def __init__(
         self,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,

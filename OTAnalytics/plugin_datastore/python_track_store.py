@@ -233,6 +233,14 @@ class ByMaxConfidence(TrackClassificationCalculator):
 class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
+    @property
+    def first_occurrence(self) -> datetime:
+        raise NotImplementedError
+
+    @property
+    def last_occurrence(self) -> datetime:
+        raise NotImplementedError
+
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,
