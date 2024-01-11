@@ -83,7 +83,7 @@ class TrackHasClassifications(TrackPredicate):
             to_test (Track): the track under test
 
         Returns:
-            bool: `True` if track has classification. Otherwise `False`.
+            bool: `True` if track has classification. Otherwise, `False`.
         """
         return to_test.classification in self._classifications
 
