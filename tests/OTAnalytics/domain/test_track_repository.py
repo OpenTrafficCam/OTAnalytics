@@ -160,6 +160,13 @@ class TestTrackRepository:
         repository = TrackRepository(dataset)
         assert repository.last_occurrence == last_occurrence
 
+    def test_classifications(self) -> None:
+        classifications = Mock()
+        dataset = Mock()
+        dataset.classifications = classifications
+        repository = TrackRepository(dataset)
+        assert repository.classifications == classifications
+
 
 class TestTrackFileRepository:
     @pytest.fixture
