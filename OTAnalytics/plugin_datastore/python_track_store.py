@@ -247,6 +247,10 @@ class PythonTrackDataset(TrackDataset):
             return None
         return max([track.last_detection.occurrence for track in self._tracks.values()])
 
+    @property
+    def classifications(self) -> frozenset[str]:
+        raise NotImplementedError
+
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,

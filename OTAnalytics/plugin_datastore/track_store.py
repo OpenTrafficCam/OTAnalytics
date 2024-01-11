@@ -209,6 +209,10 @@ class PandasTrackDataset(TrackDataset):
             return None
         return self._dataset.index.get_level_values(LEVEL_OCCURRENCE).max()
 
+    @property
+    def classifications(self) -> frozenset[str]:
+        raise NotImplementedError
+
     def __init__(
         self,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,

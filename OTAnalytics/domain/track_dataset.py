@@ -28,6 +28,11 @@ class TrackDataset(ABC):
     def last_occurrence(self) -> datetime | None:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def classifications(self) -> frozenset[str]:
+        raise NotImplementedError
+
     @abstractmethod
     def add_all(self, other: Iterable[Track]) -> "TrackDataset":
         raise NotImplementedError
