@@ -120,7 +120,7 @@ class ColorPaletteProvider:
         self._default_palette = default_palette
         self._palette: dict[str, str] = {}
 
-    def update(self, classifications: set[str]) -> None:
+    def update(self, classifications: frozenset[str]) -> None:
         for classification in classifications:
             if classification in self._default_palette.keys():
                 self._palette[classification] = self._default_palette[classification]

@@ -436,9 +436,9 @@ class TracksMetadata(TrackListObserver):
         self._last_detection_occurrence: ObservableOptionalProperty[
             datetime
         ] = ObservableOptionalProperty[datetime]()
-        self._classifications: ObservableProperty[set[str]] = ObservableProperty[set](
-            set()
-        )
+        self._classifications: ObservableProperty[frozenset[str]] = ObservableProperty[
+            frozenset
+        ](frozenset())
         self._detection_classifications: ObservableProperty[
             frozenset[str]
         ] = ObservableProperty[frozenset](frozenset([]))
@@ -464,7 +464,7 @@ class TracksMetadata(TrackListObserver):
         return self._last_detection_occurrence.get()
 
     @property
-    def classifications(self) -> set[str]:
+    def classifications(self) -> frozenset[str]:
         """The current classifications in the track repository.
 
         Returns:
@@ -484,7 +484,7 @@ class TracksMetadata(TrackListObserver):
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """Update tracks metadata on track repository changes"""
         self._update_detection_occurrences()
-        self._update_classifications(track_event.added)
+        self._update_classifications()
 
     def _update_detection_occurrences(self) -> None:
         """Update the first and last detection occurrences."""
@@ -495,13 +495,9 @@ class TracksMetadata(TrackListObserver):
             self._first_detection_occurrence.set(sorted_detections[0].occurrence)
             self._last_detection_occurrence.set(sorted_detections[-1].occurrence)
 
-    def _update_classifications(self, new_tracks: list[TrackId]) -> None:
+    def _update_classifications(self) -> None:
         """Update current classifications."""
-        updated_classifications = self._classifications.get().copy()
-        for track_id in new_tracks:
-            if track := self._track_repository.get_for(track_id):
-                updated_classifications.add(track.classification)
-        self._classifications.set(updated_classifications)
+        self._classifications.set(self._track_repository.classifications)
 
     def _get_all_track_detections(self) -> Iterable[Detection]:
         """Get all track detections in the track repository.

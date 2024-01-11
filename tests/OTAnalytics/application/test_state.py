@@ -382,26 +382,16 @@ class TestTracksMetadata:
         assert detections == [first_detection, second_detection]
         track_repository.get_all.assert_called_once()
 
-    def test_update_classifications(self, track: Mock) -> None:
+    def test_update_classifications(self) -> None:
+        classifications = frozenset(["truck", "car", "pedestrian"])
         mock_track_repository = Mock(spec=TrackRepository)
-        mock_track_repository.get_for.return_value = track
+        mock_track_repository.classifications = classifications
 
         tracks_metadata = TracksMetadata(mock_track_repository)
-
         assert tracks_metadata.classifications == set()
 
-        tracks_metadata._update_classifications([track.id])
-
-        assert tracks_metadata.classifications == {"car"}
-        mock_track_repository.get_for.assert_any_call(track.id)
-        assert mock_track_repository.get_for.call_count == 1
-
-        track.detections[0].classification = "bicycle"
-        tracks_metadata._update_classifications([track.id])
-
-        assert tracks_metadata.classifications == {"car"}
-        mock_track_repository.get_for.assert_any_call(track.id)
-        assert mock_track_repository.get_for.call_count == 2
+        tracks_metadata._update_classifications()
+        assert tracks_metadata.classifications == classifications
 
     def test_update_detection_classes(self) -> None:
         tracks_metadata = TracksMetadata(Mock())
