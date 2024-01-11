@@ -46,7 +46,7 @@ class TrackStartsAtOrAfterDate(TrackPredicate):
         self._start_date = start_date
 
     def test(self, to_test: Track) -> bool:
-        return self._start_date <= to_test.detections[0].occurrence
+        return self._start_date <= to_test.first_detection.occurrence
 
 
 class TrackEndsBeforeOrAtDate(TrackPredicate):
@@ -60,7 +60,7 @@ class TrackEndsBeforeOrAtDate(TrackPredicate):
         self._end_date = end_date
 
     def test(self, to_test: Track) -> bool:
-        return to_test.detections[0].occurrence <= self._end_date
+        return to_test.first_detection.occurrence <= self._end_date
 
 
 class TrackHasClassifications(TrackPredicate):
