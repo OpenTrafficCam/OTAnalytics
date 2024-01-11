@@ -495,3 +495,22 @@ class TestPandasTrackDataset:
     ) -> None:
         dataset = PandasTrackDataset(track_geometry_factory)
         assert dataset.last_occurrence is None
+
+    def test_classifications(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+        assert dataset.classifications == frozenset(
+            [first_track.classification, second_track.classification]
+        )
+
+    def test_classifications_on_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
+        assert dataset.classifications == frozenset()

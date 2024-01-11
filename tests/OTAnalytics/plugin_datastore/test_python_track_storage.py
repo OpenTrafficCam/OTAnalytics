@@ -498,3 +498,13 @@ class TestPythonTrackDataset:
     def test_last_occurrence_on_empty_dataset(self) -> None:
         dataset = PythonTrackDataset()
         assert dataset.last_occurrence is None
+
+    def test_classifications(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([first_track, second_track])
+        assert dataset.classifications == frozenset(
+            [first_track.classification, second_track.classification]
+        )
+
+    def test_classifications_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.classifications == frozenset()
