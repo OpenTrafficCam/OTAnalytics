@@ -234,13 +234,17 @@ class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
     @property
-    def first_occurrence(self) -> datetime:
+    def first_occurrence(self) -> datetime | None:
+        if not len(self):
+            return None
         return min(
             [track.first_detection.occurrence for track in self._tracks.values()]
         )
 
     @property
-    def last_occurrence(self) -> datetime:
+    def last_occurrence(self) -> datetime | None:
+        if not len(self):
+            return None
         return max([track.last_detection.occurrence for track in self._tracks.values()])
 
     def __init__(

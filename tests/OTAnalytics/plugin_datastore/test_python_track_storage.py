@@ -490,3 +490,11 @@ class TestPythonTrackDataset:
     def test_last_occurrence(self, first_track: Track, second_track: Track) -> None:
         dataset = PythonTrackDataset.from_list([second_track, first_track])
         assert dataset.last_occurrence == second_track.last_detection.occurrence
+
+    def test_first_occurrence_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.first_occurrence is None
+
+    def test_last_occurrence_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.last_occurrence is None

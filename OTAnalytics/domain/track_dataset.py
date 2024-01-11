@@ -20,12 +20,12 @@ class TrackDataset(ABC):
 
     @property
     @abstractmethod
-    def first_occurrence(self) -> datetime:
+    def first_occurrence(self) -> datetime | None:
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def last_occurrence(self) -> datetime:
+    def last_occurrence(self) -> datetime | None:
         raise NotImplementedError
 
     @abstractmethod

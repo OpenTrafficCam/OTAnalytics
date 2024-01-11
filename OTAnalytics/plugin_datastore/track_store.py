@@ -198,11 +198,11 @@ def extract_hostname(name: str) -> str:
 
 class PandasTrackDataset(TrackDataset):
     @property
-    def first_occurrence(self) -> datetime:
+    def first_occurrence(self) -> datetime | None:
         raise NotImplementedError
 
     @property
-    def last_occurrence(self) -> datetime:
+    def last_occurrence(self) -> datetime | None:
         raise NotImplementedError
 
     def __init__(
