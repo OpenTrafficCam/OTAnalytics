@@ -146,6 +146,20 @@ class TestTrackRepository:
         assert result == expected_size
         dataset.__len__.assert_called_once()
 
+    def test_first_occurrence(self) -> None:
+        first_occurrence = Mock()
+        dataset = Mock()
+        dataset.first_occurrence = first_occurrence
+        repository = TrackRepository(dataset)
+        assert repository.first_occurrence == first_occurrence
+
+    def test_last_occurrence(self) -> None:
+        last_occurrence = Mock()
+        dataset = Mock()
+        dataset.last_occurrence = last_occurrence
+        repository = TrackRepository(dataset)
+        assert repository.last_occurrence == last_occurrence
+
 
 class TestTrackFileRepository:
     @pytest.fixture

@@ -106,7 +106,7 @@ class TrackRepository:
 
     @property
     def last_occurrence(self) -> datetime | None:
-        return self._dataset.first_occurrence
+        return self._dataset.last_occurrence
 
     @property
     def classifications(self) -> frozenset[str]:
