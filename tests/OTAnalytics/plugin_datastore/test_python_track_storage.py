@@ -481,3 +481,12 @@ class TestPythonTrackDataset:
             ),
             video_name=track.last_detection.video_name,
         )
+
+    def test_first_occurrence(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([second_track, first_track])
+        assert dataset.first_occurrence == first_track.first_detection.occurrence
+        assert dataset.first_occurrence == second_track.first_detection.occurrence
+
+    def test_last_occurrence(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([second_track, first_track])
+        assert dataset.last_occurrence == second_track.last_detection.occurrence

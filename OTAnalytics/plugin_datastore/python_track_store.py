@@ -235,11 +235,13 @@ class PythonTrackDataset(TrackDataset):
 
     @property
     def first_occurrence(self) -> datetime:
-        raise NotImplementedError
+        return min(
+            [track.first_detection.occurrence for track in self._tracks.values()]
+        )
 
     @property
     def last_occurrence(self) -> datetime:
-        raise NotImplementedError
+        return max([track.last_detection.occurrence for track in self._tracks.values()])
 
     def __init__(
         self,
