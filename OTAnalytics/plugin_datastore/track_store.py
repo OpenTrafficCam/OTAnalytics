@@ -197,6 +197,18 @@ def extract_hostname(name: str) -> str:
 
 
 class PandasTrackDataset(TrackDataset):
+    @property
+    def first_occurrence(self) -> datetime | None:
+        if not len(self):
+            return None
+        return self._dataset.index.get_level_values(LEVEL_OCCURRENCE).min()
+
+    @property
+    def last_occurrence(self) -> datetime | None:
+        if not len(self):
+            return None
+        return self._dataset.index.get_level_values(LEVEL_OCCURRENCE).max()
+
     def __init__(
         self,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
@@ -218,18 +230,6 @@ class PandasTrackDataset(TrackDataset):
             ]()
         else:
             self._geometry_datasets = geometry_datasets
-
-    @property
-    def first_occurrence(self) -> datetime | None:
-        if not len(self):
-            return None
-        return self._dataset.index.get_level_values(LEVEL_OCCURRENCE).min()
-
-    @property
-    def last_occurrence(self) -> datetime | None:
-        if not len(self):
-            return None
-        return self._dataset.index.get_level_values(LEVEL_OCCURRENCE).max()
 
     @staticmethod
     def from_list(
