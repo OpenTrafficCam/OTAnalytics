@@ -211,7 +211,9 @@ class PandasTrackDataset(TrackDataset):
 
     @property
     def classifications(self) -> frozenset[str]:
-        raise NotImplementedError
+        if not len(self):
+            return frozenset()
+        return frozenset(self._dataset[track.TRACK_CLASSIFICATION].unique())
 
     def __init__(
         self,

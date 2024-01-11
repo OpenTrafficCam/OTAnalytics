@@ -249,7 +249,7 @@ class PythonTrackDataset(TrackDataset):
 
     @property
     def classifications(self) -> frozenset[str]:
-        raise NotImplementedError
+        return frozenset([track.classification for track in self._tracks.values()])
 
     def __init__(
         self,
