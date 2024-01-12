@@ -3,10 +3,11 @@ from unittest.mock import MagicMock, Mock, call
 
 import pytest
 
-from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
-from OTAnalytics.domain.track_repository import (
+from OTAnalytics.domain.track import (
+    Track,
+    TrackDataset,
     TrackFileRepository,
+    TrackId,
     TrackListObserver,
     TrackObserver,
     TrackRepository,

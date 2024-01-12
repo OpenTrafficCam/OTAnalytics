@@ -17,7 +17,6 @@ from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track
-from OTAnalytics.domain.track_dataset import TrackDataset
 
 
 @pytest.fixture
@@ -76,10 +75,9 @@ class TestSimpleCreateIntersectionEvents:
 
 
 class TestSimpleCreateSceneEvents:
-    def test_create_scene_events(self, event: Mock) -> None:
-        dataset = Mock(spec=TrackDataset)
+    def test_create_scene_events(self, track: Mock, event: Mock) -> None:
         get_all_tracks = Mock(spec=GetAllTracks)
-        get_all_tracks.as_dataset.return_value = dataset
+        get_all_tracks.return_value = [track]
 
         scene_action_detector = Mock(spec=SceneActionDetector)
         scene_action_detector.detect.return_value = [event]
@@ -90,8 +88,8 @@ class TestSimpleCreateSceneEvents:
         )
         create_scene_events()
 
-        get_all_tracks.as_dataset.assert_called_once()
-        scene_action_detector.detect.assert_called_once_with(dataset)
+        get_all_tracks.assert_called_once()
+        scene_action_detector.detect.assert_called_once_with([track])
         add_events.assert_called_once_with([event])
 
 

@@ -33,9 +33,6 @@ from OTAnalytics.application.use_cases.create_events import (
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
 )
-from OTAnalytics.application.use_cases.create_intersection_events import (
-    BatchedTracksRunIntersect,
-)
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
@@ -52,20 +49,22 @@ from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackIds,
-    GetAllTracks,
     GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
 )
-from OTAnalytics.domain.event import EventRepository
+from OTAnalytics.domain.event import EventRepository, SceneEventBuilder
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
-from OTAnalytics.domain.track import TrackId
-from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.domain.track import TrackId, TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_intersect.shapely.create_intersection_events import (
+    ShapelyRunIntersect,
+)
+from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTrackSegmentBuilder,
@@ -275,24 +274,23 @@ class TestOTAnalyticsCli:
         flow_repository = FlowRepository()
         add_events = AddEvents(event_repository)
 
-        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
-            track_repository
-        )
-        get_all_tracks = GetAllTracks(track_repository)
+        get_all_tracks = GetTracksWithoutSingleDetections(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
 
         clear_all_events = ClearAllEvents(event_repository)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            BatchedTracksRunIntersect(
+            ShapelyRunIntersect(
                 MultiprocessingIntersectParallelization(),
                 get_all_tracks,
             ),
             section_repository.get_all,
             add_events,
         )
-        tracks_intersecting_sections = SimpleTracksIntersectingSections(get_all_tracks)
+        tracks_intersecting_sections = SimpleTracksIntersectingSections(
+            get_all_tracks, ShapelyIntersector()
+        )
         cut_tracks_with_section = SimpleCutTracksWithSection(
             GetTracksFromIds(track_repository),
             ShapelyMapper(),
@@ -301,7 +299,7 @@ class TestOTAnalyticsCli:
         cut_tracks = (
             SimpleCutTracksIntersectingSection(
                 GetSectionsById(section_repository),
-                get_tracks_without_single_detections,
+                get_all_tracks,
                 tracks_intersecting_sections,
                 cut_tracks_with_section,
                 add_all_tracks,
@@ -310,8 +308,8 @@ class TestOTAnalyticsCli:
             ),
         )
         create_scene_events = SimpleCreateSceneEvents(
-            get_tracks_without_single_detections,
-            SceneActionDetector(),
+            get_all_tracks,
+            SceneActionDetector(SceneEventBuilder()),
             add_events,
         )
         create_events = CreateEvents(

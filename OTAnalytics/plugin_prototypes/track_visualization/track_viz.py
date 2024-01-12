@@ -5,12 +5,12 @@ from typing import Iterable, Optional
 import numpy
 import pandas
 import seaborn
+from PIL import Image
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
-from PIL import Image
 
 from OTAnalytics.application.plotting import DynamicLayersPlotter, EntityPlotterFactory
 from OTAnalytics.application.state import (
@@ -37,8 +37,6 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackIdProvider,
     TrackImage,
-)
-from OTAnalytics.domain.track_repository import (
     TrackListObserver,
     TrackRepository,
     TrackRepositoryEvent,
@@ -279,16 +277,8 @@ class FilterById(PandasDataFrameProvider):
         data = self._other.get_data()
         if data.empty:
             return data
-
-        if not list(data.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
-            raise ValueError(
-                f"{track.TRACK_ID} and {track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to work."
-            )
-
-        ids = [track_id.id for track_id in self._filter.get_ids()]
-        intersection_of_ids = data.index.get_level_values(0).unique().intersection(ids)
-        return data.loc[intersection_of_ids]
+        ids: set[str] = {track_id.id for track_id in self._filter.get_ids()}
+        return data.loc[data[track.TRACK_ID].isin(ids)]
 
 
 class FilterByClassification(PandasDataFrameProvider):
@@ -411,16 +401,11 @@ class PandasTrackProvider(PandasDataFrameProvider):
                 ] = current_track.classification
                 prepared.append(detection_dict)
 
-        if not prepared:
-            return DataFrame()
-
-        df = DataFrame(prepared).set_index([track.TRACK_ID, track.OCCURRENCE])
-        df.index.names = [track.TRACK_ID, track.OCCURRENCE]
-
-        return self._sort_tracks(df)
+        return self._sort_tracks(DataFrame(prepared))
 
     def _sort_tracks(self, track_df: DataFrame) -> DataFrame:
-        """Sort the given dataframe by track id and occurrence,
+        """Sort the given dataframe by trackId and frame,
+        if both collumns are available.
 
         Args:
             track_df (DataFrame): dataframe of tracks
@@ -428,9 +413,10 @@ class PandasTrackProvider(PandasDataFrameProvider):
         Returns:
             DataFrame: sorted dataframe by track id and frame
         """
-        if track_df.empty:
+        if (track.TRACK_ID in track_df.columns) and (track.FRAME in track_df.columns):
+            return track_df.sort_values([track.TRACK_ID, track.FRAME])
+        else:
             return track_df
-        return track_df.sort_index()
 
 
 class PandasTracksOffsetProvider(PandasDataFrameProvider):
@@ -538,9 +524,9 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
 
     def _fetch_new_track_data(self, track_ids: list[TrackId]) -> list[Track]:
         return [
-            _track
+            track
             for t_id in track_ids
-            if (_track := self._track_repository.get_for(t_id))
+            if (track := self._track_repository.get_for(t_id))
         ]
 
     def _cache_without_existing_tracks(self, track_ids: list[TrackId]) -> DataFrame:
@@ -560,8 +546,11 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         return self._remove_tracks(track_ids)
 
     def _remove_tracks(self, track_ids: Iterable[TrackId]) -> DataFrame:
-        tracks_to_be_removed = [t.id for t in track_ids]
-        return self._cache_df.drop(tracks_to_be_removed, axis=0, errors="ignore")
+        track_id_nums = [t.id for t in track_ids]
+        cache_without_removed_tracks = self._cache_df.drop(
+            self._cache_df.index[self._cache_df[track.TRACK_ID].isin(track_id_nums)]
+        )
+        return cache_without_removed_tracks
 
     def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
         cache_without_cut_tracks = self._remove_tracks(cut_tracks_dto.original_tracks)

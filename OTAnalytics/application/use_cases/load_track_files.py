@@ -7,7 +7,7 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.domain.progress import ProgressbarBuilder
-from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
+from OTAnalytics.domain.track import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 
 

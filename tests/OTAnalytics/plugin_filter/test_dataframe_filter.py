@@ -3,9 +3,8 @@ from typing import Iterable
 from unittest.mock import Mock
 
 import pytest
-from pandas import DataFrame
+from pandas import DataFrame, Series
 
-from OTAnalytics.domain import track
 from OTAnalytics.domain.track import (
     CLASSIFICATION,
     FRAME,
@@ -40,12 +39,12 @@ def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:
     for current_track in tracks:
         detections.extend(current_track.detections)
     prepared = [detection.to_dict() for detection in detections]
-    converted = DataFrame(prepared).set_index([track.TRACK_ID, track.OCCURRENCE])
+    converted = DataFrame(prepared)
     return converted.sort_values([TRACK_ID, FRAME])
 
 
 @pytest.fixture
-def simple_track(track_builder: TrackBuilder) -> Track:
+def track(track_builder: TrackBuilder) -> Track:
     track_builder.add_occurrence(2000, 1, 2, 0, 0, 0, 0)
     track_builder.append_detection()
     track_builder.append_detection()
@@ -56,53 +55,33 @@ def simple_track(track_builder: TrackBuilder) -> Track:
 
 
 @pytest.fixture
-def track_dataframe(simple_track: Track) -> DataFrame:
-    return convert_tracks_to_dataframe([simple_track])
-
-
-class TestDataFrameStartsAtOrAfterDate:
-    def test_dataframe_with_wrong_index(self) -> None:
-        df = DataFrame()
-        df_filter = DataFrameStartsAtOrAfterDate(
-            OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
-        )
-        with pytest.raises(ValueError):
-            df_filter.test(df)
-
-
-class TestDataFrameEndsBeforeOrAtDate:
-    def test_dataframe_with_wrong_index(self) -> None:
-        df = DataFrame()
-        df_filter = DataFrameEndsBeforeOrAtDate(
-            OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
-        )
-        with pytest.raises(ValueError):
-            df_filter.test(df)
+def track_dataframe(track: Track) -> DataFrame:
+    return convert_tracks_to_dataframe([track])
 
 
 class TestDataFramePredicates:
     @pytest.mark.parametrize(
-        "predicate, expected_mask",
+        "predicate, expected_result",
         [
             (
                 DataFrameStartsAtOrAfterDate(
                     OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
                 ),
-                [True, True, True, True, True],
+                Series([True, True, True, True, True]),
             ),
             (
                 DataFrameStartsAtOrAfterDate(
                     OCCURRENCE, datetime(2000, 1, 10, tzinfo=timezone.utc)
                 ),
-                [False, False, False, False, False],
+                Series([False, False, False, False, False]),
             ),
             (
                 DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
-                [True, True, True, True, True],
+                Series([True, True, True, True, True]),
             ),
             (
                 DataFrameHasClassifications(CLASSIFICATION, {"bicycle", "truck"}),
-                [False, False, False, False, False],
+                Series([False, False, False, False, False]),
             ),
             (
                 DataFrameStartsAtOrAfterDate(
@@ -110,7 +89,7 @@ class TestDataFramePredicates:
                 ).conjunct_with(
                     DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 ),
-                [True, True, True, True, True],
+                Series([True, True, True, True, True]),
             ),
             (
                 DataFrameStartsAtOrAfterDate(
@@ -118,20 +97,17 @@ class TestDataFramePredicates:
                 ).conjunct_with(
                     DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 ),
-                [False, False, False, False, False],
+                Series([False, False, False, False, False]),
             ),
         ],
     )
     def test_predicate(
         self,
         predicate: DataFramePredicate,
-        expected_mask: list[bool],
+        expected_result: Series,
         track_dataframe: DataFrame,
     ) -> None:
-        result = predicate.test(track_dataframe)
-        expected_result = track_dataframe[expected_mask]
-
-        assert result.equals(expected_result)
+        assert predicate.test(track_dataframe).equals(expected_result)
 
 
 class TestDataFrameFilter:

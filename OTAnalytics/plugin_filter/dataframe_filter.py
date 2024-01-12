@@ -3,70 +3,63 @@ from typing import Iterable, Optional
 
 from pandas import DataFrame, Series
 
-from OTAnalytics.domain import track
 from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
 
 
-class DataFrameConjunction(Conjunction[DataFrame, DataFrame]):
+class DataFrameConjunction(Conjunction[DataFrame, Series]):
     """Represents the conjunction of two DataFrame predicates.
 
     Args:
-        first_predicate (Predicate[DataFrame, DataFrame]): first predicate to
+        first_predicate (Predicate[DataFrame, Series]): first predicate to
             conjunct with
-        second_predicate (Predicate[DataFrame, DataFrame]): second predicate to
+        second_predicate (Predicate[DataFrame, Series]): second predicate to
             conjunct with
     """
 
     def __init__(
         self,
-        first_predicate: Predicate[DataFrame, DataFrame],
-        second_predicate: Predicate[DataFrame, DataFrame],
+        first_predicate: Predicate[DataFrame, Series],
+        second_predicate: Predicate[DataFrame, Series],
     ) -> None:
         super().__init__(first_predicate, second_predicate)
 
-    def test(self, to_test: DataFrame) -> DataFrame:
-        return self._second_predicate.test(self._first_predicate.test(to_test))
+    def test(self, to_test: DataFrame) -> Series:
+        return (self._first_predicate.test(to_test)) & (
+            self._second_predicate.test(to_test)
+        )
 
     def conjunct_with(
-        self, other: Predicate[DataFrame, DataFrame]
-    ) -> Predicate[DataFrame, DataFrame]:
+        self, other: Predicate[DataFrame, Series]
+    ) -> Predicate[DataFrame, Series]:
         return DataFrameConjunction(self, other)
 
 
-class DataFramePredicate(Predicate[DataFrame, DataFrame]):
-    """Checks DataFrame entries against predicate.
-
-    Entries that do not fulfill predicate are filtered out.
-    """
-
+class DataFramePredicate(Predicate[DataFrame, Series]):
     def conjunct_with(
-        self, other: Predicate[DataFrame, DataFrame]
-    ) -> Predicate[DataFrame, DataFrame]:
+        self, other: Predicate[DataFrame, Series]
+    ) -> Predicate[DataFrame, Series]:
         return DataFrameConjunction(self, other)
 
 
-class DataFrameFilter(Filter[DataFrame, DataFrame]):
-    def __init__(self, predicate: Predicate[DataFrame, DataFrame]) -> None:
+class DataFrameFilter(Filter[DataFrame, Series]):
+    def __init__(self, predicate: Predicate[DataFrame, Series]) -> None:
         """A `DataFrame` filter.
 
         Args:
-            predicate (Predicate[DataFrame, DataFrame]): the predicate to test
+            predicate (Predicate[DataFrame, Series]): the predicate to test
                 the DataFrame against
         """
         self._predicate = predicate
 
     def apply(self, data: Iterable[DataFrame]) -> Iterable[DataFrame]:
-        return [self._predicate.test(df) for df in data]
+        return [datum[self._predicate.test(datum)] for datum in data]
 
 
-class NoOpDataFrameFilter(Filter[DataFrame, DataFrame]):
+class NoOpDataFrameFilter(Filter[DataFrame, Series]):
     """Returns the DataFrame as is without any filtering."""
 
     def apply(self, iterable: Iterable[DataFrame]) -> Iterable[DataFrame]:
         return iterable
-
-
-INDEX_LEVEL_OCCURRENCE = 1
 
 
 class DataFrameStartsAtOrAfterDate(DataFramePredicate):
@@ -85,15 +78,8 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
         self.column_name: str = column_name
         self._start_date = start_date
 
-    def test(self, to_test: DataFrame) -> DataFrame:
-        if not list(to_test.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
-            raise ValueError(
-                f"{track.TRACK_ID} and {track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to work."
-            )
-        return to_test[
-            to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) >= self._start_date
-        ]
+    def test(self, to_test: DataFrame) -> Series:
+        return to_test[self.column_name] >= self._start_date
 
 
 class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
@@ -112,15 +98,8 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
         self.column_name: str = column_name
         self._end_date = end_date
 
-    def test(self, to_test: DataFrame) -> DataFrame:
-        if not list(to_test.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
-            raise ValueError(
-                f"{track.TRACK_ID} and {track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to work."
-            )
-        return to_test[
-            to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) <= self._end_date
-        ]
+    def test(self, to_test: DataFrame) -> Series:
+        return to_test[self.column_name] <= self._end_date
 
 
 class DataFrameHasClassifications(DataFramePredicate):
@@ -139,16 +118,16 @@ class DataFrameHasClassifications(DataFramePredicate):
         self._column_name = column_name
         self._classifications = classifications
 
-    def test(self, to_test: DataFrame) -> DataFrame:
-        return to_test[to_test[self._column_name].isin(self._classifications)]
+    def test(self, to_test: DataFrame) -> Series:
+        return to_test[self._column_name].isin(self._classifications)
 
 
-class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
+class DataFrameFilterBuilder(FilterBuilder[DataFrame, Series]):
     """A builder used to build a `DataFrameFilter`."""
 
     def __init__(self) -> None:
         super().__init__()
-        self._complex_predicate: Optional[Predicate[DataFrame, DataFrame]] = None
+        self._complex_predicate: Optional[Predicate[DataFrame, Series]] = None
         self._classification_column: Optional[str] = None
         self._occurrence_column: Optional[str] = None
 

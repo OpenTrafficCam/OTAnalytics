@@ -38,12 +38,12 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackClassificationCalculator,
+    TrackDataset,
     TrackHasNoDetectionError,
     TrackId,
     TrackImage,
+    TrackRepository,
 )
-from OTAnalytics.domain.track_dataset import TrackDataset
-from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,

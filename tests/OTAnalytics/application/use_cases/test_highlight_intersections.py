@@ -30,8 +30,13 @@ from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Detection, Track, TrackId, TrackIdProvider
-from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.domain.track import (
+    Detection,
+    Track,
+    TrackId,
+    TrackIdProvider,
+    TrackRepository,
+)
 
 
 @pytest.fixture

@@ -2,11 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
-from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
-)
+from OTAnalytics.domain.track import TrackRepository
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
@@ -24,11 +20,6 @@ from tests.conftest import TrackBuilder, assert_equal_track_properties
 @pytest.fixture
 def track_builder_setup_with_sample_data(track_builder: TrackBuilder) -> TrackBuilder:
     return append_sample_data(track_builder, frame_offset=0, microsecond_offset=0)
-
-
-@pytest.fixture
-def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
-    return PygeosTrackGeometryDataset.from_track_dataset
 
 
 def append_sample_data(
@@ -68,10 +59,9 @@ def mocked_track_repository() -> Mock:
 
 class TestPandasDetectionParser:
     @pytest.fixture
-    def parser(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> DetectionParser:
+    def parser(self) -> DetectionParser:
         return PandasDetectionParser(
             PandasByMaxConfidence(),
-            track_geometry_factory,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
 
@@ -79,7 +69,6 @@ class TestPandasDetectionParser:
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
         parser: DetectionParser,
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
         detections: list[
             dict
@@ -95,7 +84,7 @@ class TestPandasDetectionParser:
         ).as_list()
 
         expected_sorted = PandasTrackDataset.from_list(
-            [track_builder_setup_with_sample_data.build_track()], track_geometry_factory
+            [track_builder_setup_with_sample_data.build_track()]
         ).as_list()
 
         for sorted, expected in zip(result_sorted_input, expected_sorted):
@@ -115,11 +104,8 @@ class TestPandasDetectionParser:
         mocked_track_repository: Mock,
         track_builder_setup_with_sample_data: TrackBuilder,
         track_length_limit: TrackLengthLimit,
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
-        parser = PandasDetectionParser(
-            PandasByMaxConfidence(), track_geometry_factory, track_length_limit
-        )
+        parser = PandasDetectionParser(PandasByMaxConfidence(), track_length_limit)
         detections: list[
             dict
         ] = track_builder_setup_with_sample_data.build_serialized_detections()

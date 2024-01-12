@@ -15,17 +15,19 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
     TrackRepositorySize,
 )
-from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
-from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
+from OTAnalytics.domain.track import (
+    Track,
+    TrackDataset,
+    TrackFileRepository,
+    TrackId,
+    TrackRepository,
+)
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 
 
 @pytest.fixture
 def tracks() -> TrackDataset:
-    tracks = [Mock(spec=Track), Mock(spec=Track)]
-    dataset = MagicMock(spec=TrackDataset)
-    dataset.__iter__.return_value = tracks
-    return dataset
+    return PythonTrackDataset.from_list([Mock(spec=Track), Mock(spec=Track)])
 
 
 @pytest.fixture
@@ -49,29 +51,11 @@ def track_file_repository(track_files: list[Mock]) -> Mock:
 
 
 class TestGetAllTracks:
-    def test_get_as_dataset(self) -> None:
-        expected_dataset = Mock()
-        track_repository = Mock()
-        track_repository.get_all.return_value = expected_dataset
-
-        get_tracks = GetAllTracks(track_repository)
-        result_dataset = get_tracks.as_dataset()
-        assert result_dataset == expected_dataset
+    def test_get_all_tracks(self, track_repository: Mock, tracks: TrackDataset) -> None:
+        get_all_tracks = GetAllTracks(track_repository)
+        result_tracks = get_all_tracks()
+        assert result_tracks == tracks
         track_repository.get_all.assert_called_once()
-
-    def test_get_as_list(self) -> None:
-        first_track = Mock()
-        second_track = Mock()
-        track_dataset = Mock()
-        track_dataset.as_list.return_value = [first_track, second_track]
-        track_repository = Mock()
-        track_repository.get_all.return_value = track_dataset
-
-        get_tracks = GetAllTracks(track_repository)
-        all_tracks = get_tracks.as_list()
-        assert all_tracks == [first_track, second_track]
-        track_repository.get_all.assert_called_once()
-        track_dataset.as_list.assert_called_once()
 
 
 class TestGetAllTrackIds:

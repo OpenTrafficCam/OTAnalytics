@@ -39,7 +39,7 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
-from OTAnalytics.domain.track_repository import TrackRepositoryEvent
+from OTAnalytics.domain.track import TrackRepositoryEvent
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_CSV_FORMAT_NAME,

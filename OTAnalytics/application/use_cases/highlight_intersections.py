@@ -9,8 +9,7 @@ from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
-from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider, TrackRepository
 
 
 class IntersectionRepository(ABC):
