@@ -136,6 +136,10 @@ class TrackDataset(ABC):
     def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    def cut_with_sections(self, sections: Iterable[Section]) -> "TrackDataset":
+        raise NotImplementedError
+
 
 class TrackGeometryDataset(ABC):
     """Dataset containing track geometries.

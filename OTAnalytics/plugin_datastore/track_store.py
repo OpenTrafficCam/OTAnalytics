@@ -472,6 +472,9 @@ class PandasTrackDataset(TrackDataset):
             )
             consumer(event)
 
+    def cut_with_sections(self, sections: Iterable[Section]) -> TrackDataset:
+        raise NotImplementedError
+
 
 def _assign_track_classification(
     data: DataFrame, calculator: PandasTrackClassificationCalculator
