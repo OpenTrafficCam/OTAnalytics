@@ -37,6 +37,7 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CachedPandasTrackProvider,
     ColorPaletteProvider,
     EventToFlowResolver,
     FilterByClassification,
@@ -369,18 +370,18 @@ class VisualizationBuilder:
         self, progressbar: ProgressbarBuilder
     ) -> PandasTrackProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        return PandasTrackProvider(
-            self._track_repository,
-            self._track_view_state,
-            dataframe_filter_builder,
-            progressbar,
-        )
-        # return CachedPandasTrackProvider(
+        # return PandasTrackProvider(
         #     self._track_repository,
         #     self._track_view_state,
         #     dataframe_filter_builder,
         #     progressbar,
         # )
+        return CachedPandasTrackProvider(
+            self._track_repository,
+            self._track_view_state,
+            dataframe_filter_builder,
+            progressbar,
+        )
 
     def _wrap_pandas_track_offset_provider(
         self, other: PandasDataFrameProvider
