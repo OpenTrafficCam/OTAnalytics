@@ -29,7 +29,8 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionRepository,
 )
-from OTAnalytics.domain.track import TrackFileRepository, TrackImage, TrackRepository
+from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import SimpleVideo, Video, VideoReader, VideoRepository
 

@@ -28,8 +28,8 @@ from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
     TrackId,
     TrackImage,
-    TrackRepository,
 )
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
@@ -61,7 +61,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     TrackLengthLimit,
     Version,
 )
-from tests.conftest import TrackBuilder
+from tests.conftest import TrackBuilder, assert_track_datasets_equal
 
 
 @pytest.fixture
@@ -222,23 +222,33 @@ class TestOttrkParser:
         # TODO What is the expected result?
         ottrk_parser.parse(ottrk_path)
 
+    @pytest.mark.parametrize(
+        "version,track_id", [("1.0", "legacy#legacy#1"), ("1.1", "1#1#1")]
+    )
     def test_parse_ottrk_sample(
         self,
         test_data_tmp_dir: Path,
         track_builder_setup_with_sample_data: TrackBuilder,
         ottrk_parser: OttrkParser,
+        version: str,
+        track_id: str,
     ) -> None:
-        track_builder_setup_with_sample_data.set_ottrk_version("1.0")
+        track_builder_setup_with_sample_data.set_ottrk_version(version)
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
         write_json_bz2(ottrk_data, ottrk_file)
         parse_result = ottrk_parser.parse(ottrk_file)
 
-        expected_track = track_builder_setup_with_sample_data.build_track()
+        example_track_builder = TrackBuilder()
+        example_track_builder.add_track_id(track_id)
+        append_sample_data(example_track_builder)
+        expected_track = example_track_builder.build_track()
         expected_detection_classes = frozenset(
             ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
         )
-        assert parse_result.tracks == PythonTrackDataset.from_list([expected_track])
+        assert_track_datasets_equal(
+            parse_result.tracks, PythonTrackDataset.from_list([expected_track])
+        )
         assert (
             parse_result.detection_metadata.detection_classes
             == expected_detection_classes
@@ -319,9 +329,8 @@ class TestPythonDetectionParser:
         expected_sorted = PythonTrackDataset.from_list(
             [track_builder_setup_with_sample_data.build_track()]
         )
-
-        assert expected_sorted == result_sorted_input
-        assert expected_sorted == result_unsorted_input
+        assert_track_datasets_equal(result_sorted_input, expected_sorted)
+        assert_track_datasets_equal(result_unsorted_input, expected_sorted)
 
     def test_parse_tracks_merge_with_existing(
         self,
@@ -358,7 +367,7 @@ class TestPythonDetectionParser:
 
         expected_sorted = PythonTrackDataset.from_list([merged_track])
 
-        assert expected_sorted == result_sorted_input
+        assert_track_datasets_equal(result_sorted_input, expected_sorted)
 
     @pytest.mark.parametrize(
         "track_length_limit",

@@ -14,21 +14,24 @@ from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.application.use_cases.track_repository import (
+    GetAllTracks,
     GetTracksWithoutSingleDetections,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import TrackRepository
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
+)
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
-from OTAnalytics.plugin_intersect.shapely.intersect import ShapelyIntersector
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
@@ -70,10 +73,8 @@ def _build_tracks_intersecting_sections(
     track_repository: TrackRepository,
 ) -> TracksIntersectingSections:
     starter = ApplicationStarter()
-    get_all_tracks = GetTracksWithoutSingleDetections(track_repository)
-    return starter._create_tracks_intersecting_sections(
-        get_all_tracks, ShapelyIntersector()
-    )
+    get_all_tracks = GetAllTracks(track_repository)
+    return starter._create_tracks_intersecting_sections(get_all_tracks)
 
 
 def _build_create_events(
@@ -83,12 +84,16 @@ def _build_create_events(
 ) -> CreateEvents:
     starter = ApplicationStarter()
     clear_all_events = ClearAllEvents(event_repository)
-    get_tracks = GetTracksWithoutSingleDetections(track_repository)
+    get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+        track_repository
+    )
+    get_tracks = GetAllTracks(track_repository)
     add_events = AddEvents(event_repository)
     create_events = starter._create_use_case_create_events(
         section_repository.get_all,
         clear_all_events,
         get_tracks,
+        get_tracks_without_single_detections,
         add_events,
         num_processes=NUM_PROCESSES,
     )
@@ -146,7 +151,9 @@ def python_track_repository() -> TrackRepository:
 
 @pytest.fixture
 def pandas_track_repository() -> TrackRepository:
-    return TrackRepository(PandasTrackDataset())
+    return TrackRepository(
+        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+    )
 
 
 @pytest.fixture
@@ -178,7 +185,9 @@ def python_track_parser(python_track_repository: TrackRepository) -> TrackParser
 @pytest.fixture
 def pandas_track_parser() -> TrackParser:
     calculator = PandasByMaxConfidence()
-    detection_parser = PandasDetectionParser(calculator)
+    detection_parser = PandasDetectionParser(
+        calculator, PygeosTrackGeometryDataset.from_track_dataset
+    )
     return OttrkParser(detection_parser)
 
 
@@ -214,8 +223,14 @@ def python_track_repo_2hours(
 def pandas_track_repo_15min(
     track_file_15min: Path,
 ) -> tuple[TrackRepository, DetectionMetadata]:
-    track_repository = TrackRepository(PandasTrackDataset())
-    track_parser = OttrkParser(PandasDetectionParser(PandasByMaxConfidence()))
+    track_repository = TrackRepository(
+        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+    )
+    track_parser = OttrkParser(
+        PandasDetectionParser(
+            PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
+        )
+    )
     detection_metadata = _fill_track_repository(
         track_parser, track_repository, [track_file_15min]
     )
@@ -226,8 +241,14 @@ def pandas_track_repo_15min(
 def pandas_track_repo_2hours(
     track_files_2hours: list[Path],
 ) -> tuple[TrackRepository, DetectionMetadata]:
-    track_repository = TrackRepository(PandasTrackDataset())
-    track_parser = OttrkParser(PandasDetectionParser(PandasByMaxConfidence()))
+    track_repository = TrackRepository(
+        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+    )
+    track_parser = OttrkParser(
+        PandasDetectionParser(
+            PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
+        )
+    )
     detection_metadata = _fill_track_repository(
         track_parser, track_repository, track_files_2hours
     )
@@ -252,11 +273,11 @@ class TestBenchmarkTrackParser:
     def test_load_15min(
         self,
         benchmark: BenchmarkFixture,
-        python_track_parser: TrackParser,
+        pandas_track_parser: TrackParser,
         track_file_15min: Path,
     ) -> None:
         benchmark.pedantic(
-            python_track_parser.parse,
+            pandas_track_parser.parse,
             args=(track_file_15min,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
@@ -266,7 +287,7 @@ class TestBenchmarkTrackParser:
     def test_load_2hours(
         self,
         benchmark: BenchmarkFixture,
-        python_track_parser: TrackParser,
+        pandas_track_parser: TrackParser,
         track_files_2hours: list[Path],
     ) -> None:
         def _parse_2hours(parser: TrackParser, ottrk_files: list[Path]) -> None:
@@ -276,7 +297,7 @@ class TestBenchmarkTrackParser:
         benchmark.pedantic(
             _parse_2hours,
             args=(
-                python_track_parser,
+                pandas_track_parser,
                 track_files_2hours,
             ),
             rounds=self.ROUNDS,
@@ -330,10 +351,10 @@ class TestBenchmarkTracksIntersectingSections:
     def test_15min(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
     ) -> None:
-        track_repository, _ = python_track_repo_15min
+        track_repository, _ = pandas_track_repo_15min
         section_repository, flow_repository = section_flow_repo_setup
         use_case = _build_tracks_intersecting_sections(track_repository)
 
@@ -348,13 +369,12 @@ class TestBenchmarkTracksIntersectingSections:
     def test_2hours(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
     ) -> None:
-        track_repository, _ = python_track_repo_2hours
+        track_repository, _ = pandas_track_repo_2hours
         section_repository, flow_repository = section_flow_repo_setup
         use_case = _build_tracks_intersecting_sections(track_repository)
-
         benchmark.pedantic(
             use_case,
             args=(section_repository.get_all(),),
@@ -412,12 +432,12 @@ class TestBenchmarkCreateEvents:
     def test_15min(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
         event_repository: EventRepository,
         clear_events: ClearAllEvents,
     ) -> None:
-        track_repository, _ = python_track_repo_15min
+        track_repository, _ = pandas_track_repo_15min
         section_repository, flow_repository = section_flow_repo_setup
         create_events = _build_create_events(
             track_repository, section_repository, event_repository
@@ -433,12 +453,12 @@ class TestBenchmarkCreateEvents:
     def test_2hours(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
         event_repository: EventRepository,
         clear_events: ClearAllEvents,
     ) -> None:
-        track_repository, _ = python_track_repo_2hours
+        track_repository, _ = pandas_track_repo_2hours
         section_repository, flow_repository = section_flow_repo_setup
         create_events = _build_create_events(
             track_repository, section_repository, event_repository

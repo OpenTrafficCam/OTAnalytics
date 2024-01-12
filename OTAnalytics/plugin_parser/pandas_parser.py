@@ -5,7 +5,8 @@ from pandas import DataFrame
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import TrackDataset, TrackId
+from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.plugin_datastore.track_store import (
     PandasTrackClassificationCalculator,
     PandasTrackDataset,
@@ -23,9 +24,11 @@ class PandasDetectionParser(DetectionParser):
     def __init__(
         self,
         calculator: PandasTrackClassificationCalculator,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
     ) -> None:
         self._calculator = calculator
+        self._track_geometry_factory = track_geometry_factory
         self._track_length_limit = track_length_limit
 
     def parse_tracks(
@@ -86,10 +89,13 @@ class PandasDetectionParser(DetectionParser):
                 f"Track ids: {too_long_track_ids}"
             )
 
-        tracks_to_remain = data.loc[
-            data[track.TRACK_ID].isin(track_ids_to_remain)
-        ].copy()
-        tracks_to_remain.sort_values(
-            by=[track.TRACK_ID, track.OCCURRENCE], inplace=True
+        tracks_to_remain = (
+            data.loc[data[track.TRACK_ID].isin(track_ids_to_remain)]
+            .copy()
+            .set_index([track.TRACK_ID, track.OCCURRENCE])
         )
-        return PandasTrackDataset.from_dataframe(tracks_to_remain, self._calculator)
+        tracks_to_remain.index.names = [track.TRACK_ID, track.OCCURRENCE]
+        tracks_to_remain = tracks_to_remain.sort_index()
+        return PandasTrackDataset.from_dataframe(
+            tracks_to_remain, self._track_geometry_factory, calculator=self._calculator
+        )
