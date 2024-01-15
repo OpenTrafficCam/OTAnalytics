@@ -472,7 +472,9 @@ class PandasTrackDataset(TrackDataset):
             )
             consumer(event)
 
-    def cut_with_sections(self, sections: Iterable[Section]) -> TrackDataset:
+    def cut_with_section(
+        self, section: Section, offset: RelativeOffsetCoordinate
+    ) -> TrackDataset:
         raise NotImplementedError
 
 

@@ -476,5 +476,7 @@ class PythonTrackDataset(TrackDataset):
             video_name=track.last_detection.video_name,
         )
 
-    def cut_with_sections(self, sections: Iterable[Section]) -> TrackDataset:
+    def cut_with_section(
+        self, section: Section, offset: RelativeOffsetCoordinate
+    ) -> TrackDataset:
         raise NotImplementedError
