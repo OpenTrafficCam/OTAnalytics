@@ -8,10 +8,12 @@ from pandas import DataFrame, Series
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import (
+    Coordinate,
     ImageCoordinate,
     RelativeOffsetCoordinate,
     calculate_direction_vector,
 )
+from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
@@ -33,16 +35,49 @@ from OTAnalytics.plugin_datastore.track_store import (
     _convert_tracks,
     extract_hostname,
 )
-from tests.OTAnalytics.plugin_datastore.conftest import (
-    assert_track_geometry_dataset_add_all_called_correctly,
-    create_mock_geometry_dataset,
-)
 from tests.conftest import (
     TrackBuilder,
     assert_equal_detection_properties,
     assert_equal_track_properties,
     assert_track_datasets_equal,
+    create_track,
 )
+from tests.OTAnalytics.plugin_datastore.conftest import (
+    assert_track_geometry_dataset_add_all_called_correctly,
+    create_mock_geometry_dataset,
+)
+
+
+@pytest.fixture
+def cutting_section_test_case() -> tuple[LineSection, Track, list[Track]]:
+    original_track = create_track(
+        "1",
+        [(1, 1), (2, 1), (3, 1), (4, 1), (4, 2), (3, 2), (2, 2), (1, 2)],
+        start_second=1,
+    )
+    expected_track_1 = create_track(
+        "1_1",
+        [
+            (1, 1),
+            (2, 1),
+        ],
+        start_second=1,
+    )
+    expected_track_2 = create_track(
+        "1_2", [(3, 1), (4, 1), (4, 2), (3, 2)], start_second=3
+    )
+    expected_track_3 = create_track("1_3", [(2, 2), (2, 1)], start_second=7)
+
+    _id = "#cut_1"
+    cutting_section = LineSection(
+        SectionId(_id), _id, {}, {}, [Coordinate(2.5, 0), Coordinate(2.5, 3)]
+    )
+
+    return (
+        cutting_section,
+        original_track,
+        [expected_track_1, expected_track_2, expected_track_3],
+    )
 
 
 class TestPandasDetection:
@@ -474,3 +509,20 @@ class TestPandasTrackDataset:
             ),
             video_name=track.last_detection.video_name,
         )
+
+    def test_cut_with_section(
+        self,
+        cutting_section_test_case: tuple[LineSection, Track, list[Track]],
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        cutting_section, input_track, expected_tracks = cutting_section_test_case
+        expected_dataset = PandasTrackDataset.from_list(
+            expected_tracks, track_geometry_factory
+        )
+
+        dataset = PandasTrackDataset.from_list([input_track], track_geometry_factory)
+        cut_track_dataset = dataset.cut_with_section(
+            cutting_section, RelativeOffsetCoordinate(0, 0)
+        )
+
+        assert_track_datasets_equal(cut_track_dataset, expected_dataset)
