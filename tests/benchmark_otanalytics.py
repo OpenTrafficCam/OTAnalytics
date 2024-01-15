@@ -305,43 +305,6 @@ class TestBenchmarkTrackParser:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    @pytest.mark.skip
-    def test_load_15min_with_pandas_parser(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_parser: TrackParser,
-        track_file_15min: Path,
-    ) -> None:
-        benchmark.pedantic(
-            pandas_track_parser.parse,
-            args=(track_file_15min,),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
-    @pytest.mark.skip
-    def test_load_2hour_with_pandas_parser(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_parser: TrackParser,
-        track_files_2hours: list[Path],
-    ) -> None:
-        def _parse_2hours(parser: TrackParser, ottrk_files: list[Path]) -> None:
-            for ottrk_file in ottrk_files:
-                parser.parse(ottrk_file)
-
-        benchmark.pedantic(
-            _parse_2hours,
-            args=(
-                pandas_track_parser,
-                track_files_2hours,
-            ),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
 
 class TestBenchmarkTracksIntersectingSections:
     ROUNDS = 1
@@ -383,46 +346,6 @@ class TestBenchmarkTracksIntersectingSections:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    @pytest.mark.skip
-    def test_pandas_15min(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-    ) -> None:
-        track_repository, _ = pandas_track_repo_15min
-        section_repository, flow_repository = section_flow_repo_setup
-        use_case = _build_tracks_intersecting_sections(track_repository)
-
-        use_case(section_repository.get_all())
-
-        benchmark.pedantic(
-            use_case,
-            args=(section_repository.get_all(),),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
-    @pytest.mark.skip
-    def test_pandas_2hours(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-    ) -> None:
-        track_repository, _ = pandas_track_repo_2hours
-        section_repository, flow_repository = section_flow_repo_setup
-        use_case = _build_tracks_intersecting_sections(track_repository)
-
-        benchmark.pedantic(
-            use_case,
-            args=(section_repository.get_all(),),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
 
 class TestBenchmarkCreateEvents:
     ROUNDS = 1
@@ -451,50 +374,6 @@ class TestBenchmarkCreateEvents:
         )
 
     def test_2hours(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-        event_repository: EventRepository,
-        clear_events: ClearAllEvents,
-    ) -> None:
-        track_repository, _ = pandas_track_repo_2hours
-        section_repository, flow_repository = section_flow_repo_setup
-        create_events = _build_create_events(
-            track_repository, section_repository, event_repository
-        )
-        benchmark.pedantic(
-            create_events,
-            setup=clear_events,
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
-    @pytest.mark.skip
-    def test_pandas_15min(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-        event_repository: EventRepository,
-        clear_events: ClearAllEvents,
-    ) -> None:
-        track_repository, _ = pandas_track_repo_15min
-        section_repository, flow_repository = section_flow_repo_setup
-        create_events = _build_create_events(
-            track_repository, section_repository, event_repository
-        )
-        benchmark.pedantic(
-            create_events,
-            setup=clear_events,
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
-    @pytest.mark.skip
-    def test_pandas_2hours(
         self,
         benchmark: BenchmarkFixture,
         pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
