@@ -64,7 +64,7 @@ def cutting_section_test_case() -> tuple[LineSection, list[Track], list[Track]]:
         1,
     )
     expected_first_track_2 = create_track("1_2", [(3, 1), (4, 1), (4, 2), (3, 2)], 3)
-    expected_first_track_3 = create_track("1_3", [(2, 2), (2, 1)], 7)
+    expected_first_track_3 = create_track("1_3", [(2, 2), (1, 2)], 7)
 
     second_track = create_track("2", [(1, 1), (2, 1), (3, 1)], 1)
     expected_second_track_1 = create_track("2_1", [(1, 1), (2, 1)], 1)
