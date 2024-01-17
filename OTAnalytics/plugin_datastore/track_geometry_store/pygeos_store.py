@@ -335,7 +335,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, PygeosTrackGeometryDataset):
             return False
-        return self.offset == other.offset and self._dataset.equals(
+        return self.offset == other.offset and self._dataset[COLUMNS].equals(
             other._dataset[COLUMNS]
         )
 
