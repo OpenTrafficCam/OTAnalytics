@@ -70,6 +70,8 @@ def cutting_section_test_case() -> tuple[LineSection, list[Track], list[Track]]:
     expected_second_track_1 = create_track("2_1", [(1, 1), (2, 1)], 1)
     expected_second_track_2 = create_track("2_2", [(3, 1)], 3)
 
+    third_track = create_track("3", [(10, 10), (20, 10)], 10)
+
     _id = "#cut_1"
     cutting_section = LineSection(
         SectionId(_id), _id, {}, {}, [Coordinate(2.5, 0), Coordinate(2.5, 3)]
@@ -77,13 +79,14 @@ def cutting_section_test_case() -> tuple[LineSection, list[Track], list[Track]]:
 
     return (
         cutting_section,
-        [first_track, second_track],
+        [first_track, second_track, third_track],
         [
             expected_first_track_1,
             expected_first_track_2,
             expected_first_track_3,
             expected_second_track_1,
             expected_second_track_2,
+            third_track,
         ],
     )
 
@@ -544,5 +547,4 @@ class TestPandasTrackDataset:
         actual_geometry_dataset = cut_track_dataset._geometry_datasets[
             RelativeOffsetCoordinate(0, 0)
         ]
-
         assert actual_geometry_dataset == expected_geometry_dataset
