@@ -494,7 +494,11 @@ class PandasTrackDataset(TrackDataset):
             index_as_df[[track.TRACK_ID, track.OCCURRENCE]]
         )
         cut_track_ids = list(
-            new_index.difference(self._dataset.index).get_level_values(LEVEL_TRACK_ID)
+            set(
+                new_index.difference(self._dataset.index).get_level_values(
+                    LEVEL_TRACK_ID
+                )
+            )
         )
         updated_dataset = self._dataset.copy()
         updated_dataset.index = new_index
