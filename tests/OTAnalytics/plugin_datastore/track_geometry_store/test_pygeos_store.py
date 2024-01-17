@@ -669,6 +669,24 @@ class TestPygeosTrackGeometryDataset:
         assert not result.track_ids
         assert result.empty
 
+    def test_equals(self, first_track: Track, second_track: Track) -> None:
+        first_track_dataset: TrackGeometryDataset = PygeosTrackGeometryDataset(
+            RelativeOffsetCoordinate(0, 0)
+        ).add_all([first_track])
+        first_track_dataset_different_offset: TrackGeometryDataset = (
+            PygeosTrackGeometryDataset(RelativeOffsetCoordinate(1, 1)).add_all(
+                [first_track]
+            )
+        )
+        second_track_dataset: TrackGeometryDataset = PygeosTrackGeometryDataset(
+            RelativeOffsetCoordinate(0, 0)
+        ).add_all([second_track])
+
+        assert first_track_dataset != second_track_dataset
+        assert first_track_dataset == first_track_dataset
+        assert first_track_dataset != first_track_dataset_different_offset
+        assert first_track_dataset != 5
+
 
 class TestProfiling:
     ROUNDS = 1

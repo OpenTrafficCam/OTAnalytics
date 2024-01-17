@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Iterable, Iterator, Optional, Sequence
+from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
@@ -261,6 +261,10 @@ class TrackGeometryDataset(ABC):
             dict[TrackId, list[tuple[SectionId, list[bool]]]]: boolean mask
                 of track coordinates contained by given sections.
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def __eq__(self, other: Any) -> bool:
         raise NotImplementedError
 
 
