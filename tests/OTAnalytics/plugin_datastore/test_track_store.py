@@ -529,8 +529,20 @@ class TestPandasTrackDataset:
         )
 
         dataset = PandasTrackDataset.from_list(input_tracks, track_geometry_factory)
-        cut_track_dataset = dataset.cut_with_section(
-            cutting_section, RelativeOffsetCoordinate(0, 0)
+        cut_track_dataset = cast(
+            PandasTrackDataset,
+            dataset.cut_with_section(cutting_section, RelativeOffsetCoordinate(0, 0)),
+        )
+        expected_geometry_dataset = cast(
+            PygeosTrackGeometryDataset,
+            PygeosTrackGeometryDataset(RelativeOffsetCoordinate(0, 0)).add_all(
+                expected_tracks
+            ),
         )
 
         assert_track_datasets_equal(cut_track_dataset, expected_dataset)
+        actual_geometry_dataset = cut_track_dataset._geometry_datasets[
+            RelativeOffsetCoordinate(0, 0)
+        ]
+
+        assert actual_geometry_dataset == expected_geometry_dataset
