@@ -81,9 +81,10 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--count-interval",
+            "--count-intervals",
+            nargs="+",
             type=int,
-            help="Count interval in minutes.",
+            help="Count intervals in minutes.",
             required=False,
         )
         self._parser.add_argument(
@@ -123,7 +124,7 @@ class ArgparseCliParser(CliParser):
             save_name=args.save_name,
             save_suffix=args.save_suffix,
             event_formats=args.event_formats,
-            count_interval=args.count_interval,
+            count_intervals=args.count_intervals,
             num_processes=args.num_processes,
             log_file=args.logfile,
         )

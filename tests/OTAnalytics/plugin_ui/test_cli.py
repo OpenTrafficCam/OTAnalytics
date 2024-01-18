@@ -200,8 +200,7 @@ def create_run_config(
     save_name: str = "",
     save_suffix: str = "",
     event_formats: list[str] | None = None,
-    count_intervals: int = 1,
-    # count_intervals: list[int] | None = None,
+    count_intervals: list[int] | None = None,
     num_processes: int = DEFAULT_NUM_PROCESSES,
     logfile: str = str(DEFAULT_LOG_FILE),
     logfile_overwrite: bool = False,
@@ -211,10 +210,11 @@ def create_run_config(
     else:
         _event_formats = [DEFAULT_EVENTLIST_FILE_TYPE]
 
-    # if count_intervals is None:
-    #     _count_intervals = {1}
-    # else:
-    #     _count_intervals = count_intervals
+    if count_intervals:
+        _count_intervals = count_intervals
+    else:
+        _count_intervals = [1]
+
     if track_files is None:
         track_files = [TRACK_FILE]
     cli_args = CliArguments(
@@ -228,7 +228,7 @@ def create_run_config(
         save_name,
         save_suffix,
         _event_formats,
-        count_intervals,
+        _count_intervals,
         num_processes,
         logfile,
     )
@@ -480,7 +480,7 @@ class TestOTAnalyticsCli:
     ) -> None:
         save_name = test_data_tmp_dir / "stem"
         save_suffix = "suffix"
-        count_intervals = 1
+        count_interval = 1
         run_config = create_run_config(
             flow_parser,
             track_files=[str(temp_ottrk)],
@@ -488,7 +488,7 @@ class TestOTAnalyticsCli:
             config_file="",
             save_name=str(save_name),
             save_suffix=save_suffix,
-            count_intervals=count_intervals,
+            count_intervals=[count_interval],
         )
         cli = OTAnalyticsCli(run_config, **cli_dependencies)
         cli.start()
@@ -496,7 +496,7 @@ class TestOTAnalyticsCli:
             f"stem_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
         )
         expected_counts_file = save_name.with_name(
-            f"stem_{save_suffix}.counts_{count_intervals}s.{DEFAULT_COUNTS_FILE_TYPE}"
+            f"stem_{save_suffix}.counts_{count_interval}s.{DEFAULT_COUNTS_FILE_TYPE}"
         )
 
         assert expected_event_list_file.exists()

@@ -125,8 +125,8 @@ class RunConfiguration:
 
     @property
     def count_intervals(self) -> set[int]:
-        if self._cli_args.count_interval:
-            return {self._cli_args.count_interval}
+        if self._cli_args.count_intervals:
+            return set(self._cli_args.count_intervals)
         if self._otconfig:
             return self._otconfig.analysis.export_config.count_intervals
         return {DEFAULT_COUNTING_INTERVAL_IN_MINUTES}

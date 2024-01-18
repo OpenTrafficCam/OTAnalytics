@@ -29,7 +29,7 @@ def cli_args_otconfig() -> CliArguments:
         save_name="cli_save_name",
         save_suffix="cli_save_suffix",
         event_formats=["csv"],
-        count_interval=6,
+        count_intervals=[6],
         num_processes=8,
         log_file="path/to/cli_log",
         logfile_overwrite=True,
@@ -301,8 +301,8 @@ class TestRunConfiguration:
         }
 
     def test_count_intervals(self, cli_args: Mock, otconfig: Mock) -> None:
-        cli_count_intervals = 1
-        cli_args.count_interval = cli_count_intervals
+        cli_count_intervals = [1, 5]
+        cli_args.count_intervals = cli_count_intervals
 
         analysis = Mock()
         export_config = Mock()
@@ -311,8 +311,10 @@ class TestRunConfiguration:
         analysis.export_config = export_config
         otconfig.analysis = analysis
 
-        assert build_config(cli_args, otconfig).count_intervals == {cli_count_intervals}
-        cli_args.count_interval = None
+        assert build_config(cli_args, otconfig).count_intervals == set(
+            cli_count_intervals
+        )
+        cli_args.count_intervals = None
         assert build_config(cli_args, otconfig).count_intervals == cfg_count_intervals
         assert build_config(cli_args, None).count_intervals == {
             DEFAULT_COUNTING_INTERVAL_IN_MINUTES

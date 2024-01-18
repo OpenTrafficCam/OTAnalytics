@@ -18,7 +18,7 @@ class CliArguments:
     save_name: str | None = None
     save_suffix: str | None = None
     event_formats: list[str] | None = None
-    count_interval: int | None = None
+    count_intervals: list[int] | None = None
     num_processes: int | None = None
     log_file: str | None = None
 

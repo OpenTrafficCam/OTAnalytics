@@ -35,7 +35,8 @@ class TestArgparseCliParser:
             "--event-format",
             csv_format,
             otevents_format,
-            "--count-interval",
+            "--count-intervals",
+            "1",
             "15",
             "--num-processes",
             "3",
@@ -57,7 +58,7 @@ class TestArgparseCliParser:
                 save_name,
                 save_suffix,
                 [csv_format, otevents_format],
-                15,
+                [1, 15],
                 3,
                 log_file,
             )
