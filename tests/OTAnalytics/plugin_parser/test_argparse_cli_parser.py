@@ -14,7 +14,8 @@ class TestArgparseCliParser:
         save_name = "stem"
         save_suffix = "suffix"
         log_file = "path/to/my_log.log"
-        event_format = "csv"
+        csv_format = "csv"
+        otevents_format = "otevents"
         config_file = "path/to/config.otconfig"
 
         cli_args: list[str] = [
@@ -32,7 +33,8 @@ class TestArgparseCliParser:
             "--save-suffix",
             save_suffix,
             "--event-format",
-            event_format,
+            csv_format,
+            otevents_format,
             "--count-interval",
             "15",
             "--num-processes",
@@ -54,7 +56,7 @@ class TestArgparseCliParser:
                 None,
                 save_name,
                 save_suffix,
-                event_format,
+                [csv_format, otevents_format],
                 15,
                 3,
                 log_file,

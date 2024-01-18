@@ -117,7 +117,7 @@ class RunConfiguration:
     @property
     def event_formats(self) -> set[str]:
         if self._cli_args.event_formats:
-            return {self._cli_args.event_formats}
+            return set(self._cli_args.event_formats)
         if self._otconfig:
             if event_formats := self._otconfig.analysis.export_config.event_formats:
                 return event_formats

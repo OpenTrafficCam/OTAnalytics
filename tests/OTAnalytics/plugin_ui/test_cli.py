@@ -199,19 +199,18 @@ def create_run_config(
     save_dir: str = "",
     save_name: str = "",
     save_suffix: str = "",
-    event_formats: str = DEFAULT_EVENTLIST_FILE_TYPE,
+    event_formats: list[str] | None = None,
     count_intervals: int = 1,
-    # event_formats: list[str] | None = None,
     # count_intervals: list[int] | None = None,
     num_processes: int = DEFAULT_NUM_PROCESSES,
     logfile: str = str(DEFAULT_LOG_FILE),
     logfile_overwrite: bool = False,
 ) -> RunConfiguration:
-    # if event_formats is None:
-    #     _event_formats = {DEFAULT_EVENTLIST_FILE_TYPE}
-    # else:
-    #     _event_formats = event_formats
-    #
+    if event_formats:
+        _event_formats = event_formats
+    else:
+        _event_formats = [DEFAULT_EVENTLIST_FILE_TYPE]
+
     # if count_intervals is None:
     #     _count_intervals = {1}
     # else:
@@ -228,7 +227,7 @@ def create_run_config(
         save_dir,
         save_name,
         save_suffix,
-        event_formats,
+        _event_formats,
         count_intervals,
         num_processes,
         logfile,

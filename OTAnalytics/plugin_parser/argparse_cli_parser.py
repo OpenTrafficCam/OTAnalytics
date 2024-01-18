@@ -71,10 +71,11 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--event-format",
+            "--event-formats",
+            nargs="+",
             type=str,
             help=(
-                "Format to export the event list "
+                "Formats to export the event list "
                 "('otevents' (default), 'csv', 'xlsx')."
             ),
             required=False,
@@ -121,7 +122,7 @@ class ArgparseCliParser(CliParser):
             save_dir=args.save_dir,
             save_name=args.save_name,
             save_suffix=args.save_suffix,
-            event_formats=args.event_format,
+            event_formats=args.event_formats,
             count_interval=args.count_interval,
             num_processes=args.num_processes,
             log_file=args.logfile,

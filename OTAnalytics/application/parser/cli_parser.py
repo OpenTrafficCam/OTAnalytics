@@ -17,7 +17,7 @@ class CliArguments:
     save_dir: str | None = None
     save_name: str | None = None
     save_suffix: str | None = None
-    event_formats: str | None = None
+    event_formats: list[str] | None = None
     count_interval: int | None = None
     num_processes: int | None = None
     log_file: str | None = None

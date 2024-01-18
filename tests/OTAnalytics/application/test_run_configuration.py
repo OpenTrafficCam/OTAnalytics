@@ -28,7 +28,7 @@ def cli_args_otconfig() -> CliArguments:
         otflow_file=None,
         save_name="cli_save_name",
         save_suffix="cli_save_suffix",
-        event_formats="csv",
+        event_formats=["csv"],
         count_interval=6,
         num_processes=8,
         log_file="path/to/cli_log",
@@ -281,7 +281,7 @@ class TestRunConfiguration:
 
     def test_event_formats(self, cli_args: Mock, otconfig: Mock) -> None:
         cli_event_formats = "csv"
-        cli_args.event_formats = cli_event_formats
+        cli_args.event_formats = [cli_event_formats]
         cli_args.otflow_file = None
         cli_args.config_file = None
 
