@@ -503,7 +503,7 @@ class PandasTrackDataset(TrackDataset):
         self, row: DataFrame, cut_info: dict[str, list[int]]
     ) -> str:
         if (track_id := row[track.TRACK_ID]) in cut_info.keys():
-            cut_segment_index = bisect(cut_info[track_id], row["cumcount"]) + 1
+            cut_segment_index = bisect(cut_info[track_id], row["cumcount"])
             return f"{track_id}_{cut_segment_index}"
         return row[track.TRACK_ID]
 
