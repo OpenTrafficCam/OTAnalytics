@@ -139,7 +139,17 @@ class TrackDataset(ABC):
     @abstractmethod
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> "TrackDataset":
+    ) -> tuple["TrackDataset", set[TrackId]]:
+        """Use section to cut track with TrackDataset.
+
+        Args:
+            section (Section): the section to cut the TrackDataset with.
+            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
+
+        Returns:
+            tuple[TrackDataset, set[TrackId]]: the dataset containing the cut tracks
+                and the original track ids that have been cut.
+        """
         raise NotImplementedError
 
 

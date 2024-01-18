@@ -49,7 +49,9 @@ from tests.OTAnalytics.plugin_datastore.conftest import (
 
 
 @pytest.fixture
-def cutting_section_test_case() -> tuple[LineSection, list[Track], list[Track]]:
+def cutting_section_test_case() -> (
+    tuple[LineSection, list[Track], list[Track], set[TrackId]]
+):
     first_track = create_track(
         "1",
         [(1, 1), (2, 1), (3, 1), (4, 1), (4, 2), (3, 2), (2, 2), (1, 2)],
@@ -77,6 +79,8 @@ def cutting_section_test_case() -> tuple[LineSection, list[Track], list[Track]]:
         SectionId(_id), _id, {}, {}, [Coordinate(2.5, 0), Coordinate(2.5, 3)]
     )
 
+    expected_original_track_ids = {first_track.id, second_track.id}
+
     return (
         cutting_section,
         [first_track, second_track, third_track],
@@ -86,8 +90,8 @@ def cutting_section_test_case() -> tuple[LineSection, list[Track], list[Track]]:
             expected_first_track_3,
             expected_second_track_1,
             expected_second_track_2,
-            third_track,
         ],
+        expected_original_track_ids,
     )
 
 
@@ -523,28 +527,24 @@ class TestPandasTrackDataset:
 
     def test_cut_with_section(
         self,
-        cutting_section_test_case: tuple[LineSection, list[Track], list[Track]],
+        cutting_section_test_case: tuple[
+            LineSection, list[Track], list[Track], set[TrackId]
+        ],
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
-        cutting_section, input_tracks, expected_tracks = cutting_section_test_case
+        (
+            cutting_section,
+            input_tracks,
+            expected_tracks,
+            expected_original_track_ids,
+        ) = cutting_section_test_case
         expected_dataset = PandasTrackDataset.from_list(
             expected_tracks, track_geometry_factory
         )
 
         dataset = PandasTrackDataset.from_list(input_tracks, track_geometry_factory)
-        cut_track_dataset = cast(
-            PandasTrackDataset,
-            dataset.cut_with_section(cutting_section, RelativeOffsetCoordinate(0, 0)),
+        cut_track_dataset, original_track_ids = dataset.cut_with_section(
+            cutting_section, RelativeOffsetCoordinate(0, 0)
         )
-        expected_geometry_dataset = cast(
-            PygeosTrackGeometryDataset,
-            PygeosTrackGeometryDataset(RelativeOffsetCoordinate(0, 0)).add_all(
-                expected_tracks
-            ),
-        )
-
         assert_track_datasets_equal(cut_track_dataset, expected_dataset)
-        actual_geometry_dataset = cut_track_dataset._geometry_datasets[
-            RelativeOffsetCoordinate(0, 0)
-        ]
-        assert actual_geometry_dataset == expected_geometry_dataset
+        assert original_track_ids == expected_original_track_ids

@@ -478,5 +478,5 @@ class PythonTrackDataset(TrackDataset):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> TrackDataset:
+    ) -> tuple[TrackDataset, set[TrackId]]:
         raise NotImplementedError
