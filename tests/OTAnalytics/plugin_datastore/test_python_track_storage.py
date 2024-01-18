@@ -11,7 +11,14 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
     calculate_direction_vector,
 )
-from OTAnalytics.domain.track import Detection, Track, TrackHasNoDetectionError, TrackId
+from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.track import (
+    Detection,
+    Track,
+    TrackClassificationCalculator,
+    TrackHasNoDetectionError,
+    TrackId,
+)
 from OTAnalytics.domain.track_dataset import TrackGeometryDataset
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
@@ -19,10 +26,11 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
+    SimpleCutTrackSegmentBuilder,
 )
 from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
-from tests.conftest import TrackBuilder
+from tests.conftest import TrackBuilder, create_track
 from tests.OTAnalytics.plugin_datastore.conftest import (
     assert_track_geometry_dataset_add_all_called_correctly,
     create_mock_geometry_dataset,
@@ -481,3 +489,50 @@ class TestPythonTrackDataset:
             ),
             video_name=track.last_detection.video_name,
         )
+
+    def test_cut_with_section(
+        self,
+        cutting_section_test_case: tuple[
+            LineSection, list[Track], list[Track], set[TrackId]
+        ],
+    ) -> None:
+        (
+            cutting_section,
+            input_tracks,
+            expected_tracks,
+            expected_original_track_ids,
+        ) = cutting_section_test_case
+        expected_dataset = PythonTrackDataset.from_list(expected_tracks)
+
+        dataset = PythonTrackDataset.from_list(input_tracks)
+        cut_track_dataset, original_track_ids = dataset.cut_with_section(
+            cutting_section, RelativeOffsetCoordinate(0, 0)
+        )
+        actual_tracks = sorted(cut_track_dataset, key=lambda _track: _track.id)
+        expected_tracks = sorted(expected_dataset, key=lambda _track: _track.id)
+        for actual, expected in zip(actual_tracks, expected_tracks):
+            assert actual == expected
+        assert original_track_ids == expected_original_track_ids
+
+
+class TestSimpleCutTrackSegmentBuilder:
+    def test_build(self) -> None:
+        classification = "car"
+        my_track = create_track("1", [(0, 0), (1, 0), (2, 0), (3, 0)], 0)
+
+        class_calculator = Mock(spec=TrackClassificationCalculator)
+        class_calculator.calculate.return_value = classification
+        track_builder = SimpleCutTrackSegmentBuilder(class_calculator)
+
+        assert track_builder._track_id is None
+        assert track_builder._detections == []
+
+        track_builder.add_id(my_track.id.id)
+        for detection in my_track.detections:
+            track_builder.add_detection(detection)
+        result = track_builder.build()
+        assert result == my_track
+
+        # Assert track builder is reset after build
+        assert track_builder._track_id is None
+        assert track_builder._detections == []

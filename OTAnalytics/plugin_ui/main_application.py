@@ -104,7 +104,10 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
+from OTAnalytics.plugin_datastore.python_track_store import (
+    ByMaxConfidence,
+    SimpleCutTrackSegmentBuilder,
+)
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
@@ -114,7 +117,6 @@ from OTAnalytics.plugin_datastore.track_store import (
 )
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
-    SimpleCutTrackSegmentBuilder,
     SimpleCutTracksIntersectingSection,
     SimpleCutTracksWithSection,
 )

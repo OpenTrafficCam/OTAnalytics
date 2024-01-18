@@ -65,10 +65,10 @@ from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
+    SimpleCutTrackSegmentBuilder,
 )
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
-    SimpleCutTrackSegmentBuilder,
     SimpleCutTracksIntersectingSection,
     SimpleCutTracksWithSection,
 )

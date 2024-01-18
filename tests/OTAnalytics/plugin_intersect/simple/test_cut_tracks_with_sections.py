@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Iterable
 from unittest.mock import Mock, patch
 
@@ -26,75 +25,15 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
     SectionType,
 )
-from OTAnalytics.domain.track import (
-    Detection,
-    Track,
-    TrackClassificationCalculator,
-    TrackId,
-)
+from OTAnalytics.domain.track import Track, TrackClassificationCalculator, TrackId
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_datastore.python_track_store import PythonDetection
+from OTAnalytics.plugin_datastore.python_track_store import SimpleCutTrackSegmentBuilder
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
-    SimpleCutTrackSegmentBuilder,
     SimpleCutTracksIntersectingSection,
     SimpleCutTracksWithSection,
 )
 from tests.conftest import TrackBuilder as TrackBuilderForTesting
-
-
-def create_mock_detection(occurrence: datetime) -> Detection:
-    return PythonDetection(
-        "car", 0.7, 0, 0, 1, 1, 1, occurrence, False, TrackId("Default"), "my_video.mp4"
-    )
-
-
-@pytest.fixture
-def detections() -> list[Detection]:
-    first = create_mock_detection(datetime.min)
-    second = create_mock_detection(datetime(2000, 1, 1))
-    third = create_mock_detection(datetime(2000, 1, 2))
-    fourth = create_mock_detection(datetime(2000, 1, 3))
-    fifth = create_mock_detection(datetime.max)
-    return [first, second, third, fourth, fifth]
-
-
-class TestSimpleCutTrackSegmentBuilder:
-    def test_build(self, detections: list[Detection]) -> None:
-        track_id_name = "1"
-        classification = "car"
-        class_calculator = Mock(spec=TrackClassificationCalculator)
-        class_calculator.calculate.return_value = classification
-        track_builder = SimpleCutTrackSegmentBuilder(class_calculator)
-
-        assert track_builder._track_id is None
-        assert track_builder._detections == []
-
-        track_builder.add_id(track_id_name)
-        for detection in detections:
-            track_builder.add_detection(detection)
-        result = track_builder.build()
-        assert result.id == TrackId(track_id_name)
-        assert result.classification == classification
-        for result_detection, expected_detection in zip(result.detections, detections):
-            assert result_detection.classification == expected_detection.classification
-            assert result_detection.confidence == expected_detection.confidence
-            assert result_detection.x == expected_detection.x
-            assert result_detection.y == expected_detection.y
-            assert result_detection.w == expected_detection.w
-            assert result_detection.h == expected_detection.h
-            assert result_detection.frame == expected_detection.frame
-            assert result_detection.occurrence == expected_detection.occurrence
-            assert (
-                result_detection.interpolated_detection
-                == expected_detection.interpolated_detection
-            )
-            assert result_detection.track_id == TrackId(track_id_name)
-            assert result_detection.video_name == expected_detection.video_name
-
-        # Assert track builder is reset after build
-        assert track_builder._track_id is None
-        assert track_builder._detections == []
 
 
 class TestSimpleCutTracksWithSection:

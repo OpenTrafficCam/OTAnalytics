@@ -4,6 +4,7 @@ from math import ceil
 from typing import Callable, Iterable, Optional, Sequence
 
 from more_itertools import batched
+from shapely import LineString
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
@@ -17,6 +18,8 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     Detection,
     Track,
+    TrackBuilder,
+    TrackBuilderError,
     TrackClassificationCalculator,
     TrackHasNoDetectionError,
     TrackId,
@@ -32,6 +35,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import extract_hostname
+from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 
 @dataclass(frozen=True)
@@ -479,4 +483,133 @@ class PythonTrackDataset(TrackDataset):
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
     ) -> tuple[TrackDataset, set[TrackId]]:
-        raise NotImplementedError
+        shapely_mapper = ShapelyMapper()
+
+        section_geometry = shapely_mapper.map_coordinates_to_line_string(
+            section.get_coordinates()
+        )
+        intersecting_track_ids = self.intersecting_tracks([section], offset)
+
+        cut_tracks: list[Track] = []
+        for track_id in intersecting_track_ids:
+            cut_tracks.extend(
+                self.__cut_with_section(
+                    self._tracks[track_id], section_geometry, offset, shapely_mapper
+                )
+            )
+        return (
+            PythonTrackDataset.from_list(cut_tracks),
+            intersecting_track_ids,
+        )
+
+    def __cut_with_section(
+        self,
+        track_to_cut: Track,
+        section_geometry: LineString,
+        offset: RelativeOffsetCoordinate,
+        shapely_mapper: ShapelyMapper,
+    ) -> list[Track]:
+        cut_track_segments: list[Track] = []
+        track_builder = SimpleCutTrackSegmentBuilder()
+        for current_detection, next_detection in zip(
+            track_to_cut.detections[0:-1], track_to_cut.detections[1:]
+        ):
+            current_coordinate = current_detection.get_coordinate(offset)
+            next_coordinate = next_detection.get_coordinate(offset)
+            track_segment_geometry = (
+                shapely_mapper.map_domain_coordinates_to_line_string(
+                    [current_coordinate, next_coordinate]
+                )
+            )
+            if track_segment_geometry.intersects(section_geometry):
+                new_track_segment = self._build_track(
+                    track_builder,
+                    f"{track_to_cut.id.id}_{len(cut_track_segments)}",
+                    current_detection,
+                )
+                cut_track_segments.append(new_track_segment)
+            else:
+                track_builder.add_detection(current_detection)
+
+        new_track_segment = self._build_track(
+            track_builder,
+            f"{track_to_cut.id.id}_{len(cut_track_segments)}",
+            track_to_cut.last_detection,
+        )
+        cut_track_segments.append(new_track_segment)
+
+        return cut_track_segments
+
+    def _build_track(
+        self, track_builder: TrackBuilder, track_id: str, detection: Detection
+    ) -> Track:
+        track_builder.add_id(track_id)
+        track_builder.add_detection(detection)
+        return track_builder.build()
+
+
+class SimpleCutTrackSegmentBuilder(TrackBuilder):
+    """Build tracks that have been cut with a cutting section.
+
+    The builder will be reset after a successful build of a track.
+
+    Args:
+        class_calculator (TrackClassificationCalculator): the strategy to determine
+            the max class of a track.
+    """
+
+    def __init__(
+        self, class_calculator: TrackClassificationCalculator = ByMaxConfidence()
+    ) -> None:
+        self._track_id: TrackId | None = None
+        self._detections: list[Detection] = []
+
+        self._class_calculator = class_calculator
+
+    def add_id(self, track_id: str) -> None:
+        self._track_id = TrackId(track_id)
+
+    def add_detection(self, detection: Detection) -> None:
+        self._detections.append(detection)
+
+    def build(self) -> Track:
+        if self._track_id is None:
+            raise TrackBuilderError(
+                "Track builder setup error occurred. TrackId not set."
+            )
+        detections = self._build_detections()
+        result = PythonTrack(
+            self._track_id,
+            self._class_calculator.calculate(detections),
+            detections,
+        )
+        self.reset()
+        return result
+
+    def reset(self) -> None:
+        self._track_id = None
+        self._detections = []
+
+    def _build_detections(self) -> list[Detection]:
+        if self._track_id is None:
+            raise TrackBuilderError(
+                "Track builder setup error occurred. TrackId not set."
+            )
+        new_detections: list[Detection] = []
+        for detection in self._detections:
+            new_detections.append(
+                PythonDetection(
+                    detection.classification,
+                    detection.confidence,
+                    detection.x,
+                    detection.y,
+                    detection.w,
+                    detection.h,
+                    detection.frame,
+                    detection.occurrence,
+                    detection.interpolated_detection,
+                    self._track_id,
+                    detection.video_name,
+                )
+            )
+        return new_detections

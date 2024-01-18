@@ -23,16 +23,8 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
     SectionType,
 )
-from OTAnalytics.domain.track import (
-    Detection,
-    Track,
-    TrackBuilder,
-    TrackBuilderError,
-    TrackClassificationCalculator,
-    TrackId,
-)
+from OTAnalytics.domain.track import Detection, Track, TrackBuilder, TrackId
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 
@@ -170,68 +162,3 @@ class SimpleCutTracksWithSection(CutTracksWithSection):
         self._track_builder.add_id(track_id)
         self._track_builder.add_detection(detection)
         return self._track_builder.build()
-
-
-class SimpleCutTrackSegmentBuilder(TrackBuilder):
-    """Build tracks that have been cut with a cutting section.
-
-    The builder will be reset after a successful build of a track.
-
-    Args:
-        class_calculator (TrackClassificationCalculator): the strategy to determine
-            the max class of a track.
-    """
-
-    def __init__(self, class_calculator: TrackClassificationCalculator) -> None:
-        self._track_id: TrackId | None = None
-        self._detections: list[Detection] = []
-
-        self._class_calculator = class_calculator
-
-    def add_id(self, track_id: str) -> None:
-        self._track_id = TrackId(track_id)
-
-    def add_detection(self, detection: Detection) -> None:
-        self._detections.append(detection)
-
-    def build(self) -> Track:
-        if self._track_id is None:
-            raise TrackBuilderError(
-                "Track builder setup error occurred. TrackId not set."
-            )
-        detections = self._build_detections()
-        result = PythonTrack(
-            self._track_id,
-            self._class_calculator.calculate(detections),
-            detections,
-        )
-        self.reset()
-        return result
-
-    def reset(self) -> None:
-        self._track_id = None
-        self._detections = []
-
-    def _build_detections(self) -> list[Detection]:
-        if self._track_id is None:
-            raise TrackBuilderError(
-                "Track builder setup error occurred. TrackId not set."
-            )
-        new_detections: list[Detection] = []
-        for detection in self._detections:
-            new_detections.append(
-                PythonDetection(
-                    detection.classification,
-                    detection.confidence,
-                    detection.x,
-                    detection.y,
-                    detection.w,
-                    detection.h,
-                    detection.frame,
-                    detection.occurrence,
-                    detection.interpolated_detection,
-                    self._track_id,
-                    detection.video_name,
-                )
-            )
-        return new_detections
