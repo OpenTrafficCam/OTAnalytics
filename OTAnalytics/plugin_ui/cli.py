@@ -46,6 +46,7 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
 from OTAnalytics.domain.track_repository import TrackRepository, TrackRepositoryEvent
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -509,9 +510,9 @@ class OTAnalyticsCli:
                 "Gruppe A3": 0.80,
             },
             "private_van_with_trailer": {
-                "Gruppe A1": 0.97,
-                "Gruppe A2": 0.95,
-                "Gruppe A3": 0.90,
+                "Gruppe A1": 0.90,
+                "Gruppe A2": 0.85,
+                "Gruppe A3": 0.80,
             },
             "truck_with_trailer": {
                 "Gruppe A1": 0.95,
@@ -520,9 +521,9 @@ class OTAnalyticsCli:
             },
             "delivery_van": {"Gruppe A1": 0.90, "Gruppe A2": 0.85, "Gruppe A3": 0.80},
             "delivery_van_with_trailer": {
-                "Gruppe A1": 0.90,
-                "Gruppe A2": 0.85,
-                "Gruppe A3": 0.80,
+                "Gruppe A1": 0.95,
+                "Gruppe A2": 0.90,
+                "Gruppe A3": 0.85,
             },
             "truck_with_semitrailer": {
                 "Gruppe A1": 0.95,
@@ -533,7 +534,11 @@ class OTAnalyticsCli:
         }
         svz_data = DataFrame.from_dict(svz_classification).T.reset_index()
         svz_data.rename(columns={"index": track.TRACK_CLASSIFICATION}, inplace=True)
-        track_ids = {event.road_user_id for event in self._event_repository.get_all()}
+        track_ids = {
+            event.road_user_id
+            for event in self._event_repository.get_all()
+            if event.event_type == EventType.SECTION_ENTER
+        }
         if isinstance(track_dataset, PandasTrackDataset):
             data = track_dataset.as_dataframe().reset_index()
             data = data.loc[data[track.TRACK_ID].isin(track_ids), :]
