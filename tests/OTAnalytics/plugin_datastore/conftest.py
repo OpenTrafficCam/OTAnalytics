@@ -3,7 +3,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.section import LineSection, SectionId
+from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
     TrackGeometryDataset,
@@ -11,7 +13,7 @@ from OTAnalytics.domain.track_dataset import (
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
-from tests.conftest import TrackBuilder, assert_equal_track_properties
+from tests.conftest import TrackBuilder, assert_equal_track_properties, create_track
 
 
 def create_mock_geometry_dataset(
@@ -111,3 +113,50 @@ def second_track() -> Track:
     track_builder.append_detection()
 
     return track_builder.build_track()
+
+
+@pytest.fixture
+def cutting_section_test_case() -> (
+    tuple[LineSection, list[Track], list[Track], set[TrackId]]
+):
+    first_track = create_track(
+        "1",
+        [(1, 1), (2, 1), (3, 1), (4, 1), (4, 2), (3, 2), (2, 2), (1, 2)],
+        start_second=1,
+    )
+    expected_first_track_1 = create_track(
+        "1_1",
+        [
+            (1, 1),
+            (2, 1),
+        ],
+        1,
+    )
+    expected_first_track_2 = create_track("1_2", [(3, 1), (4, 1), (4, 2), (3, 2)], 3)
+    expected_first_track_3 = create_track("1_3", [(2, 2), (1, 2)], 7)
+
+    second_track = create_track("2", [(1, 1), (2, 1), (3, 1)], 1)
+    expected_second_track_1 = create_track("2_1", [(1, 1), (2, 1)], 1)
+    expected_second_track_2 = create_track("2_2", [(3, 1)], 3)
+
+    third_track = create_track("3", [(10, 10), (20, 10)], 10)
+
+    _id = "#cut_1"
+    cutting_section = LineSection(
+        SectionId(_id), _id, {}, {}, [Coordinate(2.5, 0), Coordinate(2.5, 3)]
+    )
+
+    expected_original_track_ids = {first_track.id, second_track.id}
+
+    return (
+        cutting_section,
+        [first_track, second_track, third_track],
+        [
+            expected_first_track_1,
+            expected_first_track_2,
+            expected_first_track_3,
+            expected_second_track_1,
+            expected_second_track_2,
+        ],
+        expected_original_track_ids,
+    )
