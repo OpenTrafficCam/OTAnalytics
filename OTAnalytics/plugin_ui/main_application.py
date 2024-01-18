@@ -515,6 +515,7 @@ class ApplicationStarter:
             tracks_metadata=TracksMetadata(track_repository),
             videos_metadata=VideosMetadata(),
             progressbar=TqdmBuilder(),
+            track_repository=track_repository,
         ).start()
 
     def _create_datastore(

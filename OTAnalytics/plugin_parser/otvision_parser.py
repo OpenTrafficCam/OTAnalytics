@@ -271,7 +271,7 @@ class Otdet_Version_1_0_To_1_2(DetectionFixer):
         return detection
 
 
-class Ottrk_Version_1_0_To_1_1(MetadataFixer):
+class Ottrk_Version_1_0_To_1_1_TrackingRunIds(MetadataFixer):
     def __init__(self) -> None:
         super().__init__(VERSION_1_0, VERSION_1_1)
 
@@ -285,11 +285,39 @@ class Ottrk_Version_1_0_To_1_1(MetadataFixer):
         return metadata
 
 
+class Ottrk_Version_1_0_To_1_1_RecordedStartDate(MetadataFixer):
+    def __init__(self) -> None:
+        super().__init__(VERSION_1_0, VERSION_1_1)
+
+    def fix(self, metadata: dict, current_version: Version) -> dict:
+        return self.__fix_recorded_start_date(metadata, current_version)
+
+    def __fix_recorded_start_date(
+        self, metadata: dict, current_version: Version
+    ) -> dict:
+        if current_version < self.to_version():
+            old_recorded_start_date = metadata[ottrk_format.VIDEO][
+                ottrk_format.RECORDED_START_DATE
+            ]
+            if isinstance(old_recorded_start_date, float):
+                return metadata
+            recorded_start_date = datetime.strptime(
+                old_recorded_start_date, ottrk_format.DATE_FORMAT
+            ).replace(tzinfo=timezone.utc)
+            metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE] = str(
+                recorded_start_date.timestamp()
+            )
+        return metadata
+
+
 ALL_DETECTION_FIXES: list[DetectionFixer] = [
     Otdet_Version_1_0_to_1_1(),
     Otdet_Version_1_0_To_1_2(),
 ]
-ALL_METADATA_FIXES: list[MetadataFixer] = [Ottrk_Version_1_0_To_1_1()]
+ALL_METADATA_FIXES: list[MetadataFixer] = [
+    Ottrk_Version_1_0_To_1_1_TrackingRunIds(),
+    Ottrk_Version_1_0_To_1_1_RecordedStartDate(),
+]
 
 
 class OttrkFormatFixer:

@@ -2,7 +2,10 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
+
+import pandas
+from pandas import DataFrame
 
 from OTAnalytics.application.analysis.traffic_counting import ExportCounts
 from OTAnalytics.application.analysis.traffic_counting_specification import (
@@ -15,6 +18,8 @@ from OTAnalytics.application.config import (
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
     DEFAULT_SECTIONS_FILE_TYPE,
+    DEFAULT_STATISTIC_FILE_STEM,
+    DEFAULT_STATISTIC_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import FlowParser, TrackParser
@@ -35,11 +40,13 @@ from OTAnalytics.application.use_cases.track_repository import (
     ClearAllTracks,
     GetAllTrackIds,
 )
+from OTAnalytics.domain import track
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
-from OTAnalytics.domain.track_repository import TrackRepositoryEvent
+from OTAnalytics.domain.track_repository import TrackRepository, TrackRepositoryEvent
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_CSV_FORMAT_NAME,
@@ -232,6 +239,7 @@ class OTAnalyticsCli:
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
         progressbar: ProgressbarBuilder,
+        track_repository: TrackRepository,
     ) -> None:
         self._validate_cli_args(cli_args)
         self.cli_args = cli_args
@@ -251,6 +259,7 @@ class OTAnalyticsCli:
         self._tracks_metadata = tracks_metadata
         self._videos_metadata = videos_metadata
         self._progressbar = progressbar
+        self._track_repository = track_repository
 
     def start(self) -> None:
         """Start analysis."""
@@ -307,7 +316,8 @@ class OTAnalyticsCli:
 
         save_path = self._create_save_path()
         self._export_events(sections, save_path)
-        self._do_export_counts(save_path)
+        # self._do_export_counts(save_path)
+        self._do_export_statistic(save_path)
 
     def _apply_cuts(self, sections: Iterable[Section]) -> None:
         cutting_sections = sorted(
@@ -462,3 +472,123 @@ class OTAnalyticsCli:
         )
         self._export_counts.export(specification=counting_specification)
         logger().info(f"Counts saved at {output_file}")
+
+    def _do_export_statistic(self, save_path: Path) -> None:
+        # TODO Nur beachten, wenn es ein Event mit der TrackId gibt
+
+        output_file = save_path.with_suffix(
+            f".{DEFAULT_STATISTIC_FILE_STEM}.{DEFAULT_STATISTIC_FILE_TYPE}"
+        )
+        # overall_file = save_path.with_suffix(f".overall.{
+        # DEFAULT_STATISTIC_FILE_TYPE}") overall_plot = save_path.with_suffix(
+        # f".overall.png") plot_file = save_path.with_suffix(f".{
+        # DEFAULT_STATISTIC_FILE_STEM}.png")
+        track_dataset = self._track_repository.get_all()
+        svz_classification = {
+            "bicyclist": {"Gruppe A1": 0.90, "Gruppe A2": 0.85, "Gruppe A3": 0.80},
+            "car": {"Gruppe A1": 0.97, "Gruppe A2": 0.95, "Gruppe A3": 0.90},
+            "motorcyclist": {"Gruppe A1": 0.90, "Gruppe A2": 0.85, "Gruppe A3": 0.80},
+            "private_van": {"Gruppe A1": 0.97, "Gruppe A2": 0.95, "Gruppe A3": 0.90},
+            "bus": {"Gruppe A1": 0.90, "Gruppe A2": 0.85, "Gruppe A3": 0.80},
+            "train": {"Gruppe A1": 0.0, "Gruppe A2": 0.0, "Gruppe A3": 0.0},
+            "truck": {"Gruppe A1": 0.90, "Gruppe A2": 0.85, "Gruppe A3": 0.80},
+            "scooter_driver": {"Gruppe A1": 0.0, "Gruppe A2": 0.0, "Gruppe A3": 0.0},
+            "cargo_bike_driver": {
+                "Gruppe A1": 0.90,
+                "Gruppe A2": 0.85,
+                "Gruppe A3": 0.80,
+            },
+            "bicyclist_with_trailer": {
+                "Gruppe A1": 0.90,
+                "Gruppe A2": 0.85,
+                "Gruppe A3": 0.80,
+            },
+            "car_with_trailer": {
+                "Gruppe A1": 0.90,
+                "Gruppe A2": 0.85,
+                "Gruppe A3": 0.80,
+            },
+            "private_van_with_trailer": {
+                "Gruppe A1": 0.97,
+                "Gruppe A2": 0.95,
+                "Gruppe A3": 0.90,
+            },
+            "truck_with_trailer": {
+                "Gruppe A1": 0.95,
+                "Gruppe A2": 0.90,
+                "Gruppe A3": 0.85,
+            },
+            "delivery_van": {"Gruppe A1": 0.90, "Gruppe A2": 0.85, "Gruppe A3": 0.80},
+            "delivery_van_with_trailer": {
+                "Gruppe A1": 0.90,
+                "Gruppe A2": 0.85,
+                "Gruppe A3": 0.80,
+            },
+            "truck_with_semitrailer": {
+                "Gruppe A1": 0.95,
+                "Gruppe A2": 0.90,
+                "Gruppe A3": 0.85,
+            },
+            "other": {"Gruppe A1": 0.0, "Gruppe A2": 0.0, "Gruppe A3": 0.0},
+        }
+        svz_data = DataFrame.from_dict(svz_classification).T.reset_index()
+        svz_data.rename(columns={"index": track.TRACK_CLASSIFICATION}, inplace=True)
+        track_ids = {event.road_user_id for event in self._event_repository.get_all()}
+        if isinstance(track_dataset, PandasTrackDataset):
+            data = track_dataset.as_dataframe().reset_index()
+            data = data.loc[data[track.TRACK_ID].isin(track_ids), :]
+            data = data.loc[data[track.TRACK_CLASSIFICATION] != "pedestrian", :]
+            data = data.set_index([track.TRACK_ID, track.OCCURRENCE])
+            # rate_len = self._calculate_detection_rate(data, len)
+            # rate_sum = self._calculate_detection_rate(data, sum)
+            rate_max = self._calculate_detection_rate(data, max).reset_index(
+                track.TRACK_ID
+            )
+            # merged = pandas.merge(rate_len, rate_sum, left_index=True,
+            # right_index=True) merged = pandas.merge(merged, rate_max,
+            # left_index=True, right_index=True)
+            merged = rate_max.merge(svz_data, how="left", on=track.TRACK_CLASSIFICATION)
+            merged["in A1"] = merged["detection_rate_max"] >= merged["Gruppe A1"]
+            merged["in A2"] = merged["detection_rate_max"] >= merged["Gruppe A2"]
+            merged["in A3"] = merged["detection_rate_max"] >= merged["Gruppe A3"]
+            print(f"Write statistic to {output_file}")
+            merged.to_csv(output_file, sep=",", encoding="utf8")
+
+            # mean_by_classification = merged.groupby(level=1).mean()
+            # mean_by_classification.to_csv(overall_file, sep=",", encoding="utf8")
+            # merged.loc[:, ["detection_rate_len", "detection_rate_sum",
+            # "detection_rate_max"]].plot(kind="bar",ylim=[0, 1]            ) figure
+            # = matplotlib.pyplot.gcf() figure.savefig(overall_plot)
+
+    def _calculate_detection_rate(
+        self, data: DataFrame, agg_function: Any
+    ) -> DataFrame:
+        complete_len = data.groupby([track.TRACK_ID])[track.CONFIDENCE].agg(
+            agg_function
+        )
+        max_class_len = (
+            data[data[track.CLASSIFICATION] == data[track.TRACK_CLASSIFICATION]]
+            .groupby([track.TRACK_ID, track.CLASSIFICATION])[track.CONFIDENCE]
+            .agg(agg_function)
+            .droplevel(1)
+        )
+        merged = pandas.merge(
+            max_class_len, complete_len, left_index=True, right_index=True
+        )
+        rate_column = f"detection_rate_{agg_function.__name__}"
+        merged[rate_column] = (
+            merged[f"{track.CONFIDENCE}_x"] / merged[f"{track.CONFIDENCE}_y"]
+        )
+        track_classification = (
+            data.droplevel(1)[track.TRACK_CLASSIFICATION]
+            .reset_index()
+            .drop_duplicates()
+            .set_index(track.TRACK_ID)
+        )
+        merged = merged.merge(
+            track_classification, how="left", left_index=True, right_index=True
+        )
+        merged = merged.reset_index().set_index(
+            [track.TRACK_ID, track.TRACK_CLASSIFICATION]
+        )
+        return merged[rate_column]
