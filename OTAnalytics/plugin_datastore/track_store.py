@@ -313,7 +313,12 @@ class PandasTrackDataset(TrackDataset):
         )
 
     def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
-        raise NotImplementedError
+        track_ids_primitive = [track_id.id for track_id in track_ids]
+        remaining_tracks = self._dataset.drop(track_ids_primitive, errors="ignore")
+        updated_geometry_datasets = self._remove_from_geometry_dataset(track_ids)
+        return PandasTrackDataset.from_dataframe(
+            remaining_tracks, self._track_geometry_factory, updated_geometry_datasets
+        )
 
     def _remove_from_geometry_dataset(
         self, track_ids: set[TrackId]

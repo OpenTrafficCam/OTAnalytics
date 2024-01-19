@@ -301,6 +301,34 @@ class TestPandasTrackDataset:
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
         }
 
+    def test_remove_multiple(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        first_track = self.__build_track("1")
+        second_track = self.__build_track("2")
+        third_track = self.__build_track("3")
+        all_track_ids = frozenset([first_track.id, second_track.id, third_track.id])
+        track_ids_to_remove = {first_track.id, second_track.id}
+        tracks_df = _convert_tracks([first_track, second_track, third_track])
+        geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
+        dataset = PandasTrackDataset.from_dataframe(
+            tracks_df,
+            track_geometry_factory,
+            {RelativeOffsetCoordinate(0, 0): geometry_dataset},
+        )
+        assert len(dataset) == 3
+        assert dataset.track_ids == all_track_ids
+
+        removed_track_set = cast(
+            PandasTrackDataset,
+            dataset.remove_multiple(track_ids_to_remove),
+        )
+        assert_equal_track_properties(list(removed_track_set)[0], third_track)
+        geometry_dataset.remove.assert_called_once_with(track_ids_to_remove)
+        assert removed_track_set._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
+        }
+
     def test_len(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
