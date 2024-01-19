@@ -449,7 +449,7 @@ class TestBenchmarkExportCounting:
     ITERATIONS = 1
     WARMUP_ROUNDS = 0
 
-    def test_export_15min_tracks(
+    def test_15min(
         self,
         benchmark: BenchmarkFixture,
         pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
@@ -482,7 +482,7 @@ class TestBenchmarkExportCounting:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    def test_export_2hours_track(
+    def test_2hours(
         self,
         benchmark: BenchmarkFixture,
         pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
