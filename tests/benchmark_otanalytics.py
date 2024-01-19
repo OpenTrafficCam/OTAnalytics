@@ -198,7 +198,7 @@ def pandas_track_parser() -> TrackParser:
     return OttrkParser(detection_parser)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def python_track_repo_15min(
     track_file_15min: Path,
 ) -> tuple[TrackRepository, DetectionMetadata]:
@@ -212,7 +212,7 @@ def python_track_repo_15min(
     return track_repository, detection_metadata
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def python_track_repo_2hours(
     track_files_2hours: list[Path],
 ) -> tuple[TrackRepository, DetectionMetadata]:
@@ -226,7 +226,7 @@ def python_track_repo_2hours(
     return track_repository, detection_metadata
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def pandas_track_repo_15min(
     track_file_15min: Path,
 ) -> tuple[TrackRepository, DetectionMetadata]:
@@ -244,7 +244,7 @@ def pandas_track_repo_15min(
     return track_repository, detection_metadata
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def pandas_track_repo_2hours(
     track_files_2hours: list[Path],
 ) -> tuple[TrackRepository, DetectionMetadata]:
