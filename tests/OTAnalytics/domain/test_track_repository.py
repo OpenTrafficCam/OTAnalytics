@@ -62,7 +62,7 @@ class TestTrackRepository:
 
         dataset.add_all.assert_called_with(tracks)
         observer.notify_tracks.assert_called_with(
-            TrackRepositoryEvent([track_1.id, track_2.id], [])
+            TrackRepositoryEvent.create_added([track_1.id, track_2.id])
         )
 
     def test_add_nothing(self) -> None:
@@ -103,7 +103,7 @@ class TestTrackRepository:
 
         assert repository._dataset == cleared_dataset
         assert observer.notify_tracks.call_args_list == [
-            call(TrackRepositoryEvent([], [track_1.id, track_2.id]))
+            call(TrackRepositoryEvent.create_removed([track_1.id, track_2.id]))
         ]
 
     def test_get_all_ids(self, track_1: Mock, track_2: Mock) -> None:
@@ -131,22 +131,26 @@ class TestTrackRepository:
         assert call(track_2.id) in dataset.remove.call_args_list
 
         assert observer.notify_tracks.call_args_list == [
-            call(TrackRepositoryEvent([], [track_1.id])),
-            call(TrackRepositoryEvent([], [track_2.id])),
+            call(TrackRepositoryEvent.create_removed([track_1.id])),
+            call(TrackRepositoryEvent.create_removed([track_2.id])),
         ]
 
     def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
+        tracks_to_remove = frozenset([track_1.id, track_2.id])
+        updated_dataset = Mock(spec=TrackDataset)
+        type(updated_dataset).track_ids = PropertyMock(return_value=tracks_to_remove)
         dataset = Mock(spec=TrackDataset)
-        dataset.remove.return_value = dataset
+        dataset.remove_multiple.return_value = updated_dataset
         repository = TrackRepository(dataset)
 
         observer = Mock(spec=TrackListObserver)
         repository.register_tracks_observer(observer)
 
         repository.remove_multiple({track_1.id, track_2.id})
-        assert len(dataset.remove.call_args_list) == 2
-        assert call(track_1.id) in dataset.remove.call_args_list
-        assert call(track_2.id) in dataset.remove.call_args_list
+        dataset.remove_multiple.assert_called_once_with({track_1.id, track_2.id})
+        assert observer.notify_tracks.call_args_list == [
+            call(TrackRepositoryEvent.create_removed(tracks_to_remove))
+        ]
 
     def test_len(self) -> None:
         expected_size = 3

@@ -238,21 +238,21 @@ class TestCachedPandasTrackProvider:
         """Test clearing cache."""
         provider = self.set_up_provider([track_1], [])
 
-        provider.notify_tracks(TrackRepositoryEvent([], [track_1.id]))
+        provider.notify_tracks(TrackRepositoryEvent.create_removed([track_1.id]))
         self.check_expected_ids(provider, [])
 
     def test_notify_update_add(self, track_1: Track, track_2: Track) -> None:
         """Test adding track to non-empty cache."""
         provider = self.set_up_provider([track_1], [track_2])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_2.id], []))
+        provider.notify_tracks(TrackRepositoryEvent.create_added([track_2.id]))
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_add_first(self, track_2: Track) -> None:
         """Test adding first track to cache."""
         provider = self.set_up_provider([], [track_2])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_2.id], []))
+        provider.notify_tracks(TrackRepositoryEvent.create_added([track_2.id]))
         self.check_expected_ids(provider, [track_2])
 
     def test_notify_update_add_multiple_first(
@@ -261,19 +261,23 @@ class TestCachedPandasTrackProvider:
         """Test adding first tracks to cache."""
         provider = self.set_up_provider([], [track_2, track_1])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_2.id, track_1.id], []))
+        provider.notify_tracks(
+            TrackRepositoryEvent.create_added([track_2.id, track_1.id])
+        )
         self.check_expected_ids(provider, [track_2, track_1])
 
     def test_notify_update_existing(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_1, track_2], [track_1])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_1.id], []))
+        provider.notify_tracks(TrackRepositoryEvent.create_added([track_1.id]))
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_mixed(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_2], [track_1, track_2])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_1.id, track_2.id], []))
+        provider.notify_tracks(
+            TrackRepositoryEvent.create_added([track_1.id, track_2.id])
+        )
         self.check_expected_ids(provider, [track_1, track_2])
 
 
@@ -499,7 +503,7 @@ class TestDataFrameProviderFilter:
             data_provider, track_view_state, filter_builder
         )
         result = df_filter.get_data()
-        result == filter_result
+        assert result == filter_result
 
         filter_builder.set_classification_column.assert_called_once_with(
             TRACK_CLASSIFICATION
@@ -521,7 +525,7 @@ class TestDataFrameProviderFilter:
         filter_builder = Mock(Spec=FilterBuilder)
         df_filter = FilterByOccurrence(data_provider, track_view_state, filter_builder)
         result = df_filter.get_data()
-        result == filter_result
+        assert result == filter_result
 
         filter_builder.set_occurrence_column.assert_called_once_with(OCCURRENCE)
         observable_filter_element.get.assert_called_once()

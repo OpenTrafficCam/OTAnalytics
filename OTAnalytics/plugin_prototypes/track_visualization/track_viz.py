@@ -536,20 +536,20 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
     def _reset_cache(self) -> None:
         self._cache_df = DataFrame()
 
-    def _fetch_new_track_data(self, track_ids: list[TrackId]) -> list[Track]:
+    def _fetch_new_track_data(self, track_ids: Iterable[TrackId]) -> list[Track]:
         return [
             _track
             for t_id in track_ids
             if (_track := self._track_repository.get_for(t_id))
         ]
 
-    def _cache_without_existing_tracks(self, track_ids: list[TrackId]) -> DataFrame:
+    def _cache_without_existing_tracks(self, track_ids: Iterable[TrackId]) -> DataFrame:
         """Filter cached tracks.
 
         Only keep those not matching the ids in the given list of track_ids.
 
         Args:
-            track_ids (list[TrackId]): ids of tracks to be removed from cache.
+            track_ids (Iterable[TrackId]): ids of tracks to be removed from cache.
 
         Returns:
             DataFrame : filtered cache.

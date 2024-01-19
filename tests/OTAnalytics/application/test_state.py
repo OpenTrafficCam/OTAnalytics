@@ -69,7 +69,9 @@ class TestTrackState:
         second_track = TrackId("2")
         state = TrackState()
 
-        state.notify_tracks(TrackRepositoryEvent([first_track, second_track], []))
+        state.notify_tracks(
+            TrackRepositoryEvent.create_added([first_track, second_track])
+        )
 
         assert state.selected_track == first_track
 
@@ -77,8 +79,8 @@ class TestTrackState:
         first_track = TrackId("1")
         state = TrackState()
 
-        state.notify_tracks(TrackRepositoryEvent([first_track], []))
-        state.notify_tracks(TrackRepositoryEvent([], []))
+        state.notify_tracks(TrackRepositoryEvent.create_added([first_track]))
+        state.notify_tracks(TrackRepositoryEvent(frozenset(), frozenset()))
 
         assert state.selected_track is None
 
@@ -206,7 +208,7 @@ class TestTrackImageUpdater:
         )
         tracks: list[TrackId] = [track_id]
 
-        updater.notify_tracks(TrackRepositoryEvent(tracks, []))
+        updater.notify_tracks(TrackRepositoryEvent.create_added(tracks))
 
         assert track_view_state.background_image.get() == background_image
 

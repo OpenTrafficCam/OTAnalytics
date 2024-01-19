@@ -73,7 +73,7 @@ class TrackState(TrackListObserver):
         Args:
             track_event (TrackRepositoryEvent): newly added or removed tracks.
         """
-        track_to_select = track_event.added[0] if track_event.added else None
+        track_to_select = next(iter(track_event.added)) if track_event.added else None
         self.select(track_to_select)
 
 
@@ -495,7 +495,7 @@ class TracksMetadata(TrackListObserver):
             self._first_detection_occurrence.set(sorted_detections[0].occurrence)
             self._last_detection_occurrence.set(sorted_detections[-1].occurrence)
 
-    def _update_classifications(self, new_tracks: list[TrackId]) -> None:
+    def _update_classifications(self, new_tracks: Iterable[TrackId]) -> None:
         """Update current classifications."""
         updated_classifications = self._classifications.get().copy()
         for track_id in new_tracks:

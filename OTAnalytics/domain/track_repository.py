@@ -10,8 +10,16 @@ from OTAnalytics.domain.track_dataset import TrackDataset
 
 @dataclass(frozen=True)
 class TrackRepositoryEvent:
-    added: list[TrackId]
-    removed: list[TrackId]
+    added: frozenset[TrackId]
+    removed: frozenset[TrackId]
+
+    @staticmethod
+    def create_added(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
+        return TrackRepositoryEvent(frozenset(tracks), frozenset())
+
+    @staticmethod
+    def create_removed(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
+        return TrackRepositoryEvent(frozenset(), frozenset(tracks))
 
 
 class TrackListObserver(ABC):
@@ -121,8 +129,7 @@ class TrackRepository:
         """
         if len(tracks):
             self._dataset = self._dataset.add_all(tracks)
-            new_tracks = list(tracks.track_ids)
-            self.observers.notify(TrackRepositoryEvent(new_tracks, []))
+            self.observers.notify(TrackRepositoryEvent.create_added(tracks.track_ids))
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
@@ -170,27 +177,14 @@ class TrackRepository:
             )
         # TODO: Pass removed track id to notify when moving observers to
         #  application layer
-        self.observers.notify(TrackRepositoryEvent([], [track_id]))
+        self.observers.notify(TrackRepositoryEvent.create_removed([track_id]))
 
     def remove_multiple(self, track_ids: set[TrackId]) -> None:
-        failed_tracks: list[TrackId] = []
-        for track_id in track_ids:
-            try:
-                self._dataset = self._dataset.remove(track_id)
-            except KeyError:
-                failed_tracks.append(track_id)
-            # TODO: Pass removed track id to notify when moving observers to
-            #  application layer
-
-        if failed_tracks:
-            raise RemoveMultipleTracksError(
-                failed_tracks,
-                (
-                    "Multiple tracks with following ids could not be removed."
-                    f" '{[failed_track.id for failed_track in failed_tracks]}'"
-                ),
-            )
-        self.observers.notify(TrackRepositoryEvent([], list(track_ids)))
+        self._dataset = self._dataset.remove_multiple(track_ids)
+        actual_removed_tracks = self._dataset.track_ids.intersection(track_ids)
+        self.observers.notify(
+            TrackRepositoryEvent.create_removed(actual_removed_tracks)
+        )
 
     def split(self, chunks: int) -> Iterable[TrackDataset]:
         return self._dataset.split(chunks)
@@ -201,7 +195,7 @@ class TrackRepository:
         """
         removed = list(self._dataset.track_ids)
         self._dataset = self._dataset.clear()
-        self.observers.notify(TrackRepositoryEvent([], removed))
+        self.observers.notify(TrackRepositoryEvent.create_removed(removed))
 
     def __len__(self) -> int:
         return len(self._dataset)
