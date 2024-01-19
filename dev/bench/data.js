@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1705627779132,
+  "lastUpdate": 1705658875306,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -4928,6 +4928,98 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 29.528961690841243 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "id": "327aced32c837150715cd1825ed9893320755446",
+          "message": "Benchmark cutting section use case with pandas implementation of TrackDataset",
+          "timestamp": "2024-01-19T10:05:15Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/327aced32c837150715cd1825ed9893320755446"
+        },
+        "date": 1705658874816,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.14178653191760562,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.052856053924188 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.020634345790567617,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 48.46288853301667 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.13486255840383743,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.414956470020115 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.01738425062347069,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 57.52333083888516 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.13590077278241328,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.358309886883944 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.01728403305269621,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 57.856866910122335 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkExportCounting::test_export_15min_tracks",
+            "value": 0.13096481902439297,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.635638390900567 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkExportCounting::test_export_2hours_track",
+            "value": 0.01701270017626589,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 58.779616970801726 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_15min",
+            "value": 0.05587710347022222,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 17.89641799405217 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_2hours",
+            "value": 0.0072951465044264275,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 137.07743900595233 sec\nrounds: 1"
           }
         ]
       }
