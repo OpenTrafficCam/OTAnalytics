@@ -475,12 +475,38 @@ class TestBenchmarkExportCounting:
 
 
 class TestBenchmarkCuttingSection:
+    ROUNDS = 1
+    ITERATIONS = 1
+    WARMUP_ROUNDS = 0
+
     def test_15min(
-        self, python_track_repo_15min: tuple[TrackRepository, DetectionMetadata]
+        self,
+        benchmark: BenchmarkFixture,
+        python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        cutting_section: Section,
     ) -> None:
-        pass
+        track_repository, _ = python_track_repo_15min
+        track_dataset = track_repository.get_all()
+        benchmark.pedantic(
+            track_dataset.cut_with_section,
+            args=(cutting_section, cutting_section.get_offset(EventType.SECTION_ENTER)),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
 
     def test_2hours(
-        self, python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata]
+        self,
+        benchmark: BenchmarkFixture,
+        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        cutting_section: Section,
     ) -> None:
-        pass
+        track_repository, _ = python_track_repo_2hours
+        track_dataset = track_repository.get_all()
+        benchmark.pedantic(
+            track_dataset.cut_with_section,
+            args=(cutting_section, cutting_section.get_offset(EventType.SECTION_ENTER)),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
