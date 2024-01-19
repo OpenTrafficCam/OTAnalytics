@@ -112,16 +112,16 @@ class TrackRepository:
         """
         self.observers.register(observer.notify_tracks)
 
-    def add_all(self, tracks: Iterable[Track]) -> None:
+    def add_all(self, tracks: TrackDataset) -> None:
         """
         Add multiple tracks to the repository and notify only once about it.
 
         Args:
-            tracks (Iterable[Track]): tracks to be added
+            tracks (TrackDataset): tracks to be added.
         """
-        self._dataset = self._dataset.add_all(tracks)
-        new_tracks = [track.id for track in tracks]
-        if new_tracks:
+        if len(tracks):
+            self._dataset = self._dataset.add_all(tracks)
+            new_tracks = list(tracks.track_ids)
             self.observers.notify(TrackRepositoryEvent(new_tracks, []))
 
     def get_for(self, id: TrackId) -> Optional[Track]:
@@ -151,7 +151,7 @@ class TrackRepository:
         Returns:
             Iterable[TrackId]: the track ids.
         """
-        return self._dataset.get_all_ids()
+        return self._dataset.track_ids
 
     def remove(self, track_id: TrackId) -> None:
         """Remove track by its id and notify observers
@@ -199,7 +199,7 @@ class TrackRepository:
         """
         Clear the repository and inform the observers about the empty repository.
         """
-        removed = list(self._dataset.get_all_ids())
+        removed = list(self._dataset.track_ids)
         self._dataset = self._dataset.clear()
         self.observers.notify(TrackRepositoryEvent([], removed))
 

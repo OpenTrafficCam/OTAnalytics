@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call
+from unittest.mock import MagicMock, Mock, PropertyMock, call
 
 import pytest
 
@@ -41,8 +41,16 @@ class TestTrackRepository:
         return track
 
     def test_add_all(self, track_1: Mock, track_2: Mock) -> None:
-        tracks = [track_1, track_2]
+        track_ids_property = PropertyMock(
+            return_value=frozenset([track_1.id, track_2.id])
+        )
+        tracks = MagicMock(spec=TrackDataset)
+        tracks.__len__.return_value = 2
+        type(tracks).track_ids = track_ids_property
+
         merged_dataset = Mock(spec=TrackDataset)
+        type(merged_dataset).track_ids = track_ids_property
+
         dataset = Mock(spec=TrackDataset)
         dataset.add_all.return_value = merged_dataset
 
@@ -58,13 +66,16 @@ class TestTrackRepository:
         )
 
     def test_add_nothing(self) -> None:
+        empty_dataset = MagicMock()
+        empty_dataset.__len__.return_value = 0
+
         observer = Mock(spec=TrackListObserver)
         dataset = Mock(spec=TrackDataset)
         repository = TrackRepository(dataset)
         repository.register_tracks_observer(observer)
-        repository.add_all([])
+        repository.add_all(empty_dataset)
 
-        dataset.add_all.assert_called_once_with([])
+        dataset.add_all.assert_not_called()
         observer.notify_tracks.assert_not_called()
 
     def test_get_by_id(self, track_1: Mock) -> None:
@@ -80,7 +91,9 @@ class TestTrackRepository:
     def test_clear(self, track_1: Track, track_2: Track) -> None:
         cleared_dataset = Mock(spec=TrackDataset)
         dataset = Mock(spec=TrackDataset)
-        dataset.get_all_ids.return_value = [track_1.id, track_2.id]
+        type(dataset).track_ids = PropertyMock(
+            return_value=frozenset([track_1.id, track_2.id])
+        )
         dataset.clear.return_value = cleared_dataset
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository(dataset)
@@ -94,9 +107,9 @@ class TestTrackRepository:
         ]
 
     def test_get_all_ids(self, track_1: Mock, track_2: Mock) -> None:
-        ids: set[TrackId] = set()
+        ids: frozenset[TrackId] = frozenset()
         dataset = Mock(spec=TrackDataset)
-        dataset.get_all_ids.return_value = ids
+        type(dataset).track_ids = PropertyMock(return_value=ids)
         repository = TrackRepository(dataset)
 
         actual_ids = repository.get_all_ids()

@@ -26,10 +26,6 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_all_ids(self) -> Iterable[TrackId]:
-        raise NotImplementedError
-
-    @abstractmethod
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
         Retrieve a track for the given id.
@@ -44,6 +40,10 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def remove(self, track_id: TrackId) -> "TrackDataset":
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
         raise NotImplementedError
 
     @abstractmethod

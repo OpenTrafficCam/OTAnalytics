@@ -324,13 +324,6 @@ class TestPythonTrackDataset:
         result = result_dataset.get_for(first_track.id)
         assert result == first_track
 
-    def test_get_all_ids(self, first_track: Track, second_track: Track) -> None:
-        dataset = PythonTrackDataset()
-        result_dataset = dataset.add_all([first_track, second_track])
-
-        result = result_dataset.get_all_ids()
-        assert set(result) == {first_track.id, second_track.id}
-
     def test_clear(self, first_track: Track, second_track: Track) -> None:
         dataset = PythonTrackDataset()
         result_dataset = dataset.add_all([first_track, second_track])
@@ -350,6 +343,25 @@ class TestPythonTrackDataset:
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
         }
         geometry_dataset.remove.assert_called_once_with({second_track.id})
+
+    def test_remove_multiple(self, first_track: Track, second_track: Track) -> None:
+        geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
+        dataset = PythonTrackDataset(
+            {first_track.id: first_track, second_track.id: second_track},
+            {RelativeOffsetCoordinate(0, 0): geometry_dataset},
+        )
+        assert list(dataset) == [first_track, second_track]
+        result = cast(
+            PythonTrackDataset,
+            dataset.remove_multiple({first_track.id, second_track.id}),
+        )
+        assert list(result) == []
+        assert result._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
+        }
+        geometry_dataset.remove.assert_called_once_with(
+            {first_track.id, second_track.id}
+        )
 
     @pytest.mark.parametrize(
         "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]

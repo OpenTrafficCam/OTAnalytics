@@ -292,9 +292,6 @@ class PandasTrackDataset(TrackDataset):
             updated[offset] = geometries.add_all(new_tracks)
         return updated
 
-    def get_all_ids(self) -> Iterable[TrackId]:
-        return [TrackId(_id) for _id in self._get_track_ids()]
-
     def __get_tracks(self, other: Iterable[Track]) -> DataFrame:
         if isinstance(other, PandasTrackDataset):
             return other._dataset
@@ -314,6 +311,9 @@ class PandasTrackDataset(TrackDataset):
         return PandasTrackDataset.from_dataframe(
             remaining_tracks, self._track_geometry_factory, updated_geometry_datasets
         )
+
+    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+        raise NotImplementedError
 
     def _remove_from_geometry_dataset(
         self, track_ids: set[TrackId]

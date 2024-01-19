@@ -83,7 +83,7 @@ class AddAllTracks:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self, tracks: Iterable[Track]) -> None:
+    def __call__(self, tracks: TrackDataset) -> None:
         self._track_repository.add_all(tracks)
 
 

@@ -323,9 +323,6 @@ class PythonTrackDataset(TrackDataset):
             return existing_track.detections
         return []
 
-    def get_all_ids(self) -> Iterable[TrackId]:
-        return self._tracks.keys()
-
     def get_for(self, id: TrackId) -> Optional[Track]:
         return self._tracks.get(id)
 
@@ -333,6 +330,13 @@ class PythonTrackDataset(TrackDataset):
         new_tracks = self._tracks.copy()
         del new_tracks[track_id]
         updated_geometry_datasets = self._remove_from_geometry_datasets({track_id})
+        return PythonTrackDataset(new_tracks, updated_geometry_datasets)
+
+    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+        new_tracks = self._tracks.copy()
+        for track_id in track_ids:
+            del new_tracks[track_id]
+        updated_geometry_datasets = self._remove_from_geometry_datasets(track_ids)
         return PythonTrackDataset(new_tracks, updated_geometry_datasets)
 
     def _remove_from_geometry_datasets(
