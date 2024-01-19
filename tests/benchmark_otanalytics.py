@@ -495,10 +495,10 @@ class TestBenchmarkCuttingSection:
     def test_15min(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
         cutting_section: Section,
     ) -> None:
-        track_repository, _ = python_track_repo_15min
+        track_repository, _ = pandas_track_repo_15min
         track_dataset = track_repository.get_all()
         benchmark.pedantic(
             track_dataset.cut_with_section,
@@ -511,10 +511,10 @@ class TestBenchmarkCuttingSection:
     def test_2hours(
         self,
         benchmark: BenchmarkFixture,
-        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
         cutting_section: Section,
     ) -> None:
-        track_repository, _ = python_track_repo_2hours
+        track_repository, _ = pandas_track_repo_2hours
         track_dataset = track_repository.get_all()
         benchmark.pedantic(
             track_dataset.cut_with_section,
