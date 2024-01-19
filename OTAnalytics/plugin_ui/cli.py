@@ -46,7 +46,6 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionType
 from OTAnalytics.domain.track_repository import TrackRepository, TrackRepositoryEvent
-from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -309,14 +308,14 @@ class OTAnalyticsCli:
             ottrk_files, key=lambda file: str(file).lower()
         )
         self._parse_tracks(ottrk_files_sorted)
-        self._apply_cuts(self._get_all_sections())
+        # self._apply_cuts(self._get_all_sections())
 
         logger().info("Create event list ...")
         self._create_events()
         logger().info("Event list created.")
 
         save_path = self._create_save_path()
-        self._export_events(sections, save_path)
+        # self._export_events(sections, save_path)
         # self._do_export_counts(save_path)
         self._do_export_statistic(save_path)
 
@@ -478,7 +477,7 @@ class OTAnalyticsCli:
         # TODO Nur beachten, wenn es ein Event mit der TrackId gibt
 
         output_file = save_path.with_suffix(
-            f".{DEFAULT_STATISTIC_FILE_STEM}.{DEFAULT_STATISTIC_FILE_TYPE}"
+            f".{DEFAULT_STATISTIC_FILE_STEM}.all.{DEFAULT_STATISTIC_FILE_TYPE}"
         )
         # overall_file = save_path.with_suffix(f".overall.{
         # DEFAULT_STATISTIC_FILE_TYPE}") overall_plot = save_path.with_suffix(
@@ -534,14 +533,14 @@ class OTAnalyticsCli:
         }
         svz_data = DataFrame.from_dict(svz_classification).T.reset_index()
         svz_data.rename(columns={"index": track.TRACK_CLASSIFICATION}, inplace=True)
-        track_ids = {
-            event.road_user_id
-            for event in self._event_repository.get_all()
-            if event.event_type == EventType.SECTION_ENTER
-        }
+        # track_ids = {
+        #     event.road_user_id
+        #     for event in self._event_repository.get_all()
+        #     if event.event_type == EventType.SECTION_ENTER
+        # }
         if isinstance(track_dataset, PandasTrackDataset):
             data = track_dataset.as_dataframe().reset_index()
-            data = data.loc[data[track.TRACK_ID].isin(track_ids), :]
+            # data = data.loc[data[track.TRACK_ID].isin(track_ids), :]
             data = data.loc[data[track.TRACK_CLASSIFICATION] != "pedestrian", :]
             data = data.set_index([track.TRACK_ID, track.OCCURRENCE])
             # rate_len = self._calculate_detection_rate(data, len)
