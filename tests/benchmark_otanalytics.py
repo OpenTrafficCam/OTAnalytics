@@ -19,8 +19,15 @@ from OTAnalytics.application.use_cases.track_repository import (
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
-from OTAnalytics.domain.section import SectionRepository
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.section import (
+    LineSection,
+    Section,
+    SectionId,
+    SectionRepository,
+)
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
@@ -265,6 +272,19 @@ def section_flow_repo_setup(
     return section_repository, flow_repository
 
 
+@pytest.fixture
+def cutting_section() -> Section:
+    coords = [Coordinate(589, 674), Coordinate(883, 290)]
+
+    return LineSection(
+        SectionId("#cut"),
+        "#cut",
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)},
+        {},
+        coords,
+    )
+
+
 class TestBenchmarkTrackParser:
     ROUNDS = 1
     ITERATIONS = 1
@@ -452,3 +472,15 @@ class TestBenchmarkExportCounting:
             output_format="CSV",
         )
         export_events.export(specification)
+
+
+class TestBenchmarkCuttingSection:
+    def test_15min(
+        self, python_track_repo_15min: tuple[TrackRepository, DetectionMetadata]
+    ) -> None:
+        pass
+
+    def test_2hours(
+        self, python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata]
+    ) -> None:
+        pass
