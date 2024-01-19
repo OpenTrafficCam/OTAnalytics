@@ -11,11 +11,19 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.datastore import DetectionMetadata, FlowParser, TrackParser
 from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
+    CutTracksIntersectingSection,
+)
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
-from OTAnalytics.application.use_cases.section_repository import GetSectionsById
+from OTAnalytics.application.use_cases.section_repository import (
+    GetSectionsById,
+    RemoveSection,
+)
 from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
     GetAllTracks,
     GetTracksWithoutSingleDetections,
+    RemoveTracks,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
@@ -38,6 +46,9 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
+)
+from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
+    SimpleCutTracksIntersectingSection,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
@@ -124,6 +135,24 @@ def _build_export_events(
         track_repository,
         GetSectionsById(section_repository),
         create_events,
+    )
+
+
+def _build_cut_tracks_intersecting_sections(
+    section_repository: SectionRepository,
+    track_repository: TrackRepository,
+) -> CutTracksIntersectingSection:
+    get_sections_by_id = GetSectionsById(section_repository)
+    get_tracks = GetAllTracks(track_repository)
+    add_all_tracks = AddAllTracks(track_repository)
+    remove_tracks = RemoveTracks(track_repository)
+    remove_section = RemoveSection(section_repository)
+    return SimpleCutTracksIntersectingSection(
+        get_sections_by_id,
+        get_tracks,
+        add_all_tracks,
+        remove_tracks,
+        remove_section,
     )
 
 
@@ -499,10 +528,14 @@ class TestBenchmarkCuttingSection:
         cutting_section: Section,
     ) -> None:
         track_repository, _ = pandas_track_repo_15min
-        track_dataset = track_repository.get_all()
+        section_repository = SectionRepository()
+        section_repository.add(cutting_section)
+        cut_tracks_intersecting_section = _build_cut_tracks_intersecting_sections(
+            section_repository, track_repository
+        )
         benchmark.pedantic(
-            track_dataset.cut_with_section,
-            args=(cutting_section, cutting_section.get_offset(EventType.SECTION_ENTER)),
+            cut_tracks_intersecting_section,
+            args=(cutting_section,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -515,10 +548,14 @@ class TestBenchmarkCuttingSection:
         cutting_section: Section,
     ) -> None:
         track_repository, _ = pandas_track_repo_2hours
-        track_dataset = track_repository.get_all()
+        section_repository = SectionRepository()
+        section_repository.add(cutting_section)
+        cut_tracks_intersecting_section = _build_cut_tracks_intersecting_sections(
+            section_repository, track_repository
+        )
         benchmark.pedantic(
-            track_dataset.cut_with_section,
-            args=(cutting_section, cutting_section.get_offset(EventType.SECTION_ENTER)),
+            cut_tracks_intersecting_section,
+            args=(cutting_section,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
