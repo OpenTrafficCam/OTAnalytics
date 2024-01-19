@@ -422,13 +422,14 @@ class TestBenchmarkExportCounting:
 
     def test_export_15min_tracks(
         self,
-        python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        benchmark: BenchmarkFixture,
+        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
         event_repository: EventRepository,
         test_data_tmp_dir: Path,
         otflow_file: Path,
     ) -> None:
-        track_repository, detection_metadata = python_track_repo_15min
+        track_repository, detection_metadata = pandas_track_repo_15min
         section_repository, flow_repository = section_flow_repo_setup
         export_events = _build_export_events(
             track_repository,
@@ -444,18 +445,24 @@ class TestBenchmarkExportCounting:
             output_file=f"{test_data_tmp_dir / otflow_file.with_suffix('.csv').name}",
             output_format="CSV",
         )
-        export_events.export(specification)
-        print("yes")
+        benchmark.pedantic(
+            export_events.export,
+            args=(specification,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
 
     def test_export_2hours_track(
         self,
-        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        benchmark: BenchmarkFixture,
+        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
         section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
         event_repository: EventRepository,
         test_data_tmp_dir: Path,
         otflow_file: Path,
     ) -> None:
-        track_repository, detection_metadata = python_track_repo_2hours
+        track_repository, detection_metadata = pandas_track_repo_2hours
         section_repository, flow_repository = section_flow_repo_setup
         export_events = _build_export_events(
             track_repository,
@@ -471,7 +478,13 @@ class TestBenchmarkExportCounting:
             output_file=f"{test_data_tmp_dir / otflow_file.with_suffix('.csv').name}",
             output_format="CSV",
         )
-        export_events.export(specification)
+        benchmark.pedantic(
+            export_events.export,
+            args=(specification,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
 
 
 class TestBenchmarkCuttingSection:
