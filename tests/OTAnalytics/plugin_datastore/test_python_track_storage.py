@@ -514,6 +514,16 @@ class TestPythonTrackDataset:
             assert actual == expected
         assert original_track_ids == expected_original_track_ids
 
+    def test_track_ids(
+        self,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.track_ids == frozenset()
+        updated_dataset = dataset.add_all([first_track, second_track])
+        assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
+
 
 class TestSimpleCutTrackSegmentBuilder:
     def test_build(self) -> None:

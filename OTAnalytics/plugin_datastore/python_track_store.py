@@ -239,7 +239,7 @@ class PythonTrackDataset(TrackDataset):
 
     @property
     def track_ids(self) -> frozenset[TrackId]:
-        raise NotImplementedError
+        return frozenset(self._tracks.keys())
 
     def __init__(
         self,
