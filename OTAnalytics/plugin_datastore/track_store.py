@@ -204,6 +204,17 @@ def extract_hostname(name: str) -> str:
 
 
 class PandasTrackDataset(TrackDataset):
+    @property
+    def track_ids(self) -> frozenset[TrackId]:
+        if self._dataset.empty:
+            return frozenset()
+        return frozenset(
+            [
+                TrackId(_id)
+                for _id in self._dataset.index.get_level_values(LEVEL_TRACK_ID)
+            ]
+        )
+
     def __init__(
         self,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,

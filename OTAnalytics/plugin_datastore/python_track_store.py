@@ -237,6 +237,10 @@ class ByMaxConfidence(TrackClassificationCalculator):
 class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
+    @property
+    def track_ids(self) -> frozenset[TrackId]:
+        raise NotImplementedError
+
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,

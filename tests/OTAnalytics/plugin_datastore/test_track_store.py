@@ -499,3 +499,14 @@ class TestPandasTrackDataset:
         )
         assert_track_datasets_equal(cut_track_dataset, expected_dataset)
         assert original_track_ids == expected_original_track_ids
+
+    def test_track_ids(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
+        assert dataset.track_ids == frozenset()
+        updated_dataset = dataset.add_all([first_track, second_track])
+        assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])

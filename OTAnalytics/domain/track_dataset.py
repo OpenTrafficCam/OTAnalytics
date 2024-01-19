@@ -17,6 +17,10 @@ class TrackDataset(ABC):
     def __iter__(self) -> Iterator[Track]:
         yield from self.as_list()
 
+    @property
+    def track_ids(self) -> frozenset[TrackId]:
+        raise NotImplementedError
+
     @abstractmethod
     def add_all(self, other: Iterable[Track]) -> "TrackDataset":
         raise NotImplementedError
