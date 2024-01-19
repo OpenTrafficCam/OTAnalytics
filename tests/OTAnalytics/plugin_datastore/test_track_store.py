@@ -1,6 +1,7 @@
 from typing import cast
 from unittest.mock import Mock, call
 
+import numpy
 import pytest
 from pandas import DataFrame, Series
 
@@ -32,19 +33,32 @@ from OTAnalytics.plugin_datastore.track_store import (
     _convert_tracks,
     extract_hostname,
 )
+from tests.OTAnalytics.plugin_datastore.conftest import (
+    assert_track_geometry_dataset_add_all_called_correctly,
+    create_mock_geometry_dataset,
+)
 from tests.conftest import (
     TrackBuilder,
     assert_equal_detection_properties,
     assert_equal_track_properties,
     assert_track_datasets_equal,
 )
-from tests.OTAnalytics.plugin_datastore.conftest import (
-    assert_track_geometry_dataset_add_all_called_correctly,
-    create_mock_geometry_dataset,
-)
 
 
 class TestPandasDetection:
+    def test_convert_frame_number_to_python_data_type(self) -> None:
+        track_id = "track-id"
+        new_frame_number = 2
+        builder = TrackBuilder()
+        python_detection = builder.create_detection()
+        detection_values = python_detection.to_dict()
+        detection_values[track.FRAME] = numpy.int64(new_frame_number)
+        data = Series(detection_values)
+        detection = PandasDetection(track_id=track_id, data=data)
+
+        assert type(detection.frame) is int
+        assert detection.frame == new_frame_number
+
     def test_properties(self) -> None:
         builder = TrackBuilder()
         builder.append_detection()

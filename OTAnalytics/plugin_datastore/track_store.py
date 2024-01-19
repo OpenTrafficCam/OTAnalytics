@@ -5,6 +5,7 @@ from datetime import datetime
 from math import ceil
 from typing import Any, Callable, Iterable, Optional, Sequence
 
+import numpy
 import pandas
 from more_itertools import batched
 from pandas import DataFrame, Series
@@ -67,7 +68,10 @@ class PandasDetection(Detection):
 
     @property
     def frame(self) -> int:
-        return self.__get_attribute(track.FRAME)
+        frame_number = self.__get_attribute(track.FRAME)
+        if isinstance(frame_number, numpy.int64):
+            return frame_number.item()
+        return frame_number
 
     @property
     def occurrence(self) -> datetime:
