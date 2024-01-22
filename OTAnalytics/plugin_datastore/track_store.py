@@ -205,15 +205,12 @@ def extract_hostname(name: str) -> str:
 
 class PandasTrackDataset(TrackDataset):
     @property
-    def track_ids(self) -> frozenset[TrackId]:
+    def track_ids(self) -> list[TrackId]:
         if self._dataset.empty:
-            return frozenset()
-        return frozenset(
-            [
-                TrackId(_id)
-                for _id in self._dataset.index.get_level_values(LEVEL_TRACK_ID)
-            ]
-        )
+            return []
+        return [
+            TrackId(_id) for _id in self._dataset.index.unique(level=LEVEL_TRACK_ID)
+        ]
 
     def __init__(
         self,
@@ -509,7 +506,7 @@ class PandasTrackDataset(TrackDataset):
             lambda row: self._create_cut_track_id(row, cut_indices), axis=1
         )
         cut_tracks_df.index = MultiIndex.from_frame(
-            index_as_df[[track.TRACK_ID, track.OCCURRENCE]]
+            index_as_df[[track.TRACK_ID, track.OCCURRENCE]],
         )
         return PandasTrackDataset(self._track_geometry_factory, cut_tracks_df), set(
             intersection_points.keys()

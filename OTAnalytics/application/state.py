@@ -73,7 +73,7 @@ class TrackState(TrackListObserver):
         Args:
             track_event (TrackRepositoryEvent): newly added or removed tracks.
         """
-        track_to_select = next(iter(track_event.added)) if track_event.added else None
+        track_to_select = track_event.added[0] if track_event.added else None
         self.select(track_to_select)
 
 

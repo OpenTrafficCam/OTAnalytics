@@ -41,9 +41,7 @@ class TestTrackRepository:
         return track
 
     def test_add_all(self, track_1: Mock, track_2: Mock) -> None:
-        track_ids_property = PropertyMock(
-            return_value=frozenset([track_1.id, track_2.id])
-        )
+        track_ids_property = PropertyMock(return_value=[track_1.id, track_2.id])
         tracks = MagicMock(spec=TrackDataset)
         tracks.__len__.return_value = 2
         type(tracks).track_ids = track_ids_property
@@ -91,9 +89,7 @@ class TestTrackRepository:
     def test_clear(self, track_1: Track, track_2: Track) -> None:
         cleared_dataset = Mock(spec=TrackDataset)
         dataset = Mock(spec=TrackDataset)
-        type(dataset).track_ids = PropertyMock(
-            return_value=frozenset([track_1.id, track_2.id])
-        )
+        type(dataset).track_ids = PropertyMock(return_value=[track_1.id, track_2.id])
         dataset.clear.return_value = cleared_dataset
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository(dataset)
@@ -136,7 +132,7 @@ class TestTrackRepository:
         ]
 
     def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
-        tracks_to_remove = frozenset([track_1.id, track_2.id])
+        tracks_to_remove = [track_1.id, track_2.id]
         updated_dataset = Mock(spec=TrackDataset)
         type(updated_dataset).track_ids = PropertyMock(return_value=tracks_to_remove)
         dataset = Mock(spec=TrackDataset)

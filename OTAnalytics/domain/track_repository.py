@@ -10,16 +10,16 @@ from OTAnalytics.domain.track_dataset import TrackDataset
 
 @dataclass(frozen=True)
 class TrackRepositoryEvent:
-    added: frozenset[TrackId]
-    removed: frozenset[TrackId]
+    added: list[TrackId]
+    removed: list[TrackId]
 
     @staticmethod
     def create_added(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
-        return TrackRepositoryEvent(frozenset(tracks), frozenset())
+        return TrackRepositoryEvent(list(tracks), [])
 
     @staticmethod
     def create_removed(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
-        return TrackRepositoryEvent(frozenset(), frozenset(tracks))
+        return TrackRepositoryEvent([], list(tracks))
 
 
 class TrackListObserver(ABC):
@@ -181,7 +181,10 @@ class TrackRepository:
 
     def remove_multiple(self, track_ids: set[TrackId]) -> None:
         self._dataset = self._dataset.remove_multiple(track_ids)
-        actual_removed_tracks = self._dataset.track_ids.intersection(track_ids)
+        actual_removed_tracks = sorted(
+            set(self._dataset.track_ids).intersection(track_ids),
+            key=lambda track_id: track_id.id,
+        )
         self.observers.notify(
             TrackRepositoryEvent.create_removed(actual_removed_tracks)
         )
