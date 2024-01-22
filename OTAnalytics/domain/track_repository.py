@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import Subject
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import TrackDataset
@@ -180,11 +181,18 @@ class TrackRepository:
         self.observers.notify(TrackRepositoryEvent.create_removed([track_id]))
 
     def remove_multiple(self, track_ids: set[TrackId]) -> None:
+        not_existing_tracks = track_ids - set(self._dataset.track_ids)
+        if not_existing_tracks:
+            logger().warning(
+                f"Trying to remove {len(not_existing_tracks)} "
+                "track(s) not contained in track dataset."
+            )
+            logger().debug(
+                "Trying to remove tracks not contained in dataset: "
+                f"{not_existing_tracks}."
+            )
         self._dataset = self._dataset.remove_multiple(track_ids)
-        actual_removed_tracks = self._dataset.track_ids.intersection(track_ids)
-        self.observers.notify(
-            TrackRepositoryEvent.create_removed(actual_removed_tracks)
-        )
+        self.observers.notify(TrackRepositoryEvent.create_removed(track_ids))
 
     def split(self, chunks: int) -> Iterable[TrackDataset]:
         return self._dataset.split(chunks)
