@@ -522,7 +522,7 @@ def assert_equal_track_properties(actual: Track, expected: Track) -> None:
 
 
 def assert_track_datasets_equal(actual: TrackDataset, expected: TrackDataset) -> None:
-    assert len(actual) == len(expected)
+    assert actual.track_ids == expected.track_ids
 
     for actual_track in actual.as_list():
         if expected_track := expected.get_for(actual_track.id):
