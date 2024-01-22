@@ -80,7 +80,7 @@ class TestTrackState:
         state = TrackState()
 
         state.notify_tracks(TrackRepositoryEvent.create_added([first_track]))
-        state.notify_tracks(TrackRepositoryEvent([], []))
+        state.notify_tracks(TrackRepositoryEvent(frozenset(), frozenset()))
 
         assert state.selected_track is None
 

@@ -238,8 +238,8 @@ class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
     @property
-    def track_ids(self) -> list[TrackId]:
-        return list(self._tracks.keys())
+    def track_ids(self) -> frozenset[TrackId]:
+        return frozenset(self._tracks.keys())
 
     def __init__(
         self,

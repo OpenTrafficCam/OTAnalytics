@@ -307,7 +307,7 @@ class TestPandasTrackDataset:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
         third_track = self.__build_track("3")
-        all_track_ids = [first_track.id, second_track.id, third_track.id]
+        all_track_ids = frozenset([first_track.id, second_track.id, third_track.id])
         track_ids_to_remove = {first_track.id, second_track.id}
         tracks_df = _convert_tracks([first_track, second_track, third_track])
         geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
@@ -535,6 +535,6 @@ class TestPandasTrackDataset:
         second_track: Track,
     ) -> None:
         dataset = PandasTrackDataset(track_geometry_factory)
-        assert dataset.track_ids == []
+        assert dataset.track_ids == frozenset()
         updated_dataset = dataset.add_all([first_track, second_track])
-        assert updated_dataset.track_ids == [first_track.id, second_track.id]
+        assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])

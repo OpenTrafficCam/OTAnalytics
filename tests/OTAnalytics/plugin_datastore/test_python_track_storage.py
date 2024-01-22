@@ -532,9 +532,9 @@ class TestPythonTrackDataset:
         second_track: Track,
     ) -> None:
         dataset = PythonTrackDataset()
-        assert dataset.track_ids == []
+        assert dataset.track_ids == frozenset()
         updated_dataset = dataset.add_all([first_track, second_track])
-        assert updated_dataset.track_ids == [first_track.id, second_track.id]
+        assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
 
 
 class TestSimpleCutTrackSegmentBuilder:

@@ -18,7 +18,7 @@ class TrackDataset(ABC):
         yield from self.as_list()
 
     @property
-    def track_ids(self) -> list[TrackId]:
+    def track_ids(self) -> frozenset[TrackId]:
         raise NotImplementedError
 
     @abstractmethod
