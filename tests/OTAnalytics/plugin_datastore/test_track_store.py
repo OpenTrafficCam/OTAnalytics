@@ -525,8 +525,8 @@ class TestPandasTrackDataset:
         cut_track_dataset, original_track_ids = dataset.cut_with_section(
             cutting_section, RelativeOffsetCoordinate(0, 0)
         )
-        assert_track_datasets_equal(cut_track_dataset, expected_dataset)
         assert original_track_ids == expected_original_track_ids
+        assert_track_datasets_equal(cut_track_dataset, expected_dataset)
 
     def test_track_ids(
         self,
