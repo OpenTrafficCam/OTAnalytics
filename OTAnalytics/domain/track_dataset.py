@@ -8,7 +8,7 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 
 
-@dataclass
+@dataclass(frozen=True, order=True)
 class IntersectionPoint:
     index: int
 

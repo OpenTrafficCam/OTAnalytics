@@ -496,7 +496,9 @@ class PandasTrackDataset(TrackDataset):
     ) -> tuple[TrackDataset, set[TrackId]]:
         intersection_points = self.intersection_points([section], offset)
         cut_indices = {
-            track_id.id: [ip[1].index for ip in intersection_points]
+            track_id.id: [
+                ip[1].index for ip in sorted(intersection_points, key=lambda ip: ip[1])
+            ]
             for track_id, intersection_points in intersection_points.items()
         }
         tracks_to_cut = list(cut_indices.keys())
