@@ -73,7 +73,7 @@ class TestTrackState:
             TrackRepositoryEvent.create_added([first_track, second_track])
         )
 
-        assert state.selected_track == first_track
+        assert state.selected_track in [first_track, second_track]
 
     def test_update_selected_track_on_notify_tracks_with_empty_list(self) -> None:
         first_track = TrackId("1")

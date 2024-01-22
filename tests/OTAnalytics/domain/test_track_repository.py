@@ -140,6 +140,7 @@ class TestTrackRepository:
         updated_dataset = Mock(spec=TrackDataset)
         type(updated_dataset).track_ids = PropertyMock(return_value=tracks_to_remove)
         dataset = Mock(spec=TrackDataset)
+        type(dataset).track_ids = PropertyMock(return_value=tracks_to_remove)
         dataset.remove_multiple.return_value = updated_dataset
         repository = TrackRepository(dataset)
 

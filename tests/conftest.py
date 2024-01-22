@@ -522,8 +522,15 @@ def assert_equal_track_properties(actual: Track, expected: Track) -> None:
 
 
 def assert_track_datasets_equal(actual: TrackDataset, expected: TrackDataset) -> None:
-    for actual_track, expected_track in zip(actual.as_list(), expected.as_list()):
-        assert_equal_track_properties(actual_track, expected_track)
+    assert len(actual) == len(expected)
+
+    for actual_track in actual.as_list():
+        if expected_track := expected.get_for(actual_track.id):
+            assert_equal_track_properties(actual_track, expected_track)
+        else:
+            raise AssertionError(
+                f"Track with id {actual_track.id} not found in expected dataset"
+            )
 
 
 def append_sample_data(
