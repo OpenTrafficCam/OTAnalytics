@@ -812,7 +812,7 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
             axes.plot(
                 row[X],
                 row[Y],
-                marker="x",
+                marker="o",
                 color=color,
             )
 
