@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Callable, Generic, Iterable, Optional
+from typing import Callable, Generic, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore, VideoMetadata
@@ -17,10 +17,8 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
     SectionType,
 )
-from OTAnalytics.domain.track import (
-    Detection,
-    TrackId,
-    TrackImage,
+from OTAnalytics.domain.track import TrackId, TrackImage
+from OTAnalytics.domain.track_repository import (
     TrackListObserver,
     TrackObserver,
     TrackRepository,
@@ -75,7 +73,7 @@ class TrackState(TrackListObserver):
         Args:
             track_event (TrackRepositoryEvent): newly added or removed tracks.
         """
-        track_to_select = track_event.added[0] if track_event.added else None
+        track_to_select = next(iter(track_event.added)) if track_event.added else None
         self.select(track_to_select)
 
 
@@ -438,9 +436,9 @@ class TracksMetadata(TrackListObserver):
         self._last_detection_occurrence: ObservableOptionalProperty[
             datetime
         ] = ObservableOptionalProperty[datetime]()
-        self._classifications: ObservableProperty[set[str]] = ObservableProperty[set](
-            set()
-        )
+        self._classifications: ObservableProperty[frozenset[str]] = ObservableProperty[
+            frozenset
+        ](frozenset())
         self._detection_classifications: ObservableProperty[
             frozenset[str]
         ] = ObservableProperty[frozenset](frozenset([]))
@@ -466,7 +464,7 @@ class TracksMetadata(TrackListObserver):
         return self._last_detection_occurrence.get()
 
     @property
-    def classifications(self) -> set[str]:
+    def classifications(self) -> frozenset[str]:
         """The current classifications in the track repository.
 
         Returns:
@@ -486,37 +484,16 @@ class TracksMetadata(TrackListObserver):
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """Update tracks metadata on track repository changes"""
         self._update_detection_occurrences()
-        self._update_classifications(track_event.added)
+        self._update_classifications()
 
     def _update_detection_occurrences(self) -> None:
         """Update the first and last detection occurrences."""
-        sorted_detections = sorted(
-            self._get_all_track_detections(), key=lambda x: x.occurrence
-        )
-        if sorted_detections:
-            self._first_detection_occurrence.set(sorted_detections[0].occurrence)
-            self._last_detection_occurrence.set(sorted_detections[-1].occurrence)
+        self._first_detection_occurrence.set(self._track_repository.first_occurrence)
+        self._last_detection_occurrence.set(self._track_repository.last_occurrence)
 
-    def _update_classifications(self, new_tracks: list[TrackId]) -> None:
+    def _update_classifications(self) -> None:
         """Update current classifications."""
-        updated_classifications = self._classifications.get().copy()
-        for track_id in new_tracks:
-            if track := self._track_repository.get_for(track_id):
-                updated_classifications.add(track.classification)
-        self._classifications.set(updated_classifications)
-
-    def _get_all_track_detections(self) -> Iterable[Detection]:
-        """Get all track detections in the track repository.
-
-        Returns:
-            Iterable[Detection]: the track detections.
-        """
-        detections: list[Detection] = []
-
-        for track in self._track_repository.get_all():
-            detections.extend(track.detections)
-
-        return detections
+        self._classifications.set(self._track_repository.classifications)
 
     def update_detection_classes(self, new_classes: frozenset[str]) -> None:
         """Update the classifications used by the detection model."""

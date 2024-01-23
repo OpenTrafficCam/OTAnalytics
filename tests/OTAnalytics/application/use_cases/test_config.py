@@ -4,7 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.datastore import ConfigParser, Datastore
+from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.config import MissingDate, SaveOtconfig
 

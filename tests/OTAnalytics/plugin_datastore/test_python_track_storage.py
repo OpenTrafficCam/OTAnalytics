@@ -1,19 +1,40 @@
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from typing import cast
+from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.domain.event import VIDEO_NAME
-from OTAnalytics.domain.track import Detection, Track, TrackHasNoDetectionError, TrackId
+from OTAnalytics.domain.event import VIDEO_NAME, Event
+from OTAnalytics.domain.geometry import (
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+    calculate_direction_vector,
+)
+from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.track import (
+    Detection,
+    Track,
+    TrackClassificationCalculator,
+    TrackHasNoDetectionError,
+    TrackId,
+)
+from OTAnalytics.domain.track_dataset import TrackGeometryDataset
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
+    SimpleCutTrackSegmentBuilder,
 )
+from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
-from tests.conftest import TrackBuilder
+from tests.conftest import TrackBuilder, create_track
+from tests.OTAnalytics.plugin_datastore.conftest import (
+    assert_track_geometry_dataset_add_all_called_correctly,
+    create_mock_geometry_dataset,
+)
 
 
 @pytest.fixture
@@ -228,76 +249,6 @@ class TestTrack:
 
 
 class TestPythonTrackDataset:
-    @pytest.fixture
-    def first_track(self) -> Track:
-        track_builder = TrackBuilder()
-        _class = "car"
-
-        track_builder.add_track_id("1")
-        track_builder.add_track_class(_class)
-        track_builder.add_second(1)
-        track_builder.add_frame(1)
-        track_builder.add_detection_class(_class)
-        track_builder.append_detection()
-
-        track_builder.add_track_class(_class)
-        track_builder.add_second(2)
-        track_builder.add_frame(2)
-        track_builder.add_detection_class(_class)
-        track_builder.append_detection()
-
-        return track_builder.build_track()
-
-    @pytest.fixture
-    def first_track_continuing(self) -> Track:
-        track_builder = TrackBuilder()
-        _class = "truck"
-        track_builder.add_track_id("1")
-        track_builder.add_track_class(_class)
-        track_builder.add_second(3)
-        track_builder.add_frame(3)
-        track_builder.add_detection_class(_class)
-        track_builder.append_detection()
-
-        track_builder.add_track_class(_class)
-        track_builder.add_second(4)
-        track_builder.add_frame(4)
-        track_builder.add_detection_class(_class)
-        track_builder.append_detection()
-
-        track_builder.add_track_class(_class)
-        track_builder.add_second(5)
-        track_builder.add_frame(5)
-        track_builder.add_detection_class(_class)
-        track_builder.append_detection()
-
-        return track_builder.build_track()
-
-    @pytest.fixture
-    def second_track(self) -> Track:
-        track_builder = TrackBuilder()
-        _class = "pedestrian"
-        track_builder.add_track_id("2")
-        track_builder.add_track_class(_class)
-        track_builder.add_second(1)
-        track_builder.add_frame(1)
-        track_builder.add_detection_class(_class)
-        track_builder.append_detection()
-
-        track_builder.add_track_class(_class)
-        track_builder.add_second(2)
-        track_builder.add_frame(2)
-        track_builder.add_detection_class(_class)
-        track_builder.append_detection()
-
-        track_builder.add_track_class(_class)
-        track_builder.add_second(3)
-        track_builder.add_frame(3)
-        track_builder.add_detection_class(_class)
-        track_builder.append_detection()
-
-        return track_builder.build_track()
-
     @staticmethod
     def create_track_dataset(size: int) -> PythonTrackDataset:
         dataset: dict[TrackId, Track] = {}
@@ -309,31 +260,56 @@ class TestPythonTrackDataset:
 
         return PythonTrackDataset(dataset)
 
-    def test_add_all(self, first_track: Track, second_track: Track) -> None:
+    def test_add_all_to_empty(self, first_track: Track, second_track: Track) -> None:
         tracks = [first_track, second_track]
         dataset = PythonTrackDataset()
-        result_dataset = dataset.add_all(tracks)
+        result_dataset = cast(PythonTrackDataset, dataset.add_all(tracks))
 
         assert list(result_dataset) == tracks
+        assert result_dataset._geometry_datasets == {}
 
     def test_add_all_merge_tracks(
-        self, first_track: Track, first_track_continuing: Track
+        self, first_track: Track, first_track_continuing: Track, second_track: Track
     ) -> None:
-        dataset = PythonTrackDataset()
-        dataset_with_first_track = dataset.add_all([first_track])
-        assert list(dataset_with_first_track) == [first_track]
-
-        dataset_merged_track = dataset_with_first_track.add_all(
-            [first_track_continuing]
+        (
+            geometry_dataset_no_offset,
+            updated_geometry_dataset_no_offset,
+        ) = create_mock_geometry_dataset()
+        (
+            geometry_dataset_with_offset,
+            updated_geometry_dataset_with_offset,
+        ) = create_mock_geometry_dataset()
+        geometry_datasets = {
+            RelativeOffsetCoordinate(0, 0): cast(
+                TrackGeometryDataset, geometry_dataset_no_offset
+            ),
+            RelativeOffsetCoordinate(0.5, 0.5): cast(
+                TrackGeometryDataset, geometry_dataset_with_offset
+            ),
+        }
+        dataset = PythonTrackDataset({first_track.id: first_track}, geometry_datasets)
+        dataset_merged_track = cast(
+            PythonTrackDataset, dataset.add_all([first_track_continuing, second_track])
         )
-
+        expected_merged_track = PythonTrack(
+            first_track.id,
+            first_track_continuing.classification,
+            first_track.detections + first_track_continuing.detections,
+        )
         assert list(dataset_merged_track) == [
-            PythonTrack(
-                first_track.id,
-                first_track_continuing.classification,
-                first_track.detections + first_track_continuing.detections,
-            )
+            expected_merged_track,
+            second_track,
         ]
+        assert_track_geometry_dataset_add_all_called_correctly(
+            geometry_dataset_no_offset.add_all, [expected_merged_track, second_track]
+        )
+        assert_track_geometry_dataset_add_all_called_correctly(
+            geometry_dataset_with_offset.add_all, [expected_merged_track, second_track]
+        )
+        assert dataset_merged_track._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset_no_offset,
+            RelativeOffsetCoordinate(0.5, 0.5): updated_geometry_dataset_with_offset,
+        }
 
     def test_add_nothing(self, first_track: Track) -> None:
         dataset = PythonTrackDataset()
@@ -348,13 +324,6 @@ class TestPythonTrackDataset:
         result = result_dataset.get_for(first_track.id)
         assert result == first_track
 
-    def test_get_all_ids(self, first_track: Track, second_track: Track) -> None:
-        dataset = PythonTrackDataset()
-        result_dataset = dataset.add_all([first_track, second_track])
-
-        result = result_dataset.get_all_ids()
-        assert set(result) == {first_track.id, second_track.id}
-
     def test_clear(self, first_track: Track, second_track: Track) -> None:
         dataset = PythonTrackDataset()
         result_dataset = dataset.add_all([first_track, second_track])
@@ -363,11 +332,36 @@ class TestPythonTrackDataset:
         assert list(result) == []
 
     def test_remove(self, first_track: Track, second_track: Track) -> None:
-        dataset = PythonTrackDataset()
-        result_dataset = dataset.add_all([first_track, second_track])
-
-        result = result_dataset.remove(second_track.id)
+        geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
+        dataset = PythonTrackDataset(
+            {first_track.id: first_track, second_track.id: second_track},
+            {RelativeOffsetCoordinate(0, 0): geometry_dataset},
+        )
+        result = cast(PythonTrackDataset, dataset.remove(second_track.id))
         assert list(result) == [first_track]
+        assert result._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
+        }
+        geometry_dataset.remove.assert_called_once_with({second_track.id})
+
+    def test_remove_multiple(self, first_track: Track, second_track: Track) -> None:
+        geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
+        dataset = PythonTrackDataset(
+            {first_track.id: first_track, second_track.id: second_track},
+            {RelativeOffsetCoordinate(0, 0): geometry_dataset},
+        )
+        assert list(dataset) == [first_track, second_track]
+        result = cast(
+            PythonTrackDataset,
+            dataset.remove_multiple({first_track.id, second_track.id}),
+        )
+        assert list(result) == []
+        assert result._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
+        }
+        geometry_dataset.remove.assert_called_once_with(
+            {first_track.id, second_track.id}
+        )
 
     @pytest.mark.parametrize(
         "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]
@@ -386,6 +380,51 @@ class TestPythonTrackDataset:
                 expected_track = next(it)
                 assert track == expected_track
 
+    def test_split_with_existing_geometries(
+        self, first_track: Track, second_track: Track
+    ) -> None:
+        first_batch_geometries_no_offset = Mock()
+        second_batch_geometries_no_offset = Mock()
+        geometry_dataset_no_offset, _ = create_mock_geometry_dataset(
+            [first_batch_geometries_no_offset, second_batch_geometries_no_offset]
+        )
+        first_batch_geometries_with_offset = Mock()
+        second_batch_geometries_with_offset = Mock()
+        geometry_dataset_with_offset, _ = create_mock_geometry_dataset(
+            [first_batch_geometries_with_offset, second_batch_geometries_with_offset]
+        )
+
+        geometry_datasets = {
+            RelativeOffsetCoordinate(0, 0): cast(
+                TrackGeometryDataset, geometry_dataset_no_offset
+            ),
+            RelativeOffsetCoordinate(0.5, 0.5): cast(
+                TrackGeometryDataset, geometry_dataset_with_offset
+            ),
+        }
+        dataset = PythonTrackDataset(
+            {first_track.id: first_track, second_track.id: second_track},
+            geometry_datasets,
+        )
+        result = cast(list[PythonTrackDataset], dataset.split(batches=2))
+
+        assert result[0]._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): first_batch_geometries_no_offset,
+            RelativeOffsetCoordinate(0.5, 0.5): first_batch_geometries_with_offset,
+        }
+        assert result[1]._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): second_batch_geometries_no_offset,
+            RelativeOffsetCoordinate(0.5, 0.5): second_batch_geometries_with_offset,
+        }
+        assert geometry_dataset_no_offset.get_for.call_args_list == [
+            call([first_track.id.id]),
+            call([second_track.id.id]),
+        ]
+        assert geometry_dataset_with_offset.get_for.call_args_list == [
+            call([first_track.id.id]),
+            call([second_track.id.id]),
+        ]
+
     def test_filter_by_minimum_detection_length(
         self, first_track: Track, second_track: Track
     ) -> None:
@@ -394,3 +433,155 @@ class TestPythonTrackDataset:
         filtered_dataset = dataset.filter_by_min_detection_length(3)
 
         assert list(filtered_dataset) == [second_track]
+
+    def test_apply_to_first_segments(
+        self,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        mock_consumer = Mock()
+        dataset = PythonTrackDataset.from_list([first_track, second_track])
+
+        dataset.apply_to_first_segments(mock_consumer)
+
+        mock_consumer.assert_any_call(self.__create_enter_scene_event(first_track))
+        mock_consumer.assert_any_call(self.__create_enter_scene_event(second_track))
+
+    def test_apply_to_last_segments(
+        self,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        mock_consumer = Mock()
+        dataset = PythonTrackDataset.from_list([first_track, second_track])
+
+        dataset.apply_to_last_segments(mock_consumer)
+
+        mock_consumer.assert_any_call(self.__create_leave_scene_event(first_track))
+        mock_consumer.assert_any_call(self.__create_leave_scene_event(second_track))
+
+    def __create_enter_scene_event(self, track: Track) -> Event:
+        return Event(
+            road_user_id=track.id.id,
+            road_user_type=track.classification,
+            hostname=extract_hostname(track.first_detection.video_name),
+            occurrence=track.first_detection.occurrence,
+            frame_number=track.first_detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(
+                track.first_detection.x, track.first_detection.y
+            ),
+            event_type=EventType.ENTER_SCENE,
+            direction_vector=calculate_direction_vector(
+                track.first_detection.x,
+                track.first_detection.y,
+                track.detections[1].x,
+                track.detections[1].y,
+            ),
+            video_name=track.first_detection.video_name,
+        )
+
+    def __create_leave_scene_event(self, track: Track) -> Event:
+        return Event(
+            road_user_id=track.id.id,
+            road_user_type=track.classification,
+            hostname=extract_hostname(track.last_detection.video_name),
+            occurrence=track.last_detection.occurrence,
+            frame_number=track.last_detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(
+                track.last_detection.x, track.last_detection.y
+            ),
+            event_type=EventType.LEAVE_SCENE,
+            direction_vector=calculate_direction_vector(
+                track.detections[-2].x,
+                track.detections[-2].y,
+                track.last_detection.x,
+                track.last_detection.y,
+            ),
+            video_name=track.last_detection.video_name,
+        )
+
+    def test_first_occurrence(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([second_track, first_track])
+        assert dataset.first_occurrence == first_track.first_detection.occurrence
+        assert dataset.first_occurrence == second_track.first_detection.occurrence
+
+    def test_last_occurrence(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([second_track, first_track])
+        assert dataset.last_occurrence == second_track.last_detection.occurrence
+
+    def test_first_occurrence_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.first_occurrence is None
+
+    def test_last_occurrence_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.last_occurrence is None
+
+    def test_classifications(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([first_track, second_track])
+        assert dataset.classifications == frozenset(
+            [first_track.classification, second_track.classification]
+        )
+
+    def test_classifications_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.classifications == frozenset()
+
+    def test_cut_with_section(
+        self,
+        cutting_section_test_case: tuple[
+            LineSection, list[Track], list[Track], set[TrackId]
+        ],
+    ) -> None:
+        (
+            cutting_section,
+            input_tracks,
+            expected_tracks,
+            expected_original_track_ids,
+        ) = cutting_section_test_case
+        expected_dataset = PythonTrackDataset.from_list(expected_tracks)
+
+        dataset = PythonTrackDataset.from_list(input_tracks)
+        cut_track_dataset, original_track_ids = dataset.cut_with_section(
+            cutting_section, RelativeOffsetCoordinate(0, 0)
+        )
+        actual_tracks = sorted(cut_track_dataset, key=lambda _track: _track.id)
+        expected_tracks = sorted(expected_dataset, key=lambda _track: _track.id)
+        for actual, expected in zip(actual_tracks, expected_tracks):
+            assert actual == expected
+        assert original_track_ids == expected_original_track_ids
+
+    def test_track_ids(
+        self,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.track_ids == frozenset()
+        updated_dataset = dataset.add_all([first_track, second_track])
+        assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
+
+
+class TestSimpleCutTrackSegmentBuilder:
+    def test_build(self) -> None:
+        classification = "car"
+        my_track = create_track("1", [(0, 0), (1, 0), (2, 0), (3, 0)], 0)
+
+        class_calculator = Mock(spec=TrackClassificationCalculator)
+        class_calculator.calculate.return_value = classification
+        track_builder = SimpleCutTrackSegmentBuilder(class_calculator)
+
+        assert track_builder._track_id is None
+        assert track_builder._detections == []
+
+        track_builder.add_id(my_track.id.id)
+        for detection in my_track.detections:
+            track_builder.add_detection(detection)
+        result = track_builder.build()
+        assert result == my_track
+
+        # Assert track builder is reset after build
+        assert track_builder._track_id is None
+        assert track_builder._detections == []
