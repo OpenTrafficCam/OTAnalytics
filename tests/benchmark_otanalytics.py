@@ -524,10 +524,10 @@ class TestBenchmarkCuttingSection:
     def test_15min(
         self,
         benchmark: BenchmarkFixture,
-        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        python_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
         cutting_section: Section,
     ) -> None:
-        track_repository, _ = pandas_track_repo_15min
+        track_repository, _ = python_track_repo_15min
         section_repository = SectionRepository()
         section_repository.add(cutting_section)
         cut_tracks_intersecting_section = _build_cut_tracks_intersecting_sections(
@@ -544,10 +544,10 @@ class TestBenchmarkCuttingSection:
     def test_2hours(
         self,
         benchmark: BenchmarkFixture,
-        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
+        python_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
         cutting_section: Section,
     ) -> None:
-        track_repository, _ = pandas_track_repo_2hours
+        track_repository, _ = python_track_repo_2hours
         section_repository = SectionRepository()
         section_repository.add(cutting_section)
         cut_tracks_intersecting_section = _build_cut_tracks_intersecting_sections(
