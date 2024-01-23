@@ -157,6 +157,9 @@ class VisualizationBuilder:
             PandasDataFrameProvider
         ] = None
         self._data_provider_class_filter: Optional[PandasDataFrameProvider] = None
+        self._data_provider_class_filter_with_offset: Optional[
+            PandasDataFrameProvider
+        ] = None
         self._tracks_intersection_selected_sections: Optional[
             TracksIntersectingSelectedSections
         ] = None
@@ -362,11 +365,13 @@ class VisualizationBuilder:
         return self._data_provider_class_filter
 
     def _get_data_provider_class_filter_with_offset(self) -> PandasDataFrameProvider:
-        if not self._data_provider_class_filter:
-            self._data_provider_class_filter = self._build_filter_by_classification(
-                self._get_pandas_data_provider_with_offset()
+        if not self._data_provider_class_filter_with_offset:
+            self._data_provider_class_filter_with_offset = (
+                self._build_filter_by_classification(
+                    self._get_pandas_data_provider_with_offset()
+                )
             )
-        return self._data_provider_class_filter
+        return self._data_provider_class_filter_with_offset
 
     def _get_data_provider_all_filters(self) -> PandasDataFrameProvider:
         if not self._data_provider_all_filters:
