@@ -502,6 +502,33 @@ class TestPythonTrackDataset:
             video_name=track.last_detection.video_name,
         )
 
+    def test_first_occurrence(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([second_track, first_track])
+        assert dataset.first_occurrence == first_track.first_detection.occurrence
+        assert dataset.first_occurrence == second_track.first_detection.occurrence
+
+    def test_last_occurrence(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([second_track, first_track])
+        assert dataset.last_occurrence == second_track.last_detection.occurrence
+
+    def test_first_occurrence_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.first_occurrence is None
+
+    def test_last_occurrence_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.last_occurrence is None
+
+    def test_classifications(self, first_track: Track, second_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([first_track, second_track])
+        assert dataset.classifications == frozenset(
+            [first_track.classification, second_track.classification]
+        )
+
+    def test_classifications_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.classifications == frozenset()
+
     def test_cut_with_section(
         self,
         cutting_section_test_case: tuple[

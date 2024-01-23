@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -108,6 +109,18 @@ class RemoveMultipleTracksError(Exception):
 
 
 class TrackRepository:
+    @property
+    def first_occurrence(self) -> datetime | None:
+        return self._dataset.first_occurrence
+
+    @property
+    def last_occurrence(self) -> datetime | None:
+        return self._dataset.last_occurrence
+
+    @property
+    def classifications(self) -> frozenset[str]:
+        return self._dataset.classifications
+
     def __init__(self, dataset: TrackDataset) -> None:
         self._dataset = dataset
         self.observers = Subject[TrackRepositoryEvent]()

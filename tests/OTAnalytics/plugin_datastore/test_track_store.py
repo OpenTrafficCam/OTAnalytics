@@ -504,6 +504,60 @@ class TestPandasTrackDataset:
             video_name=track.last_detection.video_name,
         )
 
+    def test_first_occurrence(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+        assert dataset.first_occurrence == first_track.first_detection.occurrence
+        assert dataset.first_occurrence == second_track.first_detection.occurrence
+
+    def test_last_occurrence(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+        assert dataset.last_occurrence == second_track.last_detection.occurrence
+
+    def test_first_occurrence_on_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
+        assert dataset.first_occurrence is None
+
+    def test_last_occurrence_on_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
+        assert dataset.last_occurrence is None
+
+    def test_classifications(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+        assert dataset.classifications == frozenset(
+            [first_track.classification, second_track.classification]
+        )
+
+    def test_classifications_on_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
+        assert dataset.classifications == frozenset()
+
     def test_cut_with_section(
         self,
         cutting_section_test_case: tuple[

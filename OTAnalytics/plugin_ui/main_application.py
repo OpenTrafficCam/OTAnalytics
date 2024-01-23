@@ -26,7 +26,9 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
+from OTAnalytics.application.parser.cli_parser import CliParseError, CliParser
 from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
+from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
@@ -119,15 +121,16 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
+from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
+from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
-    OtConfigParser,
     OtEventListParser,
     OtFlowParser,
     OttrkParser,
@@ -138,17 +141,13 @@ from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
+    provide_available_eventlist_exporter,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
 )
-from OTAnalytics.plugin_ui.cli import (
-    CliArgumentParser,
-    CliArguments,
-    CliParseError,
-    OTAnalyticsCli,
-)
+from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
@@ -156,22 +155,31 @@ from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 class ApplicationStarter:
     def start(self) -> None:
-        parser = self._build_cli_argument_parser()
-        cli_args = parser.parse()
+        run_config = self._parse_configuration()
         self._setup_logger(
-            Path(cli_args.log_file), cli_args.logfile_overwrite, cli_args.debug
+            Path(run_config.log_file), run_config.logfile_overwrite, run_config.debug
         )
-
-        if cli_args.start_cli:
+        if run_config.start_cli:
             try:
-                self.start_cli(cli_args)
+                self.start_cli(run_config)
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
             self.start_gui()
 
-    def _build_cli_argument_parser(self) -> CliArgumentParser:
-        return CliArgumentParser()
+    def _parse_configuration(self) -> RunConfiguration:
+        cli_args_parser = self._build_cli_argument_parser()
+        cli_args = cli_args_parser.parse()
+        flow_parser = self._create_flow_parser()
+        config_parser = OtConfigParser(self._create_video_parser(), flow_parser)
+
+        if config_file := cli_args.config_file:
+            config = config_parser.parse(Path(config_file))
+            return RunConfiguration(flow_parser, cli_args, config)
+        return RunConfiguration(flow_parser, cli_args, None)
+
+    def _build_cli_argument_parser(self) -> CliParser:
+        return ArgparseCliParser()
 
     def _setup_logger(self, log_file: Path, overwrite: bool, debug: bool) -> None:
         if debug:
@@ -441,12 +449,11 @@ class ApplicationStarter:
         pulling_progressbar_popup_builder.add_widget(main_window)
         OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
 
-    def start_cli(self, cli_args: CliArguments) -> None:
+    def start_cli(self, run_config: RunConfiguration) -> None:
         track_repository = self._create_track_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         track_parser = self._create_track_parser(track_repository)
-        flow_parser = self._create_flow_parser()
         event_repository = self._create_event_repository()
         add_section = AddSection(section_repository)
         get_sections_by_id = GetSectionsById(section_repository)
@@ -464,7 +471,7 @@ class ApplicationStarter:
             get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
-            cli_args.num_processes,
+            run_config.num_processes,
         )
         cut_tracks = self._create_cut_tracks_intersecting_section(
             GetSectionsById(section_repository),
@@ -483,14 +490,14 @@ class ApplicationStarter:
             create_events,
         )
         OTAnalyticsCli(
-            cli_args,
+            run_config,
             track_parser=track_parser,
-            flow_parser=flow_parser,
             event_repository=event_repository,
             get_all_sections=GetAllSections(section_repository),
             add_section=add_section,
             create_events=create_events,
             export_counts=export_counts,
+            provide_eventlist_exporter=provide_available_eventlist_exporter,
             cut_tracks=cut_tracks,
             add_all_tracks=add_all_tracks,
             get_all_track_ids=get_all_track_ids,

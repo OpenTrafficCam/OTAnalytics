@@ -241,6 +241,24 @@ class PythonTrackDataset(TrackDataset):
     def track_ids(self) -> frozenset[TrackId]:
         return frozenset(self._tracks.keys())
 
+    @property
+    def first_occurrence(self) -> datetime | None:
+        if not len(self):
+            return None
+        return min(
+            [track.first_detection.occurrence for track in self._tracks.values()]
+        )
+
+    @property
+    def last_occurrence(self) -> datetime | None:
+        if not len(self):
+            return None
+        return max([track.last_detection.occurrence for track in self._tracks.values()])
+
+    @property
+    def classifications(self) -> frozenset[str]:
+        return frozenset([track.classification for track in self._tracks.values()])
+
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,

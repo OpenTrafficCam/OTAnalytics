@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -344,66 +344,32 @@ class TestTracksMetadata:
         track.detections = [first_detection, second_detection, third_detection]
         return track
 
-    @patch("OTAnalytics.application.state.TracksMetadata._get_all_track_detections")
-    def test_update_detection_occurrences(
-        self,
-        mock_get_all_track_detections: Mock,
-        first_detection: Mock,
-        second_detection: Mock,
-        third_detection: Mock,
-    ) -> None:
-        mock_track_repository = Mock(spec=TrackRepository)
+    def test_update_detection_occurrences(self) -> None:
+        first_occurrence = datetime(2000, 1, 1, 12)
+        last_occurrence = datetime(2000, 1, 1, 15)
+        track_repository = Mock(spec=TrackRepository)
+        track_repository.first_occurrence = first_occurrence
+        track_repository.last_occurrence = last_occurrence
 
-        mock_get_all_track_detections.return_value = [
-            first_detection,
-            third_detection,
-            second_detection,
-        ]
-        tracks_metadata = TracksMetadata(mock_track_repository)
+        tracks_metadata = TracksMetadata(track_repository)
 
         assert tracks_metadata.first_detection_occurrence is None
         assert tracks_metadata.last_detection_occurrence is None
 
         tracks_metadata._update_detection_occurrences()
-        assert tracks_metadata.first_detection_occurrence == first_detection.occurrence
-        assert tracks_metadata.last_detection_occurrence == third_detection.occurrence
+        assert tracks_metadata.first_detection_occurrence == first_occurrence
+        assert tracks_metadata.last_detection_occurrence == last_occurrence
 
-        mock_get_all_track_detections.assert_called_once()
-
-    def test_get_all_track_detections(
-        self, first_detection: Mock, second_detection: Mock
-    ) -> None:
-        track = Mock(spec=Track).return_value
-        track.detections = [first_detection, second_detection]
-        track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = [track]
-
-        tracks_metadata = TracksMetadata(track_repository)
-        detections = tracks_metadata._get_all_track_detections()
-
-        assert detections == [first_detection, second_detection]
-        track_repository.get_all.assert_called_once()
-
-    def test_update_classifications(self, track: Mock) -> None:
+    def test_update_classifications(self) -> None:
+        classifications = frozenset(["truck", "car", "pedestrian"])
         mock_track_repository = Mock(spec=TrackRepository)
-        mock_track_repository.get_for.return_value = track
+        mock_track_repository.classifications = classifications
 
         tracks_metadata = TracksMetadata(mock_track_repository)
-
         assert tracks_metadata.classifications == set()
 
-        tracks_metadata._update_classifications([track.id])
-
-        assert tracks_metadata.classifications == {"car"}
-        mock_track_repository.get_for.assert_any_call(track.id)
-        assert mock_track_repository.get_for.call_count == 1
-
-        track.detections[0].classification = "bicycle"
-        tracks_metadata._update_classifications([track.id])
-
-        assert tracks_metadata.classifications == {"car"}
-        mock_track_repository.get_for.assert_any_call(track.id)
-        assert mock_track_repository.get_for.call_count == 2
+        tracks_metadata._update_classifications()
+        assert tracks_metadata.classifications == classifications
 
     def test_update_detection_classes(self) -> None:
         tracks_metadata = TracksMetadata(Mock())
