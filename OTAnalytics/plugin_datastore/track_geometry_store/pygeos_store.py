@@ -332,6 +332,13 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
     def as_dict(self) -> dict:
         return self._dataset[COLUMNS].to_dict(orient=ORIENTATION_INDEX)
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, PygeosTrackGeometryDataset):
+            return False
+        return self.offset == other.offset and self._dataset[COLUMNS].equals(
+            other._dataset[COLUMNS]
+        )
+
 
 def calculate_all_projections(tracks: DataFrame) -> DataFrame:
     tracks_by_id = tracks.groupby(level=0, group_keys=True)

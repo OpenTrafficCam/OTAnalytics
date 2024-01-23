@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Iterable, Iterator, Optional, Sequence
+from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
@@ -9,7 +9,7 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 
 
-@dataclass
+@dataclass(frozen=True, order=True)
 class IntersectionPoint:
     index: int
 
@@ -17,6 +17,10 @@ class IntersectionPoint:
 class TrackDataset(ABC):
     def __iter__(self) -> Iterator[Track]:
         yield from self.as_list()
+
+    @property
+    def track_ids(self) -> frozenset[TrackId]:
+        raise NotImplementedError
 
     @property
     @abstractmethod
@@ -38,10 +42,6 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_all_ids(self) -> Iterable[TrackId]:
-        raise NotImplementedError
-
-    @abstractmethod
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
         Retrieve a track for the given id.
@@ -56,6 +56,10 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def remove(self, track_id: TrackId) -> "TrackDataset":
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
         raise NotImplementedError
 
     @abstractmethod
@@ -150,6 +154,22 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def cut_with_section(
+        self, section: Section, offset: RelativeOffsetCoordinate
+    ) -> tuple["TrackDataset", set[TrackId]]:
+        """Use section to cut track with TrackDataset.
+
+        Args:
+            section (Section): the section to cut the TrackDataset with.
+            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
+
+        Returns:
+            tuple[TrackDataset, set[TrackId]]: the dataset containing the cut tracks
+                and the original track ids that have been cut.
+        """
         raise NotImplementedError
 
 
@@ -271,6 +291,10 @@ class TrackGeometryDataset(ABC):
             dict[TrackId, list[tuple[SectionId, list[bool]]]]: boolean mask
                 of track coordinates contained by given sections.
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def __eq__(self, other: Any) -> bool:
         raise NotImplementedError
 
 

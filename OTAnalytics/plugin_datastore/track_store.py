@@ -1,5 +1,6 @@
 import re
 from abc import ABC, abstractmethod
+from bisect import bisect
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
@@ -8,7 +9,7 @@ from typing import Any, Callable, Iterable, Optional, Sequence
 import numpy
 import pandas
 from more_itertools import batched
-from pandas import DataFrame, Series
+from pandas import DataFrame, MultiIndex, Series
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import (
@@ -175,6 +176,8 @@ DEFAULT_CLASSIFICATOR = PandasByMaxConfidence()
 INDEX_NAMES = [track.TRACK_ID, track.OCCURRENCE]
 LEVEL_TRACK_ID = 0
 LEVEL_OCCURRENCE = 1
+CUT_INDICES = "CUT_INDICES"
+TRACK_LENGTH = "TRACK_LENGTH"
 
 
 def extract_hostname(name: str) -> str:
@@ -201,6 +204,17 @@ def extract_hostname(name: str) -> str:
 
 
 class PandasTrackDataset(TrackDataset):
+    @property
+    def track_ids(self) -> frozenset[TrackId]:
+        if self._dataset.empty:
+            return frozenset()
+        return frozenset(
+            [
+                TrackId(_id)
+                for _id in self._dataset.index.get_level_values(LEVEL_TRACK_ID)
+            ]
+        )
+
     @property
     def first_occurrence(self) -> datetime | None:
         if not len(self):
@@ -296,9 +310,6 @@ class PandasTrackDataset(TrackDataset):
             updated[offset] = geometries.add_all(new_tracks)
         return updated
 
-    def get_all_ids(self) -> Iterable[TrackId]:
-        return [TrackId(_id) for _id in self._get_track_ids()]
-
     def __get_tracks(self, other: Iterable[Track]) -> DataFrame:
         if isinstance(other, PandasTrackDataset):
             return other._dataset
@@ -315,6 +326,14 @@ class PandasTrackDataset(TrackDataset):
     def remove(self, track_id: TrackId) -> "TrackDataset":
         remaining_tracks = self._dataset.drop(track_id.id, errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset({track_id})
+        return PandasTrackDataset.from_dataframe(
+            remaining_tracks, self._track_geometry_factory, updated_geometry_datasets
+        )
+
+    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+        track_ids_primitive = [track_id.id for track_id in track_ids]
+        remaining_tracks = self._dataset.drop(track_ids_primitive, errors="ignore")
+        updated_geometry_datasets = self._remove_from_geometry_dataset(track_ids)
         return PandasTrackDataset.from_dataframe(
             remaining_tracks, self._track_geometry_factory, updated_geometry_datasets
         )
@@ -489,6 +508,40 @@ class PandasTrackDataset(TrackDataset):
                 video_name=value[track.VIDEO_NAME],
             )
             consumer(event)
+
+    def cut_with_section(
+        self, section: Section, offset: RelativeOffsetCoordinate
+    ) -> tuple[TrackDataset, set[TrackId]]:
+        intersection_points = self.intersection_points([section], offset)
+        cut_indices = {
+            track_id.id: [
+                ip[1].index for ip in sorted(intersection_points, key=lambda ip: ip[1])
+            ]
+            for track_id, intersection_points in intersection_points.items()
+        }
+        tracks_to_cut = list(cut_indices.keys())
+        cut_tracks_df = self._dataset.loc[tracks_to_cut].copy()
+        index_as_df = cut_tracks_df.index.to_frame(
+            name=[track.TRACK_ID, track.OCCURRENCE]
+        )
+        index_as_df["cumcount"] = index_as_df.groupby(level=0).transform("cumcount")
+        index_as_df[track.TRACK_ID] = index_as_df.apply(
+            lambda row: self._create_cut_track_id(row, cut_indices), axis=1
+        )
+        cut_tracks_df.index = MultiIndex.from_frame(
+            index_as_df[[track.TRACK_ID, track.OCCURRENCE]]
+        )
+        return PandasTrackDataset(self._track_geometry_factory, cut_tracks_df), set(
+            intersection_points.keys()
+        )
+
+    def _create_cut_track_id(
+        self, row: DataFrame, cut_info: dict[str, list[int]]
+    ) -> str:
+        if (track_id := row[track.TRACK_ID]) in cut_info.keys():
+            cut_segment_index = bisect(cut_info[track_id], row["cumcount"])
+            return f"{track_id}_{cut_segment_index}"
+        return row[track.TRACK_ID]
 
 
 def _assign_track_classification(

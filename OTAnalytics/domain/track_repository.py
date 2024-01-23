@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import Subject
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import TrackDataset
@@ -11,8 +12,16 @@ from OTAnalytics.domain.track_dataset import TrackDataset
 
 @dataclass(frozen=True)
 class TrackRepositoryEvent:
-    added: list[TrackId]
-    removed: list[TrackId]
+    added: frozenset[TrackId]
+    removed: frozenset[TrackId]
+
+    @staticmethod
+    def create_added(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
+        return TrackRepositoryEvent(frozenset(tracks), frozenset())
+
+    @staticmethod
+    def create_removed(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
+        return TrackRepositoryEvent(frozenset(), frozenset(tracks))
 
 
 class TrackListObserver(ABC):
@@ -125,17 +134,16 @@ class TrackRepository:
         """
         self.observers.register(observer.notify_tracks)
 
-    def add_all(self, tracks: Iterable[Track]) -> None:
+    def add_all(self, tracks: TrackDataset) -> None:
         """
         Add multiple tracks to the repository and notify only once about it.
 
         Args:
-            tracks (Iterable[Track]): tracks to be added
+            tracks (TrackDataset): tracks to be added.
         """
-        self._dataset = self._dataset.add_all(tracks)
-        new_tracks = [track.id for track in tracks]
-        if new_tracks:
-            self.observers.notify(TrackRepositoryEvent(new_tracks, []))
+        if len(tracks):
+            self._dataset = self._dataset.add_all(tracks)
+            self.observers.notify(TrackRepositoryEvent.create_added(tracks.track_ids))
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
@@ -164,7 +172,7 @@ class TrackRepository:
         Returns:
             Iterable[TrackId]: the track ids.
         """
-        return self._dataset.get_all_ids()
+        return self._dataset.track_ids
 
     def remove(self, track_id: TrackId) -> None:
         """Remove track by its id and notify observers
@@ -183,27 +191,21 @@ class TrackRepository:
             )
         # TODO: Pass removed track id to notify when moving observers to
         #  application layer
-        self.observers.notify(TrackRepositoryEvent([], [track_id]))
+        self.observers.notify(TrackRepositoryEvent.create_removed([track_id]))
 
     def remove_multiple(self, track_ids: set[TrackId]) -> None:
-        failed_tracks: list[TrackId] = []
-        for track_id in track_ids:
-            try:
-                self._dataset = self._dataset.remove(track_id)
-            except KeyError:
-                failed_tracks.append(track_id)
-            # TODO: Pass removed track id to notify when moving observers to
-            #  application layer
-
-        if failed_tracks:
-            raise RemoveMultipleTracksError(
-                failed_tracks,
-                (
-                    "Multiple tracks with following ids could not be removed."
-                    f" '{[failed_track.id for failed_track in failed_tracks]}'"
-                ),
+        not_existing_tracks = track_ids - set(self._dataset.track_ids)
+        if not_existing_tracks:
+            logger().warning(
+                f"Trying to remove {len(not_existing_tracks)} "
+                "track(s) not contained in track dataset."
             )
-        self.observers.notify(TrackRepositoryEvent([], list(track_ids)))
+            logger().debug(
+                "Trying to remove tracks not contained in dataset: "
+                f"{not_existing_tracks}."
+            )
+        self._dataset = self._dataset.remove_multiple(track_ids)
+        self.observers.notify(TrackRepositoryEvent.create_removed(track_ids))
 
     def split(self, chunks: int) -> Iterable[TrackDataset]:
         return self._dataset.split(chunks)
@@ -212,9 +214,9 @@ class TrackRepository:
         """
         Clear the repository and inform the observers about the empty repository.
         """
-        removed = list(self._dataset.get_all_ids())
+        removed = list(self._dataset.track_ids)
         self._dataset = self._dataset.clear()
-        self.observers.notify(TrackRepositoryEvent([], removed))
+        self.observers.notify(TrackRepositoryEvent.create_removed(removed))
 
     def __len__(self) -> int:
         return len(self._dataset)
