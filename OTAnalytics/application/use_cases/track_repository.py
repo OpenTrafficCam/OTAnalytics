@@ -2,12 +2,11 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.track import (
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_repository import (
     RemoveMultipleTracksError,
-    Track,
-    TrackDataset,
     TrackFileRepository,
-    TrackId,
     TrackRepository,
 )
 
@@ -22,7 +21,10 @@ class GetAllTracks:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self) -> Iterable[Track]:
+    def as_list(self) -> list[Track]:
+        return self.as_dataset().as_list()
+
+    def as_dataset(self) -> TrackDataset:
         return self._track_repository.get_all()
 
 
@@ -81,7 +83,7 @@ class AddAllTracks:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self, tracks: Iterable[Track]) -> None:
+    def __call__(self, tracks: TrackDataset) -> None:
         self._track_repository.add_all(tracks)
 
 

@@ -5,6 +5,7 @@ import pytest
 from pandas import DataFrame
 
 from OTAnalytics.application.state import ObservableProperty, TrackViewState
+from OTAnalytics.domain import track
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
@@ -14,15 +15,13 @@ from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import (
     OCCURRENCE,
     TRACK_CLASSIFICATION,
-    TRACK_ID,
     Detection,
     Track,
     TrackId,
     TrackIdProvider,
     TrackImage,
-    TrackRepository,
-    TrackRepositoryEvent,
 )
+from OTAnalytics.domain.track_repository import TrackRepository, TrackRepositoryEvent
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
@@ -227,34 +226,34 @@ class TestCachedPandasTrackProvider:
             assert provider._cache_df.empty
 
         else:
-            cached_ids = provider._cache_df[TRACK_ID].unique()
+            cached_ids = provider._cache_df.index.get_level_values(0).unique()
 
             expected_detections = sum(len(t.detections) for t in expected_tracks)
             assert expected_detections == len(provider._cache_df)
             assert len(expected_tracks) == len(cached_ids)
 
-            for track in expected_tracks:
-                assert track.id.id in cached_ids
+            for _track in expected_tracks:
+                assert _track.id.id in cached_ids
 
     def test_notify_tracks_clear_cache(self, track_1: Track) -> None:
         """Test clearing cache."""
         provider = self.set_up_provider([track_1], [])
 
-        provider.notify_tracks(TrackRepositoryEvent([], [track_1.id]))
+        provider.notify_tracks(TrackRepositoryEvent.create_removed([track_1.id]))
         self.check_expected_ids(provider, [])
 
     def test_notify_update_add(self, track_1: Track, track_2: Track) -> None:
         """Test adding track to non-empty cache."""
         provider = self.set_up_provider([track_1], [track_2])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_2.id], []))
+        provider.notify_tracks(TrackRepositoryEvent.create_added([track_2.id]))
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_add_first(self, track_2: Track) -> None:
         """Test adding first track to cache."""
         provider = self.set_up_provider([], [track_2])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_2.id], []))
+        provider.notify_tracks(TrackRepositoryEvent.create_added([track_2.id]))
         self.check_expected_ids(provider, [track_2])
 
     def test_notify_update_add_multiple_first(
@@ -263,19 +262,23 @@ class TestCachedPandasTrackProvider:
         """Test adding first tracks to cache."""
         provider = self.set_up_provider([], [track_2, track_1])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_2.id, track_1.id], []))
+        provider.notify_tracks(
+            TrackRepositoryEvent.create_added([track_2.id, track_1.id])
+        )
         self.check_expected_ids(provider, [track_2, track_1])
 
     def test_notify_update_existing(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_1, track_2], [track_1])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_1.id], []))
+        provider.notify_tracks(TrackRepositoryEvent.create_added([track_1.id]))
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_mixed(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_2], [track_1, track_2])
 
-        provider.notify_tracks(TrackRepositoryEvent([track_1.id, track_2.id], []))
+        provider.notify_tracks(
+            TrackRepositoryEvent.create_added([track_1.id, track_2.id])
+        )
         self.check_expected_ids(provider, [track_1, track_2])
 
 
@@ -308,7 +311,7 @@ class TestColorPaletteProvider:
     )
     def test_update_with_filled_default(
         self,
-        new_classifications: set[str],
+        new_classifications: frozenset[str],
         default_palette: dict[str, str],
         expected: dict[str, str],
     ) -> None:
@@ -418,8 +421,15 @@ class TestStartEndPointPlotter:
 class TestDataFrameProviderFilter:
     @pytest.fixture
     def filter_input(self) -> DataFrame:
-        d = {TRACK_ID: [1, 2]}
-        return DataFrame(data=d)
+        first_occurrence = datetime(2000, 1, 1, 1)
+        second_occurrence = datetime(2000, 1, 1, 2)
+        d = {
+            track.TRACK_ID: ["1", "2"],
+            track.OCCURRENCE: [first_occurrence, second_occurrence],
+            "data": [Mock(), Mock()],
+        }
+        df = DataFrame(data=d)
+        return df.set_index([track.TRACK_ID, track.OCCURRENCE])
 
     @pytest.fixture
     def filter_result(self) -> Mock:
@@ -455,19 +465,29 @@ class TestDataFrameProviderFilter:
         track_view_state.filter_element = observable_filter_element
         return track_view_state
 
-    def test_filter_by_id(self, data_provider: Mock) -> None:
+    def test_filter_by_id(self, data_provider: Mock, filter_input: DataFrame) -> None:
         id_filter = Mock(spec=TrackIdProvider)
         track_id = Mock(spec=TrackId)
-        track_id.id = 1
+        track_id.id = "1"
 
         id_filter.get_ids.return_value = [track_id]
 
         filter_by_id = FilterById(data_provider, id_filter)
         result = filter_by_id.get_data()
+        expected = filter_input.drop("2")
 
-        assert result.equals(DataFrame(data={TRACK_ID: [1]}))
+        assert result.equals(expected)
         data_provider.get_data.assert_called_once()
         id_filter.get_ids.assert_called_once()
+
+    def test_filter_by_id_with_no_index_set(self, data_provider: Mock) -> None:
+        data_provider.get_data.return_value = DataFrame.from_dict(
+            {1: {"classification": "car", "track_id": "1"}}, orient="index"
+        )
+        id_filter = Mock()
+        filter_by_id = FilterById(data_provider, id_filter)
+        with pytest.raises(ValueError):
+            filter_by_id.get_data()
 
     def test_filter_by_classification(
         self,
@@ -484,7 +504,7 @@ class TestDataFrameProviderFilter:
             data_provider, track_view_state, filter_builder
         )
         result = df_filter.get_data()
-        result == filter_result
+        assert result == filter_result
 
         filter_builder.set_classification_column.assert_called_once_with(
             TRACK_CLASSIFICATION
@@ -506,7 +526,7 @@ class TestDataFrameProviderFilter:
         filter_builder = Mock(Spec=FilterBuilder)
         df_filter = FilterByOccurrence(data_provider, track_view_state, filter_builder)
         result = df_filter.get_data()
-        result == filter_result
+        assert result == filter_result
 
         filter_builder.set_occurrence_column.assert_called_once_with(OCCURRENCE)
         observable_filter_element.get.assert_called_once()

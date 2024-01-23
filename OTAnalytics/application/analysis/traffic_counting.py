@@ -16,7 +16,8 @@ from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import TrackId, TrackRepository
+from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 
 LEVEL_FROM_SECTION = "from section"

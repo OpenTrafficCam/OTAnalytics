@@ -6,7 +6,10 @@ import pandas as pd
 from OTAnalytics.application.config import DEFAULT_EVENTLIST_FILE_TYPE
 from OTAnalytics.application.datastore import EventListParser
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.export_events import (
+    EventListExporter,
+    ExporterNotFoundError,
+)
 from OTAnalytics.domain.event import (
     DIRECTION_VECTOR,
     EVENT_COORDINATE,
@@ -16,6 +19,9 @@ from OTAnalytics.domain.event import (
 )
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_parser.otvision_parser import OtEventListParser
+
+EXTENSION_CSV = "csv"
+EXTENSION_EXCEL = "xlsx"
 
 OTC_EXCEL_FORMAT_NAME = "Excel (OpenTrafficCam)"
 OTC_CSV_FORMAT_NAME = "CSV (OpenTrafficCam)"
@@ -92,7 +98,7 @@ class EventListExcelExporter(EventListExporter):
         writer.close()
 
     def get_extension(self) -> str:
-        return "xlsx"
+        return EXTENSION_EXCEL
 
     def get_name(self) -> str:
         return OTC_EXCEL_FORMAT_NAME
@@ -109,7 +115,7 @@ class EventListCSVExporter(EventListExporter):
         df_events.to_csv(file, index=False)
 
     def get_extension(self) -> str:
-        return "csv"
+        return EXTENSION_CSV
 
     def get_name(self) -> str:
         return OTC_CSV_FORMAT_NAME
@@ -176,3 +182,19 @@ AVAILABLE_EVENTLIST_EXPORTERS: dict[str, EventListExporter] = {
     OTC_CSV_FORMAT_NAME: EventListCSVExporter(),
     OTC_OTEVENTS_FORMAT_NAME: EventListOteventsExporter(OtEventListParser()),
 }
+
+
+def provide_available_eventlist_exporter(event_format: str) -> EventListExporter:
+    _format = event_format.lower()
+    if _format == EXTENSION_CSV:
+        return AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME]
+    elif _format == EXTENSION_EXCEL:
+        return AVAILABLE_EVENTLIST_EXPORTERS[OTC_EXCEL_FORMAT_NAME]
+    elif _format == DEFAULT_EVENTLIST_FILE_TYPE:
+        return AVAILABLE_EVENTLIST_EXPORTERS[OTC_OTEVENTS_FORMAT_NAME]
+    else:
+        raise ExporterNotFoundError(
+            f"{event_format} is a not supported eventlist format. "
+            f"Supported formats are: [{EXTENSION_CSV}, "
+            f"{EXTENSION_EXCEL}, {DEFAULT_EVENTLIST_FILE_TYPE}]"
+        )

@@ -1,13 +1,12 @@
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call
+from unittest.mock import MagicMock, Mock, PropertyMock, call
 
 import pytest
 
-from OTAnalytics.domain.track import (
-    Track,
-    TrackDataset,
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
-    TrackId,
     TrackListObserver,
     TrackObserver,
     TrackRepository,
@@ -42,8 +41,16 @@ class TestTrackRepository:
         return track
 
     def test_add_all(self, track_1: Mock, track_2: Mock) -> None:
-        tracks = [track_1, track_2]
+        track_ids_property = PropertyMock(
+            return_value=frozenset([track_1.id, track_2.id])
+        )
+        tracks = MagicMock(spec=TrackDataset)
+        tracks.__len__.return_value = 2
+        type(tracks).track_ids = track_ids_property
+
         merged_dataset = Mock(spec=TrackDataset)
+        type(merged_dataset).track_ids = track_ids_property
+
         dataset = Mock(spec=TrackDataset)
         dataset.add_all.return_value = merged_dataset
 
@@ -55,17 +62,20 @@ class TestTrackRepository:
 
         dataset.add_all.assert_called_with(tracks)
         observer.notify_tracks.assert_called_with(
-            TrackRepositoryEvent([track_1.id, track_2.id], [])
+            TrackRepositoryEvent.create_added([track_1.id, track_2.id])
         )
 
     def test_add_nothing(self) -> None:
+        empty_dataset = MagicMock()
+        empty_dataset.__len__.return_value = 0
+
         observer = Mock(spec=TrackListObserver)
         dataset = Mock(spec=TrackDataset)
         repository = TrackRepository(dataset)
         repository.register_tracks_observer(observer)
-        repository.add_all([])
+        repository.add_all(empty_dataset)
 
-        dataset.add_all.assert_called_once_with([])
+        dataset.add_all.assert_not_called()
         observer.notify_tracks.assert_not_called()
 
     def test_get_by_id(self, track_1: Mock) -> None:
@@ -81,7 +91,9 @@ class TestTrackRepository:
     def test_clear(self, track_1: Track, track_2: Track) -> None:
         cleared_dataset = Mock(spec=TrackDataset)
         dataset = Mock(spec=TrackDataset)
-        dataset.get_all_ids.return_value = [track_1.id, track_2.id]
+        type(dataset).track_ids = PropertyMock(
+            return_value=frozenset([track_1.id, track_2.id])
+        )
         dataset.clear.return_value = cleared_dataset
         observer = Mock(spec=TrackListObserver)
         repository = TrackRepository(dataset)
@@ -91,13 +103,13 @@ class TestTrackRepository:
 
         assert repository._dataset == cleared_dataset
         assert observer.notify_tracks.call_args_list == [
-            call(TrackRepositoryEvent([], [track_1.id, track_2.id]))
+            call(TrackRepositoryEvent.create_removed([track_1.id, track_2.id]))
         ]
 
     def test_get_all_ids(self, track_1: Mock, track_2: Mock) -> None:
-        ids: set[TrackId] = set()
+        ids: frozenset[TrackId] = frozenset()
         dataset = Mock(spec=TrackDataset)
-        dataset.get_all_ids.return_value = ids
+        type(dataset).track_ids = PropertyMock(return_value=ids)
         repository = TrackRepository(dataset)
 
         actual_ids = repository.get_all_ids()
@@ -119,22 +131,27 @@ class TestTrackRepository:
         assert call(track_2.id) in dataset.remove.call_args_list
 
         assert observer.notify_tracks.call_args_list == [
-            call(TrackRepositoryEvent([], [track_1.id])),
-            call(TrackRepositoryEvent([], [track_2.id])),
+            call(TrackRepositoryEvent.create_removed([track_1.id])),
+            call(TrackRepositoryEvent.create_removed([track_2.id])),
         ]
 
     def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
+        tracks_to_remove = frozenset([track_1.id, track_2.id])
+        updated_dataset = Mock(spec=TrackDataset)
+        type(updated_dataset).track_ids = PropertyMock(return_value=tracks_to_remove)
         dataset = Mock(spec=TrackDataset)
-        dataset.remove.return_value = dataset
+        type(dataset).track_ids = PropertyMock(return_value=tracks_to_remove)
+        dataset.remove_multiple.return_value = updated_dataset
         repository = TrackRepository(dataset)
 
         observer = Mock(spec=TrackListObserver)
         repository.register_tracks_observer(observer)
 
         repository.remove_multiple({track_1.id, track_2.id})
-        assert len(dataset.remove.call_args_list) == 2
-        assert call(track_1.id) in dataset.remove.call_args_list
-        assert call(track_2.id) in dataset.remove.call_args_list
+        dataset.remove_multiple.assert_called_once_with({track_1.id, track_2.id})
+        assert observer.notify_tracks.call_args_list == [
+            call(TrackRepositoryEvent.create_removed(tracks_to_remove))
+        ]
 
     def test_len(self) -> None:
         expected_size = 3
@@ -146,6 +163,27 @@ class TestTrackRepository:
 
         assert result == expected_size
         dataset.__len__.assert_called_once()
+
+    def test_first_occurrence(self) -> None:
+        first_occurrence = Mock()
+        dataset = Mock()
+        dataset.first_occurrence = first_occurrence
+        repository = TrackRepository(dataset)
+        assert repository.first_occurrence == first_occurrence
+
+    def test_last_occurrence(self) -> None:
+        last_occurrence = Mock()
+        dataset = Mock()
+        dataset.last_occurrence = last_occurrence
+        repository = TrackRepository(dataset)
+        assert repository.last_occurrence == last_occurrence
+
+    def test_classifications(self) -> None:
+        classifications = Mock()
+        dataset = Mock()
+        dataset.classifications = classifications
+        repository = TrackRepository(dataset)
+        assert repository.classifications == classifications
 
 
 class TestTrackFileRepository:

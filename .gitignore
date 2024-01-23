@@ -1,6 +1,7 @@
 # OTAnalytics
 data/
 !tests/data
+tests/data/OTCamera19_FR20_2023-05-24*
 tests/scripts/
 
 # Byte-compiled / optimized / DLL files

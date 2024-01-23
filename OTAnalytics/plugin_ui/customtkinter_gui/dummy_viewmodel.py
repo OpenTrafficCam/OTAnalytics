@@ -79,7 +79,8 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepositoryEvent,
 )
-from OTAnalytics.domain.track import TrackImage, TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
@@ -1307,7 +1308,7 @@ class DummyViewModel(
         self, default_values: dict[str, str], export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
         input_values = ToplevelExportEvents(
-            title="Export counts",
+            title="Export events",
             initial_position=(50, 50),
             input_values=default_values,
             export_format_extensions=export_format_extensions,

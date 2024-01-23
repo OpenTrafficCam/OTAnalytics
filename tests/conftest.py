@@ -6,11 +6,16 @@ from typing import Generator, Sequence, TypeVar
 
 import pytest
 
-from OTAnalytics.domain.event import Event, EventType
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.otvision_parser import (
@@ -38,14 +43,15 @@ DEFAULT_OCCURRENCE_MICROSECOND: int = 0
 @dataclass
 class TrackBuilder:
     otdet_version = "1.2"
+    ottrk_version = "1.1"
     track_id: str = "1"
     track_class: str = "car"
     detection_class: str = "car"
     confidence: float = 0.5
-    x: float = 0
-    y: float = 0
-    w: float = 10
-    h: float = 10
+    x: float = 0.0
+    y: float = 0.0
+    w: float = 10.0
+    h: float = 10.0
     frame: int = 1
     occurrence_year: int = DEFAULT_OCCURRENCE_YEAR
     occurrence_month: int = DEFAULT_OCCURRENCE_MONTH
@@ -68,6 +74,9 @@ class TrackBuilder:
 
     def set_otdet_version(self, otdet_version: str) -> None:
         self.otdet_version = otdet_version
+
+    def set_ottrk_version(self, ottrk_version: str) -> None:
+        self.ottrk_version = ottrk_version
 
     def append_detection(self) -> None:
         self._detections.append(self.create_detection())
@@ -181,7 +190,7 @@ class TrackBuilder:
                 "chunksize": 1,
                 "normalized_bbox": False,
             },
-            "ottrk_version": "1.0",
+            "ottrk_version": self.ottrk_version,
             "tracking": {
                 "otvision_version": "1.0",
                 "first_tracked_video_start": self.__to_timestamp(
@@ -190,6 +199,8 @@ class TrackBuilder:
                 "last_tracked_video_end": self.__to_timestamp(
                     "2020-01-01 00:00:02.950000"
                 ),
+                "tracking_run_id": "1",
+                "frame_group": "1",
                 "tracker": {
                     "name": "IOU",
                     "sigma_l": 0.27,
@@ -362,10 +373,18 @@ def cyclist_video(test_data_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="module")
+def otconfig_file(test_data_dir: Path) -> Path:
+    name = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otconfig"
+    return test_data_dir / name
+
+
+@pytest.fixture(scope="module")
 def tracks(ottrk_path: Path) -> list[Track]:
     calculator = PandasByMaxConfidence()
     detection_parser = PandasDetectionParser(
-        calculator, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
+        calculator,
+        PygeosTrackGeometryDataset.from_track_dataset,
+        track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
     )
     return OttrkParser(detection_parser).parse(ottrk_path).tracks.as_list()
     # ottrk_parser = OttrkParser(
@@ -393,6 +412,97 @@ def event_builder() -> EventBuilder:
     return EventBuilder()
 
 
+@pytest.fixture
+def straight_track() -> Track:
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("straight-track")
+    track_builder.add_wh_bbox(0.5, 0.5)
+    track_builder.add_xy_bbox(1.0, 1.0)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2.0, 1.0)
+    track_builder.add_frame(2)
+    track_builder.add_microsecond(1)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(3.0, 1.0)
+    track_builder.add_frame(3)
+    track_builder.add_microsecond(2)
+    track_builder.append_detection()
+
+    return track_builder.build_track()
+
+
+@pytest.fixture
+def complex_track() -> Track:
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("complex-track")
+    track_builder.add_xy_bbox(1.0, 1.0)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2.0, 1.0)
+    track_builder.add_frame(2)
+    track_builder.add_microsecond(1)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2.0, 1.5)
+    track_builder.add_frame(3)
+    track_builder.add_microsecond(2)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(1.0, 1.5)
+    track_builder.add_frame(4)
+    track_builder.add_microsecond(3)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(1.0, 2.0)
+    track_builder.add_frame(5)
+    track_builder.add_microsecond(4)
+    track_builder.append_detection()
+
+    track_builder.add_xy_bbox(2.0, 2.0)
+    track_builder.add_frame(5)
+    track_builder.add_microsecond(4)
+    track_builder.append_detection()
+
+    return track_builder.build_track()
+
+
+@pytest.fixture
+def closed_track() -> Track:
+    classification = "car"
+    track_builder = TrackBuilder()
+    track_builder.add_track_id("closed-track")
+    track_builder.add_track_class(classification)
+    track_builder.add_detection_class(classification)
+
+    track_builder.add_frame(1)
+    track_builder.add_second(1)
+    track_builder.add_xy_bbox(1.0, 1.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(2)
+    track_builder.add_second(2)
+    track_builder.add_xy_bbox(2.0, 1.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(3)
+    track_builder.add_second(3)
+    track_builder.add_xy_bbox(2.0, 2.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.add_xy_bbox(1.0, 2.0)
+    track_builder.append_detection()
+
+    track_builder.add_frame(5)
+    track_builder.add_second(5)
+    track_builder.add_xy_bbox(1.0, 1.0)
+    track_builder.append_detection()
+    return track_builder.build_track()
+
+
 def assert_equal_detection_properties(actual: Detection, expected: Detection) -> None:
     assert expected.classification == actual.classification
     assert expected.confidence == actual.confidence
@@ -404,17 +514,29 @@ def assert_equal_detection_properties(actual: Detection, expected: Detection) ->
     assert expected.occurrence == actual.occurrence
     assert expected.video_name == actual.video_name
     assert expected.interpolated_detection == actual.interpolated_detection
-    assert expected.track_id == actual.track_id
+    assert actual.track_id == expected.track_id
 
 
 def assert_equal_track_properties(actual: Track, expected: Track) -> None:
-    assert expected.id == actual.id
-    assert expected.classification == actual.classification
-    assert len(expected.detections) == len(actual.detections)
+    assert actual.id == expected.id
+    assert actual.classification == expected.classification
+    assert len(actual.detections) == len(expected.detections)
     for first_detection, second_detection in zip(
         expected.detections, actual.detections
     ):
         assert_equal_detection_properties(second_detection, first_detection)
+
+
+def assert_track_datasets_equal(actual: TrackDataset, expected: TrackDataset) -> None:
+    assert actual.track_ids == expected.track_ids
+
+    for actual_track in actual.as_list():
+        if expected_track := expected.get_for(actual_track.id):
+            assert_equal_track_properties(actual_track, expected_track)
+        else:
+            raise AssertionError(
+                f"Track with id {actual_track.id} not found in expected dataset"
+            )
 
 
 def append_sample_data(
@@ -443,3 +565,14 @@ def append_sample_data(
     track_builder.append_detection()
 
     return track_builder
+
+
+def create_track(track_id: str, coord: list[tuple], start_second: int) -> Track:
+    track_builder = TrackBuilder()
+
+    track_builder.add_track_id(track_id)
+    for second, (x, y) in enumerate(coord, start=start_second):
+        track_builder.add_second(second)
+        track_builder.add_xy_bbox(x, y)
+        track_builder.append_detection()
+    return track_builder.build_track()

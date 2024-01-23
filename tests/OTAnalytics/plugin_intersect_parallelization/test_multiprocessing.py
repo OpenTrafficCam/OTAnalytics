@@ -1,8 +1,11 @@
+from typing import Callable, Iterable, cast
 from unittest.mock import Mock, patch
 
 import pytest
 
 from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.track_dataset import TrackDataset
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
@@ -21,7 +24,7 @@ class TestMultiprocessingIntersectParallelization:
         tasks = Mock()
 
         parallelizer = MultiprocessingIntersectParallelization()
-        result = parallelizer.execute(intersect, tasks)
+        result = parallelizer.execute(cast(Callable, intersect), tasks)
 
         assert result == [event_1, event_2]
         mock_pool_instance.starmap.assert_called_once_with(intersect, tasks)
@@ -35,16 +38,16 @@ class TestMultiprocessingIntersectParallelization:
 
         intersect = Mock()
         intersect.side_effect = [[event_1, event_2]]
-        track = Mock()
+        track_dataset: TrackDataset = Mock(spec=TrackDataset)
         section = Mock()
-        task = ([track], [section])
+        task: tuple[TrackDataset, Iterable[Section]] = (track_dataset, [section])
 
         parallelizer = MultiprocessingIntersectParallelization(num_processes=1)
-        result = parallelizer.execute(intersect, [task])
+        result = parallelizer.execute(cast(Callable, intersect), [task])
 
         assert result == [event_1, event_2]
         mock_pool_instance.starmap.assert_not_called()
-        intersect.assert_called_once_with([track], [section])
+        intersect.assert_called_once_with(track_dataset, [section])
 
     def test_flatten_events(self) -> None:
         intersect = MultiprocessingIntersectParallelization()

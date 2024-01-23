@@ -1,25 +1,19 @@
-import bz2
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable, Optional, Sequence, Tuple
-
-import ujson
+from typing import Any, Callable, Iterable, Optional, Sequence, Tuple
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
-from OTAnalytics.application import project
 from OTAnalytics.application.config import (
     ALLOWED_TRACK_SIZE_PARSING,
     TRACK_LENGTH_LIMIT,
 )
 from OTAnalytics.application.datastore import (
-    ConfigParser,
     DetectionMetadata,
     EventListParser,
     FlowParser,
-    OtConfig,
     TrackParser,
     TrackParseResult,
     TrackVideoParser,
@@ -27,7 +21,6 @@ from OTAnalytics.application.datastore import (
     VideoParser,
 )
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.project import Project
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType
@@ -38,12 +31,12 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackClassificationCalculator,
-    TrackDataset,
     TrackHasNoDetectionError,
     TrackId,
     TrackImage,
-    TrackRepository,
 )
+from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
@@ -51,6 +44,12 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions
+from OTAnalytics.plugin_parser.json_parser import (
+    parse_json,
+    parse_json_bz2,
+    write_json,
+    write_json_bz2,
+)
 
 ENCODING: str = "UTF-8"
 METADATA: str = "metadata"
@@ -58,70 +57,7 @@ VERSION: str = "version"
 SECTION_FORMAT_VERSION: str = "section_file_version"
 EVENT_FORMAT_VERSION: str = "event_file_version"
 
-PROJECT: str = "project"
-
-
-def _parse_bz2(path: Path) -> dict:
-    """Parse JSON bz2.
-
-    Args:
-        path (Path): Path to bz2 JSON.
-
-    Returns:
-        dict: The content of the JSON file.
-    """
-    with bz2.open(path, "rt", encoding=ENCODING) as file:
-        return ujson.load(file)
-
-
-def _write_bz2(data: dict, path: Path) -> None:
-    """Serialize JSON bz2.
-
-    Args:
-        dict: The content of the JSON file.
-        path (Path): Path to bz2 JSON.
-    """
-    with bz2.open(path, "wt", encoding=ENCODING) as file:
-        ujson.dump(data, file)
-
-
-def _parse_json(path: Path) -> dict:
-    """Parse JSON.
-
-    Args:
-        path (Path): Path to JSON.
-
-    Returns:
-        dict: The content of the JSON file.
-    """
-    with open(path, "rt", encoding=ENCODING) as file:
-        return ujson.load(file)
-
-
-def _parse(path: Path) -> dict:
-    """Parse file as JSON or bzip2 compressed JSON.
-
-    Args:
-        path (Path): Path to file
-
-    Returns:
-        dict: The content of the JSON file.
-    """
-    try:
-        return _parse_json(path)
-    except UnicodeDecodeError:
-        return _parse_bz2(path)
-
-
-def _write_json(data: dict, path: Path) -> None:
-    """Serialize JSON.
-
-    Args:
-        dict: The content of the JSON file.
-        path (Path): Path to JSON.
-    """
-    with open(path, "wt", encoding=ENCODING) as file:
-        ujson.dump(data, file, indent=4)
+TrackIdGenerator = Callable[[str], TrackId]
 
 
 def _validate_data(data: dict, attributes: list[str]) -> None:
@@ -187,7 +123,27 @@ class DetectionFixer(ABC):
         pass
 
 
-class Version_1_0_to_1_1(DetectionFixer):
+class MetadataFixer(ABC):
+    def __init__(
+        self,
+        from_ottrk_version: Version,
+        to_ottrk_version: Version,
+    ) -> None:
+        self._from_ottrk_version: Version = from_ottrk_version
+        self._to_ottrk_version: Version = to_ottrk_version
+
+    def from_version(self) -> Version:
+        return self._from_ottrk_version
+
+    def to_version(self) -> Version:
+        return self._to_ottrk_version
+
+    @abstractmethod
+    def fix(self, metadata: dict, current_version: Version) -> dict:
+        pass
+
+
+class Otdet_Version_1_0_to_1_1(DetectionFixer):
     def __init__(self) -> None:
         super().__init__(VERSION_1_0, VERSION_1_0)
 
@@ -224,7 +180,7 @@ class Version_1_0_to_1_1(DetectionFixer):
         return detection
 
 
-class Version_1_1_To_1_2(DetectionFixer):
+class Otdet_Version_1_0_To_1_2(DetectionFixer):
     def __init__(self) -> None:
         super().__init__(VERSION_1_0, VERSION_1_2)
 
@@ -241,7 +197,7 @@ class Version_1_1_To_1_2(DetectionFixer):
         Returns:
             dict: fixed dictionary
         """
-        if otdet_format_version <= Version(1, 1):
+        if otdet_format_version < self.to_version():
             occurrence = datetime.strptime(
                 detection[ottrk_format.OCCURRENCE], ottrk_format.DATE_FORMAT
             ).replace(tzinfo=timezone.utc)
@@ -249,12 +205,35 @@ class Version_1_1_To_1_2(DetectionFixer):
         return detection
 
 
-ALL_FIXES = [Version_1_0_to_1_1(), Version_1_1_To_1_2()]
+class Ottrk_Version_1_0_To_1_1(MetadataFixer):
+    def __init__(self) -> None:
+        super().__init__(VERSION_1_0, VERSION_1_1)
+
+    def fix(self, metadata: dict, current_version: Version) -> dict:
+        return self.__fix_tracking_run_ids(metadata, current_version)
+
+    def __fix_tracking_run_ids(self, metadata: dict, current_version: Version) -> dict:
+        if current_version < self.to_version():
+            metadata[ottrk_format.TRACKING][ottrk_format.TRACKING_RUN_ID] = "legacy"
+            metadata[ottrk_format.TRACKING][ottrk_format.FRAME_GROUP] = "legacy"
+        return metadata
+
+
+ALL_DETECTION_FIXES: list[DetectionFixer] = [
+    Otdet_Version_1_0_to_1_1(),
+    Otdet_Version_1_0_To_1_2(),
+]
+ALL_METADATA_FIXES: list[MetadataFixer] = [Ottrk_Version_1_0_To_1_1()]
 
 
 class OttrkFormatFixer:
-    def __init__(self, detection_fixes: list[DetectionFixer] = ALL_FIXES) -> None:
-        self._detection_fixes: list[DetectionFixer] = detection_fixes
+    def __init__(
+        self,
+        detection_fixes: list[DetectionFixer] = ALL_DETECTION_FIXES,
+        metadata_fixes: list[MetadataFixer] = ALL_METADATA_FIXES,
+    ) -> None:
+        self._detection_fixes = detection_fixes
+        self._metadata_fixes = metadata_fixes
 
     def fix(self, content: dict) -> dict:
         """Fix formate changes from older ottrk and otdet format versions to the
@@ -266,8 +245,9 @@ class OttrkFormatFixer:
         Returns:
             dict: fixed ottrk file content
         """
-        version = self.__parse_otdet_version(content)
-        return self.__fix_detections(content, version)
+        otdet_version = self.__parse_otdet_version(content)
+        content = self.__fix_metadata(content)
+        return self.__fix_detections(content, otdet_version)
 
     def __parse_otdet_version(self, content: dict) -> Version:
         """Parse the otdet format version from the input.
@@ -280,6 +260,14 @@ class OttrkFormatFixer:
         """
         version = content[ottrk_format.METADATA][ottrk_format.OTDET_VERSION]
         return Version.from_str(version)
+
+    def __fix_metadata(self, content: dict) -> dict:
+        metadata = content[ottrk_format.METADATA]
+        current_version = Version.from_str(metadata[ottrk_format.OTTRK_VERSION])
+        for fixer in self._metadata_fixes:
+            metadata = fixer.fix(metadata, current_version)
+        content[ottrk_format.METADATA] = metadata
+        return content
 
     def __fix_detections(self, content: dict, current_otdet_version: Version) -> dict:
         detections = content[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS]
@@ -298,7 +286,10 @@ class DetectionParser(ABC):
 
     @abstractmethod
     def parse_tracks(
-        self, detections: list[dict], metadata_video: dict
+        self,
+        detections: list[dict],
+        metadata_video: dict,
+        id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
         """Parse the detections.
 
@@ -308,6 +299,7 @@ class DetectionParser(ABC):
         Args:
             detections (list[dict]): the detections in dict format.
             metadata_video (dict): metadata of the track file in dict format.
+            id_generator (TrackIdGenerator): generator used to create track ids.
 
         Returns:
             TrackDataset: the tracks.
@@ -354,8 +346,13 @@ class PythonDetectionParser(DetectionParser):
         self._track_length_limit = track_length_limit
         self._path_cache: dict[str, Path] = {}
 
-    def parse_tracks(self, dets: list[dict], metadata_video: dict) -> TrackDataset:
-        tracks_dict = self._parse_detections(dets, metadata_video)
+    def parse_tracks(
+        self,
+        dets: list[dict],
+        metadata_video: dict,
+        id_generator: TrackIdGenerator = TrackId,
+    ) -> TrackDataset:
+        tracks_dict = self._parse_detections(dets, metadata_video, id_generator)
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
@@ -409,7 +406,10 @@ class PythonDetectionParser(DetectionParser):
         return []
 
     def _parse_detections(
-        self, det_list: list[dict], metadata_video: dict
+        self,
+        det_list: list[dict],
+        metadata_video: dict,
+        id_generator: TrackIdGenerator,
     ) -> dict[TrackId, list[Detection]]:
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
@@ -426,7 +426,7 @@ class PythonDetectionParser(DetectionParser):
                     float(det_dict[ottrk_format.OCCURRENCE]), tz=timezone.utc
                 ),
                 _interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-                _track_id=TrackId(str(det_dict[ottrk_format.TRACK_ID])),
+                _track_id=id_generator(str(det_dict[ottrk_format.TRACK_ID])),
                 _video_name=metadata_video[ottrk_format.FILENAME]
                 + metadata_video[ottrk_format.FILETYPE],
             )
@@ -464,14 +464,17 @@ class OttrkParser(TrackParser):
         Returns:
             TrackParseResult: contains tracks and track metadata.
         """
-        ottrk_dict = _parse_bz2(ottrk_file)
+        ottrk_dict = parse_json_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
             ottrk_format.DATA_DETECTIONS
         ]
         metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
         video_metadata = self._parse_video_metadata(metadata_video)
-        tracks = self._detection_parser.parse_tracks(dets_list, metadata_video)
+        id_generator = self._create_id_generator_from(ottrk_dict[ottrk_format.METADATA])
+        tracks = self._detection_parser.parse_tracks(
+            dets_list, metadata_video, id_generator
+        )
         detection_metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
         return TrackParseResult(tracks, detection_metadata, video_metadata)
 
@@ -503,6 +506,12 @@ class OttrkParser(TrackParser):
             actual_fps=actual_fps,
             number_of_frames=number_of_frames,
         )
+
+    def _create_id_generator_from(self, metadata: dict) -> TrackIdGenerator:
+        tracking_metadata: dict = metadata[ottrk_format.TRACKING]
+        tracking_run_id = tracking_metadata[ottrk_format.TRACKING_RUN_ID]
+        frame_group = tracking_metadata[ottrk_format.FRAME_GROUP]
+        return lambda id: TrackId(f"{tracking_run_id}#{frame_group}#{id}")
 
     def _parse_metadata(self, metadata_detection: dict) -> DetectionMetadata:
         detection_classes_entry: dict[str, str] = metadata_detection[
@@ -549,7 +558,7 @@ class OtFlowParser(FlowParser):
             list[Section]: list of Section objects
             list[Flow]: list of Flow objects
         """
-        content: dict = _parse(file)
+        content: dict = parse_json(file)
         section_content = content.get(section.SECTIONS, [])
         flow_content = content.get(flow.FLOWS, [])
         return self.parse_content(section_content, flow_content)
@@ -758,7 +767,7 @@ class OtFlowParser(FlowParser):
             file (Path): file to serialize flows and sections to
         """
         content = self.convert(sections, flows)
-        _write_json(content, file)
+        write_json(content, file)
 
     def convert(
         self,
@@ -881,7 +890,7 @@ class OttrkVideoParser(TrackVideoParser):
     def parse(
         self, file: Path, track_ids: list[TrackId]
     ) -> Tuple[list[TrackId], list[Video]]:
-        content = _parse_bz2(file)
+        content = parse_json_bz2(file)
         metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
         video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
         start_date = self.__parse_recorded_start_date(metadata)
@@ -905,7 +914,7 @@ class OtEventListParser(EventListParser):
             file (Path): file to serialize events and sections to
         """
         content = self._convert(events, sections)
-        _write_bz2(content, file)
+        write_json_bz2(content, file)
 
     def _convert(
         self, events: Iterable[Event], sections: Iterable[Section]
@@ -956,67 +965,3 @@ class OtEventListParser(EventListParser):
             list[dict]: list containing raw information of sections
         """
         return [section.to_dict() for section in sections]
-
-
-class OtConfigParser(ConfigParser):
-    def __init__(
-        self,
-        video_parser: VideoParser,
-        flow_parser: FlowParser,
-    ) -> None:
-        self._video_parser = video_parser
-        self._flow_parser = flow_parser
-
-    def parse(self, file: Path) -> OtConfig:
-        base_folder = file.parent
-        content = _parse(file)
-        project = self._parse_project(content[PROJECT])
-        videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
-        sections, flows = self._flow_parser.parse_content(
-            content[section.SECTIONS], content[flow.FLOWS]
-        )
-        return OtConfig(
-            project=project,
-            videos=videos,
-            sections=sections,
-            flows=flows,
-        )
-
-    def _parse_project(self, data: dict) -> Project:
-        _validate_data(data, [project.NAME, project.START_DATE])
-        name = data[project.NAME]
-        start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
-        return Project(name=name, start_date=start_date)
-
-    def serialize(
-        self,
-        project: Project,
-        video_files: Iterable[Video],
-        sections: Iterable[Section],
-        flows: Iterable[Flow],
-        file: Path,
-    ) -> None:
-        """Serializes the project with the given videos, sections and flows into the
-        file.
-
-        Args:
-            project (Project): description of the project
-            video_files (Iterable[Video]): video files to reference
-            sections (Iterable[Section]): sections to store
-            flows (Iterable[Flow]): flows to store
-            file (Path): output file
-
-        Raises:
-            StartDateMissing: if start date is not configured
-        """
-        parent_folder = file.parent
-        project_content = project.to_dict()
-        video_content = self._video_parser.convert(
-            video_files,
-            relative_to=parent_folder,
-        )
-        section_content = self._flow_parser.convert(sections, flows)
-        content: dict[str, list[dict] | dict] = {PROJECT: project_content}
-        content |= video_content
-        content |= section_content
-        _write_json(data=content, path=file)

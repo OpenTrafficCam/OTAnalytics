@@ -1,21 +1,12 @@
-import bz2
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
 from unittest.mock import Mock, call
 
 import pytest
-import ujson
 
 from OTAnalytics import version
-from OTAnalytics.application.datastore import (
-    FlowParser,
-    OtConfig,
-    VideoMetadata,
-    VideoParser,
-)
-from OTAnalytics.application.project import Project
-from OTAnalytics.domain import flow, geometry, section, video
+from OTAnalytics.application.datastore import VideoMetadata, VideoParser
+from OTAnalytics.domain import flow, geometry, section
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import (
@@ -37,8 +28,8 @@ from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
     TrackId,
     TrackImage,
-    TrackRepository,
 )
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
@@ -46,11 +37,11 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
+from OTAnalytics.plugin_parser.json_parser import write_json, write_json_bz2
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     EVENT_FORMAT_VERSION,
     METADATA,
-    PROJECT,
     SECTION_FORMAT_VERSION,
     VERSION,
     VERSION_1_0,
@@ -59,7 +50,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     DetectionFixer,
     InvalidSectionData,
-    OtConfigParser,
+    MetadataFixer,
+    Otdet_Version_1_0_to_1_1,
+    Otdet_Version_1_0_To_1_2,
     OtEventListParser,
     OtFlowParser,
     OttrkFormatFixer,
@@ -67,14 +60,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
     TrackLengthLimit,
     Version,
-    Version_1_0_to_1_1,
-    Version_1_1_To_1_2,
-    _parse,
-    _parse_bz2,
-    _write_bz2,
-    _write_json,
 )
-from tests.conftest import TrackBuilder
+from tests.conftest import TrackBuilder, assert_track_datasets_equal
 
 
 @pytest.fixture
@@ -111,26 +98,6 @@ def append_sample_data(
 
 
 @pytest.fixture
-def example_json_bz2(test_data_tmp_dir: Path) -> tuple[Path, dict]:
-    bz2_json_file = test_data_tmp_dir / "bz2_file.json"
-    bz2_json_file.touch()
-    content = {"first_name": "John", "last_name": "Doe"}
-    with bz2.open(bz2_json_file, "wt", encoding="UTF-8") as out:
-        ujson.dump(content, out)
-    return bz2_json_file, content
-
-
-@pytest.fixture
-def example_json(test_data_tmp_dir: Path) -> tuple[Path, dict]:
-    json_file = test_data_tmp_dir / "file.json"
-    json_file.touch()
-    content = {"first_name": "John", "last_name": "Doe"}
-    with bz2.open(json_file, "wt", encoding="UTF-8") as out:
-        ujson.dump(content, out)
-    return json_file, content
-
-
-@pytest.fixture
 def mocked_track_repository() -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_for.return_value = None
@@ -142,21 +109,6 @@ def mocked_track_file_repository() -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_all.return_value = set()
     return repository
-
-
-def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> None:
-    content = {"some": "value", "other": "values"}
-    json_file = test_data_tmp_dir / "section.json"
-    bzip2_file = test_data_tmp_dir / "section.json.bz2"
-    json_file.touch()
-    bzip2_file.touch()
-    _write_json(content, json_file)
-    _write_bz2(content, bzip2_file)
-    json_content = _parse(json_file)
-    bzip2_content = _parse(bzip2_file)
-
-    assert json_content == content
-    assert bzip2_content == content
 
 
 class TestVersion_1_0_To_1_1:
@@ -171,7 +123,7 @@ class TestVersion_1_0_To_1_1:
         expected_detection = serialized_detection.copy()
         expected_detection[ottrk_dataformat.X] = -5
         expected_detection[ottrk_dataformat.Y] = -5
-        fixer = Version_1_0_to_1_1()
+        fixer = Otdet_Version_1_0_to_1_1()
 
         fixed = fixer.fix(serialized_detection, VERSION_1_0)
 
@@ -192,7 +144,7 @@ class TestVersion_1_1_To_1_2:
             ottrk_dataformat.OCCURRENCE
         ] = detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
 
-        fixer = Version_1_1_To_1_2()
+        fixer = Otdet_Version_1_0_To_1_2()
 
         fixed = fixer.fix(serialized_detection, VERSION_1_1)
 
@@ -206,22 +158,38 @@ class TestOttrkFormatFixer:
         otdet_version = Version.from_str(
             track_builder_setup_with_sample_data.otdet_version
         )
+        ottrk_version = Version.from_str(
+            track_builder_setup_with_sample_data.ottrk_version
+        )
         content = track_builder_setup_with_sample_data.build_ottrk()
+        metadata = content[ottrk_dataformat.METADATA]
         detections = track_builder_setup_with_sample_data.build_serialized_detections()
         some_fixer = Mock(spec=DetectionFixer)
         other_fixer = Mock(spec=DetectionFixer)
         some_fixer.fix.side_effect = lambda detection, _: detection
         other_fixer.fix.side_effect = lambda detection, _: detection
-        fixes: list[DetectionFixer] = [some_fixer, other_fixer]
-        fixer = OttrkFormatFixer(fixes)
+        some_metadata_fixer = Mock(spec=MetadataFixer)
+        other_metadata_fixer = Mock(spec=MetadataFixer)
+        some_metadata_fixer.fix.side_effect = lambda metadata, _: metadata
+        other_metadata_fixer.fix.side_effect = lambda metadata, _: metadata
+        detection_fixes: list[DetectionFixer] = [some_fixer, other_fixer]
+        metadata_fixes: list[MetadataFixer] = [
+            some_metadata_fixer,
+            other_metadata_fixer,
+        ]
+        fixer = OttrkFormatFixer(detection_fixes, metadata_fixes)
 
         fixed_content = fixer.fix(content)
 
         assert fixed_content == content
-        executed_calls = some_fixer.fix.call_args_list
-        expected_calls = [call(detection, otdet_version) for detection in detections]
-
-        assert executed_calls == expected_calls
+        assert some_fixer.fix.call_args_list == [
+            call(detection, otdet_version) for detection in detections
+        ]
+        assert other_fixer.fix.call_args_list == [
+            call(detection, otdet_version) for detection in detections
+        ]
+        some_metadata_fixer.fix.assert_called_with(metadata, ottrk_version)
+        other_metadata_fixer.fix.assert_called_with(metadata, ottrk_version)
 
     def test_no_fixes_in_newest_version(
         self, track_builder_setup_with_sample_data: TrackBuilder
@@ -254,22 +222,33 @@ class TestOttrkParser:
         # TODO What is the expected result?
         ottrk_parser.parse(ottrk_path)
 
+    @pytest.mark.parametrize(
+        "version,track_id", [("1.0", "legacy#legacy#1"), ("1.1", "1#1#1")]
+    )
     def test_parse_ottrk_sample(
         self,
         test_data_tmp_dir: Path,
         track_builder_setup_with_sample_data: TrackBuilder,
         ottrk_parser: OttrkParser,
+        version: str,
+        track_id: str,
     ) -> None:
+        track_builder_setup_with_sample_data.set_ottrk_version(version)
         ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
-        _write_bz2(ottrk_data, ottrk_file)
+        write_json_bz2(ottrk_data, ottrk_file)
         parse_result = ottrk_parser.parse(ottrk_file)
 
-        expected_track = track_builder_setup_with_sample_data.build_track()
+        example_track_builder = TrackBuilder()
+        example_track_builder.add_track_id(track_id)
+        append_sample_data(example_track_builder)
+        expected_track = example_track_builder.build_track()
         expected_detection_classes = frozenset(
             ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
         )
-        assert parse_result.tracks == PythonTrackDataset.from_list([expected_track])
+        assert_track_datasets_equal(
+            parse_result.tracks, PythonTrackDataset.from_list([expected_track])
+        )
         assert (
             parse_result.detection_metadata.detection_classes
             == expected_detection_classes
@@ -290,16 +269,6 @@ class TestOttrkParser:
             number_of_frames=60,
         )
         ottrk_file.unlink()
-
-    def test_parse_bz2(self, example_json_bz2: tuple[Path, dict]) -> None:
-        example_json_bz2_path, expected_content = example_json_bz2
-        result_content = _parse_bz2(example_json_bz2_path)
-        assert result_content == expected_content
-
-    def test_parse_bz2_uncompressed_file(self, example_json: tuple[Path, dict]) -> None:
-        example_path, expected_content = example_json
-        result_content = _parse_bz2(example_path)
-        assert result_content == expected_content
 
 
 class TestPythonDetectionParser:
@@ -322,10 +291,16 @@ class TestPythonDetectionParser:
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = parser._parse_detections(detections, metadata_video)
+        result_sorted_input = parser._parse_detections(
+            detections,
+            metadata_video,
+            TrackId,
+        )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
         result_unsorted_input = parser._parse_detections(
-            unsorted_detections, metadata_video
+            unsorted_detections,
+            metadata_video,
+            TrackId,
         )
 
         expected_sorted = {
@@ -354,9 +329,8 @@ class TestPythonDetectionParser:
         expected_sorted = PythonTrackDataset.from_list(
             [track_builder_setup_with_sample_data.build_track()]
         )
-
-        assert expected_sorted == result_sorted_input
-        assert expected_sorted == result_unsorted_input
+        assert_track_datasets_equal(result_sorted_input, expected_sorted)
+        assert_track_datasets_equal(result_unsorted_input, expected_sorted)
 
     def test_parse_tracks_merge_with_existing(
         self,
@@ -393,7 +367,7 @@ class TestPythonDetectionParser:
 
         expected_sorted = PythonTrackDataset.from_list([merged_track])
 
-        assert expected_sorted == result_sorted_input
+        assert_track_datasets_equal(result_sorted_input, expected_sorted)
 
     @pytest.mark.parametrize(
         "track_length_limit",
@@ -599,7 +573,7 @@ class TestOtFlowParser:
             flow.FLOWS: [],
         }
         save_path = test_data_tmp_dir / "sections.otflow"
-        _write_json(section_data, save_path)
+        write_json(section_data, save_path)
 
         parser = OtFlowParser()
         sections, _ = parser.parse(save_path)
@@ -641,7 +615,7 @@ class TestOtFlowParser:
             flow.FLOWS: [],
         }
         save_path = test_data_tmp_dir / "sections.otflow"
-        _write_json(section_data, save_path)
+        write_json(section_data, save_path)
 
         parser = OtFlowParser()
         sections, _ = parser.parse(save_path)
@@ -822,82 +796,3 @@ class TestCachedVideoParser:
         result = cached_parser.convert([video1, video2], test_data_tmp_dir)
 
         assert expected_result is result
-
-
-class TestOtConfigParser:
-    def test_serialize_config(self, test_data_tmp_dir: Path) -> None:
-        video_parser = Mock(spec=VideoParser)
-        flow_parser = Mock(spec=FlowParser)
-        config_parser = OtConfigParser(
-            video_parser=video_parser,
-            flow_parser=flow_parser,
-        )
-        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
-        videos: list[Video] = []
-        sections: list[Section] = []
-        flows: list[Flow] = []
-        output = test_data_tmp_dir / "config.otconfig"
-        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
-        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
-        video_parser.convert.return_value = serialized_videos
-        flow_parser.convert.return_value = serialized_sections
-
-        config_parser.serialize(
-            project=project,
-            video_files=videos,
-            sections=sections,
-            flows=flows,
-            file=output,
-        )
-
-        serialized_content = _parse(output)
-        expected_content: dict[str, Any] = {PROJECT: project.to_dict()}
-        expected_content |= serialized_videos
-        expected_content |= serialized_sections
-
-        assert serialized_content == expected_content
-        assert video_parser.convert.call_args_list == [
-            call(videos, relative_to=test_data_tmp_dir)
-        ]
-        assert flow_parser.convert.call_args_list == [call(sections, flows)]
-
-    def test_parse_config(self, test_data_tmp_dir: Path) -> None:
-        video_parser = Mock(spec=VideoParser)
-        flow_parser = Mock(spec=FlowParser)
-        config_parser = OtConfigParser(
-            video_parser=video_parser,
-            flow_parser=flow_parser,
-        )
-        project = Project(
-            name="Test Project", start_date=datetime(2020, 1, 1, tzinfo=timezone.utc)
-        )
-        videos: Sequence[Video] = ()
-        sections: Sequence[Section] = ()
-        flows: Sequence[Flow] = ()
-        config_file = test_data_tmp_dir / "config.otconfig"
-        serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
-        serialized_flows = {
-            section.SECTIONS: {"serialized": "sections"},
-            flow.FLOWS: {"serialized": "flows"},
-        }
-        video_parser.convert.return_value = serialized_videos
-        flow_parser.convert.return_value = serialized_flows
-        video_parser.parse_list.return_value = videos
-        flow_parser.parse_content.return_value = sections, flows
-
-        config_parser.serialize(
-            project=project,
-            video_files=videos,
-            sections=sections,
-            flows=flows,
-            file=config_file,
-        )
-        config = config_parser.parse(file=config_file)
-
-        expected_config = OtConfig(
-            project=project,
-            videos=videos,
-            sections=sections,
-            flows=flows,
-        )
-        assert config == expected_config
