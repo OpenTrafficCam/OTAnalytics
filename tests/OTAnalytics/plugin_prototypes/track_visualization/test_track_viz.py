@@ -306,7 +306,7 @@ class TestColorPaletteProvider:
     )
     def test_update_with_filled_default(
         self,
-        new_classifications: set[str],
+        new_classifications: frozenset[str],
         default_palette: dict[str, str],
         expected: dict[str, str],
     ) -> None:

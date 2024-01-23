@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Callable, Iterable, Iterator, Optional, Sequence
 
 from OTAnalytics.domain.event import Event
@@ -16,6 +17,21 @@ class IntersectionPoint:
 class TrackDataset(ABC):
     def __iter__(self) -> Iterator[Track]:
         yield from self.as_list()
+
+    @property
+    @abstractmethod
+    def first_occurrence(self) -> datetime | None:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def last_occurrence(self) -> datetime | None:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def classifications(self) -> frozenset[str]:
+        raise NotImplementedError
 
     @abstractmethod
     def add_all(self, other: Iterable[Track]) -> "TrackDataset":

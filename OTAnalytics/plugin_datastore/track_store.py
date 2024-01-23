@@ -201,6 +201,24 @@ def extract_hostname(name: str) -> str:
 
 
 class PandasTrackDataset(TrackDataset):
+    @property
+    def first_occurrence(self) -> datetime | None:
+        if not len(self):
+            return None
+        return self._dataset.index.get_level_values(LEVEL_OCCURRENCE).min()
+
+    @property
+    def last_occurrence(self) -> datetime | None:
+        if not len(self):
+            return None
+        return self._dataset.index.get_level_values(LEVEL_OCCURRENCE).max()
+
+    @property
+    def classifications(self) -> frozenset[str]:
+        if not len(self):
+            return frozenset()
+        return frozenset(self._dataset[track.TRACK_CLASSIFICATION].unique())
+
     def __init__(
         self,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
