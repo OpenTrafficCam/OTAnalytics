@@ -11,6 +11,7 @@ from OTAnalytics.application.datastore import (
     VideoMetadata,
 )
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.domain.track import (
     Detection,
     Track,
@@ -26,89 +27,25 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     DetectionParser,
     OttrkFormatFixer,
+    TrackIdGenerator,
     TrackLengthLimit,
     _parse_bz2,
 )
 
+RawDetectionData = list[dict]
+RawVideoMetadata = dict
+RawFileData = tuple[RawDetectionData, RawVideoMetadata]
 
-class StreamingTrackParser(TrackParser):
-    """Parse an ottrk file and convert its contents to our domain objects namely
-    `Tracks`.
 
-    Args:
-        detection_parser (DetectionParser): parses the given detections.
-        format_fixer (OttrkFormatFixer): to fix older ottrk version files.
+class StreamingDetectionParser(
+    DetectionParser
+):  # code duplication with PythonDetectionParser, hard to extract due to yield!
+    """
+    Parse the detections of an ottrk file lazily
+    and convert them into a `StreamingTrackDataset`.
+    (implementation similar to PythonDetectionParser)
     """
 
-    def __init__(
-        self,
-        detection_parser: DetectionParser,
-        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
-    ) -> None:
-        self._detection_parser = detection_parser
-        self._format_fixer = format_fixer
-
-    def parse(self, ottrk_file: Path) -> TrackParseResult:
-        """Parse ottrk file and convert its content to domain level objects namely
-        `Track`s.
-
-        Args:
-            ottrk_file (Path): the track file.
-
-        Returns:
-            TrackParseResult: contains tracks and track metadata.
-        """
-        ottrk_dict = _parse_bz2(ottrk_file)
-        fixed_ottrk = self._format_fixer.fix(ottrk_dict)
-        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
-            ottrk_format.DATA_DETECTIONS
-        ]
-        metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
-        video_metadata = self._parse_video_metadata(metadata_video)
-        tracks = self._detection_parser.parse_tracks(dets_list, metadata_video)
-        detection_metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
-        return TrackParseResult(tracks, detection_metadata, video_metadata)
-
-    def _parse_video_metadata(self, metadata_video: dict) -> VideoMetadata:
-        video_path = (
-            metadata_video[ottrk_format.FILENAME]
-            + metadata_video[ottrk_format.FILETYPE]
-        )
-        recorded_start_date = datetime.fromtimestamp(
-            float(metadata_video[ottrk_format.RECORDED_START_DATE]), timezone.utc
-        )
-        expected_duration = (
-            timedelta(seconds=metadata_video[ottrk_format.EXPECTED_DURATION])
-            if ottrk_format.EXPECTED_DURATION in metadata_video.keys()
-            else None
-        )
-        recorded_fps = float(metadata_video[ottrk_format.RECORDED_FPS])
-        actual_fps = (
-            float(metadata_video[ottrk_format.ACTUAL_FPS])
-            if ottrk_format.ACTUAL_FPS in metadata_video.keys()
-            else None
-        )
-        number_of_frames = int(metadata_video[ottrk_format.NUMBER_OF_FRAMES])
-        return VideoMetadata(
-            path=video_path,
-            recorded_start_date=recorded_start_date,
-            expected_duration=expected_duration,
-            recorded_fps=recorded_fps,
-            actual_fps=actual_fps,
-            number_of_frames=number_of_frames,
-        )
-
-    def _parse_metadata(self, metadata_detection: dict) -> DetectionMetadata:
-        detection_classes_entry: dict[str, str] = metadata_detection[
-            ottrk_format.METADATA_DETECTION
-        ][ottrk_format.MODEL][ottrk_format.CLASSES]
-        detection_classes = frozenset(
-            classification for classification in detection_classes_entry.values()
-        )
-        return DetectionMetadata(detection_classes)
-
-
-class StreamingDetectionParser(DetectionParser):
     def __init__(
         self,
         track_classification_calculator: TrackClassificationCalculator,
@@ -119,10 +56,63 @@ class StreamingDetectionParser(DetectionParser):
         self._track_repository = track_repository
         self._track_length_limit = track_length_limit
 
-    def parse_tracks(self, dets: list[dict], metadata_video: dict) -> TrackDataset:
+    def parse_multi_tracks(self, files_data: Iterator[RawFileData]) -> TrackDataset:
+        """Parse detections of multiple files lazily
+        and convert into a single (stream based) TrackDataset.
+
+        Args:
+            files_data (Iterator[RawFileData]):
+                a (lazy) iterator of the raw ottrk file data
+
+        Returns:
+            TrackDataset: a stream based TrackDataset
+        """
+        return StreamingTrackDataset(iterator=self._parse_multi_lazy(files_data))
+
+    def parse_tracks(
+        self,
+        dets: RawDetectionData,
+        metadata_video: RawVideoMetadata,
+        id_generator: TrackIdGenerator = TrackId,
+    ) -> TrackDataset:
+        """Parse detections of single ottrk file lazily
+        and convert into a single (stream based) TrackDataset.
+
+        Args:
+            dets (RawDetectionData): raw detection data
+            metadata_video (RawVideoMetadata): raw video metadata
+
+        Returns:
+            TrackDataset: a stream based TrackDataset
+        """
         return StreamingTrackDataset(iterator=self._parse_lazy(dets, metadata_video))
 
-    def _parse_lazy(self, dets: list[dict], metadata_video: dict) -> Iterator[Track]:
+    def _parse_multi_lazy(self, files_data: Iterator[RawFileData]) -> Iterator[Track]:
+        """Create a lazy detection parser yielding all tracks
+        from the given raw file data.
+
+        Args:
+            files_data (Iterator[RawFileData]): the raw file data to be parsed
+
+        Yields:
+            Iterator[Track]: a lazy iterator of all tracks in all given files
+        """
+        for dets, metadata_video in files_data:
+            yield from self._parse_lazy(dets, metadata_video)
+
+    def _parse_lazy(
+        self, dets: RawDetectionData, metadata_video: RawVideoMetadata
+    ) -> Iterator[Track]:
+        """Create a lazy detection parser yielding all tracks
+        from the given raw detection data.
+
+        Args:
+            dets (RawDetectionData): the raw detection data to be parsed to tracks
+            metadata_video (RawVideoMetadata): the raw video metadata to be applied
+
+        Yields:
+            Iterator[Track]: a lazy iterator of all contained tracks
+        """
         det_list_iterator = self._parse_detections(dets, metadata_video)
 
         for track_id, detections in det_list_iterator:
@@ -177,7 +167,7 @@ class StreamingDetectionParser(DetectionParser):
         return []
 
     def _parse_detections(
-        self, det_list: list[dict], metadata_video: dict
+        self, det_list: RawDetectionData, metadata_video: RawVideoMetadata
     ) -> Iterator[tuple[TrackId, list[Detection]]]:
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
@@ -206,10 +196,18 @@ class StreamingDetectionParser(DetectionParser):
             if det_dict[ottrk_format.FINISHED]:
                 detections = tracks_dict[det.track_id]
                 del tracks_dict[det.track_id]
-                yield (det.track_id, detections)
+                yield (det.track_id, detections)  # yield finished track
+
+        for track_id, detections in tracks_dict.items():
+            yield (track_id, detections)  # yield remaining track
 
 
 class StreamingTrackDataset(TrackDataset):
+    """A TrackDataSet based on a lazy Track stream iterator.
+    Only provides a reduced set of operations.
+    #TODO: check if cli application is possible with this reduced op-set
+    """
+
     def __init__(self, iterator: Iterator[Track]) -> None:
         self._iterator = iterator
 
@@ -265,3 +263,150 @@ class FilterIteratorWrapper(Iterator[Track]):
         for _track in delegate:
             if len(_track.detections) >= self._length:
                 yield _track
+
+
+class StreamingTrackParseResult(
+    TrackParseResult
+):  # this is a hacky quick fix since TrackParseResult is frozen,
+    # maybe StreamingTrackParser cannot implement TrackParser interface exactly??
+    # or register video/dectection metadata collection to be updated dynamically?
+    def update_video_metadata(self, video_metadata: VideoMetadata) -> None:
+        object.__setattr__(self, "video_metadata", video_metadata)
+
+    def update_detection_metadata(self, detection_metadata: DetectionMetadata) -> None:
+        object.__setattr__(self, "detection_metadata", detection_metadata)
+
+
+class StreamingTrackParser(TrackParser):
+    """_summary_
+
+    Args:
+        TrackParser (_type_): _description_
+    """
+
+    def __init__(
+        self,
+        streaming_detection_parser: StreamingDetectionParser,
+        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
+    ) -> None:
+        self._format_fixer = format_fixer
+        self._detection_parser = streaming_detection_parser
+
+        self._registered_tracks_metadata: list[TracksMetadata] = []
+        self._registered_videos_metadata: list[VideosMetadata] = []
+
+        self._current_video_metadata: VideoMetadata
+        self._current_detection_metadata: DetectionMetadata
+        self._dir: Path
+        self._result: StreamingTrackParseResult
+        # _result contains single StreamingTrackDataset + current video / det metadata
+
+    # maybe also allow to register observers to be notified when new file begins!
+    def register_tracks_metadata(self, tracks_metadata: TracksMetadata) -> None:
+        self._registered_tracks_metadata.append(tracks_metadata)
+
+    def register_videos_metadata(self, videos_metadata: VideosMetadata) -> None:
+        self._registered_videos_metadata.append(videos_metadata)
+
+    def _update_registered_metadata_collections(
+        self,
+        new_detection_metadata: DetectionMetadata,
+        new_video_metadata: VideoMetadata,
+    ) -> None:
+        self._current_detection_metadata = new_detection_metadata
+        self._current_video_metadata = new_video_metadata
+
+        for tracks_metadata in self._registered_tracks_metadata:
+            tracks_metadata.update_detection_classes(
+                new_detection_metadata.detection_classes
+            )
+
+        for videos_metadata in self._registered_videos_metadata:
+            videos_metadata.update(new_video_metadata)
+
+        if self._result is not None:
+            self._result.update_detection_metadata(new_detection_metadata)
+            self._result.update_video_metadata(new_video_metadata)
+
+    def parse(self, dir: Path) -> TrackParseResult:
+        if self._result is not None:
+            raise RuntimeError(
+                f"StreamingTrackParser cannot parse '{dir}' "
+                + f"as it was already applied to '{self._dir}'!"
+            )
+
+        tracks = self._detection_parser.parse_multi_tracks(self._parse_files(dir))
+
+        self._dir = dir
+
+        self._result = StreamingTrackParseResult(
+            tracks, self._current_detection_metadata, self._current_video_metadata
+        )  # is null possible here?
+
+        return self._result
+
+    def _parse_files(self, dir: Path) -> Iterator[RawFileData]:
+        for file_path in self._get_ottrk_files(dir):
+            yield self._parse_file(file_path)
+
+    def _get_ottrk_files(self, dir: Path) -> list[Path]:
+        return list(
+            filter(
+                lambda p: p.is_file(), sorted(dir.glob("*.ottrk"), key=lambda p: p.name)
+            )
+        )
+
+    def _parse_file(self, ottrk_file: Path) -> RawFileData:
+        ottrk_dict = _parse_bz2(ottrk_file)
+        fixed_ottrk = self._format_fixer.fix(ottrk_dict)
+        dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
+            ottrk_format.DATA_DETECTIONS
+        ]
+        metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
+
+        video_metadata = self._parse_video_metadata(metadata_video)
+        # tracks = self._detection_parser.parse_tracks(dets_list, metadata_video)
+        detection_metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
+
+        self._update_registered_metadata_collections(detection_metadata, video_metadata)
+        return dets_list, metadata_video
+
+    def _parse_video_metadata(
+        self, metadata_video: RawVideoMetadata
+    ) -> VideoMetadata:  # code duplication, maybe inherit OTTrackParser?
+        video_path = (
+            metadata_video[ottrk_format.FILENAME]
+            + metadata_video[ottrk_format.FILETYPE]
+        )
+        recorded_start_date = datetime.fromtimestamp(
+            float(metadata_video[ottrk_format.RECORDED_START_DATE]), timezone.utc
+        )
+        expected_duration = (
+            timedelta(seconds=metadata_video[ottrk_format.EXPECTED_DURATION])
+            if ottrk_format.EXPECTED_DURATION in metadata_video.keys()
+            else None
+        )
+        recorded_fps = float(metadata_video[ottrk_format.RECORDED_FPS])
+        actual_fps = (
+            float(metadata_video[ottrk_format.ACTUAL_FPS])
+            if ottrk_format.ACTUAL_FPS in metadata_video.keys()
+            else None
+        )
+        number_of_frames = int(metadata_video[ottrk_format.NUMBER_OF_FRAMES])
+        return VideoMetadata(
+            path=video_path,
+            recorded_start_date=recorded_start_date,
+            expected_duration=expected_duration,
+            recorded_fps=recorded_fps,
+            actual_fps=actual_fps,
+            number_of_frames=number_of_frames,
+        )
+
+    def _parse_metadata(self, metadata_detection: dict) -> DetectionMetadata:
+        detection_classes_entry: dict[str, str] = metadata_detection[
+            ottrk_format.METADATA_DETECTION
+        ][ottrk_format.MODEL][ottrk_format.CLASSES]
+        detection_classes = frozenset(
+            classification for classification in detection_classes_entry.values()
+        )
+        return DetectionMetadata(detection_classes)
