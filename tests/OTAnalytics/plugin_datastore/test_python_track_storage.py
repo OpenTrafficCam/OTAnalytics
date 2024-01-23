@@ -11,7 +11,14 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
     calculate_direction_vector,
 )
-from OTAnalytics.domain.track import Detection, Track, TrackHasNoDetectionError, TrackId
+from OTAnalytics.domain.section import LineSection
+from OTAnalytics.domain.track import (
+    Detection,
+    Track,
+    TrackClassificationCalculator,
+    TrackHasNoDetectionError,
+    TrackId,
+)
 from OTAnalytics.domain.track_dataset import TrackGeometryDataset
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
@@ -19,10 +26,11 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
+    SimpleCutTrackSegmentBuilder,
 )
 from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
-from tests.conftest import TrackBuilder
+from tests.conftest import TrackBuilder, create_track
 from tests.OTAnalytics.plugin_datastore.conftest import (
     assert_track_geometry_dataset_add_all_called_correctly,
     create_mock_geometry_dataset,
@@ -316,13 +324,6 @@ class TestPythonTrackDataset:
         result = result_dataset.get_for(first_track.id)
         assert result == first_track
 
-    def test_get_all_ids(self, first_track: Track, second_track: Track) -> None:
-        dataset = PythonTrackDataset()
-        result_dataset = dataset.add_all([first_track, second_track])
-
-        result = result_dataset.get_all_ids()
-        assert set(result) == {first_track.id, second_track.id}
-
     def test_clear(self, first_track: Track, second_track: Track) -> None:
         dataset = PythonTrackDataset()
         result_dataset = dataset.add_all([first_track, second_track])
@@ -342,6 +343,25 @@ class TestPythonTrackDataset:
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
         }
         geometry_dataset.remove.assert_called_once_with({second_track.id})
+
+    def test_remove_multiple(self, first_track: Track, second_track: Track) -> None:
+        geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
+        dataset = PythonTrackDataset(
+            {first_track.id: first_track, second_track.id: second_track},
+            {RelativeOffsetCoordinate(0, 0): geometry_dataset},
+        )
+        assert list(dataset) == [first_track, second_track]
+        result = cast(
+            PythonTrackDataset,
+            dataset.remove_multiple({first_track.id, second_track.id}),
+        )
+        assert list(result) == []
+        assert result._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
+        }
+        geometry_dataset.remove.assert_called_once_with(
+            {first_track.id, second_track.id}
+        )
 
     @pytest.mark.parametrize(
         "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]
@@ -508,3 +528,60 @@ class TestPythonTrackDataset:
     def test_classifications_on_empty_dataset(self) -> None:
         dataset = PythonTrackDataset()
         assert dataset.classifications == frozenset()
+
+    def test_cut_with_section(
+        self,
+        cutting_section_test_case: tuple[
+            LineSection, list[Track], list[Track], set[TrackId]
+        ],
+    ) -> None:
+        (
+            cutting_section,
+            input_tracks,
+            expected_tracks,
+            expected_original_track_ids,
+        ) = cutting_section_test_case
+        expected_dataset = PythonTrackDataset.from_list(expected_tracks)
+
+        dataset = PythonTrackDataset.from_list(input_tracks)
+        cut_track_dataset, original_track_ids = dataset.cut_with_section(
+            cutting_section, RelativeOffsetCoordinate(0, 0)
+        )
+        actual_tracks = sorted(cut_track_dataset, key=lambda _track: _track.id)
+        expected_tracks = sorted(expected_dataset, key=lambda _track: _track.id)
+        for actual, expected in zip(actual_tracks, expected_tracks):
+            assert actual == expected
+        assert original_track_ids == expected_original_track_ids
+
+    def test_track_ids(
+        self,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PythonTrackDataset()
+        assert dataset.track_ids == frozenset()
+        updated_dataset = dataset.add_all([first_track, second_track])
+        assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
+
+
+class TestSimpleCutTrackSegmentBuilder:
+    def test_build(self) -> None:
+        classification = "car"
+        my_track = create_track("1", [(0, 0), (1, 0), (2, 0), (3, 0)], 0)
+
+        class_calculator = Mock(spec=TrackClassificationCalculator)
+        class_calculator.calculate.return_value = classification
+        track_builder = SimpleCutTrackSegmentBuilder(class_calculator)
+
+        assert track_builder._track_id is None
+        assert track_builder._detections == []
+
+        track_builder.add_id(my_track.id.id)
+        for detection in my_track.detections:
+            track_builder.add_detection(detection)
+        result = track_builder.build()
+        assert result == my_track
+
+        # Assert track builder is reset after build
+        assert track_builder._track_id is None
+        assert track_builder._detections == []

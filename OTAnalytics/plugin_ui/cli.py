@@ -250,7 +250,7 @@ class OTAnalyticsCli:
     def _do_export_counts(self, save_path: Path) -> None:
         logger().info("Create counts ...")
         self._tracks_metadata.notify_tracks(
-            TrackRepositoryEvent(list(self._get_all_track_ids()), [])
+            TrackRepositoryEvent.create_added(self._get_all_track_ids())
         )
         start = self._videos_metadata.first_video_start
         end = self._videos_metadata.last_video_end

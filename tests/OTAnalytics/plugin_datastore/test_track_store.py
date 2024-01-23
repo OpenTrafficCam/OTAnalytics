@@ -12,6 +12,7 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
     calculate_direction_vector,
 )
+from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
@@ -33,15 +34,15 @@ from OTAnalytics.plugin_datastore.track_store import (
     _convert_tracks,
     extract_hostname,
 )
-from tests.OTAnalytics.plugin_datastore.conftest import (
-    assert_track_geometry_dataset_add_all_called_correctly,
-    create_mock_geometry_dataset,
-)
 from tests.conftest import (
     TrackBuilder,
     assert_equal_detection_properties,
     assert_equal_track_properties,
     assert_track_datasets_equal,
+)
+from tests.OTAnalytics.plugin_datastore.conftest import (
+    assert_track_geometry_dataset_add_all_called_correctly,
+    create_mock_geometry_dataset,
 )
 
 
@@ -300,6 +301,34 @@ class TestPandasTrackDataset:
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
         }
 
+    def test_remove_multiple(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        first_track = self.__build_track("1")
+        second_track = self.__build_track("2")
+        third_track = self.__build_track("3")
+        all_track_ids = frozenset([first_track.id, second_track.id, third_track.id])
+        track_ids_to_remove = {first_track.id, second_track.id}
+        tracks_df = _convert_tracks([first_track, second_track, third_track])
+        geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
+        dataset = PandasTrackDataset.from_dataframe(
+            tracks_df,
+            track_geometry_factory,
+            {RelativeOffsetCoordinate(0, 0): geometry_dataset},
+        )
+        assert len(dataset) == 3
+        assert dataset.track_ids == all_track_ids
+
+        removed_track_set = cast(
+            PandasTrackDataset,
+            dataset.remove_multiple(track_ids_to_remove),
+        )
+        assert_equal_track_properties(list(removed_track_set)[0], third_track)
+        geometry_dataset.remove.assert_called_once_with(track_ids_to_remove)
+        assert removed_track_set._geometry_datasets == {
+            RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
+        }
+
     def test_len(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
@@ -528,3 +557,38 @@ class TestPandasTrackDataset:
     ) -> None:
         dataset = PandasTrackDataset(track_geometry_factory)
         assert dataset.classifications == frozenset()
+
+    def test_cut_with_section(
+        self,
+        cutting_section_test_case: tuple[
+            LineSection, list[Track], list[Track], set[TrackId]
+        ],
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        (
+            cutting_section,
+            input_tracks,
+            expected_tracks,
+            expected_original_track_ids,
+        ) = cutting_section_test_case
+        expected_dataset = PandasTrackDataset.from_list(
+            expected_tracks, track_geometry_factory
+        )
+
+        dataset = PandasTrackDataset.from_list(input_tracks, track_geometry_factory)
+        cut_track_dataset, original_track_ids = dataset.cut_with_section(
+            cutting_section, RelativeOffsetCoordinate(0, 0)
+        )
+        assert original_track_ids == expected_original_track_ids
+        assert_track_datasets_equal(cut_track_dataset, expected_dataset)
+
+    def test_track_ids(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        first_track: Track,
+        second_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
+        assert dataset.track_ids == frozenset()
+        updated_dataset = dataset.add_all([first_track, second_track])
+        assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
