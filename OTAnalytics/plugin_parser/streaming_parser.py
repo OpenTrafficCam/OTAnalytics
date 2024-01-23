@@ -2,6 +2,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator, Optional, Sequence
 
+from domain.track_dataset import TrackDataset
+from domain.track_repository import TrackRepository
+from plugin_parser.json_parser import parse_json_bz2
 from pyparsing import Iterable
 
 from OTAnalytics.application.datastore import (
@@ -16,10 +19,8 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackClassificationCalculator,
-    TrackDataset,
     TrackHasNoDetectionError,
     TrackId,
-    TrackRepository,
 )
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
@@ -29,7 +30,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkFormatFixer,
     TrackIdGenerator,
     TrackLengthLimit,
-    _parse_bz2,
 )
 
 RawDetectionData = list[dict]
@@ -85,9 +85,15 @@ class StreamingDetectionParser(
         Returns:
             TrackDataset: a stream based TrackDataset
         """
-        return StreamingTrackDataset(iterator=self._parse_lazy(dets, metadata_video))
+        return StreamingTrackDataset(
+            iterator=self._parse_lazy(dets, metadata_video, id_generator)
+        )
 
-    def _parse_multi_lazy(self, files_data: Iterator[RawFileData]) -> Iterator[Track]:
+    def _parse_multi_lazy(
+        self,
+        files_data: Iterator[RawFileData],
+        id_generator: TrackIdGenerator = TrackId,
+    ) -> Iterator[Track]:
         """Create a lazy detection parser yielding all tracks
         from the given raw file data.
 
@@ -98,10 +104,13 @@ class StreamingDetectionParser(
             Iterator[Track]: a lazy iterator of all tracks in all given files
         """
         for dets, metadata_video in files_data:
-            yield from self._parse_lazy(dets, metadata_video)
+            yield from self._parse_lazy(dets, metadata_video, id_generator)
 
     def _parse_lazy(
-        self, dets: RawDetectionData, metadata_video: RawVideoMetadata
+        self,
+        dets: RawDetectionData,
+        metadata_video: RawVideoMetadata,
+        id_generator: TrackIdGenerator = TrackId,
     ) -> Iterator[Track]:
         """Create a lazy detection parser yielding all tracks
         from the given raw detection data.
@@ -113,12 +122,10 @@ class StreamingDetectionParser(
         Yields:
             Iterator[Track]: a lazy iterator of all contained tracks
         """
-        det_list_iterator = self._parse_detections(dets, metadata_video)
+        det_list_iterator = self._parse_detections(dets, metadata_video, id_generator)
 
         for track_id, detections in det_list_iterator:
-            existing_detections = self._get_existing_detections(
-                track_id
-            )  # TODO Frage: existing detections
+            existing_detections = self._get_existing_detections(track_id)
             all_detections = existing_detections + detections
             track_length = len(all_detections)
             if (
@@ -167,7 +174,10 @@ class StreamingDetectionParser(
         return []
 
     def _parse_detections(
-        self, det_list: RawDetectionData, metadata_video: RawVideoMetadata
+        self,
+        det_list: RawDetectionData,
+        metadata_video: RawVideoMetadata,
+        id_generator: TrackIdGenerator,
     ) -> Iterator[tuple[TrackId, list[Detection]]]:
         """Convert dict to Detection objects and group them by their track id."""
         tracks_dict: dict[TrackId, list[Detection]] = {}
@@ -184,7 +194,7 @@ class StreamingDetectionParser(
                     float(det_dict[ottrk_format.OCCURRENCE]), tz=timezone.utc
                 ),
                 _interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-                _track_id=TrackId(str(det_dict[ottrk_format.TRACK_ID])),
+                _track_id=id_generator(str(det_dict[ottrk_format.TRACK_ID])),
                 _video_name=metadata_video[ottrk_format.FILENAME]
                 + metadata_video[ottrk_format.FILETYPE],
             )
@@ -357,7 +367,7 @@ class StreamingTrackParser(TrackParser):
         )
 
     def _parse_file(self, ottrk_file: Path) -> RawFileData:
-        ottrk_dict = _parse_bz2(ottrk_file)
+        ottrk_dict = parse_json_bz2(ottrk_file)
         fixed_ottrk = self._format_fixer.fix(ottrk_dict)
         dets_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
             ottrk_format.DATA_DETECTIONS
