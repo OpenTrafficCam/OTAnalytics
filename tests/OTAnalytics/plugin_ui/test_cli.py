@@ -55,7 +55,6 @@ from OTAnalytics.application.use_cases.track_repository import (
     ClearAllTracks,
     GetAllTrackIds,
     GetAllTracks,
-    GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
 )
@@ -68,14 +67,8 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
-    SimpleCutTrackSegmentBuilder,
     SimpleCutTracksIntersectingSection,
-    SimpleCutTracksWithSection,
-)
-from OTAnalytics.plugin_intersect.simple_intersect import (
-    SimpleTracksIntersectingSections,
 )
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
@@ -298,18 +291,10 @@ class TestOTAnalyticsCli:
             section_repository.get_all,
             add_events,
         )
-        tracks_intersecting_sections = SimpleTracksIntersectingSections(get_all_tracks)
-        cut_tracks_with_section = SimpleCutTracksWithSection(
-            GetTracksFromIds(track_repository),
-            ShapelyMapper(),
-            SimpleCutTrackSegmentBuilder(ByMaxConfidence()),
-        )
         cut_tracks = (
             SimpleCutTracksIntersectingSection(
                 GetSectionsById(section_repository),
-                get_tracks_without_single_detections,
-                tracks_intersecting_sections,
-                cut_tracks_with_section,
+                get_all_tracks,
                 add_all_tracks,
                 RemoveTracks(track_repository),
                 RemoveSection(section_repository),

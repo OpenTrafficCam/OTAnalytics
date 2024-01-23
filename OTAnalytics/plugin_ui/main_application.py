@@ -90,7 +90,6 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     GetAllTrackIds,
     GetAllTracks,
-    GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
 )
@@ -107,7 +106,6 @@ from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.helpers.time_profiling import log_processing_time
-from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
@@ -115,11 +113,8 @@ from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
-from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
-    SimpleCutTrackSegmentBuilder,
     SimpleCutTracksIntersectingSection,
-    SimpleCutTracksWithSection,
 )
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,
@@ -282,7 +277,6 @@ class ApplicationStarter:
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             track_repository
         )
-        get_tracks_from_ids = GetTracksFromIds(track_repository)
         add_all_tracks = AddAllTracks(track_repository)
         remove_tracks = RemoveTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
@@ -364,14 +358,9 @@ class ApplicationStarter:
         start_new_project = self._create_use_case_start_new_project(
             clear_repositories, reset_project_config, track_view_state
         )
-        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            get_all_tracks
-        )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             get_sections_bv_id,
-            get_tracks_without_single_detections,
-            get_tracks_from_ids,
-            tracks_intersecting_sections,
+            get_all_tracks,
             add_all_tracks,
             remove_tracks,
             remove_section,
@@ -486,14 +475,9 @@ class ApplicationStarter:
             add_events,
             run_config.num_processes,
         )
-        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            get_all_tracks
-        )
         cut_tracks = self._create_cut_tracks_intersecting_section(
             GetSectionsById(section_repository),
-            get_tracks_without_single_detections,
-            GetTracksFromIds(track_repository),
-            tracks_intersecting_sections,
+            get_all_tracks,
             AddAllTracks(track_repository),
             RemoveTracks(track_repository),
             RemoveSection(section_repository),
@@ -807,22 +791,14 @@ class ApplicationStarter:
     @staticmethod
     def _create_cut_tracks_intersecting_section(
         get_sections_by_id: GetSectionsById,
-        get_tracks: GetTracksWithoutSingleDetections,
-        get_tracks_from_ids: GetTracksFromIds,
-        tracks_intersecting_sections: TracksIntersectingSections,
+        get_tracks: GetAllTracks,
         add_all_tracks: AddAllTracks,
         remove_tracks: RemoveTracks,
         remove_section: RemoveSection,
     ) -> CutTracksIntersectingSection:
-        track_builder = SimpleCutTrackSegmentBuilder(ByMaxConfidence())
-        cut_tracks_with_section = SimpleCutTracksWithSection(
-            get_tracks_from_ids, ShapelyMapper(), track_builder
-        )
         return SimpleCutTracksIntersectingSection(
             get_sections_by_id,
             get_tracks,
-            tracks_intersecting_sections,
-            cut_tracks_with_section,
             add_all_tracks,
             remove_tracks,
             remove_section,
