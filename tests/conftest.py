@@ -373,6 +373,12 @@ def cyclist_video(test_data_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="module")
+def otconfig_file(test_data_dir: Path) -> Path:
+    name = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otconfig"
+    return test_data_dir / name
+
+
+@pytest.fixture(scope="module")
 def tracks(ottrk_path: Path) -> list[Track]:
     calculator = PandasByMaxConfidence()
     detection_parser = PandasDetectionParser(

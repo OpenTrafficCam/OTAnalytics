@@ -1,13 +1,29 @@
 {
     "project": {
-        "name": "",
+        "name": "My Test Project",
         "start_date": 1577877077.0
     },
     "videos": [
         {
-            "path": "..\/..\/..\/..\/platomo\/OTConfig\/tests\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+            "path": "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
         }
     ],
+    "analysis":{
+        "tracks": [
+            "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
+        ],
+        "do_events": true,
+        "do_counting": true,
+        "export":{
+            "event_formats": ["csv", "xlsx"],
+            "save_name": "my_name",
+            "save_suffix": "my_suffix",
+            "count_intervals": [2, 3, 4]
+        },
+        "num_processes": 2,
+        "logfile": "path/to/my/log_dir",
+        "debug": true
+    },
     "sections": [
         {
             "id": "1",

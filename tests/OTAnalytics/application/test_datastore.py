@@ -8,17 +8,16 @@ from numpy import array, int32
 from PIL import Image
 
 from OTAnalytics.application.datastore import (
-    ConfigParser,
     Datastore,
     EventListParser,
     FlowParser,
-    OtConfig,
     TrackParser,
     TrackToVideoRepository,
     TrackVideoParser,
     VideoMetadata,
     VideoParser,
 )
+from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
@@ -220,6 +219,7 @@ class TestDatastore:
         flows: Sequence[Flow] = []
         config_parser.parse.return_value = OtConfig(
             project=project,
+            analysis=Mock(),
             videos=videos,
             sections=sections,
             flows=flows,
