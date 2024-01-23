@@ -375,3 +375,12 @@ class TestEventRepository:
         assert repository.is_empty()
         repository.add(Mock())
         assert not repository.is_empty()
+
+    def test_get_all(self) -> None:
+        repository = EventRepository()
+        first_event = Mock()
+        second_event = Mock()
+        repository.add_all([first_event, second_event])
+        all_events = repository.get_all()
+        assert all_events == [first_event, second_event]
+        assert all_events  # ensure all events can not be exhausted

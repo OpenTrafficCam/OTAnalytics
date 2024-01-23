@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from OTAnalytics.application.datastore import ConfigParser, Datastore
+from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.parser.config_parser import ConfigParser
 
 
 class MissingDate(Exception):

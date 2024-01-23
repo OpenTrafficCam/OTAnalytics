@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section
@@ -31,3 +31,6 @@ class EventListExporter(ABC):
     @abstractmethod
     def get_name(self) -> str:
         raise NotImplementedError
+
+
+EventListExporterProvider = Callable[[str], EventListExporter]
