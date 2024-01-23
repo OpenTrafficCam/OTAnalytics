@@ -22,6 +22,13 @@ from OTAnalytics.domain.track import (
 from OTAnalytics.domain.track_dataset import IntersectionPoint, TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasByMaxConfidence,
+    PandasTrackDataset,
+)
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.json_parser import parse_json_bz2
 from OTAnalytics.plugin_parser.otvision_parser import (
@@ -32,6 +39,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     TrackIdGenerator,
     TrackLengthLimit,
 )
+from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 
 RawDetectionData = list[dict]
 RawVideoMetadata = dict
@@ -440,3 +448,39 @@ class StreamingTrackParser(OttrkParser):
 
         self._update_registered_metadata_collections(detection_metadata, video_metadata)
         return dets_list, metadata_video, id_generator
+
+
+def parse_old(dir: Path) -> None:
+    files = list(
+        filter(lambda p: p.is_file(), sorted(dir.glob("*.ottrk"), key=lambda p: p.name))
+    )
+
+    track_repository = TrackRepository(
+        PandasTrackDataset.from_list([], PygeosTrackGeometryDataset.from_track_dataset)
+    )
+
+    tracks_metadata = TracksMetadata(track_repository)
+    videos_metadata = VideosMetadata()
+
+    calculator = PandasByMaxConfidence()
+    detection_parser = PandasDetectionParser(
+        calculator,
+        PygeosTrackGeometryDataset.from_track_dataset,
+        track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
+    )
+    parser = OttrkParser(detection_parser)
+
+    for file in files:
+        parse_result = parser.parse(file)
+        tracks_metadata.update_detection_classes(
+            parse_result.detection_metadata.detection_classes
+        )
+        videos_metadata.update(parse_result.video_metadata)
+
+
+def parse_stream(dir: Path) -> None:
+    pass
+
+
+if __name__ == "__main__":
+    parse_old(Path(r"D:\ptm\data\load_multi_files"))
