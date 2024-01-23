@@ -275,4 +275,3 @@ class OTAnalyticsCli:
                 output_format="CSV",
             )
             self._export_counts.export(specification=counting_specification)
-            logger().info(f"Counts saved at {output_file}")
