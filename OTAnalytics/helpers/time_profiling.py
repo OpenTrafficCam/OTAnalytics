@@ -2,7 +2,7 @@ import functools
 from datetime import datetime
 from typing import Any
 
-from application.logger import logger
+from OTAnalytics.application.logger import logger
 
 
 def log_processing_time(description: str) -> Any:
