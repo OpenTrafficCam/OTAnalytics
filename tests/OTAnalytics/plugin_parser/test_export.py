@@ -2,10 +2,20 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock
 
+import pandas
+from pandas import DataFrame
+
 from OTAnalytics.application.analysis.traffic_counting import (
+    LEVEL_CLASSIFICATION,
+    LEVEL_END_TIME,
+    LEVEL_FLOW,
+    LEVEL_FROM_SECTION,
+    LEVEL_START_TIME,
+    LEVEL_TO_SECTION,
     Count,
     Exporter,
     FillEmptyCount,
+    SingleTag,
     Tag,
     create_flow_tag,
     create_mode_tag,
@@ -20,14 +30,41 @@ from OTAnalytics.plugin_parser.export import CsvExport, FillZerosExporter, TagEx
 
 
 class TestCsvExport:
-    def test_empty_data(self) -> None:
-        output_file = Path("counts.csv")
+    def test_empty_data(self, test_data_tmp_dir: Path) -> None:
+        output_file = test_data_tmp_dir / "counts.csv"
         counts = Mock(spec=Count)
         counts.to_dict.return_value = {}
         export = CsvExport(output_file=str(output_file))
         export.export(counts)
 
         assert not output_file.exists()
+
+    def test_export(self, test_data_tmp_dir: Path) -> None:
+        output_file = test_data_tmp_dir / "counts.csv"
+        counts = Mock(spec=Count)
+        tag = (
+            SingleTag(LEVEL_START_TIME, "2023-01-02 08:00:00")
+            .combine(SingleTag(LEVEL_END_TIME, "2023-01-02 08:15:00"))
+            .combine(SingleTag(LEVEL_CLASSIFICATION, "car"))
+            .combine(SingleTag(LEVEL_FLOW, "West --> Ost"))
+            .combine(SingleTag(LEVEL_FROM_SECTION, "West"))
+            .combine(SingleTag(LEVEL_TO_SECTION, "Ost"))
+        )
+        counts.to_dict.return_value = {tag: 1}
+        expected = {
+            LEVEL_START_TIME: {0: "2023-01-02 08:00:00"},
+            LEVEL_END_TIME: {0: "2023-01-02 08:15:00"},
+            LEVEL_CLASSIFICATION: {0: "car"},
+            LEVEL_FLOW: {0: "West --> Ost"},
+            LEVEL_FROM_SECTION: {0: "West"},
+            LEVEL_TO_SECTION: {0: "Ost"},
+            "count": {0: 1},
+        }
+        export = CsvExport(output_file=str(output_file))
+        export.export(counts)
+
+        actual: DataFrame = pandas.read_csv(output_file)
+        assert actual.to_dict() == expected
 
 
 def execute_explode(
