@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 from unittest.mock import Mock
 
 from OTAnalytics.application.analysis.traffic_counting import (
@@ -15,7 +16,18 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportSpecificationDto,
     FlowNameDto,
 )
-from OTAnalytics.plugin_parser.export import FillZerosExporter, TagExploder
+from OTAnalytics.plugin_parser.export import CsvExport, FillZerosExporter, TagExploder
+
+
+class TestCsvExport:
+    def test_empty_data(self) -> None:
+        output_file = Path("counts.csv")
+        counts = Mock(spec=Count)
+        counts.to_dict.return_value = {}
+        export = CsvExport(output_file=str(output_file))
+        export.export(counts)
+
+        assert not output_file.exists()
 
 
 def execute_explode(
