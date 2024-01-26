@@ -82,9 +82,11 @@ class PandasDetectionParser(DetectionParser):
         ]
         all_track_ids = tracks_by_size[track.TRACK_ID].unique()
         track_ids_outside_bounds = set(all_track_ids) - set(track_ids_to_remain)
+        share_outside_bounds = len(track_ids_outside_bounds) / len(all_track_ids) * 100
         if len(track_ids_outside_bounds) > 0:
             logger().warning(
-                f"Number of detections of {len(track_ids_outside_bounds)} tracks "
+                f"Number of detections of {len(track_ids_outside_bounds)} "
+                f"({share_outside_bounds:.2f}%) tracks "
                 f"exceeds the allowed bounds ({self._track_length_limit})."
             )
             logger().debug(f"Track ids: {track_ids_outside_bounds}")
