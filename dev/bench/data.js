@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706318153568,
+  "lastUpdate": 1706404882599,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -5800,6 +5800,98 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 23.392120346194133 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "a5c75c6ad0473dc3e911028e28ba541a180b6556",
+          "message": "Merge pull request #436 from OpenTrafficCam/feature/4096-print-overall-processing-time-after-otanalytics-has-been-closed\n\nfeature/4096-print-overall-processing-time-after-otanalytics-has-been-closed",
+          "timestamp": "2024-01-24T08:16:43Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/a5c75c6ad0473dc3e911028e28ba541a180b6556"
+        },
+        "date": 1706404882101,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.14353702669424595,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 6.966843490008614 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.020071179017053787,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 49.82268351801031 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.1387552861646696,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.206932633998804 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.01795160416298825,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 55.7053281099943 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.1414066975143382,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.071800823992817 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.018267409429226292,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 54.74229960599041 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkExportCounting::test_15min",
+            "value": 0.13813788777680588,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.239143554994371 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkExportCounting::test_2hours",
+            "value": 0.0178910699998885,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 55.8938062399975 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_15min",
+            "value": 0.3684274830477112,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.714238340005977 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_2hours",
+            "value": 0.04270348786864238,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 23.417290950004826 sec\nrounds: 1"
           }
         ]
       }
