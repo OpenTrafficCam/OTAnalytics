@@ -35,11 +35,15 @@ class CsvExport(Exporter):
     def export(self, counts: Count) -> None:
         logger().info(f"Exporting counts to {self._output_file}")
         dataframe = self.__create_data_frame(counts)
+        if dataframe.empty:
+            logger().info("Nothing to count.")
+            return
         dataframe = self._set_column_order(dataframe)
         dataframe = dataframe.sort_values(
             by=[LEVEL_START_TIME, LEVEL_END_TIME, LEVEL_CLASSIFICATION]
         )
         dataframe.to_csv(self.__create_path(), index=False)
+        logger().info(f"Counts saved at {self._output_file}")
 
     @staticmethod
     def _set_column_order(dataframe: DataFrame) -> DataFrame:
