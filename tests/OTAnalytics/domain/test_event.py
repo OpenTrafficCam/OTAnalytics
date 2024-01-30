@@ -370,6 +370,20 @@ class TestEventRepository:
         assert [second_event] == list(repository.get_all())
         subject.notify.assert_called_with(EventRepositoryEvent([], [first_event]))
 
+    def test_remove_section_without_events(self) -> None:
+        section_1 = SectionId("1")
+        section_2 = SectionId("2")
+        first_event = Mock()
+        first_event.section_id = section_1
+        subject = Mock()
+        repository = EventRepository(subject)
+
+        repository.add_all([first_event])
+        repository.remove([section_2])
+
+        assert [first_event] == list(repository.get_all())
+        subject.notify.assert_called_with(EventRepositoryEvent([], []))
+
     def test_is_empty(self) -> None:
         repository = EventRepository()
         assert repository.is_empty()
