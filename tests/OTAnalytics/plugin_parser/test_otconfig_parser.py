@@ -3,8 +3,6 @@ from pathlib import Path
 from typing import Any, Sequence
 from unittest.mock import Mock, PropertyMock, call
 
-from conftest import do_nothing
-
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import FlowParser, VideoParser
 from OTAnalytics.application.parser.config_parser import (
@@ -37,6 +35,7 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     OtConfigFormatFixer,
     OtConfigParser,
 )
+from tests.conftest import do_nothing
 
 
 class TestOtConfigParser:
