@@ -109,6 +109,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.helpers.time_profiling import log_processing_time
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
@@ -158,6 +159,7 @@ from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 
 class ApplicationStarter:
+    @log_processing_time(description="overall")
     def start(self) -> None:
         run_config = self._parse_configuration()
         self._setup_logger(

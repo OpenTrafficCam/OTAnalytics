@@ -414,7 +414,8 @@ class EventRepository:
                 event for event in self.get_all() if event.section_id in sections
             ]
             for section in sections:
-                del self._events[section]
+                if section in self._events.keys():
+                    del self._events[section]
             self._subject.notify((EventRepositoryEvent([], removed)))
 
     def is_empty(self) -> bool:
