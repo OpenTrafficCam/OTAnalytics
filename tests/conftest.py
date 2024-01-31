@@ -2,7 +2,8 @@ import shutil
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Generator, Sequence, TypeVar
+from typing import Any, Generator, Sequence, TypeVar
+from unittest.mock import Mock
 
 import pytest
 
@@ -18,6 +19,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
 )
 from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser import ottrk_dataformat
+from OTAnalytics.plugin_parser.otconfig_parser import OtConfigFormatFixer
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     OtFlowParser,
@@ -376,6 +378,17 @@ def cyclist_video(test_data_dir: Path) -> Path:
 def otconfig_file(test_data_dir: Path) -> Path:
     name = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.otconfig"
     return test_data_dir / name
+
+
+def do_nothing(arg: Any) -> Any:
+    return arg
+
+
+@pytest.fixture(scope="module")
+def do_nothing_fixer() -> Mock:
+    fixer = Mock(spec=OtConfigFormatFixer)
+    fixer.fix.side_effect = do_nothing
+    return fixer
 
 
 @pytest.fixture(scope="module")

@@ -79,7 +79,10 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
-from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
+from OTAnalytics.plugin_parser.otconfig_parser import (
+    OtConfigFormatFixer,
+    OtConfigParser,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
@@ -179,8 +182,16 @@ def video_parser() -> VideoParser:
 
 
 @pytest.fixture
-def config_parser(video_parser: VideoParser, flow_parser: FlowParser) -> ConfigParser:
-    return OtConfigParser(video_parser, flow_parser)
+def config_parser(
+    do_nothing_fixer: OtConfigFormatFixer,
+    video_parser: VideoParser,
+    flow_parser: FlowParser,
+) -> ConfigParser:
+    return OtConfigParser(
+        format_fixer=do_nothing_fixer,
+        video_parser=video_parser,
+        flow_parser=flow_parser,
+    )
 
 
 def create_run_config(
