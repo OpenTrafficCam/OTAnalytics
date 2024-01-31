@@ -16,6 +16,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
+from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -26,7 +27,11 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
-from OTAnalytics.application.parser.cli_parser import CliParseError, CliParser
+from OTAnalytics.application.parser.cli_parser import (
+    CliParseError,
+    CliParser,
+    CliValueProvider,
+)
 from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
@@ -132,7 +137,12 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
-from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
+from OTAnalytics.plugin_parser.otconfig_parser import (
+    FixMissingAnalysis,
+    MultiFixer,
+    OtConfigFormatFixer,
+    OtConfigParser,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
@@ -171,18 +181,30 @@ class ApplicationStarter:
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
-            self.start_gui()
+            self.start_gui(run_config)
 
     def _parse_configuration(self) -> RunConfiguration:
         cli_args_parser = self._build_cli_argument_parser()
         cli_args = cli_args_parser.parse()
+        cli_value_provider: OtConfigDefaultValueProvider = CliValueProvider(cli_args)
+        format_fixer = self._create_format_fixer(cli_value_provider)
         flow_parser = self._create_flow_parser()
-        config_parser = OtConfigParser(self._create_video_parser(), flow_parser)
+        config_parser = OtConfigParser(
+            format_fixer=format_fixer,
+            video_parser=self._create_video_parser(),
+            flow_parser=flow_parser,
+        )
 
         if config_file := cli_args.config_file:
             config = config_parser.parse(Path(config_file))
             return RunConfiguration(flow_parser, cli_args, config)
         return RunConfiguration(flow_parser, cli_args, None)
+
+    @staticmethod
+    def _create_format_fixer(
+        default_value_provider: OtConfigDefaultValueProvider,
+    ) -> OtConfigFormatFixer:
+        return MultiFixer([FixMissingAnalysis(default_value_provider)])
 
     def _build_cli_argument_parser(self) -> CliParser:
         return ArgparseCliParser()
@@ -195,7 +217,7 @@ class ApplicationStarter:
         else:
             setup_logger(log_file=log_file, overwrite=overwrite, log_level=logging.INFO)
 
-    def start_gui(self) -> None:
+    def start_gui(self, run_config: RunConfiguration) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
             DummyViewModel,
         )
@@ -232,6 +254,7 @@ class ApplicationStarter:
             flow_repository,
             event_repository,
             pulling_progressbar_builder,
+            run_config,
         )
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
@@ -533,6 +556,7 @@ class ApplicationStarter:
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         progressbar_builder: ProgressbarBuilder,
+        run_config: RunConfiguration,
     ) -> Datastore:
         """
         Build all required objects and inject them where necessary
@@ -545,9 +569,11 @@ class ApplicationStarter:
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         track_video_parser = OttrkVideoParser(video_parser)
+        format_fixer = self._create_format_fixer(run_config)
         config_parser = OtConfigParser(
             video_parser=video_parser,
             flow_parser=flow_parser,
+            format_fixer=format_fixer,
         )
         return Datastore(
             track_repository,

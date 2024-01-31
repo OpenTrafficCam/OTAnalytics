@@ -6,6 +6,7 @@ from OTAnalytics.application.config import (
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
 )
+from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import FlowParser
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments
@@ -20,7 +21,7 @@ class RunConfigurationError(Exception):
     pass
 
 
-class RunConfiguration:
+class RunConfiguration(OtConfigDefaultValueProvider):
     def __init__(
         self,
         flow_parser: FlowParser,
