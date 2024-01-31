@@ -2,11 +2,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_EVENTLIST_FILE_TYPE,
+    DEFAULT_NUM_PROCESSES,
+)
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
+from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 
-DEFAULT_LOG_FILE = Path("DEFAULT_LOG_FILE.log")
-DEFAULT_SAVE_SUFFIX = "DEFAULT_SAVE_SUFFIX"
-DEFAULT_SAVE_NAME = "DEFAULT_SAVE_NAME"
+DEFAULT_SAVE_SUFFIX = ""
+DEFAULT_SAVE_NAME = ""
 
 
 class CliParseError(Exception):
@@ -36,11 +41,11 @@ class CliValueProvider(OtConfigDefaultValueProvider):
 
     @property
     def do_events(self) -> bool:
-        return False
+        return True
 
     @property
     def do_counting(self) -> bool:
-        return False
+        return True
 
     @property
     def track_files(self) -> set[Path]:
@@ -51,7 +56,9 @@ class CliValueProvider(OtConfigDefaultValueProvider):
     @property
     def event_formats(self) -> set[str]:
         return (
-            set(self._cli_args.event_formats) if self._cli_args.event_formats else set()
+            set(self._cli_args.event_formats)
+            if self._cli_args.event_formats
+            else {DEFAULT_EVENTLIST_FILE_TYPE}
         )
 
     @property
@@ -73,12 +80,16 @@ class CliValueProvider(OtConfigDefaultValueProvider):
         return (
             set(self._cli_args.count_intervals)
             if self._cli_args.count_intervals
-            else set()
+            else {DEFAULT_COUNTING_INTERVAL_IN_MINUTES}
         )
 
     @property
     def num_processes(self) -> int:
-        return self._cli_args.num_processes if self._cli_args.num_processes else 1
+        return (
+            self._cli_args.num_processes
+            if self._cli_args.num_processes
+            else DEFAULT_NUM_PROCESSES
+        )
 
     @property
     def log_file(self) -> Path:
