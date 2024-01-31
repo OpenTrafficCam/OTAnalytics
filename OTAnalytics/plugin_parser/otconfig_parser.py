@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -37,6 +37,7 @@ PATH = "path"
 
 
 class OtConfigFormatFixer(ABC):
+    @abstractmethod
     def fix(self, content: dict) -> dict:
         raise NotImplementedError
 
