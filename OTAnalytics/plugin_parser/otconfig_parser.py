@@ -1,8 +1,10 @@
+from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application import project
+from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import FlowParser, VideoParser
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
@@ -34,23 +36,70 @@ DEBUG = "debug"
 PATH = "path"
 
 
+class OtConfigFormatFixer(ABC):
+    @abstractmethod
+    def fix(self, content: dict) -> dict:
+        raise NotImplementedError
+
+
+class MultiFixer(OtConfigFormatFixer):
+    def __init__(self, fixer: list[OtConfigFormatFixer]) -> None:
+        self._fixer = fixer
+
+    def fix(self, content: dict) -> dict:
+        result = content
+        for fixer in self._fixer:
+            result = fixer.fix(result)
+        return result
+
+
+class FixMissingAnalysis(OtConfigFormatFixer):
+    def __init__(self, run_config: OtConfigDefaultValueProvider) -> None:
+        self._run_config = run_config
+
+    def fix(self, content: dict) -> dict:
+        if ANALYSIS in content.keys():
+            return content
+        content[ANALYSIS] = self._create_analysis_block()
+        return content
+
+    def _create_analysis_block(self) -> dict:
+        return {
+            DO_EVENTS: self._run_config.do_events,
+            DO_COUNTING: self._run_config.do_counting,
+            TRACKS: self._run_config.track_files,
+            EXPORT: {
+                EVENT_FORMATS: self._run_config.event_formats,
+                SAVE_NAME: self._run_config.save_name,
+                SAVE_SUFFIX: self._run_config.save_suffix,
+                COUNT_INTERVALS: self._run_config.count_intervals,
+            },
+            NUM_PROCESSES: self._run_config.num_processes,
+            LOGFILE: self._run_config.log_file,
+            DEBUG: self._run_config.debug,
+        }
+
+
 class OtConfigParser(ConfigParser):
     def __init__(
         self,
+        format_fixer: OtConfigFormatFixer,
         video_parser: VideoParser,
         flow_parser: FlowParser,
     ) -> None:
+        self._format_fixer = format_fixer
         self._video_parser = video_parser
         self._flow_parser = flow_parser
 
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
         content = parse_json(file)
-        _project = self._parse_project(content[PROJECT])
-        analysis_config = self._parse_analysis(content[ANALYSIS], base_folder)
-        videos = self._video_parser.parse_list(content[video.VIDEOS], base_folder)
+        fixed_content = self._format_fixer.fix(content)
+        _project = self._parse_project(fixed_content[PROJECT])
+        analysis_config = self._parse_analysis(fixed_content[ANALYSIS], base_folder)
+        videos = self._video_parser.parse_list(fixed_content[video.VIDEOS], base_folder)
         sections, flows = self._flow_parser.parse_content(
-            content[section.SECTIONS], content[flow.FLOWS]
+            fixed_content[section.SECTIONS], fixed_content[flow.FLOWS]
         )
         return OtConfig(
             project=_project,

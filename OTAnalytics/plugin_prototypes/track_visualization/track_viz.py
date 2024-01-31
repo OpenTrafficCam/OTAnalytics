@@ -671,7 +671,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             hue=track.TRACK_CLASSIFICATION,
             data=track_df_start_end,
             style="type",
-            markers=[">", "$x$"],
+            markers={"start": ">", "end": "$x$"},
             legend=self._enable_legend,
             s=15,
             ax=axes,
