@@ -2,8 +2,6 @@ import logging
 from pathlib import Path
 from typing import Sequence
 
-from application.config_specification import OtConfigDefaultValueProvider
-
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -18,6 +16,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
+from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
