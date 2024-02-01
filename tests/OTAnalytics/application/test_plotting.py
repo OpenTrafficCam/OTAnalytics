@@ -1,16 +1,21 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import Mock, call
 
 import pytest
 
+from OTAnalytics.application.datastore import VideoMetadata
 from OTAnalytics.application.plotting import (
+    GetCurrentFrame,
+    GetCurrentVideoPath,
     LayeredPlotter,
     PlottingLayer,
     TrackBackgroundPlotter,
     VideoProvider,
     VisualizationTimeProvider,
 )
-from OTAnalytics.application.state import Plotter
+from OTAnalytics.application.state import Plotter, TrackViewState, VideosMetadata
+from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.video import Video
 
@@ -117,3 +122,60 @@ class TestBackgroundPlotter:
         video_provider.assert_called_once()
         visualization_time_provider.get_time.assert_not_called()
         assert result is None
+
+
+class TestGetCurrentVideoPath:
+    def test_get_video(self) -> None:
+        filter_end_date = datetime(2023, 1, 1, 0, 1)
+        mocked_filter_element = FilterElement(
+            DateRange(start_date=None, end_date=filter_end_date), classifications=set()
+        )
+        video_path = "some/path"
+        state = TrackViewState()
+        state.filter_element.set(mocked_filter_element)
+        metadata = Mock(spec=VideoMetadata)
+        metadata.path = video_path
+        videos_metadata = Mock(spec=VideosMetadata)
+        videos_metadata.get_metadata_for.return_value = metadata
+        use_case = GetCurrentVideoPath(state, videos_metadata)
+
+        actual = use_case.get_video()
+
+        assert actual == video_path
+
+
+class TestGetCurrentFrame:
+    @pytest.mark.parametrize(
+        "filter_end_date, expected_frame_number",
+        [
+            (datetime(2023, 1, 1, 0, 1), 0),
+            (datetime(2023, 1, 1, 0, 1, 1), 20),
+            (datetime(2023, 1, 1, 0, 1, 3), 60),
+            (datetime(2023, 1, 1, 0, 1, 4), 60),
+        ],
+    )
+    def test_get_frame_number(
+        self,
+        filter_end_date: datetime,
+        expected_frame_number: int,
+    ) -> None:
+        video_start_date = datetime(2023, 1, 1, 0, 1)
+        mocked_filter_element = FilterElement(
+            DateRange(start_date=None, end_date=filter_end_date), classifications=set()
+        )
+        state = TrackViewState()
+        state.filter_element.set(mocked_filter_element)
+        metadata = Mock(spec=VideoMetadata)
+        metadata.start = video_start_date
+        metadata.duration = timedelta(seconds=3)
+        metadata.fps = 20
+        metadata.number_of_frames = 60
+        videos_metadata = Mock(spec=VideosMetadata)
+        videos_metadata.get_metadata_for.return_value = metadata
+        use_case = GetCurrentFrame(state, videos_metadata)
+
+        frame_number = use_case.get_frame_number()
+
+        assert frame_number == expected_frame_number
+
+        videos_metadata.get_metadata_for.assert_called_with(filter_end_date)
