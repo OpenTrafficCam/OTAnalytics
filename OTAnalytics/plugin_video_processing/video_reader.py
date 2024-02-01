@@ -1,3 +1,5 @@
+from datetime import timedelta
+from math import floor
 from pathlib import Path
 
 import cv2
@@ -19,6 +21,9 @@ class FrameDoesNotExistError(Exception):
 
 
 class OpenCvVideoReader(VideoReader):
+    def get_fps(self, video_path: Path) -> float:
+        return self.__get_clip(video_path).get(cv2.CAP_PROP_FPS)
+
     def get_frame(self, video_path: Path, index: int) -> TrackImage:
         """Get image of video at `frame`.
         Args:
@@ -44,3 +49,6 @@ class OpenCvVideoReader(VideoReader):
             return VideoCapture(str(video_path.absolute()))
         except IOError as e:
             raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
+
+    def get_frame_number_for(self, video_path: Path, delta: timedelta) -> int:
+        return floor(self.get_fps(video_path) * delta.total_seconds())

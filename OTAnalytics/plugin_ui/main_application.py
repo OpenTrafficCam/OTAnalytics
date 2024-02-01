@@ -46,6 +46,10 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
+from OTAnalytics.application.ui.frame_control import (
+    SwitchToNextFrame,
+    SwitchToPreviousFrame,
+)
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -264,10 +268,12 @@ class ApplicationStarter:
         section_repository.register_section_changed_observer(
             clear_all_intersections.on_section_changed
         )
+        videos_metadata = VideosMetadata()
         layers = self._create_layers(
             datastore,
             intersection_repository,
             track_view_state,
+            videos_metadata,
             flow_state,
             section_state,
             pulling_progressbar_builder,
@@ -289,7 +295,6 @@ class ApplicationStarter:
         tracks_metadata._classifications.register(
             observer=color_palette_provider.update
         )
-        videos_metadata = VideosMetadata()
         action_state = self._create_action_state()
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
@@ -388,6 +393,8 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
+        previous_frame = SwitchToPreviousFrame(track_view_state, videos_metadata)
+        next_frame = SwitchToNextFrame(track_view_state, videos_metadata)
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -410,6 +417,8 @@ class ApplicationStarter:
             start_new_project,
             project_updater,
             load_track_files,
+            previous_frame,
+            next_frame,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -449,6 +458,9 @@ class ApplicationStarter:
         )
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
+        )
+        application.track_view_state.filter_element.register(
+            dummy_viewmodel.notify_filter_element_change
         )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
@@ -630,6 +642,7 @@ class ApplicationStarter:
         datastore: Datastore,
         intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
+        videos_metadata: VideosMetadata,
         flow_state: FlowState,
         section_state: SectionState,
         pulling_progressbar_builder: ProgressbarBuilder,
@@ -640,6 +653,7 @@ class ApplicationStarter:
             datastore,
             intersection_repository,
             track_view_state,
+            videos_metadata,
             section_state,
             color_palette_provider,
             pulling_progressbar_builder,

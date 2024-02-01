@@ -1,4 +1,6 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
+from math import floor
 from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
 from OTAnalytics.application.state import (
@@ -6,8 +8,10 @@ from OTAnalytics.application.state import (
     ObservableProperty,
     Plotter,
     TrackViewState,
+    VideosMetadata,
 )
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.video import Video
 
 
 class Layer:
@@ -98,16 +102,31 @@ class LayeredPlotter(Plotter):
             self._current_image = image
 
 
+class VisualizationTimeProvider(ABC):
+    @abstractmethod
+    def get_time(self) -> datetime:
+        raise NotImplementedError
+
+
+VideoProvider = Callable[[], list[Video]]
+
+
 class TrackBackgroundPlotter(Plotter):
     """Plot video frame as background."""
 
-    def __init__(self, track_view_state: TrackViewState) -> None:
-        self._track_view_state = track_view_state
+    def __init__(
+        self,
+        video_provider: VideoProvider,
+        visualization_time_provider: VisualizationTimeProvider,
+    ) -> None:
+        self._video_provider = video_provider
+        self._visualization_time_provider = visualization_time_provider
 
     def plot(self) -> Optional[TrackImage]:
-        if videos := self._track_view_state.selected_videos.get():
-            if len(videos) > 0:
-                return videos[0].get_frame(0)
+        if videos := self._video_provider():
+            visualization_time = self._visualization_time_provider.get_time()
+            frame_number = videos[0].get_frame_number_for(visualization_time)
+            return videos[0].get_frame(frame_number)
         return None
 
 
@@ -238,3 +257,50 @@ class DynamicLayersPlotter(Plotter, Generic[ENTITY]):
         for entity in entities:
             del self._plotter_mapping[entity]
             del self._layer_mapping[entity]
+
+
+class GetCurrentVideoPath:
+    """
+    This use case provides the currently visible video path. It uses the current filters
+    end date to retrieve the corresponding file path.
+    """
+
+    def __init__(
+        self,
+        state: TrackViewState,
+        videos_metadata: VideosMetadata,
+    ) -> None:
+        self._state = state
+        self._videos_metadata = videos_metadata
+
+    def get_video(self) -> Optional[str]:
+        if end_date := self._state.filter_element.get().date_range.end_date:
+            if metadata := self._videos_metadata.get_metadata_for(end_date):
+                return metadata.path
+        return None
+
+
+class GetCurrentFrame:
+    """
+    This use case provides the currently visible frame. It uses the current filters
+    end date to retrieve the corresponding frame.
+    """
+
+    def __init__(
+        self,
+        state: TrackViewState,
+        videos_metadata: VideosMetadata,
+    ) -> None:
+        self._state = state
+        self._videos_metadata = videos_metadata
+
+    def get_frame_number(self) -> int:
+        if end_date := self._state.filter_element.get().date_range.end_date:
+            if metadata := self._videos_metadata.get_metadata_for(end_date):
+                time_in_video = end_date - metadata.start
+                if time_in_video < timedelta(0):
+                    return 0
+                if time_in_video > metadata.duration:
+                    return metadata.number_of_frames
+                return floor(metadata.fps * time_in_video.total_seconds())
+        return 0
