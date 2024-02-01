@@ -19,8 +19,9 @@ class SwitchToNextFrame:
                     fps = metadata.fps
                     skip_time = self._state.skip_time.get()
                     subseconds = min(skip_time.frames, fps) / fps
-                    current_skip = timedelta(seconds=skip_time.seconds) + timedelta(
-                        seconds=subseconds
+                    milliseconds = subseconds * 1000
+                    current_skip = timedelta(
+                        seconds=skip_time.seconds, milliseconds=milliseconds
                     )
                     next_start = current_date_range.start_date + current_skip
                     next_end = current_date_range.end_date + current_skip
