@@ -9,6 +9,7 @@ from OTAnalytics.application.use_cases.flow_repository import (
     FlowIdAlreadyExists,
 )
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
+from OTAnalytics.domain.section import SectionId
 
 
 @pytest.fixture
@@ -16,6 +17,8 @@ def first_flow() -> Mock:
     flow = Mock(spec=Flow)
     flow.id = FlowId("1")
     flow.name = "first"
+    flow.start = SectionId("section_1")
+    flow.end = SectionId("section_2")
     return flow
 
 
@@ -24,6 +27,8 @@ def second_flow() -> Mock:
     flow = Mock(spec=Flow)
     flow.id = FlowId("2")
     flow.name = "second"
+    flow.start = SectionId("section_3")
+    flow.end = SectionId("section_4")
     return flow
 
 
@@ -72,6 +77,17 @@ class TestAddFlow:
 
         with pytest.raises(FlowIdAlreadyExists):
             use_case(new_section)
+
+    def test_add_flow_fails_with_existing_start_end_section(
+        self, first_flow: Flow, second_flow: Mock, flow_repository: Mock
+    ) -> None:
+        second_flow.name = first_flow.name + "suffix"
+        second_flow.start = first_flow.start
+        second_flow.end = first_flow.end
+
+        use_case = AddFlow(flow_repository)
+        with pytest.raises(FlowAlreadyExists):
+            use_case(second_flow)
 
 
 class TestClearAllFlows:

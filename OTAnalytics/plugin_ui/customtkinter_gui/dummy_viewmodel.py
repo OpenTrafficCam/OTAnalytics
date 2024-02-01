@@ -55,6 +55,7 @@ from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
 )
+from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
@@ -1126,7 +1127,7 @@ class DummyViewModel(
             end=new_to_section_id,
             distance=distance,
         )
-        self._application.add_flow(flow)
+        self.__try_add_flow(flow)
         return flow
 
     def _show_flow_popup(
@@ -1190,6 +1191,16 @@ class DummyViewModel(
             input_values=input_values,
             show_distance=self._show_distance(),
         ).get_data()
+
+    def __try_add_flow(self, flow: Flow) -> None:
+        try:
+            self._application.add_flow(flow)
+        except FlowAlreadyExists as cause:
+            if self._treeview_flows is None:
+                raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+            position = self._treeview_flows.get_position()
+            InfoBox(message=str(cause), initial_position=position)
+            raise CancelAddFlow()
 
     def _show_distance(self) -> bool:
         return True
