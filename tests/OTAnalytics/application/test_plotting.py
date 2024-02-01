@@ -80,7 +80,8 @@ class TestBackgroundPlotter:
     def test_plot(self) -> None:
         expected_image = Mock()
         single_video = Mock(spec=Video)
-        single_video.get_frame_number_for.return_value = 0
+        frame_number = 0
+        single_video.get_frame_number_for.return_value = frame_number
         single_video.get_frame.return_value = expected_image
         videos: list[Video] = [single_video]
         video_provider = Mock(spec=VideoProvider)
@@ -98,7 +99,7 @@ class TestBackgroundPlotter:
         video_provider.assert_called_once()
         visualization_time_provider.get_time.assert_called_once()
         single_video.get_frame_number_for.assert_called_with(some_time)
-        single_video.get_frame.assert_called_once()
+        single_video.get_frame.assert_called_once_with(frame_number)
         assert result is not None
         assert result == expected_image
 

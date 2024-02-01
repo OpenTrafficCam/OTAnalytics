@@ -337,9 +337,13 @@ class TestVideosMetadata:
         floored_result = metadata.get_metadata_for(
             first_full_metadata.start + timedelta(seconds=1)
         )
+        floored_second_result = metadata.get_metadata_for(
+            second_full_metadata.start + timedelta(seconds=1)
+        )
 
         assert exact_result == first_full_metadata
         assert floored_result == first_full_metadata
+        assert floored_second_result == second_full_metadata
 
     def test_get_metadata_for_too_late_date(
         self,
