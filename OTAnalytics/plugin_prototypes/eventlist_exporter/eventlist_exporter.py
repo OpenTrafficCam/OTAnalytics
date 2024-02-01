@@ -178,8 +178,8 @@ class EventListDataFramePrinter(EventListExporter):
 
 
 AVAILABLE_EVENTLIST_EXPORTERS: dict[str, EventListExporter] = {
-    OTC_EXCEL_FORMAT_NAME: EventListExcelExporter(),
     OTC_CSV_FORMAT_NAME: EventListCSVExporter(),
+    OTC_EXCEL_FORMAT_NAME: EventListExcelExporter(),
     OTC_OTEVENTS_FORMAT_NAME: EventListOteventsExporter(OtEventListParser()),
 }
 
