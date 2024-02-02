@@ -192,9 +192,8 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             new_y = filtered_tracks[track.Y] + offset.y * filtered_tracks[track.H]
         tracks = concat([new_x, new_y], keys=[track.X, track.Y], axis=1)
         tracks_by_id = tracks.groupby(level=0, group_keys=True)
-        geometries = tracks_by_id.agg(list).apply(
-            lambda coords: linestrings(tuple(zip(coords[track.X], coords[track.Y]))),
-            axis=1,
+        geometries = tracks_by_id.apply(
+            lambda coords: linestrings(coords[track.X], coords[track.Y])
         )
         projections = calculate_all_projections(tracks)
 
