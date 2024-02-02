@@ -56,6 +56,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTracks,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    TrackRepositorySize,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.progress import NoProgressbarBuilder
@@ -308,7 +309,7 @@ class TestOTAnalyticsCli:
             RemoveTracks(track_repository),
             RemoveSection(section_repository),
         )
-        apply_cli_cuts = ApplyCliCuts(cut_tracks)
+        apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
         create_scene_events = SimpleCreateSceneEvents(
             get_tracks_without_single_detections,
             SceneActionDetector(),

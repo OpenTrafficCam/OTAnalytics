@@ -5,12 +5,18 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.track_repository import TrackRepositorySize
 from OTAnalytics.domain.section import Section, SectionType
 
 
 class ApplyCliCuts:
-    def __init__(self, cut_tracks: CutTracksIntersectingSection) -> None:
+    def __init__(
+        self,
+        cut_tracks: CutTracksIntersectingSection,
+        track_repository_size: TrackRepositorySize,
+    ) -> None:
         self._cut_tracks = cut_tracks
+        self._track_repository_size = track_repository_size
 
     def apply(
         self, sections: Iterable[Section], preserve_cutting_sections: bool = False
@@ -24,7 +30,11 @@ class ApplyCliCuts:
             ],
             key=lambda section: section.id.id,
         )
+        print(f"repository has size: { self._track_repository_size}")
         logger().info("Cut tracks with cutting sections...")
+        if self._track_repository_size.get() == 0:
+            logger().info("No tracks to cut")
+            return
         for cutting_section in cutting_sections:
             logger().info(
                 f"Cut tracks with cutting section '{cutting_section.name}'..."

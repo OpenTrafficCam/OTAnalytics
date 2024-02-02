@@ -103,6 +103,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTracks,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
@@ -486,7 +487,9 @@ class ApplicationStarter:
             layer.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         pulling_progressbar_popup_builder.add_widget(main_window)
-        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks_intersecting_section)
+        apply_cli_cuts = self.create_apply_cli_cuts(
+            cut_tracks_intersecting_section, track_repository
+        )
         preload_input_files = self.create_preload_input_files(
             load_otflow, load_track_files, apply_cli_cuts
         )
@@ -525,7 +528,7 @@ class ApplicationStarter:
             RemoveTracks(track_repository),
             RemoveSection(section_repository),
         )
-        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks)
+        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks, track_repository)
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
         export_counts = self._create_export_counts(
@@ -896,6 +899,8 @@ class ApplicationStarter:
         return PreloadInputFiles(load_track_files, load_otflow, apply_cli_cuts)
 
     def create_apply_cli_cuts(
-        self, cut_tracks: CutTracksIntersectingSection
+        self,
+        cut_tracks: CutTracksIntersectingSection,
+        track_repository: TrackRepository,
     ) -> ApplyCliCuts:
-        return ApplyCliCuts(cut_tracks)
+        return ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))

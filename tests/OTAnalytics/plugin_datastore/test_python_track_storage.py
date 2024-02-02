@@ -553,6 +553,14 @@ class TestPythonTrackDataset:
             assert actual == expected
         assert original_track_ids == expected_original_track_ids
 
+    def test_cut_with_section_no_tracks(self) -> None:
+        dataset = PythonTrackDataset.from_list([])
+        cut_track_dataset, original_track_ids = dataset.cut_with_section(
+            Mock(), RelativeOffsetCoordinate(0, 0)
+        )
+        assert cut_track_dataset == dataset
+        assert original_track_ids == set()
+
     def test_track_ids(
         self,
         first_track: Track,
