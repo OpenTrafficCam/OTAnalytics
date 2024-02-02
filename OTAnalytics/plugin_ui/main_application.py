@@ -50,6 +50,7 @@ from OTAnalytics.application.ui.frame_control import (
     SwitchToNextFrame,
     SwitchToPreviousFrame,
 )
+from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -529,6 +530,7 @@ class ApplicationStarter:
             RemoveTracks(track_repository),
             RemoveSection(section_repository),
         )
+        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks)
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
         export_counts = self._create_export_counts(
@@ -547,7 +549,7 @@ class ApplicationStarter:
             create_events=create_events,
             export_counts=export_counts,
             provide_eventlist_exporter=provide_available_eventlist_exporter,
-            cut_tracks=cut_tracks,
+            apply_cli_cuts=apply_cli_cuts,
             add_all_tracks=add_all_tracks,
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
@@ -889,3 +891,8 @@ class ApplicationStarter:
 
     def _create_track_to_video_repository(self) -> TrackToVideoRepository:
         return TrackToVideoRepository()
+
+    def create_apply_cli_cuts(
+        self, cut_tracks: CutTracksIntersectingSection
+    ) -> ApplyCliCuts:
+        return ApplyCliCuts(cut_tracks)
