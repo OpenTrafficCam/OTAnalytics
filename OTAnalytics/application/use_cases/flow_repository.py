@@ -30,6 +30,11 @@ class AddFlow:
         Args:
             flow (Flow): the flow to be added.
         """
+        self.check_flow_already_exists(flow)
+
+        self._flow_repository.add(flow)
+
+    def check_flow_already_exists(self, flow: Flow) -> None:
         if not self.is_flow_name_valid(flow.name):
             raise FlowAlreadyExists(
                 f"A flow with the name {flow.name} already exists. "
@@ -38,7 +43,17 @@ class AddFlow:
         if not self.is_flow_id_valid(flow.id):
             raise FlowIdAlreadyExists(f"A flow with id {flow.id} already exists.")
 
-        self._flow_repository.add(flow)
+        if self.flow_with_same_start_end_section_exists(flow):
+            raise FlowAlreadyExists(
+                "Flow with same start and end section already exists."
+            )
+
+    def flow_with_same_start_end_section_exists(self, flow: Flow) -> bool:
+        existing_flows = self._flow_repository.get_all()
+        for existing_flow in existing_flows:
+            if existing_flow.start == flow.start and existing_flow.end == flow.end:
+                return True
+        return False
 
     def is_flow_name_valid(self, flow_name: str) -> bool:
         if not flow_name:
