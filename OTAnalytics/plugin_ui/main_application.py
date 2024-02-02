@@ -486,18 +486,13 @@ class ApplicationStarter:
             layer.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         pulling_progressbar_popup_builder.add_widget(main_window)
+        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks_intersecting_section)
         preload_input_files = self.create_preload_input_files(
-            load_otflow,
-            load_track_files,
+            load_otflow, load_track_files, apply_cli_cuts
         )
         OTAnalyticsGui(
             main_window, dummy_viewmodel, layers, preload_input_files, run_config
         ).start()
-
-    def create_preload_input_files(
-        self, load_otflow: LoadOtflow, load_track_files: LoadTrackFiles
-    ) -> PreloadInputFiles:
-        return PreloadInputFiles(load_track_files, load_otflow)
 
     def start_cli(self, run_config: RunConfiguration) -> None:
         track_repository = self._create_track_repository()
@@ -891,6 +886,14 @@ class ApplicationStarter:
 
     def _create_track_to_video_repository(self) -> TrackToVideoRepository:
         return TrackToVideoRepository()
+
+    def create_preload_input_files(
+        self,
+        load_otflow: LoadOtflow,
+        load_track_files: LoadTrackFiles,
+        apply_cli_cuts: ApplyCliCuts,
+    ) -> PreloadInputFiles:
+        return PreloadInputFiles(load_track_files, load_otflow, apply_cli_cuts)
 
     def create_apply_cli_cuts(
         self, cut_tracks: CutTracksIntersectingSection
