@@ -613,8 +613,6 @@ class DummyViewModel(
         if self._application.action_state.action_running.get():
             return
 
-        if ids:
-            self._application.set_selected_section([])
         self._application.set_selected_flows(ids)
 
         logger().debug(f"New flows selected in treeview: id={ids}")
@@ -623,8 +621,6 @@ class DummyViewModel(
         if self._application.action_state.action_running.get():
             return
 
-        if ids:
-            self._application.set_selected_flows([])
         self._application.set_selected_section(ids)
 
         logger().debug(f"New line sections selected in treeview: id={ids}")
