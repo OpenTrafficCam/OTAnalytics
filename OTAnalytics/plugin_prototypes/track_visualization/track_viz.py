@@ -788,10 +788,12 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
         data_provider: PandasDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         alpha: float = 0.5,
+        marker: str = "o",
     ) -> None:
         self._data_provider = data_provider
         self._color_palette_provider = color_palette_provider
         self._alpha = alpha
+        self._marker = marker
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
@@ -812,7 +814,7 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
             axes.plot(
                 row[X],
                 row[Y],
-                marker="o",
+                marker=self._marker,
                 color=color,
             )
 
