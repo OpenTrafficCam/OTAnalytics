@@ -84,6 +84,7 @@ from OTAnalytics.application.use_cases.intersection_repository import (
 )
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -484,7 +485,18 @@ class ApplicationStarter:
             layer.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         pulling_progressbar_popup_builder.add_widget(main_window)
-        OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
+        preload_input_files = self.create_preload_input_files(
+            load_otflow,
+            load_track_files,
+        )
+        OTAnalyticsGui(
+            main_window, dummy_viewmodel, layers, preload_input_files, run_config
+        ).start()
+
+    def create_preload_input_files(
+        self, load_otflow: LoadOtflow, load_track_files: LoadTrackFiles
+    ) -> PreloadInputFiles:
+        return PreloadInputFiles(load_track_files, load_otflow)
 
     def start_cli(self, run_config: RunConfiguration) -> None:
         track_repository = self._create_track_repository()

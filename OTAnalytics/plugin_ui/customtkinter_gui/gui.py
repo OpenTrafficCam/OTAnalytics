@@ -8,6 +8,8 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.exception import gather_exception_messages
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import Layer
+from OTAnalytics.application.run_configuration import RunConfiguration
+from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
@@ -200,10 +202,14 @@ class OTAnalyticsGui:
         app: ModifiedCTk,
         view_model: ViewModel,
         layers: Sequence[Layer],
+        preload_input_files: PreloadInputFiles,
+        run_config: RunConfiguration,
     ) -> None:
         self._viewmodel = view_model
         self._app = app
         self._layers = layers
+        self._preload_input_files = preload_input_files
+        self._run_config = run_config
 
     def start(self) -> None:
         self._show_gui()
@@ -218,6 +224,7 @@ class OTAnalyticsGui:
         self._get_widgets()
         self._place_widgets()
         self._app.after(0, lambda: self._app.state("zoomed"))
+        self._app.after(1000, lambda: self._preload_input_files.load(self._run_config))
         self._app.mainloop()
 
     def _get_widgets(self) -> None:
