@@ -48,12 +48,14 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
 )
+from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
@@ -191,6 +193,7 @@ class DummyViewModel(
         self._frame_tracks: Optional[AbstractFrameTracks] = None
         self._frame_videos: Optional[AbstractFrame] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
+        self._frame_video_control: Optional[AbstractFrame] = None
         self._frame_sections: Optional[AbstractFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
@@ -1124,7 +1127,7 @@ class DummyViewModel(
             end=new_to_section_id,
             distance=distance,
         )
-        self._application.add_flow(flow)
+        self.__try_add_flow(flow)
         return flow
 
     def _show_flow_popup(
@@ -1188,6 +1191,16 @@ class DummyViewModel(
             input_values=input_values,
             show_distance=self._show_distance(),
         ).get_data()
+
+    def __try_add_flow(self, flow: Flow) -> None:
+        try:
+            self._application.add_flow(flow)
+        except FlowAlreadyExists as cause:
+            if self._treeview_flows is None:
+                raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
+            position = self._treeview_flows.get_position()
+            InfoBox(message=str(cause), initial_position=position)
+            raise CancelAddFlow()
 
     def _show_distance(self) -> bool:
         return True
@@ -1353,6 +1366,12 @@ class DummyViewModel(
         if self._frame_tracks is None:
             raise MissingInjectedInstanceError(type(self._frame_tracks).__name__)
         self.update_section_offset_button_state()
+
+    def next_frame(self) -> None:
+        self._application.next_frame()
+
+    def previous_frame(self) -> None:
+        self._application.previous_frame()
 
     def validate_date(self, date: str) -> bool:
         return any(
@@ -1591,3 +1610,27 @@ class DummyViewModel(
 
     def set_analysis_frame(self, frame: AbstractFrame) -> None:
         self._frame_analysis = frame
+
+    def update_skip_time(self, seconds: int, frames: int) -> None:
+        self._application.track_view_state.skip_time.set(SkipTime(seconds, frames))
+
+    def get_skip_seconds(self) -> int:
+        return self._application.track_view_state.skip_time.get().seconds
+
+    def get_skip_frames(self) -> int:
+        return self._application.track_view_state.skip_time.get().frames
+
+    def set_video_control_frame(self, frame: AbstractFrame) -> None:
+        self._frame_video_control = frame
+        self.notify_filter_element_change(
+            self._application.track_view_state.filter_element.get()
+        )
+
+    def notify_filter_element_change(self, filter_element: FilterElement) -> None:
+        if not self._frame_video_control:
+            raise MissingInjectedInstanceError("Frame video control missing")
+        filter_element_is_set = (
+            filter_element.date_range.start_date is not None
+            and filter_element.date_range.end_date is not None
+        )
+        self._frame_video_control.set_enabled_general_buttons(filter_element_is_set)

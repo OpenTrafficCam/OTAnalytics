@@ -8,11 +8,17 @@ import seaborn
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
 
-from OTAnalytics.application.plotting import DynamicLayersPlotter, EntityPlotterFactory
+from OTAnalytics.application.plotting import (
+    DynamicLayersPlotter,
+    EntityPlotterFactory,
+    GetCurrentFrame,
+    GetCurrentVideoPath,
+)
 from OTAnalytics.application.state import (
     FlowState,
     Plotter,
@@ -32,11 +38,15 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
 )
 from OTAnalytics.domain.track import (
+    H,
     PilImage,
     Track,
     TrackId,
     TrackIdProvider,
     TrackImage,
+    W,
+    X,
+    Y,
 )
 from OTAnalytics.domain.track_repository import (
     TrackListObserver,
@@ -45,6 +55,9 @@ from OTAnalytics.domain.track_repository import (
 )
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
+
+"""Frames start with 1 in OTVision but frames of videos are loaded zero based."""
+FRAME_OFFSET = 1
 
 ENCODING = "UTF-8"
 DPI = 100
@@ -371,12 +384,10 @@ class PandasTrackProvider(PandasDataFrameProvider):
     def __init__(
         self,
         track_repository: TrackRepository,
-        track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
         self._track_repository = track_repository
-        self._track_view_state = track_view_state
         self._filter_builder = filter_builder
         self._progressbar = progressbar
 
@@ -463,13 +474,10 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
     def __init__(
         self,
         track_repository: TrackRepository,
-        track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
         progressbar: ProgressbarBuilder,
     ) -> None:
-        super().__init__(
-            track_repository, track_view_state, filter_builder, progressbar
-        )
+        super().__init__(track_repository, filter_builder, progressbar)
         track_repository.register_tracks_observer(self)
         self._cache_df: DataFrame = DataFrame()
 
@@ -671,12 +679,142 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             hue=track.TRACK_CLASSIFICATION,
             data=track_df_start_end,
             style="type",
-            markers=[">", "$x$"],
+            markers={"start": ">", "end": "$x$"},
             legend=self._enable_legend,
             s=15,
             ax=axes,
             palette=self._color_palette_provider.get(),
         )
+
+
+class FilterByVideo(PandasDataFrameProvider):
+    """
+    Filter the data of the other data provider using the video name / path of the
+    currently displayed video.
+    """
+
+    def __init__(
+        self, data_provider: PandasDataFrameProvider, current_video: GetCurrentVideoPath
+    ) -> None:
+        self._data_provider = data_provider
+        self._current_video = current_video
+
+    def get_data(self) -> DataFrame:
+        track_df = self._data_provider.get_data()
+        if track_df.empty:
+            return track_df
+        current_video = self._current_video.get_video()
+        return track_df[track_df[track.VIDEO_NAME] == current_video]
+
+
+class FilterByFrame(PandasDataFrameProvider):
+    """
+    Filter the data of the other data provider using the frame number of the
+    currently displayed frame. If multiple videos are loaded, the filter will return all
+    detections for the given frame number. If only the frame of the currently displayed
+    video should be shown, combine this filter with FilterByVideo.
+    """
+
+    def __init__(
+        self,
+        data_provider: PandasDataFrameProvider,
+        current_frame: GetCurrentFrame,
+    ) -> None:
+        self._data_provider = data_provider
+        self._current_frame = current_frame
+
+    def get_data(self) -> DataFrame:
+        track_df = self._data_provider.get_data()
+        if track_df.empty:
+            return track_df
+        current_frame = self._current_frame.get_frame_number() + FRAME_OFFSET
+        return track_df[track_df[track.FRAME] == current_frame]
+
+
+class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
+    """Plot bounding boxes of detections."""
+
+    def __init__(
+        self,
+        data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        track_view_state: TrackViewState,
+        alpha: float = 0.5,
+    ) -> None:
+        self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
+        self._track_view_state = track_view_state
+        self._alpha = alpha
+
+    def plot(self, axes: Axes) -> None:
+        data = self._data_provider.get_data()
+        if not data.empty:
+            self._plot_dataframe(data, axes)
+
+    def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
+        """
+        Plot given tracks on the given axes with the given transparency (alpha)
+
+        Args:
+            track_df (DataFrame): tracks to plot
+            alpha (float): transparency of the lines
+            axes (Axes): axes to plot on
+        """
+        for index, row in track_df.iterrows():
+            x = row[X]
+            y = row[Y]
+            width = row[W]
+            height = row[H]
+            classification = row[track.TRACK_CLASSIFICATION]
+            color = self._color_palette_provider.get()[classification]
+            axes.add_patch(
+                Rectangle(
+                    xy=(x, y),
+                    width=width,
+                    height=height,
+                    fc="none",
+                    linewidth=0.5,
+                    color=color,
+                    alpha=0.5,
+                )
+            )
+
+
+class TrackPointPlotter(MatplotlibPlotterImplementation):
+    """Plot point of bounding boxes of detections."""
+
+    def __init__(
+        self,
+        data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float = 0.5,
+    ) -> None:
+        self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
+        self._alpha = alpha
+
+    def plot(self, axes: Axes) -> None:
+        data = self._data_provider.get_data()
+        if not data.empty:
+            self._plot_dataframe(data, axes)
+
+    def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
+        """
+        Plot given tracks on the given axes with the given transparency (alpha)
+
+        Args:
+            track_df (DataFrame): tracks to plot
+            axes (Axes): axes to plot on
+        """
+        for index, row in track_df.iterrows():
+            classification = row[track.TRACK_CLASSIFICATION]
+            color = self._color_palette_provider.get()[classification]
+            axes.plot(
+                row[X],
+                row[Y],
+                marker="o",
+                color=color,
+            )
 
 
 class MatplotlibTrackPlotter(TrackPlotter):

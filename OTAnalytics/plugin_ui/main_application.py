@@ -16,6 +16,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
+from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -26,7 +27,11 @@ from OTAnalytics.application.datastore import (
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import logger, setup_logger
-from OTAnalytics.application.parser.cli_parser import CliParseError, CliParser
+from OTAnalytics.application.parser.cli_parser import (
+    CliParseError,
+    CliParser,
+    CliValueProvider,
+)
 from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
@@ -40,6 +45,10 @@ from OTAnalytics.application.state import (
     TrackState,
     TrackViewState,
     VideosMetadata,
+)
+from OTAnalytics.application.ui.frame_control import (
+    SwitchToNextFrame,
+    SwitchToPreviousFrame,
 )
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
@@ -105,6 +114,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.helpers.time_profiling import log_processing_time
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
@@ -127,7 +137,12 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
-from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
+from OTAnalytics.plugin_parser.otconfig_parser import (
+    FixMissingAnalysis,
+    MultiFixer,
+    OtConfigFormatFixer,
+    OtConfigParser,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
@@ -154,6 +169,7 @@ from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
 
 
 class ApplicationStarter:
+    @log_processing_time(description="overall")
     def start(self) -> None:
         run_config = self._parse_configuration()
         self._setup_logger(
@@ -165,18 +181,30 @@ class ApplicationStarter:
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
-            self.start_gui()
+            self.start_gui(run_config)
 
     def _parse_configuration(self) -> RunConfiguration:
         cli_args_parser = self._build_cli_argument_parser()
         cli_args = cli_args_parser.parse()
+        cli_value_provider: OtConfigDefaultValueProvider = CliValueProvider(cli_args)
+        format_fixer = self._create_format_fixer(cli_value_provider)
         flow_parser = self._create_flow_parser()
-        config_parser = OtConfigParser(self._create_video_parser(), flow_parser)
+        config_parser = OtConfigParser(
+            format_fixer=format_fixer,
+            video_parser=self._create_video_parser(),
+            flow_parser=flow_parser,
+        )
 
         if config_file := cli_args.config_file:
             config = config_parser.parse(Path(config_file))
             return RunConfiguration(flow_parser, cli_args, config)
         return RunConfiguration(flow_parser, cli_args, None)
+
+    @staticmethod
+    def _create_format_fixer(
+        default_value_provider: OtConfigDefaultValueProvider,
+    ) -> OtConfigFormatFixer:
+        return MultiFixer([FixMissingAnalysis(default_value_provider)])
 
     def _build_cli_argument_parser(self) -> CliParser:
         return ArgparseCliParser()
@@ -189,7 +217,7 @@ class ApplicationStarter:
         else:
             setup_logger(log_file=log_file, overwrite=overwrite, log_level=logging.INFO)
 
-    def start_gui(self) -> None:
+    def start_gui(self, run_config: RunConfiguration) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
             DummyViewModel,
         )
@@ -226,6 +254,7 @@ class ApplicationStarter:
             flow_repository,
             event_repository,
             pulling_progressbar_builder,
+            run_config,
         )
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
@@ -239,10 +268,12 @@ class ApplicationStarter:
         section_repository.register_section_changed_observer(
             clear_all_intersections.on_section_changed
         )
+        videos_metadata = VideosMetadata()
         layers = self._create_layers(
             datastore,
             intersection_repository,
             track_view_state,
+            videos_metadata,
             flow_state,
             section_state,
             pulling_progressbar_builder,
@@ -264,7 +295,6 @@ class ApplicationStarter:
         tracks_metadata._classifications.register(
             observer=color_palette_provider.update
         )
-        videos_metadata = VideosMetadata()
         action_state = self._create_action_state()
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
@@ -363,6 +393,8 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
+        previous_frame = SwitchToPreviousFrame(track_view_state, videos_metadata)
+        next_frame = SwitchToNextFrame(track_view_state, videos_metadata)
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -385,6 +417,8 @@ class ApplicationStarter:
             start_new_project,
             project_updater,
             load_track_files,
+            previous_frame,
+            next_frame,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -424,6 +458,9 @@ class ApplicationStarter:
         )
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
+        )
+        application.track_view_state.filter_element.register(
+            dummy_viewmodel.notify_filter_element_change
         )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
@@ -519,6 +556,7 @@ class ApplicationStarter:
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         progressbar_builder: ProgressbarBuilder,
+        run_config: RunConfiguration,
     ) -> Datastore:
         """
         Build all required objects and inject them where necessary
@@ -531,9 +569,11 @@ class ApplicationStarter:
         flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         track_video_parser = OttrkVideoParser(video_parser)
+        format_fixer = self._create_format_fixer(run_config)
         config_parser = OtConfigParser(
             video_parser=video_parser,
             flow_parser=flow_parser,
+            format_fixer=format_fixer,
         )
         return Datastore(
             track_repository,
@@ -602,6 +642,7 @@ class ApplicationStarter:
         datastore: Datastore,
         intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
+        videos_metadata: VideosMetadata,
         flow_state: FlowState,
         section_state: SectionState,
         pulling_progressbar_builder: ProgressbarBuilder,
@@ -612,6 +653,7 @@ class ApplicationStarter:
             datastore,
             intersection_repository,
             track_view_state,
+            videos_metadata,
             section_state,
             color_palette_provider,
             pulling_progressbar_builder,

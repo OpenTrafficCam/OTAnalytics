@@ -1,9 +1,11 @@
+import bisect
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Callable, Generic, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore, VideoMetadata
+from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import EventRepositoryEvent
@@ -185,6 +187,7 @@ class TrackViewState:
         self.selected_videos: ObservableProperty[list[Video]] = ObservableProperty[
             list[Video]
         ](default=[])
+        self.skip_time = ObservableProperty[SkipTime](SkipTime(1, 0))
 
     def reset(self) -> None:
         """Reset to default settings."""
@@ -404,19 +407,50 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
 
 class VideosMetadata:
     def __init__(self) -> None:
-        self._metadata: list[VideoMetadata] = []
+        self._metadata: dict[datetime, VideoMetadata] = {}
+        self._first_video_start: Optional[datetime] = None
+        self._last_video_end: Optional[datetime] = None
 
     def update(self, metadata: VideoMetadata) -> None:
-        self._metadata.append(metadata)
-        self._metadata.sort(key=lambda current: current.start)
+        """
+        Update the stored metadata.
+        """
+        if metadata.start in self._metadata.keys():
+            raise ValueError(
+                f"metadata with start date {metadata.start} already exists."
+            )
+        self._metadata[metadata.start] = metadata
+        self._metadata = dict(sorted(self._metadata.items()))
+        self._update_start_end_by(metadata)
+
+    def _update_start_end_by(self, metadata: VideoMetadata) -> None:
+        if (not self._first_video_start) or metadata.start < self._first_video_start:
+            self._first_video_start = metadata.start
+        if (not self._last_video_end) or metadata.end > self._last_video_end:
+            self._last_video_end = metadata.end
+
+    def get_metadata_for(self, current: datetime) -> Optional[VideoMetadata]:
+        """
+        Find the metadata for the given datetime. If the datetime matches exactly a
+        start time of a video, the corresponding VideoMetadata is returned. Otherwise,
+        the metadata of the video containing the datetime will be returned.
+        """
+        if current in self._metadata:
+            return self._metadata[current]
+        keys = list(self._metadata.keys())
+        key = bisect.bisect_left(keys, current) - 1
+        metadata = self._metadata[keys[key]]
+        if metadata.start <= current <= metadata.end:
+            return metadata
+        return None
 
     @property
     def first_video_start(self) -> Optional[datetime]:
-        return self._metadata[0].recorded_start_date if self._metadata else None
+        return self._first_video_start
 
     @property
     def last_video_end(self) -> Optional[datetime]:
-        return self._metadata[-1].end if self._metadata else None
+        return self._last_video_end
 
 
 class TracksMetadata(TrackListObserver):

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from math import floor
 from os import path
 from os.path import normcase, splitdrive
 from pathlib import Path
@@ -13,6 +15,10 @@ PATH: str = "path"
 
 class VideoReader(ABC):
     @abstractmethod
+    def get_fps(self, video: Path) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_frame(self, video: Path, index: int) -> TrackImage:
         """Get frame of `video` at `index`.
         Args:
@@ -23,8 +29,22 @@ class VideoReader(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_frame_number_for(self, video_path: Path, date: timedelta) -> int:
+        raise NotImplementedError
+
 
 class Video(ABC):
+    @property
+    @abstractmethod
+    def start_date(self) -> Optional[datetime]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def fps(self) -> float:
+        raise NotImplementedError
+
     @abstractmethod
     def get_path(self) -> Path:
         pass
@@ -32,6 +52,10 @@ class Video(ABC):
     @abstractmethod
     def get_frame(self, index: int) -> TrackImage:
         pass
+
+    @abstractmethod
+    def get_frame_number_for(self, date: datetime) -> int:
+        raise NotImplementedError
 
     @abstractmethod
     def to_dict(
@@ -73,6 +97,16 @@ class SimpleVideo(Video):
 
     video_reader: VideoReader
     path: Path
+    _start_date: Optional[datetime]
+    _fps: Optional[int] = None
+
+    @property
+    def start_date(self) -> Optional[datetime]:
+        return self._start_date
+
+    @property
+    def fps(self) -> float:
+        return self._fps if self._fps else self.video_reader.get_fps(self.path)
 
     def __post_init__(self) -> None:
         self.check_path_exists()
@@ -94,6 +128,15 @@ class SimpleVideo(Video):
             TrackImage: the frame.
         """
         return self.video_reader.get_frame(self.path, index)
+
+    def get_frame_number_for(self, date: datetime) -> int:
+        if not self.start_date:
+            return 0
+        time_in_video = date - self.start_date
+        if time_in_video < timedelta(0):
+            return 0
+
+        return floor(self.fps * time_in_video.total_seconds())
 
     def to_dict(
         self,

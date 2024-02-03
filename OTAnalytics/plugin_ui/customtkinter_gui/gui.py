@@ -25,6 +25,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_video_control import (
+    FrameVideoControl,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_videos import FrameVideos
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
@@ -117,13 +120,20 @@ class FrameContent(CTkFrame):
             master=self,
             viewmodel=self._viewmodel,
         )
+        self._frame_video_control = FrameVideoControl(
+            master=self, viewmodel=self._viewmodel
+        )
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=0)
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
         self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
+        self._frame_video_control.grid(
+            row=2, column=0, columnspan=2, pady=PADY, sticky=STICKY
+        )
 
 
 class FrameNavigation(EmbeddedCTkScrollableFrame):

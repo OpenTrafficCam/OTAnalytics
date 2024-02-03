@@ -17,6 +17,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
+    DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
@@ -78,7 +79,10 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
-from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
+from OTAnalytics.plugin_parser.otconfig_parser import (
+    OtConfigFormatFixer,
+    OtConfigParser,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
@@ -178,8 +182,16 @@ def video_parser() -> VideoParser:
 
 
 @pytest.fixture
-def config_parser(video_parser: VideoParser, flow_parser: FlowParser) -> ConfigParser:
-    return OtConfigParser(video_parser, flow_parser)
+def config_parser(
+    do_nothing_fixer: OtConfigFormatFixer,
+    video_parser: VideoParser,
+    flow_parser: FlowParser,
+) -> ConfigParser:
+    return OtConfigParser(
+        format_fixer=do_nothing_fixer,
+        video_parser=video_parser,
+        flow_parser=flow_parser,
+    )
 
 
 def create_run_config(
@@ -481,7 +493,8 @@ class TestOTAnalyticsCli:
             f"stem_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
         )
         expected_counts_file = save_name.with_name(
-            f"stem_{save_suffix}.counts_{count_interval}s.{DEFAULT_COUNTS_FILE_TYPE}"
+            f"stem_{save_suffix}.counts_{count_interval}"
+            f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}.{DEFAULT_COUNTS_FILE_TYPE}"
         )
 
         assert expected_event_list_file.exists()
@@ -533,7 +546,8 @@ class TestOTAnalyticsCli:
         interval = 15
         filename = "filename"
         expected_output_file = (
-            test_data_tmp_dir / f"{filename}.{DEFAULT_COUNTS_FILE_STEM}_{interval}s."
+            test_data_tmp_dir / f"{filename}.{DEFAULT_COUNTS_FILE_STEM}_{interval}"
+            f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}."
             f"{DEFAULT_COUNTS_FILE_TYPE}"
         )
         mock_cli_dependencies[self.GET_ALL_TRACK_IDS].return_value = [TrackId("1")]
@@ -586,7 +600,8 @@ class TestOTAnalyticsCli:
 
         for count_interval in run_config.count_intervals:
             expected_counts_file = temp_otconfig.with_name(
-                f"my_name_my_suffix.counts_{count_interval}s.csv"
+                f"my_name_my_suffix.counts_{count_interval}"
+                f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}.csv"
             )
             assert expected_counts_file.is_file()
 

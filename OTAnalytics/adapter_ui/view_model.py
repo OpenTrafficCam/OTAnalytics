@@ -335,3 +335,27 @@ class ViewModel(ABC):
     @abstractmethod
     def set_analysis_frame(self, frame: AbstractFrame) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def next_frame(self) -> None:
+        pass
+
+    @abstractmethod
+    def previous_frame(self) -> None:
+        pass
+
+    @abstractmethod
+    def update_skip_time(self, seconds: int, frames: int) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_skip_seconds(self) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_skip_frames(self) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_video_control_frame(self, frame: AbstractFrame) -> None:
+        raise NotImplementedError

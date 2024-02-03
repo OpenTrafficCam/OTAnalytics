@@ -215,40 +215,43 @@ class TestTrackImageUpdater:
         plotter.plot.assert_called_once()
 
 
+@pytest.fixture
+def first_full_metadata() -> VideoMetadata:
+    return VideoMetadata(
+        path="video_path_1.mp4",
+        recorded_start_date=FIRST_START_DATE,
+        expected_duration=timedelta(seconds=3),
+        recorded_fps=20.0,
+        actual_fps=20.0,
+        number_of_frames=60,
+    )
+
+
+@pytest.fixture
+def second_full_metadata() -> VideoMetadata:
+    return VideoMetadata(
+        path="video_path_2.mp4",
+        recorded_start_date=SECOND_START_DATE,
+        expected_duration=timedelta(seconds=3),
+        recorded_fps=20.0,
+        actual_fps=20.0,
+        number_of_frames=60,
+    )
+
+
+@pytest.fixture
+def first_partial_metadata() -> VideoMetadata:
+    return VideoMetadata(
+        path="video_path_1.mp4",
+        recorded_start_date=FIRST_START_DATE,
+        expected_duration=None,
+        recorded_fps=20.0,
+        actual_fps=None,
+        number_of_frames=60,
+    )
+
+
 class TestVideosMetadata:
-    @pytest.fixture
-    def first_full_metadata(self) -> VideoMetadata:
-        return VideoMetadata(
-            path="video_path_1.mp4",
-            recorded_start_date=FIRST_START_DATE,
-            expected_duration=timedelta(seconds=3),
-            recorded_fps=20.0,
-            actual_fps=20.0,
-            number_of_frames=60,
-        )
-
-    @pytest.fixture
-    def second_full_metadata(self) -> VideoMetadata:
-        return VideoMetadata(
-            path="video_path_2.mp4",
-            recorded_start_date=SECOND_START_DATE,
-            expected_duration=timedelta(seconds=3),
-            recorded_fps=20.0,
-            actual_fps=20.0,
-            number_of_frames=60,
-        )
-
-    @pytest.fixture
-    def first_partial_metadata(self) -> VideoMetadata:
-        return VideoMetadata(
-            path="video_path_1.mp4",
-            recorded_start_date=FIRST_START_DATE,
-            expected_duration=None,
-            recorded_fps=20.0,
-            actual_fps=None,
-            number_of_frames=60,
-        )
-
     def test_nothing_updated(self) -> None:
         videos_metadata = VideosMetadata()
 
@@ -310,6 +313,51 @@ class TestVideosMetadata:
         assert videos_metadata.last_video_end == SECOND_START_DATE + timedelta(
             seconds=3
         )
+
+    def test_add_metadata_with_same_start_date_fails(
+        self, first_full_metadata: VideoMetadata, first_partial_metadata: VideoMetadata
+    ) -> None:
+        videos_metadata = VideosMetadata()
+
+        videos_metadata.update(first_full_metadata)
+        with pytest.raises(ValueError):
+            videos_metadata.update(first_partial_metadata)
+
+    def test_get_metadata_for_date(
+        self,
+        first_full_metadata: VideoMetadata,
+        second_full_metadata: VideoMetadata,
+    ) -> None:
+        metadata = VideosMetadata()
+
+        metadata.update(first_full_metadata)
+        metadata.update(second_full_metadata)
+
+        exact_result = metadata.get_metadata_for(first_full_metadata.start)
+        floored_result = metadata.get_metadata_for(
+            first_full_metadata.start + timedelta(seconds=1)
+        )
+        floored_second_result = metadata.get_metadata_for(
+            second_full_metadata.start + timedelta(seconds=1)
+        )
+
+        assert exact_result == first_full_metadata
+        assert floored_result == first_full_metadata
+        assert floored_second_result == second_full_metadata
+
+    def test_get_metadata_for_too_late_date(
+        self,
+        first_full_metadata: VideoMetadata,
+    ) -> None:
+        metadata = VideosMetadata()
+
+        metadata.update(first_full_metadata)
+
+        result = metadata.get_metadata_for(
+            first_full_metadata.start + timedelta(seconds=4)
+        )
+
+        assert result is None
 
 
 class TestTracksMetadata:
