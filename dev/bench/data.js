@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706923177994,
+  "lastUpdate": 1707009731416,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -6536,6 +6536,98 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 23.71153592900373 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Randy Seng",
+            "username": "randy-seng",
+            "email": "19281702+randy-seng@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "e8ae27176ff243463a2724f0532beb63d279d667",
+          "message": "Merge pull request #449 from OpenTrafficCam/task/2578-profile-event-handling\n\ntask/2578-profile-event-handling",
+          "timestamp": "2024-02-02T10:06:08Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/e8ae27176ff243463a2724f0532beb63d279d667"
+        },
+        "date": 1707009730968,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.14289548935213037,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 6.998121525975876 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.02059463903972297,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 48.556325656943955 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.1354837084456836,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.380961234914139 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.01729296924962025,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 57.8269691899186 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.13874049648538797,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.207700890023261 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.01770660131226358,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 56.476112064905465 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkExportCounting::test_15min",
+            "value": 0.1355376666022777,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.37802284094505 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkExportCounting::test_2hours",
+            "value": 0.01740596943800248,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 57.45155439700466 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_15min",
+            "value": 0.3672241153285844,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.723132709041238 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_2hours",
+            "value": 0.04250293705283644,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 23.527785827056505 sec\nrounds: 1"
           }
         ]
       }
