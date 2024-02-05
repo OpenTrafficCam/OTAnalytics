@@ -117,7 +117,7 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--include-classes",
+            "--exclude-classes",
             nargs="+",
             type=str,
             help="Blacklist filter to exclude tracks with given classes.",
