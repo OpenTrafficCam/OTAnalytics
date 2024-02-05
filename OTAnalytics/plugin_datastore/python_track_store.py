@@ -577,9 +577,7 @@ class PythonTrackDataset(TrackDataset):
         self, whitelist: frozenset[str], blacklist: frozenset[str]
     ) -> "TrackDataset":
         if whitelist:
-            classes_to_keep = list(
-                self.classifications & whitelist - (blacklist - whitelist)
-            )
+            classes_to_keep = list(self.classifications & whitelist)
         else:
             classes_to_keep = list(self.classifications - blacklist)
 
