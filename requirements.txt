@@ -1,4 +1,4 @@
-customtkinter==5.2.1
+customtkinter==5.2.2
 matplotlib==3.8.2
 more-itertools==10.1.0
 numpy==1.26.3
