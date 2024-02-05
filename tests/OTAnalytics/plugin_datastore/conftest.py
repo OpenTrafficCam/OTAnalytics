@@ -13,7 +13,7 @@ from OTAnalytics.domain.track_dataset import (
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
-from tests.conftest import TrackBuilder, assert_equal_track_properties, create_track
+from tests.conftest import assert_equal_track_properties, create_track
 
 
 def create_mock_geometry_dataset(
@@ -44,75 +44,27 @@ def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
 
 @pytest.fixture
 def first_track() -> Track:
-    track_builder = TrackBuilder()
-    _class = "car"
-
-    track_builder.add_track_id("1")
-    track_builder.add_track_class(_class)
-    track_builder.add_second(1)
-    track_builder.add_frame(1)
-    track_builder.add_detection_class(_class)
-    track_builder.append_detection()
-
-    track_builder.add_track_class(_class)
-    track_builder.add_second(2)
-    track_builder.add_frame(2)
-    track_builder.add_detection_class(_class)
-    track_builder.append_detection()
-
-    return track_builder.build_track()
+    return create_track("1", [(1, 1), (2, 2)], 1, "car")
 
 
 @pytest.fixture
 def first_track_continuing() -> Track:
-    track_builder = TrackBuilder()
-    _class = "truck"
-    track_builder.add_track_id("1")
-    track_builder.add_track_class(_class)
-    track_builder.add_second(3)
-    track_builder.add_frame(3)
-    track_builder.add_detection_class(_class)
-    track_builder.append_detection()
-
-    track_builder.add_track_class(_class)
-    track_builder.add_second(4)
-    track_builder.add_frame(4)
-    track_builder.add_detection_class(_class)
-    track_builder.append_detection()
-
-    track_builder.add_track_class(_class)
-    track_builder.add_second(5)
-    track_builder.add_frame(5)
-    track_builder.add_detection_class(_class)
-    track_builder.append_detection()
-
-    return track_builder.build_track()
+    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, "truck")
 
 
 @pytest.fixture
 def second_track() -> Track:
-    track_builder = TrackBuilder()
-    _class = "pedestrian"
-    track_builder.add_track_id("2")
-    track_builder.add_track_class(_class)
-    track_builder.add_second(1)
-    track_builder.add_frame(1)
-    track_builder.add_detection_class(_class)
-    track_builder.append_detection()
+    return create_track("2", [(1, 1), (2, 2), (3, 3)], 1)
 
-    track_builder.add_track_class(_class)
-    track_builder.add_second(2)
-    track_builder.add_frame(2)
-    track_builder.add_detection_class(_class)
-    track_builder.append_detection()
 
-    track_builder.add_track_class(_class)
-    track_builder.add_second(3)
-    track_builder.add_frame(3)
-    track_builder.add_detection_class(_class)
-    track_builder.append_detection()
+@pytest.fixture
+def bicycle_track() -> Track:
+    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, "bicycle")
 
-    return track_builder.build_track()
+
+@pytest.fixture
+def cargo_bike_track() -> Track:
+    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, "cargo_bike")
 
 
 @pytest.fixture

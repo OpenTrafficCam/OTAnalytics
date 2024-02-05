@@ -1,6 +1,7 @@
 import shutil
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from itertools import repeat
 from pathlib import Path
 from typing import Any, Generator, Sequence, TypeVar
 from unittest.mock import Mock
@@ -580,12 +581,36 @@ def append_sample_data(
     return track_builder
 
 
-def create_track(track_id: str, coord: list[tuple], start_second: int) -> Track:
+def create_track(
+    track_id: str,
+    coord: list[tuple],
+    start_second: int,
+    track_class: str = "car",
+    detection_classes: list[str] | None = None,
+) -> Track:
+    if detection_classes:
+        if len(detection_classes) != len(coord):
+            raise ValueError(
+                "Track coordinates must match length of detection classifications."
+            )
     track_builder = TrackBuilder()
-
     track_builder.add_track_id(track_id)
-    for second, (x, y) in enumerate(coord, start=start_second):
+    track_builder.add_track_class(track_class)
+
+    if detection_classes:
+        detections = [
+            (x, y, detection_class)
+            for (x, y), detection_class in zip(coord, detection_classes)
+        ]
+    else:
+        detections = [
+            (x, y, detection_class)
+            for (x, y), detection_class in zip(coord, repeat(track_class))
+        ]
+
+    for second, (x, y, detection_class) in enumerate(detections, start=start_second):
         track_builder.add_second(second)
         track_builder.add_xy_bbox(x, y)
+        track_builder.add_detection_class(detection_class)
         track_builder.append_detection()
     return track_builder.build_track()
