@@ -33,6 +33,8 @@ class CliArguments:
     count_intervals: list[int] | None = None
     num_processes: int | None = None
     log_file: str | None = None
+    include_classes: list[str] | None = None
+    exclude_classes: list[str] | None = None
 
 
 class CliValueProvider(OtConfigDefaultValueProvider):
