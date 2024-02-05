@@ -30,6 +30,12 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 )
 from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CLASS_BICYCLIST,
+    CLASS_CAR,
+    CLASS_CARGOBIKE,
+    CLASS_PEDESTRIAN,
+)
 from tests.conftest import TrackBuilder, create_track
 from tests.OTAnalytics.plugin_datastore.conftest import (
     assert_track_geometry_dataset_add_all_called_correctly,
@@ -562,6 +568,42 @@ class TestPythonTrackDataset:
         assert dataset.track_ids == frozenset()
         updated_dataset = dataset.add_all([first_track, second_track])
         assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
+
+    @pytest.mark.parametrize(
+        "whitelist,blacklist,expected",
+        [
+            (
+                [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
+                [CLASS_CARGOBIKE],
+                [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
+            ),
+            ([], [], [CLASS_CAR, CLASS_PEDESTRIAN, CLASS_BICYCLIST, CLASS_CARGOBIKE]),
+            (
+                [],
+                [CLASS_PEDESTRIAN],
+                [CLASS_CAR, CLASS_BICYCLIST, CLASS_CARGOBIKE],
+            ),
+            ([CLASS_PEDESTRIAN], [], [CLASS_PEDESTRIAN]),
+            ([CLASS_CAR], ["plane"], [CLASS_CAR]),
+        ],
+    )
+    def test_filter_by_classifications(
+        self,
+        whitelist: list[str],
+        blacklist: list[str],
+        expected: list[str],
+        first_track: Track,
+        second_track: Track,
+        bicycle_track: Track,
+        cargo_bike_track: Track,
+    ) -> None:
+        dataset = PythonTrackDataset.from_list(
+            [first_track, second_track, bicycle_track, cargo_bike_track],
+        )
+        result = dataset.filter_by_classifications(
+            frozenset(whitelist), frozenset(blacklist)
+        )
+        assert result.classifications == frozenset(expected)
 
 
 class TestSimpleCutTrackSegmentBuilder:

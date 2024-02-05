@@ -34,6 +34,12 @@ from OTAnalytics.plugin_datastore.track_store import (
     _convert_tracks,
     extract_hostname,
 )
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CLASS_BICYCLIST,
+    CLASS_CAR,
+    CLASS_CARGOBIKE,
+    CLASS_PEDESTRIAN,
+)
 from tests.conftest import (
     TrackBuilder,
     assert_equal_detection_properties,
@@ -592,3 +598,41 @@ class TestPandasTrackDataset:
         assert dataset.track_ids == frozenset()
         updated_dataset = dataset.add_all([first_track, second_track])
         assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
+
+    @pytest.mark.parametrize(
+        "whitelist,blacklist,expected",
+        [
+            (
+                [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
+                [CLASS_CARGOBIKE],
+                [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
+            ),
+            ([], [], [CLASS_CAR, CLASS_PEDESTRIAN, CLASS_BICYCLIST, CLASS_CARGOBIKE]),
+            (
+                [],
+                [CLASS_PEDESTRIAN],
+                [CLASS_CAR, CLASS_BICYCLIST, CLASS_CARGOBIKE],
+            ),
+            ([CLASS_PEDESTRIAN], [], [CLASS_PEDESTRIAN]),
+            ([CLASS_CAR], ["plane"], [CLASS_CAR]),
+        ],
+    )
+    def test_filter_by_classifications(
+        self,
+        whitelist: list[str],
+        blacklist: list[str],
+        expected: list[str],
+        first_track: Track,
+        second_track: Track,
+        bicycle_track: Track,
+        cargo_bike_track: Track,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track, bicycle_track, cargo_bike_track],
+            track_geometry_factory,
+        )
+        result = dataset.filter_by_classifications(
+            frozenset(whitelist), frozenset(blacklist)
+        )
+        assert result.classifications == frozenset(expected)

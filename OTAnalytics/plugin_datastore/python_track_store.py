@@ -358,7 +358,7 @@ class PythonTrackDataset(TrackDataset):
         return PythonTrackDataset(new_tracks, updated_geometry_datasets)
 
     def _remove_from_geometry_datasets(
-        self, track_ids: set[TrackId]
+        self, track_ids: Iterable[TrackId]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         updated = {}
         for offset, geometry_dataset in self._geometry_datasets.items():
@@ -572,6 +572,32 @@ class PythonTrackDataset(TrackDataset):
         track_builder.add_id(track_id)
         track_builder.add_detection(detection)
         return track_builder.build()
+
+    def filter_by_classifications(
+        self, whitelist: frozenset[str], blacklist: frozenset[str]
+    ) -> "TrackDataset":
+        if whitelist:
+            classes_to_keep = list(
+                self.classifications & whitelist - (blacklist - whitelist)
+            )
+        else:
+            classes_to_keep = list(self.classifications - blacklist)
+
+        tracks_to_keep: dict[TrackId, Track] = dict()
+        tracks_to_remove: list[TrackId] = list()
+
+        for _id, _track in self._tracks.items():
+            if _track.classification in classes_to_keep:
+                tracks_to_keep[_id] = _track
+            else:
+                tracks_to_remove.append(_id)
+
+        updated_geometry_datasets = self._remove_from_geometry_datasets(
+            tracks_to_remove
+        )
+        return PythonTrackDataset(
+            tracks_to_keep, updated_geometry_datasets, self._calculator
+        )
 
 
 class SimpleCutTrackSegmentBuilder(TrackBuilder):

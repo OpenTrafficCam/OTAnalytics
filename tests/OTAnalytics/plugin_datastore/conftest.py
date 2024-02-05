@@ -13,6 +13,13 @@ from OTAnalytics.domain.track_dataset import (
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CLASS_BICYCLIST,
+    CLASS_CAR,
+    CLASS_CARGOBIKE,
+    CLASS_PEDESTRIAN,
+    CLASS_TRUCK,
+)
 from tests.conftest import assert_equal_track_properties, create_track
 
 
@@ -44,27 +51,27 @@ def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
 
 @pytest.fixture
 def first_track() -> Track:
-    return create_track("1", [(1, 1), (2, 2)], 1, "car")
+    return create_track("1", [(1, 1), (2, 2)], 1, CLASS_CAR)
 
 
 @pytest.fixture
 def first_track_continuing() -> Track:
-    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, "truck")
+    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, CLASS_TRUCK)
 
 
 @pytest.fixture
 def second_track() -> Track:
-    return create_track("2", [(1, 1), (2, 2), (3, 3)], 1)
+    return create_track("2", [(1, 1), (2, 2), (3, 3)], 1, CLASS_PEDESTRIAN)
 
 
 @pytest.fixture
 def bicycle_track() -> Track:
-    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, "bicycle")
+    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, CLASS_BICYCLIST)
 
 
 @pytest.fixture
 def cargo_bike_track() -> Track:
-    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, "cargo_bike")
+    return create_track("4", [(1, 1), (2, 2), (3, 3)], 4, CLASS_CARGOBIKE)
 
 
 @pytest.fixture

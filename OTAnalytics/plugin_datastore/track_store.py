@@ -339,7 +339,7 @@ class PandasTrackDataset(TrackDataset):
         )
 
     def _remove_from_geometry_dataset(
-        self, track_ids: set[TrackId]
+        self, track_ids: Iterable[TrackId]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         updated_dataset = {}
         for offset, geometry_dataset in self._geometry_datasets.items():
@@ -542,6 +542,31 @@ class PandasTrackDataset(TrackDataset):
             cut_segment_index = bisect(cut_info[track_id], row["cumcount"])
             return f"{track_id}_{cut_segment_index}"
         return row[track.TRACK_ID]
+
+    def filter_by_classifications(
+        self, whitelist: frozenset[str], blacklist: frozenset[str]
+    ) -> "TrackDataset":
+        if whitelist:
+            classes_to_keep = list(
+                self.classifications & whitelist - (blacklist - whitelist)
+            )
+        else:
+            classes_to_keep = list(self.classifications - blacklist)
+
+        mask = self._dataset[track.TRACK_CLASSIFICATION].isin(classes_to_keep)
+        filtered_df = self._dataset[mask]
+        tracks_to_keep = {
+            TrackId(_id)
+            for _id in filtered_df.index.get_level_values(LEVEL_TRACK_ID).unique()
+        }
+        tracks_to_remove = self.track_ids - tracks_to_keep
+        updated_geometry_datasets = self._remove_from_geometry_dataset(tracks_to_remove)
+        return PandasTrackDataset(
+            self._track_geometry_factory,
+            filtered_df,
+            updated_geometry_datasets,
+            self._calculator,
+        )
 
 
 def _assign_track_classification(

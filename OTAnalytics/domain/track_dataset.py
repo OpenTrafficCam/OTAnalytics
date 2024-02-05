@@ -172,6 +172,25 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def filter_by_classifications(
+        self, whitelist: frozenset[str], blacklist: frozenset[str]
+    ) -> "TrackDataset":
+        """Filter TrackDataset by classifications.
+
+        IMPORTANT: Classifications contained in the whitelist will not be
+        removed even if they appear in the blacklist.
+        Furthermore, the whitelist will not be applied if empty.
+
+        Args:
+            whitelist (frozenset[str]): the classifications to keep.
+            blacklist (frozenset[str]): the classifications to remove.
+
+        Returns:
+            TrackDataset: the filtered dataset.
+        """
+        raise NotImplementedError
+
 
 class TrackGeometryDataset(ABC):
     """Dataset containing track geometries.
