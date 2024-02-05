@@ -43,6 +43,11 @@ class TestArgparseCliParser:
             "--logfile",
             log_file,
             "--logfile_overwrite",
+            "--include-classes",
+            "truck",
+            "car",
+            "--exclude-classes",
+            "pedestrian",
         ]
         with patch.object(sys, "argv", cli_args):
             parser = ArgparseCliParser()
@@ -61,4 +66,6 @@ class TestArgparseCliParser:
                 [1, 15],
                 3,
                 log_file,
+                ["truck", "car"],
+                ["pedestrian"],
             )
