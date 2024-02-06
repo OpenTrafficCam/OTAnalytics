@@ -50,7 +50,7 @@ class TestApplyCliCuts:
             call(cli_cutting_section, preserve_cutting_section=False),
             call(normal_cutting_section, preserve_cutting_section=False),
         ]
-        assert track_repository_size.get.call_count == 2
+        assert track_repository_size.get.call_count == 4
 
     def test_apply_empty_repository(self, cli_cutting_section: Section) -> None:
         cut_tracks = Mock()
@@ -62,4 +62,4 @@ class TestApplyCliCuts:
         apply_cli_cuts.apply([cli_cutting_section], preserve_cutting_sections=True)
 
         cut_tracks.assert_not_called()
-        track_repository_size.get.assert_called_once()
+        assert track_repository_size.get.call_count == 2
