@@ -221,6 +221,29 @@ class TrackRepository:
     def __len__(self) -> int:
         return len(self._dataset)
 
+    def remove_by_classifications(
+        self, include_classes: frozenset[str], exclude_classes: frozenset[str]
+    ) -> None:
+        """Remove tracks from the repository by given classes to filter from.
+
+        IMPORTANT: Classifications contained in the include_classes will not be
+        removed even if they appear in the set of exclude_classes.
+        Furthermore, the whitelist will not be applied if empty.
+
+        Args:
+            include_classes (frozenset[str]): the classes to keep.
+            exclude_classes (frozenset[str]): the classes to remove.
+        """
+        if not include_classes and not exclude_classes:
+            logger().info("No classes specified to remove tracks from repository")
+            return
+
+        filtered_dataset = self._dataset.filter_by_classifications(
+            include_classes, exclude_classes
+        )
+        removed_tracks = self._dataset.track_ids - filtered_dataset.track_ids
+        self.observers.notify(TrackRepositoryEvent.create_removed(removed_tracks))
+
 
 class TrackFileRepository:
     def __init__(self) -> None:

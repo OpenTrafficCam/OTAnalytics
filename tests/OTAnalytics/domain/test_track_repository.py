@@ -185,6 +185,34 @@ class TestTrackRepository:
         repository = TrackRepository(dataset)
         assert repository.classifications == classifications
 
+    def test_remove_by_classifications(self) -> None:
+        filtered_dataset = Mock()
+        type(filtered_dataset).track_ids = frozenset([TrackId("2")])
+
+        dataset = Mock()
+        type(dataset).track_ids = frozenset([TrackId("1"), TrackId("2")])
+        dataset.filter_by_classifications.return_value = filtered_dataset
+
+        repository = TrackRepository(dataset)
+        observer = Mock(spec=TrackListObserver)
+        repository.register_tracks_observer(observer)
+
+        repository.remove_by_classifications(frozenset(), frozenset())
+        dataset.filter_by_classifications.assert_not_called()
+        observer.notify_tracks.assert_not_called()
+
+        include_classes = frozenset(["car", "truck"])
+        exclude_classes = frozenset(["bicycle"])
+        repository.remove_by_classifications(include_classes, exclude_classes)
+        dataset.filter_by_classifications.assert_called_once_with(
+            include_classes, exclude_classes
+        )
+        observer.notify_tracks.assert_called_once_with(
+            TrackRepositoryEvent.create_removed(
+                dataset.track_ids - filtered_dataset.track_ids
+            )
+        )
+
 
 class TestTrackFileRepository:
     @pytest.fixture
