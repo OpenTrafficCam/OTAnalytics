@@ -573,19 +573,12 @@ class PythonTrackDataset(TrackDataset):
         track_builder.add_detection(detection)
         return track_builder.build()
 
-    def filter_by_classifications(
-        self, include_classes: frozenset[str], exclude_classes: frozenset[str]
-    ) -> "TrackDataset":
-        if include_classes:
-            classes_to_keep = list(self.classifications & include_classes)
-        else:
-            classes_to_keep = list(self.classifications - exclude_classes)
-
+    def _keep_tracks_with_classes(self, classes: list[str]) -> "TrackDataset":
         tracks_to_keep: dict[TrackId, Track] = dict()
         tracks_to_remove: list[TrackId] = list()
 
         for _id, _track in self._tracks.items():
-            if _track.classification in classes_to_keep:
+            if _track.classification in classes:
                 tracks_to_keep[_id] = _track
             else:
                 tracks_to_remove.append(_id)

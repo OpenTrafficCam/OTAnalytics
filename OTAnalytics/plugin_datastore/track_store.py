@@ -543,15 +543,8 @@ class PandasTrackDataset(TrackDataset):
             return f"{track_id}_{cut_segment_index}"
         return row[track.TRACK_ID]
 
-    def filter_by_classifications(
-        self, include_classes: frozenset[str], exclude_classes: frozenset[str]
-    ) -> "TrackDataset":
-        if include_classes:
-            classes_to_keep = list(self.classifications & include_classes)
-        else:
-            classes_to_keep = list(self.classifications - exclude_classes)
-
-        mask = self._dataset[track.TRACK_CLASSIFICATION].isin(classes_to_keep)
+    def _keep_tracks_with_classes(self, classes: list[str]) -> "TrackDataset":
+        mask = self._dataset[track.TRACK_CLASSIFICATION].isin(classes)
         filtered_df = self._dataset[mask]
         tracks_to_keep = {
             TrackId(_id)

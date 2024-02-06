@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
@@ -172,7 +173,6 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def filter_by_classifications(
         self, include_classes: frozenset[str], exclude_classes: frozenset[str]
     ) -> "TrackDataset":
@@ -188,6 +188,38 @@ class TrackDataset(ABC):
 
         Returns:
             TrackDataset: the filtered dataset.
+        """
+        if not include_classes and not exclude_classes:
+            return self
+
+        if include_classes:
+            logger().info(
+                f"Apply 'include-classes' filter to filter tracks: {include_classes}"
+                "\n'exclude-classes' filter is not used"
+            )
+            filtered_dataset = self._keep_tracks_with_classes(
+                list(self.classifications & include_classes)
+            )
+        elif exclude_classes:
+            logger().info(
+                f"Apply 'exclude-classes' filter to filter tracks: {exclude_classes}"
+            )
+            filtered_dataset = self._keep_tracks_with_classes(
+                list(self.classifications - exclude_classes)
+            )
+        else:
+            return self
+        return filtered_dataset
+
+    @abstractmethod
+    def _keep_tracks_with_classes(self, classes: list[str]) -> "TrackDataset":
+        """Return tracks that have given classes.
+
+        Args:
+            classes (list[str]): the classes to keep.
+
+        Returns:
+            TrackDataset: the tracks with given classes.
         """
         raise NotImplementedError
 
