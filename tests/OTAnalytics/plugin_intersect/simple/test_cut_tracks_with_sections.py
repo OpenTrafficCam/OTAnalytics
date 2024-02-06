@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import pytest
 
@@ -70,12 +70,19 @@ class TestSimpleCutTracksIntersectingSection:
             remove_tracks,
             remove_section,
         )
-        cut_tracks_intersecting_section(cutting_section)
+        cut_tracks_intersecting_section(cutting_section, False)
+        cut_tracks_intersecting_section(cutting_section, True)
 
-        get_tracks.as_dataset.assert_called_once()
+        assert get_tracks.as_dataset.call_count == 2
 
-        add_all_tracks.assert_called_once_with(cut_tracks_dataset)
-        remove_tracks.assert_called_once_with({track_id})
+        assert add_all_tracks.call_args_list == [
+            call(cut_tracks_dataset),
+            call(cut_tracks_dataset),
+        ]
+        assert remove_tracks.call_args_list == [
+            call({track_id}),
+            call({track_id}),
+        ]
         remove_section.assert_called_once_with(cutting_section.id)
 
     def test_notify_sections(
