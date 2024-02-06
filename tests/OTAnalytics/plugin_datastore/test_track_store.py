@@ -600,7 +600,7 @@ class TestPandasTrackDataset:
         assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
 
     @pytest.mark.parametrize(
-        "whitelist,blacklist,expected",
+        "include_classes,exclude_classes,expected",
         [
             (
                 [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
@@ -619,8 +619,8 @@ class TestPandasTrackDataset:
     )
     def test_filter_by_classifications(
         self,
-        whitelist: list[str],
-        blacklist: list[str],
+        include_classes: list[str],
+        exclude_classes: list[str],
         expected: list[str],
         first_track: Track,
         second_track: Track,
@@ -633,6 +633,6 @@ class TestPandasTrackDataset:
             track_geometry_factory,
         )
         result = dataset.filter_by_classifications(
-            frozenset(whitelist), frozenset(blacklist)
+            frozenset(include_classes), frozenset(exclude_classes)
         )
         assert result.classifications == frozenset(expected)

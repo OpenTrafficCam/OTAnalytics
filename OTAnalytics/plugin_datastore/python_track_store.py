@@ -574,12 +574,12 @@ class PythonTrackDataset(TrackDataset):
         return track_builder.build()
 
     def filter_by_classifications(
-        self, whitelist: frozenset[str], blacklist: frozenset[str]
+        self, include_classes: frozenset[str], exclude_classes: frozenset[str]
     ) -> "TrackDataset":
-        if whitelist:
-            classes_to_keep = list(self.classifications & whitelist)
+        if include_classes:
+            classes_to_keep = list(self.classifications & include_classes)
         else:
-            classes_to_keep = list(self.classifications - blacklist)
+            classes_to_keep = list(self.classifications - exclude_classes)
 
         tracks_to_keep: dict[TrackId, Track] = dict()
         tracks_to_remove: list[TrackId] = list()

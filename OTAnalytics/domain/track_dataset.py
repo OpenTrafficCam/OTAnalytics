@@ -174,17 +174,17 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def filter_by_classifications(
-        self, whitelist: frozenset[str], blacklist: frozenset[str]
+        self, include_classes: frozenset[str], exclude_classes: frozenset[str]
     ) -> "TrackDataset":
         """Filter TrackDataset by classifications.
 
-        IMPORTANT: Classifications contained in the whitelist will not be
-        removed even if they appear in the blacklist.
+        IMPORTANT: Classifications contained in the include_classes will not be
+        removed even if they appear in the set of exclude_classes.
         Furthermore, the whitelist will not be applied if empty.
 
         Args:
-            whitelist (frozenset[str]): the classifications to keep.
-            blacklist (frozenset[str]): the classifications to remove.
+            include_classes (frozenset[str]): the classifications to keep.
+            exclude_classes (frozenset[str]): the classifications to remove.
 
         Returns:
             TrackDataset: the filtered dataset.
