@@ -8,6 +8,7 @@ from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
+    TrackDataset,
     TrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
@@ -44,6 +45,14 @@ def assert_track_geometry_dataset_add_all_called_correctly(
         assert_equal_track_properties(actual_track, expected_track)
 
 
+def assert_track_dataset_has_tracks(dataset: TrackDataset, tracks: list[Track]) -> None:
+    for expected in tracks:
+        actual = dataset.get_for(expected.id)
+        assert actual
+        assert len(dataset) == len(tracks)
+        assert_equal_track_properties(actual, expected)
+
+
 @pytest.fixture
 def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
     return PygeosTrackGeometryDataset.from_track_dataset
@@ -72,6 +81,16 @@ def bicycle_track() -> Track:
 @pytest.fixture
 def cargo_bike_track() -> Track:
     return create_track("4", [(1, 1), (2, 2), (3, 3)], 4, CLASS_CARGOBIKE)
+
+
+@pytest.fixture
+def tracks(
+    first_track: Track,
+    second_track: Track,
+    bicycle_track: Track,
+    cargo_bike_track: Track,
+) -> list[Track]:
+    return [first_track, second_track, bicycle_track, cargo_bike_track]
 
 
 @pytest.fixture

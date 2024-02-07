@@ -23,6 +23,7 @@ from OTAnalytics.domain.track_dataset import TrackGeometryDataset
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
+    FilteredPythonTrackDataset,
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
@@ -38,6 +39,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
 )
 from tests.conftest import TrackBuilder, create_track
 from tests.OTAnalytics.plugin_datastore.conftest import (
+    assert_track_dataset_has_tracks,
     assert_track_geometry_dataset_add_all_called_correctly,
     create_mock_geometry_dataset,
 )
@@ -569,6 +571,8 @@ class TestPythonTrackDataset:
         updated_dataset = dataset.add_all([first_track, second_track])
         assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
 
+
+class TestFilteredPythonTrackDataset:
     @pytest.mark.parametrize(
         "include_classes,exclude_classes,expected",
         [
@@ -587,23 +591,73 @@ class TestPythonTrackDataset:
             ([CLASS_CAR], ["plane"], [CLASS_CAR]),
         ],
     )
-    def test_filter_by_classifications(
+    def test_classifications(
         self,
         include_classes: list[str],
         exclude_classes: list[str],
         expected: list[str],
+        tracks: list[Track],
+    ) -> None:
+        other = PythonTrackDataset.from_list(tracks)
+        filtered_dataset = FilteredPythonTrackDataset(
+            other, frozenset(include_classes), frozenset(exclude_classes)
+        )
+        assert filtered_dataset.classifications == frozenset(expected)
+
+    def test_filter_no_filters(
+        self,
+        tracks: list[Track],
+    ) -> None:
+        other = PythonTrackDataset.from_list(tracks)
+        filtered_dataset = FilteredPythonTrackDataset(other, frozenset(), frozenset())
+        assert_track_dataset_has_tracks(filtered_dataset, tracks)
+
+    def test_filter_include_classes(
+        self,
+        tracks: list[Track],
+        cargo_bike_track: Track,
+        bicycle_track: Track,
+    ) -> None:
+        other = PythonTrackDataset.from_list(tracks)
+        filtered_dataset = FilteredPythonTrackDataset(
+            other,
+            frozenset([CLASS_CARGOBIKE, CLASS_BICYCLIST]),
+            frozenset([CLASS_BICYCLIST]),
+        )
+        assert_track_dataset_has_tracks(
+            filtered_dataset, [cargo_bike_track, bicycle_track]
+        )
+
+    def test_filter_exclude_classes(
+        self,
         first_track: Track,
         second_track: Track,
         bicycle_track: Track,
         cargo_bike_track: Track,
     ) -> None:
-        dataset = PythonTrackDataset.from_list(
-            [first_track, second_track, bicycle_track, cargo_bike_track],
+        tracks = [first_track, second_track, bicycle_track, cargo_bike_track]
+        other = PythonTrackDataset.from_list(tracks)
+        filtered_dataset = FilteredPythonTrackDataset(
+            other, frozenset(), frozenset([CLASS_BICYCLIST])
         )
-        result = dataset.filter_by_classifications(
-            frozenset(include_classes), frozenset(exclude_classes)
+        assert_track_dataset_has_tracks(
+            filtered_dataset, [first_track, second_track, cargo_bike_track]
         )
-        assert result.classifications == frozenset(expected)
+
+    def test_wrap(
+        self,
+        bicycle_track: Track,
+        cargo_bike_track: Track,
+    ) -> None:
+        other = PythonTrackDataset.from_list([bicycle_track, cargo_bike_track])
+        include_classes = frozenset([CLASS_BICYCLIST])
+        exclude_classes = frozenset([CLASS_CARGOBIKE])
+        filtered_dataset = FilteredPythonTrackDataset(
+            other, include_classes, exclude_classes
+        )
+        assert isinstance(filtered_dataset, FilteredPythonTrackDataset)
+        assert filtered_dataset._include_classes == include_classes
+        assert filtered_dataset._exclude_classes == exclude_classes
 
 
 class TestSimpleCutTrackSegmentBuilder:
