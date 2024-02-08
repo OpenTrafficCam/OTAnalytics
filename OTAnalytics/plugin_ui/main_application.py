@@ -119,6 +119,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
+    FilteredPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -235,7 +236,7 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        track_repository = self._create_track_repository()
+        track_repository = self._create_track_repository(run_config)
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
@@ -487,7 +488,7 @@ class ApplicationStarter:
         OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
 
     def start_cli(self, run_config: RunConfiguration) -> None:
-        track_repository = self._create_track_repository()
+        track_repository = self._create_track_repository(run_config)
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         track_parser = self._create_track_parser(track_repository)
@@ -592,10 +593,14 @@ class ApplicationStarter:
             config_parser=config_parser,
         )
 
-    def _create_track_repository(self) -> TrackRepository:
+    def _create_track_repository(self, run_config: RunConfiguration) -> TrackRepository:
         return TrackRepository(
-            PandasTrackDataset.from_list(
-                [], PygeosTrackGeometryDataset.from_track_dataset
+            FilteredPandasTrackDataset(
+                PandasTrackDataset.from_list(
+                    [], PygeosTrackGeometryDataset.from_track_dataset
+                ),
+                run_config.include_classes,
+                run_config.exclude_classes,
             )
         )
         # return TrackRepository(PythonTrackDataset())
