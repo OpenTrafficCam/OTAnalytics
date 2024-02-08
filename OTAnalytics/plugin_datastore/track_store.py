@@ -353,7 +353,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def as_list(self) -> list[Track]:
         if self._dataset.empty:
             return []
-        track_ids = self._get_track_ids()
+        track_ids = self.get_track_ids_as_string()
         return [self.__create_track_flyweight(current) for current in track_ids]
 
     def __create_track_flyweight(self, track_id: str) -> Track:
@@ -368,7 +368,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         batch_size = ceil(dataset_size / batches)
 
         new_batches = []
-        for batch_ids in batched(self._get_track_ids(), batch_size):
+        for batch_ids in batched(self.get_track_ids_as_string(), batch_size):
             batch_dataset = self._dataset.loc[list(batch_ids), :]
             batch_geometries = self._get_geometries_for(batch_ids)
             new_batches.append(
@@ -381,10 +381,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             )
         return new_batches
 
-    def _get_track_ids(self) -> list[str]:
+    def get_track_ids_as_string(self) -> Sequence[str]:
         if self._dataset.empty:
             return []
-        return list(self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique())
+        return self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique()
 
     def _get_geometries_for(
         self, track_ids: Iterable[str]
