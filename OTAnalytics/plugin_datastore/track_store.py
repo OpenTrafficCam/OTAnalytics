@@ -4,7 +4,7 @@ from bisect import bisect
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Any, Callable, Iterable, Optional, Sequence
+from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
 import numpy
 import pandas
@@ -546,6 +546,9 @@ class PandasTrackDataset(TrackDataset):
 
 
 class FilteredPandasTrackDataset(TrackDataset):
+    def __iter__(self) -> Iterator[Track]:
+        yield from self.__filter().as_list()
+
     @property
     def track_ids(self) -> frozenset[TrackId]:
         return self.__filter().track_ids

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 
 from more_itertools import batched
 from shapely import LineString
@@ -575,6 +575,9 @@ class PythonTrackDataset(TrackDataset):
 
 
 class FilteredPythonTrackDataset(TrackDataset):
+    def __iter__(self) -> Iterator[Track]:
+        yield from self.__filter().as_list()
+
     @property
     def track_ids(self) -> frozenset[TrackId]:
         return self.__filter().track_ids
