@@ -627,11 +627,10 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         dataset = self._other.as_dataframe()
         mask = dataset[track.TRACK_CLASSIFICATION].isin(classes)
         filtered_df = dataset[mask]
-        tracks_to_keep = {
-            TrackId(_id)
-            for _id in filtered_df.index.get_level_values(LEVEL_TRACK_ID).unique()
-        }
-        tracks_to_remove = self._other.track_ids - tracks_to_keep
+        tracks_to_keep = filtered_df.index.get_level_values(LEVEL_TRACK_ID).unique()
+        tracks_to_remove = tracks_to_keep.symmetric_difference(
+            self._other.get_track_ids_as_string()
+        ).map(lambda _id: TrackId(_id))
         updated_geometry_datasets = self._other._remove_from_geometry_dataset(
             tracks_to_remove
         )
