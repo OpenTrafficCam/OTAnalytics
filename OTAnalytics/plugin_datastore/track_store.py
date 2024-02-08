@@ -580,6 +580,8 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         self._other = other
         self._include_classes = include_classes
         self._exclude_classes = exclude_classes
+        self._cache_invalidated = False
+        self._cache: PandasTrackDataset | None = None
 
     def __filter(self) -> PandasTrackDataset:
         """Filter TrackDataset by classifications.
@@ -593,6 +595,9 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         """
         if not self._include_classes and not self._exclude_classes:
             return self._other
+
+        if not self._cache_invalidated and self._cache is not None:
+            return self._cache
 
         if self._include_classes:
             logger().info(
@@ -613,6 +618,7 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             )
         else:
             return self._other
+        self._cache = filtered_dataset
         return filtered_dataset
 
     def _get_dataset_with_classes(self, classes: list[str]) -> PandasTrackDataset:
@@ -635,19 +641,27 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         )
 
     def add_all(self, other: Iterable[Track]) -> TrackDataset:
-        return self.wrap(self._other.add_all(other))
+        dataset = self.wrap(self._other.add_all(other))
+        self._cache_invalidated = True
+        return dataset
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         return self.__filter().get_for(id)
 
     def remove(self, track_id: TrackId) -> "TrackDataset":
-        return self.wrap(self._other.remove(track_id))
+        dataset = self.wrap(self._other.remove(track_id))
+        self._cache_invalidated = True
+        return dataset
 
     def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
-        return self.wrap(self._other.remove_multiple(track_ids))
+        dataset = self.wrap(self._other.remove_multiple(track_ids))
+        self._cache_invalidated = True
+        return dataset
 
     def clear(self) -> "TrackDataset":
-        return self.wrap(self._other.clear())
+        dataset = self.wrap(self._other.clear())
+        self._cache_invalidated = True
+        return dataset
 
     def as_list(self) -> list[Track]:
         return self.__filter().as_list()
