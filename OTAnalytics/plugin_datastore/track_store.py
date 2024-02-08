@@ -33,6 +33,9 @@ from OTAnalytics.domain.track_dataset import (
     TrackGeometryDataset,
 )
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    PandasDataFrameProvider,
+)
 
 
 class PandasDetection(Detection):
@@ -204,7 +207,7 @@ def extract_hostname(name: str) -> str:
     raise ImproperFormattedFilename(f"Could not parse {name}. Hostname is missing.")
 
 
-class PandasTrackDataset(TrackDataset):
+class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     @property
     def track_ids(self) -> frozenset[TrackId]:
         if self._dataset.empty:
@@ -544,8 +547,11 @@ class PandasTrackDataset(TrackDataset):
             return f"{track_id}_{cut_segment_index}"
         return row[track.TRACK_ID]
 
+    def get_data(self) -> DataFrame:
+        return self.as_dataframe()
 
-class FilteredPandasTrackDataset(TrackDataset):
+
+class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def __iter__(self) -> Iterator[Track]:
         yield from self.__filter().as_list()
 
@@ -691,6 +697,9 @@ class FilteredPandasTrackDataset(TrackDataset):
         return FilteredPandasTrackDataset(
             other, self._include_classes, self._exclude_classes
         )
+
+    def get_data(self) -> DataFrame:
+        return self.__filter().as_dataframe()
 
 
 def _assign_track_classification(

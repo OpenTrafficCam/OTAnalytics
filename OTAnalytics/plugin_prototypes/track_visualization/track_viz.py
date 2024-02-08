@@ -53,7 +53,6 @@ from OTAnalytics.domain.track_repository import (
     TrackRepository,
     TrackRepositoryEvent,
 )
-from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 """Frames start with 1 in OTVision but frames of videos are loaded zero based."""
@@ -393,8 +392,8 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks = self._track_repository.get_all()
-        if isinstance(tracks, PandasTrackDataset):
-            return tracks.as_dataframe()
+        if isinstance(tracks, PandasDataFrameProvider):
+            return tracks.get_data()
         track_list = tracks.as_list()
         if not track_list:
             return DataFrame()
