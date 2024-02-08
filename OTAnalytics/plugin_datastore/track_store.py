@@ -395,7 +395,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return geometry_datasets
 
     def __len__(self) -> int:
-        return len(self._get_track_ids())
+        if self._dataset.empty:
+            return 0
+        return len(self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique())
 
     def filter_by_min_detection_length(self, length: int) -> "PandasTrackDataset":
         detection_counts_per_track = self._dataset.groupby(level=LEVEL_TRACK_ID).size()
