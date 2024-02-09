@@ -773,9 +773,9 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
                     width=width,
                     height=height,
                     fc="none",
-                    linewidth=0.5,
+                    linewidth=1.0,
                     color=color,
-                    alpha=0.5,
+                    alpha=self._alpha,
                 )
             )
 
