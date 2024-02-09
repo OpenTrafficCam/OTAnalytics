@@ -28,18 +28,11 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
-    FilteredPandasTrackDataset,
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,
     _convert_tracks,
     extract_hostname,
-)
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CLASS_BICYCLIST,
-    CLASS_CAR,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
 )
 from tests.conftest import (
     TrackBuilder,
@@ -48,7 +41,6 @@ from tests.conftest import (
     assert_track_datasets_equal,
 )
 from tests.OTAnalytics.plugin_datastore.conftest import (
-    assert_track_dataset_has_tracks,
     assert_track_geometry_dataset_add_all_called_correctly,
     create_mock_geometry_dataset,
 )
@@ -607,104 +599,3 @@ class TestPandasTrackDataset:
         assert dataset.track_ids == frozenset()
         updated_dataset = dataset.add_all([first_track, second_track])
         assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
-
-
-class TestFilteredPandasTrackDataset:
-    @pytest.mark.parametrize(
-        "include_classes,exclude_classes,expected",
-        [
-            (
-                [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
-                [CLASS_CARGOBIKE],
-                [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
-            ),
-            ([], [], [CLASS_CAR, CLASS_PEDESTRIAN, CLASS_BICYCLIST, CLASS_CARGOBIKE]),
-            (
-                [],
-                [CLASS_PEDESTRIAN],
-                [CLASS_CAR, CLASS_BICYCLIST, CLASS_CARGOBIKE],
-            ),
-            ([CLASS_PEDESTRIAN], [], [CLASS_PEDESTRIAN]),
-            ([CLASS_CAR], ["plane"], [CLASS_CAR]),
-        ],
-    )
-    def test_filter_by_classifications(
-        self,
-        include_classes: list[str],
-        exclude_classes: list[str],
-        expected: list[str],
-        first_track: Track,
-        second_track: Track,
-        bicycle_track: Track,
-        cargo_bike_track: Track,
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
-    ) -> None:
-        other = PandasTrackDataset.from_list(
-            [first_track, second_track, bicycle_track, cargo_bike_track],
-            track_geometry_factory,
-        )
-        filtered_dataset = FilteredPandasTrackDataset(
-            other, frozenset(include_classes), frozenset(exclude_classes)
-        )
-        assert filtered_dataset.classifications == frozenset(expected)
-
-    def test_filter_no_filters(
-        self,
-        tracks: list[Track],
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
-    ) -> None:
-        other = PandasTrackDataset.from_list(tracks, track_geometry_factory)
-        filtered_dataset = FilteredPandasTrackDataset(other, frozenset(), frozenset())
-        assert_track_dataset_has_tracks(filtered_dataset, tracks)
-
-    def test_filter_include_classes(
-        self,
-        tracks: list[Track],
-        cargo_bike_track: Track,
-        bicycle_track: Track,
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
-    ) -> None:
-        other = PandasTrackDataset.from_list(tracks, track_geometry_factory)
-        filtered_dataset = FilteredPandasTrackDataset(
-            other,
-            frozenset([CLASS_CARGOBIKE, CLASS_BICYCLIST]),
-            frozenset([CLASS_BICYCLIST]),
-        )
-        assert_track_dataset_has_tracks(
-            filtered_dataset, [cargo_bike_track, bicycle_track]
-        )
-
-    def test_filter_exclude_classes(
-        self,
-        first_track: Track,
-        second_track: Track,
-        bicycle_track: Track,
-        cargo_bike_track: Track,
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
-    ) -> None:
-        tracks = [first_track, second_track, bicycle_track, cargo_bike_track]
-        other = PandasTrackDataset.from_list(tracks, track_geometry_factory)
-        filtered_dataset = FilteredPandasTrackDataset(
-            other, frozenset(), frozenset([CLASS_BICYCLIST])
-        )
-        assert_track_dataset_has_tracks(
-            filtered_dataset, [first_track, second_track, cargo_bike_track]
-        )
-
-    def test_wrap(
-        self,
-        bicycle_track: Track,
-        cargo_bike_track: Track,
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
-    ) -> None:
-        other = PandasTrackDataset.from_list(
-            [bicycle_track, cargo_bike_track], track_geometry_factory
-        )
-        include_classes = frozenset([CLASS_BICYCLIST])
-        exclude_classes = frozenset([CLASS_CARGOBIKE])
-        filtered_dataset = FilteredPandasTrackDataset(
-            other, include_classes, exclude_classes
-        )
-        assert isinstance(filtered_dataset, FilteredPandasTrackDataset)
-        assert filtered_dataset._include_classes == include_classes
-        assert filtered_dataset._exclude_classes == exclude_classes
