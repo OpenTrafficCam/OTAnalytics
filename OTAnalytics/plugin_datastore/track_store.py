@@ -322,7 +322,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def get_for(self, id: TrackId) -> Optional[Track]:
         if self._dataset.empty:
             return None
-        return self.__create_track_flyweight(id.id)
+        try:
+            return self.__create_track_flyweight(id.id)
+        except KeyError:
+            return None
 
     def clear(self) -> "PandasTrackDataset":
         return PandasTrackDataset(self.track_geometry_factory)

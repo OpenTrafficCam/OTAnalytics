@@ -255,7 +255,7 @@ class TestPandasTrackDataset:
             builder.append_detection()
         return builder.build_track()
 
-    def test_get_by_id(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
+    def test_get_for(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         first_track = self.__build_track("1")
         second_track = self.__build_track("2")
         dataset = PandasTrackDataset.from_list(
@@ -267,11 +267,18 @@ class TestPandasTrackDataset:
         assert returned is not None
         assert_equal_track_properties(returned, first_track)
 
-    def test_get_missing(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
+    def test_get_for_missing_id(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY, first_track: Track
+    ) -> None:
+        dataset = PandasTrackDataset.from_list([first_track], track_geometry_factory)
+        returned = dataset.get_for(TrackId("Foobar"))
+        assert returned is None
+
+    def test_get_for_missing_id_on_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
         dataset = PandasTrackDataset(track_geometry_factory)
-
         returned = dataset.get_for(TrackId("1"))
-
         assert returned is None
 
     def test_clear(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:

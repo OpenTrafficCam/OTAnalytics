@@ -332,6 +332,16 @@ class TestPythonTrackDataset:
         result = result_dataset.get_for(first_track.id)
         assert result == first_track
 
+    def test_get_for_missing_id(self, first_track: Track) -> None:
+        dataset = PythonTrackDataset.from_list([first_track])
+        returned = dataset.get_for(TrackId("Foobar"))
+        assert returned is None
+
+    def test_get_for_missing_id_on_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset()
+        returned = dataset.get_for(TrackId("1"))
+        assert returned is None
+
     def test_clear(self, first_track: Track, second_track: Track) -> None:
         dataset = PythonTrackDataset()
         result_dataset = dataset.add_all([first_track, second_track])
