@@ -4,7 +4,7 @@ from bisect import bisect
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
+from typing import Any, Callable, Iterable, Optional, Sequence
 
 import numpy
 import pandas
@@ -28,6 +28,7 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
+    FilteredTrackDataset,
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
@@ -556,22 +557,14 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return self.as_dataframe()
 
 
-class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
+class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
     @property
-    def track_ids(self) -> frozenset[TrackId]:
-        return self.__filter().track_ids
+    def include_classes(self) -> frozenset[str]:
+        return self._include_classes
 
     @property
-    def first_occurrence(self) -> datetime | None:
-        return self.__filter().first_occurrence
-
-    @property
-    def last_occurrence(self) -> datetime | None:
-        return self.__filter().last_occurrence
-
-    @property
-    def classifications(self) -> frozenset[str]:
-        return self.__filter().classifications
+    def exclude_classes(self) -> frozenset[str]:
+        return self._exclude_classes
 
     def __init__(
         self,
@@ -582,13 +575,9 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         self._other = other
         self._include_classes = include_classes
         self._exclude_classes = exclude_classes
-        self._cache_invalidated = False
         self._cache: PandasTrackDataset | None = None
 
-    def __iter__(self) -> Iterator[Track]:
-        yield from self.__filter().as_list()
-
-    def __filter(self) -> PandasTrackDataset:
+    def _filter(self) -> PandasTrackDataset:
         """Filter TrackDataset by classifications.
 
         IMPORTANT: Classifications contained in the include_classes will not be
@@ -598,28 +587,28 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         Returns:
             TrackDataset: the filtered dataset.
         """
-        if not self._include_classes and not self._exclude_classes:
+        if not self.include_classes and not self._exclude_classes:
             return self._other
 
-        if not self._cache_invalidated and self._cache is not None:
+        if self._cache is not None:
             return self._cache
 
-        if self._include_classes:
+        if self.include_classes:
             logger().info(
                 "Apply 'include-classes' filter to filter tracks: "
-                f"{self._include_classes}"
+                f"{self.include_classes}"
                 "\n'exclude-classes' filter is not used"
             )
             filtered_dataset = self._get_dataset_with_classes(
-                list(self._other.classifications & self._include_classes)
+                list(self._other.classifications & self.include_classes)
             )
-        elif self._exclude_classes:
+        elif self.exclude_classes:
             logger().info(
                 "Apply 'exclude-classes' filter to filter tracks: "
-                f"{self._exclude_classes}"
+                f"{self.exclude_classes}"
             )
             filtered_dataset = self._get_dataset_with_classes(
-                list(self._other.classifications - self._exclude_classes)
+                list(self._other.classifications - self.exclude_classes)
             )
         else:
             return self._other
@@ -645,65 +634,24 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         )
 
     def add_all(self, other: Iterable[Track]) -> TrackDataset:
-        dataset = self.wrap(self._other.add_all(other))
-        self._cache_invalidated = True
-        return dataset
-
-    def get_for(self, id: TrackId) -> Optional[Track]:
-        return self.__filter().get_for(id)
+        return self.wrap(self._other.add_all(other))
 
     def remove(self, track_id: TrackId) -> "TrackDataset":
-        dataset = self.wrap(self._other.remove(track_id))
-        self._cache_invalidated = True
-        return dataset
+        return self.wrap(self._other.remove(track_id))
 
     def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
-        dataset = self.wrap(self._other.remove_multiple(track_ids))
-        self._cache_invalidated = True
-        return dataset
+        return self.wrap(self._other.remove_multiple(track_ids))
 
     def clear(self) -> "TrackDataset":
-        dataset = self.wrap(self._other.clear())
-        self._cache_invalidated = True
-        return dataset
-
-    def as_list(self) -> list[Track]:
-        return self.__filter().as_list()
-
-    def intersecting_tracks(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
-        return self.__filter().intersecting_tracks(sections, offset)
-
-    def intersection_points(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        return self.__filter().intersection_points(sections, offset)
-
-    def contained_by_sections(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
-        return self.__filter().contained_by_sections(sections, offset)
+        return self.wrap(self._other.clear())
 
     def split(self, chunks: int) -> Sequence["TrackDataset"]:
         return [self.wrap(dataset) for dataset in self._other.split(chunks)]
-
-    def __len__(self) -> int:
-        return len(self.__filter())
-
-    def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
-        return self.wrap(self.__filter().filter_by_min_detection_length(length))
 
     def calculate_geometries_for(
         self, offsets: Iterable[RelativeOffsetCoordinate]
     ) -> None:
         self._other.calculate_geometries_for(offsets)
-
-    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
-        self.__filter().apply_to_first_segments(consumer)
-
-    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
-        self.__filter().apply_to_last_segments(consumer)
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
@@ -713,11 +661,11 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def wrap(self, other: PandasTrackDataset) -> TrackDataset:
         return FilteredPandasTrackDataset(
-            other, self._include_classes, self._exclude_classes
+            other, self.include_classes, self.exclude_classes
         )
 
     def get_data(self) -> DataFrame:
-        return self.__filter().as_dataframe()
+        return self._filter().as_dataframe()
 
 
 def _assign_track_classification(
