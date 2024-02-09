@@ -593,6 +593,7 @@ class FilteredPythonTrackDataset(FilteredTrackDataset):
         self._other = other
         self._include_classes = include_classes
         self._exclude_classes = exclude_classes
+        self._cache: PythonTrackDataset | None = None
 
     def _filter(self) -> PythonTrackDataset:
         """Filter TrackDataset by classifications.
@@ -606,6 +607,9 @@ class FilteredPythonTrackDataset(FilteredTrackDataset):
         """
         if not self.include_classes and not self._exclude_classes:
             return self._other
+
+        if self._cache is not None:
+            return self._cache
 
         if self.include_classes:
             logger().info(
@@ -626,6 +630,7 @@ class FilteredPythonTrackDataset(FilteredTrackDataset):
             )
         else:
             return self._other
+        self._cache = filtered_dataset
         return filtered_dataset
 
     def _get_dataset_with_classes(self, classes: list[str]) -> PythonTrackDataset:
