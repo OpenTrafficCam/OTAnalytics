@@ -72,6 +72,7 @@ LONG_IN_THE_PAST = datetime(
     tzinfo=timezone.utc,
 )
 ALPHA_BOUNDING_BOX = 0.5
+LINEWIDTH_BOUNDING_BOX = 1.5
 
 
 class FilterEndDateProvider(VisualizationTimeProvider):
@@ -707,6 +708,7 @@ class VisualizationBuilder:
                 self._color_palette_provider,
                 self._track_view_state,
                 alpha=ALPHA_BOUNDING_BOX,
+                linewidth=LINEWIDTH_BOUNDING_BOX,
             ),
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
