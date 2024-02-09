@@ -1605,6 +1605,7 @@ class DummyViewModel(
             f"{len(cut_tracks_dto.original_tracks)} out of "
             f"{self._application.get_track_repository_size()} tracks successfully cut. "
         )
+
         logger().info(msg)
         InfoBox(msg, window_position)
 
