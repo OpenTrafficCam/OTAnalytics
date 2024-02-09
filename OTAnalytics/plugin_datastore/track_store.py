@@ -554,9 +554,6 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
 
 class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
-    def __iter__(self) -> Iterator[Track]:
-        yield from self.__filter().as_list()
-
     @property
     def track_ids(self) -> frozenset[TrackId]:
         return self.__filter().track_ids
@@ -584,6 +581,9 @@ class FilteredPandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         self._exclude_classes = exclude_classes
         self._cache_invalidated = False
         self._cache: PandasTrackDataset | None = None
+
+    def __iter__(self) -> Iterator[Track]:
+        yield from self.__filter().as_list()
 
     def __filter(self) -> PandasTrackDataset:
         """Filter TrackDataset by classifications.
