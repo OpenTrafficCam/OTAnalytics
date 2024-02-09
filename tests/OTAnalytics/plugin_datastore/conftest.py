@@ -46,10 +46,10 @@ def assert_track_geometry_dataset_add_all_called_correctly(
 
 
 def assert_track_dataset_has_tracks(dataset: TrackDataset, tracks: list[Track]) -> None:
+    assert len(dataset) == len(tracks)
     for expected in tracks:
         actual = dataset.get_for(expected.id)
         assert actual
-        assert len(dataset) == len(tracks)
         assert_equal_track_properties(actual, expected)
 
 
