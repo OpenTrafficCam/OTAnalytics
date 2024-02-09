@@ -522,6 +522,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
     ) -> tuple["PandasTrackDataset", set[TrackId]]:
+        if len(self) == 0:
+            logger().info("No tracks to cut")
+            return self, set()
         intersection_points = self.intersection_points([section], offset)
         cut_indices = {
             track_id.id: [
