@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707527722902,
+  "lastUpdate": 1707614503083,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -7180,6 +7180,98 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 23.364100594000774 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Lars Briem",
+            "username": "briemla",
+            "email": "lars.briem@platomo.de"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "61be7abdfa931d79cc2c1f5ea05a80c3e279bd66",
+          "message": "Merge pull request #450 from OpenTrafficCam/feature/2904-load-input-files-via-cli-option-when-starting-the-gui\n\nFeature/2904 load input files via cli option when starting the gui",
+          "timestamp": "2024-02-06T11:30:37Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/61be7abdfa931d79cc2c1f5ea05a80c3e279bd66"
+        },
+        "date": 1707614502621,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.14725519797293038,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 6.790931754978374 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_2hours",
+            "value": 0.02054389737340949,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 48.676255621016026 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min",
+            "value": 0.13718965613135253,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.289179287996376 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours",
+            "value": 0.017488333005690308,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 57.18097886600299 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min",
+            "value": 0.1371009207448469,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.293897039984586 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_2hours",
+            "value": 0.017860373820769992,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 55.98986953101121 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkExportCounting::test_15min",
+            "value": 0.13486100861202988,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.41504168100073 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkExportCounting::test_2hours",
+            "value": 0.01767979259614613,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 56.56174949801061 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_15min",
+            "value": 0.36351463435007814,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.7509208859992214 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_2hours",
+            "value": 0.04266628499208253,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 23.437709661986446 sec\nrounds: 1"
           }
         ]
       }
