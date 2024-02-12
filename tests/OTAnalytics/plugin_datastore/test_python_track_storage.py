@@ -581,6 +581,12 @@ class TestPythonTrackDataset:
         updated_dataset = dataset.add_all([first_track, second_track])
         assert updated_dataset.track_ids == frozenset([first_track.id, second_track.id])
 
+    def test_empty(self, first_track: Track) -> None:
+        empty_dataset = PythonTrackDataset()
+        assert empty_dataset.empty
+        filled_dataset = empty_dataset.add_all([first_track])
+        assert not filled_dataset.empty
+
 
 class TestSimpleCutTrackSegmentBuilder:
     def test_build(self) -> None:

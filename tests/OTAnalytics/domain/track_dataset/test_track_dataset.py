@@ -97,7 +97,7 @@ class TestFilteredTrackDataset:
             ([CLASS_CAR], ["plane"], [CLASS_CAR]),
         ],
     )
-    def test_filter_by_classifications(
+    def test_classifications(
         self,
         include_classes: list[str],
         exclude_classes: list[str],
@@ -108,6 +108,15 @@ class TestFilteredTrackDataset:
 
         for filtered_dataset in filtered_datasets:
             assert filtered_dataset.classifications == frozenset(expected)
+
+    def test_empty(self, car_track: Track, bicycle_track: Track) -> None:
+        empty_filtered_datasets = self.get_datasets([], [CLASS_CAR], [])
+        for empty_filtered_dataset in empty_filtered_datasets:
+            assert empty_filtered_dataset.empty
+            filled_but_ignored_dataset = empty_filtered_dataset.add_all([bicycle_track])
+            assert filled_but_ignored_dataset.empty
+            filled_not_ignored_dataset = filled_but_ignored_dataset.add_all([car_track])
+            assert not filled_not_ignored_dataset.empty
 
     def test_filter_no_filters(
         self,

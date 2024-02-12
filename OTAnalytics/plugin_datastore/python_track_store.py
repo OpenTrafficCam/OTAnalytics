@@ -260,6 +260,10 @@ class PythonTrackDataset(TrackDataset):
     def classifications(self) -> frozenset[str]:
         return frozenset([track.classification for track in self._tracks.values()])
 
+    @property
+    def empty(self) -> bool:
+        return len(self) == 0
+
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,

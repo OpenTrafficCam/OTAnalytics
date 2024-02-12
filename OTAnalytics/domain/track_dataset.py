@@ -35,6 +35,11 @@ class TrackDataset(ABC):
     def classifications(self) -> frozenset[str]:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def empty(self) -> bool:
+        raise NotImplementedError
+
     def __iter__(self) -> Iterator[Track]:
         yield from self.as_list()
 
@@ -204,6 +209,10 @@ class FilteredTrackDataset(TrackDataset):
     @property
     def classifications(self) -> frozenset[str]:
         return self._filter().classifications
+
+    @property
+    def empty(self) -> bool:
+        return self._filter().empty
 
     def __iter__(self) -> Iterator[Track]:
         yield from self._filter().as_list()

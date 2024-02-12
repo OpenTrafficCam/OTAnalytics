@@ -238,6 +238,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             return frozenset()
         return frozenset(self._dataset[track.TRACK_CLASSIFICATION].unique())
 
+    @property
+    def empty(self) -> bool:
+        return self._dataset.empty
+
     def __init__(
         self,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
@@ -246,10 +250,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         | None = None,
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
     ):
-        if dataset is None:
-            self._dataset = DataFrame()
+        if dataset is not None:
+            self._dataset: DataFrame = dataset
         else:
-            self._dataset = dataset
+            self._dataset = DataFrame()
 
         self.calculator = calculator
         self.track_geometry_factory = track_geometry_factory
@@ -619,6 +623,8 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         return filtered_dataset
 
     def _get_dataset_with_classes(self, classes: list[str]) -> PandasTrackDataset:
+        if self._other.empty:
+            return self._other
         dataset = self._other.as_dataframe()
         mask = dataset[track.TRACK_CLASSIFICATION].isin(classes)
         filtered_df = dataset[mask]
