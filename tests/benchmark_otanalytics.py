@@ -156,6 +156,17 @@ def _build_cut_tracks_intersecting_sections(
     )
 
 
+def load_track_files(
+    track_files: list[Path],
+    track_parser: TrackParser,
+    track_repository: TrackRepository,
+) -> tuple[TrackRepository, DetectionMetadata]:
+    detection_metadata = _fill_track_repository(
+        track_parser, track_repository, track_files
+    )
+    return track_repository, detection_metadata
+
+
 @pytest.fixture(scope="module")
 def track_file_15min(test_data_dir: Path) -> Path:
     return Path(test_data_dir / "OTCamera19_FR20_2023-05-24_08-00-00.ottrk")
@@ -234,10 +245,7 @@ def python_track_repo_15min(
     track_parser = OttrkParser(
         PythonDetectionParser(ByMaxConfidence(), python_track_repository)
     )
-    detection_metadata = _fill_track_repository(
-        track_parser, python_track_repository, [track_file_15min]
-    )
-    return python_track_repository, detection_metadata
+    return load_track_files([track_file_15min], track_parser, python_track_repository)
 
 
 @pytest.fixture(scope="function")
@@ -247,10 +255,7 @@ def python_track_repo_2hours(
     track_parser = OttrkParser(
         PythonDetectionParser(ByMaxConfidence(), python_track_repository)
     )
-    detection_metadata = _fill_track_repository(
-        track_parser, python_track_repository, track_files_2hours
-    )
-    return python_track_repository, detection_metadata
+    return load_track_files(track_files_2hours, track_parser, python_track_repository)
 
 
 @pytest.fixture(scope="function")
@@ -262,10 +267,7 @@ def pandas_track_repo_15min(
             PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
         )
     )
-    detection_metadata = _fill_track_repository(
-        track_parser, pandas_track_repository, [track_file_15min]
-    )
-    return pandas_track_repository, detection_metadata
+    return load_track_files([track_file_15min], track_parser, pandas_track_repository)
 
 
 @pytest.fixture(scope="function")
@@ -280,10 +282,7 @@ def pandas_track_repo_2hours(
             PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
         )
     )
-    detection_metadata = _fill_track_repository(
-        track_parser, pandas_track_repository, track_files_2hours
-    )
-    return pandas_track_repository, detection_metadata
+    return load_track_files(track_files_2hours, track_parser, pandas_track_repository)
 
 
 @pytest.fixture
