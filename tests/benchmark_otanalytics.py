@@ -229,55 +229,50 @@ def pandas_track_parser() -> TrackParser:
 
 @pytest.fixture(scope="function")
 def python_track_repo_15min(
-    track_file_15min: Path,
+    track_file_15min: Path, python_track_repository: TrackRepository
 ) -> tuple[TrackRepository, DetectionMetadata]:
-    track_repository = TrackRepository(PythonTrackDataset())
     track_parser = OttrkParser(
-        PythonDetectionParser(ByMaxConfidence(), track_repository)
+        PythonDetectionParser(ByMaxConfidence(), python_track_repository)
     )
     detection_metadata = _fill_track_repository(
-        track_parser, track_repository, [track_file_15min]
+        track_parser, python_track_repository, [track_file_15min]
     )
-    return track_repository, detection_metadata
+    return python_track_repository, detection_metadata
 
 
 @pytest.fixture(scope="function")
 def python_track_repo_2hours(
-    track_files_2hours: list[Path],
+    track_files_2hours: list[Path], python_track_repository: TrackRepository
 ) -> tuple[TrackRepository, DetectionMetadata]:
-    track_repository = TrackRepository(PythonTrackDataset())
     track_parser = OttrkParser(
-        PythonDetectionParser(ByMaxConfidence(), track_repository)
+        PythonDetectionParser(ByMaxConfidence(), python_track_repository)
     )
     detection_metadata = _fill_track_repository(
-        track_parser, track_repository, track_files_2hours
+        track_parser, python_track_repository, track_files_2hours
     )
-    return track_repository, detection_metadata
+    return python_track_repository, detection_metadata
 
 
 @pytest.fixture(scope="function")
 def pandas_track_repo_15min(
-    track_file_15min: Path,
+    track_file_15min: Path, pandas_track_repository: TrackRepository
 ) -> tuple[TrackRepository, DetectionMetadata]:
-    track_repository = TrackRepository(
-        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
-    )
     track_parser = OttrkParser(
         PandasDetectionParser(
             PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
         )
     )
     detection_metadata = _fill_track_repository(
-        track_parser, track_repository, [track_file_15min]
+        track_parser, pandas_track_repository, [track_file_15min]
     )
-    return track_repository, detection_metadata
+    return pandas_track_repository, detection_metadata
 
 
 @pytest.fixture(scope="function")
 def pandas_track_repo_2hours(
-    track_files_2hours: list[Path],
+    track_files_2hours: list[Path], pandas_track_repository: TrackRepository
 ) -> tuple[TrackRepository, DetectionMetadata]:
-    track_repository = TrackRepository(
+    pandas_track_repository = TrackRepository(
         PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
     )
     track_parser = OttrkParser(
@@ -286,9 +281,9 @@ def pandas_track_repo_2hours(
         )
     )
     detection_metadata = _fill_track_repository(
-        track_parser, track_repository, track_files_2hours
+        track_parser, pandas_track_repository, track_files_2hours
     )
-    return track_repository, detection_metadata
+    return pandas_track_repository, detection_metadata
 
 
 @pytest.fixture
@@ -556,6 +551,45 @@ class TestBenchmarkCuttingSection:
         benchmark.pedantic(
             cut_tracks_intersecting_section,
             args=(cutting_section,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+
+class TestPipelineBenchmark:
+    ROUNDS = 1
+    ITERATIONS = 1
+    WARMUP_ROUNDS = 0
+
+    def test_15min(
+        self,
+        benchmark: BenchmarkFixture,
+        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
+        event_repository: EventRepository,
+        test_data_tmp_dir: Path,
+        otflow_file: Path,
+    ) -> None:
+        track_repository, detection_metadata = pandas_track_repo_15min
+        section_repository, flow_repository = section_flow_repo_setup
+        export_events = _build_export_events(
+            track_repository,
+            section_repository,
+            flow_repository,
+            event_repository,
+        )
+        specification = CountingSpecificationDto(
+            start=datetime(2023, 5, 24, 8, 0, 0),
+            end=datetime(2023, 5, 24, 8, 15, 0),
+            interval_in_minutes=15,
+            modes=list(detection_metadata.detection_classes),
+            output_file=f"{test_data_tmp_dir / otflow_file.with_suffix('.csv').name}",
+            output_format="CSV",
+        )
+        benchmark.pedantic(
+            export_events.export,
+            args=(specification,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
