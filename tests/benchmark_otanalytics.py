@@ -370,27 +370,6 @@ class TestBenchmarkTrackParser:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    def test_load_2hours(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_parser: TrackParser,
-        track_files_2hours: list[Path],
-    ) -> None:
-        def _parse_2hours(parser: TrackParser, ottrk_files: list[Path]) -> None:
-            for ottrk_file in ottrk_files:
-                parser.parse(ottrk_file)
-
-        benchmark.pedantic(
-            _parse_2hours,
-            args=(
-                pandas_track_parser,
-                track_files_2hours,
-            ),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
 
 class TestBenchmarkTracksIntersectingSections:
     ROUNDS = 1
@@ -415,23 +394,6 @@ class TestBenchmarkTracksIntersectingSections:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    def test_2hours(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-    ) -> None:
-        track_repository, _ = pandas_track_repo_2hours
-        section_repository, flow_repository = section_flow_repo_setup
-        use_case = _build_tracks_intersecting_sections(track_repository)
-        benchmark.pedantic(
-            use_case,
-            args=(section_repository.get_all(),),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
 
 class TestBenchmarkCreateEvents:
     ROUNDS = 1
@@ -447,27 +409,6 @@ class TestBenchmarkCreateEvents:
         clear_events: ClearAllEvents,
     ) -> None:
         track_repository, _ = pandas_track_repo_15min
-        section_repository, flow_repository = section_flow_repo_setup
-        create_events = _build_create_events(
-            track_repository, section_repository, event_repository
-        )
-        benchmark.pedantic(
-            create_events,
-            setup=clear_events,
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
-    def test_2hours(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-        event_repository: EventRepository,
-        clear_events: ClearAllEvents,
-    ) -> None:
-        track_repository, _ = pandas_track_repo_2hours
         section_repository, flow_repository = section_flow_repo_setup
         create_events = _build_create_events(
             track_repository, section_repository, event_repository
@@ -514,34 +455,6 @@ class TestBenchmarkExportCounting:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    def test_2hours(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-        event_repository: EventRepository,
-        test_data_tmp_dir: Path,
-        otflow_file: Path,
-    ) -> None:
-        track_repository, detection_metadata = pandas_track_repo_2hours
-        section_repository, flow_repository = section_flow_repo_setup
-        export_events = _build_export_events(
-            track_repository,
-            section_repository,
-            flow_repository,
-            event_repository,
-        )
-        specification = create_counting_specification(
-            test_data_tmp_dir, detection_metadata.detection_classes, otflow_file
-        )
-        benchmark.pedantic(
-            export_events.export,
-            args=(specification,),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
 
 class TestBenchmarkCuttingSection:
     ROUNDS = 1
@@ -555,26 +468,6 @@ class TestBenchmarkCuttingSection:
         cutting_section: Section,
     ) -> None:
         track_repository, _ = pandas_track_repo_15min
-        section_repository = SectionRepository()
-        section_repository.add(cutting_section)
-        cut_tracks_intersecting_section = _build_cut_tracks_intersecting_sections(
-            section_repository, track_repository
-        )
-        benchmark.pedantic(
-            cut_tracks_intersecting_section,
-            args=(cutting_section,),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
-    def test_2hours(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_2hours: tuple[TrackRepository, DetectionMetadata],
-        cutting_section: Section,
-    ) -> None:
-        track_repository, _ = pandas_track_repo_2hours
         section_repository = SectionRepository()
         section_repository.add(cutting_section)
         cut_tracks_intersecting_section = _build_cut_tracks_intersecting_sections(
