@@ -293,7 +293,7 @@ class ApplicationStarter:
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
-        tracks_metadata = self._create_tracks_metadata(track_repository)
+        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         tracks_metadata._classifications.register(
@@ -553,7 +553,7 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
-            tracks_metadata=TracksMetadata(track_repository),
+            tracks_metadata=self._create_tracks_metadata(track_repository, run_config),
             videos_metadata=VideosMetadata(),
             progressbar=TqdmBuilder(),
         ).start()
@@ -727,9 +727,11 @@ class ApplicationStarter:
         )
 
     def _create_tracks_metadata(
-        self, track_repository: TrackRepository
+        self, track_repository: TrackRepository, run_config: RunConfiguration
     ) -> TracksMetadata:
-        return TracksMetadata(track_repository)
+        return TracksMetadata(
+            track_repository, run_config.include_classes, run_config.exclude_classes
+        )
 
     def _create_action_state(self) -> ActionState:
         return ActionState()

@@ -235,7 +235,7 @@ class OTAnalyticsCli:
         )
         start = self._videos_metadata.first_video_start
         end = self._videos_metadata.last_video_end
-        modes = self._tracks_metadata.detection_classifications
+        modes = self._tracks_metadata.filtered_detection_classifications
         if start is None:
             raise ValueError("start is None but has to be defined for exporting counts")
         if end is None:
