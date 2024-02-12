@@ -428,7 +428,7 @@ class TestPandasTrackDataset:
             [first_track, second_track], track_geometry_factory
         )
 
-        filtered_dataset = dataset.filter_by_min_detection_length(7)
+        filtered_dataset = dataset.filter_by_min_detection_length(10)
         assert len(filtered_dataset) == 1
         for actual_track, expected_track in zip(filtered_dataset, [second_track]):
             assert_equal_track_properties(actual_track, expected_track)

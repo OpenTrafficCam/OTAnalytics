@@ -406,7 +406,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def filter_by_min_detection_length(self, length: int) -> "PandasTrackDataset":
         detection_counts_per_track = self._dataset.groupby(level=LEVEL_TRACK_ID).size()
         filtered_ids = detection_counts_per_track[
-            detection_counts_per_track > length
+            detection_counts_per_track >= length
         ].index
         filtered_dataset = self._dataset.loc[filtered_ids]
         return PandasTrackDataset(
