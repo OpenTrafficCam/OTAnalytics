@@ -44,6 +44,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
+    FilteredPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -278,7 +279,11 @@ def pandas_track_repo_2hours(
     track_files_2hours: list[Path],
 ) -> tuple[TrackRepository, DetectionMetadata]:
     track_repository = TrackRepository(
-        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        FilteredPandasTrackDataset(
+            PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset),
+            frozenset(["pedestrian"]),
+            frozenset(),
+        )
     )
     track_parser = OttrkParser(
         PandasDetectionParser(

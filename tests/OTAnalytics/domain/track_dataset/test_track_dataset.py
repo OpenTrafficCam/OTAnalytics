@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import FilteredTrackDataset
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CLASS_BICYCLIST,
@@ -11,6 +11,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CLASS_CARGOBIKE,
     CLASS_PEDESTRIAN,
 )
+from tests.conftest import assert_equal_track_properties
 from tests.OTAnalytics.domain.track_dataset.conftest import (
     IMPLEMENTATIONS,
     TrackDatasetProvider,
@@ -46,6 +47,37 @@ class TestFilteredTrackDataset:
 
     def remove_by_id(self, tracks: Iterable[Track], classes: list[str]) -> list[Track]:
         return [track for track in tracks if track.classification in classes]
+
+    def test_include_and_exclude_classes_properties(self) -> None:
+        include_classes = [CLASS_CARGOBIKE, CLASS_CAR]
+        exclude_classes = [CLASS_PEDESTRIAN, CLASS_BICYCLIST]
+        filtered_datasets = self.get_datasets([], include_classes, exclude_classes)
+        for filtered_dataset in filtered_datasets:
+            assert filtered_dataset.include_classes == frozenset(include_classes)
+            assert filtered_dataset.exclude_classes == frozenset(exclude_classes)
+
+    def test_track_ids(self, cargo_bike_track: Track, bicycle_track: Track) -> None:
+        filtered_datasets = self.get_datasets(
+            [cargo_bike_track, bicycle_track], [CLASS_BICYCLIST], []
+        )
+        for filtered_dataset in filtered_datasets:
+            assert filtered_dataset.track_ids == frozenset([bicycle_track.id])
+
+    def test_first_and_last_occurrence(
+        self, car_track: Track, cargo_bike_track: Track
+    ) -> None:
+        filtered_datasets = self.get_datasets(
+            [cargo_bike_track, car_track], [CLASS_CARGOBIKE], []
+        )
+        for filtered_dataset in filtered_datasets:
+            assert (
+                filtered_dataset.first_occurrence
+                == cargo_bike_track.first_detection.occurrence
+            )
+            assert (
+                filtered_dataset.last_occurrence
+                == cargo_bike_track.last_detection.occurrence
+            )
 
     @pytest.mark.parametrize(
         "include_classes,exclude_classes,expected",
@@ -134,6 +166,92 @@ class TestFilteredTrackDataset:
             filtered_result = filtered_dataset._filter()
             cached_filtered_result = filtered_dataset._filter()
             assert filtered_result == cached_filtered_result
+
+    def test_len(self, tracks: list[Track]) -> None:
+        filtered_datasets = self.get_datasets(
+            tracks, [], [CLASS_CARGOBIKE, CLASS_BICYCLIST]
+        )
+        for filtered_dataset in filtered_datasets:
+            assert len(filtered_dataset) == 2
+
+    def test_get_for(
+        self, car_track: Track, bicycle_track: Track, cargo_bike_track: Track
+    ) -> None:
+        filtered_datasets = self.get_datasets(
+            [car_track, bicycle_track, cargo_bike_track],
+            [],
+            [CLASS_CARGOBIKE, CLASS_BICYCLIST],
+        )
+        for filtered_dataset in filtered_datasets:
+            result_car = filtered_dataset.get_for(car_track.id)
+            assert result_car is not None
+            assert_equal_track_properties(result_car, car_track)
+            assert filtered_dataset.get_for(bicycle_track.id) is None
+            assert filtered_dataset.get_for(cargo_bike_track.id) is None
+            assert filtered_dataset.get_for(TrackId("foobar")) is None
+
+    def test_as_list(self, car_track: Track, bicycle_track: Track) -> None:
+        filtered_datasets = self.get_datasets(
+            [car_track, bicycle_track],
+            [],
+            [CLASS_BICYCLIST],
+        )
+        for filtered_dataset in filtered_datasets:
+            assert len(filtered_dataset) == 1
+            result = filtered_dataset.as_list()
+            assert len(result) == 1
+            assert_equal_track_properties(result[0], car_track)
+
+    def test_intersecting_tracks(self) -> None:
+        mocked_datasets = self.get_mocked_datasets([], [])
+        sections = Mock()
+        offset = Mock()
+        for dataset, mock_other in mocked_datasets:
+            dataset.intersecting_tracks(sections, offset)
+            mock_other.intersecting_tracks.assert_called_once_with(sections, offset)
+
+    def test_intersection_points(self) -> None:
+        mocked_datasets = self.get_mocked_datasets([], [])
+        sections = Mock()
+        offset = Mock()
+        for dataset, mock_other in mocked_datasets:
+            dataset.intersection_points(sections, offset)
+            mock_other.intersection_points.assert_called_once_with(sections, offset)
+
+    def test_contained_by_section(self) -> None:
+        mocked_datasets = self.get_mocked_datasets([], [])
+        sections = Mock()
+        offset = Mock()
+        for dataset, mock_other in mocked_datasets:
+            dataset.contained_by_sections(sections, offset)
+            mock_other.contained_by_sections.assert_called_once_with(sections, offset)
+
+    def test_filter_by_min_detection_length(
+        self, car_track: Track, bicycle_track: Track
+    ) -> None:
+        filtered_datasets = self.get_datasets(
+            [car_track, bicycle_track], [CLASS_CAR], []
+        )
+        for filtered_dataset in filtered_datasets:
+            result_no_tracks = filtered_dataset.filter_by_min_detection_length(4)
+            assert len(result_no_tracks) == 0
+            result_all_tracks = filtered_dataset.filter_by_min_detection_length(2)
+            assert len(result_all_tracks) == 1
+            assert_equal_track_properties(result_all_tracks.as_list()[0], car_track)
+
+    def test_apply_to_first_segments(self) -> None:
+        filtered_datasets = self.get_mocked_datasets([], [])
+        consumer = Mock()
+        for filtered_dataset, mock_other in filtered_datasets:
+            filtered_dataset.apply_to_first_segments(consumer)
+            mock_other.apply_to_first_segments.assert_called_once_with(consumer)
+
+    def test_apply_to_last_segments(self) -> None:
+        filtered_datasets = self.get_mocked_datasets([], [])
+        consumer = Mock()
+        for filtered_dataset, mock_other in filtered_datasets:
+            filtered_dataset.apply_to_last_segments(consumer)
+            mock_other.apply_to_last_segments.assert_called_once_with(consumer)
 
     def test_add_all(
         self, car_track: Track, bicycle_track: Track, cargo_bike_track: Track
