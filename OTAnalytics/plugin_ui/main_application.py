@@ -50,6 +50,7 @@ from OTAnalytics.application.ui.frame_control import (
     SwitchToNextFrame,
     SwitchToPreviousFrame,
 )
+from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -84,6 +85,7 @@ from OTAnalytics.application.use_cases.intersection_repository import (
 )
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -101,6 +103,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTracks,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
@@ -484,7 +487,15 @@ class ApplicationStarter:
             layer.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         pulling_progressbar_popup_builder.add_widget(main_window)
-        OTAnalyticsGui(main_window, dummy_viewmodel, layers).start()
+        apply_cli_cuts = self.create_apply_cli_cuts(
+            cut_tracks_intersecting_section, track_repository
+        )
+        preload_input_files = self.create_preload_input_files(
+            load_otflow, load_track_files, apply_cli_cuts
+        )
+        OTAnalyticsGui(
+            main_window, dummy_viewmodel, layers, preload_input_files, run_config
+        ).start()
 
     def start_cli(self, run_config: RunConfiguration) -> None:
         track_repository = self._create_track_repository()
@@ -517,6 +528,7 @@ class ApplicationStarter:
             RemoveTracks(track_repository),
             RemoveSection(section_repository),
         )
+        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks, track_repository)
         add_all_tracks = AddAllTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
         export_counts = self._create_export_counts(
@@ -535,7 +547,7 @@ class ApplicationStarter:
             create_events=create_events,
             export_counts=export_counts,
             provide_eventlist_exporter=provide_available_eventlist_exporter,
-            cut_tracks=cut_tracks,
+            apply_cli_cuts=apply_cli_cuts,
             add_all_tracks=add_all_tracks,
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
@@ -877,3 +889,18 @@ class ApplicationStarter:
 
     def _create_track_to_video_repository(self) -> TrackToVideoRepository:
         return TrackToVideoRepository()
+
+    def create_preload_input_files(
+        self,
+        load_otflow: LoadOtflow,
+        load_track_files: LoadTrackFiles,
+        apply_cli_cuts: ApplyCliCuts,
+    ) -> PreloadInputFiles:
+        return PreloadInputFiles(load_track_files, load_otflow, apply_cli_cuts)
+
+    def create_apply_cli_cuts(
+        self,
+        cut_tracks: CutTracksIntersectingSection,
+        track_repository: TrackRepository,
+    ) -> ApplyCliCuts:
+        return ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
