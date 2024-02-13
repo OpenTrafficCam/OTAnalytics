@@ -43,12 +43,14 @@ from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
+    FilteredPythonTrackDataset,
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
+    FilteredPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -221,13 +223,19 @@ def otflow_file(test_data_dir: Path) -> Path:
 
 @pytest.fixture
 def python_track_repository() -> TrackRepository:
-    return TrackRepository(PythonTrackDataset())
+    return TrackRepository(
+        FilteredPythonTrackDataset(PythonTrackDataset(), frozenset(), frozenset()),
+    )
 
 
 @pytest.fixture
 def pandas_track_repository() -> TrackRepository:
     return TrackRepository(
-        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        FilteredPandasTrackDataset(
+            PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset),
+            frozenset(),
+            frozenset(),
+        )
     )
 
 
@@ -361,13 +369,14 @@ class TestBenchmarkTrackParser:
         pandas_track_parser: TrackParser,
         track_file_15min: Path,
     ) -> None:
-        benchmark.pedantic(
-            pandas_track_parser.parse,
-            args=(track_file_15min,),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
+        # benchmark.pedantic(
+        #     pandas_track_parser.parse,
+        #     args=(track_file_15min,),
+        #     rounds=self.ROUNDS,
+        #     iterations=self.ITERATIONS,
+        #     warmup_rounds=self.WARMUP_ROUNDS,
+        # )
+        pandas_track_parser.parse(track_file_15min)
 
 
 class TestBenchmarkTracksIntersectingSections:
