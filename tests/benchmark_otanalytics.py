@@ -175,9 +175,8 @@ def load_track_files(
 def retrieve_cutting_sections(sections: Iterable[Section]) -> list[Section]:
     cutting_sections = []
     for section in sections:
-        if (
-            section.name == CUTTING_SECTION_MARKER
-            or section.name == CLI_CUTTING_SECTION_MARKER
+        if section.name.startswith(CUTTING_SECTION_MARKER) or section.name.startswith(
+            CLI_CUTTING_SECTION_MARKER
         ):
             cutting_sections.append(section)
     return cutting_sections
@@ -509,6 +508,19 @@ class TestPipelineBenchmark:
             section_repository,
             flow_repository,
             event_repository,
+        )
+        self.run(
+            [track_file_15min],
+            otflow_file,
+            pandas_track_parser,
+            otflow_parser,
+            pandas_track_repository,
+            section_repository,
+            flow_repository,
+            cut_tracks,
+            intersect_tracks,
+            export_counts,
+            test_data_tmp_dir,
         )
         benchmark.pedantic(
             self.run,
