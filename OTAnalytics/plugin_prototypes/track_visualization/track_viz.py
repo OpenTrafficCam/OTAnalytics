@@ -739,11 +739,13 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
         color_palette_provider: ColorPaletteProvider,
         track_view_state: TrackViewState,
         alpha: float = 0.5,
+        linewidth: float = 1.0,
     ) -> None:
         self._data_provider = data_provider
         self._color_palette_provider = color_palette_provider
         self._track_view_state = track_view_state
         self._alpha = alpha
+        self._linewidth = linewidth
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
@@ -772,9 +774,9 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
                     width=width,
                     height=height,
                     fc="none",
-                    linewidth=0.5,
+                    linewidth=self._linewidth,
                     color=color,
-                    alpha=0.5,
+                    alpha=self._alpha,
                 )
             )
 
@@ -787,10 +789,12 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
         data_provider: PandasDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         alpha: float = 0.5,
+        markersize: float = 3.0,
     ) -> None:
         self._data_provider = data_provider
         self._color_palette_provider = color_palette_provider
         self._alpha = alpha
+        self._markersize = markersize
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
@@ -812,7 +816,9 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
                 row[X],
                 row[Y],
                 marker="o",
+                markersize=self._markersize,
                 color=color,
+                alpha=self._alpha,
             )
 
 
