@@ -507,43 +507,22 @@ class PythonTrackDataset(TrackDataset):
 
         return PythonTrackSegmentDataset(segments)
 
-    def __create_first_segment(self, track: Track) -> PythonTrackSegment:
+    @staticmethod
+    def __create_first_segment(track: Track) -> PythonTrackSegment:
         start = track.get_detection(0)
         end = track.get_detection(1)
-        return self.__create_segment_for(track=track, start=start, end=end)
-
-    @staticmethod
-    def __create_segment_for(
-        track: Track, start: Detection, end: Detection
-    ) -> PythonTrackSegment:
-        return PythonTrackSegment(
-            track_id=track.id.id,
-            track_classification=track.classification,
-            start=PythonTrackPoint(
-                x=start.x,
-                y=start.y,
-                occurrence=start.occurrence,
-                video_name=start.video_name,
-                frame=start.frame,
-            ),
-            end=PythonTrackPoint(
-                x=end.x,
-                y=end.y,
-                occurrence=end.occurrence,
-                video_name=end.video_name,
-                frame=end.frame,
-            ),
-        )
+        return create_segment_for(track=track, start=start, end=end)
 
     def get_last_segments(self) -> TrackSegmentDataset:
         segments = [self.__create_last_segment(track) for track in self.as_list()]
 
         return PythonTrackSegmentDataset(segments)
 
-    def __create_last_segment(self, track: Track) -> PythonTrackSegment:
+    @staticmethod
+    def __create_last_segment(track: Track) -> PythonTrackSegment:
         start = track.detections[-2]
         end = track.last_detection
-        return self.__create_segment_for(track=track, start=start, end=end)
+        return create_segment_for(track=track, start=start, end=end)
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
@@ -611,6 +590,29 @@ class PythonTrackDataset(TrackDataset):
         track_builder.add_id(track_id)
         track_builder.add_detection(detection)
         return track_builder.build()
+
+
+def create_segment_for(
+    track: Track, start: Detection, end: Detection
+) -> PythonTrackSegment:
+    return PythonTrackSegment(
+        track_id=track.id.id,
+        track_classification=track.classification,
+        start=PythonTrackPoint(
+            x=start.x,
+            y=start.y,
+            occurrence=start.occurrence,
+            video_name=start.video_name,
+            frame=start.frame,
+        ),
+        end=PythonTrackPoint(
+            x=end.x,
+            y=end.y,
+            occurrence=end.occurrence,
+            video_name=end.video_name,
+            frame=end.frame,
+        ),
+    )
 
 
 class SimpleCutTrackSegmentBuilder(TrackBuilder):

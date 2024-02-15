@@ -21,10 +21,10 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
-    PythonTrackPoint,
     PythonTrackSegment,
     PythonTrackSegmentDataset,
     SimpleCutTrackSegmentBuilder,
+    create_segment_for,
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.conftest import TrackBuilder, create_track
@@ -467,48 +467,12 @@ class TestPythonTrackDataset:
     def __create_first_segment(self, track: Track) -> PythonTrackSegment:
         start = track.get_detection(0)
         end = track.get_detection(1)
-        segment = PythonTrackSegment(
-            track_id=track.id.id,
-            track_classification=track.classification,
-            start=PythonTrackPoint(
-                x=start.x,
-                y=start.y,
-                occurrence=start.occurrence,
-                video_name=start.video_name,
-                frame=start.frame,
-            ),
-            end=PythonTrackPoint(
-                x=end.x,
-                y=end.y,
-                occurrence=end.occurrence,
-                video_name=end.video_name,
-                frame=end.frame,
-            ),
-        )
-        return segment
+        return create_segment_for(track=track, start=start, end=end)
 
     def __create_last_segment(self, track: Track) -> PythonTrackSegment:
         start = track.detections[-2]
         end = track.last_detection
-        segment = PythonTrackSegment(
-            track_id=track.id.id,
-            track_classification=track.classification,
-            start=PythonTrackPoint(
-                x=start.x,
-                y=start.y,
-                occurrence=start.occurrence,
-                video_name=start.video_name,
-                frame=start.frame,
-            ),
-            end=PythonTrackPoint(
-                x=end.x,
-                y=end.y,
-                occurrence=end.occurrence,
-                video_name=end.video_name,
-                frame=end.frame,
-            ),
-        )
-        return segment
+        return create_segment_for(track=track, start=start, end=end)
 
     def test_first_occurrence(self, first_track: Track, second_track: Track) -> None:
         dataset = PythonTrackDataset.from_list([second_track, first_track])
