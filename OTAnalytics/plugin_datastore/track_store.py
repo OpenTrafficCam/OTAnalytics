@@ -322,6 +322,11 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def __get_tracks(self, other: Iterable[Track]) -> DataFrame:
         if isinstance(other, PandasDataFrameProvider):
             return other.get_data()
+
+        logger().warning(
+            "Possible creating track flyweight objects which is really slow in "
+            f"'{PandasTrackDataset.__get_tracks.__name__}'."
+        )
         return _convert_tracks(other)
 
     def get_for(self, id: TrackId) -> Optional[Track]:
@@ -362,6 +367,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if self._dataset.empty:
             return []
         track_ids = self.get_track_ids_as_string()
+        logger().warning(
+            "Creating track flyweight objects which is really slow in "
+            f"'{PandasTrackDataset.as_list.__name__}'."
+        )
         return [self.__create_track_flyweight(current) for current in track_ids]
 
     def __create_track_flyweight(self, track_id: str) -> Track:
