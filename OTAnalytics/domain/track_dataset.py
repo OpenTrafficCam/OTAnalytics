@@ -5,7 +5,7 @@ from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import TRACK_CLASSIFICATION, TRACK_ID, Track, TrackId
+from OTAnalytics.domain.track import Track, TrackId
 
 START_X: str = "start_x"
 START_Y: str = "start_y"
@@ -17,39 +17,6 @@ END_Y: str = "end_y"
 END_OCCURRENCE: str = "end_occurrence"
 END_FRAME: str = "end_frame"
 END_VIDEO_NAME: str = "end_video_name"
-
-
-@dataclass(frozen=True)
-class TrackPoint:
-    x: float
-    y: float
-    occurrence: datetime
-    video_name: str
-    frame: int
-
-
-@dataclass(frozen=True)
-class TrackSegment:
-    track_id: str
-    track_classification: str
-    start: TrackPoint
-    end: TrackPoint
-
-    def as_dict(self) -> dict:
-        return {
-            TRACK_ID: self.track_id,
-            TRACK_CLASSIFICATION: self.track_classification,
-            START_X: self.start.x,
-            START_Y: self.start.y,
-            START_OCCURRENCE: self.start.occurrence,
-            START_FRAME: self.start.frame,
-            START_VIDEO_NAME: self.start.video_name,
-            END_X: self.end.x,
-            END_Y: self.end.y,
-            END_OCCURRENCE: self.end.occurrence,
-            END_FRAME: self.end.frame,
-            END_VIDEO_NAME: self.end.video_name,
-        }
 
 
 @dataclass(frozen=True, order=True)

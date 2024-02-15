@@ -15,11 +15,7 @@ from OTAnalytics.domain.track import (
     TrackHasNoDetectionError,
     TrackId,
 )
-from OTAnalytics.domain.track_dataset import (
-    TrackGeometryDataset,
-    TrackPoint,
-    TrackSegment,
-)
+from OTAnalytics.domain.track_dataset import TrackGeometryDataset
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonDetection,
@@ -27,6 +23,8 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
     PythonTrackSegmentDataset,
     SimpleCutTrackSegmentBuilder,
+    TrackPoint,
+    TrackSegment,
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.conftest import TrackBuilder, create_track

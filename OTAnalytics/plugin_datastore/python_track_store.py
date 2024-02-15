@@ -11,6 +11,8 @@ from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
+    TRACK_CLASSIFICATION,
+    TRACK_ID,
     Detection,
     Track,
     TrackBuilder,
@@ -20,12 +22,20 @@ from OTAnalytics.domain.track import (
     TrackId,
 )
 from OTAnalytics.domain.track_dataset import (
+    END_FRAME,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_X,
+    END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
+    START_X,
+    START_Y,
     TRACK_GEOMETRY_FACTORY,
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
-    TrackPoint,
-    TrackSegment,
     TrackSegmentDataset,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
@@ -228,6 +238,39 @@ class ByMaxConfidence(TrackClassificationCalculator):
                 classifications[detection.classification] = detection.confidence
 
         return max(classifications, key=lambda x: classifications[x])
+
+
+@dataclass(frozen=True)
+class TrackPoint:
+    x: float
+    y: float
+    occurrence: datetime
+    video_name: str
+    frame: int
+
+
+@dataclass(frozen=True)
+class TrackSegment:
+    track_id: str
+    track_classification: str
+    start: TrackPoint
+    end: TrackPoint
+
+    def as_dict(self) -> dict:
+        return {
+            TRACK_ID: self.track_id,
+            TRACK_CLASSIFICATION: self.track_classification,
+            START_X: self.start.x,
+            START_Y: self.start.y,
+            START_OCCURRENCE: self.start.occurrence,
+            START_FRAME: self.start.frame,
+            START_VIDEO_NAME: self.start.video_name,
+            END_X: self.end.x,
+            END_Y: self.end.y,
+            END_OCCURRENCE: self.end.occurrence,
+            END_FRAME: self.end.frame,
+            END_VIDEO_NAME: self.end.video_name,
+        }
 
 
 @dataclass(frozen=True)
