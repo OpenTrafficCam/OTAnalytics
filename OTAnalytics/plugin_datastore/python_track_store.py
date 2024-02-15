@@ -241,7 +241,7 @@ class ByMaxConfidence(TrackClassificationCalculator):
 
 
 @dataclass(frozen=True)
-class TrackPoint:
+class PythonTrackPoint:
     x: float
     y: float
     occurrence: datetime
@@ -250,11 +250,11 @@ class TrackPoint:
 
 
 @dataclass(frozen=True)
-class TrackSegment:
+class PythonTrackSegment:
     track_id: str
     track_classification: str
-    start: TrackPoint
-    end: TrackPoint
+    start: PythonTrackPoint
+    end: PythonTrackPoint
 
     def as_dict(self) -> dict:
         return {
@@ -275,7 +275,7 @@ class TrackSegment:
 
 @dataclass(frozen=True)
 class PythonTrackSegmentDataset(TrackSegmentDataset):
-    segments: list[TrackSegment]
+    segments: list[PythonTrackSegment]
 
     def apply(self, consumer: Callable[[dict], None]) -> None:
         for segment in self.segments:
@@ -507,20 +507,20 @@ class PythonTrackDataset(TrackDataset):
 
         return PythonTrackSegmentDataset(segments)
 
-    def __create_first_segment(self, track: Track) -> TrackSegment:
+    def __create_first_segment(self, track: Track) -> PythonTrackSegment:
         start = track.get_detection(0)
         end = track.get_detection(1)
-        segment = TrackSegment(
+        segment = PythonTrackSegment(
             track_id=track.id.id,
             track_classification=track.classification,
-            start=TrackPoint(
+            start=PythonTrackPoint(
                 x=start.x,
                 y=start.y,
                 occurrence=start.occurrence,
                 video_name=start.video_name,
                 frame=start.frame,
             ),
-            end=TrackPoint(
+            end=PythonTrackPoint(
                 x=end.x,
                 y=end.y,
                 occurrence=end.occurrence,
@@ -535,20 +535,20 @@ class PythonTrackDataset(TrackDataset):
 
         return PythonTrackSegmentDataset(segments)
 
-    def __create_last_segment(self, track: Track) -> TrackSegment:
+    def __create_last_segment(self, track: Track) -> PythonTrackSegment:
         start = track.detections[-2]
         end = track.last_detection
-        segment = TrackSegment(
+        segment = PythonTrackSegment(
             track_id=track.id.id,
             track_classification=track.classification,
-            start=TrackPoint(
+            start=PythonTrackPoint(
                 x=start.x,
                 y=start.y,
                 occurrence=start.occurrence,
                 video_name=start.video_name,
                 frame=start.frame,
             ),
-            end=TrackPoint(
+            end=PythonTrackPoint(
                 x=end.x,
                 y=end.y,
                 occurrence=end.occurrence,

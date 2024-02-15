@@ -21,10 +21,10 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
+    PythonTrackPoint,
+    PythonTrackSegment,
     PythonTrackSegmentDataset,
     SimpleCutTrackSegmentBuilder,
-    TrackPoint,
-    TrackSegment,
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.conftest import TrackBuilder, create_track
@@ -464,20 +464,20 @@ class TestPythonTrackDataset:
         segments = [self.__create_last_segment(track) for track in tracks]
         return PythonTrackSegmentDataset(segments=segments)
 
-    def __create_first_segment(self, track: Track) -> TrackSegment:
+    def __create_first_segment(self, track: Track) -> PythonTrackSegment:
         start = track.get_detection(0)
         end = track.get_detection(1)
-        segment = TrackSegment(
+        segment = PythonTrackSegment(
             track_id=track.id.id,
             track_classification=track.classification,
-            start=TrackPoint(
+            start=PythonTrackPoint(
                 x=start.x,
                 y=start.y,
                 occurrence=start.occurrence,
                 video_name=start.video_name,
                 frame=start.frame,
             ),
-            end=TrackPoint(
+            end=PythonTrackPoint(
                 x=end.x,
                 y=end.y,
                 occurrence=end.occurrence,
@@ -487,20 +487,20 @@ class TestPythonTrackDataset:
         )
         return segment
 
-    def __create_last_segment(self, track: Track) -> TrackSegment:
+    def __create_last_segment(self, track: Track) -> PythonTrackSegment:
         start = track.detections[-2]
         end = track.last_detection
-        segment = TrackSegment(
+        segment = PythonTrackSegment(
             track_id=track.id.id,
             track_classification=track.classification,
-            start=TrackPoint(
+            start=PythonTrackPoint(
                 x=start.x,
                 y=start.y,
                 occurrence=start.occurrence,
                 video_name=start.video_name,
                 frame=start.frame,
             ),
-            end=TrackPoint(
+            end=PythonTrackPoint(
                 x=end.x,
                 y=end.y,
                 occurrence=end.occurrence,
