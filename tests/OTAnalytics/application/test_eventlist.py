@@ -8,7 +8,7 @@ from OTAnalytics.domain.event import EventType
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset import TrackDataset, TrackSegmentDataset
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 
 
@@ -121,10 +121,16 @@ class TestSceneActionDetector:
         track_1: Track,
         track_2: Track,
     ) -> None:
+        first_segments = Mock(spec=TrackSegmentDataset)
+        last_segments = Mock(spec=TrackSegmentDataset)
         mock_tracks = Mock(spec=TrackDataset)
+        mock_tracks.get_first_segments.return_value = first_segments
+        mock_tracks.get_last_segments.return_value = last_segments
 
         scene_action_detector = SceneActionDetector()
         scene_action_detector.detect(mock_tracks)
 
         mock_tracks.get_first_segments.assert_called_once()
         mock_tracks.get_last_segments.assert_called_once()
+        first_segments.apply.assert_called_once()
+        last_segments.apply.assert_called_once()
