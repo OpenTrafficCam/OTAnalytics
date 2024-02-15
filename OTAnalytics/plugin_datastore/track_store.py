@@ -320,8 +320,8 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return updated
 
     def __get_tracks(self, other: Iterable[Track]) -> DataFrame:
-        if isinstance(other, PandasTrackDataset):
-            return other._dataset
+        if isinstance(other, PandasDataFrameProvider):
+            return other.get_data()
         return _convert_tracks(other)
 
     def get_for(self, id: TrackId) -> Optional[Track]:
