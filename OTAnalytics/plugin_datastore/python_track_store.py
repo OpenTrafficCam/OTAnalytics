@@ -510,7 +510,13 @@ class PythonTrackDataset(TrackDataset):
     def __create_first_segment(self, track: Track) -> PythonTrackSegment:
         start = track.get_detection(0)
         end = track.get_detection(1)
-        segment = PythonTrackSegment(
+        return self.__create_segment_for(track=track, start=start, end=end)
+
+    @staticmethod
+    def __create_segment_for(
+        track: Track, start: Detection, end: Detection
+    ) -> PythonTrackSegment:
+        return PythonTrackSegment(
             track_id=track.id.id,
             track_classification=track.classification,
             start=PythonTrackPoint(
@@ -528,7 +534,6 @@ class PythonTrackDataset(TrackDataset):
                 frame=end.frame,
             ),
         )
-        return segment
 
     def get_last_segments(self) -> TrackSegmentDataset:
         segments = [self.__create_last_segment(track) for track in self.as_list()]
@@ -538,25 +543,7 @@ class PythonTrackDataset(TrackDataset):
     def __create_last_segment(self, track: Track) -> PythonTrackSegment:
         start = track.detections[-2]
         end = track.last_detection
-        segment = PythonTrackSegment(
-            track_id=track.id.id,
-            track_classification=track.classification,
-            start=PythonTrackPoint(
-                x=start.x,
-                y=start.y,
-                occurrence=start.occurrence,
-                video_name=start.video_name,
-                frame=start.frame,
-            ),
-            end=PythonTrackPoint(
-                x=end.x,
-                y=end.y,
-                occurrence=end.occurrence,
-                video_name=end.video_name,
-                frame=end.frame,
-            ),
-        )
-        return segment
+        return self.__create_segment_for(track=track, start=start, end=end)
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
