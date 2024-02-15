@@ -509,19 +509,6 @@ class TestPipelineBenchmark:
             flow_repository,
             event_repository,
         )
-        self.run(
-            [track_file_15min],
-            otflow_file,
-            pandas_track_parser,
-            otflow_parser,
-            pandas_track_repository,
-            section_repository,
-            flow_repository,
-            cut_tracks,
-            intersect_tracks,
-            export_counts,
-            test_data_tmp_dir,
-        )
         benchmark.pedantic(
             self.run,
             args=(
