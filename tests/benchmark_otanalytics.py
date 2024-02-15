@@ -488,6 +488,7 @@ class TestBenchmarkCuttingSection:
         pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
         cutting_section: Section,
     ) -> None:
+        # TODO: Replace current cutting section from the one in the test dataset
         track_repository, _ = pandas_track_repo_15min
         section_repository = SectionRepository()
         section_repository.add(cutting_section)
