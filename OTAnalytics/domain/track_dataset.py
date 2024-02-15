@@ -198,15 +198,11 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def apply_to_first_segments(
-        self, consumer: Callable[[TrackSegmentDataset], None]
-    ) -> None:
+    def get_first_segments(self) -> TrackSegmentDataset:
         raise NotImplementedError
 
     @abstractmethod
-    def apply_to_last_segments(
-        self, consumer: Callable[[TrackSegmentDataset], None]
-    ) -> None:
+    def get_last_segments(self) -> TrackSegmentDataset:
         raise NotImplementedError
 
     @abstractmethod

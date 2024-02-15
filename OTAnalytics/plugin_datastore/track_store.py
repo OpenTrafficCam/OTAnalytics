@@ -450,12 +450,10 @@ class PandasTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(
-        self, consumer: Callable[[TrackSegmentDataset], None]
-    ) -> None:
+    def get_first_segments(self) -> TrackSegmentDataset:
         segments = self.__create_segments()
         first_segments: DataFrame = segments.groupby(level=0, group_keys=True).head(1)
-        consumer(PandasTrackSegmentDataset(first_segments))
+        return PandasTrackSegmentDataset(first_segments)
 
     def __create_segments(self) -> DataFrame:
         data: DataFrame = self._dataset.reset_index(level=1)
@@ -501,12 +499,10 @@ class PandasTrackDataset(TrackDataset):
         ]
         return final_columns
 
-    def apply_to_last_segments(
-        self, consumer: Callable[[TrackSegmentDataset], None]
-    ) -> None:
+    def get_last_segments(self) -> TrackSegmentDataset:
         segments = self.__create_segments()
         last_segments: DataFrame = segments.groupby(level=0, group_keys=True).tail(1)
-        consumer(PandasTrackSegmentDataset(last_segments))
+        return PandasTrackSegmentDataset(last_segments)
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate

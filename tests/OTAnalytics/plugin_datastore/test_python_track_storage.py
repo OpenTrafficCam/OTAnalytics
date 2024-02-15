@@ -433,32 +433,30 @@ class TestPythonTrackDataset:
 
         assert list(filtered_dataset) == [second_track]
 
-    def test_apply_to_first_segments(
+    def test_get_first_segments(
         self,
         first_track: Track,
         second_track: Track,
     ) -> None:
-        mock_consumer = Mock()
         segments = self.__create_first_segments([first_track, second_track])
         dataset = PythonTrackDataset.from_list([first_track, second_track])
 
-        dataset.apply_to_first_segments(mock_consumer)
+        actual = dataset.get_first_segments()
 
-        mock_consumer.assert_any_call(segments)
+        assert actual == segments
 
-    def test_apply_to_last_segments(
+    def test_get_last_segments(
         self,
         first_track: Track,
         second_track: Track,
     ) -> None:
-        mock_consumer = Mock()
         track_segments = self.__create_last_segments([first_track, second_track])
 
         dataset = PythonTrackDataset.from_list([first_track, second_track])
 
-        dataset.apply_to_last_segments(mock_consumer)
+        actual = dataset.get_last_segments()
 
-        mock_consumer.assert_any_call(track_segments)
+        assert actual == track_segments
 
     def __create_first_segments(self, tracks: list[Track]) -> PythonTrackSegmentDataset:
         segments = [self.__create_first_segment(track) for track in tracks]

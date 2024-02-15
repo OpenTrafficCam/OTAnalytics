@@ -430,21 +430,20 @@ class TestPandasTrackDataset:
         for actual_track, expected_track in zip(filtered_dataset, [second_track]):
             assert_equal_track_properties(actual_track, expected_track)
 
-    def test_apply_to_first_segments(
+    def test_get_first_segments(
         self,
         first_track: Track,
         second_track: Track,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
-        mock_consumer = Mock()
         segments = self.__create_first_track_segments([first_track, second_track])
         dataset = PandasTrackDataset.from_list(
             [first_track, second_track], track_geometry_factory
         )
 
-        dataset.apply_to_first_segments(mock_consumer)
+        actual = dataset.get_first_segments()
 
-        mock_consumer.assert_any_call(segments)
+        assert actual == segments
 
     def __create_first_track_segments(
         self, tracks: list[Track]
@@ -474,21 +473,20 @@ class TestPandasTrackDataset:
             END_VIDEO_NAME: second_detection.video_name,
         }
 
-    def test_apply_to_last_segments(
+    def test_get_last_segments(
         self,
         first_track: Track,
         second_track: Track,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
-        mock_consumer = Mock()
         track_segments = self.__create_last_track_segments(first_track, second_track)
         dataset = PandasTrackDataset.from_list(
             [first_track, second_track], track_geometry_factory
         )
 
-        dataset.apply_to_last_segments(mock_consumer)
+        actual = dataset.get_last_segments()
 
-        mock_consumer.assert_any_call(track_segments)
+        assert actual == track_segments
 
     def __create_last_track_segments(
         self, track_1: Track, track_2: Track

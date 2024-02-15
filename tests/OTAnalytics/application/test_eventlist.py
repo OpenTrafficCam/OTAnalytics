@@ -126,5 +126,5 @@ class TestSceneActionDetector:
         scene_action_detector = SceneActionDetector()
         scene_action_detector.detect(mock_tracks)
 
-        mock_tracks.apply_to_first_segments.assert_called_once()
-        mock_tracks.apply_to_last_segments.assert_called_once()
+        mock_tracks.get_first_segments.assert_called_once()
+        mock_tracks.get_last_segments.assert_called_once()

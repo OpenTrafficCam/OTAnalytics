@@ -459,12 +459,10 @@ class PythonTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(
-        self, consumer: Callable[[TrackSegmentDataset], None]
-    ) -> None:
+    def get_first_segments(self) -> TrackSegmentDataset:
         segments = [self.__create_first_segment(track) for track in self.as_list()]
 
-        consumer(PythonTrackSegmentDataset(segments))
+        return PythonTrackSegmentDataset(segments)
 
     def __create_first_segment(self, track: Track) -> TrackSegment:
         start = track.get_detection(0)
@@ -489,12 +487,10 @@ class PythonTrackDataset(TrackDataset):
         )
         return segment
 
-    def apply_to_last_segments(
-        self, consumer: Callable[[TrackSegmentDataset], None]
-    ) -> None:
+    def get_last_segments(self) -> TrackSegmentDataset:
         segments = [self.__create_last_segment(track) for track in self.as_list()]
 
-        consumer(PythonTrackSegmentDataset(segments))
+        return PythonTrackSegmentDataset(segments)
 
     def __create_last_segment(self, track: Track) -> TrackSegment:
         start = track.detections[-2]
