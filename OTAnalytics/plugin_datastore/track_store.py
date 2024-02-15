@@ -10,14 +10,8 @@ import pandas
 from more_itertools import batched
 from pandas import DataFrame, MultiIndex, Series
 
-from OTAnalytics.application.eventlist import extract_hostname
 from OTAnalytics.domain import track
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.geometry import (
-    ImageCoordinate,
-    RelativeOffsetCoordinate,
-    calculate_direction_vector,
-)
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.domain.track_dataset import (
@@ -37,7 +31,6 @@ from OTAnalytics.domain.track_dataset import (
     TrackGeometryDataset,
     TrackSegmentDataset,
 )
-from OTAnalytics.domain.types import EventType
 
 
 class PandasDetection(Detection):
@@ -501,71 +494,9 @@ class PandasTrackDataset(TrackDataset):
         ]
         consumer(PandasTrackSegmentDataset(final_columns))
 
-        return
-
-        first_detections = self._dataset.groupby(level=0, group_keys=True)
-        self._dataset["next_x"] = first_detections[track.X].shift(-1)
-        self._dataset["next_y"] = first_detections[track.Y].shift(-1)
-        first_segments: DataFrame = (
-            self._dataset.groupby(level=0, group_keys=True).head(2).copy()
-        )
-
-        # def create_track_segment(data: DataFrame) -> TrackSegment:
-        #     start = data.
-        #     return TrackSegment(start, end)
-        #
-        # first_segments.groupby(level=0, group_keys=True).apply(
-        #     lambda current: print(current)
-        # )
-        as_dict = first_segments.reset_index().to_dict("index")
-
-        for value in as_dict.values():
-            event = Event(
-                road_user_id=value[track.TRACK_ID],
-                road_user_type=value[track.TRACK_CLASSIFICATION],
-                hostname=extract_hostname(value[track.VIDEO_NAME]),
-                occurrence=value[track.OCCURRENCE].to_pydatetime(),
-                frame_number=value[track.FRAME],
-                section_id=None,
-                event_coordinate=ImageCoordinate(value[track.X], value[track.Y]),
-                event_type=EventType.ENTER_SCENE,
-                direction_vector=calculate_direction_vector(
-                    value[track.X],
-                    value[track.Y],
-                    value["next_x"],
-                    value["next_y"],
-                ),
-                video_name=value[track.VIDEO_NAME],
-            )
-            consumer(event)
-
     def apply_to_last_segments(
         self, consumer: Callable[[TrackSegmentDataset], None]
     ) -> None:
-        # for track in self.as_list():
-        #     start = track.detections[-2]
-        #     end = track.last_detection
-        #     segment = TrackSegment(
-        #         track_id=track.id.id,
-        #         track_classification=track.classification,
-        #         start=TrackPoint(
-        #             x=start.x,
-        #             y=start.y,
-        #             occurrence=start.occurrence,
-        #             video_name=start.video_name,
-        #             frame=start.frame,
-        #         ),
-        #         end=TrackPoint(
-        #             x=end.x,
-        #             y=end.y,
-        #             occurrence=end.occurrence,
-        #             video_name=end.video_name,
-        #             frame=end.frame,
-        #         ),
-        #     )
-        #     consumer(segment)
-        # return
-
         data: DataFrame = self._dataset.reset_index(level=1)
         first_detections = data.groupby(level=0, group_keys=True)
         data[START_X] = first_detections[track.X].shift(1)
