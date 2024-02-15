@@ -6,20 +6,26 @@ import pytest
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.geometry import (
-    ImageCoordinate,
-    RelativeOffsetCoordinate,
-    calculate_direction_vector,
-)
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection
-from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track import TRACK_CLASSIFICATION, TRACK_ID, Track, TrackId
 from OTAnalytics.domain.track_dataset import (
+    END_FRAME,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_X,
+    END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
+    START_X,
+    START_Y,
     TRACK_GEOMETRY_FACTORY,
     TrackDataset,
     TrackGeometryDataset,
+    TrackPoint,
+    TrackSegment,
 )
-from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrack,
     PythonTrackDataset,
@@ -31,8 +37,8 @@ from OTAnalytics.plugin_datastore.track_store import (
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,
+    PandasTrackSegmentDataset,
     _convert_tracks,
-    extract_hostname,
 )
 from tests.conftest import (
     TrackBuilder,
@@ -433,36 +439,35 @@ class TestPandasTrackDataset:
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
         mock_consumer = Mock()
-        event_1 = self.__create_enter_scene_event(first_track)
-        event_2 = self.__create_enter_scene_event(second_track)
+        segment_1 = self.__create_first_track_segment(first_track)
+        segment_2 = self.__create_first_track_segment(second_track)
         dataset = PandasTrackDataset.from_list(
             [first_track, second_track], track_geometry_factory
         )
 
         dataset.apply_to_first_segments(mock_consumer)
 
-        mock_consumer.assert_any_call(event_1)
-        mock_consumer.assert_any_call(event_2)
+        mock_consumer.assert_any_call(segment_1)
+        mock_consumer.assert_any_call(segment_2)
 
-    def __create_enter_scene_event(self, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.first_detection.video_name),
-            occurrence=track.first_detection.occurrence,
-            frame_number=track.first_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.first_detection.x, track.first_detection.y
+    def __create_first_track_segment(self, track: Track) -> TrackSegment:
+        return TrackSegment(
+            track_id=track.id.id,
+            track_classification=track.classification,
+            start=TrackPoint(
+                x=track.first_detection.x,
+                y=track.first_detection.y,
+                occurrence=track.first_detection.occurrence,
+                frame=track.first_detection.frame,
+                video_name=track.first_detection.video_name,
             ),
-            event_type=EventType.ENTER_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.first_detection.x,
-                track.first_detection.y,
-                track.detections[1].x,
-                track.detections[1].y,
+            end=TrackPoint(
+                x=track.detections[1].x,
+                y=track.detections[1].y,
+                occurrence=track.detections[1].occurrence,
+                frame=track.detections[1].frame,
+                video_name=track.detections[1].video_name,
             ),
-            video_name=track.first_detection.video_name,
         )
 
     def test_apply_to_last_segments(
@@ -472,37 +477,43 @@ class TestPandasTrackDataset:
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
         mock_consumer = Mock()
-        event_1 = self.__create_leave_scene_event(first_track)
-        event_2 = self.__create_leave_scene_event(second_track)
+        track_segments = self.__create_last_track_segments(first_track, second_track)
         dataset = PandasTrackDataset.from_list(
             [first_track, second_track], track_geometry_factory
         )
 
         dataset.apply_to_last_segments(mock_consumer)
 
-        mock_consumer.assert_any_call(event_1)
-        mock_consumer.assert_any_call(event_2)
+        mock_consumer.assert_any_call(track_segments)
 
-    def __create_leave_scene_event(self, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.last_detection.video_name),
-            occurrence=track.last_detection.occurrence,
-            frame_number=track.last_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.last_detection.x, track.last_detection.y
-            ),
-            event_type=EventType.LEAVE_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.detections[-2].x,
-                track.detections[-2].y,
-                track.last_detection.x,
-                track.last_detection.y,
-            ),
-            video_name=track.last_detection.video_name,
-        )
+    def __create_last_track_segments(
+        self, track_1: Track, track_2: Track
+    ) -> PandasTrackSegmentDataset:
+        segments = [
+            self.__create_last_segment_for(track_1),
+            self.__create_last_segment_for(track_2),
+        ]
+        dataframe = DataFrame(segments)
+        dataframe.set_index(TRACK_ID, inplace=True)
+        return PandasTrackSegmentDataset(dataframe)
+
+    def __create_last_segment_for(self, track: Track) -> dict:
+        second_last_detection = track.detections[-2]
+        last_detection = track.last_detection
+        return {
+            TRACK_ID: track.id.id,
+            TRACK_CLASSIFICATION: track.classification,
+            START_X: second_last_detection.x,
+            START_Y: second_last_detection.y,
+            START_OCCURRENCE: second_last_detection.occurrence,
+            START_FRAME: second_last_detection.frame,
+            START_VIDEO_NAME: second_last_detection.video_name,
+            END_X: last_detection.x,
+            END_Y: last_detection.y,
+            END_OCCURRENCE: last_detection.occurrence,
+            END_FRAME: last_detection.frame,
+            END_VIDEO_NAME: last_detection.video_name,
+        }
 
     def test_first_occurrence(
         self,

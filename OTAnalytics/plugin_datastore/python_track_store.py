@@ -8,12 +8,7 @@ from shapely import LineString
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.geometry import (
-    ImageCoordinate,
-    RelativeOffsetCoordinate,
-    calculate_direction_vector,
-)
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
     Detection,
@@ -29,12 +24,13 @@ from OTAnalytics.domain.track_dataset import (
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
+    TrackPoint,
+    TrackSegment,
+    TrackSegmentDataset,
 )
-from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 
@@ -232,6 +228,15 @@ class ByMaxConfidence(TrackClassificationCalculator):
                 classifications[detection.classification] = detection.confidence
 
         return max(classifications, key=lambda x: classifications[x])
+
+
+@dataclass(frozen=True)
+class PythonTrackSegmentDataset(TrackSegmentDataset):
+    segments: list[TrackSegment]
+
+    def apply(self, consumer: Callable[[dict], None]) -> None:
+        for segment in self.segments:
+            consumer(segment.as_dict())
 
 
 class PythonTrackDataset(TrackDataset):
@@ -454,57 +459,63 @@ class PythonTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
+    def apply_to_first_segments(self, consumer: Callable[[TrackSegment], None]) -> None:
         for track in self.as_list():
-            event = self.__create_enter_scene_event(track)
-            consumer(event)
+            segment = self.__create_first_segment(track)
+            consumer(segment)
 
-    def __create_enter_scene_event(self, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.first_detection.video_name),
-            occurrence=track.first_detection.occurrence,
-            frame_number=track.first_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.first_detection.x, track.first_detection.y
+    def __create_first_segment(self, track: Track) -> TrackSegment:
+        start = track.get_detection(0)
+        end = track.get_detection(1)
+        segment = TrackSegment(
+            track_id=track.id.id,
+            track_classification=track.classification,
+            start=TrackPoint(
+                x=start.x,
+                y=start.y,
+                occurrence=start.occurrence,
+                video_name=start.video_name,
+                frame=start.frame,
             ),
-            event_type=EventType.ENTER_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.first_detection.x,
-                track.first_detection.y,
-                track.detections[1].x,
-                track.detections[1].y,
+            end=TrackPoint(
+                x=end.x,
+                y=end.y,
+                occurrence=end.occurrence,
+                video_name=end.video_name,
+                frame=end.frame,
             ),
-            video_name=track.first_detection.video_name,
         )
+        return segment
 
-    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
-        for track in self.as_list():
-            event = self.__create_leave_scene_event(track)
-            consumer(event)
+    def apply_to_last_segments(
+        self, consumer: Callable[[TrackSegmentDataset], None]
+    ) -> None:
+        segments = [self.__create_last_segment(track) for track in self.as_list()]
 
-    def __create_leave_scene_event(self, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.last_detection.video_name),
-            occurrence=track.last_detection.occurrence,
-            frame_number=track.last_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.last_detection.x, track.last_detection.y
+        consumer(PythonTrackSegmentDataset(segments))
+
+    def __create_last_segment(self, track: Track) -> TrackSegment:
+        start = track.detections[-2]
+        end = track.last_detection
+        segment = TrackSegment(
+            track_id=track.id.id,
+            track_classification=track.classification,
+            start=TrackPoint(
+                x=start.x,
+                y=start.y,
+                occurrence=start.occurrence,
+                video_name=start.video_name,
+                frame=start.frame,
             ),
-            event_type=EventType.LEAVE_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.detections[-2].x,
-                track.detections[-2].y,
-                track.last_detection.x,
-                track.last_detection.y,
+            end=TrackPoint(
+                x=end.x,
+                y=end.y,
+                occurrence=end.occurrence,
+                video_name=end.video_name,
+                frame=end.frame,
             ),
-            video_name=track.last_detection.video_name,
         )
+        return segment
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate

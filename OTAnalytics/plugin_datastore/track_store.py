@@ -1,4 +1,3 @@
-import re
 from abc import ABC, abstractmethod
 from bisect import bisect
 from dataclasses import dataclass
@@ -11,13 +10,9 @@ import pandas
 from more_itertools import batched
 from pandas import DataFrame, MultiIndex, Series
 
+from OTAnalytics.application.eventlist import extract_hostname
 from OTAnalytics.domain import track
-from OTAnalytics.domain.event import (
-    FILE_NAME_PATTERN,
-    HOSTNAME,
-    Event,
-    ImproperFormattedFilename,
-)
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
@@ -26,10 +21,23 @@ from OTAnalytics.domain.geometry import (
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.domain.track_dataset import (
+    END_FRAME,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_X,
+    END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
+    START_X,
+    START_Y,
     TRACK_GEOMETRY_FACTORY,
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
+    TrackPoint,
+    TrackSegment,
+    TrackSegmentDataset,
 )
 from OTAnalytics.domain.types import EventType
 
@@ -180,27 +188,29 @@ CUT_INDICES = "CUT_INDICES"
 TRACK_LENGTH = "TRACK_LENGTH"
 
 
-def extract_hostname(name: str) -> str:
-    """Extract hostname from name.
+class PandasTrackSegmentDataset(TrackSegmentDataset):
+    def __init__(self, segments: DataFrame) -> None:
+        self._segments = segments
 
-    Args:
-        name (Path): name containing the hostname.
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, PandasTrackSegmentDataset):
+            return self._segments.equals(other._segments)
+        return False
 
-    Raises:
-        InproperFormattedFilename: if the name is not formatted as expected, an
-            exception will be raised.
+    def __hash__(self) -> int:
+        return hash(self._segments)
 
-    Returns:
-        str: the hostname.
-    """
-    match = re.search(
-        FILE_NAME_PATTERN,
-        name,
-    )
-    if match:
-        hostname: str = match.group(HOSTNAME)
-        return hostname
-    raise ImproperFormattedFilename(f"Could not parse {name}. Hostname is missing.")
+    def __repr__(self) -> str:
+        return repr(self._segments)
+
+    def __str__(self) -> str:
+        return repr(self._segments)
+
+    def apply(self, consumer: Callable[[dict], None]) -> None:
+        as_dict = self._segments.reset_index().to_dict("index")
+
+        for value in as_dict.values():
+            consumer(value)
 
 
 class PandasTrackDataset(TrackDataset):
@@ -449,14 +459,45 @@ class PandasTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
+    def apply_to_first_segments(self, consumer: Callable[[TrackSegment], None]) -> None:
+        for current in self.as_list():
+            start = current.get_detection(0)
+            end = current.get_detection(1)
+            segment = TrackSegment(
+                track_id=current.id.id,
+                track_classification=current.classification,
+                start=TrackPoint(
+                    x=start.x,
+                    y=start.y,
+                    occurrence=start.occurrence,
+                    video_name=start.video_name,
+                    frame=start.frame,
+                ),
+                end=TrackPoint(
+                    x=end.x,
+                    y=end.y,
+                    occurrence=end.occurrence,
+                    video_name=end.video_name,
+                    frame=end.frame,
+                ),
+            )
+            consumer(segment)
+        return
+
         first_detections = self._dataset.groupby(level=0, group_keys=True)
         self._dataset["next_x"] = first_detections[track.X].shift(-1)
         self._dataset["next_y"] = first_detections[track.Y].shift(-1)
         first_segments: DataFrame = (
-            self._dataset.groupby(level=0, group_keys=True).head(1).copy()
+            self._dataset.groupby(level=0, group_keys=True).head(2).copy()
         )
 
+        # def create_track_segment(data: DataFrame) -> TrackSegment:
+        #     start = data.
+        #     return TrackSegment(start, end)
+        #
+        # first_segments.groupby(level=0, group_keys=True).apply(
+        #     lambda current: print(current)
+        # )
         as_dict = first_segments.reset_index().to_dict("index")
 
         for value in as_dict.values():
@@ -479,35 +520,73 @@ class PandasTrackDataset(TrackDataset):
             )
             consumer(event)
 
-    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
-        first_detections = self._dataset.groupby(level=0, group_keys=True)
-        self._dataset["previous_x"] = first_detections[track.X].shift(1)
-        self._dataset["previous_y"] = first_detections[track.Y].shift(1)
-        first_segments: DataFrame = self._dataset.groupby(
-            level=0, group_keys=True
-        ).tail(1)
+    def apply_to_last_segments(
+        self, consumer: Callable[[TrackSegmentDataset], None]
+    ) -> None:
+        # for track in self.as_list():
+        #     start = track.detections[-2]
+        #     end = track.last_detection
+        #     segment = TrackSegment(
+        #         track_id=track.id.id,
+        #         track_classification=track.classification,
+        #         start=TrackPoint(
+        #             x=start.x,
+        #             y=start.y,
+        #             occurrence=start.occurrence,
+        #             video_name=start.video_name,
+        #             frame=start.frame,
+        #         ),
+        #         end=TrackPoint(
+        #             x=end.x,
+        #             y=end.y,
+        #             occurrence=end.occurrence,
+        #             video_name=end.video_name,
+        #             frame=end.frame,
+        #         ),
+        #     )
+        #     consumer(segment)
+        # return
 
-        as_dict = first_segments.reset_index().to_dict("index")
+        data: DataFrame = self._dataset.reset_index(level=1)
+        first_detections = data.groupby(level=0, group_keys=True)
+        data[START_X] = first_detections[track.X].shift(1)
+        data[START_Y] = first_detections[track.Y].shift(1)
+        data[START_OCCURRENCE] = first_detections[track.OCCURRENCE].shift(1)
+        data[START_FRAME] = first_detections[track.FRAME].shift(1)
+        data[START_VIDEO_NAME] = first_detections[track.VIDEO_NAME].shift(1)
+        last_segments: DataFrame = data.groupby(level=0, group_keys=True).tail(1)
 
-        for value in as_dict.values():
-            event = Event(
-                road_user_id=value[track.TRACK_ID],
-                road_user_type=value[track.TRACK_CLASSIFICATION],
-                hostname=extract_hostname(value[track.VIDEO_NAME]),
-                occurrence=value[track.OCCURRENCE].to_pydatetime(),
-                frame_number=value[track.FRAME],
-                section_id=None,
-                event_coordinate=ImageCoordinate(value[track.X], value[track.Y]),
-                event_type=EventType.LEAVE_SCENE,
-                direction_vector=calculate_direction_vector(
-                    value["previous_x"],
-                    value["previous_y"],
-                    value[track.X],
-                    value[track.Y],
-                ),
-                video_name=value[track.VIDEO_NAME],
-            )
-            consumer(event)
+        last_segments[START_FRAME] = last_segments[START_FRAME].astype(
+            last_segments[track.FRAME].dtype
+        )
+
+        last_segments.rename(
+            columns={
+                track.X: END_X,
+                track.Y: END_Y,
+                track.OCCURRENCE: END_OCCURRENCE,
+                track.FRAME: END_FRAME,
+                track.VIDEO_NAME: END_VIDEO_NAME,
+            },
+            inplace=True,
+        )
+        final_columns = last_segments.loc[
+            :,
+            [
+                track.TRACK_CLASSIFICATION,
+                START_X,
+                START_Y,
+                START_OCCURRENCE,
+                START_FRAME,
+                START_VIDEO_NAME,
+                END_X,
+                END_Y,
+                END_OCCURRENCE,
+                END_FRAME,
+                END_VIDEO_NAME,
+            ],
+        ]
+        consumer(PandasTrackSegmentDataset(final_columns))
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
