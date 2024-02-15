@@ -23,8 +23,6 @@ from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
     TrackDataset,
     TrackGeometryDataset,
-    TrackPoint,
-    TrackSegment,
 )
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrack,
@@ -439,36 +437,42 @@ class TestPandasTrackDataset:
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
         mock_consumer = Mock()
-        segment_1 = self.__create_first_track_segment(first_track)
-        segment_2 = self.__create_first_track_segment(second_track)
+        segments = self.__create_first_track_segments([first_track, second_track])
         dataset = PandasTrackDataset.from_list(
             [first_track, second_track], track_geometry_factory
         )
 
         dataset.apply_to_first_segments(mock_consumer)
 
-        mock_consumer.assert_any_call(segment_1)
-        mock_consumer.assert_any_call(segment_2)
+        mock_consumer.assert_any_call(segments)
 
-    def __create_first_track_segment(self, track: Track) -> TrackSegment:
-        return TrackSegment(
-            track_id=track.id.id,
-            track_classification=track.classification,
-            start=TrackPoint(
-                x=track.first_detection.x,
-                y=track.first_detection.y,
-                occurrence=track.first_detection.occurrence,
-                frame=track.first_detection.frame,
-                video_name=track.first_detection.video_name,
-            ),
-            end=TrackPoint(
-                x=track.detections[1].x,
-                y=track.detections[1].y,
-                occurrence=track.detections[1].occurrence,
-                frame=track.detections[1].frame,
-                video_name=track.detections[1].video_name,
-            ),
-        )
+    def __create_first_track_segments(
+        self, tracks: list[Track]
+    ) -> PandasTrackSegmentDataset:
+        segments = [
+            self.__create_first_track_segment_for(current) for current in tracks
+        ]
+        dataframe = DataFrame(segments)
+        dataframe.set_index(TRACK_ID, inplace=True)
+        return PandasTrackSegmentDataset(segments=dataframe)
+
+    def __create_first_track_segment_for(self, track: Track) -> dict:
+        first_detection = track.first_detection
+        second_detection = track.detections[1]
+        return {
+            TRACK_ID: track.id.id,
+            TRACK_CLASSIFICATION: track.classification,
+            START_X: first_detection.x,
+            START_Y: first_detection.y,
+            START_OCCURRENCE: first_detection.occurrence,
+            START_FRAME: first_detection.frame,
+            START_VIDEO_NAME: first_detection.video_name,
+            END_X: second_detection.x,
+            END_Y: second_detection.y,
+            END_OCCURRENCE: second_detection.occurrence,
+            END_FRAME: second_detection.frame,
+            END_VIDEO_NAME: second_detection.video_name,
+        }
 
     def test_apply_to_last_segments(
         self,

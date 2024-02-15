@@ -14,10 +14,12 @@ from OTAnalytics.domain.track_dataset import (
     END_VIDEO_NAME,
     END_X,
     END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
     START_X,
     START_Y,
     TrackDataset,
-    TrackSegment,
 )
 from OTAnalytics.domain.types import EventType
 
@@ -59,7 +61,9 @@ class SceneActionDetector:
         """
         events: list[Event] = []
         tracks.apply_to_first_segments(
-            lambda segment: events.append(self._create_enter_scene_event(segment))
+            lambda segments: segments.apply(
+                lambda segment: events.append(self._create_enter_scene_event(segment))
+            )
         )
         tracks.apply_to_last_segments(
             lambda segments: segments.apply(
@@ -68,24 +72,25 @@ class SceneActionDetector:
         )
         return events
 
-    def _create_enter_scene_event(self, segment: TrackSegment) -> Event:
-        return Event(
-            road_user_id=segment.track_id,
-            road_user_type=segment.track_classification,
-            hostname=extract_hostname(segment.start.video_name),
-            occurrence=segment.start.occurrence,
-            frame_number=segment.start.frame,
+    def _create_enter_scene_event(self, value: dict) -> Event:
+        event = Event(
+            road_user_id=value[track.TRACK_ID],
+            road_user_type=value[track.TRACK_CLASSIFICATION],
+            hostname=extract_hostname(value[START_VIDEO_NAME]),
+            occurrence=value[START_OCCURRENCE],
+            frame_number=value[START_FRAME],
             section_id=None,
-            event_coordinate=ImageCoordinate(segment.start.x, segment.start.y),
+            event_coordinate=ImageCoordinate(value[START_X], value[START_Y]),
             event_type=EventType.ENTER_SCENE,
             direction_vector=calculate_direction_vector(
-                segment.start.x,
-                segment.start.y,
-                segment.end.x,
-                segment.end.y,
+                value[START_X],
+                value[START_Y],
+                value[END_X],
+                value[END_Y],
             ),
-            video_name=segment.start.video_name,
+            video_name=value[START_VIDEO_NAME],
         )
+        return event
 
     def _create_leave_scene_event(self, value: dict) -> Event:
         event = Event(
@@ -96,7 +101,7 @@ class SceneActionDetector:
             frame_number=value[END_FRAME],
             section_id=None,
             event_coordinate=ImageCoordinate(value[END_X], value[END_Y]),
-            event_type=EventType.ENTER_SCENE,
+            event_type=EventType.LEAVE_SCENE,
             direction_vector=calculate_direction_vector(
                 value[START_X],
                 value[START_Y],

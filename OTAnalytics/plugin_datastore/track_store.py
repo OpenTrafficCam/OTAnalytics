@@ -35,8 +35,6 @@ from OTAnalytics.domain.track_dataset import (
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
-    TrackPoint,
-    TrackSegment,
     TrackSegmentDataset,
 )
 from OTAnalytics.domain.types import EventType
@@ -459,29 +457,50 @@ class PandasTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(self, consumer: Callable[[TrackSegment], None]) -> None:
-        for current in self.as_list():
-            start = current.get_detection(0)
-            end = current.get_detection(1)
-            segment = TrackSegment(
-                track_id=current.id.id,
-                track_classification=current.classification,
-                start=TrackPoint(
-                    x=start.x,
-                    y=start.y,
-                    occurrence=start.occurrence,
-                    video_name=start.video_name,
-                    frame=start.frame,
-                ),
-                end=TrackPoint(
-                    x=end.x,
-                    y=end.y,
-                    occurrence=end.occurrence,
-                    video_name=end.video_name,
-                    frame=end.frame,
-                ),
-            )
-            consumer(segment)
+    def apply_to_first_segments(
+        self, consumer: Callable[[TrackSegmentDataset], None]
+    ) -> None:
+        data: DataFrame = self._dataset.reset_index(level=1)
+        first_detections = data.groupby(level=0, group_keys=True)
+        data[END_X] = first_detections[track.X].shift(-1)
+        data[END_Y] = first_detections[track.Y].shift(-1)
+        data[END_OCCURRENCE] = first_detections[track.OCCURRENCE].shift(-1)
+        data[END_FRAME] = first_detections[track.FRAME].shift(-1)
+        data[END_VIDEO_NAME] = first_detections[track.VIDEO_NAME].shift(-1)
+        last_segments: DataFrame = data.groupby(level=0, group_keys=True).head(1)
+
+        last_segments[END_FRAME] = last_segments[END_FRAME].astype(
+            last_segments[track.FRAME].dtype
+        )
+
+        last_segments.rename(
+            columns={
+                track.X: START_X,
+                track.Y: START_Y,
+                track.OCCURRENCE: START_OCCURRENCE,
+                track.FRAME: START_FRAME,
+                track.VIDEO_NAME: START_VIDEO_NAME,
+            },
+            inplace=True,
+        )
+        final_columns = last_segments.loc[
+            :,
+            [
+                track.TRACK_CLASSIFICATION,
+                START_X,
+                START_Y,
+                START_OCCURRENCE,
+                START_FRAME,
+                START_VIDEO_NAME,
+                END_X,
+                END_Y,
+                END_OCCURRENCE,
+                END_FRAME,
+                END_VIDEO_NAME,
+            ],
+        ]
+        consumer(PandasTrackSegmentDataset(final_columns))
+
         return
 
         first_detections = self._dataset.groupby(level=0, group_keys=True)
