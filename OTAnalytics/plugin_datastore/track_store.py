@@ -453,50 +453,11 @@ class PandasTrackDataset(TrackDataset):
     def apply_to_first_segments(
         self, consumer: Callable[[TrackSegmentDataset], None]
     ) -> None:
-        data: DataFrame = self._dataset.reset_index(level=1)
-        first_detections = data.groupby(level=0, group_keys=True)
-        data[END_X] = first_detections[track.X].shift(-1)
-        data[END_Y] = first_detections[track.Y].shift(-1)
-        data[END_OCCURRENCE] = first_detections[track.OCCURRENCE].shift(-1)
-        data[END_FRAME] = first_detections[track.FRAME].shift(-1)
-        data[END_VIDEO_NAME] = first_detections[track.VIDEO_NAME].shift(-1)
-        last_segments: DataFrame = data.groupby(level=0, group_keys=True).head(1)
+        segments = self.__create_segments()
+        first_segments: DataFrame = segments.groupby(level=0, group_keys=True).head(1)
+        consumer(PandasTrackSegmentDataset(first_segments))
 
-        last_segments[END_FRAME] = last_segments[END_FRAME].astype(
-            last_segments[track.FRAME].dtype
-        )
-
-        last_segments.rename(
-            columns={
-                track.X: START_X,
-                track.Y: START_Y,
-                track.OCCURRENCE: START_OCCURRENCE,
-                track.FRAME: START_FRAME,
-                track.VIDEO_NAME: START_VIDEO_NAME,
-            },
-            inplace=True,
-        )
-        final_columns = last_segments.loc[
-            :,
-            [
-                track.TRACK_CLASSIFICATION,
-                START_X,
-                START_Y,
-                START_OCCURRENCE,
-                START_FRAME,
-                START_VIDEO_NAME,
-                END_X,
-                END_Y,
-                END_OCCURRENCE,
-                END_FRAME,
-                END_VIDEO_NAME,
-            ],
-        ]
-        consumer(PandasTrackSegmentDataset(final_columns))
-
-    def apply_to_last_segments(
-        self, consumer: Callable[[TrackSegmentDataset], None]
-    ) -> None:
+    def __create_segments(self) -> DataFrame:
         data: DataFrame = self._dataset.reset_index(level=1)
         first_detections = data.groupby(level=0, group_keys=True)
         data[START_X] = first_detections[track.X].shift(1)
@@ -504,13 +465,15 @@ class PandasTrackDataset(TrackDataset):
         data[START_OCCURRENCE] = first_detections[track.OCCURRENCE].shift(1)
         data[START_FRAME] = first_detections[track.FRAME].shift(1)
         data[START_VIDEO_NAME] = first_detections[track.VIDEO_NAME].shift(1)
-        last_segments: DataFrame = data.groupby(level=0, group_keys=True).tail(1)
-
-        last_segments[START_FRAME] = last_segments[START_FRAME].astype(
-            last_segments[track.FRAME].dtype
+        data.dropna(
+            subset=[START_X, START_Y, START_OCCURRENCE, START_FRAME, START_VIDEO_NAME],
+            inplace=True,
         )
-
-        last_segments.rename(
+        segments = data
+        segments[START_FRAME] = segments[START_FRAME].astype(
+            segments[track.FRAME].dtype
+        )
+        segments.rename(
             columns={
                 track.X: END_X,
                 track.Y: END_Y,
@@ -520,7 +483,7 @@ class PandasTrackDataset(TrackDataset):
             },
             inplace=True,
         )
-        final_columns = last_segments.loc[
+        final_columns = segments.loc[
             :,
             [
                 track.TRACK_CLASSIFICATION,
@@ -536,7 +499,14 @@ class PandasTrackDataset(TrackDataset):
                 END_VIDEO_NAME,
             ],
         ]
-        consumer(PandasTrackSegmentDataset(final_columns))
+        return final_columns
+
+    def apply_to_last_segments(
+        self, consumer: Callable[[TrackSegmentDataset], None]
+    ) -> None:
+        segments = self.__create_segments()
+        last_segments: DataFrame = segments.groupby(level=0, group_keys=True).tail(1)
+        consumer(PandasTrackSegmentDataset(last_segments))
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
