@@ -369,14 +369,13 @@ class TestBenchmarkTrackParser:
         pandas_track_parser: TrackParser,
         track_file_15min: Path,
     ) -> None:
-        # benchmark.pedantic(
-        #     pandas_track_parser.parse,
-        #     args=(track_file_15min,),
-        #     rounds=self.ROUNDS,
-        #     iterations=self.ITERATIONS,
-        #     warmup_rounds=self.WARMUP_ROUNDS,
-        # )
-        pandas_track_parser.parse(track_file_15min)
+        benchmark.pedantic(
+            pandas_track_parser.parse,
+            args=(track_file_15min,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
 
 
 class TestBenchmarkTracksIntersectingSections:
