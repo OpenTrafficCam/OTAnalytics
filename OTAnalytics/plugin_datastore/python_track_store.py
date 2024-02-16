@@ -527,6 +527,9 @@ class PythonTrackDataset(TrackDataset):
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
     ) -> tuple[TrackDataset, set[TrackId]]:
+        if len(self) == 0:
+            logger().info("No tracks to cut")
+            return self, set()
         shapely_mapper = ShapelyMapper()
 
         section_geometry = shapely_mapper.map_coordinates_to_line_string(

@@ -28,12 +28,16 @@ class CutTracksIntersectingSection(SectionListObserver):
     """
 
     @abstractmethod
-    def __call__(self, cutting_section: Section) -> None:
+    def __call__(
+        self, cutting_section: Section, preserve_cutting_section: bool = False
+    ) -> None:
         """Cut tracks intersecting a section and saving the cut tracks to the track
         repository while removing the original tracks.
 
         Args:
             cutting_section (Section): the section to cut the tracks with.
+            preserve_cutting_section (bool): Whether to preserve or discard
+                cutting section after cut. Defaults to False.
         """
         raise NotImplementedError
 

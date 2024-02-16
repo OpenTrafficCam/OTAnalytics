@@ -52,14 +52,17 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
         self._remove_tracks = remove_tracks
         self._remove_section = remove_section
 
-    def __call__(self, cutting_section: Section) -> None:
+    def __call__(
+        self, cutting_section: Section, preserve_cutting_section: bool = False
+    ) -> None:
         track_dataset = self._get_tracks.as_dataset()
         cut_tracks_dataset, ids_of_cut_tracks = track_dataset.cut_with_section(
             cutting_section, cutting_section.get_offset(EventType.SECTION_ENTER)
         )
         self._remove_tracks(ids_of_cut_tracks)
         self._add_all_tracks(cut_tracks_dataset)
-        self._remove_section(cutting_section.id)
+        if not preserve_cutting_section:
+            self._remove_section(cutting_section.id)
         self._subject.notify(
             CutTracksDto(cutting_section.name, list(ids_of_cut_tracks))
         )

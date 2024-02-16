@@ -10,6 +10,7 @@ import pandas
 from more_itertools import batched
 from pandas import DataFrame, MultiIndex, Series
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
@@ -507,6 +508,9 @@ class PandasTrackDataset(TrackDataset):
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
     ) -> tuple[TrackDataset, set[TrackId]]:
+        if len(self) == 0:
+            logger().info("No tracks to cut")
+            return self, set()
         intersection_points = self.intersection_points([section], offset)
         cut_indices = {
             track_id.id: [

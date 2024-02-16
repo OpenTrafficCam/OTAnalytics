@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
 from typing import Any
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 
@@ -31,6 +31,7 @@ from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseErro
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
+from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
@@ -38,9 +39,6 @@ from OTAnalytics.application.use_cases.create_events import (
 )
 from OTAnalytics.application.use_cases.create_intersection_events import (
     BatchedTracksRunIntersect,
-)
-from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
-    CutTracksIntersectingSection,
 )
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.export_events import EventListExporter
@@ -58,6 +56,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTracks,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    TrackRepositorySize,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.progress import NoProgressbarBuilder
@@ -250,7 +249,7 @@ class TestOTAnalyticsCli:
     CREATE_EVENTS: str = "create_events"
     EXPORT_COUNTS: str = "export_counts"
     PROVIDE_EVENTLIST_EXPORTER: str = "provide_eventlist_exporter"
-    CUT_TRACKS: str = "cut_tracks"
+    APPLY_CLI_CUTS: str = "apply_cli_cuts"
     ADD_ALL_TRACKS: str = "add_all_tracks"
     GET_ALL_TRACK_IDS: str = "get_all_track_ids"
     CLEAR_ALL_TRACKS: str = "clear_all_tracks"
@@ -269,7 +268,7 @@ class TestOTAnalyticsCli:
             self.CREATE_EVENTS: Mock(spec=CreateEvents),
             self.EXPORT_COUNTS: Mock(spec=ExportCounts),
             self.PROVIDE_EVENTLIST_EXPORTER: Mock(),
-            self.CUT_TRACKS: Mock(spec=CutTracksIntersectingSection),
+            self.APPLY_CLI_CUTS: Mock(spec=ApplyCliCuts),
             self.ADD_ALL_TRACKS: Mock(spec=AddAllTracks),
             self.GET_ALL_TRACK_IDS: Mock(spec=GetAllTrackIds),
             self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
@@ -303,15 +302,14 @@ class TestOTAnalyticsCli:
             section_repository.get_all,
             add_events,
         )
-        cut_tracks = (
-            SimpleCutTracksIntersectingSection(
-                GetSectionsById(section_repository),
-                get_all_tracks,
-                add_all_tracks,
-                RemoveTracks(track_repository),
-                RemoveSection(section_repository),
-            ),
+        cut_tracks = SimpleCutTracksIntersectingSection(
+            GetSectionsById(section_repository),
+            get_all_tracks,
+            add_all_tracks,
+            RemoveTracks(track_repository),
+            RemoveSection(section_repository),
         )
+        apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
         create_scene_events = SimpleCreateSceneEvents(
             get_tracks_without_single_detections,
             SceneActionDetector(),
@@ -344,7 +342,7 @@ class TestOTAnalyticsCli:
             self.CREATE_EVENTS: create_events,
             self.EXPORT_COUNTS: export_counts,
             self.PROVIDE_EVENTLIST_EXPORTER: provide_available_eventlist_exporter,
-            self.CUT_TRACKS: cut_tracks,
+            self.APPLY_CLI_CUTS: apply_cli_cuts,
             self.ADD_ALL_TRACKS: add_all_tracks,
             self.GET_ALL_TRACK_IDS: get_all_track_ids,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
@@ -365,7 +363,7 @@ class TestOTAnalyticsCli:
         assert cli._add_flow == mock_cli_dependencies[self.ADD_FLOW]
         assert cli._create_events == mock_cli_dependencies[self.CREATE_EVENTS]
         assert cli._export_counts == mock_cli_dependencies[self.EXPORT_COUNTS]
-        assert cli._cut_tracks == mock_cli_dependencies[self.CUT_TRACKS]
+        assert cli._apply_cli_cuts == mock_cli_dependencies[self.APPLY_CLI_CUTS]
         assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
         assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
         assert cli._tracks_metadata == mock_cli_dependencies[self.TRACKS_METADATA]
@@ -500,31 +498,6 @@ class TestOTAnalyticsCli:
         assert expected_event_list_file.exists()
         assert expected_counts_file.exists()
 
-    def test_apply_cut_tracks(self, mock_cli_dependencies: dict[str, Mock]) -> None:
-        section = Mock()
-        section.id = SectionId("Section 1")
-        section.name = section.id.id
-        section.get_type.return_value = SectionType.LINE
-
-        normal_cutting_section = Mock()
-        normal_cutting_section.id = SectionId("#cut")
-        normal_cutting_section.name = normal_cutting_section.id.id
-        normal_cutting_section.get_type.return_value = SectionType.CUTTING
-
-        cli_cutting_section = Mock()
-        cli_cutting_section.id = SectionId("#clicut")
-        cli_cutting_section.name = cli_cutting_section.id.id
-        cli_cutting_section.get_type.return_value = SectionType.LINE
-
-        cli = OTAnalyticsCli(Mock(), **mock_cli_dependencies)
-        cli._apply_cuts([normal_cutting_section, section, cli_cutting_section])
-
-        cut_tracks = mock_cli_dependencies[self.CUT_TRACKS]
-        assert cut_tracks.call_args_list == [
-            call(cli_cutting_section),
-            call(normal_cutting_section),
-        ]
-
     def test_use_video_start_and_end_for_counting(
         self,
         test_data_tmp_dir: Path,
@@ -622,3 +595,50 @@ class TestOTAnalyticsCli:
         cli.start()
         logger.exception.assert_called_once_with(exception, exc_info=True)
         mock_run_analysis.assert_called_once()
+
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._do_export_counts")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._export_events")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._parse_tracks")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._add_sections")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._add_flows")
+    def test_run_analysis(
+        self,
+        mock_add_flows: Mock,
+        mock_add_sections: Mock,
+        mock_parse_tracks: Mock,
+        mock_export_events: Mock,
+        mock_do_export_counts: Mock,
+        mock_cli_dependencies: dict[str, Mock],
+    ) -> None:
+        run_config = Mock()
+        type(run_config).do_events = PropertyMock(return_value=True)
+        type(run_config).do_counting = PropertyMock(return_value=True)
+        type(run_config).save_dir = PropertyMock(return_value=Path("path/to/my/dir"))
+        type(run_config).save_name = PropertyMock(return_value="my_save_name")
+
+        first_track_file = Path("path/to/a.ottrk")
+        second_track_file = Path("path/to/b.ottrk")
+        sections = [Mock()]
+        flows = [Mock()]
+
+        mock_cli_dependencies[self.GET_ALL_SECTIONS].return_value = sections
+
+        cli = OTAnalyticsCli(run_config, **mock_cli_dependencies)
+        cli._run_analysis({second_track_file, first_track_file}, sections, flows)
+
+        mock_cli_dependencies[self.CLEAR_ALL_TRACKS].assert_called_once()
+        mock_cli_dependencies[self.EVENT_REPOSITORY].clear.assert_called_once()
+        mock_add_flows.assert_called_once_with(flows)
+        mock_add_sections.assert_called_once_with(sections)
+        mock_parse_tracks.assert_called_once_with([first_track_file, second_track_file])
+        mock_cli_dependencies[self.GET_ALL_SECTIONS].assert_called_once()
+        mock_cli_dependencies[self.APPLY_CLI_CUTS].apply.assert_called_once_with(
+            sections, preserve_cutting_sections=False
+        )
+        mock_cli_dependencies[self.CREATE_EVENTS].assert_called_once()
+        mock_export_events.assert_called_once_with(
+            sections, run_config.save_dir / run_config.save_name
+        )
+        mock_do_export_counts.assert_called_once_with(
+            run_config.save_dir / run_config.save_name
+        )
