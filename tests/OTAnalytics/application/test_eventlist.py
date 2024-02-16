@@ -4,12 +4,38 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.domain.event import EventType
-from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.event import Event, EventType
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+    calculate_direction_vector,
+)
 from OTAnalytics.domain.section import LineSection, SectionId
-from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset, TrackSegmentDataset
+from OTAnalytics.domain.track import (
+    TRACK_CLASSIFICATION,
+    TRACK_ID,
+    Detection,
+    Track,
+    TrackId,
+)
+from OTAnalytics.domain.track_dataset import (
+    END_FRAME,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_X,
+    END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
+    START_X,
+    START_Y,
+    TrackDataset,
+    TrackSegmentDataset,
+)
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
+
+HOSTNAME = "myhostname"
 
 
 def create_detection(
@@ -23,7 +49,7 @@ def create_detection(
     _occurrence: datetime = datetime(2022, 1, 1, 0, 0, 0, 0),
     _interpolated_detection: bool = False,
     _track_id: TrackId = TrackId("1"),
-    _video_name: str = "myhostname_something.mp4",
+    _video_name: str = HOSTNAME + "_something.mp4",
 ) -> Detection:
     return PythonDetection(
         _classification=_classification,
@@ -53,7 +79,7 @@ def detection() -> Detection:
 
 
 @pytest.fixture
-def track_1() -> Track:
+def track() -> Track:
     return create_track(1)
 
 
@@ -116,21 +142,104 @@ def line_section() -> LineSection:
 
 
 class TestSceneActionDetector:
-    def test_detect(
-        self,
-        track_1: Track,
-        track_2: Track,
-    ) -> None:
+    def test_detect(self, track: Track) -> None:
+        expected_events = self.__create_expected_events(track)
         first_segments = Mock(spec=TrackSegmentDataset)
+        first_segments.apply.side_effect = lambda consumer: consumer(
+            self.__first_segment_of(track)
+        )
         last_segments = Mock(spec=TrackSegmentDataset)
+        last_segments.apply.side_effect = lambda consumer: consumer(
+            self.__last_segment_of(track)
+        )
         mock_tracks = Mock(spec=TrackDataset)
         mock_tracks.get_first_segments.return_value = first_segments
         mock_tracks.get_last_segments.return_value = last_segments
 
         scene_action_detector = SceneActionDetector()
-        scene_action_detector.detect(mock_tracks)
+        events = scene_action_detector.detect(mock_tracks)
+
+        assert events == expected_events
 
         mock_tracks.get_first_segments.assert_called_once()
         mock_tracks.get_last_segments.assert_called_once()
         first_segments.apply.assert_called_once()
         last_segments.apply.assert_called_once()
+
+    def __create_expected_events(self, track: Track) -> list[Event]:
+        return [
+            Event(
+                road_user_id=track.id.id,
+                road_user_type=track.classification,
+                hostname=HOSTNAME,
+                occurrence=track.first_detection.occurrence,
+                frame_number=track.first_detection.frame,
+                section_id=None,
+                event_coordinate=ImageCoordinate(
+                    track.first_detection.x, track.first_detection.y
+                ),
+                event_type=EventType.ENTER_SCENE,
+                direction_vector=calculate_direction_vector(
+                    track.first_detection.x,
+                    track.first_detection.y,
+                    track.detections[1].x,
+                    track.detections[1].y,
+                ),
+                video_name=track.first_detection.video_name,
+            ),
+            Event(
+                road_user_id=track.id.id,
+                road_user_type=track.classification,
+                hostname=HOSTNAME,
+                occurrence=track.last_detection.occurrence,
+                frame_number=track.last_detection.frame,
+                section_id=None,
+                event_coordinate=ImageCoordinate(
+                    track.last_detection.x, track.last_detection.y
+                ),
+                event_type=EventType.LEAVE_SCENE,
+                direction_vector=calculate_direction_vector(
+                    track.detections[-2].x,
+                    track.detections[-2].y,
+                    track.last_detection.x,
+                    track.last_detection.y,
+                ),
+                video_name=track.first_detection.video_name,
+            ),
+        ]
+
+    def __first_segment_of(self, track: Track) -> dict:
+        start = track.first_detection
+        end = track.detections[1]
+        return {
+            TRACK_ID: track.id.id,
+            TRACK_CLASSIFICATION: track.classification,
+            START_X: start.x,
+            START_Y: start.y,
+            START_OCCURRENCE: start.occurrence,
+            START_FRAME: start.frame,
+            START_VIDEO_NAME: start.video_name,
+            END_X: end.x,
+            END_Y: end.y,
+            END_OCCURRENCE: end.occurrence,
+            END_FRAME: end.frame,
+            END_VIDEO_NAME: end.video_name,
+        }
+
+    def __last_segment_of(self, track: Track) -> dict:
+        start = track.detections[-2]
+        end = track.last_detection
+        return {
+            TRACK_ID: track.id.id,
+            TRACK_CLASSIFICATION: track.classification,
+            START_X: start.x,
+            START_Y: start.y,
+            START_OCCURRENCE: start.occurrence,
+            START_FRAME: start.frame,
+            START_VIDEO_NAME: start.video_name,
+            END_X: end.x,
+            END_Y: end.y,
+            END_OCCURRENCE: end.occurrence,
+            END_FRAME: end.frame,
+            END_VIDEO_NAME: end.video_name,
+        }
