@@ -70,41 +70,51 @@ class SceneActionDetector:
         return events
 
     def _create_enter_scene_event(self, value: dict) -> Event:
-        event = Event(
-            road_user_id=value[track.TRACK_ID],
-            road_user_type=value[track.TRACK_CLASSIFICATION],
-            hostname=extract_hostname(value[START_VIDEO_NAME]),
-            occurrence=value[START_OCCURRENCE],
-            frame_number=value[START_FRAME],
-            section_id=None,
-            event_coordinate=ImageCoordinate(value[START_X], value[START_Y]),
+        return self.__create_event(
+            value=value,
             event_type=EventType.ENTER_SCENE,
-            direction_vector=calculate_direction_vector(
-                value[START_X],
-                value[START_Y],
-                value[END_X],
-                value[END_Y],
-            ),
-            video_name=value[START_VIDEO_NAME],
+            key_x=START_X,
+            key_y=START_Y,
+            key_occurrence=START_OCCURRENCE,
+            key_frame=START_FRAME,
+            key_video_name=START_VIDEO_NAME,
         )
-        return event
 
     def _create_leave_scene_event(self, value: dict) -> Event:
-        event = Event(
+        return self.__create_event(
+            value=value,
+            event_type=EventType.LEAVE_SCENE,
+            key_x=END_X,
+            key_y=END_Y,
+            key_occurrence=END_OCCURRENCE,
+            key_frame=END_FRAME,
+            key_video_name=END_VIDEO_NAME,
+        )
+
+    @staticmethod
+    def __create_event(
+        value: dict,
+        event_type: EventType,
+        key_x: str,
+        key_y: str,
+        key_occurrence: str,
+        key_frame: str,
+        key_video_name: str,
+    ) -> Event:
+        return Event(
             road_user_id=value[track.TRACK_ID],
             road_user_type=value[track.TRACK_CLASSIFICATION],
-            hostname=extract_hostname(value[END_VIDEO_NAME]),
-            occurrence=value[END_OCCURRENCE],
-            frame_number=value[END_FRAME],
+            hostname=extract_hostname(value[key_video_name]),
+            occurrence=value[key_occurrence],
+            frame_number=value[key_frame],
             section_id=None,
-            event_coordinate=ImageCoordinate(value[END_X], value[END_Y]),
-            event_type=EventType.LEAVE_SCENE,
+            event_coordinate=ImageCoordinate(value[key_x], value[key_y]),
+            event_type=event_type,
             direction_vector=calculate_direction_vector(
                 value[START_X],
                 value[START_Y],
                 value[END_X],
                 value[END_Y],
             ),
-            video_name=value[END_VIDEO_NAME],
+            video_name=value[key_video_name],
         )
-        return event
