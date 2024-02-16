@@ -302,7 +302,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
                 new_tracks, self.track_geometry_factory, calculator=self.calculator
             )
         updated_dataset = pandas.concat([self._dataset, new_tracks]).sort_index()
-        new_track_ids = new_tracks.index.levels[LEVEL_TRACK_ID]
+        new_track_ids = new_tracks.index.unique(LEVEL_TRACK_ID)
         new_dataset = updated_dataset.loc[new_track_ids]
         updated_geometry_dataset = self._add_to_geometry_dataset(
             PandasTrackDataset.from_dataframe(new_dataset, self.track_geometry_factory)
