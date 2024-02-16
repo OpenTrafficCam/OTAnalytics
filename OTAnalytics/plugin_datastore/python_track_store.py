@@ -248,6 +248,16 @@ class PythonTrackPoint:
     video_name: str
     frame: int
 
+    @staticmethod
+    def from_detection(detection: Detection) -> "PythonTrackPoint":
+        return PythonTrackPoint(
+            x=detection.x,
+            y=detection.y,
+            occurrence=detection.occurrence,
+            video_name=detection.video_name,
+            frame=detection.frame,
+        )
+
 
 @dataclass(frozen=True)
 class PythonTrackSegment:

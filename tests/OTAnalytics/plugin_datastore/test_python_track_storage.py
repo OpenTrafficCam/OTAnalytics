@@ -9,18 +9,33 @@ from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import (
+    TRACK_CLASSIFICATION,
+    TRACK_ID,
     Detection,
     Track,
     TrackClassificationCalculator,
     TrackHasNoDetectionError,
     TrackId,
 )
-from OTAnalytics.domain.track_dataset import TrackGeometryDataset
+from OTAnalytics.domain.track_dataset import (
+    END_FRAME,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_X,
+    END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
+    START_X,
+    START_Y,
+    TrackGeometryDataset,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
+    PythonTrackPoint,
     PythonTrackSegment,
     PythonTrackSegmentDataset,
     SimpleCutTrackSegmentBuilder,
@@ -243,6 +258,35 @@ class TestTrack:
         track = PythonTrack(TrackId("1"), "car", detections)
         assert track.first_detection == first
         assert track.last_detection == last
+
+
+class TestPythonTrackSegment:
+    def test_as_dict(self, first_track: Track) -> None:
+        start = first_track.first_detection
+        end = first_track.detections[1]
+        segment = PythonTrackSegment(
+            track_id=first_track.id.id,
+            track_classification=first_track.classification,
+            start=PythonTrackPoint.from_detection(start),
+            end=PythonTrackPoint.from_detection(end),
+        )
+
+        actual = segment.as_dict()
+
+        assert actual == {
+            TRACK_ID: first_track.id.id,
+            TRACK_CLASSIFICATION: first_track.classification,
+            START_X: start.x,
+            START_Y: start.y,
+            START_OCCURRENCE: start.occurrence,
+            START_FRAME: start.frame,
+            START_VIDEO_NAME: start.video_name,
+            END_X: end.x,
+            END_Y: end.y,
+            END_OCCURRENCE: end.occurrence,
+            END_FRAME: end.frame,
+            END_VIDEO_NAME: end.video_name,
+        }
 
 
 class TestPythonTrackDataset:
