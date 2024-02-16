@@ -95,6 +95,30 @@ class TestPandasTrack:
         assert_equal_track_properties(pandas_track, python_track)
 
 
+class TestPandasTrackSegmentDataset:
+    def test_apply(self) -> None:
+        consumer = Mock()
+        segment_1_dict = {"dummy-key": "segment-1"}
+        segment_2_dict = {"dummy-key": "segment-2"}
+        expected_segment_1_dict = {"index": 0, "dummy-key": "segment-1"}
+        expected_segment_2_dict = {"index": 1, "dummy-key": "segment-2"}
+        data = [segment_1_dict, segment_2_dict]
+        input = DataFrame(data)
+        dataset = PandasTrackSegmentDataset(input)
+
+        dataset.apply(consumer)
+
+        consumer.assert_has_calls(
+            [call(expected_segment_1_dict), call(expected_segment_2_dict)]
+        )
+
+    def test_apply_without_segments(self) -> None:
+        consumer = Mock()
+        dataset = PandasTrackSegmentDataset(segments=DataFrame())
+
+        dataset.apply(consumer=consumer)
+
+
 class TestPandasTrackDataset:
     def _create_dataset(self, size: int) -> TrackDataset:
         tracks = []
