@@ -289,6 +289,31 @@ class TestPythonTrackSegment:
         }
 
 
+class TestPythonTrackSegmentDataset:
+    def test_apply_with_segments(self) -> None:
+        consumer = Mock()
+        segment_1 = Mock(spec=PythonTrackSegment)
+        segment_2 = Mock(spec=PythonTrackSegment)
+        segment_1_dict = {"dummy-key": "segment-1"}
+        segment_2_dict = {"dummy-key": "segment-2"}
+        segment_1.as_dict.return_value = segment_1_dict
+        segment_2.as_dict.return_value = segment_2_dict
+        segments: list[PythonTrackSegment] = [segment_1, segment_2]
+        dataset = PythonTrackSegmentDataset(segments=segments)
+
+        dataset.apply(consumer=consumer)
+
+        consumer.assert_has_calls([call(segment_1_dict), call(segment_2_dict)])
+
+    def test_apply_without_segments(self) -> None:
+        consumer = Mock()
+        dataset = PythonTrackSegmentDataset(segments=[])
+
+        dataset.apply(consumer=consumer)
+
+        consumer.assert_not_called()
+
+
 class TestPythonTrackDataset:
     @staticmethod
     def create_track_dataset(size: int) -> PythonTrackDataset:
