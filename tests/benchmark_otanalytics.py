@@ -121,6 +121,8 @@ class UseCaseProvider:
             save_dir=self._save_dir,
             event_formats=["otevents"],
             num_processes=NUM_PROCESSES,
+            include_classes=list(self._include_classes),
+            exclude_classes=list(self._exclude_classes),
         )
         return RunConfiguration(self._flow_parser, cli_args)
 
@@ -318,6 +320,21 @@ def cutting_section() -> Section:
 
 
 @pytest.fixture
+def python_track_parser(python_track_repository: TrackRepository) -> TrackParser:
+    detection_parser = PythonDetectionParser(ByMaxConfidence(), python_track_repository)
+    return OttrkParser(detection_parser)
+
+
+@pytest.fixture
+def pandas_track_parser() -> TrackParser:
+    calculator = PandasByMaxConfidence()
+    detection_parser = PandasDetectionParser(
+        calculator, PygeosTrackGeometryDataset.from_track_dataset
+    )
+    return OttrkParser(detection_parser)
+
+
+@pytest.fixture
 def use_case_provider_15min(
     otflow_file: Path, track_file_15min: Path, test_data_tmp_dir: Path
 ) -> UseCaseProvider:
@@ -331,6 +348,46 @@ def use_case_provider_2hours(
     return UseCaseProvider(otflow_file, track_files_2hours, str(test_data_tmp_dir))
 
 
+@pytest.fixture
+def use_case_provider_15min_filtered(
+    otflow_file: Path, track_file_15min: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(
+        otflow_file, [track_file_15min], str(test_data_tmp_dir)
+    )
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
+@pytest.fixture
+def use_case_provider_2hours_filtered(
+    otflow_file: Path, track_files_2hours: list[Path], test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(
+        otflow_file, track_files_2hours, str(test_data_tmp_dir)
+    )
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
+@pytest.fixture
+def use_case_provider_empty(
+    otflow_file: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(otflow_file, [], str(test_data_tmp_dir))
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
+@pytest.fixture
+def use_case_provider_empty_filtered(
+    otflow_file: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(otflow_file, [], str(test_data_tmp_dir))
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
 class TestBenchmarkTrackParser:
     ROUNDS = 1
     ITERATIONS = 1
@@ -339,13 +396,28 @@ class TestBenchmarkTrackParser:
     def test_load_15min(
         self,
         benchmark: BenchmarkFixture,
-        use_case_provider_15min: UseCaseProvider,
+        use_case_provider_empty: UseCaseProvider,
         track_file_15min: Path,
     ) -> None:
-        track_parser = use_case_provider_15min.get_track_parser()
+        use_case = use_case_provider_empty.provide_track_repository
         benchmark.pedantic(
-            track_parser.parse,
-            args=(track_file_15min,),
+            use_case,
+            args=([track_file_15min], CURRENT_DATASET_TYPE),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_load_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_empty_filtered: UseCaseProvider,
+        track_file_15min: Path,
+    ) -> None:
+        use_case = use_case_provider_empty_filtered.provide_track_repository
+        benchmark.pedantic(
+            use_case,
+            args=([track_file_15min], CURRENT_DATASET_TYPE),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -369,6 +441,20 @@ class TestBenchmarkTracksIntersectingSections:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    def test_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_15min_filtered: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_15min_filtered.get_tracks_intersecting_sections()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_15min_filtered.sections,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
 
 class TestBenchmarkCreateEvents:
     ROUNDS = 1
@@ -379,6 +465,19 @@ class TestBenchmarkCreateEvents:
         self, benchmark: BenchmarkFixture, use_case_provider_15min: UseCaseProvider
     ) -> None:
         use_case = use_case_provider_15min.get_create_events()
+        benchmark.pedantic(
+            use_case,
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_15min_filtered: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_15min_filtered.get_create_events()
         benchmark.pedantic(
             use_case,
             rounds=self.ROUNDS,
@@ -400,6 +499,24 @@ class TestBenchmarkExportCounting:
     ) -> None:
         use_case = use_case_provider_15min.get_export_counts()
         specification = use_case_provider_15min.counting_specification(
+            test_data_tmp_dir
+        )
+        benchmark.pedantic(
+            use_case.export,
+            args=(specification,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        test_data_tmp_dir: Path,
+        use_case_provider_15min_filtered: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_15min_filtered.get_export_counts()
+        specification = use_case_provider_15min_filtered.counting_specification(
             test_data_tmp_dir
         )
         benchmark.pedantic(
@@ -432,6 +549,22 @@ class TestBenchmarkCuttingSection:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    def test_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_15min_filtered: UseCaseProvider,
+        cutting_section: Section,
+    ) -> None:
+        # TODO: Replace current cutting section from the one in the test dataset
+        use_case = use_case_provider_15min_filtered.get_cut_tracks()
+        benchmark.pedantic(
+            use_case,
+            args=(cutting_section, True),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
 
 class TestPipelineBenchmark:
     ROUNDS = 1
@@ -450,6 +583,20 @@ class TestPipelineBenchmark:
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
+    def test_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_15min_filtered: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_15min_filtered.run_cli()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_15min_filtered.run_config,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
     def test_2hours(
         self, benchmark: BenchmarkFixture, use_case_provider_2hours: UseCaseProvider
     ) -> None:
@@ -457,6 +604,20 @@ class TestPipelineBenchmark:
         benchmark.pedantic(
             use_case,
             args=(use_case_provider_2hours.run_config,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_2hours_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_2hours_filtered: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_2hours_filtered.run_cli()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_2hours_filtered.run_config,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
