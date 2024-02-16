@@ -35,7 +35,6 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
-    PythonTrackPoint,
     PythonTrackSegment,
     PythonTrackSegmentDataset,
     SimpleCutTrackSegmentBuilder,
@@ -264,12 +263,7 @@ class TestPythonTrackSegment:
     def test_as_dict(self, first_track: Track) -> None:
         start = first_track.first_detection
         end = first_track.detections[1]
-        segment = PythonTrackSegment(
-            track_id=first_track.id.id,
-            track_classification=first_track.classification,
-            start=PythonTrackPoint.from_detection(start),
-            end=PythonTrackPoint.from_detection(end),
-        )
+        segment = create_segment_for(track=first_track, start=start, end=end)
 
         actual = segment.as_dict()
 
