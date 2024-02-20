@@ -49,22 +49,39 @@ def extract_hostname(name: str) -> str:
 
 
 class SceneEventListBuilder:
+    """Create enter and leave scene events for track segments."""
+
     def __init__(self) -> None:
         self._events: list[Event] = []
 
     def add_enter_scene_events(
         self, segments: TrackSegmentDataset
     ) -> "SceneEventListBuilder":
+        """Create an enter scene event for each track segment.
+
+        Args:
+            segments (TrackSegmentDataset): segments to be used to create events for
+        """
         segments.apply(self._create_enter_scene_event)
         return self
 
     def add_leave_scene_events(
         self, segments: TrackSegmentDataset
     ) -> "SceneEventListBuilder":
+        """Create a leave scene event for each track segment.
+
+        Args:
+            segments (TrackSegmentDataset): segments to be used to create events for
+        """
         segments.apply(self._create_leave_scene_event)
         return self
 
     def build(self) -> list[Event]:
+        """Create the complete event list.
+
+        Returns:
+            list[Event]: complete event list
+        """
         return self._events.copy()
 
     def _create_enter_scene_event(self, value: dict) -> None:
