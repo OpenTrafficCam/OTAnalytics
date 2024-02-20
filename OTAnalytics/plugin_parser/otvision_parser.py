@@ -367,7 +367,7 @@ class PythonDetectionParser(DetectionParser):
                     all_detections, key=lambda det: det.occurrence
                 )
                 classification = self._track_classification_calculator.calculate(
-                    detections
+                    all_detections
                 )
                 try:
                     current_track = PythonTrack(
