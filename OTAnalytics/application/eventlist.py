@@ -20,6 +20,7 @@ from OTAnalytics.domain.track_dataset import (
     START_X,
     START_Y,
     TrackDataset,
+    TrackSegmentDataset,
 )
 from OTAnalytics.domain.types import EventType
 
@@ -47,30 +48,27 @@ def extract_hostname(name: str) -> str:
     raise ImproperFormattedFilename(f"Could not parse {name}. Hostname is missing.")
 
 
-class SceneActionDetector:
-    """Detect when a road user enters or leaves the scene."""
+class SceneEventListBuilder:
+    def __init__(self) -> None:
+        self._events: list[Event] = []
 
-    def detect(self, tracks: TrackDataset) -> list[Event]:
-        """Detect all enter and leave scene events.
+    def add_enter_scene_events(
+        self, segments: TrackSegmentDataset
+    ) -> "SceneEventListBuilder":
+        segments.apply(self._create_enter_scene_event)
+        return self
 
-        Args:
-            tracks (Iterable[Track]): the tracks under inspection
+    def add_leave_scene_events(
+        self, segments: TrackSegmentDataset
+    ) -> "SceneEventListBuilder":
+        segments.apply(self._create_leave_scene_event)
+        return self
 
-        Returns:
-            Iterable[Event]: the scene events
-        """
-        events: list[Event] = []
-        tracks.get_first_segments().apply(
-            lambda segment: events.append(self._create_enter_scene_event(segment))
-        )
-        tracks.get_last_segments().apply(
-            lambda segment: events.append(self._create_leave_scene_event(segment))
-        )
+    def build(self) -> list[Event]:
+        return self._events.copy()
 
-        return events
-
-    def _create_enter_scene_event(self, value: dict) -> Event:
-        return self.__create_event(
+    def _create_enter_scene_event(self, value: dict) -> None:
+        event = self.__create_event(
             value=value,
             event_type=EventType.ENTER_SCENE,
             key_x=START_X,
@@ -79,9 +77,10 @@ class SceneActionDetector:
             key_frame=START_FRAME,
             key_video_name=START_VIDEO_NAME,
         )
+        self._events.append(event)
 
-    def _create_leave_scene_event(self, value: dict) -> Event:
-        return self.__create_event(
+    def _create_leave_scene_event(self, value: dict) -> None:
+        event = self.__create_event(
             value=value,
             event_type=EventType.LEAVE_SCENE,
             key_x=END_X,
@@ -90,6 +89,7 @@ class SceneActionDetector:
             key_frame=END_FRAME,
             key_video_name=END_VIDEO_NAME,
         )
+        self._events.append(event)
 
     @staticmethod
     def __create_event(
@@ -118,3 +118,21 @@ class SceneActionDetector:
             ),
             video_name=value[key_video_name],
         )
+
+
+class SceneActionDetector:
+    """Detect when a road user enters or leaves the scene."""
+
+    def detect(self, tracks: TrackDataset) -> list[Event]:
+        """Detect all enter and leave scene events.
+
+        Args:
+            tracks (Iterable[Track]): the tracks under inspection
+
+        Returns:
+            Iterable[Event]: the scene events
+        """
+        builder = SceneEventListBuilder()
+        builder.add_enter_scene_events(tracks.get_first_segments())
+        builder.add_leave_scene_events(tracks.get_last_segments())
+        return builder.build()

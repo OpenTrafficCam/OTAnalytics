@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.eventlist import SceneActionDetector, SceneEventListBuilder
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.geometry import (
     Coordinate,
@@ -143,14 +143,14 @@ def line_section() -> LineSection:
 
 class TestSceneActionDetector:
     def test_detect(self, track: Track) -> None:
-        expected_events = self.__create_expected_events(track)
+        expected_events = create_expected_events(track)
         first_segments = Mock(spec=TrackSegmentDataset)
         first_segments.apply.side_effect = lambda consumer: consumer(
-            self.__first_segment_of(track)
+            first_segment_of(track)
         )
         last_segments = Mock(spec=TrackSegmentDataset)
         last_segments.apply.side_effect = lambda consumer: consumer(
-            self.__last_segment_of(track)
+            last_segment_of(track)
         )
         mock_tracks = Mock(spec=TrackDataset)
         mock_tracks.get_first_segments.return_value = first_segments
@@ -166,80 +166,122 @@ class TestSceneActionDetector:
         first_segments.apply.assert_called_once()
         last_segments.apply.assert_called_once()
 
-    def __create_expected_events(self, track: Track) -> list[Event]:
-        return [
-            Event(
-                road_user_id=track.id.id,
-                road_user_type=track.classification,
-                hostname=HOSTNAME,
-                occurrence=track.first_detection.occurrence,
-                frame_number=track.first_detection.frame,
-                section_id=None,
-                event_coordinate=ImageCoordinate(
-                    track.first_detection.x, track.first_detection.y
-                ),
-                event_type=EventType.ENTER_SCENE,
-                direction_vector=calculate_direction_vector(
-                    track.first_detection.x,
-                    track.first_detection.y,
-                    track.detections[1].x,
-                    track.detections[1].y,
-                ),
-                video_name=track.first_detection.video_name,
-            ),
-            Event(
-                road_user_id=track.id.id,
-                road_user_type=track.classification,
-                hostname=HOSTNAME,
-                occurrence=track.last_detection.occurrence,
-                frame_number=track.last_detection.frame,
-                section_id=None,
-                event_coordinate=ImageCoordinate(
-                    track.last_detection.x, track.last_detection.y
-                ),
-                event_type=EventType.LEAVE_SCENE,
-                direction_vector=calculate_direction_vector(
-                    track.detections[-2].x,
-                    track.detections[-2].y,
-                    track.last_detection.x,
-                    track.last_detection.y,
-                ),
-                video_name=track.first_detection.video_name,
-            ),
-        ]
 
-    def __first_segment_of(self, track: Track) -> dict:
-        start = track.first_detection
-        end = track.detections[1]
-        return {
-            TRACK_ID: track.id.id,
-            TRACK_CLASSIFICATION: track.classification,
-            START_X: start.x,
-            START_Y: start.y,
-            START_OCCURRENCE: start.occurrence,
-            START_FRAME: start.frame,
-            START_VIDEO_NAME: start.video_name,
-            END_X: end.x,
-            END_Y: end.y,
-            END_OCCURRENCE: end.occurrence,
-            END_FRAME: end.frame,
-            END_VIDEO_NAME: end.video_name,
-        }
+def create_expected_events(track: Track) -> list[Event]:
+    return create_expected_enter_scene_events(
+        track
+    ) + create_expected_leave_scene_events(track)
 
-    def __last_segment_of(self, track: Track) -> dict:
-        start = track.detections[-2]
-        end = track.last_detection
-        return {
-            TRACK_ID: track.id.id,
-            TRACK_CLASSIFICATION: track.classification,
-            START_X: start.x,
-            START_Y: start.y,
-            START_OCCURRENCE: start.occurrence,
-            START_FRAME: start.frame,
-            START_VIDEO_NAME: start.video_name,
-            END_X: end.x,
-            END_Y: end.y,
-            END_OCCURRENCE: end.occurrence,
-            END_FRAME: end.frame,
-            END_VIDEO_NAME: end.video_name,
-        }
+
+def create_expected_leave_scene_events(track: Track) -> list[Event]:
+    return [
+        Event(
+            road_user_id=track.id.id,
+            road_user_type=track.classification,
+            hostname=HOSTNAME,
+            occurrence=track.last_detection.occurrence,
+            frame_number=track.last_detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(
+                track.last_detection.x, track.last_detection.y
+            ),
+            event_type=EventType.LEAVE_SCENE,
+            direction_vector=calculate_direction_vector(
+                track.detections[-2].x,
+                track.detections[-2].y,
+                track.last_detection.x,
+                track.last_detection.y,
+            ),
+            video_name=track.first_detection.video_name,
+        ),
+    ]
+
+
+def create_expected_enter_scene_events(track: Track) -> list[Event]:
+    return [
+        Event(
+            road_user_id=track.id.id,
+            road_user_type=track.classification,
+            hostname=HOSTNAME,
+            occurrence=track.first_detection.occurrence,
+            frame_number=track.first_detection.frame,
+            section_id=None,
+            event_coordinate=ImageCoordinate(
+                track.first_detection.x, track.first_detection.y
+            ),
+            event_type=EventType.ENTER_SCENE,
+            direction_vector=calculate_direction_vector(
+                track.first_detection.x,
+                track.first_detection.y,
+                track.detections[1].x,
+                track.detections[1].y,
+            ),
+            video_name=track.first_detection.video_name,
+        )
+    ]
+
+
+def first_segment_of(track: Track) -> dict:
+    start = track.first_detection
+    end = track.detections[1]
+    return {
+        TRACK_ID: track.id.id,
+        TRACK_CLASSIFICATION: track.classification,
+        START_X: start.x,
+        START_Y: start.y,
+        START_OCCURRENCE: start.occurrence,
+        START_FRAME: start.frame,
+        START_VIDEO_NAME: start.video_name,
+        END_X: end.x,
+        END_Y: end.y,
+        END_OCCURRENCE: end.occurrence,
+        END_FRAME: end.frame,
+        END_VIDEO_NAME: end.video_name,
+    }
+
+
+def last_segment_of(track: Track) -> dict:
+    start = track.detections[-2]
+    end = track.last_detection
+    return {
+        TRACK_ID: track.id.id,
+        TRACK_CLASSIFICATION: track.classification,
+        START_X: start.x,
+        START_Y: start.y,
+        START_OCCURRENCE: start.occurrence,
+        START_FRAME: start.frame,
+        START_VIDEO_NAME: start.video_name,
+        END_X: end.x,
+        END_Y: end.y,
+        END_OCCURRENCE: end.occurrence,
+        END_FRAME: end.frame,
+        END_VIDEO_NAME: end.video_name,
+    }
+
+
+class TestSceneEventListBuilder:
+    def test_create_enter_scene_events(self, track: Track) -> None:
+        expected_events = create_expected_enter_scene_events(track)
+        segments = Mock(spec=TrackSegmentDataset)
+        segments.apply.side_effect = lambda consumer: consumer(first_segment_of(track))
+
+        builder = SceneEventListBuilder()
+        builder.add_enter_scene_events(segments)
+        events = builder.build()
+
+        assert events == expected_events
+
+        segments.apply.assert_called_once()
+
+    def test_create_leave_scene_events(self, track: Track) -> None:
+        expected_events = create_expected_leave_scene_events(track)
+        segments = Mock(spec=TrackSegmentDataset)
+        segments.apply.side_effect = lambda consumer: consumer(last_segment_of(track))
+
+        builder = SceneEventListBuilder()
+        builder.add_leave_scene_events(segments)
+        events = builder.build()
+
+        assert events == expected_events
+
+        segments.apply.assert_called_once()
