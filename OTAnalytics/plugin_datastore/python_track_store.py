@@ -242,6 +242,16 @@ class ByMaxConfidence(TrackClassificationCalculator):
 
 @dataclass(frozen=True)
 class PythonTrackPoint:
+    """Start or end point of a track segment. X- and Y-coordinates are enriched with
+    information about the corresponding detection.
+    Attributes:
+        x (int): X coordinate of the point
+        y (int): Y coordinate of the point
+        occurrence (int): Occurrence of the point
+        video_name (str): Name of the video containing the point
+        frame (int): Frame number of the point within the video file
+    """
+
     x: float
     y: float
     occurrence: datetime
@@ -261,6 +271,8 @@ class PythonTrackPoint:
 
 @dataclass(frozen=True)
 class PythonTrackSegment:
+    """Segment of a track. Starts at a detection and ends at another one."""
+
     track_id: str
     track_classification: str
     start: PythonTrackPoint

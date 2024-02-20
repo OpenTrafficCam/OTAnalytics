@@ -25,8 +25,13 @@ class IntersectionPoint:
 
 
 class TrackSegmentDataset(ABC):
+    """Collection of track segments. A track segment consists of a start and an end
+    point with additional information about the corresponding detection.
+    """
+
     @abstractmethod
     def apply(self, consumer: Callable[[dict], None]) -> None:
+        """Apply the given consumer to the track segments."""
         raise NotImplementedError
 
 
@@ -166,10 +171,12 @@ class TrackDataset(ABC):
 
     @abstractmethod
     def get_first_segments(self) -> TrackSegmentDataset:
+        """Get first segments of each track."""
         raise NotImplementedError
 
     @abstractmethod
     def get_last_segments(self) -> TrackSegmentDataset:
+        """Get last segments of each track"""
         raise NotImplementedError
 
     @abstractmethod
