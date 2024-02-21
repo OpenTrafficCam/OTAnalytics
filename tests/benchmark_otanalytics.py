@@ -390,7 +390,7 @@ def use_case_provider_empty_filtered(
 
 class TestBenchmarkTrackParser:
     ROUNDS = 1
-    ITERATIONS = 1
+    ITERATIONS = 5
     WARMUP_ROUNDS = 0
 
     def test_load_15min(
@@ -410,7 +410,7 @@ class TestBenchmarkTrackParser:
 
 class TestBenchmarkTracksIntersectingSections:
     ROUNDS = 1
-    ITERATIONS = 1
+    ITERATIONS = 5
     WARMUP_ROUNDS = 0
 
     def test_15min(
@@ -442,7 +442,7 @@ class TestBenchmarkTracksIntersectingSections:
 
 class TestBenchmarkCreateEvents:
     ROUNDS = 1
-    ITERATIONS = 1
+    ITERATIONS = 5
     WARMUP_ROUNDS = 0
 
     def test_15min(
@@ -472,7 +472,7 @@ class TestBenchmarkCreateEvents:
 
 class TestBenchmarkExportCounting:
     ROUNDS = 1
-    ITERATIONS = 1
+    ITERATIONS = 5
     WARMUP_ROUNDS = 0
 
     def test_15min(
@@ -514,7 +514,7 @@ class TestBenchmarkExportCounting:
 
 class TestBenchmarkCuttingSection:
     ROUNDS = 1
-    ITERATIONS = 1
+    ITERATIONS = 5
     WARMUP_ROUNDS = 0
 
     def test_15min(
@@ -563,7 +563,7 @@ class TestPipelineBenchmark:
             use_case,
             args=(use_case_provider_15min.run_config,),
             rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
+            iterations=5,
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
@@ -577,7 +577,7 @@ class TestPipelineBenchmark:
             use_case,
             args=(use_case_provider_15min_filtered.run_config,),
             rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
+            iterations=5,
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
