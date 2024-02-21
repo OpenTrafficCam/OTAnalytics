@@ -396,28 +396,12 @@ class TestBenchmarkTrackParser:
     def test_load_15min(
         self,
         benchmark: BenchmarkFixture,
-        use_case_provider_empty: UseCaseProvider,
+        pandas_track_parser: OttrkParser,
         track_file_15min: Path,
     ) -> None:
-        use_case = use_case_provider_empty.provide_track_repository
         benchmark.pedantic(
-            use_case,
-            args=([track_file_15min], CURRENT_DATASET_TYPE),
-            rounds=self.ROUNDS,
-            iterations=self.ITERATIONS,
-            warmup_rounds=self.WARMUP_ROUNDS,
-        )
-
-    def test_load_15min_filtered(
-        self,
-        benchmark: BenchmarkFixture,
-        use_case_provider_empty_filtered: UseCaseProvider,
-        track_file_15min: Path,
-    ) -> None:
-        use_case = use_case_provider_empty_filtered.provide_track_repository
-        benchmark.pedantic(
-            use_case,
-            args=([track_file_15min], CURRENT_DATASET_TYPE),
+            pandas_track_parser.parse,
+            args=(track_file_15min,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
