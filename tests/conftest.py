@@ -27,6 +27,13 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CLASS_BICYCLIST,
+    CLASS_CAR,
+    CLASS_CARGOBIKE,
+    CLASS_PEDESTRIAN,
+    CLASS_TRUCK,
+)
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -515,6 +522,41 @@ def closed_track() -> Track:
     track_builder.add_xy_bbox(1.0, 1.0)
     track_builder.append_detection()
     return track_builder.build_track()
+
+
+@pytest.fixture
+def car_track() -> Track:
+    return create_track("1", [(1, 1), (2, 2)], 1, CLASS_CAR)
+
+
+@pytest.fixture
+def car_track_continuing() -> Track:
+    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, CLASS_TRUCK)
+
+
+@pytest.fixture
+def pedestrian_track() -> Track:
+    return create_track("2", [(1, 1), (2, 2), (3, 3)], 1, CLASS_PEDESTRIAN)
+
+
+@pytest.fixture
+def bicycle_track() -> Track:
+    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, CLASS_BICYCLIST)
+
+
+@pytest.fixture
+def cargo_bike_track() -> Track:
+    return create_track("4", [(1, 1), (2, 2), (3, 3)], 4, CLASS_CARGOBIKE)
+
+
+@pytest.fixture
+def all_tracks(
+    car_track: Track,
+    pedestrian_track: Track,
+    bicycle_track: Track,
+    cargo_bike_track: Track,
+) -> list[Track]:
+    return [car_track, pedestrian_track, bicycle_track, cargo_bike_track]
 
 
 def assert_equal_detection_properties(actual: Detection, expected: Detection) -> None:

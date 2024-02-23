@@ -1,8 +1,6 @@
 from typing import Literal
 from unittest.mock import Mock
 
-import pytest
-
 from OTAnalytics.domain.track import Track
 from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
@@ -20,53 +18,10 @@ from OTAnalytics.plugin_datastore.track_store import (
     FilteredPandasTrackDataset,
     PandasTrackDataset,
 )
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CLASS_BICYCLIST,
-    CLASS_CAR,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
-    CLASS_TRUCK,
-)
-from tests.conftest import create_track
 
 PYTHON: Literal["PYTHON"] = "PYTHON"
 PANDAS: Literal["PANDAS"] = "PANDAS"
 IMPLEMENTATIONS = [PYTHON, PANDAS]
-
-
-@pytest.fixture
-def car_track() -> Track:
-    return create_track("1", [(1, 1), (2, 2)], 1, CLASS_CAR)
-
-
-@pytest.fixture
-def car_track_continuing() -> Track:
-    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, CLASS_TRUCK)
-
-
-@pytest.fixture
-def pedestrian_track() -> Track:
-    return create_track("2", [(1, 1), (2, 2), (3, 3)], 1, CLASS_PEDESTRIAN)
-
-
-@pytest.fixture
-def bicycle_track() -> Track:
-    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, CLASS_BICYCLIST)
-
-
-@pytest.fixture
-def cargo_bike_track() -> Track:
-    return create_track("4", [(1, 1), (2, 2), (3, 3)], 4, CLASS_CARGOBIKE)
-
-
-@pytest.fixture
-def tracks(
-    car_track: Track,
-    pedestrian_track: Track,
-    bicycle_track: Track,
-    cargo_bike_track: Track,
-) -> list[Track]:
-    return [car_track, pedestrian_track, bicycle_track, cargo_bike_track]
 
 
 class TrackDatasetProvider:

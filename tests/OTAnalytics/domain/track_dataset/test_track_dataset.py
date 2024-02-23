@@ -102,9 +102,11 @@ class TestFilteredTrackDataset:
         include_classes: list[str],
         exclude_classes: list[str],
         expected: list[str],
-        tracks: list[Track],
+        all_tracks: list[Track],
     ) -> None:
-        filtered_datasets = self.get_datasets(tracks, include_classes, exclude_classes)
+        filtered_datasets = self.get_datasets(
+            all_tracks, include_classes, exclude_classes
+        )
 
         for filtered_dataset in filtered_datasets:
             assert filtered_dataset.classifications == frozenset(expected)
@@ -128,12 +130,12 @@ class TestFilteredTrackDataset:
 
     def test_filter_include_classes(
         self,
-        tracks: list[Track],
+        all_tracks: list[Track],
         cargo_bike_track: Track,
         bicycle_track: Track,
     ) -> None:
         filtered_datasets = self.get_datasets(
-            tracks, [CLASS_CARGOBIKE, CLASS_BICYCLIST], [CLASS_BICYCLIST]
+            all_tracks, [CLASS_CARGOBIKE, CLASS_BICYCLIST], [CLASS_BICYCLIST]
         )
         for filtered_dataset in filtered_datasets:
             assert_track_dataset_has_tracks(
@@ -142,12 +144,12 @@ class TestFilteredTrackDataset:
 
     def test_filter_exclude_classes(
         self,
-        tracks: list[Track],
+        all_tracks: list[Track],
         car_track: Track,
         pedestrian_track: Track,
         cargo_bike_track: Track,
     ) -> None:
-        filtered_datasets = self.get_datasets(tracks, [], [CLASS_BICYCLIST])
+        filtered_datasets = self.get_datasets(all_tracks, [], [CLASS_BICYCLIST])
         for filtered_dataset in filtered_datasets:
             assert_track_dataset_has_tracks(
                 filtered_dataset, [car_track, pedestrian_track, cargo_bike_track]
@@ -176,9 +178,9 @@ class TestFilteredTrackDataset:
             cached_filtered_result = filtered_dataset._filter()
             assert filtered_result == cached_filtered_result
 
-    def test_len(self, tracks: list[Track]) -> None:
+    def test_len(self, all_tracks: list[Track]) -> None:
         filtered_datasets = self.get_datasets(
-            tracks, [], [CLASS_CARGOBIKE, CLASS_BICYCLIST]
+            all_tracks, [], [CLASS_CARGOBIKE, CLASS_BICYCLIST]
         )
         for filtered_dataset in filtered_datasets:
             assert len(filtered_dataset) == 2
