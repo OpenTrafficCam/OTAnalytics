@@ -4,7 +4,7 @@ from bisect import bisect
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Any, Callable, Iterable, Optional, Sequence
+from typing import Any, Callable, Generator, Iterable, Iterator, Optional, Sequence
 
 import numpy
 import pandas
@@ -264,6 +264,16 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             ]()
         else:
             self._geometry_datasets = geometry_datasets
+
+    def __iter__(self) -> Iterator[Track]:
+        yield from self.as_generator()
+
+    def as_generator(self) -> Generator[Track, None, None]:
+        if self._dataset.empty:
+            yield from []
+        track_ids = self.get_track_ids_as_string()
+        for current in track_ids:
+            yield self.__create_track_flyweight(current)
 
     @staticmethod
     def from_list(

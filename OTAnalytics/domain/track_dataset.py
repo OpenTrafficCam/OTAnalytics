@@ -215,7 +215,7 @@ class FilteredTrackDataset(TrackDataset):
         return self._filter().empty
 
     def __iter__(self) -> Iterator[Track]:
-        yield from self._filter().as_list()
+        yield from self._filter()
 
     def __len__(self) -> int:
         return len(self._filter())
