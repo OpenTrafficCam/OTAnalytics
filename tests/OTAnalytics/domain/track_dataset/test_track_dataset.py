@@ -11,12 +11,11 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CLASS_CARGOBIKE,
     CLASS_PEDESTRIAN,
 )
-from tests.conftest import assert_equal_track_properties
-from tests.OTAnalytics.domain.track_dataset.conftest import (
-    IMPLEMENTATIONS,
-    TrackDatasetProvider,
+from tests.utils.assertions import (
+    assert_equal_track_properties,
+    assert_track_dataset_has_tracks,
 )
-from tests.OTAnalytics.plugin_datastore.conftest import assert_track_dataset_has_tracks
+from tests.utils.builders import IMPLEMENTATIONS, TrackDatasetProvider
 
 
 class TestFilteredTrackDataset:

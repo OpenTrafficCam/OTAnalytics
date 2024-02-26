@@ -7,7 +7,7 @@ from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,
 )
-from tests.conftest import TrackBuilder
+from tests.utils.builders import TrackBuilder
 
 
 @pytest.fixture

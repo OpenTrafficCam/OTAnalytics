@@ -23,7 +23,7 @@ from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameStartsAtOrAfterDate,
     NoOpDataFrameFilter,
 )
-from tests.conftest import TrackBuilder
+from tests.utils.builders import TrackBuilder
 
 
 def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:

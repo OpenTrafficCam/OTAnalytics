@@ -50,7 +50,7 @@ from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
-from tests.conftest import TrackBuilder
+from tests.utils.builders import TrackBuilder
 
 
 @pytest.fixture

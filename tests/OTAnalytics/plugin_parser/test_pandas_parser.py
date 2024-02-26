@@ -18,7 +18,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     TrackLengthLimit,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from tests.conftest import TrackBuilder, assert_equal_track_properties
+from tests.utils.assertions import assert_equal_track_properties
+from tests.utils.builders import TrackBuilder
 
 
 @pytest.fixture

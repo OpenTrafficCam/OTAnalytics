@@ -30,10 +30,13 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 )
 from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
-from tests.conftest import TrackBuilder, create_track
-from tests.OTAnalytics.plugin_datastore.conftest import (
+from tests.utils.assertions import (
     assert_track_geometry_dataset_add_all_called_correctly,
+)
+from tests.utils.builders import (
+    TrackBuilder,
     create_mock_geometry_dataset,
+    create_track,
 )
 
 

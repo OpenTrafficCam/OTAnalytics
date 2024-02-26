@@ -34,16 +34,13 @@ from OTAnalytics.plugin_datastore.track_store import (
     _convert_tracks,
     extract_hostname,
 )
-from tests.conftest import (
-    TrackBuilder,
+from tests.utils.assertions import (
     assert_equal_detection_properties,
     assert_equal_track_properties,
     assert_track_datasets_equal,
-)
-from tests.OTAnalytics.plugin_datastore.conftest import (
     assert_track_geometry_dataset_add_all_called_correctly,
-    create_mock_geometry_dataset,
 )
+from tests.utils.builders import TrackBuilder, create_mock_geometry_dataset
 
 
 class TestPandasDetection:
