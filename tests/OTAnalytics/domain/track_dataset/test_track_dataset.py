@@ -122,11 +122,11 @@ class TestFilteredTrackDataset:
 
     def test_filter_no_filters(
         self,
-        tracks: list[Track],
+        all_tracks: list[Track],
     ) -> None:
-        filtered_datasets = self.get_datasets(tracks, [], [])
+        filtered_datasets = self.get_datasets(all_tracks, [], [])
         for filtered_dataset in filtered_datasets:
-            assert_track_dataset_has_tracks(filtered_dataset, tracks)
+            assert_track_dataset_has_tracks(filtered_dataset, all_tracks)
 
     def test_filter_include_classes(
         self,

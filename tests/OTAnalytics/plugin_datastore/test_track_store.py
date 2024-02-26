@@ -55,6 +55,7 @@ class TestPandasDetection:
         detection_values = python_detection.to_dict()
         detection_values[track.FRAME] = numpy.int64(new_frame_number)
         data = Series(detection_values)
+        data.name = (data[track.CLASSIFICATION], data[track.OCCURRENCE])
         detection = PandasDetection(track_id=track_id, data=data)
 
         assert type(detection.frame) is int
@@ -66,7 +67,7 @@ class TestPandasDetection:
         python_detection = builder.build_detections()[0]
         data = Series(
             python_detection.to_dict(),
-            name=python_detection.occurrence,
+            name=("car", python_detection.occurrence),
         )
         pandas_detection = PandasDetection(python_detection.track_id.id, data)
 
@@ -83,8 +84,12 @@ class TestPandasTrack:
         builder.append_detection()
         python_track = builder.build_track()
         detections = [detection.to_dict() for detection in python_track.detections]
-        data = DataFrame(detections).set_index([track.OCCURRENCE]).sort_index()
+        data = DataFrame(detections)
         data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
+        data = data.set_index(
+            [track.TRACK_CLASSIFICATION, track.OCCURRENCE]
+        ).sort_index()
+
         data = data.drop([track.TRACK_ID], axis=1)
         pandas_track = PandasTrack(python_track.id.id, data)
 
@@ -397,9 +402,8 @@ class TestPandasTrackDataset:
             ),
         }
         tracks_df = _convert_tracks([car_track, pedestrian_track])
-
-        dataset = PandasTrackDataset(
-            track_geometry_factory, tracks_df, geometry_datasets
+        dataset = PandasTrackDataset.from_dataframe(
+            tracks_df, track_geometry_factory, geometry_datasets
         )
         result = cast(list[PythonTrackDataset], dataset.split(batches=2))
         assert_track_datasets_equal(

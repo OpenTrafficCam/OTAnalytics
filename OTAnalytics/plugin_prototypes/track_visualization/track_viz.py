@@ -292,15 +292,21 @@ class FilterById(PandasDataFrameProvider):
         if data.empty:
             return data
 
-        if not list(data.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
+        if not list(data.index.names) == [
+            track.TRACK_CLASSIFICATION,
+            track.TRACK_ID,
+            track.OCCURRENCE,
+        ]:
             raise ValueError(
-                f"{track.TRACK_ID} and {track.OCCURRENCE} "
+                f"{track.TRACK_CLASSIFICATION},{track.TRACK_ID}, {track.OCCURRENCE} "
                 "must be index of DataFrame for filtering to work."
             )
 
         ids = [track_id.id for track_id in self._filter.get_ids()]
-        intersection_of_ids = data.index.get_level_values(0).unique().intersection(ids)
-        return data.loc[intersection_of_ids]
+        intersection_of_ids = (
+            data.index.get_level_values(track.TRACK_ID).unique().intersection(ids)
+        )
+        return data.loc[:, intersection_of_ids, :]
 
 
 class FilterByClassification(PandasDataFrameProvider):

@@ -28,7 +28,11 @@ from OTAnalytics.domain.track_dataset import (
     TrackDataset,
     TrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
+from OTAnalytics.plugin_datastore.track_store import (
+    LEVEL_CLASSIFICATION,
+    LEVEL_TRACK_ID,
+    PandasTrackDataset,
+)
 
 TRACK_ID = "track_id"
 GEOMETRY = "geom"
@@ -181,8 +185,12 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         track_dataset: PandasTrackDataset,
         offset: RelativeOffsetCoordinate,
     ) -> DataFrame:
-        track_size_mask = track_dataset._dataset.groupby(level=0).transform("size")
-        filtered_tracks = track_dataset._dataset[track_size_mask > 1]
+        track_size_mask = track_dataset._dataset.groupby(
+            level=LEVEL_TRACK_ID
+        ).transform("size")
+        filtered_tracks = track_dataset._dataset[track_size_mask > 1].reset_index(
+            level=LEVEL_CLASSIFICATION, drop=True
+        )
 
         if offset == BASE_GEOMETRY:
             new_x = filtered_tracks[track.X]
@@ -191,7 +199,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             new_x = filtered_tracks[track.X] + offset.x * filtered_tracks[track.W]
             new_y = filtered_tracks[track.Y] + offset.y * filtered_tracks[track.H]
         tracks = concat([new_x, new_y], keys=[track.X, track.Y], axis=1)
-        tracks_by_id = tracks.groupby(level=0, group_keys=True)
+        tracks_by_id = tracks.groupby(level=LEVEL_TRACK_ID, group_keys=True)
         geometries = tracks_by_id.apply(
             lambda coords: linestrings(coords[track.X], coords[track.Y])
         )

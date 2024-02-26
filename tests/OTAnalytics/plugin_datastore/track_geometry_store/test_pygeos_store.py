@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 from unittest.mock import MagicMock, Mock
@@ -12,7 +11,7 @@ from pytest_benchmark.fixture import BenchmarkFixture
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
-from OTAnalytics.domain.track import TRACK_CLASSIFICATION, Track, TrackId, X, Y
+from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
     IntersectionPoint,
@@ -208,18 +207,15 @@ def not_intersecting_track() -> Track:
 
 
 @pytest.fixture
-def single_detection_track_dataset() -> PandasTrackDataset:
-    data = {
-        ("Single Detection Track", datetime(2000, 1, 1, 1, 1)): {
-            X: 1.0,
-            Y: 3.0,
-            TRACK_CLASSIFICATION: "car",
-        },
-    }
-    df = DataFrame.from_dict(data, orient="index")
-    track_dataset = Mock(spec=PandasTrackDataset)
-    track_dataset._dataset = df
-    return track_dataset
+def single_detection_track_dataset(
+    track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+) -> PandasTrackDataset:
+    track_builder = TrackBuilder()
+    track_builder.append_detection()
+    single_detection_track = track_builder.build_track()
+    return PandasTrackDataset.from_list(
+        [single_detection_track], track_geometry_factory
+    )
 
 
 @pytest.fixture
