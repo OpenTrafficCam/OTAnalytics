@@ -263,16 +263,16 @@ class TestTrack:
 
 
 class TestPythonTrackSegment:
-    def test_as_dict(self, first_track: Track) -> None:
-        start = first_track.first_detection
-        end = first_track.detections[1]
-        segment = create_segment_for(track=first_track, start=start, end=end)
+    def test_as_dict(self, car_track: Track) -> None:
+        start = car_track.first_detection
+        end = car_track.detections[1]
+        segment = create_segment_for(track=car_track, start=start, end=end)
 
         actual = segment.as_dict()
 
         assert actual == {
-            TRACK_ID: first_track.id.id,
-            TRACK_CLASSIFICATION: first_track.classification,
+            TRACK_ID: car_track.id.id,
+            TRACK_CLASSIFICATION: car_track.classification,
             START_X: start.x,
             START_Y: start.y,
             START_OCCURRENCE: start.occurrence,
