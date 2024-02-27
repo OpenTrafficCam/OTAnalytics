@@ -117,6 +117,7 @@ class TestPandasTrackSegmentDataset:
         dataset = PandasTrackSegmentDataset(segments=DataFrame())
 
         dataset.apply(consumer=consumer)
+        consumer.assert_not_called()
 
 
 class TestPandasTrackDataset:
