@@ -87,10 +87,10 @@ class TrackBuilder:
         return PythonDetection(
             _classification=self.detection_class,
             _confidence=self.confidence,
-            _x=self.x,
-            _y=self.y,
-            _w=self.w,
-            _h=self.h,
+            _x=float(self.x),
+            _y=float(self.y),
+            _w=float(self.w),
+            _h=float(self.h),
             _frame=self.frame,
             _occurrence=datetime(
                 self.occurrence_year,
