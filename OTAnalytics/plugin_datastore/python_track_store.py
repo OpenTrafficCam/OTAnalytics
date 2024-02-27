@@ -244,6 +244,7 @@ class ByMaxConfidence(TrackClassificationCalculator):
 class PythonTrackPoint:
     """Start or end point of a track segment. X- and Y-coordinates are enriched with
     information about the corresponding detection.
+
     Attributes:
         x (int): X coordinate of the point
         y (int): Y coordinate of the point
