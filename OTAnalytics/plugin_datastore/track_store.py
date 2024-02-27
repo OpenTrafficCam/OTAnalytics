@@ -505,7 +505,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return PandasTrackSegmentDataset(first_segments)
 
     def __create_segments(self) -> DataFrame:
-        data: DataFrame = self._dataset.reset_index(level=LEVEL_OCCURRENCE)
+        data: DataFrame = self._dataset.reset_index(
+            level=[LEVEL_CLASSIFICATION, LEVEL_OCCURRENCE]
+        )
         first_detections = data.groupby(level=LEVEL_TRACK_ID, group_keys=True)
         data[START_X] = first_detections[track.X].shift(1)
         data[START_Y] = first_detections[track.Y].shift(1)
