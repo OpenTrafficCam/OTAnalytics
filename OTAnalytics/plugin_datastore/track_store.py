@@ -453,12 +453,14 @@ class PandasTrackDataset(TrackDataset):
 
     def get_first_segments(self) -> TrackSegmentDataset:
         segments = self.__create_segments()
-        first_segments: DataFrame = segments.groupby(level=0, group_keys=True).head(1)
+        first_segments: DataFrame = segments.groupby(
+            level=LEVEL_TRACK_ID, group_keys=True
+        ).head(1)
         return PandasTrackSegmentDataset(first_segments)
 
     def __create_segments(self) -> DataFrame:
-        data: DataFrame = self._dataset.reset_index(level=1)
-        first_detections = data.groupby(level=0, group_keys=True)
+        data: DataFrame = self._dataset.reset_index(level=LEVEL_OCCURRENCE)
+        first_detections = data.groupby(level=LEVEL_TRACK_ID, group_keys=True)
         data[START_X] = first_detections[track.X].shift(1)
         data[START_Y] = first_detections[track.Y].shift(1)
         data[START_OCCURRENCE] = first_detections[track.OCCURRENCE].shift(1)
@@ -502,7 +504,9 @@ class PandasTrackDataset(TrackDataset):
 
     def get_last_segments(self) -> TrackSegmentDataset:
         segments = self.__create_segments()
-        last_segments: DataFrame = segments.groupby(level=0, group_keys=True).tail(1)
+        last_segments: DataFrame = segments.groupby(
+            level=LEVEL_TRACK_ID, group_keys=True
+        ).tail(1)
         return PandasTrackSegmentDataset(last_segments)
 
     def cut_with_section(
