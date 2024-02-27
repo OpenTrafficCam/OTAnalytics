@@ -8,14 +8,11 @@ from shapely import LineString
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.geometry import (
-    ImageCoordinate,
-    RelativeOffsetCoordinate,
-    calculate_direction_vector,
-)
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
+    TRACK_CLASSIFICATION,
+    TRACK_ID,
     Detection,
     Track,
     TrackBuilder,
@@ -25,16 +22,25 @@ from OTAnalytics.domain.track import (
     TrackId,
 )
 from OTAnalytics.domain.track_dataset import (
+    END_FRAME,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_X,
+    END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
+    START_X,
+    START_Y,
     TRACK_GEOMETRY_FACTORY,
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
+    TrackSegmentDataset,
 )
-from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 
@@ -232,6 +238,82 @@ class ByMaxConfidence(TrackClassificationCalculator):
                 classifications[detection.classification] = detection.confidence
 
         return max(classifications, key=lambda x: classifications[x])
+
+
+@dataclass(frozen=True)
+class PythonTrackPoint:
+    """Start or end point of a track segment. X- and Y-coordinates are enriched with
+    information about the corresponding detection.
+
+    Attributes:
+        x (int): X coordinate of the point
+        y (int): Y coordinate of the point
+        occurrence (int): Occurrence of the point
+        video_name (str): Name of the video containing the point
+        frame (int): Frame number of the point within the video file
+    """
+
+    x: float
+    y: float
+    occurrence: datetime
+    video_name: str
+    frame: int
+
+    @staticmethod
+    def from_detection(detection: Detection) -> "PythonTrackPoint":
+        return PythonTrackPoint(
+            x=detection.x,
+            y=detection.y,
+            occurrence=detection.occurrence,
+            video_name=detection.video_name,
+            frame=detection.frame,
+        )
+
+
+@dataclass(frozen=True)
+class PythonTrackSegment:
+    """Segment of a track. Starts at a detection and ends at another one."""
+
+    track_id: str
+    track_classification: str
+    start: PythonTrackPoint
+    end: PythonTrackPoint
+
+    def as_dict(self) -> dict:
+        return {
+            TRACK_ID: self.track_id,
+            TRACK_CLASSIFICATION: self.track_classification,
+            START_X: self.start.x,
+            START_Y: self.start.y,
+            START_OCCURRENCE: self.start.occurrence,
+            START_FRAME: self.start.frame,
+            START_VIDEO_NAME: self.start.video_name,
+            END_X: self.end.x,
+            END_Y: self.end.y,
+            END_OCCURRENCE: self.end.occurrence,
+            END_FRAME: self.end.frame,
+            END_VIDEO_NAME: self.end.video_name,
+        }
+
+
+def create_segment_for(
+    track: Track, start: Detection, end: Detection
+) -> PythonTrackSegment:
+    return PythonTrackSegment(
+        track_id=track.id.id,
+        track_classification=track.classification,
+        start=PythonTrackPoint.from_detection(start),
+        end=PythonTrackPoint.from_detection(end),
+    )
+
+
+@dataclass(frozen=True)
+class PythonTrackSegmentDataset(TrackSegmentDataset):
+    segments: list[PythonTrackSegment]
+
+    def apply(self, consumer: Callable[[dict], None]) -> None:
+        for segment in self.segments:
+            consumer(segment.as_dict())
 
 
 class PythonTrackDataset(TrackDataset):
@@ -454,57 +536,27 @@ class PythonTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
-        for track in self.as_list():
-            event = self.__create_enter_scene_event(track)
-            consumer(event)
+    def get_first_segments(self) -> TrackSegmentDataset:
+        segments = [self.__create_first_segment(track) for track in self.as_list()]
 
-    def __create_enter_scene_event(self, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.first_detection.video_name),
-            occurrence=track.first_detection.occurrence,
-            frame_number=track.first_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.first_detection.x, track.first_detection.y
-            ),
-            event_type=EventType.ENTER_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.first_detection.x,
-                track.first_detection.y,
-                track.detections[1].x,
-                track.detections[1].y,
-            ),
-            video_name=track.first_detection.video_name,
-        )
+        return PythonTrackSegmentDataset(segments)
 
-    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
-        for track in self.as_list():
-            event = self.__create_leave_scene_event(track)
-            consumer(event)
+    @staticmethod
+    def __create_first_segment(track: Track) -> PythonTrackSegment:
+        start = track.get_detection(0)
+        end = track.get_detection(1)
+        return create_segment_for(track=track, start=start, end=end)
 
-    def __create_leave_scene_event(self, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.last_detection.video_name),
-            occurrence=track.last_detection.occurrence,
-            frame_number=track.last_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.last_detection.x, track.last_detection.y
-            ),
-            event_type=EventType.LEAVE_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.detections[-2].x,
-                track.detections[-2].y,
-                track.last_detection.x,
-                track.last_detection.y,
-            ),
-            video_name=track.last_detection.video_name,
-        )
+    def get_last_segments(self) -> TrackSegmentDataset:
+        segments = [self.__create_last_segment(track) for track in self.as_list()]
+
+        return PythonTrackSegmentDataset(segments)
+
+    @staticmethod
+    def __create_last_segment(track: Track) -> PythonTrackSegment:
+        start = track.detections[-2]
+        end = track.last_detection
+        return create_segment_for(track=track, start=start, end=end)
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
