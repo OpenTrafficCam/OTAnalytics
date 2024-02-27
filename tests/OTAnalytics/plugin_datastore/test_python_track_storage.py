@@ -5,30 +5,41 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.domain.event import VIDEO_NAME, Event
-from OTAnalytics.domain.geometry import (
-    ImageCoordinate,
-    RelativeOffsetCoordinate,
-    calculate_direction_vector,
-)
+from OTAnalytics.domain.event import VIDEO_NAME
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import (
+    TRACK_CLASSIFICATION,
+    TRACK_ID,
     Detection,
     Track,
     TrackClassificationCalculator,
     TrackHasNoDetectionError,
     TrackId,
 )
-from OTAnalytics.domain.track_dataset import TrackGeometryDataset
-from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.track_dataset import (
+    END_FRAME,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_X,
+    END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
+    START_X,
+    START_Y,
+    TrackGeometryDataset,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
+    PythonTrackSegment,
+    PythonTrackSegmentDataset,
     SimpleCutTrackSegmentBuilder,
+    create_segment_for,
 )
-from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.utils.assertions import (
     assert_track_geometry_dataset_add_all_called_correctly,
@@ -251,6 +262,55 @@ class TestTrack:
         assert track.last_detection == last
 
 
+class TestPythonTrackSegment:
+    def test_as_dict(self, first_track: Track) -> None:
+        start = first_track.first_detection
+        end = first_track.detections[1]
+        segment = create_segment_for(track=first_track, start=start, end=end)
+
+        actual = segment.as_dict()
+
+        assert actual == {
+            TRACK_ID: first_track.id.id,
+            TRACK_CLASSIFICATION: first_track.classification,
+            START_X: start.x,
+            START_Y: start.y,
+            START_OCCURRENCE: start.occurrence,
+            START_FRAME: start.frame,
+            START_VIDEO_NAME: start.video_name,
+            END_X: end.x,
+            END_Y: end.y,
+            END_OCCURRENCE: end.occurrence,
+            END_FRAME: end.frame,
+            END_VIDEO_NAME: end.video_name,
+        }
+
+
+class TestPythonTrackSegmentDataset:
+    def test_apply_with_segments(self) -> None:
+        consumer = Mock()
+        segment_1 = Mock(spec=PythonTrackSegment)
+        segment_2 = Mock(spec=PythonTrackSegment)
+        segment_1_dict = {"dummy-key": "segment-1"}
+        segment_2_dict = {"dummy-key": "segment-2"}
+        segment_1.as_dict.return_value = segment_1_dict
+        segment_2.as_dict.return_value = segment_2_dict
+        segments: list[PythonTrackSegment] = [segment_1, segment_2]
+        dataset = PythonTrackSegmentDataset(segments=segments)
+
+        dataset.apply(consumer=consumer)
+
+        consumer.assert_has_calls([call(segment_1_dict), call(segment_2_dict)])
+
+    def test_apply_without_segments(self) -> None:
+        consumer = Mock()
+        dataset = PythonTrackSegmentDataset(segments=[])
+
+        dataset.apply(consumer=consumer)
+
+        consumer.assert_not_called()
+
+
 class TestPythonTrackDataset:
     @staticmethod
     def create_track_dataset(size: int) -> PythonTrackDataset:
@@ -450,73 +510,48 @@ class TestPythonTrackDataset:
 
         assert list(filtered_dataset) == [pedestrian_track]
 
-    def test_apply_to_first_segments(
+    def test_get_first_segments(
         self,
         car_track: Track,
         pedestrian_track: Track,
     ) -> None:
-        mock_consumer = Mock()
+        segments = self.__create_first_segments([car_track, pedestrian_track])
         dataset = PythonTrackDataset.from_list([car_track, pedestrian_track])
 
-        dataset.apply_to_first_segments(mock_consumer)
+        actual = dataset.get_first_segments()
 
-        mock_consumer.assert_any_call(self.__create_enter_scene_event(car_track))
-        mock_consumer.assert_any_call(self.__create_enter_scene_event(pedestrian_track))
+        assert actual == segments
 
-    def test_apply_to_last_segments(
+    def test_get_last_segments(
         self,
         car_track: Track,
         pedestrian_track: Track,
     ) -> None:
-        mock_consumer = Mock()
+        track_segments = self.__create_last_segments([car_track, pedestrian_track])
+
         dataset = PythonTrackDataset.from_list([car_track, pedestrian_track])
 
-        dataset.apply_to_last_segments(mock_consumer)
+        actual = dataset.get_last_segments()
 
-        mock_consumer.assert_any_call(self.__create_leave_scene_event(car_track))
-        mock_consumer.assert_any_call(self.__create_leave_scene_event(pedestrian_track))
+        assert actual == track_segments
 
-    def __create_enter_scene_event(self, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.first_detection.video_name),
-            occurrence=track.first_detection.occurrence,
-            frame_number=track.first_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.first_detection.x, track.first_detection.y
-            ),
-            event_type=EventType.ENTER_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.first_detection.x,
-                track.first_detection.y,
-                track.detections[1].x,
-                track.detections[1].y,
-            ),
-            video_name=track.first_detection.video_name,
-        )
+    def __create_first_segments(self, tracks: list[Track]) -> PythonTrackSegmentDataset:
+        segments = [self.__create_first_segment(track) for track in tracks]
+        return PythonTrackSegmentDataset(segments=segments)
 
-    def __create_leave_scene_event(self, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.last_detection.video_name),
-            occurrence=track.last_detection.occurrence,
-            frame_number=track.last_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.last_detection.x, track.last_detection.y
-            ),
-            event_type=EventType.LEAVE_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.detections[-2].x,
-                track.detections[-2].y,
-                track.last_detection.x,
-                track.last_detection.y,
-            ),
-            video_name=track.last_detection.video_name,
-        )
+    def __create_last_segments(self, tracks: list[Track]) -> PythonTrackSegmentDataset:
+        segments = [self.__create_last_segment(track) for track in tracks]
+        return PythonTrackSegmentDataset(segments=segments)
+
+    def __create_first_segment(self, track: Track) -> PythonTrackSegment:
+        start = track.get_detection(0)
+        end = track.get_detection(1)
+        return create_segment_for(track=track, start=start, end=end)
+
+    def __create_last_segment(self, track: Track) -> PythonTrackSegment:
+        start = track.detections[-2]
+        end = track.last_detection
+        return create_segment_for(track=track, start=start, end=end)
 
     def test_first_occurrence(self, car_track: Track, pedestrian_track: Track) -> None:
         dataset = PythonTrackDataset.from_list([pedestrian_track, car_track])
