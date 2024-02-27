@@ -15,7 +15,10 @@ from tests.utils.assertions import (
     assert_equal_track_properties,
     assert_track_dataset_has_tracks,
 )
-from tests.utils.builders import IMPLEMENTATIONS, TrackDatasetProvider
+from tests.utils.builders.track_dataset_provider import (
+    IMPLEMENTATIONS,
+    TrackDatasetProvider,
+)
 
 
 class TestFilteredTrackDataset:

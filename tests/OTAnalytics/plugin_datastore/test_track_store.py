@@ -44,7 +44,8 @@ from tests.utils.assertions import (
     assert_track_datasets_equal,
     assert_track_geometry_dataset_add_all_called_correctly,
 )
-from tests.utils.builders import TrackBuilder, create_mock_geometry_dataset
+from tests.utils.builders.track_builder import TrackBuilder
+from tests.utils.builders.track_dataset_provider import create_mock_geometry_dataset
 
 
 class TestPandasDetection:

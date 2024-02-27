@@ -13,7 +13,7 @@ from OTAnalytics.application.track_filter import (
     TrackStartsAtOrAfterDate,
 )
 from OTAnalytics.domain.track import Track
-from tests.utils.builders import TrackBuilder
+from tests.utils.builders.track_builder import TrackBuilder
 
 
 @pytest.fixture

@@ -44,11 +44,8 @@ from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.utils.assertions import (
     assert_track_geometry_dataset_add_all_called_correctly,
 )
-from tests.utils.builders import (
-    TrackBuilder,
-    create_mock_geometry_dataset,
-    create_track,
-)
+from tests.utils.builders.track_builder import TrackBuilder, create_track
+from tests.utils.builders.track_dataset_provider import create_mock_geometry_dataset
 
 
 @pytest.fixture

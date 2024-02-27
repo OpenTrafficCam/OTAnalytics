@@ -34,7 +34,7 @@ from OTAnalytics.plugin_datastore.track_store import (
 )
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser, OttrkParser
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from tests.utils.builders import TrackBuilder
+from tests.utils.builders.track_builder import TrackBuilder
 
 
 def create_track_dataset(tracks: list[Track]) -> TrackDataset:

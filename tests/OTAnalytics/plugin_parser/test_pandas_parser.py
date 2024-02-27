@@ -19,7 +19,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from tests.utils.assertions import assert_equal_track_properties
-from tests.utils.builders import TrackBuilder
+from tests.utils.builders.track_builder import TrackBuilder
 
 
 @pytest.fixture

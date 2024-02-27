@@ -1,45 +1,20 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import repeat
-from typing import Literal
-from unittest.mock import Mock
 
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
-from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.domain.track_dataset import (
-    TRACK_GEOMETRY_FACTORY,
-    FilteredTrackDataset,
-    TrackDataset,
-    TrackGeometryDataset,
-)
-from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_datastore.python_track_store import (
-    FilteredPythonTrackDataset,
-    PythonDetection,
-    PythonTrack,
-    PythonTrackDataset,
-)
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
-)
-from OTAnalytics.plugin_datastore.track_store import (
-    FilteredPandasTrackDataset,
-    PandasTrackDataset,
-)
+from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_parser import ottrk_dataformat
-
-DEFAULT_HOSTNAME = "myhostname"
-DEFAULT_VIDEO_NAME = f"{DEFAULT_HOSTNAME}_file.mp4"
-DEFAULT_OTDET_FILE = f"path/to/{DEFAULT_VIDEO_NAME}"
-DEFAULT_OCCURRENCE_YEAR: int = 2020
-DEFAULT_OCCURRENCE_MONTH: int = 1
-DEFAULT_OCCURRENCE_DAY: int = 1
-DEFAULT_OCCURRENCE_HOUR: int = 0
-DEFAULT_OCCURRENCE_MINUTE: int = 0
-DEFAULT_OCCURRENCE_SECOND: int = 0
-DEFAULT_OCCURRENCE_MICROSECOND: int = 0
+from tests.utils.builders.constants import (
+    DEFAULT_OCCURRENCE_DAY,
+    DEFAULT_OCCURRENCE_HOUR,
+    DEFAULT_OCCURRENCE_MICROSECOND,
+    DEFAULT_OCCURRENCE_MINUTE,
+    DEFAULT_OCCURRENCE_MONTH,
+    DEFAULT_OCCURRENCE_SECOND,
+    DEFAULT_OCCURRENCE_YEAR,
+    DEFAULT_VIDEO_NAME,
+)
 
 
 @dataclass
@@ -256,93 +231,6 @@ class TrackBuilder:
         }
 
 
-@dataclass
-class EventBuilder:
-    road_user_id: str = "1"
-    road_user_type: str = "car"
-    hostname: str = DEFAULT_HOSTNAME
-    occurrence_year: int = DEFAULT_OCCURRENCE_YEAR
-    occurrence_month: int = DEFAULT_OCCURRENCE_MONTH
-    occurrence_day: int = DEFAULT_OCCURRENCE_DAY
-    occurrence_hour: int = DEFAULT_OCCURRENCE_HOUR
-    occurrence_minute: int = DEFAULT_OCCURRENCE_MINUTE
-    occurrence_second: int = DEFAULT_OCCURRENCE_SECOND
-    occurrence_microsecond: int = DEFAULT_OCCURRENCE_MICROSECOND
-    frame_number: int = 1
-    section_id: str = "N"
-    event_coordinate_x: float = 0.0
-    event_coordinate_y: float = 0.0
-    event_type: str = "section-enter"
-    direction_vector_x: float = 0.0
-    direction_vector_y: float = 0.0
-    video_name: str = DEFAULT_VIDEO_NAME
-
-    def __post_init__(self) -> None:
-        self._events: list[Event] = []
-
-    def build_events(self) -> list[Event]:
-        return self._events
-
-    def build_section_event(self) -> Event:
-        return Event(
-            road_user_id=self.road_user_id,
-            road_user_type=self.road_user_type,
-            hostname=self.hostname,
-            occurrence=datetime(
-                self.occurrence_year,
-                self.occurrence_month,
-                self.occurrence_day,
-                self.occurrence_hour,
-                self.occurrence_minute,
-                self.occurrence_second,
-                self.occurrence_microsecond,
-                tzinfo=timezone.utc,
-            ),
-            frame_number=self.frame_number,
-            section_id=SectionId(self.section_id),
-            event_coordinate=ImageCoordinate(
-                self.event_coordinate_x, self.event_coordinate_y
-            ),
-            event_type=EventType.parse(self.event_type),
-            direction_vector=DirectionVector2D(
-                self.direction_vector_x, self.direction_vector_y
-            ),
-            video_name=self.video_name,
-        )
-
-    def append_section_event(self) -> None:
-        self._events.append(self.build_section_event())
-
-    def add_second(self, second: int) -> None:
-        self.occurrence_second = second
-
-    def add_microsecond(self, microsecond: int) -> None:
-        self.occurrence_microsecond = microsecond
-
-    def add_frame_number(self, frame_number: int) -> None:
-        self.frame_number = frame_number
-
-    def add_event_type(self, event_type: str) -> None:
-        self.event_type = event_type
-
-    def add_event_coordinate(self, x: float, y: float) -> None:
-        self.event_coordinate_x = x
-        self.event_coordinate_y = y
-
-    def add_direction_vector(self, x: float, y: float) -> None:
-        self.direction_vector_x = x
-        self.direction_vector_y = y
-
-    def add_road_user_id(self, id: str) -> None:
-        self.road_user_id = id
-
-    def add_road_user_type(self, type: str) -> None:
-        self.road_user_type = type
-
-    def add_section_id(self, id: str) -> None:
-        self.section_id = id
-
-
 def append_sample_data(
     track_builder: TrackBuilder,
     frame_offset: int = 0,
@@ -404,107 +292,3 @@ def create_track(
         track_builder.add_detection_class(detection_class)
         track_builder.append_detection()
     return track_builder.build_track()
-
-
-def create_mock_geometry_dataset(
-    get_for_side_effect: list[Mock] | None = None,
-) -> tuple[Mock, Mock]:
-    geometry_dataset = Mock(spec=TrackGeometryDataset)
-    updated_geometry_dataset = Mock()
-    geometry_dataset.add_all.return_value = updated_geometry_dataset
-    geometry_dataset.remove.return_value = updated_geometry_dataset
-    if get_for_side_effect is not None:
-        geometry_dataset.get_for.side_effect = get_for_side_effect
-    return geometry_dataset, updated_geometry_dataset
-
-
-PYTHON: Literal["PYTHON"] = "PYTHON"
-PANDAS: Literal["PANDAS"] = "PANDAS"
-IMPLEMENTATIONS = [PYTHON, PANDAS]
-
-
-class TrackDatasetProvider:
-    GEOMETRY_FACTORY: TRACK_GEOMETRY_FACTORY = (
-        PygeosTrackGeometryDataset.from_track_dataset
-    )
-
-    def provide(self, dataset_type: str, tracks: list[Track]) -> TrackDataset:
-        if dataset_type == PYTHON:
-            return self.provide_python(tracks)
-        elif dataset_type == PANDAS:
-            return self.provide_pandas(tracks)
-        else:
-            raise ValueError(f"Not known TrackDataset type of {dataset_type}!")
-
-    def provide_pandas(self, tracks: list[Track]) -> PandasTrackDataset:
-        return PandasTrackDataset.from_list(tracks, self.GEOMETRY_FACTORY)
-
-    def provide_python(self, tracks: list[Track]) -> PythonTrackDataset:
-        return PythonTrackDataset.from_list(tracks)
-
-    def provide_filtered(
-        self,
-        dataset_type: str,
-        tracks: list[Track],
-        include_classes: list[str],
-        exclude_classes: list[str],
-    ) -> FilteredTrackDataset:
-        if dataset_type == PYTHON:
-            return self.provide_filtered_python(
-                tracks, include_classes, exclude_classes
-            )
-        elif dataset_type == PANDAS:
-            return self.provide_filtered_pandas(
-                tracks, include_classes, exclude_classes
-            )
-        else:
-            raise ValueError(f"Not known TrackDataset type of {dataset_type}!")
-
-    def provide_filtered_pandas(
-        self,
-        tracks: list[Track],
-        include_classes: list[str],
-        exclude_classes: list[str],
-    ) -> FilteredPandasTrackDataset:
-        return FilteredPandasTrackDataset(
-            self.provide_pandas(tracks),
-            frozenset(include_classes),
-            frozenset(exclude_classes),
-        )
-
-    def provide_filtered_python(
-        self,
-        tracks: list[Track],
-        include_classes: list[str],
-        exclude_classes: list[str],
-    ) -> FilteredPythonTrackDataset:
-        return FilteredPythonTrackDataset(
-            self.provide_python(tracks),
-            frozenset(include_classes),
-            frozenset(exclude_classes),
-        )
-
-    def provide_filtered_mock(
-        self,
-        dataset_type: str,
-        include_classes: list[str],
-        exclude_classes: list[str],
-    ) -> tuple[FilteredTrackDataset, Mock]:
-        if dataset_type == PYTHON:
-            mock = Mock()
-            return (
-                FilteredPythonTrackDataset(
-                    mock, frozenset(include_classes), frozenset(exclude_classes)
-                ),
-                mock,
-            )
-        elif dataset_type == PANDAS:
-            mock = Mock()
-            return (
-                FilteredPandasTrackDataset(
-                    mock, frozenset(include_classes), frozenset(exclude_classes)
-                ),
-                mock,
-            )
-        else:
-            raise ValueError(f"Not known TrackDataset type of {dataset_type}!")

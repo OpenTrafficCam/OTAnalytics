@@ -27,7 +27,8 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CLASS_PEDESTRIAN,
     CLASS_TRUCK,
 )
-from tests.utils.builders import EventBuilder, TrackBuilder, create_track
+from tests.utils.builders.event_builder import EventBuilder
+from tests.utils.builders.track_builder import TrackBuilder, create_track
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]

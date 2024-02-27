@@ -24,7 +24,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import Detection, Track
 from OTAnalytics.domain.track_dataset import IntersectionPoint, TrackDataset
 from OTAnalytics.domain.types import EventType
-from tests.utils.builders import TrackBuilder
+from tests.utils.builders.track_builder import TrackBuilder
 
 
 @dataclass
