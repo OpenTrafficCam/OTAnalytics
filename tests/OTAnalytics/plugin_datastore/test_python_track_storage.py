@@ -46,6 +46,7 @@ from tests.utils.assertions import (
 )
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_dataset_provider import create_mock_geometry_dataset
+from tests.utils.builders.track_segment_builder import TrackSegmentDatasetBuilder
 
 
 @pytest.fixture
@@ -511,8 +512,12 @@ class TestPythonTrackDataset:
         self,
         car_track: Track,
         pedestrian_track: Track,
+        python_track_segment_dataset_builder: TrackSegmentDatasetBuilder,
     ) -> None:
-        segments = self.__create_first_segments([car_track, pedestrian_track])
+        python_track_segment_dataset_builder.add_first_segments(
+            [car_track, pedestrian_track]
+        )
+        segments = python_track_segment_dataset_builder.build()
         dataset = PythonTrackDataset.from_list([car_track, pedestrian_track])
 
         actual = dataset.get_first_segments()
@@ -523,32 +528,18 @@ class TestPythonTrackDataset:
         self,
         car_track: Track,
         pedestrian_track: Track,
+        python_track_segment_dataset_builder: TrackSegmentDatasetBuilder,
     ) -> None:
-        track_segments = self.__create_last_segments([car_track, pedestrian_track])
+        python_track_segment_dataset_builder.add_last_segments(
+            [car_track, pedestrian_track]
+        )
+        segments = python_track_segment_dataset_builder.build()
 
         dataset = PythonTrackDataset.from_list([car_track, pedestrian_track])
 
         actual = dataset.get_last_segments()
 
-        assert actual == track_segments
-
-    def __create_first_segments(self, tracks: list[Track]) -> PythonTrackSegmentDataset:
-        segments = [self.__create_first_segment(track) for track in tracks]
-        return PythonTrackSegmentDataset(segments=segments)
-
-    def __create_last_segments(self, tracks: list[Track]) -> PythonTrackSegmentDataset:
-        segments = [self.__create_last_segment(track) for track in tracks]
-        return PythonTrackSegmentDataset(segments=segments)
-
-    def __create_first_segment(self, track: Track) -> PythonTrackSegment:
-        start = track.get_detection(0)
-        end = track.get_detection(1)
-        return create_segment_for(track=track, start=start, end=end)
-
-    def __create_last_segment(self, track: Track) -> PythonTrackSegment:
-        start = track.detections[-2]
-        end = track.last_detection
-        return create_segment_for(track=track, start=start, end=end)
+        assert actual == segments
 
     def test_first_occurrence(self, car_track: Track, pedestrian_track: Track) -> None:
         dataset = PythonTrackDataset.from_list([pedestrian_track, car_track])

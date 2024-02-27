@@ -8,18 +8,8 @@ from pandas import DataFrame, Series
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection
-from OTAnalytics.domain.track import TRACK_CLASSIFICATION, TRACK_ID, Track, TrackId
+from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
-    END_FRAME,
-    END_OCCURRENCE,
-    END_VIDEO_NAME,
-    END_X,
-    END_Y,
-    START_FRAME,
-    START_OCCURRENCE,
-    START_VIDEO_NAME,
-    START_X,
-    START_Y,
     TRACK_GEOMETRY_FACTORY,
     TrackDataset,
     TrackGeometryDataset,
@@ -46,6 +36,7 @@ from tests.utils.assertions import (
 )
 from tests.utils.builders.track_builder import TrackBuilder
 from tests.utils.builders.track_dataset_provider import create_mock_geometry_dataset
+from tests.utils.builders.track_segment_builder import TrackSegmentDatasetBuilder
 
 
 class TestPandasDetection:
@@ -469,8 +460,13 @@ class TestPandasTrackDataset:
         car_track: Track,
         pedestrian_track: Track,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        pandas_track_segment_dataset_builder: TrackSegmentDatasetBuilder,
     ) -> None:
-        segments = self.__create_first_track_segments([car_track, pedestrian_track])
+        pandas_track_segment_dataset_builder.add_first_segments(
+            [car_track, pedestrian_track]
+        )
+        segments = pandas_track_segment_dataset_builder.build()
+
         dataset = PandasTrackDataset.from_list(
             [car_track, pedestrian_track], track_geometry_factory
         )
@@ -479,41 +475,17 @@ class TestPandasTrackDataset:
 
         assert actual == segments
 
-    def __create_first_track_segments(
-        self, tracks: list[Track]
-    ) -> PandasTrackSegmentDataset:
-        segments = [
-            self.__create_first_track_segment_for(current) for current in tracks
-        ]
-        dataframe = DataFrame(segments)
-        dataframe.set_index(TRACK_ID, inplace=True)
-        return PandasTrackSegmentDataset(segments=dataframe)
-
-    def __create_first_track_segment_for(self, track: Track) -> dict:
-        first_detection = track.first_detection
-        second_detection = track.detections[1]
-        return {
-            TRACK_ID: track.id.id,
-            TRACK_CLASSIFICATION: track.classification,
-            START_X: first_detection.x,
-            START_Y: first_detection.y,
-            START_OCCURRENCE: first_detection.occurrence,
-            START_FRAME: first_detection.frame,
-            START_VIDEO_NAME: first_detection.video_name,
-            END_X: second_detection.x,
-            END_Y: second_detection.y,
-            END_OCCURRENCE: second_detection.occurrence,
-            END_FRAME: second_detection.frame,
-            END_VIDEO_NAME: second_detection.video_name,
-        }
-
     def test_get_last_segments(
         self,
         car_track: Track,
         pedestrian_track: Track,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        pandas_track_segment_dataset_builder: TrackSegmentDatasetBuilder,
     ) -> None:
-        track_segments = self.__create_last_track_segments(car_track, pedestrian_track)
+        pandas_track_segment_dataset_builder.add_last_segments(
+            [car_track, pedestrian_track]
+        )
+        track_segments = pandas_track_segment_dataset_builder.build()
         dataset = PandasTrackDataset.from_list(
             [car_track, pedestrian_track], track_geometry_factory
         )
@@ -521,35 +493,6 @@ class TestPandasTrackDataset:
         actual = dataset.get_last_segments()
 
         assert actual == track_segments
-
-    def __create_last_track_segments(
-        self, track_1: Track, track_2: Track
-    ) -> PandasTrackSegmentDataset:
-        segments = [
-            self.__create_last_segment_for(track_1),
-            self.__create_last_segment_for(track_2),
-        ]
-        dataframe = DataFrame(segments)
-        dataframe.set_index(TRACK_ID, inplace=True)
-        return PandasTrackSegmentDataset(dataframe)
-
-    def __create_last_segment_for(self, track: Track) -> dict:
-        second_last_detection = track.detections[-2]
-        last_detection = track.last_detection
-        return {
-            TRACK_ID: track.id.id,
-            TRACK_CLASSIFICATION: track.classification,
-            START_X: second_last_detection.x,
-            START_Y: second_last_detection.y,
-            START_OCCURRENCE: second_last_detection.occurrence,
-            START_FRAME: second_last_detection.frame,
-            START_VIDEO_NAME: second_last_detection.video_name,
-            END_X: last_detection.x,
-            END_Y: last_detection.y,
-            END_OCCURRENCE: last_detection.occurrence,
-            END_FRAME: last_detection.frame,
-            END_VIDEO_NAME: last_detection.video_name,
-        }
 
     def test_first_occurrence(
         self,

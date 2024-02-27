@@ -29,6 +29,10 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
 )
 from tests.utils.builders.event_builder import EventBuilder
 from tests.utils.builders.track_builder import TrackBuilder, create_track
+from tests.utils.builders.track_segment_builder import (
+    PandasTrackSegmentDatasetBuilder,
+    PythonTrackSegmentDatasetBuilder,
+)
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -292,3 +296,13 @@ def cutting_section_test_case() -> (
         ],
         expected_original_track_ids,
     )
+
+
+@pytest.fixture
+def python_track_segment_dataset_builder() -> PythonTrackSegmentDatasetBuilder:
+    return PythonTrackSegmentDatasetBuilder()
+
+
+@pytest.fixture
+def pandas_track_segment_dataset_builder() -> PandasTrackSegmentDatasetBuilder:
+    return PandasTrackSegmentDatasetBuilder()
