@@ -3,15 +3,36 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
-from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
+
+START_X: str = "start_x"
+START_Y: str = "start_y"
+START_OCCURRENCE: str = "start_occurrence"
+START_FRAME: str = "start_frame"
+START_VIDEO_NAME: str = "start_video_name"
+END_X: str = "end_x"
+END_Y: str = "end_y"
+END_OCCURRENCE: str = "end_occurrence"
+END_FRAME: str = "end_frame"
+END_VIDEO_NAME: str = "end_video_name"
 
 
 @dataclass(frozen=True, order=True)
 class IntersectionPoint:
     index: int
+
+
+class TrackSegmentDataset(ABC):
+    """Collection of track segments. A track segment consists of a start and an end
+    point with additional information about the corresponding detection.
+    """
+
+    @abstractmethod
+    def apply(self, consumer: Callable[[dict], None]) -> None:
+        """Apply the given consumer to the track segments."""
+        raise NotImplementedError
 
 
 class TrackDataset(ABC):
@@ -149,11 +170,13 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
+    def get_first_segments(self) -> TrackSegmentDataset:
+        """Get first segments of each track."""
         raise NotImplementedError
 
     @abstractmethod
-    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
+    def get_last_segments(self) -> TrackSegmentDataset:
+        """Get last segments of each track"""
         raise NotImplementedError
 
     @abstractmethod
