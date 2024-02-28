@@ -1007,15 +1007,10 @@ class DummyViewModel(
             self._draw_arrow_for_selected_flows()
 
     def _get_sections_to_highlight(self) -> list[str]:
+        if self._get_selected_flows():
+            return []
         if selected_section_ids := self.get_selected_section_ids():
             return selected_section_ids
-
-        if selected_flows := self._get_selected_flows():
-            sections_to_highlight = []
-            for flow in selected_flows:
-                sections_to_highlight.append(flow.start.id)
-                sections_to_highlight.append(flow.end.id)
-            return sections_to_highlight
         return []
 
     def _draw_sections(self, sections_to_highlight: list[str]) -> None:
