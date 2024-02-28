@@ -41,6 +41,7 @@ from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,
 )
+from OTAnalytics.plugin_prototypes.event_visualization import PandasEventProvider
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     ColorPaletteProvider,
     EventToFlowResolver,
@@ -153,12 +154,14 @@ class VisualizationBuilder:
             FilterEndDateProvider(track_view_state)
         )
         self._pandas_data_provider: Optional[PandasDataFrameProvider] = None
+        self._pandas_event_data_provider: Optional[PandasDataFrameProvider] = None
         self._pandas_data_provider_with_offset: Optional[PandasDataFrameProvider] = None
         self._data_provider_all_filters: Optional[PandasDataFrameProvider] = None
         self._data_provider_all_filters_with_offset: Optional[
             PandasDataFrameProvider
         ] = None
         self._data_provider_class_filter: Optional[PandasDataFrameProvider] = None
+        self._event_data_provider_class_filter: Optional[PandasDataFrameProvider] = None
         self._data_provider_class_filter_with_offset: Optional[
             PandasDataFrameProvider
         ] = None
@@ -192,6 +195,7 @@ class VisualizationBuilder:
 
         track_bounding_box_plotter = self._create_track_bounding_box_plotter()
         track_point_plotter = self._create_track_point_plotter()
+        event_point_plotter = self._create_event_point_plotter()
 
         layer_definitions = [
             ("Background", background_image_plotter, True),
@@ -239,6 +243,11 @@ class VisualizationBuilder:
             (
                 "Show track point of bounding boxes of current frame",
                 track_point_plotter,
+                False,
+            ),
+            (
+                "Show events of current frame",
+                event_point_plotter,
                 False,
             ),
         ]
@@ -359,6 +368,15 @@ class VisualizationBuilder:
             enable_legend=False,
         )
 
+    def _get_event_data_provider_class_filter(self) -> PandasDataFrameProvider:
+        if not self._event_data_provider_class_filter:
+            self._event_data_provider_class_filter = (
+                self._build_filter_by_classification(
+                    self._get_pandas_event_data_provider()
+                )
+            )
+        return self._event_data_provider_class_filter
+
     def _get_data_provider_class_filter(self) -> PandasDataFrameProvider:
         if not self._data_provider_class_filter:
             self._data_provider_class_filter = self._build_filter_by_classification(
@@ -462,6 +480,16 @@ class VisualizationBuilder:
                 self._pulling_progressbar_builder,
             )
         return self._pandas_data_provider
+
+    def _get_pandas_event_data_provider(self) -> PandasDataFrameProvider:
+        dataframe_filter_builder = self._create_dataframe_filter_builder()
+        if not self._pandas_event_data_provider:
+            self._pandas_event_data_provider = PandasEventProvider(
+                self._event_repository,
+                dataframe_filter_builder,
+                self._pulling_progressbar_builder,
+            )
+        return self._pandas_event_data_provider
 
     def _wrap_pandas_track_offset_provider(
         self, other: PandasDataFrameProvider
@@ -727,6 +755,23 @@ class VisualizationBuilder:
                 self._color_palette_provider,
                 alpha=ALPHA_BOUNDING_BOX,
                 markersize=MARKERSIZE_TRACK_POINT,
+            ),
+        )
+        return PlotterPrototype(self._track_view_state, track_plotter)
+
+    def _create_event_point_plotter(self) -> Plotter:
+        track_plotter = MatplotlibTrackPlotter(
+            TrackPointPlotter(
+                FilterByFrame(
+                    FilterByVideo(
+                        self._get_event_data_provider_class_filter(),
+                        self._get_current_video,
+                    ),
+                    self._get_current_frame,
+                ),
+                self._color_palette_provider,
+                alpha=ALPHA_BOUNDING_BOX,
+                marker="h",
             ),
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
