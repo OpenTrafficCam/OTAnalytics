@@ -621,7 +621,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             x="x",
             y="y",
             hue=track.TRACK_CLASSIFICATION,
-            data=track_df,
+            data=track_df.reset_index(),
             units=track.TRACK_ID,
             linewidth=0.6,
             estimator=None,
@@ -668,10 +668,11 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot start and end points of
             axes (Axes): axes to plot on
         """
-        track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
+        df_index_reset = track_df.reset_index()
+        track_df_start = df_index_reset.groupby(track.TRACK_ID).first().reset_index()
         track_df_start["type"] = "start"
 
-        track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
+        track_df_end = df_index_reset.groupby(track.TRACK_ID).last().reset_index()
         track_df_end["type"] = "end"
 
         track_df_start_end = pandas.concat([track_df_start, track_df_end]).sort_values(
@@ -764,10 +765,9 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
 
         Args:
             track_df (DataFrame): tracks to plot
-            alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
-        for index, row in track_df.iterrows():
+        for index, row in track_df.reset_index().iterrows():
             x = row[X]
             y = row[Y]
             width = row[W]
@@ -817,7 +817,7 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot
             axes (Axes): axes to plot on
         """
-        for index, row in track_df.iterrows():
+        for index, row in track_df.reset_index().iterrows():
             classification = row[track.TRACK_CLASSIFICATION]
             color = self._color_palette_provider.get()[classification]
             axes.plot(
