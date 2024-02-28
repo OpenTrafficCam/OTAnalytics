@@ -30,8 +30,10 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
 from tests.utils.builders.event_builder import EventBuilder
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_segment_builder import (
-    PandasTrackSegmentDatasetBuilder,
-    PythonTrackSegmentDatasetBuilder,
+    PANDAS,
+    PYTHON,
+    TrackSegmentDatasetBuilder,
+    TrackSegmentDatasetBuilderProvider,
 )
 
 T = TypeVar("T")
@@ -299,10 +301,19 @@ def cutting_section_test_case() -> (
 
 
 @pytest.fixture
-def python_track_segment_dataset_builder() -> PythonTrackSegmentDatasetBuilder:
-    return PythonTrackSegmentDatasetBuilder()
+def track_segment_dataset_builder_provider() -> TrackSegmentDatasetBuilderProvider:
+    return TrackSegmentDatasetBuilderProvider()
 
 
 @pytest.fixture
-def pandas_track_segment_dataset_builder() -> PandasTrackSegmentDatasetBuilder:
-    return PandasTrackSegmentDatasetBuilder()
+def python_track_segment_dataset_builder(
+    track_segment_dataset_builder_provider: TrackSegmentDatasetBuilderProvider,
+) -> TrackSegmentDatasetBuilder:
+    return track_segment_dataset_builder_provider.provide(PYTHON)
+
+
+@pytest.fixture
+def pandas_track_segment_dataset_builder(
+    track_segment_dataset_builder_provider: TrackSegmentDatasetBuilderProvider,
+) -> TrackSegmentDatasetBuilder:
+    return track_segment_dataset_builder_provider.provide(PANDAS)

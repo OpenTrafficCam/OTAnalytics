@@ -29,6 +29,20 @@ IMPLEMENTATIONS = [PYTHON, PANDAS]
 
 
 class TrackSegmentDatasetBuilder(ABC):
+    @abstractmethod
+    def _create_segment_for(
+        self, track: Track, start: Detection, end: Detection
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _build(self) -> TrackSegmentDataset:
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset(self) -> None:
+        raise NotImplementedError
+
     def add_first_segments(self, tracks: list[Track]) -> None:
         for track in tracks:
             self.add_first_segment(track)
@@ -47,20 +61,18 @@ class TrackSegmentDatasetBuilder(ABC):
         second_last_detection = track.detections[-2]
         self._create_segment_for(track, second_last_detection, last_detection)
 
-    @abstractmethod
-    def _create_segment_for(
-        self, track: Track, start: Detection, end: Detection
-    ) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     def build(self) -> TrackSegmentDataset:
-        raise NotImplementedError
+        dataset = self._build()
+        self.reset()
+        return dataset
 
 
 class PandasTrackSegmentDatasetBuilder(TrackSegmentDatasetBuilder):
     def __init__(self) -> None:
         self._segments: list[dict] = []
+
+    def reset(self) -> None:
+        self._segments = []
 
     def _create_segment_for(
         self, track: Track, start: Detection, end: Detection
@@ -82,7 +94,7 @@ class PandasTrackSegmentDatasetBuilder(TrackSegmentDatasetBuilder):
             }
         )
 
-    def build(self) -> PandasTrackSegmentDataset:
+    def _build(self) -> PandasTrackSegmentDataset:
         dataframe = DataFrame(self._segments)
         dataframe.set_index(TRACK_ID, inplace=True)
         return PandasTrackSegmentDataset(dataframe)
@@ -91,6 +103,9 @@ class PandasTrackSegmentDatasetBuilder(TrackSegmentDatasetBuilder):
 class PythonTrackSegmentDatasetBuilder(TrackSegmentDatasetBuilder):
     def __init__(self) -> None:
         self._segments: list[PythonTrackSegment] = []
+
+    def reset(self) -> None:
+        self._segments = []
 
     def _create_segment_for(
         self, track: Track, start: Detection, end: Detection
@@ -104,7 +119,7 @@ class PythonTrackSegmentDatasetBuilder(TrackSegmentDatasetBuilder):
             )
         )
 
-    def build(self) -> PythonTrackSegmentDataset:
+    def _build(self) -> PythonTrackSegmentDataset:
         return PythonTrackSegmentDataset(self._segments)
 
 

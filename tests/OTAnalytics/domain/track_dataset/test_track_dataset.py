@@ -2,6 +2,7 @@ from typing import Iterable
 from unittest.mock import Mock
 
 import pytest
+from _pytest.fixtures import FixtureRequest
 
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import FilteredTrackDataset
@@ -19,6 +20,9 @@ from tests.utils.builders.track_dataset_provider import (
     IMPLEMENTATIONS,
     TrackDatasetProvider,
 )
+from tests.utils.builders.track_segment_builder import (
+    TrackSegmentDatasetBuilderProvider,
+)
 
 
 class TestFilteredTrackDataset:
@@ -27,14 +31,14 @@ class TestFilteredTrackDataset:
         tracks: list[Track],
         include_classes: list[str],
         exclude_classes: list[str],
-    ) -> list[FilteredTrackDataset]:
+    ) -> dict[str, FilteredTrackDataset]:
         provider = TrackDatasetProvider()
-        return [
-            provider.provide_filtered(
+        return {
+            dataset_type: provider.provide_filtered(
                 dataset_type, tracks, include_classes, exclude_classes
             )
             for dataset_type in IMPLEMENTATIONS
-        ]
+        }
 
     def get_mocked_datasets(
         self, include_classes: list[str], exclude_classes: list[str]
@@ -54,7 +58,7 @@ class TestFilteredTrackDataset:
         include_classes = [CLASS_CARGOBIKE, CLASS_CAR]
         exclude_classes = [CLASS_PEDESTRIAN, CLASS_BICYCLIST]
         filtered_datasets = self.get_datasets([], include_classes, exclude_classes)
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert filtered_dataset.include_classes == frozenset(include_classes)
             assert filtered_dataset.exclude_classes == frozenset(exclude_classes)
 
@@ -62,7 +66,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [cargo_bike_track, bicycle_track], [CLASS_BICYCLIST], []
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert filtered_dataset.track_ids == frozenset([bicycle_track.id])
 
     def test_first_and_last_occurrence(
@@ -71,7 +75,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [cargo_bike_track, car_track], [CLASS_CARGOBIKE], []
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert (
                 filtered_dataset.first_occurrence
                 == cargo_bike_track.first_detection.occurrence
@@ -110,12 +114,12 @@ class TestFilteredTrackDataset:
             all_tracks, include_classes, exclude_classes
         )
 
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert filtered_dataset.classifications == frozenset(expected)
 
     def test_empty(self, car_track: Track, bicycle_track: Track) -> None:
         empty_filtered_datasets = self.get_datasets([], [CLASS_CAR], [])
-        for empty_filtered_dataset in empty_filtered_datasets:
+        for _, empty_filtered_dataset in empty_filtered_datasets.items():
             assert empty_filtered_dataset.empty
             filled_but_ignored_dataset = empty_filtered_dataset.add_all([bicycle_track])
             assert filled_but_ignored_dataset.empty
@@ -127,7 +131,7 @@ class TestFilteredTrackDataset:
         all_tracks: list[Track],
     ) -> None:
         filtered_datasets = self.get_datasets(all_tracks, [], [])
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert_track_dataset_has_tracks(filtered_dataset, all_tracks)
 
     def test_filter_include_classes(
@@ -139,7 +143,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             all_tracks, [CLASS_CARGOBIKE, CLASS_BICYCLIST], [CLASS_BICYCLIST]
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert_track_dataset_has_tracks(
                 filtered_dataset, [cargo_bike_track, bicycle_track]
             )
@@ -152,14 +156,14 @@ class TestFilteredTrackDataset:
         cargo_bike_track: Track,
     ) -> None:
         filtered_datasets = self.get_datasets(all_tracks, [], [CLASS_BICYCLIST])
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert_track_dataset_has_tracks(
                 filtered_dataset, [car_track, pedestrian_track, cargo_bike_track]
             )
 
     def test_cache_with_no_filter_settings(self, tracks: list[Track]) -> None:
         filtered_datasets = self.get_datasets(tracks, [], [])
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             filtered_result = filtered_dataset._filter()
             cached_filtered_result = filtered_dataset._filter()
             assert filtered_result == cached_filtered_result
@@ -168,14 +172,14 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             tracks, [CLASS_BICYCLIST], [CLASS_CARGOBIKE]
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             filtered_result = filtered_dataset._filter()
             cached_filtered_result = filtered_dataset._filter()
             assert filtered_result == cached_filtered_result
 
     def test_cache_with_exclude_filter(self, tracks: list[Track]) -> None:
         filtered_datasets = self.get_datasets(tracks, [], [CLASS_CARGOBIKE])
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             filtered_result = filtered_dataset._filter()
             cached_filtered_result = filtered_dataset._filter()
             assert filtered_result == cached_filtered_result
@@ -184,7 +188,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             all_tracks, [], [CLASS_CARGOBIKE, CLASS_BICYCLIST]
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert len(filtered_dataset) == 2
 
     def test_get_for(
@@ -195,7 +199,7 @@ class TestFilteredTrackDataset:
             [],
             [CLASS_CARGOBIKE, CLASS_BICYCLIST],
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             result_car = filtered_dataset.get_for(car_track.id)
             assert result_car is not None
             assert_equal_track_properties(result_car, car_track)
@@ -209,7 +213,7 @@ class TestFilteredTrackDataset:
             [],
             [CLASS_BICYCLIST],
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             assert len(filtered_dataset) == 1
             result = filtered_dataset.as_list()
             assert len(result) == 1
@@ -245,33 +249,82 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track], [CLASS_CAR], []
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             result_no_tracks = filtered_dataset.filter_by_min_detection_length(4)
             assert len(result_no_tracks) == 0
             result_all_tracks = filtered_dataset.filter_by_min_detection_length(2)
             assert len(result_all_tracks) == 1
             assert_equal_track_properties(result_all_tracks.as_list()[0], car_track)
 
-    # TODO: Fix unit test
-    # def test_get_first_segments(self) -> None:
-    #     filtered_datasets = self.get_mocked_datasets([], [])
-    #     consumer = Mock()
-    #     for filtered_dataset, mock_other in filtered_datasets:
-    #         filtered_dataset.apply_to_first_segments(consumer)
-    #         mock_other.apply_to_first_segments.assert_called_once_with(consumer)
-    #
-    # def test_get_last_segments(self) -> None:
-    #     filtered_datasets = self.get_mocked_datasets([], [])
-    #     consumer = Mock()
-    #     for filtered_dataset, mock_other in filtered_datasets:
-    #         filtered_dataset.apply_to_last_segments(consumer)
-    #         mock_other.apply_to_last_segments.assert_called_once_with(consumer)
+    @pytest.mark.parametrize(
+        "include_classes,exclude_classes,expected_track_fixture_name",
+        [
+            ([], [], ["car_track", "bicycle_track"]),
+            ([CLASS_CAR], [CLASS_CAR], ["car_track"]),
+            ([], [CLASS_CAR], ["bicycle_track"]),
+        ],
+    )
+    def test_get_first_segments(
+        self,
+        include_classes: list[str],
+        exclude_classes: list[str],
+        expected_track_fixture_name: list[str],
+        track_segment_dataset_builder_provider: TrackSegmentDatasetBuilderProvider,
+        car_track: Track,
+        bicycle_track: Track,
+        request: FixtureRequest,
+    ) -> None:
+        filtered_datasets = self.get_datasets(
+            [car_track, bicycle_track], include_classes, exclude_classes
+        )
+        for implementation, filtered_dataset in filtered_datasets.items():
+            expected_tracks: list[Track] = [
+                request.getfixturevalue(fixture_name)
+                for fixture_name in expected_track_fixture_name
+            ]
+            builder = track_segment_dataset_builder_provider.provide(implementation)
+            builder.add_first_segments(expected_tracks)
+            expected_segments = builder.build()
+            segments = filtered_dataset.get_first_segments()
+            assert expected_segments == segments
+
+    @pytest.mark.parametrize(
+        "include_classes,exclude_classes,expected_track_fixture_name",
+        [
+            ([], [], ["car_track", "bicycle_track"]),
+            ([CLASS_CAR], [CLASS_CAR], ["car_track"]),
+            ([], [CLASS_CAR], ["bicycle_track"]),
+        ],
+    )
+    def test_get_last_segments(
+        self,
+        include_classes: list[str],
+        exclude_classes: list[str],
+        expected_track_fixture_name: list[str],
+        track_segment_dataset_builder_provider: TrackSegmentDatasetBuilderProvider,
+        car_track: Track,
+        bicycle_track: Track,
+        request: FixtureRequest,
+    ) -> None:
+        filtered_datasets = self.get_datasets(
+            [car_track, bicycle_track], include_classes, exclude_classes
+        )
+        for implementation, filtered_dataset in filtered_datasets.items():
+            expected_tracks: list[Track] = [
+                request.getfixturevalue(fixture_name)
+                for fixture_name in expected_track_fixture_name
+            ]
+            builder = track_segment_dataset_builder_provider.provide(implementation)
+            builder.add_last_segments(expected_tracks)
+            expected_segments = builder.build()
+            segments = filtered_dataset.get_last_segments()
+            assert expected_segments == segments
 
     def test_add_all(
         self, car_track: Track, bicycle_track: Track, cargo_bike_track: Track
     ) -> None:
         filtered_datasets = self.get_datasets([car_track], [], [])
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             result = filtered_dataset.add_all([bicycle_track, cargo_bike_track])
             assert isinstance(result, type(filtered_dataset))
             assert result.include_classes == filtered_dataset.include_classes
@@ -286,7 +339,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track, cargo_bike_track], [], []
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             result = filtered_dataset.remove(cargo_bike_track.id)
             assert isinstance(result, type(filtered_dataset))
             assert result.include_classes == filtered_dataset.include_classes
@@ -300,7 +353,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track, cargo_bike_track], [], []
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             result = filtered_dataset.remove_multiple(
                 {cargo_bike_track.id, bicycle_track.id}
             )
@@ -315,7 +368,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track, cargo_bike_track], [], []
         )
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             result = filtered_dataset.clear()
             assert isinstance(result, type(filtered_dataset))
             assert result.include_classes == filtered_dataset.include_classes
@@ -324,7 +377,7 @@ class TestFilteredTrackDataset:
 
     def test_split(self, car_track: Track, bicycle_track: Track) -> None:
         filtered_datasets = self.get_datasets([car_track, bicycle_track], [], [])
-        for filtered_dataset in filtered_datasets:
+        for _, filtered_dataset in filtered_datasets.items():
             chunks = filtered_dataset.split(2)
             assert len(chunks) == 2
             for chunk, expected_track in zip(chunks, [car_track, bicycle_track]):
