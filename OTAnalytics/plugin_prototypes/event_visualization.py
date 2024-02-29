@@ -5,6 +5,7 @@ from pandas import DataFrame
 from OTAnalytics.domain import event, track
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PandasDataFrameProvider,
@@ -58,7 +59,7 @@ class PandasEventProvider(PandasDataFrameProvider):
                 event.VIDEO_NAME: track.VIDEO_NAME,
             }
         )
-
+        data = data.loc[data[event.EVENT_TYPE] == EventType.SECTION_ENTER.value, :]
         df = data.set_index([track.TRACK_ID, track.OCCURRENCE])
         df.index.names = [track.TRACK_ID, track.OCCURRENCE]
 
