@@ -75,6 +75,10 @@ LONG_IN_THE_PAST = datetime(
 ALPHA_BOUNDING_BOX = 0.7
 LINEWIDTH_BOUNDING_BOX = 1.5
 MARKERSIZE_TRACK_POINT = 6
+MARKERSIZE_EVENT_FRAME = 12
+MARKERSIZE_EVENT_FILTER = 6
+MARKER_EVENT_FILTER = "x"
+MARKER_EVENT_FRAME = "o"
 
 
 class FilterEndDateProvider(VisualizationTimeProvider):
@@ -195,7 +199,8 @@ class VisualizationBuilder:
 
         track_bounding_box_plotter = self._create_track_bounding_box_plotter()
         track_point_plotter = self._create_track_point_plotter()
-        event_point_plotter = self._create_event_point_plotter()
+        event_point_plotter_frame = self._create_event_point_plotter_frame()
+        event_point_plotter_filter = self._create_event_point_plotter_filter()
 
         layer_definitions = [
             ("Background", background_image_plotter, True),
@@ -246,8 +251,13 @@ class VisualizationBuilder:
                 False,
             ),
             (
+                "Show events of current filter",
+                event_point_plotter_filter,
+                False,
+            ),
+            (
                 "Show events of current frame",
-                event_point_plotter,
+                event_point_plotter_frame,
                 False,
             ),
         ]
@@ -766,7 +776,7 @@ class VisualizationBuilder:
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
-    def _create_event_point_plotter(self) -> Plotter:
+    def _create_event_point_plotter_frame(self) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackPointPlotter(
                 FilterByFrame(
@@ -778,7 +788,20 @@ class VisualizationBuilder:
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_BOUNDING_BOX,
-                marker="h",
+                marker=MARKER_EVENT_FRAME,
+                markersize=MARKERSIZE_EVENT_FRAME,
+            ),
+        )
+        return PlotterPrototype(self._track_view_state, track_plotter)
+
+    def _create_event_point_plotter_filter(self) -> Plotter:
+        track_plotter = MatplotlibTrackPlotter(
+            TrackPointPlotter(
+                self._get_event_data_provider_class_filter(),
+                self._color_palette_provider,
+                alpha=ALPHA_BOUNDING_BOX,
+                marker=MARKER_EVENT_FILTER,
+                markersize=MARKERSIZE_EVENT_FILTER,
             ),
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
