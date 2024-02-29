@@ -361,12 +361,19 @@ class VisualizationBuilder:
             flow_state,
             self._track_repository,
         )
-        return self._create_track_geometry_plotter(
-            flows_filter,
-            self._color_palette_provider,
-            alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS,
-            enable_legend=False,
+        cached_plotter = CachedPlotter(
+            self._create_track_geometry_plotter(
+                flows_filter,
+                self._color_palette_provider,
+                alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS,
+                enable_legend=False,
+            ),
+            [],
         )
+        invalidate = cached_plotter.invalidate_cache
+        self._event_repository.register_observer(invalidate)
+        flow_state.selected_flows.register(invalidate)
+        return cached_plotter
 
     def _get_event_data_provider_class_filter(self) -> PandasDataFrameProvider:
         if not self._event_data_provider_class_filter:
