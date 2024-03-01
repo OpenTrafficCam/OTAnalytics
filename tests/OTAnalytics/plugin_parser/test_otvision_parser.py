@@ -46,7 +46,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     VERSION,
     VERSION_1_0,
     VERSION_1_1,
-    BulkPythonDetectionParser,
     CachedVideo,
     CachedVideoParser,
     DetectionFixer,
@@ -58,6 +57,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
+    PythonDetectionParser,
     TrackLengthLimit,
     Version,
 )
@@ -209,7 +209,7 @@ class TestOttrkParser:
         self, mocked_track_repository: Mock, mocked_track_file_repository: Mock
     ) -> OttrkParser:
         calculator = ByMaxConfidence()
-        detection_parser = BulkPythonDetectionParser(
+        detection_parser = PythonDetectionParser(
             calculator,
             mocked_track_repository,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
@@ -273,8 +273,8 @@ class TestOttrkParser:
 
 class TestPythonDetectionParser:
     @pytest.fixture
-    def parser(self, mocked_track_repository: Mock) -> BulkPythonDetectionParser:
-        return BulkPythonDetectionParser(
+    def parser(self, mocked_track_repository: Mock) -> PythonDetectionParser:
+        return PythonDetectionParser(
             ByMaxConfidence(),
             mocked_track_repository,
         )
@@ -282,7 +282,7 @@ class TestPythonDetectionParser:
     def test_parse_detections_output_has_same_order_as_input(
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
-        parser: BulkPythonDetectionParser,
+        parser: PythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -313,7 +313,7 @@ class TestPythonDetectionParser:
     def test_parse_tracks(
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
-        parser: BulkPythonDetectionParser,
+        parser: PythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -336,7 +336,7 @@ class TestPythonDetectionParser:
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
         mocked_track_repository: Mock,
-        parser: BulkPythonDetectionParser,
+        parser: PythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -382,7 +382,7 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         track_length_limit: TrackLengthLimit,
     ) -> None:
-        parser = BulkPythonDetectionParser(
+        parser = PythonDetectionParser(
             ByMaxConfidence(),
             mocked_track_repository,
             track_length_limit,

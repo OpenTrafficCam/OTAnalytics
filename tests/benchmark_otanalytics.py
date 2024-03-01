@@ -58,9 +58,9 @@ from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
-    BulkPythonDetectionParser,
     OtFlowParser,
     OttrkParser,
+    PythonDetectionParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
@@ -275,9 +275,7 @@ def clear_events(event_repository: EventRepository) -> ClearAllEvents:
 
 @pytest.fixture
 def python_track_parser(python_track_repository: TrackRepository) -> TrackParser:
-    detection_parser = BulkPythonDetectionParser(
-        ByMaxConfidence(), python_track_repository
-    )
+    detection_parser = PythonDetectionParser(ByMaxConfidence(), python_track_repository)
     return OttrkParser(detection_parser)
 
 
@@ -295,7 +293,7 @@ def python_track_repo_15min(
     track_file_15min: Path, python_track_repository: TrackRepository
 ) -> tuple[TrackRepository, DetectionMetadata]:
     track_parser = OttrkParser(
-        BulkPythonDetectionParser(ByMaxConfidence(), python_track_repository)
+        PythonDetectionParser(ByMaxConfidence(), python_track_repository)
     )
     return python_track_repository, load_track_files(
         [track_file_15min], track_parser, python_track_repository
@@ -307,7 +305,7 @@ def python_track_repo_2hours(
     track_files_2hours: list[Path], python_track_repository: TrackRepository
 ) -> tuple[TrackRepository, DetectionMetadata]:
     track_parser = OttrkParser(
-        BulkPythonDetectionParser(ByMaxConfidence(), python_track_repository)
+        PythonDetectionParser(ByMaxConfidence(), python_track_repository)
     )
     return python_track_repository, load_track_files(
         track_files_2hours, track_parser, python_track_repository

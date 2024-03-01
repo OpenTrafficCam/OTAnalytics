@@ -55,10 +55,11 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     Ottrk_Version_1_0_To_1_1,
     OttrkFormatFixer,
     OttrkParser,
-    PythonDetectionParser,
     TrackIdGenerator,
     TrackLengthLimit,
     Version,
+    create_python_track,
+    parse_python_detection,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -144,26 +145,15 @@ class StreamDetectionParser(ABC):
         raise NotImplementedError
 
 
-class PythonStreamDetectionParser(StreamDetectionParser, PythonDetectionParser):
+class PythonStreamDetectionParser(StreamDetectionParser):
     def __init__(
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_length_limit: TrackLengthLimit,
     ) -> None:
-        PythonDetectionParser.__init__(
-            self, track_classification_calculator, track_length_limit
-        )
+        self._track_classification_calculator = track_classification_calculator
+        self._track_length_limit = track_length_limit
         self._tracks_dict: dict[TrackId, list[Detection]] = dict()
-
-    def parse_tracks(  # TODO remove dependecy to PythonDetectionParser?
-        self,
-        detections: list[dict],
-        metadata_video: dict,
-        id_generator: Callable[[str], TrackId] = TrackId,
-    ) -> TrackDataset:
-        raise NotImplementedError(
-            "parser_track is not supported by PythonStreamDetectionParser"
-        )
 
     def parse_tracks_stream(
         self,
@@ -172,7 +162,7 @@ class PythonStreamDetectionParser(StreamDetectionParser, PythonDetectionParser):
         id_generator: TrackIdGenerator = TrackId,
     ) -> Iterator[TrackDataset]:
         for det_dict in detections:
-            det = self._parse_detection(metadata_video, id_generator, det_dict)
+            det = parse_python_detection(metadata_video, id_generator, det_dict)
             if not self._tracks_dict.get(det.track_id):
                 self._tracks_dict[det.track_id] = []
 
@@ -182,8 +172,11 @@ class PythonStreamDetectionParser(StreamDetectionParser, PythonDetectionParser):
                 track_detections = self._tracks_dict[det.track_id]
                 del self._tracks_dict[det.track_id]
 
-                track = self._create_track(
-                    det.track_id, track_detections
+                track = create_python_track(
+                    det.track_id,
+                    track_detections,
+                    self._track_classification_calculator,
+                    self._track_length_limit,
                 )  # yield finished track
                 if track is not None:
                     yield SingletonTrackDataset(track)
@@ -195,7 +188,12 @@ class PythonStreamDetectionParser(StreamDetectionParser, PythonDetectionParser):
             track_id,
             detections,
         ) in self._tracks_dict.items():
-            track = self._create_track(track_id, detections)  # yield remaining track
+            track = create_python_track(
+                track_id,
+                detections,
+                self._track_classification_calculator,
+                self._track_length_limit,
+            )  # yield remaining track
             if track is not None:
                 yield SingletonTrackDataset(track)
 

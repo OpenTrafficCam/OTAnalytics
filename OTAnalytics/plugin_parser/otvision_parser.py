@@ -344,82 +344,72 @@ DEFAULT_TRACK_LENGTH_LIMIT = TrackLengthLimit(
 )
 
 
-class PythonDetectionParser(DetectionParser):
-    def __init__(
-        self,
-        track_classification_calculator: TrackClassificationCalculator,
-        track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
-    ):
-        self._track_classification_calculator = track_classification_calculator
-        self._track_length_limit = track_length_limit
+# TODO Review: these methods for creating PythonDetections and PythonTracks are static
+# TODO and could live outside a class for reusability in streaming_parser
+def parse_python_detection(
+    metadata_video: dict, id_generator: TrackIdGenerator, det_dict: dict
+) -> PythonDetection:
+    """Convert dict to Detection object."""
+    return PythonDetection(
+        _classification=det_dict[ottrk_format.CLASS],
+        _confidence=det_dict[ottrk_format.CONFIDENCE],
+        _x=det_dict[ottrk_format.X],
+        _y=det_dict[ottrk_format.Y],
+        _w=det_dict[ottrk_format.W],
+        _h=det_dict[ottrk_format.H],
+        _frame=det_dict[ottrk_format.FRAME],
+        _occurrence=datetime.fromtimestamp(
+            float(det_dict[ottrk_format.OCCURRENCE]), tz=timezone.utc
+        ),
+        _interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
+        _track_id=id_generator(str(det_dict[ottrk_format.TRACK_ID])),
+        _video_name=metadata_video[ottrk_format.FILENAME]
+        + metadata_video[ottrk_format.FILETYPE],
+    )
 
-    def _parse_detection(
-        self, metadata_video: dict, id_generator: TrackIdGenerator, det_dict: dict
-    ) -> PythonDetection:
-        """Convert dict to Detection object."""
-        return PythonDetection(
-            _classification=det_dict[ottrk_format.CLASS],
-            _confidence=det_dict[ottrk_format.CONFIDENCE],
-            _x=det_dict[ottrk_format.X],
-            _y=det_dict[ottrk_format.Y],
-            _w=det_dict[ottrk_format.W],
-            _h=det_dict[ottrk_format.H],
-            _frame=det_dict[ottrk_format.FRAME],
-            _occurrence=datetime.fromtimestamp(
-                float(det_dict[ottrk_format.OCCURRENCE]), tz=timezone.utc
-            ),
-            _interpolated_detection=det_dict[ottrk_format.INTERPOLATED_DETECTION],
-            _track_id=id_generator(str(det_dict[ottrk_format.TRACK_ID])),
-            _video_name=metadata_video[ottrk_format.FILENAME]
-            + metadata_video[ottrk_format.FILETYPE],
+
+def create_python_track(
+    track_id: TrackId,
+    all_detections: list[Detection],
+    track_classification_calculator: TrackClassificationCalculator,
+    track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
+) -> PythonTrack | None:
+    track_length = len(all_detections)
+    if track_length_limit.lower_bound <= track_length <= track_length_limit.upper_bound:
+        sort_dets_by_occurrence = sorted(all_detections, key=lambda det: det.occurrence)
+        classification = track_classification_calculator.calculate(all_detections)
+        try:
+            current_track = PythonTrack(
+                _id=track_id,
+                _classification=classification,
+                _detections=sort_dets_by_occurrence,
+            )
+            return current_track
+        except TrackHasNoDetectionError as build_error:
+            # Skip tracks with no detections
+            logger().warning(build_error)
+
+    else:
+        logger().debug(
+            f"Trying to construct track (track_id={track_id}). "
+            f"Number of detections ({track_length} detections) is outside "
+            f"the allowed bounds ({track_length_limit})."
         )
 
-    def _create_track(
-        self, track_id: TrackId, all_detections: list[Detection]
-    ) -> PythonTrack | None:
-        track_length = len(all_detections)
-        if (
-            self._track_length_limit.lower_bound
-            <= track_length
-            <= self._track_length_limit.upper_bound
-        ):
-            sort_dets_by_occurrence = sorted(
-                all_detections, key=lambda det: det.occurrence
-            )
-            classification = self._track_classification_calculator.calculate(
-                all_detections
-            )  # TODO maybe all_detections (used to be detections)
-            try:
-                current_track = PythonTrack(
-                    _id=track_id,
-                    _classification=classification,
-                    _detections=sort_dets_by_occurrence,
-                )
-                return current_track
-            except TrackHasNoDetectionError as build_error:
-                # Skip tracks with no detections
-                logger().warning(build_error)
-
-        else:
-            logger().debug(
-                f"Trying to construct track (track_id={track_id}). "
-                f"Number of detections ({track_length} detections) is outside "
-                f"the allowed bounds ({self._track_length_limit})."
-            )
-
-        return None
+    return None
 
 
-class BulkPythonDetectionParser(PythonDetectionParser):
+class PythonDetectionParser(DetectionParser):
     def __init__(
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
         track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
     ):
-        super().__init__(track_classification_calculator, track_length_limit)
         self._track_repository = track_repository
         self._path_cache: dict[str, Path] = {}
+        self._track_classification_calculator = track_classification_calculator
+        self._track_length_limit = track_length_limit
 
     def parse_tracks(
         self,
@@ -433,7 +423,12 @@ class BulkPythonDetectionParser(PythonDetectionParser):
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
             all_detections = existing_detections + detections
-            current_track = self._create_track(track_id, all_detections)
+            current_track = create_python_track(
+                track_id,
+                all_detections,
+                self._track_classification_calculator,
+                self._track_length_limit,
+            )
             if current_track is not None:
                 tracks.append(current_track)
 
@@ -468,7 +463,7 @@ class BulkPythonDetectionParser(PythonDetectionParser):
         """
         tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
-            det = self._parse_detection(metadata_video, id_generator, det_dict)
+            det = parse_python_detection(metadata_video, id_generator, det_dict)
 
             if not tracks_dict.get(det.track_id):
                 tracks_dict[det.track_id] = []
