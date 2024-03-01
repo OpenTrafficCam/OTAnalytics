@@ -299,13 +299,25 @@ class OttrkFormatFixer:
         version = content[ottrk_format.METADATA][ottrk_format.OTDET_VERSION]
         return Version.from_str(version)
 
+    # TODO find better name instead of name duplication?
     def __fix_metadata(self, content: dict) -> dict:
-        metadata = content[ottrk_format.METADATA]
+        content[ottrk_format.METADATA] = self.fix_metadata(
+            metadata=content[ottrk_format.METADATA]
+        )
+        return content
+
+    # TODO Review: fixing metadata alone can be reused in streaming_parser,
+    # TODO hence I made it public. This might also apply to fixing
+    # TODO single detection data, when they are parsed lazy (but currently not used).
+    def fix_metadata(self, metadata: dict) -> dict:
+        """
+        Fix formate changes from older ottrk metadata
+        format versions to the current version.
+        """
         current_version = Version.from_str(metadata[ottrk_format.OTTRK_VERSION])
         for fixer in self._metadata_fixes:
             metadata = fixer.fix(metadata, current_version)
-        content[ottrk_format.METADATA] = metadata
-        return content
+        return metadata
 
     def __fix_detections(self, content: dict, current_otdet_version: Version) -> dict:
         detections = content[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS]

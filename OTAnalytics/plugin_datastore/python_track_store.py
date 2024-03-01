@@ -233,6 +233,99 @@ class ByMaxConfidence(TrackClassificationCalculator):
         return max(classifications, key=lambda x: classifications[x])
 
 
+# TODO review: moved some reusable stateless methods from PythonTrackDataset
+# TODO to module level so they can be reused in streaming_parser
+def create_enter_scene_event(track: Track) -> Event:
+    return Event(
+        road_user_id=track.id.id,
+        road_user_type=track.classification,
+        hostname=extract_hostname(track.first_detection.video_name),
+        occurrence=track.first_detection.occurrence,
+        frame_number=track.first_detection.frame,
+        section_id=None,
+        event_coordinate=ImageCoordinate(
+            track.first_detection.x, track.first_detection.y
+        ),
+        event_type=EventType.ENTER_SCENE,
+        direction_vector=calculate_direction_vector(
+            track.first_detection.x,
+            track.first_detection.y,
+            track.detections[1].x,
+            track.detections[1].y,
+        ),
+        video_name=track.first_detection.video_name,
+    )
+
+
+def create_leave_scene_event(track: Track) -> Event:
+    return Event(
+        road_user_id=track.id.id,
+        road_user_type=track.classification,
+        hostname=extract_hostname(track.last_detection.video_name),
+        occurrence=track.last_detection.occurrence,
+        frame_number=track.last_detection.frame,
+        section_id=None,
+        event_coordinate=ImageCoordinate(
+            track.last_detection.x, track.last_detection.y
+        ),
+        event_type=EventType.LEAVE_SCENE,
+        direction_vector=calculate_direction_vector(
+            track.detections[-2].x,
+            track.detections[-2].y,
+            track.last_detection.x,
+            track.last_detection.y,
+        ),
+        video_name=track.last_detection.video_name,
+    )
+
+
+def cut_track_with_section(
+    track_to_cut: Track,
+    section: Section,
+    offset: RelativeOffsetCoordinate,
+    shapely_mapper: ShapelyMapper = ShapelyMapper(),
+) -> list[Track]:
+    section_geometry = shapely_mapper.map_coordinates_to_line_string(
+        section.get_coordinates()
+    )
+    cut_track_segments: list[Track] = []
+    track_builder = SimpleCutTrackSegmentBuilder()
+    for current_detection, next_detection in zip(
+        track_to_cut.detections[0:-1], track_to_cut.detections[1:]
+    ):
+        current_coordinate = current_detection.get_coordinate(offset)
+        next_coordinate = next_detection.get_coordinate(offset)
+        track_segment_geometry = shapely_mapper.map_domain_coordinates_to_line_string(
+            [current_coordinate, next_coordinate]
+        )
+        if track_segment_geometry.intersects(section_geometry):
+            new_track_segment = build_track(
+                track_builder,
+                f"{track_to_cut.id.id}_{len(cut_track_segments)}",
+                current_detection,
+            )
+            cut_track_segments.append(new_track_segment)
+        else:
+            track_builder.add_detection(current_detection)
+
+    new_track_segment = build_track(
+        track_builder,
+        f"{track_to_cut.id.id}_{len(cut_track_segments)}",
+        track_to_cut.last_detection,
+    )
+    cut_track_segments.append(new_track_segment)
+
+    return cut_track_segments
+
+
+def build_track(
+    track_builder: TrackBuilder, track_id: str, detection: Detection
+) -> Track:
+    track_builder.add_id(track_id)
+    track_builder.add_detection(detection)
+    return track_builder.build()
+
+
 class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
@@ -456,57 +549,13 @@ class PythonTrackDataset(TrackDataset):
 
     def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
         for track in self.as_list():
-            event = self.create_enter_scene_event(track)
+            event = create_enter_scene_event(track)
             consumer(event)
-
-    @classmethod
-    def create_enter_scene_event(cls, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.first_detection.video_name),
-            occurrence=track.first_detection.occurrence,
-            frame_number=track.first_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.first_detection.x, track.first_detection.y
-            ),
-            event_type=EventType.ENTER_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.first_detection.x,
-                track.first_detection.y,
-                track.detections[1].x,
-                track.detections[1].y,
-            ),
-            video_name=track.first_detection.video_name,
-        )
 
     def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
         for track in self.as_list():
-            event = self.create_leave_scene_event(track)
+            event = create_leave_scene_event(track)
             consumer(event)
-
-    @classmethod
-    def create_leave_scene_event(cls, track: Track) -> Event:
-        return Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=extract_hostname(track.last_detection.video_name),
-            occurrence=track.last_detection.occurrence,
-            frame_number=track.last_detection.frame,
-            section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.last_detection.x, track.last_detection.y
-            ),
-            event_type=EventType.LEAVE_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.detections[-2].x,
-                track.detections[-2].y,
-                track.last_detection.x,
-                track.last_detection.y,
-            ),
-            video_name=track.last_detection.video_name,
-        )
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
@@ -521,7 +570,7 @@ class PythonTrackDataset(TrackDataset):
         cut_tracks: list[Track] = []
         for track_id in intersecting_track_ids:
             cut_tracks.extend(
-                self.cut_track_with_section(
+                cut_track_with_section(
                     self._tracks[track_id], section, offset, shapely_mapper
                 )
             )
@@ -529,56 +578,6 @@ class PythonTrackDataset(TrackDataset):
             PythonTrackDataset.from_list(cut_tracks),
             intersecting_track_ids,
         )
-
-    @classmethod
-    def cut_track_with_section(
-        cls,
-        track_to_cut: Track,
-        section: Section,
-        offset: RelativeOffsetCoordinate,
-        shapely_mapper: ShapelyMapper = ShapelyMapper(),
-    ) -> list[Track]:
-        section_geometry = shapely_mapper.map_coordinates_to_line_string(
-            section.get_coordinates()
-        )
-        cut_track_segments: list[Track] = []
-        track_builder = SimpleCutTrackSegmentBuilder()
-        for current_detection, next_detection in zip(
-            track_to_cut.detections[0:-1], track_to_cut.detections[1:]
-        ):
-            current_coordinate = current_detection.get_coordinate(offset)
-            next_coordinate = next_detection.get_coordinate(offset)
-            track_segment_geometry = (
-                shapely_mapper.map_domain_coordinates_to_line_string(
-                    [current_coordinate, next_coordinate]
-                )
-            )
-            if track_segment_geometry.intersects(section_geometry):
-                new_track_segment = cls.build_track(
-                    track_builder,
-                    f"{track_to_cut.id.id}_{len(cut_track_segments)}",
-                    current_detection,
-                )
-                cut_track_segments.append(new_track_segment)
-            else:
-                track_builder.add_detection(current_detection)
-
-        new_track_segment = cls.build_track(
-            track_builder,
-            f"{track_to_cut.id.id}_{len(cut_track_segments)}",
-            track_to_cut.last_detection,
-        )
-        cut_track_segments.append(new_track_segment)
-
-        return cut_track_segments
-
-    @classmethod
-    def build_track(
-        cls, track_builder: TrackBuilder, track_id: str, detection: Detection
-    ) -> Track:
-        track_builder.add_id(track_id)
-        track_builder.add_detection(detection)
-        return track_builder.build()
 
 
 class SimpleCutTrackSegmentBuilder(TrackBuilder):

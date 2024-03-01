@@ -2,7 +2,6 @@ import bz2
 import glob
 from abc import ABC, abstractmethod
 from bisect import bisect
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
@@ -35,6 +34,9 @@ from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
+    create_enter_scene_event,
+    create_leave_scene_event,
+    cut_track_with_section,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     GEOMETRY,
@@ -52,12 +54,10 @@ from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.json_parser import parse_json_bz2
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
-    Ottrk_Version_1_0_To_1_1,
     OttrkFormatFixer,
     OttrkParser,
     TrackIdGenerator,
     TrackLengthLimit,
-    Version,
     create_python_track,
     parse_python_detection,
 )
@@ -117,7 +117,7 @@ class StreamDetectionParser(ABC):
     """
 
     @abstractmethod
-    def parse_tracks_stream(
+    def parse_tracks(
         self,
         detections: list[dict],
         metadata_video: dict,
@@ -146,6 +146,11 @@ class StreamDetectionParser(ABC):
 
 
 class PythonStreamDetectionParser(StreamDetectionParser):
+    """
+    A StreamDetectionParser implementation producing SingletonTrackDatasets
+    each containing a single PythonTracks consisting of PythonDetections.
+    """
+
     def __init__(
         self,
         track_classification_calculator: TrackClassificationCalculator,
@@ -155,7 +160,7 @@ class PythonStreamDetectionParser(StreamDetectionParser):
         self._track_length_limit = track_length_limit
         self._tracks_dict: dict[TrackId, list[Detection]] = dict()
 
-    def parse_tracks_stream(
+    def parse_tracks(
         self,
         detections: list[dict],
         metadata_video: dict,
@@ -163,11 +168,14 @@ class PythonStreamDetectionParser(StreamDetectionParser):
     ) -> Iterator[TrackDataset]:
         for det_dict in detections:
             det = parse_python_detection(metadata_video, id_generator, det_dict)
+
+            # Group detections by track id
             if not self._tracks_dict.get(det.track_id):
                 self._tracks_dict[det.track_id] = []
+            self._tracks_dict[det.track_id].append(det)
 
-            self._tracks_dict[det.track_id].append(det)  # Group detections by track id
-
+            # the finished flag indicates tha last detection of a track
+            # so the detections can be assembled to a track object
             if det_dict[ottrk_format.FINISHED]:
                 track_detections = self._tracks_dict[det.track_id]
                 del self._tracks_dict[det.track_id]
@@ -201,10 +209,35 @@ class PythonStreamDetectionParser(StreamDetectionParser):
 class StreamTrackParser(ABC):
     @abstractmethod
     def parse(self, files: list[Path]) -> Iterator[TrackDataset]:
+        """
+        Parse multiple track files and provide
+        the parsed Tracks in form of a lazy stream.
+        """
         raise NotImplementedError
 
 
 class StreamOttrkParser(StreamTrackParser):
+    """
+    Parse multiple ottrk files (sorted by 'recorder_start_date' in video metadata).
+    Provides a stream of SingletonTackDatasets each containing a single Track.
+    Allows to register TracksMetadata and VideosMetadata objects to be updated
+    with new metadata every time a new ottrk file is parsed.
+
+    Args:
+        detection_parser (StreamDetectionParser): a stream detection parser
+        format_fixer (OttrkFormatFixer, optional): a format fixer for ottrk files.
+            Defaults to OttrkFormatFixer().
+        registered_tracks_metadata (list[TracksMetadata], optional):
+            TracksMetadata objects to be updated with each parsed files metadata.
+            Defaults to [].
+        registered_videos_metadata (list[VideosMetadata], optional):
+            VideosMetadata objects to be updated with each parsed files metadata.
+            Defaults to [].
+        progressbar (ProgressbarBuilder, optional):
+            a progressbar builder to show progress of processed files.
+            Defaults to TqdmBuilder().
+    """
+
     def __init__(
         self,
         detection_parser: StreamDetectionParser,
@@ -225,9 +258,11 @@ class StreamOttrkParser(StreamTrackParser):
         self._progressbar = progressbar
 
     def register_tracks_metadata(self, tracks_metadata: TracksMetadata) -> None:
+        """Register TracksMetadata to be updated when a new ottrk file is parsed."""
         self._registered_tracks_metadata.append(tracks_metadata)
 
     def register_videos_metadata(self, videos_metadata: VideosMetadata) -> None:
+        """Register VideosMetadata to be updated when a new ottrk file is parsed."""
         self._registered_videos_metadata.append(videos_metadata)
 
     def _update_registered_metadata_collections(
@@ -250,26 +285,28 @@ class StreamOttrkParser(StreamTrackParser):
         )
 
         for ottrk_file in progressbar:
+            # TODO reduce code duplication'
             ottrk_dict = parse_json_bz2(ottrk_file)
 
             fixed_ottrk = self._format_fixer.fix(ottrk_dict)
             det_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
                 ottrk_format.DATA_DETECTIONS
             ]
-            metadata_video = ottrk_dict[ottrk_format.METADATA][ottrk_format.VIDEO]
+            metadata = ottrk_dict[ottrk_format.METADATA]
+            metadata_video = metadata[ottrk_format.VIDEO]
 
-            detection_metadata = OttrkParser.parse_metadata(
-                ottrk_dict[ottrk_format.METADATA]
-            )
+            detection_metadata = OttrkParser.parse_metadata(metadata)
             video_metadata = OttrkParser.parse_video_metadata(metadata_video)
-            id_generator = OttrkParser.create_id_generator_from(
-                ottrk_dict[ottrk_format.METADATA]
-            )
+            id_generator = OttrkParser.create_id_generator_from(metadata)
             self._update_registered_metadata_collections(
                 detection_metadata, video_metadata
             )
 
-            yield from self._detection_parser.parse_tracks_stream(
+            del ottrk_dict
+            del fixed_ottrk
+            del metadata
+
+            yield from self._detection_parser.parse_tracks(
                 det_list, metadata_video, id_generator
             )
 
@@ -277,6 +314,10 @@ class StreamOttrkParser(StreamTrackParser):
         yield from self._detection_parser.get_remaining_tracks()
 
     def _sort_files(self, files: list[Path]) -> list[Path]:
+        """
+        Sort ottrk files by recorded_start_date in video metadata,
+        only considers files with .ottrk extension
+        """
         return list(
             sorted(filter(lambda p: p.is_file(), files), key=self._start_date_metadata)
         )
@@ -286,21 +327,21 @@ class StreamOttrkParser(StreamTrackParser):
         metadata = metadata_from_json_events(
             json_events
         )  # TODO metadata fixer in constructor
-        version = Version.from_str(metadata[ottrk_format.OTTRK_VERSION])
-        metadata = Ottrk_Version_1_0_To_1_1().fix(metadata, version)
+        metadata = self._format_fixer.fix_metadata(metadata)
         return float(metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE])
 
 
+# TODO review: tis singleton implementation of a track dataset is based on
+# TODO implementation of PythonTrackDataset and PygeosTrackGeometryDataset
 class SingletonTrackDataset(TrackDataset):
     """A TrackDataSet based on a single track."""
 
     def __init__(self, track: Track) -> None:
         self._track = track
-
         self._geometries: dict[RelativeOffsetCoordinate, dict]
 
     def _get_geometry_data_for(self, offset: RelativeOffsetCoordinate) -> Any:
-        # TODO resolve code duplication with pygeos store
+        """Compute (or get cached) track geometry"""
         if (geometry_data := self._geometries.get(offset, None)) is None:
             geometry = create_pygeos_track(self._track, offset)
             projection = [
@@ -317,6 +358,7 @@ class SingletonTrackDataset(TrackDataset):
 
     @property
     def track_ids(self) -> frozenset[TrackId]:
+        """A set containing the single track id."""
         return frozenset((self._track.id,))
 
     @property
@@ -329,29 +371,36 @@ class SingletonTrackDataset(TrackDataset):
 
     @property
     def classifications(self) -> frozenset[str]:
-        return frozenset(tuple(self._track.classification))
+        """A set containing the single track classification."""
+        return frozenset((self._track.classification,))
 
     def add_all(self, other: Iterable[Track]) -> "TrackDataset":
+        """Adding is not allowed!"""
         raise NotImplementedError
 
     def get_for(self, id: TrackId) -> Optional[Track]:
+        """Returns the single track if the given id matches else None."""
         return self._track if id == self._track.id else None
 
     def remove(self, track_id: TrackId) -> "TrackDataset":
+        """Removing is not allowed!"""
         raise NotImplementedError
 
     def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+        """Removing is not allowed!"""
         raise NotImplementedError
 
     def clear(self) -> "TrackDataset":
-        raise NotImplementedError
+        return PythonTrackDataset()
 
     def as_list(self) -> list[Track]:
+        """Return list with single track."""
         return [self._track]
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> set[TrackId]:
+        """Return id of single track if it intersects any of sections."""
         geometry_data = self._get_geometry_data_for(offset)
         section_geoms = line_sections_to_pygeos_multi(sections)
 
@@ -376,7 +425,6 @@ class SingletonTrackDataset(TrackDataset):
 
         intersections = [
             (
-                self._track.id,
                 _section_id,
                 IntersectionPoint(
                     bisect(projection, line_locate_point(geometry, point))
@@ -386,15 +434,7 @@ class SingletonTrackDataset(TrackDataset):
             for point in get_coordinates(ip)
         ]
 
-        intersection_points = defaultdict(list)
-        for (
-            _id,
-            section_id,
-            intersection_point,
-        ) in intersections:  # chain.from_iterable() TODO ??
-            intersection_points[_id].append((section_id, intersection_point))
-
-        return intersection_points
+        return {self._track.id: intersections}
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
@@ -402,9 +442,7 @@ class SingletonTrackDataset(TrackDataset):
         geometry_data = self._get_geometry_data_for(offset)
         geometry = geometry_data[GEOMETRY]
 
-        contains_result: dict[
-            TrackId, list[tuple[SectionId, list[bool]]]
-        ] = defaultdict(list)
+        contains_result: list[tuple[SectionId, list[bool]]] = []
         for _section in sections:
             section_geom = area_section_to_pygeos(_section)
 
@@ -415,9 +453,9 @@ class SingletonTrackDataset(TrackDataset):
             if not any(contains_mask):
                 continue
 
-            contains_result[self._track.id].append((_section.id, contains_mask))
+            contains_result.append((_section.id, contains_mask))
 
-        return contains_result
+        return {self._track.id: contains_result}
 
     def split(self, chunks: int) -> Sequence["TrackDataset"]:
         return [self]
@@ -433,25 +471,23 @@ class SingletonTrackDataset(TrackDataset):
                 self._geometries[offset] = self._get_geometry_data_for(offset)
 
     def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
-        event = PythonTrackDataset.create_enter_scene_event(self._track)
+        event = create_enter_scene_event(self._track)
         consumer(event)
 
     def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
-        event = PythonTrackDataset.create_leave_scene_event(self._track)
+        event = create_leave_scene_event(self._track)
         consumer(event)
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
     ) -> tuple["TrackDataset", set[TrackId]]:
-        cut_tracks = PythonTrackDataset.cut_track_with_section(
-            self._track, section, offset
-        )
+        cut_tracks = cut_track_with_section(self._track, section, offset)
 
         if len(cut_tracks) > 0:
             return (
                 PythonTrackDataset.from_list(cut_tracks),
                 {self._track.id},
-                # only possible id the single track of this data set
+                # only possible id is the single track of this data set
             )
         else:  # return empty track dataset as no tracks were cut
             return (PythonTrackDataset(), set())
