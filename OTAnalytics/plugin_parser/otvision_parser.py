@@ -208,18 +208,8 @@ class Otdet_Version_1_0_To_1_2(DetectionFixer):
 class Ottrk_Version_1_0_To_1_1(MetadataFixer):
     def __init__(self) -> None:
         super().__init__(VERSION_1_0, VERSION_1_1)
-        self.date_offset = 0
 
     def fix(self, metadata: dict, current_version: Version) -> dict:
-        start_date = metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE]
-
-        datetime_object = datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S.%f")
-
-        timestamp = datetime.timestamp(datetime_object)
-        timestamp += self.date_offset
-        self.date_offset += 24 * 60 * 60
-        metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE] = str(timestamp)
-
         return self.__fix_tracking_run_ids(metadata, current_version)
 
     def __fix_tracking_run_ids(self, metadata: dict, current_version: Version) -> dict:
@@ -229,11 +219,49 @@ class Ottrk_Version_1_0_To_1_1(MetadataFixer):
         return metadata
 
 
+class Ottrk_Version_1_0_To_1_2(MetadataFixer):
+    def __init__(self) -> None:
+        super().__init__(VERSION_1_0, VERSION_1_2)
+
+    def fix(self, metadata: dict, current_version: Version) -> dict:
+        return self.__fix_recorded_start_date(metadata, current_version)
+
+    def __fix_recorded_start_date(
+        self, metadata: dict, current_version: Version
+    ) -> dict:
+        """
+        Fix datetime of recorded start date in video metadata
+        from date string to timestamp.
+        """
+        # TODO Review: Not sure in which version this changed ?
+        if current_version < self.to_version():
+            recorded_start_date = metadata[ottrk_format.VIDEO][
+                ottrk_format.RECORDED_START_DATE
+            ]
+            try:
+                date = datetime.strptime(
+                    recorded_start_date, ottrk_format.DATE_FORMAT
+                ).replace(tzinfo=timezone.utc)
+                metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE] = str(
+                    date.timestamp()
+                )
+            except ValueError:
+                # TODO just for safety in case there are both
+                # TODO file with timestamp and date string in prior versions
+                metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE] = float(
+                    recorded_start_date
+                )
+        return metadata
+
+
 ALL_DETECTION_FIXES: list[DetectionFixer] = [
     Otdet_Version_1_0_to_1_1(),
     Otdet_Version_1_0_To_1_2(),
 ]
-ALL_METADATA_FIXES: list[MetadataFixer] = [Ottrk_Version_1_0_To_1_1()]
+ALL_METADATA_FIXES: list[MetadataFixer] = [
+    Ottrk_Version_1_0_To_1_1(),
+    Ottrk_Version_1_0_To_1_2(),
+]
 
 
 class OttrkFormatFixer:
