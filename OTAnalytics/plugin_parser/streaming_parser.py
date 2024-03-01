@@ -69,11 +69,19 @@ RawFileData = tuple[RawDetectionData, RawVideoMetadata, TrackIdGenerator]
 
 
 def parse_json_bz2_events(path: Path) -> Iterable[tuple[str, str, str]]:
+    """
+    Provide lazy data stream reading the bzip2 compressed file
+    at the given path and interpreting it as json objects.
+    """
     stream = bz2.BZ2File(path)
     return ijson.parse(stream)
 
 
 def metadata_from_json_events(parse_events: Iterable[tuple[str, str, str]]) -> dict:
+    """
+    Extract the metadata block of the ottrk data format
+    from the given json parser event stream.
+    """
     result: dict
     for data in ijson.items(parse_events, "metadata"):
         result = data
@@ -82,10 +90,18 @@ def metadata_from_json_events(parse_events: Iterable[tuple[str, str, str]]) -> d
 
 
 def detection_stream_from_json_events(parse_events: Any) -> Iterator[dict]:
+    """
+    Extract the detection attributes from the deata.detections block
+    of the ottrk data format from the given json parser event stream.
+    """
     yield from ijson.items(parse_events, "data.detections.item")
 
 
-def parse_json_bz2_ottrk_old(path: Path) -> tuple[dict, Iterator[dict]]:
+def parse_json_bz2_ottrk_bulk(path: Path) -> tuple[dict, Iterator[dict]]:
+    """
+    Extract metadata block and list of detections attributes of the ottrk data format
+    from the bzip2 compressed file at the given path by reading the whole file in bulk.
+    """
     ottrk_dict = parse_json_bz2(path)
     dets_list: list[dict] = ottrk_dict[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS]
     metadata = ottrk_dict[ottrk_format.METADATA]
@@ -94,6 +110,11 @@ def parse_json_bz2_ottrk_old(path: Path) -> tuple[dict, Iterator[dict]]:
 
 
 class StreamDetectionParser(ABC):
+    """
+    Parser the detections data in ottrk data format
+    and convert them to a stream of `TrackDataset`s.
+    """
+
     @abstractmethod
     def parse_tracks_stream(
         self,
@@ -101,10 +122,25 @@ class StreamDetectionParser(ABC):
         metadata_video: dict,
         id_generator: TrackIdGenerator = TrackId,
     ) -> Iterator[TrackDataset]:
+        """Parse the given detections into a stream of TrackDatasets.
+
+        When Detections with the "finished" flag are parsed,
+        the according Track is assembled and provided via the stream.
+
+        Args:
+            detections (list[dict]): the detections in dict format.
+            metadata_video (dict): metadata of the track file in dict format.
+            id_generator (TrackIdGenerator): generator used to create track ids.
+
+        Returns:
+            Iterator[TrackDataset]: a stream of TackDatasets, one per Track.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def get_remaining_tracks(self) -> Iterator[TrackDataset]:
+        """Get yet unparsed tracks,
+        that did not show a detection with the "finished" flag."""
         raise NotImplementedError
 
 
