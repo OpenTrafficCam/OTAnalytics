@@ -4,7 +4,6 @@ from math import ceil
 from typing import Callable, Iterable, Optional, Sequence
 
 from more_itertools import batched
-from shapely import LineString
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
@@ -262,8 +261,9 @@ class PythonTrackDataset(TrackDataset):
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,
-        geometry_datasets: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
-        | None = None,
+        geometry_datasets: (
+            dict[RelativeOffsetCoordinate, TrackGeometryDataset] | None
+        ) = None,
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
         track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
             PygeosTrackGeometryDataset.from_track_dataset
@@ -456,10 +456,11 @@ class PythonTrackDataset(TrackDataset):
 
     def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
         for track in self.as_list():
-            event = self.__create_enter_scene_event(track)
+            event = self.create_enter_scene_event(track)
             consumer(event)
 
-    def __create_enter_scene_event(self, track: Track) -> Event:
+    @classmethod
+    def create_enter_scene_event(cls, track: Track) -> Event:
         return Event(
             road_user_id=track.id.id,
             road_user_type=track.classification,
@@ -482,10 +483,11 @@ class PythonTrackDataset(TrackDataset):
 
     def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
         for track in self.as_list():
-            event = self.__create_leave_scene_event(track)
+            event = self.create_leave_scene_event(track)
             consumer(event)
 
-    def __create_leave_scene_event(self, track: Track) -> Event:
+    @classmethod
+    def create_leave_scene_event(cls, track: Track) -> Event:
         return Event(
             road_user_id=track.id.id,
             road_user_type=track.classification,
@@ -514,16 +516,13 @@ class PythonTrackDataset(TrackDataset):
             return self, set()
         shapely_mapper = ShapelyMapper()
 
-        section_geometry = shapely_mapper.map_coordinates_to_line_string(
-            section.get_coordinates()
-        )
         intersecting_track_ids = self.intersecting_tracks([section], offset)
 
         cut_tracks: list[Track] = []
         for track_id in intersecting_track_ids:
             cut_tracks.extend(
-                self.__cut_with_section(
-                    self._tracks[track_id], section_geometry, offset, shapely_mapper
+                self.cut_track_with_section(
+                    self._tracks[track_id], section, offset, shapely_mapper
                 )
             )
         return (
@@ -531,13 +530,17 @@ class PythonTrackDataset(TrackDataset):
             intersecting_track_ids,
         )
 
-    def __cut_with_section(
-        self,
+    @classmethod
+    def cut_track_with_section(
+        cls,
         track_to_cut: Track,
-        section_geometry: LineString,
+        section: Section,
         offset: RelativeOffsetCoordinate,
-        shapely_mapper: ShapelyMapper,
+        shapely_mapper: ShapelyMapper = ShapelyMapper(),
     ) -> list[Track]:
+        section_geometry = shapely_mapper.map_coordinates_to_line_string(
+            section.get_coordinates()
+        )
         cut_track_segments: list[Track] = []
         track_builder = SimpleCutTrackSegmentBuilder()
         for current_detection, next_detection in zip(
@@ -551,7 +554,7 @@ class PythonTrackDataset(TrackDataset):
                 )
             )
             if track_segment_geometry.intersects(section_geometry):
-                new_track_segment = self._build_track(
+                new_track_segment = cls.build_track(
                     track_builder,
                     f"{track_to_cut.id.id}_{len(cut_track_segments)}",
                     current_detection,
@@ -560,7 +563,7 @@ class PythonTrackDataset(TrackDataset):
             else:
                 track_builder.add_detection(current_detection)
 
-        new_track_segment = self._build_track(
+        new_track_segment = cls.build_track(
             track_builder,
             f"{track_to_cut.id.id}_{len(cut_track_segments)}",
             track_to_cut.last_detection,
@@ -569,8 +572,9 @@ class PythonTrackDataset(TrackDataset):
 
         return cut_track_segments
 
-    def _build_track(
-        self, track_builder: TrackBuilder, track_id: str, detection: Detection
+    @classmethod
+    def build_track(
+        cls, track_builder: TrackBuilder, track_id: str, detection: Detection
     ) -> Track:
         track_builder.add_id(track_id)
         track_builder.add_detection(detection)

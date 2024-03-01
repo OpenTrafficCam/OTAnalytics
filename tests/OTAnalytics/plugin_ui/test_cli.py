@@ -84,10 +84,10 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
+    BulkPythonDetectionParser,
     CachedVideoParser,
     OtFlowParser,
     OttrkParser,
-    PythonDetectionParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
@@ -331,7 +331,7 @@ class TestOTAnalyticsCli:
         )
         return {
             self.TRACK_PARSER: OttrkParser(
-                PythonDetectionParser(
+                BulkPythonDetectionParser(
                     ByMaxConfidence(), track_repository, DEFAULT_TRACK_LENGTH_LIMIT
                 ),
             ),

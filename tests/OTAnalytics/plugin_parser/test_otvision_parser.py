@@ -46,6 +46,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     VERSION,
     VERSION_1_0,
     VERSION_1_1,
+    BulkPythonDetectionParser,
     CachedVideo,
     CachedVideoParser,
     DetectionFixer,
@@ -57,7 +58,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
-    PythonDetectionParser,
     TrackLengthLimit,
     Version,
 )
@@ -209,7 +209,7 @@ class TestOttrkParser:
         self, mocked_track_repository: Mock, mocked_track_file_repository: Mock
     ) -> OttrkParser:
         calculator = ByMaxConfidence()
-        detection_parser = PythonDetectionParser(
+        detection_parser = BulkPythonDetectionParser(
             calculator,
             mocked_track_repository,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
@@ -273,8 +273,8 @@ class TestOttrkParser:
 
 class TestPythonDetectionParser:
     @pytest.fixture
-    def parser(self, mocked_track_repository: Mock) -> PythonDetectionParser:
-        return PythonDetectionParser(
+    def parser(self, mocked_track_repository: Mock) -> BulkPythonDetectionParser:
+        return BulkPythonDetectionParser(
             ByMaxConfidence(),
             mocked_track_repository,
         )
@@ -282,7 +282,7 @@ class TestPythonDetectionParser:
     def test_parse_detections_output_has_same_order_as_input(
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
-        parser: PythonDetectionParser,
+        parser: BulkPythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -291,13 +291,13 @@ class TestPythonDetectionParser:
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = parser._parse_detections(
+        result_sorted_input = parser._parse_track_detections(
             detections,
             metadata_video,
             TrackId,
         )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = parser._parse_detections(
+        result_unsorted_input = parser._parse_track_detections(
             unsorted_detections,
             metadata_video,
             TrackId,
@@ -313,7 +313,7 @@ class TestPythonDetectionParser:
     def test_parse_tracks(
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
-        parser: PythonDetectionParser,
+        parser: BulkPythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -336,7 +336,7 @@ class TestPythonDetectionParser:
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
         mocked_track_repository: Mock,
-        parser: PythonDetectionParser,
+        parser: BulkPythonDetectionParser,
     ) -> None:
         detections: list[
             dict
@@ -382,7 +382,7 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         track_length_limit: TrackLengthLimit,
     ) -> None:
-        parser = PythonDetectionParser(
+        parser = BulkPythonDetectionParser(
             ByMaxConfidence(),
             mocked_track_repository,
             track_length_limit,
