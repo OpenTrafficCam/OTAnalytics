@@ -55,6 +55,7 @@ from OTAnalytics.application.use_cases.clear_repositories import ClearRepositori
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
+    FilterOutCuttingSections,
     MissingEventsSectionProvider,
     SectionProvider,
     SimpleCreateIntersectionEvents,
@@ -330,9 +331,8 @@ class ApplicationStarter:
         clear_all_track_to_videos = ClearAllTrackToVideos(
             datastore._track_to_video_repository
         )
-
-        section_provider = MissingEventsSectionProvider(
-            section_repository, event_repository
+        section_provider = FilterOutCuttingSections(
+            MissingEventsSectionProvider(section_repository, event_repository)
         )
         create_events = self._create_use_case_create_events(
             section_provider,

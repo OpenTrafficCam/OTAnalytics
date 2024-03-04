@@ -3,11 +3,13 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
+from OTAnalytics.application.config import CLI_CUTTING_SECTION_MARKER
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
     CreateSceneEvents,
+    FilterOutCuttingSections,
     SectionProvider,
     SimpleCreateIntersectionEvents,
     SimpleCreateSceneEvents,
@@ -15,7 +17,7 @@ from OTAnalytics.application.use_cases.create_events import (
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import Track
 from OTAnalytics.domain.track_dataset import TrackDataset
 
@@ -116,3 +118,39 @@ class TestCreateEvents:
 
         create_intersection_events.assert_called_once()
         create_scene_events.assert_called_once()
+
+
+class TestFilterOutCuttingSections:
+    def create_section(self, section_type: SectionType, name: str) -> Section:
+        section = Mock(spec=Section)
+        section.get_type.return_value = section_type
+        section.name = name
+        return section
+
+    @pytest.fixture
+    def sections(self) -> list[Section]:
+        return [
+            self.create_section(SectionType.LINE, "line_section"),
+            self.create_section(SectionType.CUTTING, "cutting_section"),
+            self.create_section(SectionType.AREA, "area_section"),
+            self.create_section(
+                SectionType.LINE, f"{CLI_CUTTING_SECTION_MARKER}_cli_cutting_section"
+            ),
+        ]
+
+    @pytest.fixture
+    def section_provider(self, sections: list[Section]) -> Mock:
+        provider = Mock(spec=SectionProvider)
+        provider.return_value = sections
+        return provider
+
+    def test_filter_out_cutting_sections(self, section_provider: Mock) -> None:
+        _filter = FilterOutCuttingSections(section_provider)
+        result = _filter.filter()
+
+        assert len(result) == 2
+        assert result[0].get_type() == SectionType.LINE
+        assert result[0].name == "line_section"
+        assert result[1].get_type() == SectionType.AREA
+        assert result[1].name == "area_section"
+        section_provider.assert_called_once()
