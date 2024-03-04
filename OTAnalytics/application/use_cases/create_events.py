@@ -2,13 +2,14 @@ from abc import ABC, abstractmethod
 from typing import Callable
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
+from OTAnalytics.application.config import CLI_CUTTING_SECTION_MARKER
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
 )
 from OTAnalytics.domain.event import EventRepository
-from OTAnalytics.domain.section import Section, SectionRepository
+from OTAnalytics.domain.section import Section, SectionRepository, SectionType
 
 
 class CreateIntersectionEvents(ABC):
@@ -33,6 +34,41 @@ class CreateSceneEvents(ABC):
 
 
 SectionProvider = Callable[[], list[Section]]
+
+
+class FilterOutCuttingSections:
+    """
+    A filter that removes cutting sections from a list of sections.
+
+    Args:
+      other (SectionProvider): The provider of the sections to be filtered.
+    """
+
+    def __init__(self, other: SectionProvider) -> None:
+        self._other = other
+
+    def __call__(self) -> list[Section]:
+        """
+        Returns a new list of sections without cutting sections.
+
+        Returns:
+          A list of sections, filtered out any cutting sections.
+        """
+        return self.filter()
+
+    def filter(self) -> list[Section]:
+        """
+        Returns a new list of sections, filtered out any cutting sections.
+
+        Returns:
+          A list of sections, excluding any cutting sections.
+        """
+        return [
+            _section
+            for _section in self._other()
+            if not _section.name.startswith(CLI_CUTTING_SECTION_MARKER)
+            and _section.get_type() != SectionType.CUTTING
+        ]
 
 
 class MissingEventsSectionProvider:
