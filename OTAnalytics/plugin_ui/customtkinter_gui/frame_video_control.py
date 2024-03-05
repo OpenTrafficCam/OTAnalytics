@@ -1,23 +1,27 @@
 import tkinter
 from typing import Any
 
-from customtkinter import CTkButton, CTkEntry, CTkLabel
+from customtkinter import CTkButton, CTkEntry, CTkLabel, ThemeManager
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_RED
 
 
 class FrameVideoControl(AbstractCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self._is_initialized = False
         self._viewmodel = viewmodel
-        self._seconds = tkinter.IntVar(value=viewmodel.get_skip_seconds())
-        self._frames = tkinter.IntVar(value=viewmodel.get_skip_frames())
+        self.default_border_color = ThemeManager.theme["CTkEntry"]["border_color"]
+        self._seconds = tkinter.StringVar(value=str(viewmodel.get_skip_seconds()))
+        self._frames = tkinter.StringVar(value=str(viewmodel.get_skip_frames()))
         self._get_widgets()
         self._place_widgets()
         self._wire_widgets()
         self.introduce_to_viewmodel()
+        self._is_initialized = True
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_video_control_frame(self)
@@ -39,8 +43,29 @@ class FrameVideoControl(AbstractCTkFrame):
         self._label_frames = CTkLabel(
             master=self, text="Frames", anchor="e", justify="right"
         )
-        self._entry_seconds = CTkEntry(master=self, textvariable=self._seconds)
-        self._entry_frames = CTkEntry(master=self, textvariable=self._frames)
+        self._entry_seconds = CTkEntry(
+            master=self,
+            textvariable=self._seconds,
+            validate="key",
+            validatecommand=(self.register(self._validate_int), "%P", "%W"),
+        )
+        self._entry_frames = CTkEntry(
+            master=self,
+            textvariable=self._frames,
+            validate="key",
+            validatecommand=(self.register(self._validate_int), "%P", "%W"),
+        )
+
+    def _validate_int(self, value: Any, widget_name: str) -> bool:
+        if not self._is_initialized:
+            return True
+        widget: CTkEntry = self.nametowidget(widget_name).master
+        try:
+            int(value)
+            widget.configure(border_color=self.default_border_color)
+        except ValueError:
+            widget.configure(border_color=COLOR_RED)
+        return True
 
     def _place_widgets(self) -> None:
         PADY = 10
@@ -63,4 +88,9 @@ class FrameVideoControl(AbstractCTkFrame):
         return [self._button_previous_frame, self._button_next_frame]
 
     def _update_skip_time(self, name: str, other: str, mode: str) -> None:
-        self._viewmodel.update_skip_time(self._seconds.get(), self._frames.get())
+        try:
+            self._viewmodel.update_skip_time(
+                int(self._seconds.get()), int(self._frames.get())
+            )
+        except ValueError:
+            pass
