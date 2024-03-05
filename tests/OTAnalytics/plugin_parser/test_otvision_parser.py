@@ -61,7 +61,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     TrackLengthLimit,
     Version,
 )
-from tests.conftest import TrackBuilder, assert_track_datasets_equal
+from tests.utils.assertions import assert_track_datasets_equal
+from tests.utils.builders.track_builder import TrackBuilder
 
 
 @pytest.fixture

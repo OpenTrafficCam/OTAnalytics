@@ -5,7 +5,6 @@ from typing import Iterable
 
 from PIL import Image
 
-from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 
 MIN_NUMBER_OF_DETECTIONS = 5
@@ -24,7 +23,7 @@ VIDEO_NAME: str = "video_name"
 
 
 @dataclass(frozen=True, order=True)
-class TrackId(DataclassValidation):
+class TrackId:
     id: str
 
     def __str__(self) -> str:

@@ -184,5 +184,17 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     def flows(self) -> Sequence[Flow]:
         return self._flows
 
+    @property
+    def include_classes(self) -> frozenset[str]:
+        if self._cli_args.include_classes is not None:
+            return frozenset(self._cli_args.include_classes)
+        return frozenset()
+
+    @property
+    def exclude_classes(self) -> frozenset[str]:
+        if self._cli_args.exclude_classes is not None:
+            return frozenset(self._cli_args.exclude_classes)
+        return frozenset()
+
 
 RunConfigurationBuilder = Callable[[CliArguments, OtConfig | None], RunConfiguration]

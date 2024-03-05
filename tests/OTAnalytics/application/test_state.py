@@ -46,6 +46,13 @@ FIRST_START_DATE = datetime(
 )
 SECOND_START_DATE = FIRST_START_DATE + timedelta(seconds=3)
 
+CAR = "car"
+TRUCK = "truck"
+BICYCLE = "bicycle"
+CARGO_BIKE = "cargo_bike"
+PEDESTRIAN = "pedestrian"
+ALL_CLASSES = [CAR, TRUCK, BICYCLE, CARGO_BIKE, PEDESTRIAN]
+
 
 class TestTrackState:
     def test_notify_observer(self) -> None:
@@ -424,6 +431,29 @@ class TestTracksMetadata:
         classes = frozenset(["class 1", "class 2"])
         tracks_metadata.update_detection_classes(classes)
         assert classes == tracks_metadata.detection_classifications
+
+    @pytest.mark.parametrize(
+        "detection_classes,include_classes,exclude_classes,expected",
+        [
+            ([CAR, BICYCLE], [CAR], [BICYCLE], [CAR]),
+            ([BICYCLE], [CAR], [], [CAR]),
+            ([CAR, BICYCLE], [], [BICYCLE], [CAR]),
+            ([CAR, BICYCLE], [], [], [CAR, BICYCLE]),
+            ([], [], [], []),
+        ],
+    )
+    def test_filtered_detection_classifications(
+        self,
+        detection_classes: list[str],
+        include_classes: list[str],
+        exclude_classes: list[str],
+        expected: list[str],
+    ) -> None:
+        tracks_metadata = TracksMetadata(
+            Mock(), frozenset(include_classes), frozenset(exclude_classes)
+        )
+        tracks_metadata.update_detection_classes(frozenset(detection_classes))
+        assert tracks_metadata.filtered_detection_classifications == frozenset(expected)
 
 
 class TestTrackViewState:
