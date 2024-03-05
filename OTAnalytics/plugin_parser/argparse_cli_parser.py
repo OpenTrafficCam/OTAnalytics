@@ -105,6 +105,24 @@ class ArgparseCliParser(CliParser):
             help="Overwrite log file if it already exists.",
             required=False,
         )
+        self._parser.add_argument(
+            "--include-classes",
+            nargs="+",
+            type=str,
+            help=(
+                "Whitelist filter to include tracks with given classes."
+                "Classes specified in `--include-classes` are always kept "
+                "even if they are appear in `--exclude-classes`."
+            ),
+            required=False,
+        )
+        self._parser.add_argument(
+            "--exclude-classes",
+            nargs="+",
+            type=str,
+            help="Blacklist filter to exclude tracks with given classes.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -127,4 +145,6 @@ class ArgparseCliParser(CliParser):
             count_intervals=args.count_intervals,
             num_processes=args.num_processes,
             log_file=args.logfile,
+            include_classes=args.include_classes,
+            exclude_classes=args.exclude_classes,
         )

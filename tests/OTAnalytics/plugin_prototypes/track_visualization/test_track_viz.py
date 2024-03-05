@@ -426,10 +426,13 @@ class TestDataFrameProviderFilter:
         d = {
             track.TRACK_ID: ["1", "2"],
             track.OCCURRENCE: [first_occurrence, second_occurrence],
+            track.TRACK_CLASSIFICATION: "Car",
             "data": [Mock(), Mock()],
         }
         df = DataFrame(data=d)
-        return df.set_index([track.TRACK_ID, track.OCCURRENCE])
+        return df.set_index(
+            [track.TRACK_CLASSIFICATION, track.TRACK_ID, track.OCCURRENCE]
+        )
 
     @pytest.fixture
     def filter_result(self) -> Mock:
@@ -474,7 +477,7 @@ class TestDataFrameProviderFilter:
 
         filter_by_id = FilterById(data_provider, id_filter)
         result = filter_by_id.get_data()
-        expected = filter_input.drop("2")
+        expected = filter_input.drop("2", level=track.TRACK_ID)
 
         assert result.equals(expected)
         data_provider.get_data.assert_called_once()

@@ -62,7 +62,7 @@ class LoadTrackFiles:
             file (Path): file in ottrk format
         """
         parse_result = self._track_parser.parse(file)
-        track_ids = [track.id for track in parse_result.tracks]
+        track_ids = list(parse_result.tracks.track_ids)
         track_ids, videos = self._track_video_parser.parse(file, track_ids)
         self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)

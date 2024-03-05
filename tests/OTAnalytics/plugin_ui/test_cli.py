@@ -528,7 +528,7 @@ class TestOTAnalyticsCli:
         mock_cli_dependencies[self.VIDEOS_METADATA].last_video_end = end_date
         mock_cli_dependencies[
             self.TRACKS_METADATA
-        ].detection_classifications = classifications
+        ].filtered_detection_classifications = classifications
 
         run_config = Mock()
         run_config.count_intervals = {interval}

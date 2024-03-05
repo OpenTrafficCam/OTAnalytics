@@ -53,7 +53,6 @@ from OTAnalytics.domain.track_repository import (
     TrackRepository,
     TrackRepositoryEvent,
 )
-from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 """Frames start with 1 in OTVision but frames of videos are loaded zero based."""
@@ -293,15 +292,21 @@ class FilterById(PandasDataFrameProvider):
         if data.empty:
             return data
 
-        if not list(data.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
+        if not list(data.index.names) == [
+            track.TRACK_CLASSIFICATION,
+            track.TRACK_ID,
+            track.OCCURRENCE,
+        ]:
             raise ValueError(
-                f"{track.TRACK_ID} and {track.OCCURRENCE} "
+                f"{track.TRACK_CLASSIFICATION},{track.TRACK_ID}, {track.OCCURRENCE} "
                 "must be index of DataFrame for filtering to work."
             )
 
         ids = [track_id.id for track_id in self._filter.get_ids()]
-        intersection_of_ids = data.index.get_level_values(0).unique().intersection(ids)
-        return data.loc[intersection_of_ids]
+        intersection_of_ids = (
+            data.index.get_level_values(track.TRACK_ID).unique().intersection(ids)
+        )
+        return data.loc[:, intersection_of_ids, :]
 
 
 class FilterByClassification(PandasDataFrameProvider):
@@ -393,8 +398,8 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks = self._track_repository.get_all()
-        if isinstance(tracks, PandasTrackDataset):
-            return tracks.as_dataframe()
+        if isinstance(tracks, PandasDataFrameProvider):
+            return tracks.get_data()
         track_list = tracks.as_list()
         if not track_list:
             return DataFrame()
@@ -616,7 +621,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             x="x",
             y="y",
             hue=track.TRACK_CLASSIFICATION,
-            data=track_df,
+            data=track_df.reset_index(),
             units=track.TRACK_ID,
             linewidth=0.6,
             estimator=None,
@@ -663,10 +668,11 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot start and end points of
             axes (Axes): axes to plot on
         """
-        track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
+        df_index_reset = track_df.reset_index()
+        track_df_start = df_index_reset.groupby(track.TRACK_ID).first().reset_index()
         track_df_start["type"] = "start"
 
-        track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
+        track_df_end = df_index_reset.groupby(track.TRACK_ID).last().reset_index()
         track_df_end["type"] = "end"
 
         track_df_start_end = pandas.concat([track_df_start, track_df_end]).sort_values(
@@ -759,10 +765,9 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
 
         Args:
             track_df (DataFrame): tracks to plot
-            alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
-        for index, row in track_df.iterrows():
+        for index, row in track_df.reset_index().iterrows():
             x = row[X]
             y = row[Y]
             width = row[W]
@@ -812,7 +817,7 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot
             axes (Axes): axes to plot on
         """
-        for index, row in track_df.iterrows():
+        for index, row in track_df.reset_index().iterrows():
             classification = row[track.TRACK_CLASSIFICATION]
             color = self._color_palette_provider.get()[classification]
             axes.plot(

@@ -123,6 +123,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
+    FilteredPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -239,7 +240,7 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        track_repository = self._create_track_repository()
+        track_repository = self._create_track_repository(run_config)
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
@@ -293,7 +294,7 @@ class ApplicationStarter:
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
-        tracks_metadata = self._create_tracks_metadata(track_repository)
+        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         tracks_metadata._classifications.register(
@@ -498,7 +499,7 @@ class ApplicationStarter:
         ).start()
 
     def start_cli(self, run_config: RunConfiguration) -> None:
-        track_repository = self._create_track_repository()
+        track_repository = self._create_track_repository(run_config)
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         track_parser = self._create_track_parser(track_repository)
@@ -552,7 +553,7 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
-            tracks_metadata=TracksMetadata(track_repository),
+            tracks_metadata=self._create_tracks_metadata(track_repository, run_config),
             videos_metadata=VideosMetadata(),
             progressbar=TqdmBuilder(),
         ).start()
@@ -604,10 +605,14 @@ class ApplicationStarter:
             config_parser=config_parser,
         )
 
-    def _create_track_repository(self) -> TrackRepository:
+    def _create_track_repository(self, run_config: RunConfiguration) -> TrackRepository:
         return TrackRepository(
-            PandasTrackDataset.from_list(
-                [], PygeosTrackGeometryDataset.from_track_dataset
+            FilteredPandasTrackDataset(
+                PandasTrackDataset.from_list(
+                    [], PygeosTrackGeometryDataset.from_track_dataset
+                ),
+                run_config.include_classes,
+                run_config.exclude_classes,
             )
         )
         # return TrackRepository(PythonTrackDataset())
@@ -722,9 +727,11 @@ class ApplicationStarter:
         )
 
     def _create_tracks_metadata(
-        self, track_repository: TrackRepository
+        self, track_repository: TrackRepository, run_config: RunConfiguration
     ) -> TracksMetadata:
-        return TracksMetadata(track_repository)
+        return TracksMetadata(
+            track_repository, run_config.include_classes, run_config.exclude_classes
+        )
 
     def _create_action_state(self) -> ActionState:
         return ActionState()

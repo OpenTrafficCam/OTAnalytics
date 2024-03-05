@@ -462,8 +462,15 @@ class TracksMetadata(TrackListObserver):
         track_repository (TrackRepository): the track repository
     """
 
-    def __init__(self, track_repository: TrackRepository) -> None:
+    def __init__(
+        self,
+        track_repository: TrackRepository,
+        include_classes: frozenset[str] = frozenset(),
+        exclude_classes: frozenset[str] = frozenset(),
+    ) -> None:
         self._track_repository = track_repository
+        self._include_classes = include_classes
+        self._exclude_classes = exclude_classes
         self._first_detection_occurrence: ObservableOptionalProperty[
             datetime
         ] = ObservableOptionalProperty[datetime]()
@@ -505,6 +512,22 @@ class TracksMetadata(TrackListObserver):
             set[str]: the classifications.
         """
         return self._classifications.get()
+
+    @property
+    def filtered_detection_classifications(self) -> frozenset[str]:
+        """The filtered detection classifications.
+
+        Considers include-classes and exclude-classes filter.
+
+        Returns:
+            set[str]: the classifications.
+        """
+        if self._include_classes:
+            return self._include_classes
+        elif self._exclude_classes:
+            return self.detection_classifications - self._exclude_classes
+        else:
+            return self.detection_classifications
 
     @property
     def detection_classifications(self) -> frozenset[str]:
