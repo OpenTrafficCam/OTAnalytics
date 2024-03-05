@@ -613,8 +613,6 @@ class DummyViewModel(
         if self._application.action_state.action_running.get():
             return
 
-        if ids:
-            self._application.set_selected_section([])
         self._application.set_selected_flows(ids)
 
         logger().debug(f"New flows selected in treeview: id={ids}")
@@ -623,8 +621,6 @@ class DummyViewModel(
         if self._application.action_state.action_running.get():
             return
 
-        if ids:
-            self._application.set_selected_flows([])
         self._application.set_selected_section(ids)
 
         logger().debug(f"New line sections selected in treeview: id={ids}")
@@ -1013,13 +1009,6 @@ class DummyViewModel(
     def _get_sections_to_highlight(self) -> list[str]:
         if selected_section_ids := self.get_selected_section_ids():
             return selected_section_ids
-
-        if selected_flows := self._get_selected_flows():
-            sections_to_highlight = []
-            for flow in selected_flows:
-                sections_to_highlight.append(flow.start.id)
-                sections_to_highlight.append(flow.end.id)
-            return sections_to_highlight
         return []
 
     def _draw_sections(self, sections_to_highlight: list[str]) -> None:
