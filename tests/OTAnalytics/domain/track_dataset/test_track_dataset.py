@@ -58,7 +58,7 @@ class TestFilteredTrackDataset:
         include_classes = [CLASS_CARGOBIKE, CLASS_CAR]
         exclude_classes = [CLASS_PEDESTRIAN, CLASS_BICYCLIST]
         filtered_datasets = self.get_datasets([], include_classes, exclude_classes)
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert filtered_dataset.include_classes == frozenset(include_classes)
             assert filtered_dataset.exclude_classes == frozenset(exclude_classes)
 
@@ -66,7 +66,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [cargo_bike_track, bicycle_track], [CLASS_BICYCLIST], []
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert filtered_dataset.track_ids == frozenset([bicycle_track.id])
 
     def test_first_and_last_occurrence(
@@ -75,7 +75,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [cargo_bike_track, car_track], [CLASS_CARGOBIKE], []
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert (
                 filtered_dataset.first_occurrence
                 == cargo_bike_track.first_detection.occurrence
@@ -114,12 +114,12 @@ class TestFilteredTrackDataset:
             all_tracks, include_classes, exclude_classes
         )
 
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert filtered_dataset.classifications == frozenset(expected)
 
     def test_empty(self, car_track: Track, bicycle_track: Track) -> None:
         empty_filtered_datasets = self.get_datasets([], [CLASS_CAR], [])
-        for _, empty_filtered_dataset in empty_filtered_datasets.items():
+        for empty_filtered_dataset in empty_filtered_datasets.values():
             assert empty_filtered_dataset.empty
             filled_but_ignored_dataset = empty_filtered_dataset.add_all([bicycle_track])
             assert filled_but_ignored_dataset.empty
@@ -131,7 +131,7 @@ class TestFilteredTrackDataset:
         all_tracks: list[Track],
     ) -> None:
         filtered_datasets = self.get_datasets(all_tracks, [], [])
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert_track_dataset_has_tracks(filtered_dataset, all_tracks)
 
     def test_filter_include_classes(
@@ -143,7 +143,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             all_tracks, [CLASS_CARGOBIKE, CLASS_BICYCLIST], [CLASS_BICYCLIST]
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert_track_dataset_has_tracks(
                 filtered_dataset, [cargo_bike_track, bicycle_track]
             )
@@ -156,14 +156,14 @@ class TestFilteredTrackDataset:
         cargo_bike_track: Track,
     ) -> None:
         filtered_datasets = self.get_datasets(all_tracks, [], [CLASS_BICYCLIST])
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert_track_dataset_has_tracks(
                 filtered_dataset, [car_track, pedestrian_track, cargo_bike_track]
             )
 
     def test_cache_with_no_filter_settings(self, tracks: list[Track]) -> None:
         filtered_datasets = self.get_datasets(tracks, [], [])
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             filtered_result = filtered_dataset._filter()
             cached_filtered_result = filtered_dataset._filter()
             assert filtered_result == cached_filtered_result
@@ -172,14 +172,14 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             tracks, [CLASS_BICYCLIST], [CLASS_CARGOBIKE]
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             filtered_result = filtered_dataset._filter()
             cached_filtered_result = filtered_dataset._filter()
             assert filtered_result == cached_filtered_result
 
     def test_cache_with_exclude_filter(self, tracks: list[Track]) -> None:
         filtered_datasets = self.get_datasets(tracks, [], [CLASS_CARGOBIKE])
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             filtered_result = filtered_dataset._filter()
             cached_filtered_result = filtered_dataset._filter()
             assert filtered_result == cached_filtered_result
@@ -188,7 +188,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             all_tracks, [], [CLASS_CARGOBIKE, CLASS_BICYCLIST]
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert len(filtered_dataset) == 2
 
     def test_get_for(
@@ -199,7 +199,7 @@ class TestFilteredTrackDataset:
             [],
             [CLASS_CARGOBIKE, CLASS_BICYCLIST],
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             result_car = filtered_dataset.get_for(car_track.id)
             assert result_car is not None
             assert_equal_track_properties(result_car, car_track)
@@ -213,7 +213,7 @@ class TestFilteredTrackDataset:
             [],
             [CLASS_BICYCLIST],
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             assert len(filtered_dataset) == 1
             result = filtered_dataset.as_list()
             assert len(result) == 1
@@ -249,7 +249,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track], [CLASS_CAR], []
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             result_no_tracks = filtered_dataset.filter_by_min_detection_length(4)
             assert len(result_no_tracks) == 0
             result_all_tracks = filtered_dataset.filter_by_min_detection_length(2)
@@ -324,7 +324,7 @@ class TestFilteredTrackDataset:
         self, car_track: Track, bicycle_track: Track, cargo_bike_track: Track
     ) -> None:
         filtered_datasets = self.get_datasets([car_track], [], [])
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             result = filtered_dataset.add_all([bicycle_track, cargo_bike_track])
             assert isinstance(result, type(filtered_dataset))
             assert result.include_classes == filtered_dataset.include_classes
@@ -339,7 +339,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track, cargo_bike_track], [], []
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             result = filtered_dataset.remove(cargo_bike_track.id)
             assert isinstance(result, type(filtered_dataset))
             assert result.include_classes == filtered_dataset.include_classes
@@ -353,7 +353,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track, cargo_bike_track], [], []
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             result = filtered_dataset.remove_multiple(
                 {cargo_bike_track.id, bicycle_track.id}
             )
@@ -368,7 +368,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track, cargo_bike_track], [], []
         )
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             result = filtered_dataset.clear()
             assert isinstance(result, type(filtered_dataset))
             assert result.include_classes == filtered_dataset.include_classes
@@ -377,7 +377,7 @@ class TestFilteredTrackDataset:
 
     def test_split(self, car_track: Track, bicycle_track: Track) -> None:
         filtered_datasets = self.get_datasets([car_track, bicycle_track], [], [])
-        for _, filtered_dataset in filtered_datasets.items():
+        for filtered_dataset in filtered_datasets.values():
             chunks = filtered_dataset.split(2)
             assert len(chunks) == 2
             for chunk, expected_track in zip(chunks, [car_track, bicycle_track]):
