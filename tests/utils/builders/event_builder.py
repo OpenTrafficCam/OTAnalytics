@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Self
 
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -72,34 +73,44 @@ class EventBuilder:
             video_name=self.video_name,
         )
 
-    def append_section_event(self) -> None:
+    def append_section_event(self) -> Self:
         self._events.append(self.build_section_event())
+        return self
 
-    def add_second(self, second: int) -> None:
+    def add_second(self, second: int) -> Self:
         self.occurrence_second = second
+        return self
 
-    def add_microsecond(self, microsecond: int) -> None:
+    def add_microsecond(self, microsecond: int) -> Self:
         self.occurrence_microsecond = microsecond
+        return self
 
-    def add_frame_number(self, frame_number: int) -> None:
+    def add_frame_number(self, frame_number: int) -> Self:
         self.frame_number = frame_number
+        return self
 
-    def add_event_type(self, event_type: str) -> None:
+    def add_event_type(self, event_type: str) -> Self:
         self.event_type = event_type
+        return self
 
-    def add_event_coordinate(self, x: float, y: float) -> None:
+    def add_event_coordinate(self, x: float, y: float) -> Self:
         self.event_coordinate_x = x
         self.event_coordinate_y = y
+        return self
 
-    def add_direction_vector(self, x: float, y: float) -> None:
+    def add_direction_vector(self, x: float, y: float) -> Self:
         self.direction_vector_x = x
         self.direction_vector_y = y
+        return self
 
-    def add_road_user_id(self, id: str) -> None:
+    def add_road_user_id(self, id: str) -> Self:
         self.road_user_id = id
+        return self
 
-    def add_road_user_type(self, type: str) -> None:
+    def add_road_user_type(self, type: str) -> Self:
         self.road_user_type = type
+        return self
 
-    def add_section_id(self, id: str) -> None:
+    def add_section_id(self, id: str) -> Self:
         self.section_id = id
+        return self
