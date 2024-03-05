@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from math import floor
 from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
@@ -49,6 +50,20 @@ class Layer:
     def reset(self) -> None:
         """Reset layer enabled state to default value."""
         raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class LayerGroup:
+    name: str
+    layers: Sequence[Layer]
+
+    def register(self, observer: Callable[[bool], None]) -> None:
+        for layer in self.layers:
+            layer.register(observer)
+
+    def reset(self) -> None:
+        for layer in self.layers:
+            layer.reset()
 
 
 class PlottingLayer(Plotter, Layer):

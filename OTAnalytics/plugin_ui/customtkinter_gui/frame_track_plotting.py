@@ -8,7 +8,7 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.plotting import Layer
+from OTAnalytics.application.plotting import Layer, LayerGroup
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.style import STICKY_WEST
@@ -16,7 +16,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import STICKY_WEST
 
 class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
     def __init__(
-        self, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
+        self, viewmodel: ViewModel, layers: Sequence[LayerGroup], **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
         self._view_model = viewmodel
@@ -34,13 +34,19 @@ class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
 
     def _place_widgets(self) -> None:
         pady = 10
-        for idx, layer in enumerate(self._layers):
-            checkbox_layer = CheckBoxLayer(master=self, layer=layer)
-            checkbox_layer.grid(
-                row=idx, column=0, padx=PADX, pady=(0, pady), sticky=STICKY
-            )
+        row = 0
+        for group in self._layers:
+            label = CTkLabel(master=self, text=group.name)
+            label.grid(row=row, column=0, padx=PADX, pady=(0, pady), sticky=STICKY_WEST)
+            row += 1
+            for layer in group.layers:
+                checkbox_layer = CheckBoxLayer(master=self, layer=layer)
+                checkbox_layer.grid(
+                    row=row, column=0, padx=PADX, pady=(0, pady), sticky=STICKY
+                )
+                row += 1
         self._button_update_highlight_flows.grid(
-            row=len(self._layers),
+            row=row,
             column=0,
             padx=PADX,
             pady=(0, pady),

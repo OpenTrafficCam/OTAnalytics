@@ -7,7 +7,7 @@ from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.exception import gather_exception_messages
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.plotting import Layer
+from OTAnalytics.application.plotting import LayerGroup
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
@@ -107,7 +107,11 @@ class TabviewInputFiles(CustomCTkTabview):
 
 class FrameContent(CTkFrame):
     def __init__(
-        self, master: Any, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
+        self,
+        master: Any,
+        viewmodel: ViewModel,
+        layers: Sequence[LayerGroup],
+        **kwargs: Any,
     ) -> None:
         super().__init__(master=master, **kwargs)
         self._viewmodel = viewmodel
@@ -171,7 +175,7 @@ class TabviewContent(CustomCTkTabview):
     def __init__(
         self,
         viewmodel: ViewModel,
-        layers: Sequence[Layer],
+        layers: Sequence[LayerGroup],
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -201,7 +205,7 @@ class OTAnalyticsGui:
         self,
         app: ModifiedCTk,
         view_model: ViewModel,
-        layers: Sequence[Layer],
+        layers: Sequence[LayerGroup],
         preload_input_files: PreloadInputFiles,
         run_config: RunConfiguration,
     ) -> None:
