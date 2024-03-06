@@ -10,10 +10,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import (
-    SwitchToNextFrame,
-    SwitchToPreviousFrame,
-)
+from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevious
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 
@@ -74,7 +71,7 @@ class TestSwitchToNextFrame:
         new_date_range = DateRange(
             START_DATE + TIME_OF_A_FRAME, END_DATE + TIME_OF_A_FRAME
         )
-        use_case = SwitchToNextFrame(track_view_state, videos_metadata)
+        use_case = SwitchToNext(track_view_state, videos_metadata)
 
         use_case.set_next_frame()
 
@@ -96,7 +93,7 @@ class TestSwitchToPreviousFrame:
         new_date_range = DateRange(
             START_DATE - TIME_OF_A_FRAME, END_DATE - TIME_OF_A_FRAME
         )
-        use_case = SwitchToPreviousFrame(track_view_state, videos_metadata)
+        use_case = SwitchToPrevious(track_view_state, videos_metadata)
 
         use_case.set_previous_frame()
 

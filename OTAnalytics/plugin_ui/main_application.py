@@ -46,10 +46,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import (
-    SwitchToNextFrame,
-    SwitchToPreviousFrame,
-)
+from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevious
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
@@ -397,8 +394,8 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
-        previous_frame = SwitchToPreviousFrame(track_view_state, videos_metadata)
-        next_frame = SwitchToNextFrame(track_view_state, videos_metadata)
+        previous_frame = SwitchToPrevious(track_view_state, videos_metadata)
+        next_frame = SwitchToNext(track_view_state, videos_metadata)
         application = OTAnalyticsApplication(
             datastore,
             track_state,

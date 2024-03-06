@@ -37,6 +37,16 @@ class FrameVideoControl(AbstractCTkFrame):
             text="<",
             command=self._viewmodel.previous_frame,
         )
+        self._button_next_second = CTkButton(
+            master=self,
+            text=">",
+            command=self._viewmodel.next_second,
+        )
+        self._button_previous_second = CTkButton(
+            master=self,
+            text="<",
+            command=self._viewmodel.previous_second,
+        )
         self._label_seconds = CTkLabel(
             master=self, text="Seconds", anchor="e", justify="right"
         )
@@ -69,15 +79,23 @@ class FrameVideoControl(AbstractCTkFrame):
 
     def _place_widgets(self) -> None:
         PADY = 10
+        self.grid_rowconfigure((0, 1), weight=1)
+        self.grid_columnconfigure((1, 2, 3, 4), weight=0)
+        self._button_previous_second.grid(
+            row=0, column=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self._button_previous_frame.grid(
-            row=0, column=1, rowspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._label_seconds.grid(row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_seconds.grid(row=0, column=3, padx=PADX, pady=PADY, sticky=STICKY)
         self._label_frames.grid(row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_frames.grid(row=1, column=3, padx=PADX, pady=PADY, sticky=STICKY)
+        self._button_next_second.grid(
+            row=0, column=4, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self._button_next_frame.grid(
-            row=0, column=4, rowspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=4, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _wire_widgets(self) -> None:
