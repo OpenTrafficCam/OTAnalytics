@@ -292,21 +292,15 @@ class FilterById(PandasDataFrameProvider):
         if data.empty:
             return data
 
-        if not list(data.index.names) == [
-            track.TRACK_CLASSIFICATION,
-            track.TRACK_ID,
-            track.OCCURRENCE,
-        ]:
+        if not list(data.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
             raise ValueError(
-                f"{track.TRACK_CLASSIFICATION},{track.TRACK_ID}, {track.OCCURRENCE} "
+                f"{track.TRACK_ID}, {track.OCCURRENCE} "
                 "must be index of DataFrame for filtering to work."
             )
 
         ids = [track_id.id for track_id in self._filter.get_ids()]
-        intersection_of_ids = (
-            data.index.get_level_values(track.TRACK_ID).unique().intersection(ids)
-        )
-        return data.loc[:, intersection_of_ids, :]
+        intersection_of_ids = data.index.unique(level=track.TRACK_ID).intersection(ids)
+        return data.loc[intersection_of_ids]
 
 
 class FilterByClassification(PandasDataFrameProvider):
@@ -422,9 +416,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
         ):
             for detection in current_track.detections:
                 detection_dict = detection.to_dict()
-                detection_dict[
-                    track.TRACK_CLASSIFICATION
-                ] = current_track.classification
+                detection_dict[track.TRACK_CLASSIFICATION] = (
+                    current_track.classification
+                )
                 prepared.append(detection_dict)
 
         if not prepared:
@@ -621,7 +615,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             x="x",
             y="y",
             hue=track.TRACK_CLASSIFICATION,
-            data=track_df.reset_index(),
+            data=track_df,
             units=track.TRACK_ID,
             linewidth=0.6,
             estimator=None,
@@ -668,11 +662,10 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot start and end points of
             axes (Axes): axes to plot on
         """
-        df_index_reset = track_df.reset_index()
-        track_df_start = df_index_reset.groupby(track.TRACK_ID).first().reset_index()
+        track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
         track_df_start["type"] = "start"
 
-        track_df_end = df_index_reset.groupby(track.TRACK_ID).last().reset_index()
+        track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
         track_df_end["type"] = "end"
 
         track_df_start_end = pandas.concat([track_df_start, track_df_end]).sort_values(

@@ -349,8 +349,9 @@ class PythonTrackDataset(TrackDataset):
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,
-        geometry_datasets: dict[RelativeOffsetCoordinate, TrackGeometryDataset]
-        | None = None,
+        geometry_datasets: (
+            dict[RelativeOffsetCoordinate, TrackGeometryDataset] | None
+        ) = None,
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
         track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
             PygeosTrackGeometryDataset.from_track_dataset
@@ -449,7 +450,7 @@ class PythonTrackDataset(TrackDataset):
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         updated = {}
         for offset, geometry_dataset in self._geometry_datasets.items():
-            updated[offset] = geometry_dataset.remove(track_ids)
+            updated[offset] = geometry_dataset.remove([_id.id for _id in track_ids])
         return updated
 
     def clear(self) -> "PythonTrackDataset":

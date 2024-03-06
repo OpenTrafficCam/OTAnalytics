@@ -500,7 +500,7 @@ class TestPygeosTrackGeometryDataset:
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
             track_dataset, offset
         )
-        result = geometry_dataset.remove([first_track.id])
+        result = geometry_dataset.remove([first_track.id.id])
         expected = create_geometry_dataset_from([second_track], offset)
         assert_track_geometry_dataset_equals(result, expected)
 
@@ -509,7 +509,7 @@ class TestPygeosTrackGeometryDataset:
         self, first_track: Track, offset: RelativeOffsetCoordinate
     ) -> None:
         geometry_dataset = PygeosTrackGeometryDataset(offset)
-        result = geometry_dataset.remove([first_track.id])
+        result = geometry_dataset.remove([first_track.id.id])
         assert_track_geometry_dataset_equals(result, PygeosTrackGeometryDataset(offset))
 
     @pytest.mark.parametrize("offset", [BASE_GEOMETRY, DEFAULT_TRACK_OFFSET])
@@ -520,7 +520,7 @@ class TestPygeosTrackGeometryDataset:
         geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
             track_dataset, offset
         )
-        result = geometry_dataset.remove([second_track.id])
+        result = geometry_dataset.remove([second_track.id.id])
         expected = create_geometry_dataset_from([first_track], offset)
         assert_track_geometry_dataset_equals(result, expected)
 
