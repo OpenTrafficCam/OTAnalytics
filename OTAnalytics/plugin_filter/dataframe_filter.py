@@ -137,7 +137,7 @@ class DataFrameHasClassifications(DataFramePredicate):
         self._classifications = classifications
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        return to_test[to_test[self._column_name].isin(self._classifications)]
+        return to_test.loc[to_test[self._column_name].isin(self._classifications)]
 
 
 class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
