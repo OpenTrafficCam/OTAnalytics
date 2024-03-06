@@ -1,23 +1,28 @@
+from abc import ABCMeta, abstractmethod
 from datetime import timedelta
 
 from OTAnalytics.application.state import TrackViewState, VideosMetadata
 from OTAnalytics.domain.date import DateRange
 
 
-class SwitchToNext:
+class SwitchTo(metaclass=ABCMeta):
     def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
         self._state = state
         self._videos_metadata = videos_metadata
 
-    def set_next_second(self) -> None:
+    def switch_second(self) -> None:
         skip_time = self._state.skip_time.get()
         current_skip = timedelta(seconds=skip_time.seconds)
-        self.__switch_time(current_skip)
+        self._switch_time(current_skip)
 
-    def set_next_frame(self) -> None:
+    def switch_frame(self) -> None:
+        if current_skip := self._get_current_skip_frames():
+            self._switch_time(current_skip)
+
+    def _get_current_skip_frames(self) -> timedelta | None:
         if filter_element := self._state.filter_element.get():
             current_date_range = filter_element.date_range
-            if current_date_range.end_date:
+            if current_date_range.start_date and current_date_range.end_date:
                 if metadata := self._videos_metadata.get_metadata_for(
                     current_date_range.end_date
                 ):
@@ -26,9 +31,20 @@ class SwitchToNext:
                     subseconds = min(skip_time.frames, fps) / fps
                     milliseconds = subseconds * 1000
                     current_skip = timedelta(milliseconds=milliseconds)
-                    self.__switch_time(current_skip)
+                    return current_skip
+        return None
 
-    def __switch_time(self, current_skip: timedelta) -> None:
+    @abstractmethod
+    def _switch_time(self, current_skip: timedelta) -> None:
+        raise NotImplementedError
+
+
+class SwitchToNext(SwitchTo):
+
+    def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
+        super().__init__(state, videos_metadata)
+
+    def _switch_time(self, current_skip: timedelta) -> None:
         if filter_element := self._state.filter_element.get():
             current_date_range = filter_element.date_range
             if current_date_range.start_date and current_date_range.end_date:
@@ -40,31 +56,11 @@ class SwitchToNext:
                 )
 
 
-class SwitchToPrevious:
+class SwitchToPrevious(SwitchTo):
     def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
-        self._state = state
-        self._videos_metadata = videos_metadata
+        super().__init__(state, videos_metadata)
 
-    def set_previous_frame(self) -> None:
-        if filter_element := self._state.filter_element.get():
-            current_date_range = filter_element.date_range
-            if current_date_range.start_date and current_date_range.end_date:
-                if metadata := self._videos_metadata.get_metadata_for(
-                    current_date_range.end_date
-                ):
-                    fps = metadata.fps
-                    skip_time = self._state.skip_time.get()
-                    subseconds = min(skip_time.frames, fps) / fps
-                    milliseconds = subseconds * 1000
-                    current_skip = timedelta(milliseconds=milliseconds)
-                    self.__switch_time(current_skip)
-
-    def set_previous_second(self) -> None:
-        skip_time = self._state.skip_time.get()
-        current_skip = timedelta(seconds=skip_time.seconds)
-        self.__switch_time(current_skip)
-
-    def __switch_time(self, current_skip: timedelta) -> None:
+    def _switch_time(self, current_skip: timedelta) -> None:
         if filter_element := self._state.filter_element.get():
             current_date_range = filter_element.date_range
             if current_date_range.start_date and current_date_range.end_date:

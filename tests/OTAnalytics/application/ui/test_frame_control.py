@@ -73,7 +73,7 @@ class TestSwitchToNextFrame:
         )
         use_case = SwitchToNext(track_view_state, videos_metadata)
 
-        use_case.set_next_frame()
+        use_case.switch_frame()
 
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
@@ -95,7 +95,7 @@ class TestSwitchToPreviousFrame:
         )
         use_case = SwitchToPrevious(track_view_state, videos_metadata)
 
-        use_case.set_previous_frame()
+        use_case.switch_frame()
 
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)

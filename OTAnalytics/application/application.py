@@ -455,16 +455,16 @@ class OTAnalyticsApplication:
         return self.track_view_state.track_offset.get()
 
     def next_frame(self) -> None:
-        self._switch_next.set_next_frame()
+        self._switch_next.switch_frame()
 
     def previous_frame(self) -> None:
-        self._switch_previous.set_previous_frame()
+        self._switch_previous.switch_frame()
 
     def next_second(self) -> None:
-        self._switch_next.set_next_second()
+        self._switch_next.switch_second()
 
     def previous_second(self) -> None:
-        self._switch_previous.set_previous_second()
+        self._switch_previous.switch_second()
 
     def update_date_range_tracks_filter(self, date_range: DateRange) -> None:
         """Update the date range of the track filter.
