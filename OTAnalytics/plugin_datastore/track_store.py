@@ -563,7 +563,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         index_as_df = cut_tracks_df.index.to_frame(
             name=[track.TRACK_ID, track.OCCURRENCE]
         )
-        index_as_df["cumcount"] = index_as_df.groupby(level=0).transform("cumcount")
+        index_as_df["cumcount"] = index_as_df.groupby(level=LEVEL_TRACK_ID).transform(
+            "cumcount"
+        )
         index_as_df[track.TRACK_ID] = index_as_df.apply(
             lambda row: self._create_cut_track_id(row, cut_indices), axis=1
         )
