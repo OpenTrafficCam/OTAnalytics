@@ -33,12 +33,8 @@ def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:
     for current_track in tracks:
         detections.extend(current_track.detections)
     prepared = [detection.to_dict() for detection in detections]
-    converted = DataFrame(prepared)
-    converted[track.TRACK_CLASSIFICATION] = converted[track.CLASSIFICATION]
-    converted = converted.set_index(
-        [track.TRACK_CLASSIFICATION, track.TRACK_ID, track.OCCURRENCE]
-    )
-    return converted.sort_index()
+    converted = DataFrame(prepared).set_index([track.TRACK_ID, track.OCCURRENCE])
+    return converted.sort_values([track.TRACK_ID, track.FRAME])
 
 
 @pytest.fixture

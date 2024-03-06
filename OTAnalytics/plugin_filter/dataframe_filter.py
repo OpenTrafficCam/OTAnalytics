@@ -66,10 +66,6 @@ class NoOpDataFrameFilter(Filter[DataFrame, DataFrame]):
         return iterable
 
 
-INDEX_LEVEL_CLASSIFICATION = 0
-INDEX_LEVEL_OCCURRENCE = 2
-
-
 class DataFrameStartsAtOrAfterDate(DataFramePredicate):
     """Checks if the DataFrame rows start at or after date.
 
@@ -93,7 +89,7 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
                 "must be index of DataFrame for filtering to work."
             )
         return to_test[
-            to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) >= self._start_date
+            to_test.index.get_level_values(track.OCCURRENCE) >= self._start_date
         ]
 
 
@@ -120,7 +116,7 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
                 "must be index of DataFrame for filtering to work."
             )
         return to_test[
-            to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) <= self._end_date
+            to_test.index.get_level_values(track.OCCURRENCE) <= self._end_date
         ]
 
 
@@ -141,11 +137,7 @@ class DataFrameHasClassifications(DataFramePredicate):
         self._classifications = classifications
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        return to_test.loc[
-            to_test.index.get_level_values(INDEX_LEVEL_CLASSIFICATION).intersection(
-                self._classifications, sort=True
-            )
-        ]
+        return to_test[to_test[self._column_name].isin(self._classifications)]
 
 
 class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
