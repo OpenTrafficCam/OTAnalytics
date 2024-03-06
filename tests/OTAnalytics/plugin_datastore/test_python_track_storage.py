@@ -416,7 +416,7 @@ class TestPythonTrackDataset:
         assert result._geometry_datasets == {
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
         }
-        geometry_dataset.remove.assert_called_once_with({pedestrian_track.id})
+        geometry_dataset.remove.assert_called_once_with([pedestrian_track.id.id])
 
     def test_remove_multiple(self, car_track: Track, pedestrian_track: Track) -> None:
         geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
@@ -433,9 +433,10 @@ class TestPythonTrackDataset:
         assert result._geometry_datasets == {
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset
         }
-        geometry_dataset.remove.assert_called_once_with(
-            {car_track.id, pedestrian_track.id}
-        )
+        assert set(geometry_dataset.remove.call_args_list[0][0][0]) == {
+            car_track.id.id,
+            pedestrian_track.id.id,
+        }
 
     @pytest.mark.parametrize(
         "num_tracks,batches,expected_batches", [(10, 1, 1), (10, 4, 4), (3, 4, 3)]

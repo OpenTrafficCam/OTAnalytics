@@ -1,7 +1,7 @@
 from bisect import bisect
 from collections import defaultdict
 from itertools import chain
-from typing import Any, Iterable, Literal
+from typing import Any, Iterable, Literal, Sequence
 
 from pandas import DataFrame, concat
 from pygeos import (
@@ -226,10 +226,8 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
         return PygeosTrackGeometryDataset(self._offset, new_dataset)
 
-    def remove(self, ids: Iterable[TrackId]) -> TrackGeometryDataset:
-        updated = self._dataset.drop(
-            index=[track_id.id for track_id in ids], errors="ignore"
-        )
+    def remove(self, ids: Sequence[str]) -> TrackGeometryDataset:
+        updated = self._dataset.drop(index=ids, errors="ignore")
         return PygeosTrackGeometryDataset(self._offset, updated)
 
     def get_for(self, track_ids: Iterable[str]) -> "TrackGeometryDataset":

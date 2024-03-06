@@ -355,7 +355,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def remove(self, track_id: TrackId) -> "PandasTrackDataset":
         remaining_tracks = self._dataset.drop(track_id.id, errors="ignore")
-        updated_geometry_datasets = self._remove_from_geometry_dataset({track_id})
+        updated_geometry_datasets = self._remove_from_geometry_dataset([track_id.id])
         return PandasTrackDataset.from_dataframe(
             remaining_tracks, self.track_geometry_factory, updated_geometry_datasets
         )
@@ -363,13 +363,15 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def remove_multiple(self, track_ids: set[TrackId]) -> "PandasTrackDataset":
         track_ids_primitive = [track_id.id for track_id in track_ids]
         remaining_tracks = self._dataset.drop(track_ids_primitive, errors="ignore")
-        updated_geometry_datasets = self._remove_from_geometry_dataset(track_ids)
+        updated_geometry_datasets = self._remove_from_geometry_dataset(
+            track_ids_primitive
+        )
         return PandasTrackDataset.from_dataframe(
             remaining_tracks, self.track_geometry_factory, updated_geometry_datasets
         )
 
     def _remove_from_geometry_dataset(
-        self, track_ids: Iterable[TrackId]
+        self, track_ids: Sequence[str]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         updated_dataset = {}
         for offset, geometry_dataset in self._geometry_datasets.items():
@@ -651,7 +653,7 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         tracks_to_keep = filtered_df.index.get_level_values(LEVEL_TRACK_ID).unique()
         tracks_to_remove = tracks_to_keep.symmetric_difference(
             self._other.get_track_ids_as_string()
-        ).map(lambda _id: TrackId(_id))
+        )
         updated_geometry_datasets = self._other._remove_from_geometry_dataset(
             tracks_to_remove
         )

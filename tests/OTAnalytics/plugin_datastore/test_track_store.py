@@ -321,7 +321,7 @@ class TestPandasTrackDataset:
             ).as_list(),
         ):
             assert_equal_track_properties(actual, expected)
-        geometry_dataset.remove.assert_called_once_with({first_track.id})
+        geometry_dataset.remove.assert_called_once_with([first_track.id.id])
         assert removed_track_set._geometry_datasets == {
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
         }
@@ -349,7 +349,10 @@ class TestPandasTrackDataset:
             dataset.remove_multiple(track_ids_to_remove),
         )
         assert_equal_track_properties(list(removed_track_set)[0], third_track)
-        geometry_dataset.remove.assert_called_once_with(track_ids_to_remove)
+        assert set(geometry_dataset.remove.call_args_list[0][0][0]) == {
+            first_track.id.id,
+            second_track.id.id,
+        }
         assert removed_track_set._geometry_datasets == {
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
         }
