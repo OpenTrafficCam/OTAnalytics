@@ -6,6 +6,7 @@ from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.config import ON_MAC
 from OTAnalytics.application.exception import gather_exception_messages
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import LayerGroup
@@ -234,6 +235,7 @@ class OTAnalyticsGui:
 
         self._get_widgets()
         self._place_widgets()
+        self._register_global_keybindings()
         self._app.after(0, lambda: self._app.state("zoomed"))
         self._app.after(1000, lambda: self._preload_input_files.load(self._run_config))
         self._app.mainloop()
@@ -259,4 +261,26 @@ class OTAnalyticsGui:
             padx=PADX,
             pady=PADY,
             sticky=STICKY,
+        )
+
+    def _register_global_keybindings(self) -> None:
+        cmd_ctrl = "Command" if ON_MAC else "Control"
+        shift = "Shift"
+        next = "Right"
+        previous = "Left"
+        self._app.bind(f"<{next}>", lambda event: self._viewmodel.next_frame())
+        self._app.bind(
+            f"<{cmd_ctrl}-{next}>", lambda event: self._viewmodel.next_second()
+        )
+        self._app.bind(
+            f"<{cmd_ctrl}-{shift}-{next}>",
+            lambda event: self._viewmodel.switch_to_next_date_range(),
+        )
+        self._app.bind(f"<{previous}>", lambda event: self._viewmodel.previous_frame())
+        self._app.bind(
+            f"<{cmd_ctrl}-{previous}>", lambda event: self._viewmodel.previous_second()
+        )
+        self._app.bind(
+            f"<{cmd_ctrl}-{shift}-{previous}>",
+            lambda event: self._viewmodel.switch_to_prev_date_range(),
         )
