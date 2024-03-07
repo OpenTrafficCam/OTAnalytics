@@ -261,12 +261,12 @@ class VisualizationBuilder:
             ],
             "Show events": [
                 (
-                    "Show events of current filter",
+                    "Current filter",
                     event_point_plotter_filter,
                     False,
                 ),
                 (
-                    "Show events of current frame",
+                    "Current frame",
                     event_point_plotter_frame,
                     False,
                 ),
