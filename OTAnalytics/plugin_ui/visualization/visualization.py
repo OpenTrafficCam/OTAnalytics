@@ -230,7 +230,7 @@ class VisualizationBuilder:
                     False,
                 ),
             ],
-            "Start and end points": [
+            "Show start and end points": [
                 (
                     "All",
                     self._create_start_end_point_plotter(),
