@@ -1,11 +1,11 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from datetime import timedelta
 
 from OTAnalytics.application.state import TrackViewState, VideosMetadata
 from OTAnalytics.domain.date import DateRange
 
 
-class SwitchTo(metaclass=ABCMeta):
+class SwitchTo(ABC):
     def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
         self._state = state
         self._videos_metadata = videos_metadata
