@@ -19,7 +19,6 @@ class TracksFrame(AbstractFrameTracks):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
-        # self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         self._get_widgets()
         self._place_widgets()
