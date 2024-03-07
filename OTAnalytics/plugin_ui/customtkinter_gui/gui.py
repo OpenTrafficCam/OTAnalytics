@@ -1,4 +1,5 @@
 import tkinter
+from functools import partial
 from typing import Any, Sequence
 
 from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_theme
@@ -14,6 +15,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkScrollableFrame,
+    SingleFrameTabview,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import TabviewAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
@@ -121,7 +123,11 @@ class FrameContent(CTkFrame):
             viewmodel=viewmodel,
             layers=layers,
         )
-        self._frame_filter = FrameFilter(master=self, viewmodel=self._viewmodel)
+        self._frame_filter = SingleFrameTabview(
+            master=self,
+            title="Visualization Filters",
+            frame_factory=(partial(FrameFilter, viewmodel=viewmodel)),
+        )
         self._frame_canvas = FrameCanvas(
             master=self,
             viewmodel=self._viewmodel,

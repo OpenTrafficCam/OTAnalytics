@@ -69,7 +69,6 @@ class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
         self._introduce_to_viewmodel()
 
     def _get_widgets(self) -> None:
-        self.label = CTkLabel(master=self, text="Visualization Filters")
         self.filter_by_date_button = FilterTracksByDateFilterButton(
             master=self,
             name="Filter By Date",
@@ -91,15 +90,14 @@ class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
         )
 
     def _place_widgets(self) -> None:
-        self.label.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY_WEST)
         self.filter_by_date_button.grid(
-            row=1, column=0, padx=(PADX, 0), pady=PADY, sticky=STICKY
+            row=0, column=0, padx=(PADX, 0), pady=PADY, sticky=STICKY
         )
         self.date_range_switcher.grid(
-            row=1, column=1, padx=(0, PADX), pady=PADY, sticky=STICKY
+            row=0, column=1, padx=(0, PADX), pady=PADY, sticky=STICKY
         )
         self.filter_by_classification_button.grid(
-            row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def reset(self) -> None:

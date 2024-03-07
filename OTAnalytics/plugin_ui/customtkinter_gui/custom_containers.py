@@ -1,4 +1,5 @@
-from typing import Any
+import tkinter
+from typing import Any, Protocol
 
 from customtkinter import CTkFrame, CTkScrollableFrame, CTkTabview
 
@@ -83,6 +84,34 @@ class CustomCTkTabview(CTkTabview):
         self.grid_rowconfigure(3, weight=1)
         self.grid_rowconfigure(4, weight=0, minsize=7)
         self.grid_columnconfigure(0, weight=1)
+
+
+class FrameFactory(Protocol):
+    def __call__(self, **kwargs: Any) -> CTkFrame:
+        raise NotImplementedError
+
+
+class SingleFrameTabview(CustomCTkTabview):
+    def __init__(
+        self,
+        frame_factory: FrameFactory,
+        title: str,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._frame_factory = frame_factory
+        self._title = title
+        self._get_widgets()
+        self._place_widgets()
+        self.disable_segmented_button()
+
+    def _get_widgets(self) -> None:
+        self.add(self._title)
+        self.frame = self._frame_factory(master=self.tab(self._title))
+
+    def _place_widgets(self) -> None:
+        self.frame.pack(fill=tkinter.BOTH, expand=True)
+        self.set(self._title)
 
 
 class CTkEmbeddedTabview(CTkTabview):
