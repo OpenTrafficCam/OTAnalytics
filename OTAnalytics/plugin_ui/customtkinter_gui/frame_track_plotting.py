@@ -42,8 +42,7 @@ class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         pady = 10
-        row = 0
-        for group in self._layers:
+        for row, group in enumerate(self._layers):
             actual = TabviewLayerGroup(
                 master=self,
                 title=group.name,
@@ -54,9 +53,8 @@ class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
                 row=row, column=0, padx=PADX, pady=(0, PADY), sticky=STICKY_WEST
             )
             self._views.append(actual)
-            row += 1
         self._button_update_highlight_flows.grid(
-            row=row,
+            row=len(self._layers),
             column=0,
             padx=PADX,
             pady=(0, pady),
