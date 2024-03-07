@@ -132,20 +132,21 @@ class FrameContent(CTkFrame):
             master=self,
             viewmodel=self._viewmodel,
         )
-        self._frame_video_control = FrameVideoControl(
-            master=self, viewmodel=self._viewmodel
+        self._frame_video_control = SingleFrameTabview(
+            master=self,
+            title="Video Control",
+            frame_factory=(partial(FrameVideoControl, viewmodel=viewmodel)),
         )
         self.grid_rowconfigure(0, weight=0)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=0)
         self.grid_rowconfigure(2, weight=0)
+        self.grid_rowconfigure(3, weight=1)
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
         self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
-        self._frame_video_control.grid(
-            row=2, column=0, columnspan=2, pady=PADY, sticky=STICKY
-        )
+        self._frame_video_control.grid(row=2, column=0, pady=PADY, sticky=STICKY)
 
 
 class FrameNavigation(EmbeddedCTkScrollableFrame):
