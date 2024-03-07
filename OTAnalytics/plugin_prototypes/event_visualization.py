@@ -42,7 +42,7 @@ class PandasEventProvider(PandasDataFrameProvider):
         Returns:
             DataFrame: events as dataframe.
         """
-        prepared: list[dict] = [current.to_dict() for current in events]
+        prepared: list[dict] = [current.to_typed_dict() for current in events]
 
         if not prepared:
             return DataFrame()

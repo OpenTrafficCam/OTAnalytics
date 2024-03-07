@@ -122,6 +122,26 @@ class Event(DataclassValidation):
             VIDEO_NAME: self.video_name,
         }
 
+    def to_typed_dict(self) -> dict:
+        """Convert event into dict to interact with other parts of the system,
+        e.g. serialization.
+
+        Returns:
+            dict: serialized event
+        """
+        return {
+            ROAD_USER_ID: self.road_user_id,
+            ROAD_USER_TYPE: self.road_user_type,
+            HOSTNAME: self.hostname,
+            OCCURRENCE: self.occurrence,
+            FRAME_NUMBER: self.frame_number,
+            SECTION_ID: self._serialized_section_id(),
+            EVENT_COORDINATE: self.event_coordinate.to_list(),
+            EVENT_TYPE: self.event_type.value,
+            DIRECTION_VECTOR: self.direction_vector.to_list(),
+            VIDEO_NAME: self.video_name,
+        }
+
     def _serialized_section_id(self) -> Optional[str]:
         return self.section_id.serialize() if self.section_id else None
 
