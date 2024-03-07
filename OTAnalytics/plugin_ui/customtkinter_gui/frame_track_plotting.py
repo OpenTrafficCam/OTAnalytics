@@ -96,9 +96,7 @@ class TabviewLayerGroup(CustomCTkTabview):
         )
 
     def _place_widgets(self) -> None:
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-        self._frame.grid(row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+        self._frame.pack(fill=tkinter.BOTH, expand=True)
         self.set(self._title)
 
     def reset_layers(self) -> None:
