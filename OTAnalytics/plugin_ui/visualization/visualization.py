@@ -164,6 +164,9 @@ class VisualizationBuilder:
         self._data_provider_all_filters_with_offset: Optional[
             PandasDataFrameProvider
         ] = None
+        self._pandas_event_data_provider_all_filters: Optional[
+            PandasDataFrameProvider
+        ] = None
         self._data_provider_class_filter: Optional[PandasDataFrameProvider] = None
         self._event_data_provider_class_filter: Optional[PandasDataFrameProvider] = None
         self._data_provider_class_filter_with_offset: Optional[
@@ -395,6 +398,13 @@ class VisualizationBuilder:
                 )
             )
         return self._event_data_provider_class_filter
+
+    def _get_event_data_provider_all_filters(self) -> PandasDataFrameProvider:
+        if not self._pandas_event_data_provider_all_filters:
+            self._pandas_event_data_provider_all_filters = self._create_all_filters(
+                self._get_pandas_event_data_provider()
+            )
+        return self._pandas_event_data_provider_all_filters
 
     def _get_data_provider_class_filter(self) -> PandasDataFrameProvider:
         if not self._data_provider_class_filter:
@@ -799,7 +809,7 @@ class VisualizationBuilder:
     def _create_event_point_plotter_filter(self) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             TrackPointPlotter(
-                self._get_event_data_provider_class_filter(),
+                self._get_event_data_provider_all_filters(),
                 self._color_palette_provider,
                 alpha=ALPHA_BOUNDING_BOX,
                 marker=MARKER_EVENT_FILTER,
