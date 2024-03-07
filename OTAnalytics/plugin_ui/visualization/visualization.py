@@ -402,6 +402,8 @@ class VisualizationBuilder:
         invalidate = cached_plotter.invalidate_cache
         self._event_repository.register_observer(invalidate)
         flow_state.selected_flows.register(invalidate)
+        self._track_view_state.filter_element.register(invalidate)
+        self._track_view_state.track_offset.register(invalidate)
         return cached_plotter
 
     def _get_event_data_provider_class_filter(self) -> PandasDataFrameProvider:

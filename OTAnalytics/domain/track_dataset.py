@@ -326,11 +326,11 @@ class TrackGeometryDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def remove(self, ids: Iterable[TrackId]) -> "TrackGeometryDataset":
+    def remove(self, ids: Sequence[str]) -> "TrackGeometryDataset":
         """Remove track geometries with given ids from dataset.
 
         Args:
-            ids (Iterable[TrackId]): the track geometries to remove.
+            ids (Sequence[str]): the track geometries to remove.
 
         Returns:
             TrackGeometryDataset: the dataset with tracks removed.

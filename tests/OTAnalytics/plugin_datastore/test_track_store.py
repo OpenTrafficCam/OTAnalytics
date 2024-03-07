@@ -48,7 +48,6 @@ class TestPandasDetection:
         detection_values = python_detection.to_dict()
         detection_values[track.FRAME] = numpy.int64(new_frame_number)
         data = Series(detection_values)
-        data.name = (data[track.CLASSIFICATION], data[track.OCCURRENCE])
         detection = PandasDetection(track_id=track_id, data=data)
 
         assert type(detection.frame) is int
@@ -60,7 +59,7 @@ class TestPandasDetection:
         python_detection = builder.build_detections()[0]
         data = Series(
             python_detection.to_dict(),
-            name=("car", python_detection.occurrence),
+            name=python_detection.occurrence,
         )
         pandas_detection = PandasDetection(python_detection.track_id.id, data)
 
@@ -77,12 +76,8 @@ class TestPandasTrack:
         builder.append_detection()
         python_track = builder.build_track()
         detections = [detection.to_dict() for detection in python_track.detections]
-        data = DataFrame(detections)
+        data = DataFrame(detections).set_index([track.OCCURRENCE]).sort_index()
         data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
-        data = data.set_index(
-            [track.TRACK_CLASSIFICATION, track.OCCURRENCE]
-        ).sort_index()
-
         data = data.drop([track.TRACK_ID], axis=1)
         pandas_track = PandasTrack(python_track.id.id, data)
 
@@ -326,7 +321,7 @@ class TestPandasTrackDataset:
             ).as_list(),
         ):
             assert_equal_track_properties(actual, expected)
-        geometry_dataset.remove.assert_called_once_with({first_track.id})
+        geometry_dataset.remove.assert_called_once_with([first_track.id.id])
         assert removed_track_set._geometry_datasets == {
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
         }
@@ -354,7 +349,10 @@ class TestPandasTrackDataset:
             dataset.remove_multiple(track_ids_to_remove),
         )
         assert_equal_track_properties(list(removed_track_set)[0], third_track)
-        geometry_dataset.remove.assert_called_once_with(track_ids_to_remove)
+        assert set(geometry_dataset.remove.call_args_list[0][0][0]) == {
+            first_track.id.id,
+            second_track.id.id,
+        }
         assert removed_track_set._geometry_datasets == {
             RelativeOffsetCoordinate(0, 0): updated_geometry_dataset,
         }

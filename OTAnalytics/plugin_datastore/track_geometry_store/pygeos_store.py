@@ -1,7 +1,7 @@
 from bisect import bisect
 from collections import defaultdict
 from itertools import chain
-from typing import Any, Iterable, Literal
+from typing import Any, Iterable, Literal, Sequence
 
 from pandas import DataFrame, concat
 from pygeos import (
@@ -28,11 +28,7 @@ from OTAnalytics.domain.track_dataset import (
     TrackDataset,
     TrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import (
-    LEVEL_CLASSIFICATION,
-    LEVEL_TRACK_ID,
-    PandasTrackDataset,
-)
+from OTAnalytics.plugin_datastore.track_store import LEVEL_TRACK_ID, PandasTrackDataset
 
 TRACK_ID = "track_id"
 GEOMETRY = "geom"
@@ -188,9 +184,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         track_size_mask = track_dataset._dataset.groupby(
             level=LEVEL_TRACK_ID
         ).transform("size")
-        filtered_tracks = track_dataset._dataset[track_size_mask > 1].reset_index(
-            level=LEVEL_CLASSIFICATION, drop=True
-        )
+        filtered_tracks = track_dataset._dataset[track_size_mask > 1]
 
         if offset == BASE_GEOMETRY:
             new_x = filtered_tracks[track.X]
@@ -232,10 +226,8 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
         return PygeosTrackGeometryDataset(self._offset, new_dataset)
 
-    def remove(self, ids: Iterable[TrackId]) -> TrackGeometryDataset:
-        updated = self._dataset.drop(
-            index=[track_id.id for track_id in ids], errors="ignore"
-        )
+    def remove(self, ids: Sequence[str]) -> TrackGeometryDataset:
+        updated = self._dataset.drop(index=ids, errors="ignore")
         return PygeosTrackGeometryDataset(self._offset, updated)
 
     def get_for(self, track_ids: Iterable[str]) -> "TrackGeometryDataset":
@@ -315,9 +307,9 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
     def contained_by_sections(
         self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
-        contains_result: dict[
-            TrackId, list[tuple[SectionId, list[bool]]]
-        ] = defaultdict(list)
+        contains_result: dict[TrackId, list[tuple[SectionId, list[bool]]]] = (
+            defaultdict(list)
+        )
         for _section in sections:
             section_geom = area_section_to_pygeos(_section)
 
