@@ -32,7 +32,7 @@ from OTAnalytics.application.parser.cli_parser import (
     CliParser,
     CliValueProvider,
 )
-from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
+from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
     ActionState,
@@ -46,10 +46,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import (
-    SwitchToNextFrame,
-    SwitchToPreviousFrame,
-)
+from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevious
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
@@ -274,7 +271,7 @@ class ApplicationStarter:
             clear_all_intersections.on_section_changed
         )
         videos_metadata = VideosMetadata()
-        layers = self._create_layers(
+        layer_groups, layers = self._create_layers(
             datastore,
             intersection_repository,
             track_view_state,
@@ -397,8 +394,8 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
-        previous_frame = SwitchToPreviousFrame(track_view_state, videos_metadata)
-        next_frame = SwitchToNextFrame(track_view_state, videos_metadata)
+        previous_frame = SwitchToPrevious(track_view_state, videos_metadata)
+        next_frame = SwitchToNext(track_view_state, videos_metadata)
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -484,8 +481,8 @@ class ApplicationStarter:
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
 
-        for layer in layers:
-            layer.register(image_updater.notify_layers)
+        for group in layer_groups:
+            group.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         pulling_progressbar_popup_builder.add_widget(main_window)
         apply_cli_cuts = self.create_apply_cli_cuts(
@@ -495,7 +492,7 @@ class ApplicationStarter:
             load_otflow, load_track_files, apply_cli_cuts
         )
         OTAnalyticsGui(
-            main_window, dummy_viewmodel, layers, preload_input_files, run_config
+            main_window, dummy_viewmodel, layer_groups, preload_input_files, run_config
         ).start()
 
     def start_cli(self, run_config: RunConfiguration) -> None:
@@ -665,7 +662,7 @@ class ApplicationStarter:
         pulling_progressbar_builder: ProgressbarBuilder,
         road_user_assigner: RoadUserAssigner,
         color_palette_provider: ColorPaletteProvider,
-    ) -> Sequence[PlottingLayer]:
+    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         return VisualizationBuilder(
             datastore,
             intersection_repository,

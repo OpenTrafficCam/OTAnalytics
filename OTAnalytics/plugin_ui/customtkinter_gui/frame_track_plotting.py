@@ -8,18 +8,22 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.plotting import Layer
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
+from OTAnalytics.application.plotting import Layer, LayerGroup
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
+    CustomCTkTabview,
+    EmbeddedCTkFrame,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.style import STICKY_WEST
 
 
 class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
     def __init__(
-        self, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
+        self, viewmodel: ViewModel, layers: Sequence[LayerGroup], **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
-        self._view_model = viewmodel
+        self._viewmodel = viewmodel
+        self._views: list[TabviewLayerGroup] = []
         self._layers = layers
         self._get_widgets()
         self._place_widgets()
@@ -33,12 +37,22 @@ class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
         )
 
     def _place_widgets(self) -> None:
+        self.grid_rowconfigure([i for i in range(0, len(self._layers))], weight=0)
+        self.grid_rowconfigure(len(self._layers) + 1, weight=1)
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
         pady = 10
-        for idx, layer in enumerate(self._layers):
-            checkbox_layer = CheckBoxLayer(master=self, layer=layer)
-            checkbox_layer.grid(
-                row=idx, column=0, padx=PADX, pady=(0, pady), sticky=STICKY
+        for row, group in enumerate(self._layers):
+            actual = TabviewLayerGroup(
+                master=self,
+                title=group.name,
+                viewmodel=self._viewmodel,
+                layers=group.layers,
             )
+            actual.grid(
+                row=row, column=0, padx=PADX, pady=(0, PADY), sticky=STICKY_WEST
+            )
+            self._views.append(actual)
         self._button_update_highlight_flows.grid(
             row=len(self._layers),
             column=0,
@@ -49,10 +63,62 @@ class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
 
     def _create_events(self) -> None:
         logger().info("Creating events")
-        self._view_model.create_events()
+        self._viewmodel.create_events()
 
     def introduce_to_viewmodel(self) -> None:
-        self._view_model.set_frame_track_plotting(self)
+        self._viewmodel.set_frame_track_plotting(self)
+
+    def reset_layers(self) -> None:
+        for view in self._views:
+            view.reset_layers()
+
+
+class TabviewLayerGroup(CustomCTkTabview):
+    def __init__(
+        self,
+        viewmodel: ViewModel,
+        title: str,
+        layers: Sequence[Layer],
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._title = title
+        self._get_widgets(viewmodel=viewmodel, layers=layers)
+        self._place_widgets()
+        self.disable_segmented_button()
+
+    def _get_widgets(self, viewmodel: ViewModel, layers: Sequence[Layer]) -> None:
+        self.add(self._title)
+        self._frame = FrameTrackPlottingLayerGroup(
+            master=self.tab(self._title), viewmodel=viewmodel, layers=layers
+        )
+
+    def _place_widgets(self) -> None:
+        self._frame.pack(fill=tkinter.BOTH, expand=True)
+        self.set(self._title)
+
+    def reset_layers(self) -> None:
+        self._frame.reset_layers()
+
+
+class FrameTrackPlottingLayerGroup(EmbeddedCTkFrame):
+
+    def __init__(
+        self, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
+    ) -> None:
+        super().__init__(**kwargs)
+        self._view_model = viewmodel
+        self._layers = layers
+        self._place_widgets()
+
+    def _place_widgets(self) -> None:
+        self.grid_rowconfigure([i for i in range(0, len(self._layers))], weight=0)
+        self.grid_rowconfigure(len(self._layers), weight=1)
+        for row, layer in enumerate(self._layers):
+            checkbox_layer = CheckBoxLayer(master=self, layer=layer)
+            checkbox_layer.grid(
+                row=row, column=0, padx=PADX, pady=(0, PADY), sticky=STICKY
+            )
 
     def reset_layers(self) -> None:
         for layer in self._layers:

@@ -1362,6 +1362,12 @@ class DummyViewModel(
     def previous_frame(self) -> None:
         self._application.previous_frame()
 
+    def next_second(self) -> None:
+        self._application.next_second()
+
+    def previous_second(self) -> None:
+        self._application.previous_second()
+
     def validate_date(self, date: str) -> bool:
         return any(
             [validate_date(date, date_format) for date_format in SUPPORTED_FORMATS]
@@ -1498,9 +1504,9 @@ class DummyViewModel(
                     "There is no flow configurated.\n"
                     "Please create a flow."
                 ),
-                initial_position=self._window.get_position()
-                if self._window
-                else (0, 0),
+                initial_position=(
+                    self._window.get_position() if self._window else (0, 0)
+                ),
             )
             return
         export_formats: dict = {

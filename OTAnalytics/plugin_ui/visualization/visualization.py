@@ -10,6 +10,7 @@ from OTAnalytics.application.plotting import (
     CachedPlotter,
     GetCurrentFrame,
     GetCurrentVideoPath,
+    LayerGroup,
     PlottingLayer,
     TrackBackgroundPlotter,
     VisualizationTimeProvider,
@@ -183,7 +184,7 @@ class VisualizationBuilder:
         self,
         flow_state: FlowState,
         road_user_assigner: RoadUserAssigner,
-    ) -> Sequence[PlottingLayer]:
+    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         background_image_plotter = TrackBackgroundPlotter(
             self._track_view_state.selected_videos.get,
             self._visualization_time_provider,
@@ -205,70 +206,88 @@ class VisualizationBuilder:
         event_point_plotter_frame = self._create_event_point_plotter_frame()
         event_point_plotter_filter = self._create_event_point_plotter_filter()
 
-        layer_definitions = [
-            ("Background", background_image_plotter, True),
-            ("Show all tracks", all_tracks_plotter, False),
-            (
-                "Highlight tracks intersecting sections",
-                self._create_highlight_tracks_intersecting_sections_plotter(),
-                False,
-            ),
-            (
-                "Highlight tracks not intersecting sections",
-                self._create_highlight_tracks_not_intersecting_sections_plotter(),
-                False,
-            ),
-            (
-                "Show start and end point of tracks intersecting sections",
-                self._create_start_end_point_intersecting_sections_plotter(),
-                False,
-            ),
-            (
-                "Show start and end point of tracks not intersecting sections",
-                self._create_start_end_point_not_intersection_sections_plotter(),
-                False,
-            ),
-            (
-                "Show start and end point",
-                self._create_start_end_point_plotter(),
-                False,
-            ),
-            (
-                "Highlight tracks assigned to flows",
-                highlight_tracks_assigned_to_flows_plotter,
-                False,
-            ),
-            (
-                "Highlight tracks not assigned to flows",
-                highlight_tracks_not_assigned_to_flows_plotter,
-                False,
-            ),
-            (
-                "Show bounding boxes of current frame",
-                track_bounding_box_plotter,
-                False,
-            ),
-            (
-                "Show track point of bounding boxes of current frame",
-                track_point_plotter,
-                False,
-            ),
-            (
-                "Show events of current filter",
-                event_point_plotter_filter,
-                False,
-            ),
-            (
-                "Show events of current frame",
-                event_point_plotter_frame,
-                False,
-            ),
-        ]
+        layer_definitions: dict[str, list[tuple]] = {
+            "Background": [
+                ("Background", background_image_plotter, True),
+            ],
+            "Show tracks": [
+                ("All", all_tracks_plotter, False),
+                (
+                    "Intersecting sections",
+                    self._create_highlight_tracks_intersecting_sections_plotter(),
+                    False,
+                ),
+                (
+                    "Not intersecting sections",
+                    self._create_highlight_tracks_not_intersecting_sections_plotter(),
+                    False,
+                ),
+                (
+                    "Assigned to flows",
+                    highlight_tracks_assigned_to_flows_plotter,
+                    False,
+                ),
+                (
+                    "Not assigned to flows",
+                    highlight_tracks_not_assigned_to_flows_plotter,
+                    False,
+                ),
+            ],
+            "Show start and end points": [
+                (
+                    "All",
+                    self._create_start_end_point_plotter(),
+                    False,
+                ),
+                (
+                    "Intersecting sections",
+                    self._create_start_end_point_intersecting_sections_plotter(),
+                    False,
+                ),
+                (
+                    "Not intersecting sections",
+                    self._create_start_end_point_not_intersection_sections_plotter(),
+                    False,
+                ),
+            ],
+            "Show Bounding Box": [
+                (
+                    "Current frame",
+                    track_bounding_box_plotter,
+                    False,
+                ),
+                (
+                    "Track point of current frame",
+                    track_point_plotter,
+                    False,
+                ),
+            ],
+            "Show events": [
+                (
+                    "Current filter",
+                    event_point_plotter_filter,
+                    False,
+                ),
+                (
+                    "Current frame",
+                    event_point_plotter_frame,
+                    False,
+                ),
+            ],
+        }
 
-        return [
-            PlottingLayer(name, plotter, enabled)
-            for name, plotter, enabled in layer_definitions
-        ]
+        plotting_layers = []
+        grouped_layers = []
+
+        for group, definition in layer_definitions.items():
+            layers = [
+                PlottingLayer(name, plotter, enabled)
+                for name, plotter, enabled in definition
+            ]
+            layer_group = LayerGroup(name=group, layers=layers)
+            grouped_layers.append(layer_group)
+            plotting_layers.extend(layers)
+        return grouped_layers, plotting_layers
 
     def _create_all_tracks_plotter(self) -> Plotter:
         track_geometry_plotter = self._create_track_geometry_plotter(

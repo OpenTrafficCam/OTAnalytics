@@ -33,7 +33,6 @@ class FrameBboxOffset(CTkFrame):
         self.label_y_value = CTkLabel(master=self, width=20)
         self.slider_x = CTkSlider(
             master=self,
-            width=110,
             from_=0,
             to=1,
             number_of_steps=1 / SLIDER_RESOLUTION,
@@ -42,7 +41,6 @@ class FrameBboxOffset(CTkFrame):
         self.slider_x.bind("<ButtonRelease-1>", self._on_slider_release)
         self.slider_y = CTkSlider(
             master=self,
-            width=110,
             from_=0,
             to=1,
             number_of_steps=10,

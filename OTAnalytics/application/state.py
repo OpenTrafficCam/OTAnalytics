@@ -187,7 +187,7 @@ class TrackViewState:
         self.selected_videos: ObservableProperty[list[Video]] = ObservableProperty[
             list[Video]
         ](default=[])
-        self.skip_time = ObservableProperty[SkipTime](SkipTime(1, 0))
+        self.skip_time = ObservableProperty[SkipTime](SkipTime(1, 1))
 
     def reset(self) -> None:
         """Reset to default settings."""
@@ -251,9 +251,9 @@ class SectionState(SectionListObserver):
     """
 
     def __init__(self, get_sections_by_id: GetSectionsById) -> None:
-        self.selected_sections: ObservableProperty[
-            list[SectionId]
-        ] = ObservableProperty[list]([])
+        self.selected_sections: ObservableProperty[list[SectionId]] = (
+            ObservableProperty[list]([])
+        )
         self._get_sections_by_id = get_sections_by_id
 
     def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
@@ -471,18 +471,18 @@ class TracksMetadata(TrackListObserver):
         self._track_repository = track_repository
         self._include_classes = include_classes
         self._exclude_classes = exclude_classes
-        self._first_detection_occurrence: ObservableOptionalProperty[
-            datetime
-        ] = ObservableOptionalProperty[datetime]()
-        self._last_detection_occurrence: ObservableOptionalProperty[
-            datetime
-        ] = ObservableOptionalProperty[datetime]()
+        self._first_detection_occurrence: ObservableOptionalProperty[datetime] = (
+            ObservableOptionalProperty[datetime]()
+        )
+        self._last_detection_occurrence: ObservableOptionalProperty[datetime] = (
+            ObservableOptionalProperty[datetime]()
+        )
         self._classifications: ObservableProperty[frozenset[str]] = ObservableProperty[
             frozenset
         ](frozenset())
-        self._detection_classifications: ObservableProperty[
-            frozenset[str]
-        ] = ObservableProperty[frozenset](frozenset([]))
+        self._detection_classifications: ObservableProperty[frozenset[str]] = (
+            ObservableProperty[frozenset](frozenset([]))
+        )
 
     @property
     def first_detection_occurrence(self) -> Optional[datetime]:

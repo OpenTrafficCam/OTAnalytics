@@ -1,19 +1,22 @@
 import tkinter
+from functools import partial
 from typing import Any, Sequence
 
 from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_theme
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.config import ON_MAC
 from OTAnalytics.application.exception import gather_exception_messages
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.plotting import Layer
+from OTAnalytics.application.plotting import LayerGroup
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkScrollableFrame,
+    SingleFrameTabview,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_analysis import TabviewAnalysis
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
@@ -107,7 +110,11 @@ class TabviewInputFiles(CustomCTkTabview):
 
 class FrameContent(CTkFrame):
     def __init__(
-        self, master: Any, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
+        self,
+        master: Any,
+        viewmodel: ViewModel,
+        layers: Sequence[LayerGroup],
+        **kwargs: Any,
     ) -> None:
         super().__init__(master=master, **kwargs)
         self._viewmodel = viewmodel
@@ -117,25 +124,30 @@ class FrameContent(CTkFrame):
             viewmodel=viewmodel,
             layers=layers,
         )
-        self._frame_filter = FrameFilter(master=self, viewmodel=self._viewmodel)
+        self._frame_filter = SingleFrameTabview(
+            master=self,
+            title="Visualization Filters",
+            frame_factory=(partial(FrameFilter, viewmodel=viewmodel)),
+        )
         self._frame_canvas = FrameCanvas(
             master=self,
             viewmodel=self._viewmodel,
         )
-        self._frame_video_control = FrameVideoControl(
-            master=self, viewmodel=self._viewmodel
+        self._frame_video_control = SingleFrameTabview(
+            master=self,
+            title="Video Control",
+            frame_factory=(partial(FrameVideoControl, viewmodel=viewmodel)),
         )
         self.grid_rowconfigure(0, weight=0)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=0)
         self.grid_rowconfigure(2, weight=0)
+        self.grid_rowconfigure(3, weight=1)
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
         self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
-        self._frame_video_control.grid(
-            row=2, column=0, columnspan=2, pady=PADY, sticky=STICKY
-        )
+        self._frame_video_control.grid(row=2, column=0, pady=PADY, sticky=STICKY)
 
 
 class FrameNavigation(EmbeddedCTkScrollableFrame):
@@ -171,7 +183,7 @@ class TabviewContent(CustomCTkTabview):
     def __init__(
         self,
         viewmodel: ViewModel,
-        layers: Sequence[Layer],
+        layers: Sequence[LayerGroup],
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -201,7 +213,7 @@ class OTAnalyticsGui:
         self,
         app: ModifiedCTk,
         view_model: ViewModel,
-        layers: Sequence[Layer],
+        layers: Sequence[LayerGroup],
         preload_input_files: PreloadInputFiles,
         run_config: RunConfiguration,
     ) -> None:
@@ -223,6 +235,7 @@ class OTAnalyticsGui:
 
         self._get_widgets()
         self._place_widgets()
+        self._register_global_keybindings()
         self._app.after(0, lambda: self._app.state("zoomed"))
         self._app.after(1000, lambda: self._preload_input_files.load(self._run_config))
         self._app.mainloop()
@@ -248,4 +261,26 @@ class OTAnalyticsGui:
             padx=PADX,
             pady=PADY,
             sticky=STICKY,
+        )
+
+    def _register_global_keybindings(self) -> None:
+        cmd_ctrl = "Command" if ON_MAC else "Control"
+        shift = "Shift"
+        next = "Right"
+        previous = "Left"
+        self._app.bind(f"<{next}>", lambda event: self._viewmodel.next_frame())
+        self._app.bind(
+            f"<{cmd_ctrl}-{next}>", lambda event: self._viewmodel.next_second()
+        )
+        self._app.bind(
+            f"<{cmd_ctrl}-{shift}-{next}>",
+            lambda event: self._viewmodel.switch_to_next_date_range(),
+        )
+        self._app.bind(f"<{previous}>", lambda event: self._viewmodel.previous_frame())
+        self._app.bind(
+            f"<{cmd_ctrl}-{previous}>", lambda event: self._viewmodel.previous_second()
+        )
+        self._app.bind(
+            f"<{cmd_ctrl}-{shift}-{previous}>",
+            lambda event: self._viewmodel.switch_to_prev_date_range(),
         )
