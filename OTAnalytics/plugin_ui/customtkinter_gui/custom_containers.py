@@ -39,7 +39,7 @@ class CustomCTkTabview(CTkTabview):
         self,
         **kwargs: Any,
     ) -> None:
-        super().__init__(border_width=0, **kwargs)
+        super().__init__(border_width=0, height=10, **kwargs)
         self.set_fg_color_as_segmented_button_color()
         self._configure_grid()
 
