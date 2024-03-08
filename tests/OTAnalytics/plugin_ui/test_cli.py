@@ -205,6 +205,7 @@ def create_run_config(
     save_suffix: str = "",
     event_formats: list[str] | None = None,
     count_intervals: list[int] | None = None,
+    track_export: bool = False,
     num_processes: int = DEFAULT_NUM_PROCESSES,
     logfile: str = str(DEFAULT_LOG_FILE),
     logfile_overwrite: bool = False,
@@ -222,19 +223,20 @@ def create_run_config(
     if track_files is None:
         track_files = [TRACK_FILE]
     cli_args = CliArguments(
-        start_cli,
-        debug,
-        logfile_overwrite,
-        config_file,
-        track_files,
-        sections_file,
-        save_dir,
-        save_name,
-        save_suffix,
-        _event_formats,
-        _count_intervals,
-        num_processes,
-        logfile,
+        start_cli=start_cli,
+        debug=debug,
+        logfile_overwrite=logfile_overwrite,
+        track_export=track_export,
+        config_file=config_file,
+        track_files=track_files,
+        otflow_file=sections_file,
+        save_dir=save_dir,
+        save_name=save_name,
+        save_suffix=save_suffix,
+        event_formats=_event_formats,
+        count_intervals=_count_intervals,
+        num_processes=num_processes,
+        log_file=logfile,
     )
     run_config = RunConfiguration(flow_parser, cli_args)
     return run_config
@@ -558,6 +560,7 @@ class TestOTAnalyticsCli:
             start_cli=True,
             debug=False,
             logfile_overwrite=False,
+            track_export=False,
             config_file=str(temp_otconfig),
         )
         otconfig = config_parser.parse(temp_otconfig)

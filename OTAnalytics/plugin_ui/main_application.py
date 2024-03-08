@@ -155,6 +155,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -536,6 +537,7 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
         )
+        export_tracks = CsvTrackExport(track_repository)
         OTAnalyticsCli(
             run_config,
             track_parser=track_parser,
@@ -553,6 +555,7 @@ class ApplicationStarter:
             tracks_metadata=self._create_tracks_metadata(track_repository, run_config),
             videos_metadata=VideosMetadata(),
             progressbar=TqdmBuilder(),
+            export_tracks=export_tracks,
         ).start()
 
     def _create_datastore(
