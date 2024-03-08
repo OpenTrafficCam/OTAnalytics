@@ -49,6 +49,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
     RemoveSection,
 )
+from OTAnalytics.application.use_cases.track_export import ExportTracks
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -90,6 +91,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
     SimpleVideoParser,
 )
+from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_OTEVENTS_FORMAT_NAME,
@@ -250,6 +252,7 @@ class TestOTAnalyticsCli:
     ADD_FLOW: str = "add_flow"
     CREATE_EVENTS: str = "create_events"
     EXPORT_COUNTS: str = "export_counts"
+    EXPORT_TRACKS: str = "export_tracks"
     PROVIDE_EVENTLIST_EXPORTER: str = "provide_eventlist_exporter"
     APPLY_CLI_CUTS: str = "apply_cli_cuts"
     ADD_ALL_TRACKS: str = "add_all_tracks"
@@ -269,6 +272,7 @@ class TestOTAnalyticsCli:
             self.ADD_FLOW: Mock(spec=AddFlow),
             self.CREATE_EVENTS: Mock(spec=CreateEvents),
             self.EXPORT_COUNTS: Mock(spec=ExportCounts),
+            self.EXPORT_TRACKS: Mock(spec=ExportTracks),
             self.PROVIDE_EVENTLIST_EXPORTER: Mock(),
             self.APPLY_CLI_CUTS: Mock(spec=ApplyCliCuts),
             self.ADD_ALL_TRACKS: Mock(spec=AddAllTracks),
@@ -331,6 +335,7 @@ class TestOTAnalyticsCli:
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),
         )
+        export_tracks = CsvTrackExport(track_repository)
         return {
             self.TRACK_PARSER: OttrkParser(
                 PythonDetectionParser(
@@ -343,6 +348,7 @@ class TestOTAnalyticsCli:
             self.ADD_FLOW: AddFlow(flow_repository),
             self.CREATE_EVENTS: create_events,
             self.EXPORT_COUNTS: export_counts,
+            self.EXPORT_TRACKS: export_tracks,
             self.PROVIDE_EVENTLIST_EXPORTER: provide_available_eventlist_exporter,
             self.APPLY_CLI_CUTS: apply_cli_cuts,
             self.ADD_ALL_TRACKS: add_all_tracks,
@@ -365,6 +371,7 @@ class TestOTAnalyticsCli:
         assert cli._add_flow == mock_cli_dependencies[self.ADD_FLOW]
         assert cli._create_events == mock_cli_dependencies[self.CREATE_EVENTS]
         assert cli._export_counts == mock_cli_dependencies[self.EXPORT_COUNTS]
+        assert cli._export_tracks == mock_cli_dependencies[self.EXPORT_TRACKS]
         assert cli._apply_cli_cuts == mock_cli_dependencies[self.APPLY_CLI_CUTS]
         assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
         assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
