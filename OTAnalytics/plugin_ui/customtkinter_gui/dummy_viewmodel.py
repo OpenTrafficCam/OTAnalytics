@@ -46,7 +46,7 @@ from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
 )
-from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
+from OTAnalytics.application.datastore import FlowParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.config import MissingDate
@@ -57,6 +57,7 @@ from OTAnalytics.application.use_cases.export_events import (
 )
 from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,

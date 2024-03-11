@@ -7,6 +7,7 @@ from typing import Iterable, Optional, Sequence, Tuple
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import (
     Flow,
@@ -214,10 +215,6 @@ class TrackVideoParser(ABC):
             Tuple[list[TrackId], list[Video]]: track ids and the corresponding videos
         """
         pass
-
-
-class NoSectionsToSave(Exception):
-    pass
 
 
 class Datastore:
