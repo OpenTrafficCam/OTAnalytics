@@ -13,7 +13,6 @@ from OTAnalytics.application.config import (
 from OTAnalytics.application.datastore import (
     DetectionMetadata,
     EventListParser,
-    FlowParser,
     TrackParser,
     TrackParseResult,
     TrackVideoParser,
@@ -21,6 +20,7 @@ from OTAnalytics.application.datastore import (
     VideoParser,
 )
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType

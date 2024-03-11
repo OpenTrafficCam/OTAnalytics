@@ -5,13 +5,14 @@ from typing import Iterable
 
 from OTAnalytics.application import project
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
-from OTAnalytics.application.datastore import FlowParser, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ConfigParser,
     ExportConfig,
     OtConfig,
 )
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow

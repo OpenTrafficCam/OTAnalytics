@@ -10,7 +10,6 @@ from PIL import Image
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
-    FlowParser,
     TrackParser,
     TrackToVideoRepository,
     TrackVideoParser,
@@ -18,6 +17,7 @@ from OTAnalytics.application.datastore import (
     VideoParser,
 )
 from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository

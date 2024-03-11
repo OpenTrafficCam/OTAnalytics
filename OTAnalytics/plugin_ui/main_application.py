@@ -20,7 +20,6 @@ from OTAnalytics.application.config_specification import OtConfigDefaultValuePro
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
-    FlowParser,
     TrackParser,
     TrackToVideoRepository,
     VideoParser,
@@ -32,6 +31,7 @@ from OTAnalytics.application.parser.cli_parser import (
     CliParser,
     CliValueProvider,
 )
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (

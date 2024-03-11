@@ -4,12 +4,13 @@ from typing import Any, Sequence
 from unittest.mock import Mock, PropertyMock, call
 
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
-from OTAnalytics.application.datastore import FlowParser, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ExportConfig,
     OtConfig,
 )
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow

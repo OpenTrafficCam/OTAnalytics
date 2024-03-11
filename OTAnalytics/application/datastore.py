@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
 from OTAnalytics.application.parser.config_parser import ConfigParser
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
@@ -80,41 +81,6 @@ class TrackParser(ABC):
     @abstractmethod
     def parse(self, file: Path) -> TrackParseResult:
         raise NotImplementedError
-
-
-class FlowParser(ABC):
-    @abstractmethod
-    def parse(self, file: Path) -> tuple[Sequence[Section], Sequence[Flow]]:
-        pass
-
-    @abstractmethod
-    def parse_content(
-        self,
-        section_content: list[dict],
-        flow_content: list[dict],
-    ) -> tuple[Sequence[Section], Sequence[Flow]]:
-        pass
-
-    @abstractmethod
-    def parse_section(self, entry: dict) -> Section:
-        pass
-
-    @abstractmethod
-    def serialize(
-        self,
-        sections: Iterable[Section],
-        flows: Iterable[Flow],
-        file: Path,
-    ) -> None:
-        pass
-
-    @abstractmethod
-    def convert(
-        self,
-        sections: Iterable[Section],
-        flows: Iterable[Flow],
-    ) -> dict[str, list[dict]]:
-        pass
 
 
 class EventListParser(ABC):

@@ -46,8 +46,8 @@ from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
 )
-from OTAnalytics.application.datastore import FlowParser
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto

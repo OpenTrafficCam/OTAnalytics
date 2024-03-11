@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from OTAnalytics.application.datastore import FlowParser
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.section_repository import GetAllSections
 
