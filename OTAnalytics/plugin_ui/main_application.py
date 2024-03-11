@@ -495,6 +495,7 @@ class ApplicationStarter:
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
+        load_otflow.register(otflow_file_save_state.last_saved.set)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)

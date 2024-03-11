@@ -81,8 +81,10 @@ class TestLoadOtflow:
         load_flow_file = LoadOtflow(**mock_deps)
 
         otflow_file = Mock(spec=Path)
-        load_flow_file(otflow_file)
+        observer = Mock()
+        load_flow_file.register(observer)
 
+        load_flow_file(otflow_file)
         mock_deps["flow_parser"].parse.assert_called_once_with(otflow_file)
         assert mock_deps["add_section"].call_args_list == [
             call(mock_first_section),
@@ -92,12 +94,15 @@ class TestLoadOtflow:
         mock_deps["clear_all_events"].assert_called_once()
         mock_deps["clear_all_flows"].assert_called_once()
         mock_deps["clear_all_sections"].assert_called_once()
+        observer.assert_called_with(otflow_file)
 
     def test_load_flow_file_invalid_section_file(
         self, mock_deps: MockDependencies, mock_first_section: Mock
     ) -> None:
         mock_deps["add_section"].side_effect = SectionAlreadyExists
         load_flow_file = LoadOtflow(**mock_deps)
+        observer = Mock()
+        load_flow_file.register(observer)
         otflow_file = Mock(spec=Path)
 
         with pytest.raises((SectionAlreadyExists, UnableToLoadFlowFile)):
@@ -108,6 +113,7 @@ class TestLoadOtflow:
         assert mock_deps["clear_all_sections"].call_count == 2
         assert mock_deps["clear_all_flows"].call_count == 2
         assert mock_deps["clear_all_events"].call_count == 2
+        observer.assert_not_called()
 
     def test_load_flow_file_invalid_flow_file(
         self,
@@ -118,6 +124,8 @@ class TestLoadOtflow:
     ) -> None:
         mock_deps["add_flow"].side_effect = FlowAlreadyExists
         load_flow_file = LoadOtflow(**mock_deps)
+        observer = Mock()
+        load_flow_file.register(observer)
         otflow_file = Mock(spec=Path)
 
         with pytest.raises((FlowAlreadyExists, UnableToLoadFlowFile)):
@@ -131,3 +139,4 @@ class TestLoadOtflow:
         assert mock_deps["clear_all_sections"].call_count == 2
         assert mock_deps["clear_all_flows"].call_count == 2
         assert mock_deps["clear_all_events"].call_count == 2
+        observer.assert_not_called()

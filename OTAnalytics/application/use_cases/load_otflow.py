@@ -14,6 +14,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     SectionAlreadyExists,
 )
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.section import Section
 
 
@@ -49,6 +50,7 @@ class LoadOtflow:
         self._flow_parser = flow_parser
         self._add_section = add_section
         self._add_flow = add_flow
+        self._subject = Subject[Path]()
 
     def __call__(self, file: Path) -> None:
         """
@@ -63,6 +65,7 @@ class LoadOtflow:
         try:
             self._add_sections(sections)
             self._add_flows(flows)
+            self._subject.notify(file)
 
         except (SectionAlreadyExists, FlowAlreadyExists) as cause:
             self._clear_repositories()
@@ -82,3 +85,6 @@ class LoadOtflow:
     def _add_flows(self, flows: Iterable[Flow]) -> None:
         for flow in flows:
             self._add_flow(flow)
+
+    def register(self, observer: OBSERVER[Path]) -> None:
+        self._subject.register(observer)

@@ -94,6 +94,12 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             width=10,
             command=self._viewmodel.save_configuration,
         )
+        self.button_quick_save = CTkButton(
+            master=self._button_frame,
+            text="Save",
+            width=10,
+            command=self._viewmodel.quick_save_otflow,
+        )
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure(2, weight=1)
@@ -103,7 +109,12 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             row=0, column=0, columnspan=2, padx=0, pady=0, sticky=STICKY
         )
         for column, button in enumerate(
-            [self._button_new, self.button_open, self.button_save_as]
+            [
+                self._button_new,
+                self.button_open,
+                self.button_save_as,
+                self.button_quick_save,
+            ]
         ):
             self._button_frame.grid_columnconfigure(column, weight=1)
             button.grid(row=0, column=column, padx=PADX, pady=PADY, sticky=STICKY)
