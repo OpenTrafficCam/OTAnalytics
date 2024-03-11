@@ -1,6 +1,8 @@
 from unittest.mock import Mock
 
-from OTAnalytics.application.use_cases.save_otflow import SaveOTFlow
+import pytest
+
+from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave, SaveOTFlow
 
 
 class TestSaveOTFlow:
@@ -22,3 +24,20 @@ class TestSaveOTFlow:
         flow_parser.serialize.assert_called_once_with(
             sections=sections, flows=flows, file=some_file
         )
+
+    def test_save_no_sections(self) -> None:
+        get_sections = Mock()
+        get_sections.return_value = []
+        get_flows = Mock()
+
+        flow_parser = Mock()
+        some_file = Mock()
+
+        save_otflow = SaveOTFlow(flow_parser, get_sections, get_flows)
+
+        with pytest.raises(NoSectionsToSave):
+            save_otflow.save(some_file)
+
+        flow_parser.serialize.assert_not_called()
+        get_sections.assert_called_once()
+        get_flows.get.assert_not_called()
