@@ -37,6 +37,7 @@ from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
     ActionState,
     FlowState,
+    OTFlowFileSaveState,
     SectionState,
     SelectedVideoUpdate,
     TrackImageUpdater,
@@ -89,7 +90,7 @@ from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
-from OTAnalytics.application.use_cases.save_otflow import SaveOTFlow
+from OTAnalytics.application.use_cases.save_otflow import QuickSaveOTFlow, SaveOTFlow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
@@ -404,7 +405,11 @@ class ApplicationStarter:
         next_frame = SwitchToNext(track_view_state, videos_metadata)
         get_sections = GetAllSections(section_repository)
         get_flows = GetAllFlows(flow_repository)
-        save_otflow = SaveOTFlow(flow_parser, get_sections, get_flows)
+        otflow_file_save_state = OTFlowFileSaveState()
+        save_otflow = SaveOTFlow(
+            flow_parser, get_sections, get_flows, otflow_file_save_state
+        )
+        quick_save_otflow = QuickSaveOTFlow(otflow_file_save_state, save_otflow)
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -430,6 +435,7 @@ class ApplicationStarter:
             previous_frame,
             next_frame,
             save_otflow,
+            quick_save_otflow,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(

@@ -12,14 +12,18 @@ class SaveOTFlow:
         flow_parser: FlowParser,
         get_sections: GetAllSections,
         get_flows: GetAllFlows,
+        state: OTFlowFileSaveState,
     ) -> None:
         self._parser = flow_parser
         self._get_sections = get_sections
         self._get_flows = get_flows
+        self._state = state
 
     def save(self, file: Path) -> None:
         """
         Save the flows and sections from the repositories into a file.
+
+        Notifies observers that an OTFlow file has been saved.
 
         Args:
             file (Path): file to save the flows and sections to.
@@ -31,6 +35,7 @@ class SaveOTFlow:
                 flows=flows,
                 file=file,
             )
+            self._state.last_saved.set(file)
         else:
             raise NoSectionsToSave()
 
