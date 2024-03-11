@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.state import OTFlowFileSaveState
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.section_repository import GetAllSections
 
@@ -35,4 +36,19 @@ class SaveOTFlow:
 
 
 class NoSectionsToSave(Exception):
+    pass
+
+
+class QuickSaveOTFlow:
+    def __init__(self, state: OTFlowFileSaveState, save_otflow: SaveOTFlow) -> None:
+        self._state = state
+        self._save_otflow = save_otflow
+
+    def save(self) -> None:
+        if not (flow_file := self._state.last_saved.get()):
+            raise NoExistingFileToSave("No saved file to save otflow to")
+        self._save_otflow.save(flow_file)
+
+
+class NoExistingFileToSave(Exception):
     pass

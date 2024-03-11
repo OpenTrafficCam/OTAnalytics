@@ -1,6 +1,7 @@
 import bisect
 from abc import ABC, abstractmethod
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Generic, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
@@ -565,3 +566,8 @@ class ActionState:
 
     def __init__(self) -> None:
         self.action_running = ObservableProperty[bool](False)
+
+
+class OTFlowFileSaveState:
+    def __init__(self) -> None:
+        self.last_saved = ObservableOptionalProperty[Path]()
