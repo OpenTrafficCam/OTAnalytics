@@ -7,6 +7,7 @@ from OTAnalytics.application.use_cases.flow_repository import (
     ClearAllFlows,
     FlowAlreadyExists,
     FlowIdAlreadyExists,
+    GetAllFlows,
 )
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
@@ -96,3 +97,14 @@ class TestClearAllFlows:
         clear_all_flows = ClearAllFlows(flow_repository)
         clear_all_flows()
         flow_repository.clear.assert_called_once()
+
+
+class TestGetAllFlows:
+    def test_get(self) -> None:
+        expected_flows = Mock()
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = expected_flows
+        get_all_flows = GetAllFlows(flow_repository)
+        actual_flows = get_all_flows.get()
+        assert actual_flows == expected_flows
+        flow_repository.get_all.assert_called_once()
