@@ -5,10 +5,8 @@ from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
 from OTAnalytics.application.parser.config_parser import ConfigParser
-from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import EventListExporter
-from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import (
     Flow,
@@ -194,7 +192,6 @@ class Datastore:
         track_file_repository: TrackFileRepository,
         track_parser: TrackParser,
         section_repository: SectionRepository,
-        flow_parser: FlowParser,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         event_list_parser: EventListParser,
@@ -206,7 +203,6 @@ class Datastore:
         config_parser: ConfigParser,
     ) -> None:
         self._track_parser = track_parser
-        self._flow_parser = flow_parser
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
         self._track_video_parser = track_video_parser
@@ -303,23 +299,6 @@ class Datastore:
     def delete_all_tracks(self) -> None:
         """Delete all tracks in repository."""
         self._track_repository.clear()
-
-    def save_flow_file(self, file: Path) -> None:
-        """
-        Save the flows and sections from the repositories into a file.
-
-        Args:
-            file (Path): file to save the flows and sections to
-        """
-        if sections := self._section_repository.get_all():
-            flows = self._flow_repository.get_all()
-            self._flow_parser.serialize(
-                sections=sections,
-                flows=flows,
-                file=file,
-            )
-        else:
-            raise NoSectionsToSave()
 
     def get_all_sections(self) -> list[Section]:
         return self._section_repository.get_all()

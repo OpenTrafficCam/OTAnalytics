@@ -65,7 +65,11 @@ from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
-from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearAllFlows
+from OTAnalytics.application.use_cases.flow_repository import (
+    AddFlow,
+    ClearAllFlows,
+    GetAllFlows,
+)
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -85,6 +89,7 @@ from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
+from OTAnalytics.application.use_cases.save_otflow import SaveOTFlow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
@@ -258,6 +263,7 @@ class ApplicationStarter:
             pulling_progressbar_builder,
             run_config,
         )
+        flow_parser = self._create_flow_parser()
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state(section_repository)
@@ -359,7 +365,7 @@ class ApplicationStarter:
             clear_all_sections,
             clear_all_flows,
             clear_all_events,
-            datastore._flow_parser,
+            flow_parser,
             add_section,
             add_flow,
         )
@@ -396,6 +402,9 @@ class ApplicationStarter:
         )
         previous_frame = SwitchToPrevious(track_view_state, videos_metadata)
         next_frame = SwitchToNext(track_view_state, videos_metadata)
+        get_sections = GetAllSections(section_repository)
+        get_flows = GetAllFlows(flow_repository)
+        save_otflow = SaveOTFlow(flow_parser, get_sections, get_flows)
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -420,6 +429,7 @@ class ApplicationStarter:
             load_track_files,
             previous_frame,
             next_frame,
+            save_otflow,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -427,7 +437,6 @@ class ApplicationStarter:
         )
         cut_tracks_intersecting_section.register(clear_all_events.on_tracks_cut)
         application.connect_clear_event_repository_observer()
-        flow_parser: FlowParser = application._datastore._flow_parser
         name_generator = ArrowFlowNameGenerator()
         dummy_viewmodel = DummyViewModel(
             application,
@@ -590,7 +599,6 @@ class ApplicationStarter:
             track_file_repository,
             track_parser,
             section_repository,
-            flow_parser,
             flow_repository,
             event_repository,
             event_list_parser,

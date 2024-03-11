@@ -29,6 +29,7 @@ from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.application.use_cases.save_otflow import SaveOTFlow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetSectionOffset,
@@ -101,6 +102,7 @@ class OTAnalyticsApplication:
         load_track_files: LoadTrackFiles,
         previous_frame: SwitchToPrevious,
         next_frame: SwitchToNext,
+        save_otflow: SaveOTFlow,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -134,6 +136,7 @@ class OTAnalyticsApplication:
         )
         self._switch_previous = previous_frame
         self._switch_next = next_frame
+        self._save_otflow = save_otflow
 
     def connect_observers(self) -> None:
         """
@@ -348,7 +351,7 @@ class OTAnalyticsApplication:
         Args:
             file (Path): file to save the flows and sections to
         """
-        self._datastore.save_flow_file(file)
+        self._save_otflow.save(file)
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
