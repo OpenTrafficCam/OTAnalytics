@@ -88,9 +88,9 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             width=10,
             command=self._viewmodel.load_configuration,
         )
-        self.button_save = CTkButton(
+        self.button_save_as = CTkButton(
             master=self._button_frame,
-            text="Save...",
+            text="Save as...",
             width=10,
             command=self._viewmodel.save_configuration,
         )
@@ -103,7 +103,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             row=0, column=0, columnspan=2, padx=0, pady=0, sticky=STICKY
         )
         for column, button in enumerate(
-            [self._button_new, self.button_open, self.button_save]
+            [self._button_new, self.button_open, self.button_save_as]
         ):
             self._button_frame.grid_columnconfigure(column, weight=1)
             button.grid(row=0, column=column, padx=PADX, pady=PADY, sticky=STICKY)
@@ -130,7 +130,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
 
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         new_state = STATE_NORMAL if enabled else STATE_DISABLED
-        for button in [self._button_new, self.button_save, self.button_open]:
+        for button in [self._button_new, self.button_save_as, self.button_open]:
             button.configure(state=new_state)
 
 
