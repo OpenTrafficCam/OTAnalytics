@@ -6,10 +6,7 @@ from OTAnalytics.application.use_cases.track_export import (
 )
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    PandasDataFrameProvider,
-)
+from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 
 
 class CsvTrackExport(ExportTracks):
@@ -24,8 +21,6 @@ class CsvTrackExport(ExportTracks):
 
     def _get_data(self) -> DataFrame:
         dataset = self._track_repository.get_all()
-        if isinstance(dataset, PandasTrackDataset):
-            return dataset.as_dataframe().reset_index()
         if isinstance(dataset, PandasDataFrameProvider):
             return dataset.get_data().reset_index()
         detections = [

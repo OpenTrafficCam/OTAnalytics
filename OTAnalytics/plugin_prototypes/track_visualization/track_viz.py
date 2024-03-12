@@ -53,6 +53,7 @@ from OTAnalytics.domain.track_repository import (
     TrackRepository,
     TrackRepositoryEvent,
 )
+from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 """Frames start with 1 in OTVision but frames of videos are loaded zero based."""
@@ -270,12 +271,6 @@ class PlotterPrototype(Plotter):
 
     def __get_plotting_width(self) -> int:
         return self._track_view_state.view_width.get()
-
-
-class PandasDataFrameProvider:
-    @abstractmethod
-    def get_data(self) -> DataFrame:
-        pass
 
 
 class FilterById(PandasDataFrameProvider):
