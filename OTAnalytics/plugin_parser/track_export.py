@@ -18,7 +18,7 @@ class CsvTrackExport(ExportTracks):
 
     def export(self, specification: TrackExportSpecification) -> None:
         dataframe = self._get_data()
-        dataframe = self._set_column_order(dataframe)
+        dataframe = set_column_order(dataframe)
         output_path = specification.save_path.with_suffix(".tracks.csv")
         dataframe.to_csv(output_path, index=False)
 
@@ -34,25 +34,24 @@ class CsvTrackExport(ExportTracks):
         ]
         return DataFrame.from_dict(detections)
 
-    @staticmethod
-    def _set_column_order(dataframe: DataFrame) -> DataFrame:
-        desired_columns_order = [
-            track.TRACK_ID,
-            track.CLASSIFICATION,
-            track.CONFIDENCE,
-            track.X,
-            track.Y,
-            track.W,
-            track.H,
-            track.FRAME,
-            track.OCCURRENCE,
-            track.INTERPOLATED_DETECTION,
-            track.TRACK_ID,
-            track.VIDEO_NAME,
-        ]
-        dataframe = dataframe[
-            desired_columns_order
-            + [col for col in dataframe.columns if col not in desired_columns_order]
-        ]
 
-        return dataframe
+def set_column_order(dataframe: DataFrame) -> DataFrame:
+    desired_columns_order = [
+        track.TRACK_ID,
+        track.CLASSIFICATION,
+        track.CONFIDENCE,
+        track.X,
+        track.Y,
+        track.W,
+        track.H,
+        track.FRAME,
+        track.OCCURRENCE,
+        track.INTERPOLATED_DETECTION,
+        track.VIDEO_NAME,
+    ]
+    dataframe = dataframe[
+        desired_columns_order
+        + [col for col in dataframe.columns if col not in desired_columns_order]
+    ]
+
+    return dataframe
