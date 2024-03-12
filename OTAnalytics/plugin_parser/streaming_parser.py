@@ -363,10 +363,12 @@ class SingletonTrackDataset(TrackDataset):
 
     @property
     def first_occurrence(self) -> datetime | None:
+        """Returns first occurrence of single track."""
         return self._track.first_detection.occurrence
 
     @property
     def last_occurrence(self) -> datetime | None:
+        """Returns last occurrence of single track."""
         return self._track.last_detection.occurrence
 
     @property
@@ -391,6 +393,7 @@ class SingletonTrackDataset(TrackDataset):
         raise NotImplementedError
 
     def clear(self) -> "TrackDataset":
+        """Returns empty PythonTrackDataset."""
         return PythonTrackDataset()
 
     def as_list(self) -> list[Track]:
@@ -412,6 +415,7 @@ class SingletonTrackDataset(TrackDataset):
     def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+        """Returns intersectionpints of the single track with all given sections."""
         geometry_data = self._get_geometry_data_for(offset)
         geometry = geometry_data[GEOMETRY]
         projection = geometry_data[PROJECTION]
@@ -439,6 +443,10 @@ class SingletonTrackDataset(TrackDataset):
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
+        """
+        Return the single track id + containment mask for the given sections.
+        If no detection of the track is contained by any section, returns empty set.
+        """
         geometry_data = self._get_geometry_data_for(offset)
         geometry = geometry_data[GEOMETRY]
 
@@ -458,29 +466,42 @@ class SingletonTrackDataset(TrackDataset):
         return {self._track.id: contains_result}
 
     def split(self, chunks: int) -> Sequence["TrackDataset"]:
+        """
+        Splitting track dataset with only one track
+        returns sequence containing just itself.
+        """
         return [self]
 
     def __len__(self) -> int:
+        """Length of SingletonTrackDataset is always 1!"""
         return 1
 
     def calculate_geometries_for(
         self, offsets: Iterable[RelativeOffsetCoordinate]
     ) -> None:
+        """Calculate track geometry of single track for all given offsets."""
         for offset in offsets:
             if offset not in self._geometries.keys():
                 self._geometries[offset] = self._get_geometry_data_for(offset)
 
     def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
+        """Create an enter scene event and apply the given consumer."""
         event = create_enter_scene_event(self._track)
         consumer(event)
 
     def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
+        """Create a leave scene event and apply the given consumer."""
         event = create_leave_scene_event(self._track)
         consumer(event)
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
     ) -> tuple["TrackDataset", set[TrackId]]:
+        """
+        Cut the single track with the given section.
+        If they intersect returns TrackDataset with cut parts and id of single track.
+        Otherwise returns empty TrackDataset and empty TrackId set.
+        """
         cut_tracks = cut_track_with_section(self._track, section, offset)
 
         if len(cut_tracks) > 0:
@@ -493,6 +514,11 @@ class SingletonTrackDataset(TrackDataset):
             return (PythonTrackDataset(), set())
 
     def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
+        """
+        Check if single track has at least the given amount of detections.
+        If so, returns the unchanged SingletonTrackDataset.
+        Otherwise returns empty TrackDataset.
+        """
         if len(self._track.detections) >= length:
             return self
         else:
