@@ -215,6 +215,16 @@ class StreamTrackParser(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def register_tracks_metadata(self, tracks_metadata: TracksMetadata) -> None:
+        """Register TracksMetadata to be updated when a new ottrk file is parsed."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def register_videos_metadata(self, videos_metadata: VideosMetadata) -> None:
+        """Register VideosMetadata to be updated when a new ottrk file is parsed."""
+        raise NotImplementedError
+
 
 class StreamOttrkParser(StreamTrackParser):
     """
@@ -285,7 +295,6 @@ class StreamOttrkParser(StreamTrackParser):
         )
 
         for ottrk_file in progressbar:
-            # TODO reduce code duplication'
             ottrk_dict = parse_json_bz2(ottrk_file)
 
             fixed_ottrk = self._format_fixer.fix(ottrk_dict)
@@ -309,6 +318,7 @@ class StreamOttrkParser(StreamTrackParser):
             yield from self._detection_parser.parse_tracks(
                 det_list, metadata_video, id_generator
             )
+            del det_list
 
         # after all files are processed, yield remaining, unfinished tracks
         yield from self._detection_parser.get_remaining_tracks()

@@ -962,21 +962,35 @@ class CachedVideoParser(VideoParser):
 
 
 class OttrkVideoParser(TrackVideoParser):
-    def __init__(self, video_parser: VideoParser) -> None:
+    def __init__(
+        self,
+        video_parser: VideoParser,
+        track_format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
+    ) -> None:
         self._video_parser = video_parser
+        self._track_format_fixer = track_format_fixer
 
     def parse(
-        self, file: Path, track_ids: list[TrackId]
+        self,
+        file: Path,
+        track_ids: list[TrackId],
     ) -> Tuple[list[TrackId], list[Video]]:
+        # TODO review: this section crashed once: the metadata format was incompatible
+        # TODO: current fix: apply format fixer here
         content = parse_json_bz2(file)
-        metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
-        video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
-        start_date = self.__parse_recorded_start_date(metadata)
+        metadata = self._track_format_fixer.fix_metadata(content[ottrk_format.METADATA])
+        video_metadata = metadata[ottrk_format.VIDEO]
+        video_file = (
+            video_metadata[ottrk_format.FILENAME]
+            + video_metadata[ottrk_format.FILETYPE]
+        )
+        start_date = self.__parse_recorded_start_date(video_metadata)
         video = self._video_parser.parse(file.parent / video_file, start_date)
         return track_ids, [video] * len(track_ids)
 
     def __parse_recorded_start_date(self, metadata: dict) -> datetime:
-        start_date = metadata[ottrk_format.RECORDED_START_DATE]
+        print(metadata)
+        start_date = float(metadata[ottrk_format.RECORDED_START_DATE])
         return datetime.fromtimestamp(start_date, tz=timezone.utc)
 
 
