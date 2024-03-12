@@ -867,7 +867,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
             figure (Figure): figure object to add the axis to
 
         Returns:
-            Axes: axes object with the given width and heigt
+            Axes: axes object with the given width and height
         """
         # The first items are for padding and the second items are for the axes.
         # sizes are in inch.
