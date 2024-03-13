@@ -2,13 +2,12 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 from typing import Sequence
 
-from domain.section import SectionId
-from domain.types import EventType
-
 from OTAnalytics.application.state import SectionState, TrackViewState, VideosMetadata
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.types import EventType
 
 
 class SwitchTo(ABC):

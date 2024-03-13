@@ -2,6 +2,7 @@ from datetime import datetime
 from unittest.mock import Mock
 
 import pytest
+from application.ui.frame_control import DEFAULT_EVENT_TYPES
 
 from OTAnalytics.domain.event import (
     DATE_FORMAT,
@@ -541,6 +542,7 @@ class TestEventRepository:
             ([SECTION_ID_1], [], [event_1_section_1(), event_2_section_1()]),
             ([SECTION_ID_2], [], [event_1_section_2(), event_2_section_2()]),
             ([SECTION_ID_1, SECTION_ID_2], [], all_events()),
+            ([SECTION_ID_1, SECTION_ID_2], DEFAULT_EVENT_TYPES, all_events()),
             (
                 [SECTION_ID_1],
                 [EventType.SECTION_ENTER],
