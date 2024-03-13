@@ -265,16 +265,21 @@ class OTAnalyticsGui:
 
     def _register_global_keybindings(self) -> None:
         cmd_ctrl = "Command" if ON_MAC else "Control"
+        opt_alt = "Option" if ON_MAC else "Alt"
         shift = "Shift"
-        next = "Right"
+        next_key = "Right"
         previous = "Left"
-        self._app.bind(f"<{next}>", lambda event: self._viewmodel.next_frame())
+        self._app.bind(f"<{next_key}>", lambda event: self._viewmodel.next_frame())
         self._app.bind(
-            f"<{cmd_ctrl}-{next}>", lambda event: self._viewmodel.next_second()
+            f"<{cmd_ctrl}-{next_key}>", lambda event: self._viewmodel.next_second()
         )
         self._app.bind(
-            f"<{cmd_ctrl}-{shift}-{next}>",
+            f"<{cmd_ctrl}-{shift}-{next_key}>",
             lambda event: self._viewmodel.switch_to_next_date_range(),
+        )
+        self._app.bind(
+            f"<{cmd_ctrl}-{opt_alt}-{shift}-{next_key}>",
+            lambda event: self._viewmodel.next_event(),
         )
         self._app.bind(f"<{previous}>", lambda event: self._viewmodel.previous_frame())
         self._app.bind(
@@ -283,4 +288,8 @@ class OTAnalyticsGui:
         self._app.bind(
             f"<{cmd_ctrl}-{shift}-{previous}>",
             lambda event: self._viewmodel.switch_to_prev_date_range(),
+        )
+        self._app.bind(
+            f"<{cmd_ctrl}-{opt_alt}-{shift}-{previous}>",
+            lambda event: self._viewmodel.previous_event(),
         )
