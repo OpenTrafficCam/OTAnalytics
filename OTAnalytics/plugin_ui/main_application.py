@@ -36,8 +36,8 @@ from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, Plottin
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
     ActionState,
+    FileState,
     FlowState,
-    OTFlowFileSaveState,
     SectionState,
     SelectedVideoUpdate,
     TrackImageUpdater,
@@ -405,11 +405,12 @@ class ApplicationStarter:
         next_frame = SwitchToNext(track_view_state, videos_metadata)
         get_sections = GetAllSections(section_repository)
         get_flows = GetAllFlows(flow_repository)
-        otflow_file_save_state = OTFlowFileSaveState()
-        save_otflow = SaveOtflow(
-            flow_parser, get_sections, get_flows, otflow_file_save_state
-        )
-        quick_save_otflow = QuickSaveOtflow(otflow_file_save_state, save_otflow)
+        file_state = FileState()
+        save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
+        quick_save_otflow = QuickSaveOtflow(file_state, save_otflow)
+
+        # save_otconfig = SaveOtconfig(datastore, datastore._config_parser, file_state)
+
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -431,6 +432,7 @@ class ApplicationStarter:
             clear_all_events,
             start_new_project,
             project_updater,
+            # save_otconfig,
             load_track_files,
             previous_frame,
             next_frame,
@@ -495,7 +497,7 @@ class ApplicationStarter:
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
-        load_otflow.register(otflow_file_save_state.last_saved.set)
+        load_otflow.register(file_state.last_saved_config.set)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
