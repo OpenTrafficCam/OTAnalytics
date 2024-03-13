@@ -471,9 +471,6 @@ class ApplicationStarter:
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
         )
-        application.track_view_state.filter_element.register(
-            dummy_viewmodel.notify_filter_element_change
-        )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
         # cut_tracks_intersecting_section.register(

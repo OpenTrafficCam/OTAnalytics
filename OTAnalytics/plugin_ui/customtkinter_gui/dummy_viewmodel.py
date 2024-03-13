@@ -137,6 +137,7 @@ FROM_SECTION = "from_section"
 OTFLOW = "otflow"
 MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
+MISSING_VIDEO_CONTROL_FRAME_MESSAGE = "video control frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
@@ -222,6 +223,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
+        self._update_enabled_video_control_buttons()
 
     def _update_enabled_general_buttons(self) -> None:
         frames = self._get_frames()
@@ -302,6 +304,14 @@ class DummyViewModel(
         self._frame_flows.set_enabled_change_multiple_items_buttons(
             multiple_flows_enabled
         )
+
+    def _update_enabled_video_control_buttons(self) -> None:
+        if self._frame_video_control is None:
+            raise MissingInjectedInstanceError(MISSING_VIDEO_CONTROL_FRAME_MESSAGE)
+        action_running = self._application.action_state.action_running.get()
+        videos_exist = len(self._application.get_all_videos()) > 0
+        general_activated = not action_running and videos_exist
+        self._frame_video_control.set_enabled_general_buttons(general_activated)
 
     def _on_section_changed(self, section: SectionId) -> None:
         self._refresh_sections_in_ui()
@@ -1626,15 +1636,3 @@ class DummyViewModel(
 
     def set_video_control_frame(self, frame: AbstractFrame) -> None:
         self._frame_video_control = frame
-        self.notify_filter_element_change(
-            self._application.track_view_state.filter_element.get()
-        )
-
-    def notify_filter_element_change(self, filter_element: FilterElement) -> None:
-        if not self._frame_video_control:
-            raise MissingInjectedInstanceError("Frame video control missing")
-        filter_element_is_set = (
-            filter_element.date_range.start_date is not None
-            and filter_element.date_range.end_date is not None
-        )
-        self._frame_video_control.set_enabled_general_buttons(filter_element_is_set)

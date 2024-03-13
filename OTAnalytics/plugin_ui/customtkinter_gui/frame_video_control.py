@@ -20,6 +20,7 @@ class FrameVideoControl(AbstractCTkFrame):
         self._get_widgets()
         self._place_widgets()
         self._wire_widgets()
+        self._set_initial_button_states()
         self.introduce_to_viewmodel()
         self._is_initialized = True
 
@@ -123,6 +124,9 @@ class FrameVideoControl(AbstractCTkFrame):
     def _wire_widgets(self) -> None:
         self._seconds.trace_add("write", callback=self._update_skip_time)
         self._frames.trace_add("write", callback=self._update_skip_time)
+
+    def _set_initial_button_states(self) -> None:
+        self.set_enabled_general_buttons(False)
 
     def get_general_buttons(self) -> list[CTkButton]:
         return [
