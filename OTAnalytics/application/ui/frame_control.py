@@ -3,7 +3,8 @@ from datetime import timedelta
 
 from OTAnalytics.application.state import TrackViewState, VideosMetadata
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.domain.event import EventRepository
+from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.filter import FilterElement
 
 
 class SwitchTo(ABC):
@@ -75,11 +76,30 @@ class SwitchToPrevious(SwitchTo):
 
 class SwitchToEvent:
 
-    def __init__(self, event_repository: EventRepository) -> None:
+    def __init__(
+        self, event_repository: EventRepository, track_view_state: TrackViewState
+    ) -> None:
         self._event_repository = event_repository
+        self._track_view_state = track_view_state
 
     def switch_to_previous(self) -> None:
-        pass
+        if end_date := self.__current_filter_element.date_range.end_date:
+            if event := self._event_repository.get_previous_before(end_date):
+                self.__switch_to(event)
 
     def switch_to_next(self) -> None:
-        pass
+        if end_date := self.__current_filter_element.date_range.end_date:
+            if event := self._event_repository.get_next_after(end_date):
+                self.__switch_to(event)
+
+    def __switch_to(self, event: Event) -> None:
+        new_end_date = event.occurrence
+        if duration := self.__current_filter_element.date_range.duration():
+            new_start_date = event.occurrence - duration
+            new_range = DateRange(start_date=new_start_date, end_date=new_end_date)
+            new_filter_element = self.__current_filter_element.derive_date(new_range)
+            self._track_view_state.filter_element.set(new_filter_element)
+
+    @property
+    def __current_filter_element(self) -> FilterElement:
+        return self._track_view_state.filter_element.get()

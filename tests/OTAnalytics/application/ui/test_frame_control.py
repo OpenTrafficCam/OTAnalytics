@@ -10,14 +10,21 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevious
+from OTAnalytics.application.ui.frame_control import (
+    SwitchToEvent,
+    SwitchToNext,
+    SwitchToPrevious,
+)
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
 
 FPS = 1
 TIME_OF_A_FRAME = timedelta(seconds=1) / FPS
 START_DATE = datetime(2023, 1, 1, 0, 0, 0)
 END_DATE = datetime(2023, 1, 1, 0, 0, 1)
+FILTER_DURATION = END_DATE - START_DATE
+EVENT_OCCURRENCE = END_DATE + timedelta(seconds=1)
 
 
 def observable(value: Mock) -> Mock:
@@ -100,3 +107,79 @@ class TestSwitchToPreviousFrame:
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
         videos_metadata.get_metadata_for.assert_called_with(END_DATE)
+
+
+class TestSwitchToEvent:
+    def test_switch_to_previous(
+        self,
+        track_view_state: Mock,
+        filter_element: Mock,
+    ) -> None:
+        derived_filter_element = Mock(spec=FilterElement)
+        filter_element.derive_date.return_value = derived_filter_element
+        event = Mock(spec=Event)
+        event.occurrence = EVENT_OCCURRENCE
+        new_date_range = DateRange(EVENT_OCCURRENCE - FILTER_DURATION, EVENT_OCCURRENCE)
+        event_repository = Mock(spec=EventRepository)
+        event_repository.get_previous_before.return_value = event
+
+        use_case = SwitchToEvent(event_repository, track_view_state)
+
+        use_case.switch_to_previous()
+
+        filter_element.derive_date.assert_called_with(new_date_range)
+        track_view_state.filter_element.set.assert_called_with(derived_filter_element)
+
+    def test_switch_to_previous_without_next_event(
+        self,
+        track_view_state: Mock,
+        filter_element: Mock,
+    ) -> None:
+        derived_filter_element = Mock(spec=FilterElement)
+        filter_element.derive_date.return_value = derived_filter_element
+        event_repository = Mock(spec=EventRepository)
+        event_repository.get_previous_before.return_value = None
+
+        use_case = SwitchToEvent(event_repository, track_view_state)
+
+        use_case.switch_to_previous()
+
+        filter_element.derive_date.assert_not_called()
+        track_view_state.filter_element.set.assert_not_called()
+
+    def test_switch_to_next(
+        self,
+        track_view_state: Mock,
+        filter_element: Mock,
+    ) -> None:
+        derived_filter_element = Mock(spec=FilterElement)
+        filter_element.derive_date.return_value = derived_filter_element
+        event = Mock(spec=Event)
+        event.occurrence = EVENT_OCCURRENCE
+        new_date_range = DateRange(EVENT_OCCURRENCE - FILTER_DURATION, EVENT_OCCURRENCE)
+        event_repository = Mock(spec=EventRepository)
+        event_repository.get_next_after.return_value = event
+
+        use_case = SwitchToEvent(event_repository, track_view_state)
+
+        use_case.switch_to_next()
+
+        filter_element.derive_date.assert_called_with(new_date_range)
+        track_view_state.filter_element.set.assert_called_with(derived_filter_element)
+
+    def test_switch_to_next_without_next_event(
+        self,
+        track_view_state: Mock,
+        filter_element: Mock,
+    ) -> None:
+        derived_filter_element = Mock(spec=FilterElement)
+        filter_element.derive_date.return_value = derived_filter_element
+        event_repository = Mock(spec=EventRepository)
+        event_repository.get_next_after.return_value = None
+
+        use_case = SwitchToEvent(event_repository, track_view_state)
+
+        use_case.switch_to_next()
+
+        filter_element.derive_date.assert_not_called()
+        track_view_state.filter_element.set.assert_not_called()
