@@ -1,3 +1,5 @@
+from typing import Iterable
+
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 
 
@@ -88,3 +90,12 @@ class GetAllFlows:
 
     def get(self) -> list[Flow]:
         return self._flow_repository.get_all()
+
+
+class AddAllFlows:
+    def __init__(self, add_flow: AddFlow) -> None:
+        self._add_flow = add_flow
+
+    def add(self, flows: Iterable[Flow]) -> None:
+        for flow in flows:
+            self._add_flow(flow)
