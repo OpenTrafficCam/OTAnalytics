@@ -449,16 +449,34 @@ class EventRepository:
         """
         return [section for section in all if section.id not in self._events.keys()]
 
-    def get_next_after(self, end_date: datetime) -> Optional[Event]:
-        for event in sorted(self.get_all(), key=lambda actual: actual.occurrence):
+    def get_next_after(
+        self, end_date: datetime, sections: list[SectionId] | None
+    ) -> Optional[Event]:
+        if sections is None:
+            sections = []
+        for event in sorted(
+            self.get(sections=sections), key=lambda actual: actual.occurrence
+        ):
             if event.occurrence > end_date:
                 return event
         return None
 
-    def get_previous_before(self, end_date: datetime) -> Optional[Event]:
+    def get_previous_before(
+        self, end_date: datetime, sections: list[SectionId] | None
+    ) -> Optional[Event]:
+        if sections is None:
+            sections = []
         for event in sorted(
-            self.get_all(), key=lambda actual: actual.occurrence, reverse=True
+            self.get(sections=sections),
+            key=lambda actual: actual.occurrence,
+            reverse=True,
         ):
             if event.occurrence < end_date:
                 return event
         return None
+
+    def get(self, sections: list[SectionId]) -> Iterable[Event]:
+        if not sections:
+            return self.get_all()
+        event_lists = [self._events[section] for section in sections]
+        return list(itertools.chain.from_iterable(event_lists))

@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from domain.section import SectionId
 
 from OTAnalytics.application.datastore import VideoMetadata
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.state import (
     ObservableProperty,
+    SectionState,
     TrackViewState,
     VideosMetadata,
 )
@@ -27,7 +30,7 @@ FILTER_DURATION = END_DATE - START_DATE
 EVENT_OCCURRENCE = END_DATE + timedelta(seconds=1)
 
 
-def observable(value: Mock) -> Mock:
+def observable(value: Any) -> Mock:
     observable_property = Mock(spec=ObservableProperty)
     observable_property.get.return_value = value
     return observable_property
@@ -54,6 +57,14 @@ def track_view_state(filter_element: Mock, skip_time: Mock) -> Mock:
     track_view_state.filter_element = observable(filter_element)
     track_view_state.skip_time = observable(skip_time)
     return track_view_state
+
+
+@pytest.fixture
+def section_state() -> Mock:
+    selected_section = SectionId("selected section")
+    section_state = Mock(spec=SectionState)
+    section_state.selected_sections = observable([selected_section])
+    return section_state
 
 
 @pytest.fixture
@@ -113,6 +124,7 @@ class TestSwitchToEvent:
     def test_switch_to_previous(
         self,
         track_view_state: Mock,
+        section_state: Mock,
         filter_element: Mock,
     ) -> None:
         derived_filter_element = Mock(spec=FilterElement)
@@ -123,16 +135,18 @@ class TestSwitchToEvent:
         event_repository = Mock(spec=EventRepository)
         event_repository.get_previous_before.return_value = event
 
-        use_case = SwitchToEvent(event_repository, track_view_state)
+        use_case = SwitchToEvent(event_repository, track_view_state, section_state)
 
         use_case.switch_to_previous()
 
+        section_state.selected_sections.get.assert_called()
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
 
     def test_switch_to_previous_without_next_event(
         self,
         track_view_state: Mock,
+        section_state: Mock,
         filter_element: Mock,
     ) -> None:
         derived_filter_element = Mock(spec=FilterElement)
@@ -140,16 +154,18 @@ class TestSwitchToEvent:
         event_repository = Mock(spec=EventRepository)
         event_repository.get_previous_before.return_value = None
 
-        use_case = SwitchToEvent(event_repository, track_view_state)
+        use_case = SwitchToEvent(event_repository, track_view_state, section_state)
 
         use_case.switch_to_previous()
 
+        section_state.selected_sections.get.assert_called()
         filter_element.derive_date.assert_not_called()
         track_view_state.filter_element.set.assert_not_called()
 
     def test_switch_to_next(
         self,
         track_view_state: Mock,
+        section_state: Mock,
         filter_element: Mock,
     ) -> None:
         derived_filter_element = Mock(spec=FilterElement)
@@ -160,16 +176,18 @@ class TestSwitchToEvent:
         event_repository = Mock(spec=EventRepository)
         event_repository.get_next_after.return_value = event
 
-        use_case = SwitchToEvent(event_repository, track_view_state)
+        use_case = SwitchToEvent(event_repository, track_view_state, section_state)
 
         use_case.switch_to_next()
 
+        section_state.selected_sections.get.assert_called()
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
 
     def test_switch_to_next_without_next_event(
         self,
         track_view_state: Mock,
+        section_state: Mock,
         filter_element: Mock,
     ) -> None:
         derived_filter_element = Mock(spec=FilterElement)
@@ -177,9 +195,10 @@ class TestSwitchToEvent:
         event_repository = Mock(spec=EventRepository)
         event_repository.get_next_after.return_value = None
 
-        use_case = SwitchToEvent(event_repository, track_view_state)
+        use_case = SwitchToEvent(event_repository, track_view_state, section_state)
 
         use_case.switch_to_next()
 
+        section_state.selected_sections.get.assert_called()
         filter_element.derive_date.assert_not_called()
         track_view_state.filter_element.set.assert_not_called()

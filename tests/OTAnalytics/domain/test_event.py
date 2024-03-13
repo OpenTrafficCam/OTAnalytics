@@ -30,6 +30,9 @@ from OTAnalytics.domain.track import Detection, TrackId
 from OTAnalytics.domain.types import EventType, EventTypeParseError
 from tests.utils.builders import event_builder
 
+SECTION_ID_1 = SectionId("section 1")
+SECTION_ID_2 = SectionId("section 2")
+
 EVENT_OCCURRENCE = datetime(2022, 1, 1, 0, 0, 0, 0)
 
 
@@ -401,22 +404,115 @@ class TestEventRepository:
         assert all_events == [first_event, second_event]
         assert all_events  # ensure all events can not be exhausted
 
-    def test_get_next_after(self) -> None:
+    @staticmethod
+    def event_1_section_1() -> Event:
+        return (
+            event_builder.EventBuilder()
+            .add_section_id(SECTION_ID_1.id)
+            .add_second(1)
+            .build_section_event()
+        )
+
+    @staticmethod
+    def event_1_section_2() -> Event:
+        return (
+            event_builder.EventBuilder()
+            .add_section_id(SECTION_ID_2.id)
+            .add_second(2)
+            .build_section_event()
+        )
+
+    @staticmethod
+    def event_2_section_1() -> Event:
+        return (
+            event_builder.EventBuilder()
+            .add_section_id(SECTION_ID_1.id)
+            .add_second(3)
+            .build_section_event()
+        )
+
+    @staticmethod
+    def event_2_section_2() -> Event:
+        return (
+            event_builder.EventBuilder()
+            .add_section_id(SECTION_ID_2.id)
+            .add_second(4)
+            .build_section_event()
+        )
+
+    @pytest.fixture
+    def all_events(
+        self,
+    ) -> list[Event]:
+        return [
+            self.event_1_section_1(),
+            self.event_2_section_1(),
+            self.event_1_section_2(),
+            self.event_2_section_2(),
+        ]
+
+    @pytest.mark.parametrize(
+        "input_event,expected_event,sections",
+        [
+            (event_1_section_1(), event_1_section_2(), []),
+            (event_1_section_1(), event_2_section_1(), [SECTION_ID_1]),
+            (event_1_section_2(), event_2_section_2(), [SECTION_ID_2]),
+            (event_1_section_1(), event_1_section_2(), [SECTION_ID_1, SECTION_ID_2]),
+        ],
+    )
+    def test_get_next_after(
+        self,
+        all_events: list[Event],
+        input_event: Event,
+        expected_event: Event,
+        sections: list[SectionId],
+    ) -> None:
         repository = EventRepository()
-        first_event = event_builder.EventBuilder().build_section_event()
-        second_event = event_builder.EventBuilder().add_second(1).build_section_event()
+        repository.add_all(all_events)
+
+        actual_event = repository.get_next_after(input_event.occurrence, sections)
+
+        assert actual_event == expected_event
+
+    @pytest.mark.parametrize(
+        "input_event,expected_event,sections",
+        [
+            (event_2_section_1(), event_1_section_2(), []),
+            (event_2_section_1(), event_1_section_1(), [SECTION_ID_1]),
+            (event_2_section_2(), event_1_section_2(), [SECTION_ID_2]),
+            (event_2_section_1(), event_1_section_2(), [SECTION_ID_1, SECTION_ID_2]),
+        ],
+    )
+    def test_get_previous_before(
+        self,
+        all_events: list[Event],
+        input_event: Event,
+        expected_event: Event,
+        sections: list[SectionId],
+    ) -> None:
+        repository = EventRepository()
+        repository.add_all(all_events)
+
+        actual_event = repository.get_previous_before(input_event.occurrence, sections)
+
+        assert actual_event == expected_event
+
+    def test_get(self) -> None:
+        section_1 = SectionId("section one")
+        section_2 = SectionId("section two")
+        repository = EventRepository()
+        first_event = (
+            event_builder.EventBuilder()
+            .add_section_id(section_1.id)
+            .build_section_event()
+        )
+        second_event = (
+            event_builder.EventBuilder()
+            .add_section_id(section_2.id)
+            .build_section_event()
+        )
         repository.add_all([first_event, second_event])
 
-        actual_event = repository.get_next_after(first_event.occurrence)
+        actual_events = repository.get(sections=[section_1])
 
-        assert actual_event == second_event
-
-    def test_get_previous_before(self) -> None:
-        repository = EventRepository()
-        first_event = event_builder.EventBuilder().build_section_event()
-        second_event = event_builder.EventBuilder().add_second(1).build_section_event()
-        repository.add_all([first_event, second_event])
-
-        actual_event = repository.get_previous_before(second_event.occurrence)
-
-        assert actual_event == first_event
+        assert actual_events == [first_event]

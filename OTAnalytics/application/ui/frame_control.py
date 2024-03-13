@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
 
-from OTAnalytics.application.state import TrackViewState, VideosMetadata
+from domain.section import SectionId
+
+from OTAnalytics.application.state import SectionState, TrackViewState, VideosMetadata
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
@@ -77,19 +79,27 @@ class SwitchToPrevious(SwitchTo):
 class SwitchToEvent:
 
     def __init__(
-        self, event_repository: EventRepository, track_view_state: TrackViewState
+        self,
+        event_repository: EventRepository,
+        track_view_state: TrackViewState,
+        section_state: SectionState,
     ) -> None:
         self._event_repository = event_repository
         self._track_view_state = track_view_state
+        self._section_state = section_state
 
     def switch_to_previous(self) -> None:
         if end_date := self.__current_filter_element.date_range.end_date:
-            if event := self._event_repository.get_previous_before(end_date):
+            if event := self._event_repository.get_previous_before(
+                end_date, self.__selected_sections
+            ):
                 self.__switch_to(event)
 
     def switch_to_next(self) -> None:
         if end_date := self.__current_filter_element.date_range.end_date:
-            if event := self._event_repository.get_next_after(end_date):
+            if event := self._event_repository.get_next_after(
+                end_date, self.__selected_sections
+            ):
                 self.__switch_to(event)
 
     def __switch_to(self, event: Event) -> None:
@@ -103,3 +113,7 @@ class SwitchToEvent:
     @property
     def __current_filter_element(self) -> FilterElement:
         return self._track_view_state.filter_element.get()
+
+    @property
+    def __selected_sections(self) -> list[SectionId]:
+        return self._section_state.selected_sections.get()

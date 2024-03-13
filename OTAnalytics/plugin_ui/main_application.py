@@ -402,7 +402,9 @@ class ApplicationStarter:
         previous_frame = SwitchToPrevious(track_view_state, videos_metadata)
         next_frame = SwitchToNext(track_view_state, videos_metadata)
         switch_event = SwitchToEvent(
-            event_repository=event_repository, track_view_state=track_view_state
+            event_repository=event_repository,
+            track_view_state=track_view_state,
+            section_state=section_state,
         )
         application = OTAnalyticsApplication(
             datastore,
