@@ -345,6 +345,7 @@ class DummyViewModel(
         self._frame_filter.update_date_range(
             {"start_date": start_date, "end_date": end_date}
         )
+        self.__enable_filter_track_by_date_button()
 
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         self.notify_files()
@@ -1463,9 +1464,11 @@ class DummyViewModel(
     def enable_filter_track_by_date(self) -> None:
         self._application.enable_filter_track_by_date()
 
+        self.__enable_filter_track_by_date_button()
+
+    def __enable_filter_track_by_date_button(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
-
         self._frame_filter.enable_filter_by_date_button()
         current_date_range = (
             self._application.track_view_state.filter_element.get().date_range
