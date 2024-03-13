@@ -375,6 +375,7 @@ class EventRepository:
             event (Event): the event to add
         """
         self.__do_add(event)
+        self.__sort()
         self._subject.notify(EventRepositoryEvent([event], []))
 
     def __do_add(self, event: Event) -> None:
@@ -404,7 +405,17 @@ class EventRepository:
             self.__do_add(event)
         for section in sections:
             self._events.setdefault(section, [])
+        self.__sort()
         self._subject.notify(EventRepositoryEvent(events, []))
+
+    @staticmethod
+    def comparator(event: Event) -> datetime:
+        return event.occurrence
+
+    def __sort(self) -> None:
+        self._non_section_events = sorted(self._non_section_events, key=self.comparator)
+        for section_id, events in self._events.items():
+            self._events[section_id] = sorted(events, key=self.comparator)
 
     def get_all(self) -> Iterable[Event]:
         """Get all events stored in the repository.

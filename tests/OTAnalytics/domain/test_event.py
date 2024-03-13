@@ -368,6 +368,43 @@ class TestEventRepository:
             EventRepositoryEvent([first_event, second_event], [])
         )
 
+    def test_sort_after_add_all(self) -> None:
+        repository = EventRepository()
+
+        repository.add_all(
+            [
+                event_2_section_1(),
+                event_1_section_2(),
+                event_2_section_2(),
+                event_1_section_1(),
+            ]
+        )
+
+        actual = repository.get_all()
+        expected = [
+            event_1_section_1(),
+            event_2_section_1(),
+            event_1_section_2(),
+            event_2_section_2(),
+        ]
+        assert actual == expected
+
+    def test_sort_after_add(self) -> None:
+        repository = EventRepository()
+        repository.add(event_2_section_1())
+        repository.add(event_1_section_2())
+        repository.add(event_2_section_2())
+        repository.add(event_1_section_1())
+
+        actual = repository.get_all()
+        expected = [
+            event_1_section_1(),
+            event_2_section_1(),
+            event_1_section_2(),
+            event_2_section_2(),
+        ]
+        assert actual == expected
+
     def test_no_event_for_intersected_section(self) -> None:
         section_id_1 = SectionId("1")
         section_id_2 = SectionId("2")
