@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
-from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import Event, EventRepository
@@ -200,7 +199,6 @@ class Datastore:
         video_parser: VideoParser,
         track_video_parser: TrackVideoParser,
         progressbar: ProgressbarBuilder,
-        config_parser: ConfigParser,
     ) -> None:
         self._track_parser = track_parser
         self._event_list_parser = event_list_parser
@@ -214,7 +212,6 @@ class Datastore:
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
         self._progressbar = progressbar
-        self._config_parser = config_parser
         self.project = Project(name="", start_date=None)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
@@ -237,14 +234,6 @@ class Datastore:
             observer (SectionListObserver): listener to be notified about changes
         """
         self._section_repository.register_sections_observer(observer)
-
-    def load_otconfig(self, file: Path) -> None:
-        self.clear_repositories()
-        config = self._config_parser.parse(file)
-        self.project = config.project
-        self._video_repository.add_all(config.videos)
-        self._section_repository.add_all(config.sections)
-        self._flow_repository.add_all(config.flows)
 
     def clear_repositories(self) -> None:
         self._event_repository.clear()

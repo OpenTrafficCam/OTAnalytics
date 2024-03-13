@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -16,16 +16,15 @@ from OTAnalytics.application.datastore import (
     VideoMetadata,
     VideoParser,
 )
-from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
+from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.parser.flow_parser import FlowParser
-from OTAnalytics.application.project import Project
 from OTAnalytics.domain.event import EventRepository
-from OTAnalytics.domain.flow import Flow, FlowRepository
+from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
-from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+from OTAnalytics.domain.section import SectionId, SectionRepository
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
-from OTAnalytics.domain.video import SimpleVideo, Video, VideoReader, VideoRepository
+from OTAnalytics.domain.video import SimpleVideo, VideoReader, VideoRepository
 
 FIRST_START_DATE = datetime(
     year=2019,
@@ -184,63 +183,6 @@ def progressbar() -> Mock:
 
 
 class TestDatastore:
-    def test_load_config_file(
-        self,
-        track_repository: Mock,
-        track_file_repository: Mock,
-        track_parser: Mock,
-        section_repository: Mock,
-        flow_repository: Mock,
-        video_parser: Mock,
-        track_video_parser: Mock,
-        event_repository: Mock,
-        event_list_parser: Mock,
-        video_repository: Mock,
-        track_to_video_repository: Mock,
-        progressbar: Mock,
-        config_parser: Mock,
-    ) -> None:
-        store = Datastore(
-            track_repository=track_repository,
-            track_file_repository=track_file_repository,
-            track_parser=track_parser,
-            section_repository=section_repository,
-            flow_repository=flow_repository,
-            event_repository=event_repository,
-            event_list_parser=event_list_parser,
-            video_repository=video_repository,
-            video_parser=video_parser,
-            track_video_parser=track_video_parser,
-            track_to_video_repository=track_to_video_repository,
-            progressbar=progressbar,
-            config_parser=config_parser,
-        )
-        project: Project = Mock(spec=Project)
-        videos: Sequence[Video] = []
-        sections: Sequence[Section] = []
-        flows: Sequence[Flow] = []
-        config_parser.parse.return_value = OtConfig(
-            project=project,
-            analysis=Mock(),
-            videos=videos,
-            sections=sections,
-            flows=flows,
-        )
-        some_file = Path("some.file.otconfig")
-
-        store.load_otconfig(some_file)
-
-        assert store.project == project
-        track_repository.clear.assert_called_once()
-        section_repository.clear.assert_called_once()
-        flow_repository.clear.assert_called_once()
-        video_repository.clear.assert_called_once()
-        event_repository.clear.assert_called_once()
-        track_to_video_repository.clear.assert_called_once()
-        config_parser.parse.assert_called_with(some_file)
-        video_repository.add_all.called_with(videos)
-        section_repository.add_all.called_with(sections)
-        flow_repository.add_all.called_with(flows)
 
     def test_save_event_list_file(
         self,
@@ -256,7 +198,6 @@ class TestDatastore:
         video_repository: Mock,
         track_to_video_repository: Mock,
         progressbar: Mock,
-        config_parser: Mock,
     ) -> None:
         track_parser.parse.return_value = []
         track_video_parser.parse.return_value = []
@@ -273,7 +214,6 @@ class TestDatastore:
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
-            config_parser=config_parser,
         )
         some_file = Mock()
 
@@ -295,7 +235,6 @@ class TestDatastore:
         video_repository: Mock,
         track_to_video_repository: Mock,
         progressbar: Mock,
-        config_parser: Mock,
     ) -> None:
         store = Datastore(
             track_repository=track_repository,
@@ -310,7 +249,6 @@ class TestDatastore:
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
-            config_parser=config_parser,
         )
         section_id = SectionId("my section")
         plugin_data = {"some": "new_value"}
@@ -338,7 +276,6 @@ class TestDatastore:
         video_repository: Mock,
         track_to_video_repository: Mock,
         progressbar: Mock,
-        config_parser: Mock,
     ) -> None:
         store = Datastore(
             track_repository=track_repository,
@@ -353,7 +290,6 @@ class TestDatastore:
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
-            config_parser=config_parser,
         )
         section_id = SectionId("my section")
         new_plugin_data = {"other": "new_value"}

@@ -27,6 +27,7 @@ from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
+from OTAnalytics.application.use_cases.load_otconfig import LoadOtconfig
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.save_otflow import QuickSaveOtflow, SaveOtflow
@@ -99,11 +100,13 @@ class OTAnalyticsApplication:
         clear_all_events: ClearAllEvents,
         start_new_project: StartNewProject,
         project_updater: ProjectUpdater,
+        save_otconfig: SaveOtconfig,
         load_track_files: LoadTrackFiles,
         previous_frame: SwitchToPrevious,
         next_frame: SwitchToNext,
         save_otflow: SaveOtflow,
         quick_save_otflow: QuickSaveOtflow,
+        load_otconfig: LoadOtconfig,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -122,9 +125,7 @@ class OTAnalyticsApplication:
         self._clear_all_events = clear_all_events
         self._export_counts = export_counts
         self._project_updater = project_updater
-        self._save_otconfig = SaveOtconfig(
-            datastore, config_parser=datastore._config_parser
-        )
+        self._save_otconfig = save_otconfig
         self._create_events = create_events
         self._load_otflow = load_otflow
         self._start_new_project = start_new_project
@@ -139,6 +140,7 @@ class OTAnalyticsApplication:
         self._switch_next = next_frame
         self._save_otflow = save_otflow
         self._quick_save_otflow = quick_save_otflow
+        self._load_otconfig = load_otconfig
 
     def connect_observers(self) -> None:
         """
@@ -241,7 +243,7 @@ class OTAnalyticsApplication:
         self._save_otconfig(file)
 
     def load_otconfig(self, file: Path) -> None:
-        self._datastore.load_otconfig(file)
+        self._load_otconfig.load(file)
 
     def add_tracks_of_files(self, track_files: list[Path]) -> None:
         """
