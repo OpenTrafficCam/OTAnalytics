@@ -1,18 +1,11 @@
 from datetime import datetime, timedelta
-from typing import Any
 from unittest.mock import Mock
 
 import pytest
-from domain.section import SectionId
 
 from OTAnalytics.application.datastore import VideoMetadata
 from OTAnalytics.application.playback import SkipTime
-from OTAnalytics.application.state import (
-    ObservableProperty,
-    SectionState,
-    TrackViewState,
-    VideosMetadata,
-)
+from OTAnalytics.application.state import SectionState, TrackViewState, VideosMetadata
 from OTAnalytics.application.ui.frame_control import (
     SwitchToEvent,
     SwitchToNext,
@@ -21,6 +14,8 @@ from OTAnalytics.application.ui.frame_control import (
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.domain.section import SectionId
+from tests.utils.state import observable
 
 FPS = 1
 TIME_OF_A_FRAME = timedelta(seconds=1) / FPS
@@ -28,12 +23,6 @@ START_DATE = datetime(2023, 1, 1, 0, 0, 0)
 END_DATE = datetime(2023, 1, 1, 0, 0, 1)
 FILTER_DURATION = END_DATE - START_DATE
 EVENT_OCCURRENCE = END_DATE + timedelta(seconds=1)
-
-
-def observable(value: Any) -> Mock:
-    observable_property = Mock(spec=ObservableProperty)
-    observable_property.get.return_value = value
-    return observable_property
 
 
 @pytest.fixture
