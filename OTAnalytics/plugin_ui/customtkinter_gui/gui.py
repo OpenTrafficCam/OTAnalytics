@@ -285,7 +285,7 @@ class OTAnalyticsGui:
             lambda event: self._viewmodel.switch_to_prev_date_range(),
         )
         self._app.bind(
-            f"<{cmd_ctrl}-s>", lambda event: self._viewmodel.quick_save_otflow()
+            f"<{cmd_ctrl}-s>", lambda event: self._viewmodel.quick_save_configuration()
         )
         self._app.bind(
             f"<{cmd_ctrl}-{shift}-S>",

@@ -98,7 +98,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             master=self._button_frame,
             text="Save",
             width=10,
-            command=self._viewmodel.quick_save_otflow,
+            command=self._viewmodel.quick_save_configuration,
         )
 
     def _place_widgets(self) -> None:

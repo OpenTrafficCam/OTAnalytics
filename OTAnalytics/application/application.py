@@ -30,7 +30,10 @@ from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otconfig import LoadOtconfig
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
-from OTAnalytics.application.use_cases.save_otflow import QuickSaveOtflow, SaveOtflow
+from OTAnalytics.application.use_cases.quick_save_configuration import (
+    QuickSaveConfiguration,
+)
+from OTAnalytics.application.use_cases.save_otflow import SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetSectionOffset,
@@ -105,7 +108,7 @@ class OTAnalyticsApplication:
         previous_frame: SwitchToPrevious,
         next_frame: SwitchToNext,
         save_otflow: SaveOtflow,
-        quick_save_otflow: QuickSaveOtflow,
+        quick_save_configuration: QuickSaveConfiguration,
         load_otconfig: LoadOtconfig,
     ) -> None:
         self._datastore: Datastore = datastore
@@ -139,7 +142,7 @@ class OTAnalyticsApplication:
         self._switch_previous = previous_frame
         self._switch_next = next_frame
         self._save_otflow = save_otflow
-        self._quick_save_otflow = quick_save_otflow
+        self._quick_save_configuration = quick_save_configuration
         self._load_otconfig = load_otconfig
 
     def connect_observers(self) -> None:
@@ -596,8 +599,8 @@ class OTAnalyticsApplication:
     def get_track_repository_size(self) -> int:
         return self._track_repository_size.get()
 
-    def quick_save_otflow(self) -> None:
-        self._quick_save_otflow.save()
+    def quick_save_configuration(self) -> None:
+        self._quick_save_configuration.save()
 
 
 class MissingTracksError(Exception):

@@ -57,10 +57,10 @@ from OTAnalytics.application.use_cases.export_events import (
 )
 from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
-from OTAnalytics.application.use_cases.save_otflow import (
+from OTAnalytics.application.use_cases.quick_save_configuration import (
     NoExistingFileToSave,
-    NoSectionsToSave,
 )
+from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -712,9 +712,9 @@ class DummyViewModel(
         else:
             raise ValueError("Configuration file to save has unknown file extension")
 
-    def quick_save_otflow(self) -> None:
+    def quick_save_configuration(self) -> None:
         try:
-            self._application.quick_save_otflow()
+            self._application.quick_save_configuration()
         except NoExistingFileToSave:
             self.save_configuration()
 

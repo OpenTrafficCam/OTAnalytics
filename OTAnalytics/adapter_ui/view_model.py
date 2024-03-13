@@ -130,7 +130,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def quick_save_otflow(self) -> None:
+    def quick_save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

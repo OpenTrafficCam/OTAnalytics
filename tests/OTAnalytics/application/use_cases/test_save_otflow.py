@@ -1,15 +1,10 @@
 from pathlib import Path
-from unittest.mock import Mock, PropertyMock
+from unittest.mock import Mock
 
 import pytest
 
 from OTAnalytics.application.state import ConfigurationFile
-from OTAnalytics.application.use_cases.save_otflow import (
-    NoExistingFileToSave,
-    NoSectionsToSave,
-    QuickSaveOtflow,
-    SaveOtflow,
-)
+from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave, SaveOtflow
 
 
 def _create_otflow_file_save_state(otflow_file: Path | None) -> Mock:
@@ -62,31 +57,3 @@ class TestSaveOtflow:
         get_sections.assert_called_once()
         get_flows.get.assert_not_called()
         state.last_saved_config.set.assert_not_called()
-
-
-class TestQuickSaveOtflow:
-
-    def test_save(self) -> None:
-        config_file = PropertyMock(return_value=Path("path/to/my_flows.otflow"))
-        last_saved_config = Mock()
-        type(last_saved_config).file = config_file
-
-        save_otflow = Mock()
-        state = _create_otflow_file_save_state(last_saved_config)
-
-        quick_save = QuickSaveOtflow(state, save_otflow)
-        quick_save.save()
-
-        state.last_saved_config.get.assert_called_once()
-        save_otflow.save.assert_called_once_with(last_saved_config.file)
-
-    def test_save_no_flow_file(self) -> None:
-        save_otflow = Mock()
-        state = _create_otflow_file_save_state(None)
-
-        quick_save = QuickSaveOtflow(state, save_otflow)
-        with pytest.raises(NoExistingFileToSave):
-            quick_save.save()
-
-        state.last_saved_config.get.assert_called_once()
-        save_otflow.save.assert_not_called()

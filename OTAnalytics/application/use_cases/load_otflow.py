@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.parser.flow_parser import FlowParser
-from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import (
     AddFlow,
@@ -87,5 +86,5 @@ class LoadOtflow:
         for flow in flows:
             self._add_flow(flow)
 
-    def register(self, observer: OBSERVER[ConfigurationFile]) -> None:
+    def register(self, observer: OBSERVER[Path]) -> None:
         self._subject.register(observer)

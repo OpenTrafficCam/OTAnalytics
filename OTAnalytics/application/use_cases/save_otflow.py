@@ -42,18 +42,3 @@ class SaveOtflow:
 
 class NoSectionsToSave(Exception):
     pass
-
-
-class QuickSaveOtflow:
-    def __init__(self, state: FileState, save_otflow: SaveOtflow) -> None:
-        self._state = state
-        self._save_otflow = save_otflow
-
-    def save(self) -> None:
-        if not (config := self._state.last_saved_config.get()):
-            raise NoExistingFileToSave("No saved file to save otflow to")
-        self._save_otflow.save(config.file)
-
-
-class NoExistingFileToSave(Exception):
-    pass

@@ -92,8 +92,11 @@ from OTAnalytics.application.use_cases.load_otconfig import LoadOtconfig
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
+from OTAnalytics.application.use_cases.quick_save_configuration import (
+    QuickSaveConfiguration,
+)
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
-from OTAnalytics.application.use_cases.save_otflow import QuickSaveOtflow, SaveOtflow
+from OTAnalytics.application.use_cases.save_otflow import SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddAllSections,
     AddSection,
@@ -413,8 +416,11 @@ class ApplicationStarter:
         get_flows = GetAllFlows(flow_repository)
         file_state = FileState()
         save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
-        quick_save_otflow = QuickSaveOtflow(file_state, save_otflow)
         config_parser = self.create_config_parser(run_config, video_parser)
+        save_otconfig = SaveOtconfig(datastore, config_parser, file_state)
+        quick_save_configuration = QuickSaveConfiguration(
+            file_state, save_otflow, save_otconfig
+        )
         load_otconfig = LoadOtconfig(
             clear_repositories,
             config_parser,
@@ -423,7 +429,6 @@ class ApplicationStarter:
             AddAllSections(add_section),
             AddAllFlows(add_flow),
         )
-        save_otconfig = SaveOtconfig(datastore, config_parser, file_state)
 
         application = OTAnalyticsApplication(
             datastore,
@@ -451,7 +456,7 @@ class ApplicationStarter:
             previous_frame,
             next_frame,
             save_otflow,
-            quick_save_otflow,
+            quick_save_configuration,
             load_otconfig,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
@@ -512,7 +517,8 @@ class ApplicationStarter:
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
-        load_otflow.register(file_state.last_saved_config.set)
+        load_otflow.register(file_state.update_last_saved_config)
+        load_otconfig.register(file_state.update_last_saved_config)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
