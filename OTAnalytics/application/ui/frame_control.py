@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
+from typing import Sequence
 
 from domain.section import SectionId
+from domain.types import EventType
 
 from OTAnalytics.application.state import SectionState, TrackViewState, VideosMetadata
 from OTAnalytics.domain.date import DateRange
@@ -76,6 +78,9 @@ class SwitchToPrevious(SwitchTo):
                 )
 
 
+DEFAULT_EVENT_TYPES = tuple([EventType.SECTION_ENTER, EventType.SECTION_LEAVE])
+
+
 class SwitchToEvent:
 
     def __init__(
@@ -83,22 +88,28 @@ class SwitchToEvent:
         event_repository: EventRepository,
         track_view_state: TrackViewState,
         section_state: SectionState,
+        event_types: Sequence[EventType] = DEFAULT_EVENT_TYPES,
     ) -> None:
         self._event_repository = event_repository
         self._track_view_state = track_view_state
         self._section_state = section_state
+        self._event_types = event_types
 
     def switch_to_previous(self) -> None:
         if end_date := self.__current_filter_element.date_range.end_date:
             if event := self._event_repository.get_previous_before(
-                end_date, self.__selected_sections
+                date=end_date,
+                sections=self.__selected_sections,
+                event_types=self._event_types,
             ):
                 self.__switch_to(event)
 
     def switch_to_next(self) -> None:
         if end_date := self.__current_filter_element.date_range.end_date:
             if event := self._event_repository.get_next_after(
-                end_date, self.__selected_sections
+                date=end_date,
+                sections=self.__selected_sections,
+                event_types=self._event_types,
             ):
                 self.__switch_to(event)
 
