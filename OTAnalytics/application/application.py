@@ -10,6 +10,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     ActionState,
+    FileState,
     FlowState,
     SectionState,
     TracksMetadata,
@@ -88,6 +89,7 @@ class OTAnalyticsApplication:
         track_view_state: TrackViewState,
         section_state: SectionState,
         flow_state: FlowState,
+        file_state: FileState,
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
         action_state: ActionState,
@@ -116,6 +118,7 @@ class OTAnalyticsApplication:
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self.flow_state: FlowState = flow_state
+        self.file_state = file_state
         self._tracks_metadata = tracks_metadata
         self._videos_metadata = videos_metadata
         self.action_state = action_state

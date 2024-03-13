@@ -436,6 +436,7 @@ class ApplicationStarter:
             track_view_state,
             section_state,
             flow_state,
+            file_state,
             tracks_metadata,
             videos_metadata,
             action_state,
