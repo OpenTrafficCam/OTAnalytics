@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -461,24 +461,31 @@ class EventRepository:
         return [section for section in all if section.id not in self._events.keys()]
 
     def get_next_after(
-        self, end_date: datetime, sections: list[SectionId] | None
+        self,
+        end_date: datetime,
+        sections: list[SectionId] | None = None,
+        event_types: list[EventType] | None = None,
     ) -> Optional[Event]:
         if sections is None:
             sections = []
         for event in sorted(
-            self.get(sections=sections), key=lambda actual: actual.occurrence
+            self.get(sections=sections, event_types=event_types),
+            key=lambda actual: actual.occurrence,
         ):
             if event.occurrence > end_date:
                 return event
         return None
 
     def get_previous_before(
-        self, end_date: datetime, sections: list[SectionId] | None
+        self,
+        end_date: datetime,
+        sections: list[SectionId] | None = None,
+        event_types: list[EventType] | None = None,
     ) -> Optional[Event]:
         if sections is None:
             sections = []
         for event in sorted(
-            self.get(sections=sections),
+            self.get(sections=sections, event_types=event_types),
             key=lambda actual: actual.occurrence,
             reverse=True,
         ):
@@ -486,8 +493,28 @@ class EventRepository:
                 return event
         return None
 
-    def get(self, sections: list[SectionId]) -> Iterable[Event]:
+    def get(
+        self,
+        sections: list[SectionId] | None = None,
+        event_types: list[EventType] | None = None,
+    ) -> Iterable[Event]:
+        if event_types is None:
+            event_types = []
+        events = self.get_all()
+        if not sections and not event_types:
+            return events
+        filter_function = self.__create_filter(event_types)
         if not sections:
-            return self.get_all()
+            return list(filter(filter_function, events))
         event_lists = [self._events[section] for section in sections]
-        return list(itertools.chain.from_iterable(event_lists))
+        events = list(itertools.chain.from_iterable(event_lists))
+        if not event_types:
+            return events
+
+        return list(filter(filter_function, events))
+
+    @staticmethod
+    def __create_filter(event_types: list[EventType]) -> Callable[[Event], bool]:
+        if event_types:
+            return lambda actual: actual.event_type in event_types
+        return lambda event: True

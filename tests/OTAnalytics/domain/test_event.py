@@ -291,6 +291,7 @@ def event_1_section_1() -> Event:
     return (
         event_builder.EventBuilder()
         .add_section_id(SECTION_ID_1.id)
+        .add_event_type(EventType.SECTION_ENTER.value)
         .add_second(1)
         .build_section_event()
     )
@@ -300,6 +301,7 @@ def event_1_section_2() -> Event:
     return (
         event_builder.EventBuilder()
         .add_section_id(SECTION_ID_2.id)
+        .add_event_type(EventType.SECTION_ENTER.value)
         .add_second(2)
         .build_section_event()
     )
@@ -309,6 +311,7 @@ def event_2_section_1() -> Event:
     return (
         event_builder.EventBuilder()
         .add_section_id(SECTION_ID_1.id)
+        .add_event_type(EventType.SECTION_LEAVE.value)
         .add_second(3)
         .build_section_event()
     )
@@ -318,6 +321,7 @@ def event_2_section_2() -> Event:
     return (
         event_builder.EventBuilder()
         .add_section_id(SECTION_ID_2.id)
+        .add_event_type(EventType.SECTION_LEAVE.value)
         .add_second(4)
         .build_section_event()
     )
@@ -531,22 +535,33 @@ class TestEventRepository:
         assert actual_event == expected_event
 
     @pytest.mark.parametrize(
-        "sections,expected_events",
+        "sections,event_type,expected_events",
         [
-            ([], all_events()),
-            ([SECTION_ID_1], [event_1_section_1(), event_2_section_1()]),
-            ([SECTION_ID_2], [event_1_section_2(), event_2_section_2()]),
-            ([SECTION_ID_1, SECTION_ID_2], all_events()),
+            ([], [], all_events()),
+            ([SECTION_ID_1], [], [event_1_section_1(), event_2_section_1()]),
+            ([SECTION_ID_2], [], [event_1_section_2(), event_2_section_2()]),
+            ([SECTION_ID_1, SECTION_ID_2], [], all_events()),
+            (
+                [SECTION_ID_1],
+                [EventType.SECTION_ENTER],
+                [event_1_section_1()],
+            ),
+            (
+                [SECTION_ID_1],
+                [EventType.SECTION_LEAVE],
+                [event_2_section_1()],
+            ),
         ],
     )
     def test_get(
         self,
-        expected_events: list[Event],
         sections: list[SectionId],
+        event_type: list[EventType],
+        expected_events: list[Event],
     ) -> None:
         repository = EventRepository()
         repository.add_all(all_events())
 
-        actual_events = repository.get(sections=sections)
+        actual_events = repository.get(sections=sections, event_types=event_type)
 
         assert actual_events == expected_events
