@@ -29,6 +29,9 @@ from OTAnalytics.application.use_cases.create_events import (
 )
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.filter_visualization import (
+    EnableFilterTrackByDate,
+)
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
@@ -103,6 +106,7 @@ class OTAnalyticsApplication:
         start_new_project: StartNewProject,
         project_updater: ProjectUpdater,
         load_track_files: LoadTrackFiles,
+        enable_filter_by_date: EnableFilterTrackByDate,
         previous_frame: SwitchToPrevious,
         next_frame: SwitchToNext,
         switch_event: SwitchToEvent,
@@ -137,6 +141,7 @@ class OTAnalyticsApplication:
         self._track_repository_size = TrackRepositorySize(
             self._datastore._track_repository
         )
+        self._enable_filter_by_date = enable_filter_by_date
         self._switch_previous = previous_frame
         self._switch_next = next_frame
         self._switch_event = switch_event
@@ -504,13 +509,7 @@ class OTAnalyticsApplication:
 
     def enable_filter_track_by_date(self) -> None:
         """Enable filtering track by date and restoring the previous date range."""
-        current_filter_element = self.track_view_state.filter_element.get()
-        restored_filter_element = (
-            self._filter_element_setting_restorer.restore_by_date_filter_setting(
-                current_filter_element
-            )
-        )
-        self.track_view_state.filter_element.set(restored_filter_element)
+        self._enable_filter_by_date.enable()
 
     def disable_filter_track_by_date(self) -> None:
         """Disable filtering track by date and saving the current date range."""

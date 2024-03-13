@@ -2,6 +2,11 @@ import logging
 from pathlib import Path
 from typing import Sequence
 
+from application.use_cases.filter_visualization import (
+    CreateDefaultFilterRange,
+    EnableFilterTrackByDate,
+)
+
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -399,12 +404,21 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
+        enable_filter_track_by_date = EnableFilterTrackByDate(
+            track_view_state, filter_element_settings_restorer
+        )
+        create_default_filter = CreateDefaultFilterRange(
+            state=track_view_state,
+            videos_metadata=videos_metadata,
+            enable_filter_track_by_date=enable_filter_track_by_date,
+        )
         previous_frame = SwitchToPrevious(track_view_state, videos_metadata)
         next_frame = SwitchToNext(track_view_state, videos_metadata)
         switch_event = SwitchToEvent(
             event_repository=event_repository,
             track_view_state=track_view_state,
             section_state=section_state,
+            create_default_filter=create_default_filter,
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -428,6 +442,7 @@ class ApplicationStarter:
             start_new_project,
             project_updater,
             load_track_files,
+            enable_filter_track_by_date,
             previous_frame,
             next_frame,
             switch_event,

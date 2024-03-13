@@ -7,6 +7,7 @@ import pytest
 from OTAnalytics.application.state import TrackViewState, VideosMetadata
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilterRange,
+    EnableFilterTrackByDate,
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
@@ -57,6 +58,7 @@ class TestCreateDefaultFilterRange:
         expected_start_date: datetime,
         expected_end_date: datetime,
     ) -> None:
+        enable_filter_track_by_date = Mock(spec=EnableFilterTrackByDate)
         filter_element = create_filter_element(start_date=start_date, end_date=end_date)
         track_view_state = create_track_view_state(filter_element)
         derived_filter_element = Mock(spec=FilterElement)
@@ -65,6 +67,7 @@ class TestCreateDefaultFilterRange:
             track_view_state,
             videos_metadata=videos_metadata,
             duration=FILTER_DURATION,
+            enable_filter_track_by_date=enable_filter_track_by_date,
         )
 
         use_case.create()
@@ -75,8 +78,10 @@ class TestCreateDefaultFilterRange:
         track_view_state.filter_element.set.assert_called_once_with(
             derived_filter_element
         )
+        enable_filter_track_by_date.enable.assert_called_once()
 
     def test_do_nothing_if_filter_is_already_set(self, videos_metadata: Mock) -> None:
+        enable_filter_track_by_date = Mock(spec=EnableFilterTrackByDate)
         filter_element = create_filter_element(start_date=START_DATE, end_date=END_DATE)
         track_view_state = create_track_view_state(filter_element)
         derived_filter_element = Mock(spec=FilterElement)
@@ -85,9 +90,11 @@ class TestCreateDefaultFilterRange:
             track_view_state,
             videos_metadata=videos_metadata,
             duration=FILTER_DURATION,
+            enable_filter_track_by_date=enable_filter_track_by_date,
         )
 
         use_case.create()
 
         filter_element.derive_date.assert_not_called()
         track_view_state.filter_element.set.assert_called_once_with(filter_element)
+        enable_filter_track_by_date.enable.assert_called_once()
