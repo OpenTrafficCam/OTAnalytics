@@ -17,7 +17,11 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevious
+from OTAnalytics.application.ui.frame_control import (
+    SwitchToEvent,
+    SwitchToNext,
+    SwitchToPrevious,
+)
 from OTAnalytics.application.use_cases.config import SaveOtconfig
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -101,6 +105,7 @@ class OTAnalyticsApplication:
         load_track_files: LoadTrackFiles,
         previous_frame: SwitchToPrevious,
         next_frame: SwitchToNext,
+        switch_event: SwitchToEvent,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -134,6 +139,7 @@ class OTAnalyticsApplication:
         )
         self._switch_previous = previous_frame
         self._switch_next = next_frame
+        self._switch_event = switch_event
 
     def connect_observers(self) -> None:
         """
@@ -465,6 +471,12 @@ class OTAnalyticsApplication:
 
     def previous_second(self) -> None:
         self._switch_previous.switch_second()
+
+    def next_event(self) -> None:
+        self._switch_event.switch_to_next()
+
+    def previous_event(self) -> None:
+        self._switch_event.switch_to_previous()
 
     def update_date_range_tracks_filter(self, date_range: DateRange) -> None:
         """Update the date range of the track filter.

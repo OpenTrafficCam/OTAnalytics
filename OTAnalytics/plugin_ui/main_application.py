@@ -46,7 +46,11 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevious
+from OTAnalytics.application.ui.frame_control import (
+    SwitchToEvent,
+    SwitchToNext,
+    SwitchToPrevious,
+)
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
@@ -397,6 +401,7 @@ class ApplicationStarter:
         )
         previous_frame = SwitchToPrevious(track_view_state, videos_metadata)
         next_frame = SwitchToNext(track_view_state, videos_metadata)
+        switch_event = SwitchToEvent(event_repository=event_repository)
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -421,6 +426,7 @@ class ApplicationStarter:
             load_track_files,
             previous_frame,
             next_frame,
+            switch_event,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(

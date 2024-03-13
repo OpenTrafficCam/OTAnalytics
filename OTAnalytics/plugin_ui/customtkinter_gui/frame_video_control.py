@@ -47,11 +47,24 @@ class FrameVideoControl(AbstractCTkFrame):
             text="<",
             command=self._viewmodel.previous_second,
         )
+        self._button_next_event = CTkButton(
+            master=self,
+            text=">",
+            command=self._viewmodel.next_event,
+        )
+        self._button_previous_event = CTkButton(
+            master=self,
+            text="<",
+            command=self._viewmodel.previous_event,
+        )
         self._label_seconds = CTkLabel(
             master=self, text="Seconds", anchor="e", justify="right"
         )
         self._label_frames = CTkLabel(
             master=self, text="Frames", anchor="e", justify="right"
+        )
+        self._label_event = CTkLabel(
+            master=self, text="Event", anchor="center", justify="right"
         )
         self._entry_seconds = CTkEntry(
             master=self,
@@ -87,15 +100,24 @@ class FrameVideoControl(AbstractCTkFrame):
         self._button_previous_frame.grid(
             row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self._button_previous_event.grid(
+            row=2, column=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self._label_seconds.grid(row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_seconds.grid(row=0, column=3, padx=PADX, pady=PADY, sticky=STICKY)
         self._label_frames.grid(row=1, column=2, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_frames.grid(row=1, column=3, padx=PADX, pady=PADY, sticky=STICKY)
+        self._label_event.grid(
+            row=2, column=2, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self._button_next_second.grid(
             row=0, column=4, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._button_next_frame.grid(
             row=1, column=4, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self._button_next_event.grid(
+            row=2, column=4, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _wire_widgets(self) -> None:
@@ -103,7 +125,14 @@ class FrameVideoControl(AbstractCTkFrame):
         self._frames.trace_add("write", callback=self._update_skip_time)
 
     def get_general_buttons(self) -> list[CTkButton]:
-        return [self._button_previous_frame, self._button_next_frame]
+        return [
+            self._button_previous_frame,
+            self._button_next_frame,
+            self._button_previous_event,
+            self._button_next_event,
+            self._button_previous_second,
+            self._button_next_second,
+        ]
 
     def _update_skip_time(self, name: str, other: str, mode: str) -> None:
         try:

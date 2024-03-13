@@ -1368,6 +1368,12 @@ class DummyViewModel(
     def previous_second(self) -> None:
         self._application.previous_second()
 
+    def next_event(self) -> None:
+        self._application.next_event()
+
+    def previous_event(self) -> None:
+        self._application.previous_event()
+
     def validate_date(self, date: str) -> bool:
         return any(
             [validate_date(date, date_format) for date_format in SUPPORTED_FORMATS]

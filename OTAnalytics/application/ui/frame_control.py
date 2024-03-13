@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from OTAnalytics.application.state import TrackViewState, VideosMetadata
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.event import EventRepository
 
 
 class SwitchTo(ABC):
@@ -70,3 +71,15 @@ class SwitchToPrevious(SwitchTo):
                 self._state.filter_element.set(
                     filter_element.derive_date(next_date_range)
                 )
+
+
+class SwitchToEvent:
+
+    def __init__(self, event_repository: EventRepository) -> None:
+        self._event_repository = event_repository
+
+    def switch_to_previous(self) -> None:
+        pass
+
+    def switch_to_next(self) -> None:
+        pass
