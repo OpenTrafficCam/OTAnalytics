@@ -500,18 +500,17 @@ class EventRepository:
     ) -> Iterable[Event]:
         if event_types is None:
             event_types = []
-        events = self.get_all()
-        if not sections and not event_types:
-            return events
+        if sections is None:
+            sections = []
         filter_function = self.__create_filter(event_types)
-        if not sections:
-            return list(filter(filter_function, events))
-        event_lists = [self._events[section] for section in sections]
-        events = list(itertools.chain.from_iterable(event_lists))
-        if not event_types:
-            return events
-
+        events = self.__create_event_list(sections)
         return list(filter(filter_function, events))
+
+    def __create_event_list(self, sections: list[SectionId]) -> Iterable[Event]:
+        if sections:
+            event_lists = [self._events[section] for section in sections]
+            return list(itertools.chain.from_iterable(event_lists))
+        return self.get_all()
 
     @staticmethod
     def __create_filter(event_types: list[EventType]) -> Callable[[Event], bool]:
