@@ -28,6 +28,9 @@ from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, TrackId
 from OTAnalytics.domain.types import EventType, EventTypeParseError
+from tests.utils.builders import event_builder
+
+EVENT_OCCURRENCE = datetime(2022, 1, 1, 0, 0, 0, 0)
 
 
 @pytest.fixture
@@ -70,7 +73,7 @@ class TestEvent:
                 road_user_id="1",
                 road_user_type="car",
                 hostname="my_hostname",
-                occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+                occurrence=EVENT_OCCURRENCE,
                 frame_number=frame,
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(0, 0),
@@ -80,14 +83,13 @@ class TestEvent:
             )
 
     def test_instantiate_with_valid_args(self) -> None:
-        occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
         event_coordinate = ImageCoordinate(0, 0)
         direction = DirectionVector2D(1, 0)
         event = Event(
             road_user_id="1",
             road_user_type="car",
             hostname="my_hostname",
-            occurrence=occurrence,
+            occurrence=EVENT_OCCURRENCE,
             frame_number=1,
             section_id=SectionId("N"),
             event_coordinate=event_coordinate,
@@ -98,7 +100,7 @@ class TestEvent:
         assert event.road_user_id == "1"
         assert event.road_user_type == "car"
         assert event.hostname == "my_hostname"
-        assert event.occurrence == occurrence
+        assert event.occurrence == EVENT_OCCURRENCE
         assert event.frame_number == 1
         assert event.section_id == SectionId("N")
         assert event.event_coordinate == event_coordinate
@@ -110,7 +112,7 @@ class TestEvent:
         road_user_id = "1"
         road_user_type = "car"
         hostname = "myhostname"
-        occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
+        occurrence = EVENT_OCCURRENCE
         frame_number = 1
         section_id = SectionId("N")
         event_coordinate = ImageCoordinate(0, 0)
@@ -398,3 +400,23 @@ class TestEventRepository:
         all_events = repository.get_all()
         assert all_events == [first_event, second_event]
         assert all_events  # ensure all events can not be exhausted
+
+    def test_get_next_after(self) -> None:
+        repository = EventRepository()
+        first_event = event_builder.EventBuilder().build_section_event()
+        second_event = event_builder.EventBuilder().add_second(1).build_section_event()
+        repository.add_all([first_event, second_event])
+
+        actual_event = repository.get_next_after(first_event.occurrence)
+
+        assert actual_event == second_event
+
+    def test_get_previous_before(self) -> None:
+        repository = EventRepository()
+        first_event = event_builder.EventBuilder().build_section_event()
+        second_event = event_builder.EventBuilder().add_second(1).build_section_event()
+        repository.add_all([first_event, second_event])
+
+        actual_event = repository.get_previous_before(second_event.occurrence)
+
+        assert actual_event == first_event

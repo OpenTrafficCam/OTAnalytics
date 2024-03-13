@@ -448,3 +448,17 @@ class EventRepository:
         except the ones event have been generated for.
         """
         return [section for section in all if section.id not in self._events.keys()]
+
+    def get_next_after(self, end_date: datetime) -> Optional[Event]:
+        for event in sorted(self.get_all(), key=lambda actual: actual.occurrence):
+            if event.occurrence > end_date:
+                return event
+        return None
+
+    def get_previous_before(self, end_date: datetime) -> Optional[Event]:
+        for event in sorted(
+            self.get_all(), key=lambda actual: actual.occurrence, reverse=True
+        ):
+            if event.occurrence < end_date:
+                return event
+        return None
