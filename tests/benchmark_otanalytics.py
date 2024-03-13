@@ -116,6 +116,7 @@ class UseCaseProvider:
             start_cli=True,
             debug=False,
             logfile_overwrite=True,
+            track_export=False,
             track_files=[str(f) for f in self._ottrk_files],
             otflow_file=str(self._otflow_file),
             save_dir=self._save_dir,
