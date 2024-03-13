@@ -423,7 +423,7 @@ class ApplicationStarter:
             AddAllSections(add_section),
             AddAllFlows(add_flow),
         )
-        save_otconfig = SaveOtconfig(datastore, config_parser)
+        save_otconfig = SaveOtconfig(datastore, config_parser, file_state)
 
         application = OTAnalyticsApplication(
             datastore,
