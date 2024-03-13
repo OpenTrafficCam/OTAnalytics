@@ -90,7 +90,7 @@ from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
-from OTAnalytics.application.use_cases.save_otflow import QuickSaveOTFlow, SaveOTFlow
+from OTAnalytics.application.use_cases.save_otflow import QuickSaveOtflow, SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
@@ -406,10 +406,10 @@ class ApplicationStarter:
         get_sections = GetAllSections(section_repository)
         get_flows = GetAllFlows(flow_repository)
         otflow_file_save_state = OTFlowFileSaveState()
-        save_otflow = SaveOTFlow(
+        save_otflow = SaveOtflow(
             flow_parser, get_sections, get_flows, otflow_file_save_state
         )
-        quick_save_otflow = QuickSaveOTFlow(otflow_file_save_state, save_otflow)
+        quick_save_otflow = QuickSaveOtflow(otflow_file_save_state, save_otflow)
         application = OTAnalyticsApplication(
             datastore,
             track_state,

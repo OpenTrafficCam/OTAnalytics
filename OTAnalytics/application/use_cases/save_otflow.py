@@ -6,7 +6,7 @@ from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.section_repository import GetAllSections
 
 
-class SaveOTFlow:
+class SaveOtflow:
     def __init__(
         self,
         flow_parser: FlowParser,
@@ -44,8 +44,8 @@ class NoSectionsToSave(Exception):
     pass
 
 
-class QuickSaveOTFlow:
-    def __init__(self, state: OTFlowFileSaveState, save_otflow: SaveOTFlow) -> None:
+class QuickSaveOtflow:
+    def __init__(self, state: OTFlowFileSaveState, save_otflow: SaveOtflow) -> None:
         self._state = state
         self._save_otflow = save_otflow
 

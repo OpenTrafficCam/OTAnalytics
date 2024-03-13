@@ -6,8 +6,8 @@ import pytest
 from OTAnalytics.application.use_cases.save_otflow import (
     NoExistingFileToSave,
     NoSectionsToSave,
-    QuickSaveOTFlow,
-    SaveOTFlow,
+    QuickSaveOtflow,
+    SaveOtflow,
 )
 
 
@@ -19,7 +19,7 @@ def _create_otflow_file_save_state(otflow_file: Path | None) -> Mock:
     return state
 
 
-class TestSaveOTFlow:
+class TestSaveOtflow:
     def test_save(self) -> None:
         sections = Mock()
         flows = Mock()
@@ -33,7 +33,7 @@ class TestSaveOTFlow:
         some_file = Mock()
         state = Mock()
 
-        save_otflow = SaveOTFlow(flow_parser, get_sections, get_flows, state)
+        save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, state)
         save_otflow.save(some_file)
 
         flow_parser.serialize.assert_called_once_with(
@@ -50,7 +50,7 @@ class TestSaveOTFlow:
         some_file = Mock()
 
         state = Mock()
-        save_otflow = SaveOTFlow(flow_parser, get_sections, get_flows, state)
+        save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, state)
 
         with pytest.raises(NoSectionsToSave):
             save_otflow.save(some_file)
@@ -61,14 +61,14 @@ class TestSaveOTFlow:
         state.last_saved.set.assert_not_called()
 
 
-class TestQuickSaveOTFlow:
+class TestQuickSaveOtflow:
 
     def test_save(self) -> None:
         last_saved_otflow_file = Path("path/to/my_flows.otflow")
         save_otflow = Mock()
         state = _create_otflow_file_save_state(last_saved_otflow_file)
 
-        quick_save = QuickSaveOTFlow(state, save_otflow)
+        quick_save = QuickSaveOtflow(state, save_otflow)
         quick_save.save()
 
         state.last_saved.get.assert_called_once()
@@ -78,7 +78,7 @@ class TestQuickSaveOTFlow:
         save_otflow = Mock()
         state = _create_otflow_file_save_state(None)
 
-        quick_save = QuickSaveOTFlow(state, save_otflow)
+        quick_save = QuickSaveOtflow(state, save_otflow)
         with pytest.raises(NoExistingFileToSave):
             quick_save.save()
 

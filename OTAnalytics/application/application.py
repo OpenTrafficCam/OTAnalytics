@@ -29,7 +29,7 @@ from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
-from OTAnalytics.application.use_cases.save_otflow import QuickSaveOTFlow, SaveOTFlow
+from OTAnalytics.application.use_cases.save_otflow import QuickSaveOtflow, SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetSectionOffset,
@@ -102,8 +102,8 @@ class OTAnalyticsApplication:
         load_track_files: LoadTrackFiles,
         previous_frame: SwitchToPrevious,
         next_frame: SwitchToNext,
-        save_otflow: SaveOTFlow,
-        quick_save_otflow: QuickSaveOTFlow,
+        save_otflow: SaveOtflow,
+        quick_save_otflow: QuickSaveOtflow,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
