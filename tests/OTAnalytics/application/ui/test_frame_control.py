@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
-from application.use_cases.filter_visualization import CreateDefaultFilterRange
 
 from OTAnalytics.application.datastore import VideoMetadata
 from OTAnalytics.application.playback import SkipTime
@@ -11,6 +10,9 @@ from OTAnalytics.application.ui.frame_control import (
     SwitchToEvent,
     SwitchToNext,
     SwitchToPrevious,
+)
+from OTAnalytics.application.use_cases.filter_visualization import (
+    CreateDefaultFilterRange,
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import Event, EventRepository
@@ -73,19 +75,23 @@ class TestSwitchToNextFrame:
         videos_metadata: Mock,
         filter_element: Mock,
     ) -> None:
+        create_default_filter = Mock(spec=CreateDefaultFilterRange)
         derived_filter_element = Mock(spec=FilterElement)
         filter_element.derive_date.return_value = derived_filter_element
 
         new_date_range = DateRange(
             START_DATE + TIME_OF_A_FRAME, END_DATE + TIME_OF_A_FRAME
         )
-        use_case = SwitchToNext(track_view_state, videos_metadata)
+        use_case = SwitchToNext(
+            track_view_state, videos_metadata, create_default_filter
+        )
 
         use_case.switch_frame()
 
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
         videos_metadata.get_metadata_for.assert_called_with(END_DATE)
+        create_default_filter.create.assert_called_once()
 
 
 class TestSwitchToPreviousFrame:
@@ -95,19 +101,23 @@ class TestSwitchToPreviousFrame:
         videos_metadata: Mock,
         filter_element: Mock,
     ) -> None:
+        create_default_filter = Mock(spec=CreateDefaultFilterRange)
         derived_filter_element = Mock(spec=FilterElement)
         filter_element.derive_date.return_value = derived_filter_element
 
         new_date_range = DateRange(
             START_DATE - TIME_OF_A_FRAME, END_DATE - TIME_OF_A_FRAME
         )
-        use_case = SwitchToPrevious(track_view_state, videos_metadata)
+        use_case = SwitchToPrevious(
+            track_view_state, videos_metadata, create_default_filter
+        )
 
         use_case.switch_frame()
 
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
         videos_metadata.get_metadata_for.assert_called_with(END_DATE)
+        create_default_filter.create.assert_called_once()
 
 
 class TestSwitchToEvent:

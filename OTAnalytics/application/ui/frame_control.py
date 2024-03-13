@@ -14,16 +14,24 @@ from OTAnalytics.domain.types import EventType
 
 
 class SwitchTo(ABC):
-    def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
+    def __init__(
+        self,
+        state: TrackViewState,
+        videos_metadata: VideosMetadata,
+        create_default_filter: CreateDefaultFilterRange,
+    ) -> None:
         self._state = state
         self._videos_metadata = videos_metadata
+        self._create_default_filter = create_default_filter
 
     def switch_second(self) -> None:
+        self._create_default_filter.create()
         skip_time = self._state.skip_time.get()
         current_skip = timedelta(seconds=skip_time.seconds)
         self._switch_time(current_skip)
 
     def switch_frame(self) -> None:
+        self._create_default_filter.create()
         if current_skip := self._get_current_skip_frames():
             self._switch_time(current_skip)
 
@@ -49,8 +57,13 @@ class SwitchTo(ABC):
 
 class SwitchToNext(SwitchTo):
 
-    def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
-        super().__init__(state, videos_metadata)
+    def __init__(
+        self,
+        state: TrackViewState,
+        videos_metadata: VideosMetadata,
+        create_default_filter: CreateDefaultFilterRange,
+    ) -> None:
+        super().__init__(state, videos_metadata, create_default_filter)
 
     def _switch_time(self, current_skip: timedelta) -> None:
         if filter_element := self._state.filter_element.get():
@@ -65,8 +78,13 @@ class SwitchToNext(SwitchTo):
 
 
 class SwitchToPrevious(SwitchTo):
-    def __init__(self, state: TrackViewState, videos_metadata: VideosMetadata) -> None:
-        super().__init__(state, videos_metadata)
+    def __init__(
+        self,
+        state: TrackViewState,
+        videos_metadata: VideosMetadata,
+        create_default_filter: CreateDefaultFilterRange,
+    ) -> None:
+        super().__init__(state, videos_metadata, create_default_filter)
 
     def _switch_time(self, current_skip: timedelta) -> None:
         if filter_element := self._state.filter_element.get():

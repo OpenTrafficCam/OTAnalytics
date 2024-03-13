@@ -412,8 +412,12 @@ class ApplicationStarter:
             videos_metadata=videos_metadata,
             enable_filter_track_by_date=enable_filter_track_by_date,
         )
-        previous_frame = SwitchToPrevious(track_view_state, videos_metadata)
-        next_frame = SwitchToNext(track_view_state, videos_metadata)
+        previous_frame = SwitchToPrevious(
+            track_view_state, videos_metadata, create_default_filter
+        )
+        next_frame = SwitchToNext(
+            track_view_state, videos_metadata, create_default_filter
+        )
         switch_event = SwitchToEvent(
             event_repository=event_repository,
             track_view_state=track_view_state,
