@@ -2,11 +2,6 @@ import logging
 from pathlib import Path
 from typing import Sequence
 
-from application.use_cases.filter_visualization import (
-    CreateDefaultFilterRange,
-    EnableFilterTrackByDate,
-)
-
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -74,6 +69,10 @@ from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.filter_visualization import (
+    CreateDefaultFilterRange,
+    EnableFilterTrackByDate,
+)
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearAllFlows
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
