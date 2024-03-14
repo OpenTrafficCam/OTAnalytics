@@ -25,3 +25,11 @@ class AddAllVideos:
 
     def add(self, videos: Iterable[Video]) -> None:
         self._video_repository.add_all(videos)
+
+
+class GetAllVideos:
+    def __init__(self, video_repository: VideoRepository) -> None:
+        self._video_repository = video_repository
+
+    def get(self) -> list[Video]:
+        return self._video_repository.get_all()
