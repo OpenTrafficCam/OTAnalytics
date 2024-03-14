@@ -2,8 +2,8 @@ from datetime import datetime
 from unittest.mock import Mock
 
 import pytest
-from application.ui.frame_control import DEFAULT_EVENT_TYPES
 
+from OTAnalytics.application.ui.frame_control import DEFAULT_EVENT_TYPES
 from OTAnalytics.domain.event import (
     DATE_FORMAT,
     DIRECTION_VECTOR,
