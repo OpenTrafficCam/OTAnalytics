@@ -3,7 +3,7 @@ from pathlib import Path
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.parser.flow_parser import FlowParser
-from OTAnalytics.application.state import ConfigurationFile
+from OTAnalytics.application.state import FileState
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.section_repository import GetAllSections
@@ -65,14 +65,28 @@ class ConfigHasChanged:
         self,
         otconfig_has_changed: OtconfigHasChanged,
         otflow_has_changed: OtflowHasChanged,
+        file_state: FileState,
     ):
         self._otconfig_has_changed = otconfig_has_changed
         self._otflow_has_changed = otflow_has_changed
+        self._file_state = file_state
 
-    def has_changed(self, config_file: ConfigurationFile) -> bool:
+    def has_changed(self) -> bool:
+        if not (config_file := self._file_state.last_saved_config.get()):
+            raise NoExistingConfigFound("No existing config file found")
+
         if config_file.is_otflow:
             return self._otflow_has_changed.has_changed(config_file.file)
-        elif config_file.is_otconfig:
+
+        if config_file.is_otconfig:
             return self._otconfig_has_changed.has_changed(config_file.file)
-        else:
-            return False
+
+        raise InvalidConfigFile(f"Config file '{config_file.file}' is invalid")
+
+
+class NoExistingConfigFound(Exception):
+    pass
+
+
+class InvalidConfigFile(Exception):
+    pass

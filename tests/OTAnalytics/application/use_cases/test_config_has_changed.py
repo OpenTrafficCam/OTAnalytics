@@ -6,6 +6,8 @@ import pytest
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.config_has_changed import (
     ConfigHasChanged,
+    InvalidConfigFile,
+    NoExistingConfigFound,
     OtconfigHasChanged,
     OtflowHasChanged,
 )
@@ -126,39 +128,84 @@ class TestOtflowHasChanged:
 
 class TestConfigHasChanged:
     def test_has_changed_otconfig(self) -> None:
-        otconfig_has_changed = Mock()
-        otconfig_has_changed.has_changed.return_value = True
-        otflow_has_changed = Mock()
-
-        use_case = ConfigHasChanged(otconfig_has_changed, otflow_has_changed)
         otconfig_file = Path("path/to/my.otconfig")
         config_file = ConfigurationFile(otconfig_file, Mock())
 
-        assert use_case.has_changed(config_file) is True
+        otconfig_has_changed = Mock()
+        otflow_has_changed = Mock()
+        file_state = Mock()
+        last_saved_config = Mock()
+
+        last_saved_config.get.return_value = config_file
+        file_state.last_saved_config = last_saved_config
+        otconfig_has_changed.has_changed.return_value = True
+
+        use_case = ConfigHasChanged(
+            otconfig_has_changed, otflow_has_changed, file_state
+        )
+
+        assert use_case.has_changed() is True
+        last_saved_config.get.assert_called_once()
         otconfig_has_changed.has_changed.assert_called_once_with(otconfig_file)
         otflow_has_changed.has_changed.assert_not_called()
 
     def test_has_changed_otflow(self) -> None:
-        otconfig_has_changed = Mock()
-        otflow_has_changed = Mock()
-        otflow_has_changed.has_changed.return_value = True
-
-        use_case = ConfigHasChanged(otconfig_has_changed, otflow_has_changed)
         otflow_file = Path("path/to/my.otflow")
         config_file = ConfigurationFile(otflow_file, Mock())
 
-        assert use_case.has_changed(config_file) is True
+        otconfig_has_changed = Mock()
+        otflow_has_changed = Mock()
+        file_state = Mock()
+        last_saved_config = Mock()
+
+        last_saved_config.get.return_value = config_file
+        file_state.last_saved_config = last_saved_config
+        otflow_has_changed.has_changed.return_value = True
+
+        use_case = ConfigHasChanged(
+            otconfig_has_changed, otflow_has_changed, file_state
+        )
+
+        assert use_case.has_changed() is True
+        last_saved_config.get.assert_called_once()
         otflow_has_changed.has_changed.assert_called_once_with(otflow_file)
         otconfig_has_changed.has_changed.assert_not_called()
 
-    def test_has_changed_not_configuration_file(self) -> None:
-        otconfig_has_changed = Mock()
-        otflow_has_changed = Mock()
-
-        use_case = ConfigHasChanged(otconfig_has_changed, otflow_has_changed)
+    def test_has_changed_raise_invalid_config_file_error(self) -> None:
         some_file = Path("path/to/my.txt")
         config_file = ConfigurationFile(some_file, Mock())
 
-        assert use_case.has_changed(config_file) is False
+        otconfig_has_changed = Mock()
+        otflow_has_changed = Mock()
+        file_state = Mock()
+        last_saved_config = Mock()
+
+        last_saved_config.get.return_value = config_file
+        file_state.last_saved_config = last_saved_config
+
+        use_case = ConfigHasChanged(
+            otconfig_has_changed, otflow_has_changed, file_state
+        )
+
+        with pytest.raises(InvalidConfigFile):
+            use_case.has_changed()
+        otflow_has_changed.has_changed.assert_not_called()
+        otconfig_has_changed.has_changed.assert_not_called()
+
+    def test_has_changed_raise_no_existing_config_found(self) -> None:
+        otconfig_has_changed = Mock()
+        otflow_has_changed = Mock()
+        file_state = Mock()
+        last_saved_config = Mock()
+
+        last_saved_config.get.return_value = None
+        file_state.last_saved_config = last_saved_config
+
+        use_case = ConfigHasChanged(
+            otconfig_has_changed, otflow_has_changed, file_state
+        )
+
+        with pytest.raises(NoExistingConfigFound):
+            use_case.has_changed()
         otflow_has_changed.has_changed.assert_not_called()
         otconfig_has_changed.has_changed.assert_not_called()
