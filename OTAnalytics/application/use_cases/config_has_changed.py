@@ -28,6 +28,15 @@ class OtconfigHasChanged:
         self._deserialize = deserialize
 
     def has_changed(self, file: Path) -> bool:
+        """
+        Check if the OTConfig file has changed or not based on its content.
+
+        Args:
+            file (Path): The path to the OTConfig file.
+
+        Returns:
+            bool: True if the OTConfig file has changed, False otherwise.
+        """
         prev_content = self._deserialize(file)
         current_content = self._config_parser.convert(
             self._get_current_project.get(),
@@ -53,6 +62,15 @@ class OtflowHasChanged:
         self._deserialize = deserialize
 
     def has_changed(self, file: Path) -> bool:
+        """
+        Method checking if the OTFlow file has changed or not based on its content.
+
+        Args:
+            file (Path): The path to the OTFlow file.
+
+        Returns:
+            bool: True if the OTFlow file has changed, False otherwise.
+        """
         prev_content = self._deserialize(file)
         current_content = self._flow_parser.convert(
             self._get_sections(), self._get_flows.get()
@@ -72,6 +90,18 @@ class ConfigHasChanged:
         self._file_state = file_state
 
     def has_changed(self) -> bool:
+        """
+        Method checking if any of the OTConfig or OTFlow files have changed or not.
+
+        Returns:
+            bool: True if either an OTConfig or an OTFlow file has changed,
+                False otherwise.
+
+        Raises:
+            NoExistingConfigFound: When no existing OTConfig or OTFlow file is found.
+            InvalidConfigFile: When a file is encountered that does not have an
+                OTConfig or OTFlow filetype.
+        """
         if not (config_file := self._file_state.last_saved_config.get()):
             raise NoExistingConfigFound("No existing config file found")
 
