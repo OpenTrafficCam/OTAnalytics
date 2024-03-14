@@ -20,6 +20,7 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevious
 from OTAnalytics.application.use_cases.config import SaveOtconfig
+from OTAnalytics.application.use_cases.config_has_changed import ConfigHasChanged
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
@@ -112,6 +113,7 @@ class OTAnalyticsApplication:
         save_otflow: SaveOtflow,
         quick_save_configuration: QuickSaveConfiguration,
         load_otconfig: LoadOtconfig,
+        config_has_changed: ConfigHasChanged,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -147,6 +149,7 @@ class OTAnalyticsApplication:
         self._save_otflow = save_otflow
         self._quick_save_configuration = quick_save_configuration
         self._load_otconfig = load_otconfig
+        self._config_has_changed = config_has_changed
 
     def connect_observers(self) -> None:
         """
@@ -604,6 +607,9 @@ class OTAnalyticsApplication:
 
     def quick_save_configuration(self) -> None:
         self._quick_save_configuration.save()
+
+    def config_has_changed(self) -> bool:
+        return self._config_has_changed.has_changed()
 
 
 class MissingTracksError(Exception):

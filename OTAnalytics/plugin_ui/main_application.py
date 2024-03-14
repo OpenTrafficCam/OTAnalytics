@@ -51,6 +51,11 @@ from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevi
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.config import SaveOtconfig
+from OTAnalytics.application.use_cases.config_has_changed import (
+    ConfigHasChanged,
+    OtconfigHasChanged,
+    OtflowHasChanged,
+)
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
@@ -82,6 +87,7 @@ from OTAnalytics.application.use_cases.generate_flows import (
     GenerateFlows,
     RepositoryFlowIdGenerator,
 )
+from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
 )
@@ -123,6 +129,7 @@ from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import (
     AddAllVideos,
     ClearAllVideos,
+    GetAllVideos,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
@@ -431,6 +438,18 @@ class ApplicationStarter:
             AddAllFlows(add_flow),
             parse_json,
         )
+        config_has_changed = ConfigHasChanged(
+            OtconfigHasChanged(
+                config_parser,
+                get_sections,
+                get_flows,
+                GetCurrentProject(datastore),
+                GetAllVideos(video_repository),
+                parse_json,
+            ),
+            OtflowHasChanged(flow_parser, get_sections, get_flows, parse_json),
+            file_state,
+        )
 
         application = OTAnalyticsApplication(
             datastore,
@@ -461,6 +480,7 @@ class ApplicationStarter:
             save_otflow,
             quick_save_configuration,
             load_otconfig,
+            config_has_changed,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
