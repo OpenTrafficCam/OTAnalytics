@@ -5,6 +5,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import (
     AddFlow,
@@ -31,6 +32,7 @@ class MockDependencies(TypedDict):
     flow_parser: Mock
     add_section: Mock
     add_flow: Mock
+    deserialize: Mock
 
 
 class TestLoadOtflow:
@@ -62,6 +64,7 @@ class TestLoadOtflow:
 
         add_section = Mock(spec=AddSection)
         add_flow = Mock(spec=AddFlow)
+        deserializer = Mock()
         return {
             "clear_all_sections": clear_all_sections,
             "clear_all_flows": clear_all_flows,
@@ -69,6 +72,7 @@ class TestLoadOtflow:
             "flow_parser": flow_parser,
             "add_section": add_section,
             "add_flow": add_flow,
+            "deserialize": deserializer,
         }
 
     def test_load_flow_file(
@@ -83,6 +87,8 @@ class TestLoadOtflow:
         otflow_file = Mock(spec=Path)
         observer = Mock()
         load_flow_file.register(observer)
+        deserialization_result = Mock()
+        mock_deps["deserialize"].return_value = deserialization_result
 
         load_flow_file(otflow_file)
         mock_deps["flow_parser"].parse.assert_called_once_with(otflow_file)
@@ -94,7 +100,9 @@ class TestLoadOtflow:
         mock_deps["clear_all_events"].assert_called_once()
         mock_deps["clear_all_flows"].assert_called_once()
         mock_deps["clear_all_sections"].assert_called_once()
-        observer.assert_called_with(otflow_file)
+        observer.assert_called_with(
+            ConfigurationFile(otflow_file, deserialization_result)
+        )
 
     def test_load_flow_file_invalid_section_file(
         self, mock_deps: MockDependencies, mock_first_section: Mock

@@ -176,6 +176,17 @@ class OtConfigParser(ConfigParser):
         Raises:
             StartDateMissing: if start date is not configured
         """
+        content = self.convert(project, video_files, sections, flows, file)
+        write_json(data=content, path=file)
+
+    def convert(
+        self,
+        project: Project,
+        video_files: Iterable[Video],
+        sections: Iterable[Section],
+        flows: Iterable[Flow],
+        file: Path,
+    ) -> dict:
         parent_folder = file.parent
         project_content = project.to_dict()
         video_content = self._video_parser.convert(
@@ -186,4 +197,4 @@ class OtConfigParser(ConfigParser):
         content: dict[str, list[dict] | dict] = {PROJECT: project_content}
         content |= video_content
         content |= section_content
-        write_json(data=content, path=file)
+        return content

@@ -15,7 +15,9 @@ class TestSaveOtconfig:
     def test_correct_date(self, test_data_tmp_dir: Path) -> None:
         datastore = Mock(spec=Datastore)
         datastore.project = Project("name", start_date=datetime(2023, 1, 1))
+        convert_result = Mock()
         config_parser = Mock(spec=ConfigParser)
+        config_parser.convert.return_value = convert_result
         output = test_data_tmp_dir / "test.otconfig"
         file_state = Mock()
         use_case = SaveOtconfig(datastore, config_parser, file_state)
@@ -24,7 +26,7 @@ class TestSaveOtconfig:
 
         config_parser.serialize.assert_called_once()
         file_state.last_saved_config.set.assert_called_once_with(
-            ConfigurationFile(output)
+            ConfigurationFile(output, convert_result)
         )
 
     def test_missing_date(self, test_data_tmp_dir: Path) -> None:

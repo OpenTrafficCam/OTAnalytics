@@ -500,16 +500,16 @@ class TestConfigurationFile:
         return Path("path/to/my.otconfig")
 
     def test_is_otflow(self, otflow_file: Path, otconfig_file: Path) -> None:
-        assert ConfigurationFile(otflow_file).is_otflow
-        assert not ConfigurationFile(otconfig_file).is_otflow
+        assert ConfigurationFile(otflow_file, Mock()).is_otflow
+        assert not ConfigurationFile(otconfig_file, Mock()).is_otflow
 
     def test_is_otconfig(self, otconfig_file: Path, otflow_file: Path) -> None:
-        assert ConfigurationFile(otconfig_file).is_otconfig
-        assert not ConfigurationFile(otflow_file).is_otconfig
+        assert ConfigurationFile(otconfig_file, Mock()).is_otconfig
+        assert not ConfigurationFile(otflow_file, Mock()).is_otconfig
 
     def test_file_type(self, otflow_file: Path) -> None:
-        assert ConfigurationFile(otflow_file).file_type == "otflow"
+        assert ConfigurationFile(otflow_file, Mock()).file_type == "otflow"
 
     def test_file_type_has_no_type(self) -> None:
         no_file_type = Path("path/to/no_file_type")
-        assert ConfigurationFile(no_file_type).file_type == ""
+        assert ConfigurationFile(no_file_type, Mock()).file_type == ""

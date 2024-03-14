@@ -35,7 +35,9 @@ class SaveOtflow:
                 flows=flows,
                 file=file,
             )
-            self._state.last_saved_config.set(ConfigurationFile(file))
+            self._state.last_saved_config.set(
+                ConfigurationFile(file, self._parser.convert(sections, flows))
+            )
         else:
             raise NoSectionsToSave()
 

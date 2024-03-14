@@ -572,6 +572,7 @@ class ActionState:
 @dataclass
 class ConfigurationFile:
     file: Path
+    content: dict
 
     @property
     def is_otconfig(self) -> bool:
@@ -592,6 +593,3 @@ class ConfigurationFile:
 class FileState:
     def __init__(self) -> None:
         self.last_saved_config = ObservableOptionalProperty[ConfigurationFile]()
-
-    def update_last_saved_config(self, config_file: Path) -> None:
-        self.last_saved_config.set(ConfigurationFile(config_file))

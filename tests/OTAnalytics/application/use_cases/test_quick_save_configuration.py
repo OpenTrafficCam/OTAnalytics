@@ -13,7 +13,7 @@ from OTAnalytics.application.use_cases.quick_save_configuration import (
 
 class TestQuickSaveConfiguration:
     def test_save_otflow(self) -> None:
-        config_file = ConfigurationFile(Path("path/to/my.otflow"))
+        config_file = ConfigurationFile(Path("path/to/my.otflow"), Mock())
 
         save_otflow = Mock()
         save_otconfig = Mock()
@@ -27,7 +27,7 @@ class TestQuickSaveConfiguration:
         save_otconfig.save.assert_not_called()
 
     def test_save_otconfig(self) -> None:
-        config_file = ConfigurationFile(Path("path/to/my.otconfig"))
+        config_file = ConfigurationFile(Path("path/to/my.otconfig"), Mock())
 
         save_otflow = Mock()
         save_otconfig = Mock()
@@ -41,7 +41,9 @@ class TestQuickSaveConfiguration:
         save_otflow.save.assert_not_called()
 
     def test_save_not_supported_format(self) -> None:
-        config_file = ConfigurationFile(Path("path/to/not-supported-format.txt"))
+        config_file = ConfigurationFile(
+            Path("path/to/not-supported-format.txt"), Mock()
+        )
         save_otflow = Mock()
         save_otconfig = Mock()
         state = _create_otflow_file_save_state(config_file)

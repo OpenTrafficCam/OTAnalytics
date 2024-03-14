@@ -25,7 +25,9 @@ class TestSaveOtflow:
         get_flows = Mock()
         get_flows.get.return_value = flows
 
+        converted_data = Mock()
         flow_parser = Mock()
+        flow_parser.convert.return_value = converted_data
         some_file = Mock()
         state = Mock()
 
@@ -35,8 +37,9 @@ class TestSaveOtflow:
         flow_parser.serialize.assert_called_once_with(
             sections=sections, flows=flows, file=some_file
         )
+        flow_parser.convert.assert_called_once_with(sections, flows)
         state.last_saved_config.set.assert_called_once_with(
-            ConfigurationFile(some_file)
+            ConfigurationFile(some_file, converted_data)
         )
 
     def test_save_no_sections(self) -> None:

@@ -1,7 +1,9 @@
 from pathlib import Path
 from typing import Iterable
 
+from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import (
     AddFlow,
@@ -43,6 +45,7 @@ class LoadOtflow:
         flow_parser: FlowParser,
         add_section: AddSection,
         add_flow: AddFlow,
+        deserialize: Deserializer,
     ) -> None:
         self._clear_all_sections = clear_all_sections
         self._clear_all_flows = clear_all_flows
@@ -50,7 +53,8 @@ class LoadOtflow:
         self._flow_parser = flow_parser
         self._add_section = add_section
         self._add_flow = add_flow
-        self._subject = Subject[Path]()
+        self._deserialize = deserialize
+        self._subject = Subject[ConfigurationFile]()
 
     def __call__(self, file: Path) -> None:
         """
@@ -65,7 +69,7 @@ class LoadOtflow:
         try:
             self._add_sections(sections)
             self._add_flows(flows)
-            self._subject.notify(file)
+            self._subject.notify(ConfigurationFile(file, self._deserialize(file)))
 
         except (SectionAlreadyExists, FlowAlreadyExists) as cause:
             self._clear_repositories()
@@ -86,5 +90,5 @@ class LoadOtflow:
         for flow in flows:
             self._add_flow(flow)
 
-    def register(self, observer: OBSERVER[Path]) -> None:
+    def register(self, observer: OBSERVER[ConfigurationFile]) -> None:
         self._subject.register(observer)

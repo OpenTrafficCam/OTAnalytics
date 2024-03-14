@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, Mock
 import pytest
 
 from OTAnalytics.application.parser.config_parser import OtConfig
+from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.load_otconfig import (
     LoadOtconfig,
     UnableToLoadOtconfigFile,
@@ -34,6 +35,9 @@ class TestLoadOtconfig:
         add_videos = Mock()
         add_sections = Mock()
         add_flows = Mock()
+        deserialization_result = Mock()
+        deserializer = Mock()
+        deserializer.return_value = deserialization_result
 
         load_otconfig = LoadOtconfig(
             clear_repositories,
@@ -42,6 +46,7 @@ class TestLoadOtconfig:
             add_videos,
             add_sections,
             add_flows,
+            deserializer,
         )
         observer = Mock()
         load_otconfig.register(observer)
@@ -55,7 +60,9 @@ class TestLoadOtconfig:
         add_videos.add.assert_called_once_with(otconfig.videos)
         add_sections.add.assert_called_once_with(otconfig.sections)
         add_flows.add.assert_called_once_with(otconfig.flows)
-        observer.assert_called_once_with(file)
+        observer.assert_called_once_with(
+            ConfigurationFile(file, deserialization_result)
+        )
 
     def test_load_error(self, otconfig: OtConfig) -> None:
         clear_repositories = Mock()
@@ -71,6 +78,7 @@ class TestLoadOtconfig:
             Mock(),
             Mock(),
             add_sections,
+            Mock(),
             Mock(),
         )
         observer = Mock()

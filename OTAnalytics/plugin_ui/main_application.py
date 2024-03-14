@@ -155,6 +155,7 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
+from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.otconfig_parser import (
     FixMissingAnalysis,
     MultiFixer,
@@ -428,6 +429,7 @@ class ApplicationStarter:
             AddAllVideos(video_repository),
             AddAllSections(add_section),
             AddAllFlows(add_flow),
+            parse_json,
         )
 
         application = OTAnalyticsApplication(
@@ -518,8 +520,8 @@ class ApplicationStarter:
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
-        load_otflow.register(file_state.update_last_saved_config)
-        load_otconfig.register(file_state.update_last_saved_config)
+        load_otflow.register(file_state.last_saved_config.set)
+        load_otconfig.register(file_state.last_saved_config.set)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
@@ -829,6 +831,7 @@ class ApplicationStarter:
             flow_parser,
             add_section,
             add_flow,
+            parse_json,
         )
 
     @staticmethod

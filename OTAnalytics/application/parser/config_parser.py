@@ -46,7 +46,7 @@ class ConfigParser(ABC):
         self,
         file: Path,
     ) -> OtConfig:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def serialize(
@@ -57,4 +57,15 @@ class ConfigParser(ABC):
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
-        pass
+        raise NotImplementedError
+
+    @abstractmethod
+    def convert(
+        self,
+        project: Project,
+        video_files: Iterable[Video],
+        sections: Iterable[Section],
+        flows: Iterable[Flow],
+        file: Path,
+    ) -> dict:
+        raise NotImplementedError
