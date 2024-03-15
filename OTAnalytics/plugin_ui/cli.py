@@ -25,6 +25,10 @@ from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetAllSections,
 )
+from OTAnalytics.application.use_cases.track_export import (
+    ExportTracks,
+    TrackExportSpecification,
+)
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -66,6 +70,7 @@ class OTAnalyticsCli:
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
         progressbar: ProgressbarBuilder,
+        export_tracks: ExportTracks,
     ) -> None:
         self._validate_cli_args(run_config)
         self._run_config = run_config
@@ -85,6 +90,7 @@ class OTAnalyticsCli:
         self._tracks_metadata = tracks_metadata
         self._videos_metadata = videos_metadata
         self._progressbar = progressbar
+        self._export_tracks = export_tracks
 
     def start(self) -> None:
         """Start analysis."""
@@ -140,6 +146,8 @@ class OTAnalyticsCli:
             self._export_events(sections, save_path)
         if self._run_config.do_counting:
             self._do_export_counts(save_path)
+        if self._run_config.do_export_tracks:
+            self._do_export_tracks(save_path)
 
     @staticmethod
     def _validate_cli_args(run_config: RunConfiguration) -> None:
@@ -257,3 +265,9 @@ class OTAnalyticsCli:
                 output_format="CSV",
             )
             self._export_counts.export(specification=counting_specification)
+
+    def _do_export_tracks(self, save_path: Path) -> None:
+        logger().info("Start tracks export")
+        specification = TrackExportSpecification(save_path=save_path)
+        self._export_tracks.export(specification=specification)
+        logger().info("Finished tracks export")

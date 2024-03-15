@@ -33,9 +33,6 @@ from OTAnalytics.domain.track_dataset import (
     TrackGeometryDataset,
     TrackSegmentDataset,
 )
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    PandasDataFrameProvider,
-)
 
 
 class PandasDetection(Detection):
@@ -207,6 +204,12 @@ class PandasTrackSegmentDataset(TrackSegmentDataset):
 
         for value in as_dict.values():
             consumer(value)
+
+
+class PandasDataFrameProvider:
+    @abstractmethod
+    def get_data(self) -> DataFrame:
+        pass
 
 
 class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
@@ -392,7 +395,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         track_frame = self._dataset.loc[track_id, :]
         return PandasTrack(track_id, track_frame)
 
-    def as_dataframe(self) -> DataFrame:
+    def get_data(self) -> DataFrame:
         return self._dataset
 
     def split(self, batches: int) -> Sequence["PandasTrackDataset"]:
@@ -584,9 +587,6 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             return f"{track_id}_{cut_segment_index}"
         return row[track.TRACK_ID]
 
-    def get_data(self) -> DataFrame:
-        return self.as_dataframe()
-
 
 class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
     @property
@@ -649,7 +649,7 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
     def _get_dataset_with_classes(self, classes: list[str]) -> PandasTrackDataset:
         if self._other.empty:
             return self._other
-        dataset = self._other.as_dataframe()
+        dataset = self._other.get_data()
         mask = dataset[track.TRACK_CLASSIFICATION].isin(classes)
         filtered_df = dataset[mask]
         tracks_to_keep = filtered_df.index.get_level_values(LEVEL_TRACK_ID).unique()
@@ -698,7 +698,7 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         )
 
     def get_data(self) -> DataFrame:
-        return self._filter().as_dataframe()
+        return self._filter().get_data()
 
 
 def _assign_track_classification(
