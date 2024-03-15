@@ -541,7 +541,7 @@ class ApplicationStarter:
         event_repository.register_observer(image_updater.notify_events)
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
-        # project_updater.register(dummy_viewmodel.update_quick_save_button)
+        project_updater.register(dummy_viewmodel.update_quick_save_button)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
