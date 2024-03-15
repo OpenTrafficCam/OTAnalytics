@@ -1,9 +1,6 @@
-from pathlib import Path
-
 from OTAnalytics.application.parser.config_parser import ConfigParser
-from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.parser.flow_parser import FlowParser
-from OTAnalytics.application.state import FileState
+from OTAnalytics.application.state import ConfigurationFile, FileState
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.section_repository import GetAllSections
@@ -18,34 +15,31 @@ class OtconfigHasChanged:
         get_flows: GetAllFlows,
         get_current_project: GetCurrentProject,
         get_videos: GetAllVideos,
-        deserialize: Deserializer,
     ):
         self._config_parser = config_parser
         self._get_sections = get_sections
         self._get_flows = get_flows
         self._get_current_project = get_current_project
         self._get_videos = get_videos
-        self._deserialize = deserialize
 
-    def has_changed(self, file: Path) -> bool:
+    def has_changed(self, prev_config: ConfigurationFile) -> bool:
         """
         Check if the OTConfig file has changed or not based on its content.
 
         Args:
-            file (Path): The path to the OTConfig file.
+            prev_config (ConfigurationFile): The path to the OTConfig file.
 
         Returns:
             bool: True if the OTConfig file has changed, False otherwise.
         """
-        prev_content = self._deserialize(file)
         current_content = self._config_parser.convert(
             self._get_current_project.get(),
             self._get_videos.get(),
             self._get_sections(),
             self._get_flows.get(),
-            file,
+            prev_config.file,
         )
-        return prev_content != current_content
+        return prev_config.content != current_content
 
 
 class OtflowHasChanged:
@@ -54,28 +48,25 @@ class OtflowHasChanged:
         flow_parser: FlowParser,
         get_sections: GetAllSections,
         get_flows: GetAllFlows,
-        deserialize: Deserializer,
     ):
         self._flow_parser = flow_parser
         self._get_sections = get_sections
         self._get_flows = get_flows
-        self._deserialize = deserialize
 
-    def has_changed(self, file: Path) -> bool:
+    def has_changed(self, prev_config: ConfigurationFile) -> bool:
         """
         Method checking if the OTFlow file has changed or not based on its content.
 
         Args:
-            file (Path): The path to the OTFlow file.
+            prev_config (ConfigurationFile): The previous OTFlow config.
 
         Returns:
             bool: True if the OTFlow file has changed, False otherwise.
         """
-        prev_content = self._deserialize(file)
         current_content = self._flow_parser.convert(
             self._get_sections(), self._get_flows.get()
         )
-        return prev_content != current_content
+        return prev_config.content != current_content
 
 
 class ConfigHasChanged:
@@ -106,10 +97,10 @@ class ConfigHasChanged:
             raise NoExistingConfigFound("No existing config file found")
 
         if config_file.is_otflow:
-            return self._otflow_has_changed.has_changed(config_file.file)
+            return self._otflow_has_changed.has_changed(config_file)
 
         if config_file.is_otconfig:
-            return self._otconfig_has_changed.has_changed(config_file.file)
+            return self._otconfig_has_changed.has_changed(config_file)
 
         raise InvalidConfigFile(f"Config file '{config_file.file}' is invalid")
 

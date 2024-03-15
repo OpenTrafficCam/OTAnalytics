@@ -445,9 +445,8 @@ class ApplicationStarter:
                 get_flows,
                 GetCurrentProject(datastore),
                 GetAllVideos(video_repository),
-                parse_json,
             ),
-            OtflowHasChanged(flow_parser, get_sections, get_flows, parse_json),
+            OtflowHasChanged(flow_parser, get_sections, get_flows),
             file_state,
         )
 

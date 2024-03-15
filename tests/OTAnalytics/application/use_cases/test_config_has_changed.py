@@ -47,13 +47,11 @@ class TestOtconfigHasChanged:
         get_current_project = Mock()
         get_videos = Mock()
         config_parser = Mock()
-        deserialize = Mock()
 
         get_sections.return_value = sections
         get_flows.get.return_value = flows
         get_current_project.get.return_value = current_project
         get_videos.get.return_value = videos
-        deserialize.return_value = previous_data
         config_parser.convert.return_value = current_data
 
         use_case = OtconfigHasChanged(
@@ -62,18 +60,16 @@ class TestOtconfigHasChanged:
             get_flows,
             get_current_project,
             get_videos,
-            deserialize,
         )
-        otconfig_file = Mock()
+        config_file = ConfigurationFile(Mock(), previous_data)
 
-        assert use_case.has_changed(otconfig_file) is expected
-        deserialize.assert_called_once_with(otconfig_file)
+        assert use_case.has_changed(config_file) is expected
         config_parser.convert.assert_called_once_with(
             current_project,
             videos,
             sections,
             flows,
-            otconfig_file,
+            config_file.file,
         )
         get_current_project.get.assert_called_once()
         get_videos.get.assert_called_once()
@@ -110,26 +106,22 @@ class TestOtflowHasChanged:
         flows = Mock()
         get_sections = Mock()
         get_flows = Mock()
-        deserialize = Mock()
         flow_parser = Mock()
 
         get_sections.return_value = sections
         get_flows.get.return_value = flows
-        deserialize.return_value = previous_data
         flow_parser.convert.return_value = current_data
 
-        use_case = OtflowHasChanged(flow_parser, get_sections, get_flows, deserialize)
-        otflow_file = Mock()
+        use_case = OtflowHasChanged(flow_parser, get_sections, get_flows)
+        config_file = ConfigurationFile(Mock(), previous_data)
 
-        assert use_case.has_changed(otflow_file) is expected
-        deserialize.assert_called_once_with(otflow_file)
+        assert use_case.has_changed(config_file) is expected
         flow_parser.convert.assert_called_once_with(sections, flows)
 
 
 class TestConfigHasChanged:
     def test_has_changed_otconfig(self) -> None:
-        otconfig_file = Path("path/to/my.otconfig")
-        config_file = ConfigurationFile(otconfig_file, Mock())
+        config_file = ConfigurationFile(Path("path/to/my.otconfig"), Mock())
 
         otconfig_has_changed = Mock()
         otflow_has_changed = Mock()
@@ -146,12 +138,11 @@ class TestConfigHasChanged:
 
         assert use_case.has_changed() is True
         last_saved_config.get.assert_called_once()
-        otconfig_has_changed.has_changed.assert_called_once_with(otconfig_file)
+        otconfig_has_changed.has_changed.assert_called_once_with(config_file)
         otflow_has_changed.has_changed.assert_not_called()
 
     def test_has_changed_otflow(self) -> None:
-        otflow_file = Path("path/to/my.otflow")
-        config_file = ConfigurationFile(otflow_file, Mock())
+        config_file = ConfigurationFile(Path("path/to/my.otflow"), Mock())
 
         otconfig_has_changed = Mock()
         otflow_has_changed = Mock()
@@ -168,12 +159,11 @@ class TestConfigHasChanged:
 
         assert use_case.has_changed() is True
         last_saved_config.get.assert_called_once()
-        otflow_has_changed.has_changed.assert_called_once_with(otflow_file)
+        otflow_has_changed.has_changed.assert_called_once_with(config_file)
         otconfig_has_changed.has_changed.assert_not_called()
 
     def test_has_changed_raise_invalid_config_file_error(self) -> None:
-        some_file = Path("path/to/my.txt")
-        config_file = ConfigurationFile(some_file, Mock())
+        config_file = ConfigurationFile(Path("path/to/my.txt"), Mock())
 
         otconfig_has_changed = Mock()
         otflow_has_changed = Mock()
