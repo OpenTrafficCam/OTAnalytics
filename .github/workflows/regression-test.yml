@@ -1,4 +1,4 @@
-name: Benchmark Test With Pytest
+name: Regression Test With Pytest
 on:
   schedule:
     - cron: '0 0 * * *'
