@@ -286,6 +286,7 @@ class ApplicationStarter:
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state(section_repository)
         flow_state = self._create_flow_state()
+        file_state = FileState()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         clear_all_intersections = ClearAllIntersections(intersection_repository)
@@ -409,7 +410,7 @@ class ApplicationStarter:
         project_updater = self._create_project_updater(datastore)
         reset_project_config = self._create_reset_project_config(project_updater)
         start_new_project = self._create_use_case_start_new_project(
-            clear_repositories, reset_project_config, track_view_state
+            clear_repositories, reset_project_config, track_view_state, file_state
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             get_sections_bv_id,
@@ -422,7 +423,6 @@ class ApplicationStarter:
         next_frame = SwitchToNext(track_view_state, videos_metadata)
         get_sections = GetAllSections(section_repository)
         get_flows = GetAllFlows(flow_repository)
-        file_state = FileState()
         save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
         config_parser = self.create_config_parser(run_config, video_parser)
         save_otconfig = SaveOtconfig(datastore, config_parser, file_state)
@@ -541,6 +541,7 @@ class ApplicationStarter:
         event_repository.register_observer(image_updater.notify_events)
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
+        # project_updater.register(dummy_viewmodel.update_quick_save_button)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
@@ -878,9 +879,10 @@ class ApplicationStarter:
         clear_repositories: ClearRepositories,
         reset_project_config: ResetProjectConfig,
         track_view_state: TrackViewState,
+        file_state: FileState,
     ) -> StartNewProject:
         return StartNewProject(
-            clear_repositories, reset_project_config, track_view_state
+            clear_repositories, reset_project_config, track_view_state, file_state
         )
 
     @staticmethod
