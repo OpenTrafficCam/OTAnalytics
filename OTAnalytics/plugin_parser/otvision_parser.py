@@ -749,7 +749,7 @@ class OtFlowParser(FlowParser):
         )
 
     def __parse_distance(self, entry: dict) -> Optional[float]:
-        if distance_entry := entry.get(flow.DISTANCE, 0.0):
+        if (distance_entry := entry.get(flow.DISTANCE, 0.0)) is not None:
             return float(distance_entry)
         return None
 
