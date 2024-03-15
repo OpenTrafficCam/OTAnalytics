@@ -69,3 +69,7 @@ class ConfigParser(ABC):
         file: Path,
     ) -> dict:
         raise NotImplementedError
+
+
+class StartDateMissing(Exception):
+    pass

@@ -11,6 +11,7 @@ from OTAnalytics.application.parser.config_parser import (
     ConfigParser,
     ExportConfig,
     OtConfig,
+    StartDateMissing,
 )
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
@@ -176,8 +177,14 @@ class OtConfigParser(ConfigParser):
         Raises:
             StartDateMissing: if start date is not configured
         """
+        self._validate_data(project)
         content = self.convert(project, video_files, sections, flows, file)
         write_json(data=content, path=file)
+
+    @staticmethod
+    def _validate_data(project: Project) -> None:
+        if project.start_date is None:
+            raise StartDateMissing()
 
     def convert(
         self,

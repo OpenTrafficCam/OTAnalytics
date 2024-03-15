@@ -3,12 +3,15 @@ from pathlib import Path
 from typing import Any, Sequence
 from unittest.mock import Mock, PropertyMock, call
 
+import pytest
+
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ExportConfig,
     OtConfig,
+    StartDateMissing,
 )
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
@@ -165,6 +168,11 @@ class TestOtConfigParser:
         config_parser.parse(file=otconfig_file)
 
         format_fixer.fix.assert_called_once()
+
+    def test_validate(self) -> None:
+        project = Project("My Name", None)
+        with pytest.raises(StartDateMissing):
+            OtConfigParser._validate_data(project)
 
 
 class TestMultiFixer:
