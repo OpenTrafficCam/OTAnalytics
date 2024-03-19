@@ -18,6 +18,7 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.types import EventType
 from tests.utils.state import observable
 
 FPS = 1
@@ -144,6 +145,11 @@ class TestSwitchToEvent:
 
         section_state.selected_sections.get.assert_called()
         filter_element.derive_date.assert_called_with(new_date_range)
+        event_repository.get_previous_before.assert_called_with(
+            date=END_DATE,
+            sections=section_state.selected_sections.get(),
+            event_types=(EventType.SECTION_ENTER, EventType.SECTION_LEAVE),
+        )
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
         create_default_filter.create.assert_called_once()
 
@@ -167,6 +173,11 @@ class TestSwitchToEvent:
 
         section_state.selected_sections.get.assert_called()
         filter_element.derive_date.assert_not_called()
+        event_repository.get_previous_before.assert_called_with(
+            date=END_DATE,
+            sections=section_state.selected_sections.get(),
+            event_types=(EventType.SECTION_ENTER, EventType.SECTION_LEAVE),
+        )
         track_view_state.filter_element.set.assert_not_called()
         create_default_filter.create.assert_called_once()
 
