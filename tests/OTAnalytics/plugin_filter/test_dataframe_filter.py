@@ -6,14 +6,7 @@ import pytest
 from pandas import DataFrame
 
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import (
-    CLASSIFICATION,
-    FRAME,
-    OCCURRENCE,
-    TRACK_ID,
-    Detection,
-    Track,
-)
+from OTAnalytics.domain.track import CLASSIFICATION, OCCURRENCE, Detection, Track
 from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameEndsBeforeOrAtDate,
     DataFrameFilter,
@@ -23,7 +16,7 @@ from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameStartsAtOrAfterDate,
     NoOpDataFrameFilter,
 )
-from tests.conftest import TrackBuilder
+from tests.utils.builders.track_builder import TrackBuilder
 
 
 def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:
@@ -41,7 +34,7 @@ def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:
         detections.extend(current_track.detections)
     prepared = [detection.to_dict() for detection in detections]
     converted = DataFrame(prepared).set_index([track.TRACK_ID, track.OCCURRENCE])
-    return converted.sort_values([TRACK_ID, FRAME])
+    return converted.sort_values([track.TRACK_ID, track.FRAME])
 
 
 @pytest.fixture

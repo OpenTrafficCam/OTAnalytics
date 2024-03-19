@@ -39,8 +39,10 @@ class TestLoadTrackFile:
         some_track.id = some_track_id
         some_video = SimpleVideo(Mock(), Path(""), START_DATE)
         detection_metadata = Mock()
+        track_dataset_result = Mock()
+        type(track_dataset_result).track_ids = frozenset([some_track_id])
         parse_result = Mock()
-        parse_result.tracks = [some_track]
+        parse_result.tracks = track_dataset_result
         parse_result.metadata = detection_metadata
         track_parser.parse.return_value = parse_result
         track_video_parser.parse.return_value = [some_track_id], [some_video]
@@ -70,5 +72,5 @@ class TestLoadTrackFile:
             call.track_video_parser.parse(some_file, [some_track_id]),
             call.video_repository.add_all([some_video]),
             call.track_to_video_repository.add_all([some_track_id], [some_video]),
-            call.track_repository.add_all([some_track]),
+            call.track_repository.add_all(track_dataset_result),
         ]

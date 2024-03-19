@@ -49,6 +49,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
     RemoveSection,
 )
+from OTAnalytics.application.use_cases.track_export import ExportTracks
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -90,6 +91,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
     SimpleVideoParser,
 )
+from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_OTEVENTS_FORMAT_NAME,
@@ -205,6 +207,7 @@ def create_run_config(
     save_suffix: str = "",
     event_formats: list[str] | None = None,
     count_intervals: list[int] | None = None,
+    track_export: bool = False,
     num_processes: int = DEFAULT_NUM_PROCESSES,
     logfile: str = str(DEFAULT_LOG_FILE),
     logfile_overwrite: bool = False,
@@ -222,19 +225,20 @@ def create_run_config(
     if track_files is None:
         track_files = [TRACK_FILE]
     cli_args = CliArguments(
-        start_cli,
-        debug,
-        logfile_overwrite,
-        config_file,
-        track_files,
-        sections_file,
-        save_dir,
-        save_name,
-        save_suffix,
-        _event_formats,
-        _count_intervals,
-        num_processes,
-        logfile,
+        start_cli=start_cli,
+        debug=debug,
+        logfile_overwrite=logfile_overwrite,
+        track_export=track_export,
+        config_file=config_file,
+        track_files=track_files,
+        otflow_file=sections_file,
+        save_dir=save_dir,
+        save_name=save_name,
+        save_suffix=save_suffix,
+        event_formats=_event_formats,
+        count_intervals=_count_intervals,
+        num_processes=num_processes,
+        log_file=logfile,
     )
     run_config = RunConfiguration(flow_parser, cli_args)
     return run_config
@@ -248,6 +252,7 @@ class TestOTAnalyticsCli:
     ADD_FLOW: str = "add_flow"
     CREATE_EVENTS: str = "create_events"
     EXPORT_COUNTS: str = "export_counts"
+    EXPORT_TRACKS: str = "export_tracks"
     PROVIDE_EVENTLIST_EXPORTER: str = "provide_eventlist_exporter"
     APPLY_CLI_CUTS: str = "apply_cli_cuts"
     ADD_ALL_TRACKS: str = "add_all_tracks"
@@ -267,6 +272,7 @@ class TestOTAnalyticsCli:
             self.ADD_FLOW: Mock(spec=AddFlow),
             self.CREATE_EVENTS: Mock(spec=CreateEvents),
             self.EXPORT_COUNTS: Mock(spec=ExportCounts),
+            self.EXPORT_TRACKS: Mock(spec=ExportTracks),
             self.PROVIDE_EVENTLIST_EXPORTER: Mock(),
             self.APPLY_CLI_CUTS: Mock(spec=ApplyCliCuts),
             self.ADD_ALL_TRACKS: Mock(spec=AddAllTracks),
@@ -329,6 +335,7 @@ class TestOTAnalyticsCli:
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),
         )
+        export_tracks = CsvTrackExport(track_repository)
         return {
             self.TRACK_PARSER: OttrkParser(
                 PythonDetectionParser(
@@ -341,6 +348,7 @@ class TestOTAnalyticsCli:
             self.ADD_FLOW: AddFlow(flow_repository),
             self.CREATE_EVENTS: create_events,
             self.EXPORT_COUNTS: export_counts,
+            self.EXPORT_TRACKS: export_tracks,
             self.PROVIDE_EVENTLIST_EXPORTER: provide_available_eventlist_exporter,
             self.APPLY_CLI_CUTS: apply_cli_cuts,
             self.ADD_ALL_TRACKS: add_all_tracks,
@@ -363,6 +371,7 @@ class TestOTAnalyticsCli:
         assert cli._add_flow == mock_cli_dependencies[self.ADD_FLOW]
         assert cli._create_events == mock_cli_dependencies[self.CREATE_EVENTS]
         assert cli._export_counts == mock_cli_dependencies[self.EXPORT_COUNTS]
+        assert cli._export_tracks == mock_cli_dependencies[self.EXPORT_TRACKS]
         assert cli._apply_cli_cuts == mock_cli_dependencies[self.APPLY_CLI_CUTS]
         assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
         assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
@@ -528,7 +537,7 @@ class TestOTAnalyticsCli:
         mock_cli_dependencies[self.VIDEOS_METADATA].last_video_end = end_date
         mock_cli_dependencies[
             self.TRACKS_METADATA
-        ].detection_classifications = classifications
+        ].filtered_detection_classifications = classifications
 
         run_config = Mock()
         run_config.count_intervals = {interval}
@@ -558,6 +567,7 @@ class TestOTAnalyticsCli:
             start_cli=True,
             debug=False,
             logfile_overwrite=False,
+            track_export=False,
             config_file=str(temp_otconfig),
         )
         otconfig = config_parser.parse(temp_otconfig)

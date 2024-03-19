@@ -66,9 +66,6 @@ class NoOpDataFrameFilter(Filter[DataFrame, DataFrame]):
         return iterable
 
 
-INDEX_LEVEL_OCCURRENCE = 1
-
-
 class DataFrameStartsAtOrAfterDate(DataFramePredicate):
     """Checks if the DataFrame rows start at or after date.
 
@@ -86,13 +83,13 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
         self._start_date = start_date
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        if not list(to_test.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
+        if track.OCCURRENCE not in to_test.index.names:
             raise ValueError(
-                f"{track.TRACK_ID} and {track.OCCURRENCE} "
+                f"{track.OCCURRENCE} "
                 "must be index of DataFrame for filtering to work."
             )
         return to_test[
-            to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) >= self._start_date
+            to_test.index.get_level_values(track.OCCURRENCE) >= self._start_date
         ]
 
 
@@ -113,13 +110,13 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
         self._end_date = end_date
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        if not list(to_test.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
+        if track.OCCURRENCE not in to_test.index.names:
             raise ValueError(
-                f"{track.TRACK_ID} and {track.OCCURRENCE} "
+                f"{track.OCCURRENCE} "
                 "must be index of DataFrame for filtering to work."
             )
         return to_test[
-            to_test.index.get_level_values(INDEX_LEVEL_OCCURRENCE) <= self._end_date
+            to_test.index.get_level_values(track.OCCURRENCE) <= self._end_date
         ]
 
 
@@ -140,7 +137,7 @@ class DataFrameHasClassifications(DataFramePredicate):
         self._classifications = classifications
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        return to_test[to_test[self._column_name].isin(self._classifications)]
+        return to_test.loc[to_test[self._column_name].isin(self._classifications)]
 
 
 class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):

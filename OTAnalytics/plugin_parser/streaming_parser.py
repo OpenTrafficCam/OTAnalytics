@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from bisect import bisect
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
+from typing import Any, Iterable, Iterator, Optional, Sequence
 
 import ijson
 from pygeos import (
@@ -19,7 +19,6 @@ from pygeos import (
 
 from OTAnalytics.application.datastore import DetectionMetadata, VideoMetadata
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
-from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section, SectionId
@@ -29,13 +28,17 @@ from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
     TrackId,
 )
-from OTAnalytics.domain.track_dataset import IntersectionPoint, TrackDataset
+from OTAnalytics.domain.track_dataset import (
+    IntersectionPoint,
+    TrackDataset,
+    TrackSegmentDataset,
+)
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
-    create_enter_scene_event,
-    create_leave_scene_event,
+    PythonTrackSegmentDataset,
+    create_segment_for,
     cut_track_with_section,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
@@ -386,6 +389,11 @@ class SingletonTrackDataset(TrackDataset):
         """A set containing the single track classification."""
         return frozenset((self._track.classification,))
 
+    @property
+    def empty(self) -> bool:
+        """SingletonTrackDataset always contains exactly one Track."""
+        return False
+
     def add_all(self, other: Iterable[Track]) -> "TrackDataset":
         """Adding is not allowed!"""
         raise NotImplementedError
@@ -494,15 +502,21 @@ class SingletonTrackDataset(TrackDataset):
             if offset not in self._geometries.keys():
                 self._geometries[offset] = self._get_geometry_data_for(offset)
 
-    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
-        """Create an enter scene event and apply the given consumer."""
-        event = create_enter_scene_event(self._track)
-        consumer(event)
+    def get_first_segments(self) -> TrackSegmentDataset:
+        """Get first segment of single track."""
+        start = self._track.get_detection(0)
+        end = self._track.get_detection(1)
+        return PythonTrackSegmentDataset(
+            segments=[create_segment_for(track=self._track, start=start, end=end)]
+        )
 
-    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
-        """Create a leave scene event and apply the given consumer."""
-        event = create_leave_scene_event(self._track)
-        consumer(event)
+    def get_last_segments(self) -> TrackSegmentDataset:
+        """Get last segment of single track"""
+        start = self._track.detections[-2]
+        end = self._track.last_detection
+        return PythonTrackSegmentDataset(
+            segments=[create_segment_for(track=self._track, start=start, end=end)]
+        )
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate

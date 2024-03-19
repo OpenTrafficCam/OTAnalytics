@@ -19,6 +19,7 @@ class TracksFrame(AbstractFrameTracks):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self.grid_columnconfigure(1, weight=1)
         self._get_widgets()
         self._place_widgets()
         self._set_initial_button_states()
@@ -29,7 +30,7 @@ class TracksFrame(AbstractFrameTracks):
 
     def _get_widgets(self) -> None:
         self.button_load_tracks = CTkButton(
-            master=self, text="Add...", command=self._viewmodel.load_tracks
+            master=self, text="Add tracks...", command=self._viewmodel.load_tracks
         )
         self._frame_bbox_offset = FrameBboxOffset(
             master=self,
@@ -50,7 +51,7 @@ class TracksFrame(AbstractFrameTracks):
             row=0, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._frame_bbox_offset.grid(
-            row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY
+            row=1, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_change_to_section_offset.grid(
             row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY

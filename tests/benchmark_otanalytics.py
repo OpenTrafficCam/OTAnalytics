@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -14,7 +14,7 @@ from OTAnalytics.application.config import (
     CLI_CUTTING_SECTION_MARKER,
     CUTTING_SECTION_MARKER,
 )
-from OTAnalytics.application.datastore import DetectionMetadata, FlowParser, TrackParser
+from OTAnalytics.application.datastore import DetectionMetadata, TrackParser
 from OTAnalytics.application.parser.cli_parser import CliArguments
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.create_events import CreateEvents
@@ -41,16 +41,19 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionRepository,
 )
+from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
+    FilteredPythonTrackDataset,
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
+    FilteredPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -63,9 +66,28 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    CLASS_BICYCLIST,
+    CLASS_BICYCLIST_TRAILER,
+    CLASS_CARGOBIKE,
+    CLASS_PEDESTRIAN,
+    CLASS_SCOOTER,
+)
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
 
 NUM_PROCESSES = 1
+PYTHON = "PYTHON"
+PANDAS = "PANDAS"
+CURRENT_DATASET_TYPE = PANDAS
+
+EXCLUDE_FILTER = [
+    CLASS_PEDESTRIAN,
+    CLASS_BICYCLIST,
+    CLASS_BICYCLIST_TRAILER,
+    CLASS_CARGOBIKE,
+    CLASS_SCOOTER,
+    "other",
+]
 
 
 def _fill_track_repository(
@@ -83,95 +105,172 @@ def _fill_track_repository(
     return DetectionMetadata(frozenset(detection_classes))
 
 
-def _parse_otflow(
-    flow_parser: FlowParser,
-    section_repository: SectionRepository,
-    flow_repository: FlowRepository,
-    otflow: Path,
-) -> None:
-    sections, flows = flow_parser.parse(otflow)
-    section_repository.add_all(sections)
-    flow_repository.add_all(flows)
-
-
-def _build_tracks_intersecting_sections(
-    track_repository: TrackRepository,
-) -> TracksIntersectingSections:
-    starter = ApplicationStarter()
-    get_all_tracks = GetAllTracks(track_repository)
-    return starter._create_tracks_intersecting_sections(get_all_tracks)
-
-
-def _build_create_events(
-    track_repository: TrackRepository,
-    section_repository: SectionRepository,
-    event_repository: EventRepository,
-) -> CreateEvents:
-    starter = ApplicationStarter()
-    clear_all_events = ClearAllEvents(event_repository)
-    get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
-        track_repository
-    )
-    get_tracks = GetAllTracks(track_repository)
-    add_events = AddEvents(event_repository)
-    create_events = starter._create_use_case_create_events(
-        section_repository.get_all,
-        clear_all_events,
-        get_tracks,
-        get_tracks_without_single_detections,
-        add_events,
-        num_processes=NUM_PROCESSES,
-    )
-    return create_events
-
-
-def _build_export_events(
-    track_repository: TrackRepository,
-    section_repository: SectionRepository,
-    flow_repository: FlowRepository,
-    event_repository: EventRepository,
-) -> ExportCounts:
-    starter = ApplicationStarter()
-    create_events = _build_create_events(
-        track_repository, section_repository, event_repository
+class UseCaseProvider:
+    GEOMETRY_FACTORY: TRACK_GEOMETRY_FACTORY = (
+        PygeosTrackGeometryDataset.from_track_dataset
     )
 
-    return starter._create_export_counts(
-        event_repository,
-        flow_repository,
-        track_repository,
-        GetSectionsById(section_repository),
-        create_events,
-    )
+    @property
+    def run_config(self) -> RunConfiguration:
+        cli_args = CliArguments(
+            start_cli=True,
+            debug=False,
+            logfile_overwrite=True,
+            track_export=False,
+            track_files=[str(f) for f in self._ottrk_files],
+            otflow_file=str(self._otflow_file),
+            save_dir=self._save_dir,
+            event_formats=["otevents"],
+            num_processes=NUM_PROCESSES,
+            include_classes=list(self._include_classes),
+            exclude_classes=list(self._exclude_classes),
+        )
+        return RunConfiguration(self._flow_parser, cli_args)
 
+    @property
+    def sections(self) -> list[Section]:
+        return self._section_repository.get_all()
 
-def _build_cut_tracks_intersecting_sections(
-    section_repository: SectionRepository,
-    track_repository: TrackRepository,
-) -> CutTracksIntersectingSection:
-    get_sections_by_id = GetSectionsById(section_repository)
-    get_tracks = GetAllTracks(track_repository)
-    add_all_tracks = AddAllTracks(track_repository)
-    remove_tracks = RemoveTracks(track_repository)
-    remove_section = RemoveSection(section_repository)
-    return SimpleCutTracksIntersectingSection(
-        get_sections_by_id,
-        get_tracks,
-        add_all_tracks,
-        remove_tracks,
-        remove_section,
-    )
+    def __init__(
+        self,
+        otflow_file: Path,
+        ottrk_files: list[Path],
+        save_dir: str,
+        dataset_type: str = CURRENT_DATASET_TYPE,
+    ) -> None:
+        self._otflow_file = otflow_file
+        self._ottrk_files = ottrk_files
+        self._save_dir = save_dir
+        self._include_classes: frozenset[str] = frozenset()
+        self._exclude_classes: frozenset[str] = frozenset()
+        self._starter = ApplicationStarter()
+        track_repository, detection_metadata = self.provide_track_repository(
+            self._ottrk_files, dataset_type
+        )
+        self._track_repository = track_repository
+        self._detection_metadata = detection_metadata
+        self._section_repository = SectionRepository()
+        self._flow_repository = FlowRepository()
+        self._event_repository = EventRepository()
+        self._flow_parser = OtFlowParser()
 
+        self._parse_otflow(self._otflow_file)
 
-def load_track_files(
-    track_files: list[Path],
-    track_parser: TrackParser,
-    track_repository: TrackRepository,
-) -> DetectionMetadata:
-    detection_metadata = _fill_track_repository(
-        track_parser, track_repository, track_files
-    )
-    return detection_metadata
+    def _parse_otflow(self, otflow_file: Path) -> None:
+        sections, flows = self._flow_parser.parse(otflow_file)
+        self._section_repository.add_all(sections)
+        self._flow_repository.add_all(flows)
+
+    def get_tracks_intersecting_sections(self) -> TracksIntersectingSections:
+        get_all_tracks = GetAllTracks(self._track_repository)
+        return self._starter._create_tracks_intersecting_sections(get_all_tracks)
+
+    def get_create_events(self) -> CreateEvents:
+        clear_all_events = ClearAllEvents(self._event_repository)
+        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+            self._track_repository
+        )
+        get_tracks = GetAllTracks(self._track_repository)
+        add_events = AddEvents(self._event_repository)
+        create_events = self._starter._create_use_case_create_events(
+            self._section_repository.get_all,
+            clear_all_events,
+            get_tracks,
+            get_tracks_without_single_detections,
+            add_events,
+            num_processes=NUM_PROCESSES,
+        )
+        return create_events
+
+    def get_export_counts(self) -> ExportCounts:
+        return self._starter._create_export_counts(
+            self._event_repository,
+            self._flow_repository,
+            self._track_repository,
+            GetSectionsById(self._section_repository),
+            self.get_create_events(),
+        )
+
+    def get_cut_tracks(self) -> CutTracksIntersectingSection:
+        get_sections_by_id = GetSectionsById(self._section_repository)
+        get_tracks = GetAllTracks(self._track_repository)
+        add_all_tracks = AddAllTracks(self._track_repository)
+        remove_tracks = RemoveTracks(self._track_repository)
+        remove_section = RemoveSection(self._section_repository)
+        return SimpleCutTracksIntersectingSection(
+            get_sections_by_id,
+            get_tracks,
+            add_all_tracks,
+            remove_tracks,
+            remove_section,
+        )
+
+    def add_filters(
+        self, include_classes: list[str], exclude_classes: list[str]
+    ) -> None:
+        self._include_classes = frozenset(include_classes)
+        self._exclude_classes = frozenset(exclude_classes)
+
+    def provide_track_repository(
+        self, track_files: list[Path], dataset_type: str
+    ) -> tuple[TrackRepository, DetectionMetadata]:
+        if dataset_type == PYTHON:
+            repository = TrackRepository(self.provide_python_track_dataset())
+            parser = OttrkParser(self.provide_python_detection_parser(repository))
+        elif dataset_type == PANDAS:
+            repository = TrackRepository(self.provide_pandas_track_dataset())
+            parser = OttrkParser(self.provide_pandas_detection_parser())
+        else:
+            raise ValueError(f"Unknown dataset type {dataset_type}")
+        detection_metadata = _fill_track_repository(parser, repository, track_files)
+        return repository, detection_metadata
+
+    def provide_pandas_track_dataset(self) -> TrackDataset:
+        return FilteredPandasTrackDataset(
+            PandasTrackDataset.from_list(
+                [], PygeosTrackGeometryDataset.from_track_dataset
+            ),
+            self._include_classes,
+            self._exclude_classes,
+        )
+
+    def provide_python_track_dataset(self) -> TrackDataset:
+        return FilteredPythonTrackDataset(
+            PythonTrackDataset(), self._include_classes, self._exclude_classes
+        )
+
+    def provide_python_detection_parser(
+        self, track_repository: TrackRepository
+    ) -> PythonDetectionParser:
+        return PythonDetectionParser(ByMaxConfidence(), track_repository)
+
+    def provide_pandas_detection_parser(self) -> PandasDetectionParser:
+        return PandasDetectionParser(
+            PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
+        )
+
+    def counting_specification(self, save_dir: Path) -> CountingSpecificationDto:
+        return CountingSpecificationDto(
+            start=datetime(2023, 5, 24, 8, 0, 0),
+            end=datetime(2023, 5, 24, 8, 15, 0),
+            interval_in_minutes=15,
+            modes=list(self._detection_metadata.detection_classes),
+            output_file=f"{save_dir/ self._otflow_file.with_suffix('.csv').name}",
+            output_format="CSV",
+        )
+
+    def run_cli(self) -> Callable[[RunConfiguration], None]:
+        return self._starter.start_cli
+
+    def get_track_parser(self, dataset_type: str = CURRENT_DATASET_TYPE) -> TrackParser:
+        if dataset_type == PYTHON:
+            return OttrkParser(
+                self.provide_python_detection_parser(self._track_repository)
+            )
+        elif dataset_type == PANDAS:
+            return OttrkParser(self.provide_pandas_detection_parser())
+        else:
+            raise ValueError(f"Unknown dataset type {dataset_type}")
 
 
 def retrieve_cutting_sections(sections: Iterable[Section]) -> list[Section]:
@@ -182,39 +281,6 @@ def retrieve_cutting_sections(sections: Iterable[Section]) -> list[Section]:
         ):
             cutting_sections.append(section)
     return cutting_sections
-
-
-def create_run_config(
-    track_files: list[str],
-    otflow_file: str,
-    save_dir: str,
-    event_formats: list[str],
-    flow_parser: FlowParser,
-) -> RunConfiguration:
-    cli_args = CliArguments(
-        start_cli=True,
-        debug=False,
-        logfile_overwrite=True,
-        track_files=track_files,
-        otflow_file=otflow_file,
-        save_dir=save_dir,
-        event_formats=event_formats,
-        num_processes=NUM_PROCESSES,
-    )
-    return RunConfiguration(flow_parser, cli_args)
-
-
-def create_counting_specification(
-    save_dir: Path, modes: Iterable[str], otflow_file: Path
-) -> CountingSpecificationDto:
-    return CountingSpecificationDto(
-        start=datetime(2023, 5, 24, 8, 0, 0),
-        end=datetime(2023, 5, 24, 8, 15, 0),
-        interval_in_minutes=15,
-        modes=list(modes),
-        output_file=f"{save_dir/ otflow_file.with_suffix('.csv').name}",
-        output_format="CSV",
-    )
 
 
 @pytest.fixture(scope="module")
@@ -242,35 +308,16 @@ def otflow_file(test_data_dir: Path) -> Path:
 
 
 @pytest.fixture
-def python_track_repository() -> TrackRepository:
-    return TrackRepository(PythonTrackDataset())
+def cutting_section() -> Section:
+    coords = [Coordinate(589, 674), Coordinate(883, 290)]
 
-
-@pytest.fixture
-def pandas_track_repository() -> TrackRepository:
-    return TrackRepository(
-        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+    return LineSection(
+        SectionId("#cut"),
+        "#cut",
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)},
+        {},
+        coords,
     )
-
-
-@pytest.fixture
-def section_repository() -> SectionRepository:
-    return SectionRepository()
-
-
-@pytest.fixture
-def flow_repository() -> FlowRepository:
-    return FlowRepository()
-
-
-@pytest.fixture
-def event_repository() -> EventRepository:
-    return EventRepository()
-
-
-@pytest.fixture
-def clear_events(event_repository: EventRepository) -> ClearAllEvents:
-    return ClearAllEvents(event_repository)
 
 
 @pytest.fixture
@@ -288,88 +335,58 @@ def pandas_track_parser() -> TrackParser:
     return OttrkParser(detection_parser)
 
 
-@pytest.fixture(scope="function")
-def python_track_repo_15min(
-    track_file_15min: Path, python_track_repository: TrackRepository
-) -> tuple[TrackRepository, DetectionMetadata]:
-    track_parser = OttrkParser(
-        PythonDetectionParser(ByMaxConfidence(), python_track_repository)
-    )
-    return python_track_repository, load_track_files(
-        [track_file_15min], track_parser, python_track_repository
-    )
-
-
-@pytest.fixture(scope="function")
-def python_track_repo_2hours(
-    track_files_2hours: list[Path], python_track_repository: TrackRepository
-) -> tuple[TrackRepository, DetectionMetadata]:
-    track_parser = OttrkParser(
-        PythonDetectionParser(ByMaxConfidence(), python_track_repository)
-    )
-    return python_track_repository, load_track_files(
-        track_files_2hours, track_parser, python_track_repository
-    )
-
-
-@pytest.fixture(scope="function")
-def pandas_track_repo_15min(
-    track_file_15min: Path, pandas_track_repository: TrackRepository
-) -> tuple[TrackRepository, DetectionMetadata]:
-    track_parser = OttrkParser(
-        PandasDetectionParser(
-            PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
-        )
-    )
-    return pandas_track_repository, load_track_files(
-        [track_file_15min], track_parser, pandas_track_repository
-    )
-
-
-@pytest.fixture(scope="function")
-def pandas_track_repo_2hours(
-    track_files_2hours: list[Path], pandas_track_repository: TrackRepository
-) -> tuple[TrackRepository, DetectionMetadata]:
-    pandas_track_repository = TrackRepository(
-        PandasTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
-    )
-    track_parser = OttrkParser(
-        PandasDetectionParser(
-            PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
-        )
-    )
-    return pandas_track_repository, load_track_files(
-        track_files_2hours, track_parser, pandas_track_repository
-    )
+@pytest.fixture
+def use_case_provider_15min(
+    otflow_file: Path, track_file_15min: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    return UseCaseProvider(otflow_file, [track_file_15min], str(test_data_tmp_dir))
 
 
 @pytest.fixture
-def otflow_parser() -> FlowParser:
-    return OtFlowParser()
+def use_case_provider_2hours(
+    otflow_file: Path, track_files_2hours: list[Path], test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    return UseCaseProvider(otflow_file, track_files_2hours, str(test_data_tmp_dir))
 
 
 @pytest.fixture
-def section_flow_repo_setup(
-    section_repository: SectionRepository,
-    flow_repository: FlowRepository,
-    otflow_parser: FlowParser,
-    otflow_file: Path,
-) -> tuple[SectionRepository, FlowRepository]:
-    _parse_otflow(otflow_parser, section_repository, flow_repository, otflow_file)
-    return section_repository, flow_repository
-
-
-@pytest.fixture
-def cutting_section() -> Section:
-    coords = [Coordinate(589, 674), Coordinate(883, 290)]
-
-    return LineSection(
-        SectionId("#cut"),
-        "#cut",
-        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.5, 0.5)},
-        {},
-        coords,
+def use_case_provider_15min_filtered(
+    otflow_file: Path, track_file_15min: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(
+        otflow_file, [track_file_15min], str(test_data_tmp_dir)
     )
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
+@pytest.fixture
+def use_case_provider_2hours_filtered(
+    otflow_file: Path, track_files_2hours: list[Path], test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(
+        otflow_file, track_files_2hours, str(test_data_tmp_dir)
+    )
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
+@pytest.fixture
+def use_case_provider_empty(
+    otflow_file: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(otflow_file, [], str(test_data_tmp_dir))
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
+@pytest.fixture
+def use_case_provider_empty_filtered(
+    otflow_file: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(otflow_file, [], str(test_data_tmp_dir))
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
 
 
 class TestBenchmarkTrackParser:
@@ -380,7 +397,7 @@ class TestBenchmarkTrackParser:
     def test_load_15min(
         self,
         benchmark: BenchmarkFixture,
-        pandas_track_parser: TrackParser,
+        pandas_track_parser: OttrkParser,
         track_file_15min: Path,
     ) -> None:
         benchmark.pedantic(
@@ -398,18 +415,26 @@ class TestBenchmarkTracksIntersectingSections:
     WARMUP_ROUNDS = 0
 
     def test_15min(
-        self,
-        benchmark: BenchmarkFixture,
-        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
+        self, benchmark: BenchmarkFixture, use_case_provider_15min: UseCaseProvider
     ) -> None:
-        track_repository, _ = pandas_track_repo_15min
-        section_repository, flow_repository = section_flow_repo_setup
-        use_case = _build_tracks_intersecting_sections(track_repository)
-
+        use_case = use_case_provider_15min.get_tracks_intersecting_sections()
         benchmark.pedantic(
             use_case,
-            args=(section_repository.get_all(),),
+            args=(use_case_provider_15min.sections,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_15min_filtered: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_15min_filtered.get_tracks_intersecting_sections()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_15min_filtered.sections,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -422,21 +447,24 @@ class TestBenchmarkCreateEvents:
     WARMUP_ROUNDS = 0
 
     def test_15min(
+        self, benchmark: BenchmarkFixture, use_case_provider_15min: UseCaseProvider
+    ) -> None:
+        use_case = use_case_provider_15min.get_create_events()
+        benchmark.pedantic(
+            use_case,
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_filtered(
         self,
         benchmark: BenchmarkFixture,
-        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-        event_repository: EventRepository,
-        clear_events: ClearAllEvents,
+        use_case_provider_15min_filtered: UseCaseProvider,
     ) -> None:
-        track_repository, _ = pandas_track_repo_15min
-        section_repository, flow_repository = section_flow_repo_setup
-        create_events = _build_create_events(
-            track_repository, section_repository, event_repository
-        )
+        use_case = use_case_provider_15min_filtered.get_create_events()
         benchmark.pedantic(
-            create_events,
-            setup=clear_events,
+            use_case,
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -451,25 +479,33 @@ class TestBenchmarkExportCounting:
     def test_15min(
         self,
         benchmark: BenchmarkFixture,
-        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
-        section_flow_repo_setup: tuple[SectionRepository, FlowRepository],
-        event_repository: EventRepository,
         test_data_tmp_dir: Path,
-        otflow_file: Path,
+        use_case_provider_15min: UseCaseProvider,
     ) -> None:
-        track_repository, detection_metadata = pandas_track_repo_15min
-        section_repository, flow_repository = section_flow_repo_setup
-        export_events = _build_export_events(
-            track_repository,
-            section_repository,
-            flow_repository,
-            event_repository,
-        )
-        specification = create_counting_specification(
-            test_data_tmp_dir, detection_metadata.detection_classes, otflow_file
+        use_case = use_case_provider_15min.get_export_counts()
+        specification = use_case_provider_15min.counting_specification(
+            test_data_tmp_dir
         )
         benchmark.pedantic(
-            export_events.export,
+            use_case.export,
+            args=(specification,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        test_data_tmp_dir: Path,
+        use_case_provider_15min_filtered: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_15min_filtered.get_export_counts()
+        specification = use_case_provider_15min_filtered.counting_specification(
+            test_data_tmp_dir
+        )
+        benchmark.pedantic(
+            use_case.export,
             args=(specification,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
@@ -485,19 +521,30 @@ class TestBenchmarkCuttingSection:
     def test_15min(
         self,
         benchmark: BenchmarkFixture,
-        pandas_track_repo_15min: tuple[TrackRepository, DetectionMetadata],
+        use_case_provider_15min: UseCaseProvider,
         cutting_section: Section,
     ) -> None:
         # TODO: Replace current cutting section from the one in the test dataset
-        track_repository, _ = pandas_track_repo_15min
-        section_repository = SectionRepository()
-        section_repository.add(cutting_section)
-        cut_tracks_intersecting_section = _build_cut_tracks_intersecting_sections(
-            section_repository, track_repository
-        )
+        use_case = use_case_provider_15min.get_cut_tracks()
         benchmark.pedantic(
-            cut_tracks_intersecting_section,
-            args=(cutting_section,),
+            use_case,
+            args=(cutting_section, True),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_filtered(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_15min_filtered: UseCaseProvider,
+        cutting_section: Section,
+    ) -> None:
+        # TODO: Replace current cutting section from the one in the test dataset
+        use_case = use_case_provider_15min_filtered.get_cut_tracks()
+        benchmark.pedantic(
+            use_case,
+            args=(cutting_section, True),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -510,46 +557,52 @@ class TestPipelineBenchmark:
     WARMUP_ROUNDS = 0
 
     def test_15min(
+        self, benchmark: BenchmarkFixture, use_case_provider_15min: UseCaseProvider
+    ) -> None:
+        use_case = use_case_provider_15min.run_cli()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_15min.run_config,),
+            rounds=self.ROUNDS,
+            iterations=5,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_filtered(
         self,
         benchmark: BenchmarkFixture,
-        test_data_tmp_dir: Path,
-        track_file_15min: Path,
-        otflow_file: Path,
-        otflow_parser: FlowParser,
+        use_case_provider_15min_filtered: UseCaseProvider,
     ) -> None:
-        run_config = create_run_config(
-            track_files=[str(track_file_15min)],
-            otflow_file=str(otflow_file),
-            save_dir=str(test_data_tmp_dir),
-            event_formats=["otevents"],
-            flow_parser=otflow_parser,
-        )
+        use_case = use_case_provider_15min_filtered.run_cli()
         benchmark.pedantic(
-            ApplicationStarter().start_cli,
-            args=(run_config,),
+            use_case,
+            args=(use_case_provider_15min_filtered.run_config,),
+            rounds=self.ROUNDS,
+            iterations=5,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_2hours(
+        self, benchmark: BenchmarkFixture, use_case_provider_2hours: UseCaseProvider
+    ) -> None:
+        use_case = use_case_provider_2hours.run_cli()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_2hours.run_config,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
         )
 
-    def test_2hours(
+    def test_2hours_filtered(
         self,
         benchmark: BenchmarkFixture,
-        test_data_tmp_dir: Path,
-        track_files_2hours: list[Path],
-        otflow_file: Path,
-        otflow_parser: FlowParser,
+        use_case_provider_2hours_filtered: UseCaseProvider,
     ) -> None:
-        run_config = create_run_config(
-            track_files=[str(_file) for _file in track_files_2hours],
-            otflow_file=str(otflow_file),
-            save_dir=str(test_data_tmp_dir),
-            event_formats=["otevents"],
-            flow_parser=otflow_parser,
-        )
+        use_case = use_case_provider_2hours_filtered.run_cli()
         benchmark.pedantic(
-            ApplicationStarter().start_cli,
-            args=(run_config,),
+            use_case,
+            args=(use_case_provider_2hours_filtered.run_config,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,

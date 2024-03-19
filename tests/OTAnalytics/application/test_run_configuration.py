@@ -30,6 +30,7 @@ def cli_args_otconfig() -> CliArguments:
         save_suffix="cli_save_suffix",
         event_formats=["csv"],
         count_intervals=[6],
+        track_export=False,
         num_processes=8,
         log_file="path/to/cli_log",
         logfile_overwrite=True,
@@ -437,3 +438,17 @@ class TestRunConfiguration:
         cli_args.otflow_file = otflow_file
         cli_args.config_file = config_file
         assert build_config(cli_args, None).save_dir == Path(expected)
+
+    def test_include_classes(self, cli_args: Mock, otconfig: Mock) -> None:
+        include_classes = frozenset(["car", "truck"])
+        cli_args.include_classes = include_classes
+        assert build_config(cli_args, otconfig).include_classes == include_classes
+        cli_args.include_classes = None
+        assert build_config(cli_args, otconfig).include_classes == frozenset()
+
+    def test_exclude_classes(self, cli_args: Mock, otconfig: Mock) -> None:
+        exclude_classes = frozenset(["car", "truck"])
+        cli_args.exclude_classes = exclude_classes
+        assert build_config(cli_args, otconfig).exclude_classes == exclude_classes
+        cli_args.exclude_classes = None
+        assert build_config(cli_args, otconfig).exclude_classes == frozenset()

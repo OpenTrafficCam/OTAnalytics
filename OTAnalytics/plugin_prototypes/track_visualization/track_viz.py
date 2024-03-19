@@ -53,7 +53,7 @@ from OTAnalytics.domain.track_repository import (
     TrackRepository,
     TrackRepositoryEvent,
 )
-from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
+from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 """Frames start with 1 in OTVision but frames of videos are loaded zero based."""
@@ -273,12 +273,6 @@ class PlotterPrototype(Plotter):
         return self._track_view_state.view_width.get()
 
 
-class PandasDataFrameProvider:
-    @abstractmethod
-    def get_data(self) -> DataFrame:
-        pass
-
-
 class FilterById(PandasDataFrameProvider):
     """Filter tracks by id before providing tracks as pandas DataFrame."""
 
@@ -295,12 +289,12 @@ class FilterById(PandasDataFrameProvider):
 
         if not list(data.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
             raise ValueError(
-                f"{track.TRACK_ID} and {track.OCCURRENCE} "
+                f"{track.TRACK_ID}, {track.OCCURRENCE} "
                 "must be index of DataFrame for filtering to work."
             )
 
         ids = [track_id.id for track_id in self._filter.get_ids()]
-        intersection_of_ids = data.index.get_level_values(0).unique().intersection(ids)
+        intersection_of_ids = data.index.unique(level=track.TRACK_ID).intersection(ids)
         return data.loc[intersection_of_ids]
 
 
@@ -393,8 +387,8 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks = self._track_repository.get_all()
-        if isinstance(tracks, PandasTrackDataset):
-            return tracks.as_dataframe()
+        if isinstance(tracks, PandasDataFrameProvider):
+            return tracks.get_data()
         track_list = tracks.as_list()
         if not track_list:
             return DataFrame()
@@ -417,9 +411,9 @@ class PandasTrackProvider(PandasDataFrameProvider):
         ):
             for detection in current_track.detections:
                 detection_dict = detection.to_dict()
-                detection_dict[
-                    track.TRACK_CLASSIFICATION
-                ] = current_track.classification
+                detection_dict[track.TRACK_CLASSIFICATION] = (
+                    current_track.classification
+                )
                 prepared.append(detection_dict)
 
         if not prepared:
@@ -679,7 +673,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             hue=track.TRACK_CLASSIFICATION,
             data=track_df_start_end,
             style="type",
-            markers={"start": ">", "end": "$x$"},
+            markers={"start": ">", "end": "s"},
             legend=self._enable_legend,
             s=15,
             ax=axes,
@@ -759,10 +753,9 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
 
         Args:
             track_df (DataFrame): tracks to plot
-            alpha (float): transparency of the lines
             axes (Axes): axes to plot on
         """
-        for index, row in track_df.iterrows():
+        for index, row in track_df.reset_index().iterrows():
             x = row[X]
             y = row[Y]
             width = row[W]
@@ -791,11 +784,13 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
         color_palette_provider: ColorPaletteProvider,
         alpha: float = 0.5,
         markersize: float = 3.0,
+        marker: str = "o",
     ) -> None:
         self._data_provider = data_provider
         self._color_palette_provider = color_palette_provider
         self._alpha = alpha
         self._markersize = markersize
+        self._marker = marker
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
@@ -810,13 +805,13 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot
             axes (Axes): axes to plot on
         """
-        for index, row in track_df.iterrows():
+        for index, row in track_df.reset_index().iterrows():
             classification = row[track.TRACK_CLASSIFICATION]
             color = self._color_palette_provider.get()[classification]
             axes.plot(
                 row[X],
                 row[Y],
-                marker="o",
+                marker=self._marker,
                 markersize=self._markersize,
                 color=color,
                 alpha=self._alpha,
@@ -867,7 +862,7 @@ class MatplotlibTrackPlotter(TrackPlotter):
             figure (Figure): figure object to add the axis to
 
         Returns:
-            Axes: axes object with the given width and heigt
+            Axes: axes object with the given width and height
         """
         # The first items are for padding and the second items are for the axes.
         # sizes are in inch.

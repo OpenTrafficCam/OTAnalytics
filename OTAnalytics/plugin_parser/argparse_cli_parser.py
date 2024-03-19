@@ -88,6 +88,12 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--track-export",
+            action="store_true",
+            help="Export tracks as csv",
+            required=False,
+        )
+        self._parser.add_argument(
             "--num-processes",
             type=int,
             help="Number of processes to use in multi-processing.",
@@ -103,6 +109,24 @@ class ArgparseCliParser(CliParser):
             "--logfile_overwrite",
             action="store_true",
             help="Overwrite log file if it already exists.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--include-classes",
+            nargs="+",
+            type=str,
+            help=(
+                "Whitelist filter to include tracks with given classes."
+                "Classes specified in `--include-classes` are always kept "
+                "even if they are appear in `--exclude-classes`."
+            ),
+            required=False,
+        )
+        self._parser.add_argument(
+            "--exclude-classes",
+            nargs="+",
+            type=str,
+            help="Blacklist filter to exclude tracks with given classes.",
             required=False,
         )
 
@@ -125,6 +149,9 @@ class ArgparseCliParser(CliParser):
             save_suffix=args.save_suffix,
             event_formats=args.event_formats,
             count_intervals=args.count_intervals,
+            track_export=args.track_export,
             num_processes=args.num_processes,
             log_file=args.logfile,
+            include_classes=args.include_classes,
+            exclude_classes=args.exclude_classes,
         )

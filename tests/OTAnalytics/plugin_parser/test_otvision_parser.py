@@ -61,7 +61,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     TrackLengthLimit,
     Version,
 )
-from tests.conftest import TrackBuilder, assert_track_datasets_equal
+from tests.utils.assertions import assert_track_datasets_equal
+from tests.utils.builders.track_builder import TrackBuilder
 
 
 @pytest.fixture
@@ -140,9 +141,9 @@ class TestVersion_1_1_To_1_2:
             detection, False, False
         )
         expected_detection = serialized_detection.copy()
-        serialized_detection[
-            ottrk_dataformat.OCCURRENCE
-        ] = detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
+        serialized_detection[ottrk_dataformat.OCCURRENCE] = (
+            detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
+        )
 
         fixer = Otdet_Version_1_0_To_1_2()
 
@@ -273,9 +274,17 @@ class TestOttrkParser:
 
 class TestPythonDetectionParser:
     @pytest.fixture
-    def parser(self, mocked_track_repository: Mock) -> PythonDetectionParser:
+    def mocked_classificator(self) -> TrackClassificationCalculator:
+        return Mock(spec=TrackClassificationCalculator)
+
+    @pytest.fixture
+    def parser(
+        self,
+        mocked_track_repository: Mock,
+        mocked_classificator: TrackClassificationCalculator,
+    ) -> PythonDetectionParser:
         return PythonDetectionParser(
-            ByMaxConfidence(),
+            mocked_classificator,
             mocked_track_repository,
         )
 
@@ -284,9 +293,9 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         parser: PythonDetectionParser,
     ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
@@ -313,11 +322,13 @@ class TestPythonDetectionParser:
     def test_parse_tracks(
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
+        mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        mocked_classificator.calculate.return_value = "car"
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
@@ -336,11 +347,12 @@ class TestPythonDetectionParser:
         self,
         track_builder_setup_with_sample_data: TrackBuilder,
         mocked_track_repository: Mock,
+        mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         deserialized_detections = (
             track_builder_setup_with_sample_data.build_detections()
         )
@@ -355,8 +367,7 @@ class TestPythonDetectionParser:
         )
         existing_track = existing_track_builder.build_track()
         merged_classification = "car"
-        classificator = Mock(spec=TrackClassificationCalculator)
-        classificator.calculate.return_value = merged_classification
+        mocked_classificator.calculate.return_value = merged_classification
         mocked_track_repository.get_for.return_value = existing_track
         all_detections = deserialized_detections + existing_track.detections
         merged_track = PythonTrack(
@@ -368,6 +379,7 @@ class TestPythonDetectionParser:
         expected_sorted = PythonTrackDataset.from_list([merged_track])
 
         assert_track_datasets_equal(result_sorted_input, expected_sorted)
+        mocked_classificator.calculate.assert_called_once_with(all_detections)
 
     @pytest.mark.parametrize(
         "track_length_limit",
@@ -387,9 +399,9 @@ class TestPythonDetectionParser:
             mocked_track_repository,
             track_length_limit,
         )
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
 
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO

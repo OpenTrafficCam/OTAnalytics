@@ -23,6 +23,7 @@ class CliArguments:
     start_cli: bool
     debug: bool
     logfile_overwrite: bool
+    track_export: bool
     config_file: str | None = None
     track_files: list[str] | None = None
     otflow_file: str | None = None
@@ -33,6 +34,8 @@ class CliArguments:
     count_intervals: list[int] | None = None
     num_processes: int | None = None
     log_file: str | None = None
+    include_classes: list[str] | None = None
+    exclude_classes: list[str] | None = None
 
 
 class CliValueProvider(OtConfigDefaultValueProvider):

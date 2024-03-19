@@ -1,4 +1,4 @@
-echo Install OTAnalytics.
+echo Start OTAnalytics.
 @echo off
 FOR /F "tokens=* USEBACKQ" %%F IN (`python --version`) DO SET PYTHON_VERSION=%%F
 

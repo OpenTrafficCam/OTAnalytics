@@ -10,6 +10,7 @@ from OTAnalytics.application.plotting import (
     CachedPlotter,
     GetCurrentFrame,
     GetCurrentVideoPath,
+    LayerGroup,
     PlottingLayer,
     TrackBackgroundPlotter,
     VisualizationTimeProvider,
@@ -41,6 +42,7 @@ from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_intersect.simple_intersect import (
     SimpleTracksIntersectingSections,
 )
+from OTAnalytics.plugin_prototypes.event_visualization import PandasEventProvider
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     ColorPaletteProvider,
     EventToFlowResolver,
@@ -74,6 +76,10 @@ LONG_IN_THE_PAST = datetime(
 ALPHA_BOUNDING_BOX = 0.7
 LINEWIDTH_BOUNDING_BOX = 1.5
 MARKERSIZE_TRACK_POINT = 6
+MARKERSIZE_EVENT_FRAME = 12
+MARKERSIZE_EVENT_FILTER = 6
+MARKER_EVENT_FILTER = "x"
+MARKER_EVENT_FRAME = "o"
 
 
 class FilterEndDateProvider(VisualizationTimeProvider):
@@ -153,12 +159,17 @@ class VisualizationBuilder:
             FilterEndDateProvider(track_view_state)
         )
         self._pandas_data_provider: Optional[PandasDataFrameProvider] = None
+        self._pandas_event_data_provider: Optional[PandasDataFrameProvider] = None
         self._pandas_data_provider_with_offset: Optional[PandasDataFrameProvider] = None
         self._data_provider_all_filters: Optional[PandasDataFrameProvider] = None
         self._data_provider_all_filters_with_offset: Optional[
             PandasDataFrameProvider
         ] = None
+        self._pandas_event_data_provider_all_filters: Optional[
+            PandasDataFrameProvider
+        ] = None
         self._data_provider_class_filter: Optional[PandasDataFrameProvider] = None
+        self._event_data_provider_class_filter: Optional[PandasDataFrameProvider] = None
         self._data_provider_class_filter_with_offset: Optional[
             PandasDataFrameProvider
         ] = None
@@ -173,7 +184,7 @@ class VisualizationBuilder:
         self,
         flow_state: FlowState,
         road_user_assigner: RoadUserAssigner,
-    ) -> Sequence[PlottingLayer]:
+    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         background_image_plotter = TrackBackgroundPlotter(
             self._track_view_state.selected_videos.get,
             self._visualization_time_provider,
@@ -192,61 +203,91 @@ class VisualizationBuilder:
 
         track_bounding_box_plotter = self._create_track_bounding_box_plotter()
         track_point_plotter = self._create_track_point_plotter()
+        event_point_plotter_frame = self._create_event_point_plotter_frame()
+        event_point_plotter_filter = self._create_event_point_plotter_filter()
 
-        layer_definitions = [
-            ("Background", background_image_plotter, True),
-            ("Show all tracks", all_tracks_plotter, False),
-            (
-                "Highlight tracks intersecting sections",
-                self._create_highlight_tracks_intersecting_sections_plotter(),
-                False,
-            ),
-            (
-                "Highlight tracks not intersecting sections",
-                self._create_highlight_tracks_not_intersecting_sections_plotter(),
-                False,
-            ),
-            (
-                "Show start and end point of tracks intersecting sections",
-                self._create_start_end_point_intersecting_sections_plotter(),
-                False,
-            ),
-            (
-                "Show start and end point of tracks not intersecting sections",
-                self._create_start_end_point_not_intersection_sections_plotter(),
-                False,
-            ),
-            (
-                "Show start and end point",
-                self._create_start_end_point_plotter(),
-                False,
-            ),
-            (
-                "Highlight tracks assigned to flows",
-                highlight_tracks_assigned_to_flows_plotter,
-                False,
-            ),
-            (
-                "Highlight tracks not assigned to flows",
-                highlight_tracks_not_assigned_to_flows_plotter,
-                False,
-            ),
-            (
-                "Show bounding boxes of current frame",
-                track_bounding_box_plotter,
-                False,
-            ),
-            (
-                "Show track point of bounding boxes of current frame",
-                track_point_plotter,
-                False,
-            ),
-        ]
+        layer_definitions: dict[str, list[tuple]] = {
+            "Background": [
+                ("Background", background_image_plotter, True),
+            ],
+            "Show tracks": [
+                ("All", all_tracks_plotter, False),
+                (
+                    "Intersecting sections",
+                    self._create_highlight_tracks_intersecting_sections_plotter(),
+                    False,
+                ),
+                (
+                    "Not intersecting sections",
+                    self._create_highlight_tracks_not_intersecting_sections_plotter(),
+                    False,
+                ),
+                (
+                    "Assigned to flows",
+                    highlight_tracks_assigned_to_flows_plotter,
+                    False,
+                ),
+                (
+                    "Not assigned to flows",
+                    highlight_tracks_not_assigned_to_flows_plotter,
+                    False,
+                ),
+            ],
+            "Show start and end points": [
+                (
+                    "All",
+                    self._create_start_end_point_plotter(),
+                    False,
+                ),
+                (
+                    "Intersecting sections",
+                    self._create_start_end_point_intersecting_sections_plotter(),
+                    False,
+                ),
+                (
+                    "Not intersecting sections",
+                    self._create_start_end_point_not_intersection_sections_plotter(),
+                    False,
+                ),
+            ],
+            "Show Bounding Box": [
+                (
+                    "Current frame",
+                    track_bounding_box_plotter,
+                    False,
+                ),
+                (
+                    "Track point of current frame",
+                    track_point_plotter,
+                    False,
+                ),
+            ],
+            "Show events": [
+                (
+                    "Current filter",
+                    event_point_plotter_filter,
+                    False,
+                ),
+                (
+                    "Current frame",
+                    event_point_plotter_frame,
+                    False,
+                ),
+            ],
+        }
 
-        return [
-            PlottingLayer(name, plotter, enabled)
-            for name, plotter, enabled in layer_definitions
-        ]
+        plotting_layers = []
+        grouped_layers = []
+
+        for group, definition in layer_definitions.items():
+            layers = [
+                PlottingLayer(name, plotter, enabled)
+                for name, plotter, enabled in definition
+            ]
+            layer_group = LayerGroup(name=group, layers=layers)
+            grouped_layers.append(layer_group)
+            plotting_layers.extend(layers)
+        return grouped_layers, plotting_layers
 
     def _create_all_tracks_plotter(self) -> Plotter:
         track_geometry_plotter = self._create_track_geometry_plotter(
@@ -352,12 +393,37 @@ class VisualizationBuilder:
             flow_state,
             self._track_repository,
         )
-        return self._create_track_geometry_plotter(
-            flows_filter,
-            self._color_palette_provider,
-            alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS,
-            enable_legend=False,
+        cached_plotter = CachedPlotter(
+            self._create_track_geometry_plotter(
+                flows_filter,
+                self._color_palette_provider,
+                alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS,
+                enable_legend=False,
+            ),
+            [],
         )
+        invalidate = cached_plotter.invalidate_cache
+        self._event_repository.register_observer(invalidate)
+        flow_state.selected_flows.register(invalidate)
+        self._track_view_state.filter_element.register(invalidate)
+        self._track_view_state.track_offset.register(invalidate)
+        return cached_plotter
+
+    def _get_event_data_provider_class_filter(self) -> PandasDataFrameProvider:
+        if not self._event_data_provider_class_filter:
+            self._event_data_provider_class_filter = (
+                self._build_filter_by_classification(
+                    self._get_pandas_event_data_provider()
+                )
+            )
+        return self._event_data_provider_class_filter
+
+    def _get_event_data_provider_all_filters(self) -> PandasDataFrameProvider:
+        if not self._pandas_event_data_provider_all_filters:
+            self._pandas_event_data_provider_all_filters = self._create_all_filters(
+                self._get_pandas_event_data_provider()
+            )
+        return self._pandas_event_data_provider_all_filters
 
     def _get_data_provider_class_filter(self) -> PandasDataFrameProvider:
         if not self._data_provider_class_filter:
@@ -462,6 +528,16 @@ class VisualizationBuilder:
                 self._pulling_progressbar_builder,
             )
         return self._pandas_data_provider
+
+    def _get_pandas_event_data_provider(self) -> PandasDataFrameProvider:
+        dataframe_filter_builder = self._create_dataframe_filter_builder()
+        if not self._pandas_event_data_provider:
+            self._pandas_event_data_provider = PandasEventProvider(
+                self._event_repository,
+                dataframe_filter_builder,
+                self._pulling_progressbar_builder,
+            )
+        return self._pandas_event_data_provider
 
     def _wrap_pandas_track_offset_provider(
         self, other: PandasDataFrameProvider
@@ -727,6 +803,36 @@ class VisualizationBuilder:
                 self._color_palette_provider,
                 alpha=ALPHA_BOUNDING_BOX,
                 markersize=MARKERSIZE_TRACK_POINT,
+            ),
+        )
+        return PlotterPrototype(self._track_view_state, track_plotter)
+
+    def _create_event_point_plotter_frame(self) -> Plotter:
+        track_plotter = MatplotlibTrackPlotter(
+            TrackPointPlotter(
+                FilterByFrame(
+                    FilterByVideo(
+                        self._get_event_data_provider_class_filter(),
+                        self._get_current_video,
+                    ),
+                    self._get_current_frame,
+                ),
+                self._color_palette_provider,
+                alpha=ALPHA_BOUNDING_BOX,
+                marker=MARKER_EVENT_FRAME,
+                markersize=MARKERSIZE_EVENT_FRAME,
+            ),
+        )
+        return PlotterPrototype(self._track_view_state, track_plotter)
+
+    def _create_event_point_plotter_filter(self) -> Plotter:
+        track_plotter = MatplotlibTrackPlotter(
+            TrackPointPlotter(
+                self._get_event_data_provider_all_filters(),
+                self._color_palette_provider,
+                alpha=ALPHA_BOUNDING_BOX,
+                marker=MARKER_EVENT_FILTER,
+                markersize=MARKERSIZE_EVENT_FILTER,
             ),
         )
         return PlotterPrototype(self._track_view_state, track_plotter)

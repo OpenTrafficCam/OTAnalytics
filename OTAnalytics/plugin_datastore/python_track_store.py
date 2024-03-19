@@ -7,14 +7,11 @@ from more_itertools import batched
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
-from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.geometry import (
-    ImageCoordinate,
-    RelativeOffsetCoordinate,
-    calculate_direction_vector,
-)
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import (
+    TRACK_CLASSIFICATION,
+    TRACK_ID,
     Detection,
     Track,
     TrackBuilder,
@@ -24,16 +21,26 @@ from OTAnalytics.domain.track import (
     TrackId,
 )
 from OTAnalytics.domain.track_dataset import (
+    END_FRAME,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_X,
+    END_Y,
+    START_FRAME,
+    START_OCCURRENCE,
+    START_VIDEO_NAME,
+    START_X,
+    START_Y,
     TRACK_GEOMETRY_FACTORY,
+    FilteredTrackDataset,
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
+    TrackSegmentDataset,
 )
-from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import extract_hostname
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 
@@ -233,50 +240,80 @@ class ByMaxConfidence(TrackClassificationCalculator):
         return max(classifications, key=lambda x: classifications[x])
 
 
-# TODO review: moved some reusable stateless methods from PythonTrackDataset
-# TODO to module level so they can be reused in streaming_parser
-def create_enter_scene_event(track: Track) -> Event:
-    return Event(
-        road_user_id=track.id.id,
-        road_user_type=track.classification,
-        hostname=extract_hostname(track.first_detection.video_name),
-        occurrence=track.first_detection.occurrence,
-        frame_number=track.first_detection.frame,
-        section_id=None,
-        event_coordinate=ImageCoordinate(
-            track.first_detection.x, track.first_detection.y
-        ),
-        event_type=EventType.ENTER_SCENE,
-        direction_vector=calculate_direction_vector(
-            track.first_detection.x,
-            track.first_detection.y,
-            track.detections[1].x,
-            track.detections[1].y,
-        ),
-        video_name=track.first_detection.video_name,
+@dataclass(frozen=True)
+class PythonTrackPoint:
+    """Start or end point of a track segment. X- and Y-coordinates are enriched with
+    information about the corresponding detection.
+
+    Attributes:
+        x (int): X coordinate of the point
+        y (int): Y coordinate of the point
+        occurrence (int): Occurrence of the point
+        video_name (str): Name of the video containing the point
+        frame (int): Frame number of the point within the video file
+    """
+
+    x: float
+    y: float
+    occurrence: datetime
+    video_name: str
+    frame: int
+
+    @staticmethod
+    def from_detection(detection: Detection) -> "PythonTrackPoint":
+        return PythonTrackPoint(
+            x=detection.x,
+            y=detection.y,
+            occurrence=detection.occurrence,
+            video_name=detection.video_name,
+            frame=detection.frame,
+        )
+
+
+@dataclass(frozen=True)
+class PythonTrackSegment:
+    """Segment of a track. Starts at a detection and ends at another one."""
+
+    track_id: str
+    track_classification: str
+    start: PythonTrackPoint
+    end: PythonTrackPoint
+
+    def as_dict(self) -> dict:
+        return {
+            TRACK_ID: self.track_id,
+            TRACK_CLASSIFICATION: self.track_classification,
+            START_X: self.start.x,
+            START_Y: self.start.y,
+            START_OCCURRENCE: self.start.occurrence,
+            START_FRAME: self.start.frame,
+            START_VIDEO_NAME: self.start.video_name,
+            END_X: self.end.x,
+            END_Y: self.end.y,
+            END_OCCURRENCE: self.end.occurrence,
+            END_FRAME: self.end.frame,
+            END_VIDEO_NAME: self.end.video_name,
+        }
+
+
+def create_segment_for(
+    track: Track, start: Detection, end: Detection
+) -> PythonTrackSegment:
+    return PythonTrackSegment(
+        track_id=track.id.id,
+        track_classification=track.classification,
+        start=PythonTrackPoint.from_detection(start),
+        end=PythonTrackPoint.from_detection(end),
     )
 
 
-def create_leave_scene_event(track: Track) -> Event:
-    return Event(
-        road_user_id=track.id.id,
-        road_user_type=track.classification,
-        hostname=extract_hostname(track.last_detection.video_name),
-        occurrence=track.last_detection.occurrence,
-        frame_number=track.last_detection.frame,
-        section_id=None,
-        event_coordinate=ImageCoordinate(
-            track.last_detection.x, track.last_detection.y
-        ),
-        event_type=EventType.LEAVE_SCENE,
-        direction_vector=calculate_direction_vector(
-            track.detections[-2].x,
-            track.detections[-2].y,
-            track.last_detection.x,
-            track.last_detection.y,
-        ),
-        video_name=track.last_detection.video_name,
-    )
+@dataclass(frozen=True)
+class PythonTrackSegmentDataset(TrackSegmentDataset):
+    segments: list[PythonTrackSegment]
+
+    def apply(self, consumer: Callable[[dict], None]) -> None:
+        for segment in self.segments:
+            consumer(segment.as_dict())
 
 
 def cut_track_with_section(
@@ -351,6 +388,10 @@ class PythonTrackDataset(TrackDataset):
     def classifications(self) -> frozenset[str]:
         return frozenset([track.classification for track in self._tracks.values()])
 
+    @property
+    def empty(self) -> bool:
+        return len(self) == 0
+
     def __init__(
         self,
         values: Optional[dict[TrackId, Track]] = None,
@@ -365,8 +406,8 @@ class PythonTrackDataset(TrackDataset):
         if values is None:
             values = {}
         self._tracks = values
-        self._calculator = calculator
-        self._track_geometry_factory = track_geometry_factory
+        self.calculator = calculator
+        self.track_geometry_factory = track_geometry_factory
         if geometry_datasets is None:
             self._geometry_datasets = dict[
                 RelativeOffsetCoordinate, TrackGeometryDataset
@@ -378,18 +419,18 @@ class PythonTrackDataset(TrackDataset):
     def from_list(
         tracks: list[Track],
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
-    ) -> TrackDataset:
+    ) -> "PythonTrackDataset":
         return PythonTrackDataset(
             {track.id: track for track in tracks}, calculator=calculator
         )
 
-    def add_all(self, other: Iterable[Track]) -> "TrackDataset":
+    def add_all(self, other: Iterable[Track]) -> "PythonTrackDataset":
         if isinstance(other, PythonTrackDataset):
             return self.__merge(other._tracks)
         new_tracks = {track.id: track for track in other}
         return self.__merge(new_tracks)
 
-    def __merge(self, other: dict[TrackId, Track]) -> TrackDataset:
+    def __merge(self, other: dict[TrackId, Track]) -> "PythonTrackDataset":
         merged_tracks: dict[TrackId, Track] = {}
         for track_id, other_track in other.items():
             existing_detections = self._get_existing_detections(track_id)
@@ -397,7 +438,7 @@ class PythonTrackDataset(TrackDataset):
             sort_dets_by_occurrence = sorted(
                 all_detections, key=lambda det: det.occurrence
             )
-            classification = self._calculator.calculate(all_detections)
+            classification = self.calculator.calculate(all_detections)
             try:
                 current_track = PythonTrack(
                     _id=track_id,
@@ -437,13 +478,13 @@ class PythonTrackDataset(TrackDataset):
     def get_for(self, id: TrackId) -> Optional[Track]:
         return self._tracks.get(id)
 
-    def remove(self, track_id: TrackId) -> TrackDataset:
+    def remove(self, track_id: TrackId) -> "PythonTrackDataset":
         new_tracks = self._tracks.copy()
         del new_tracks[track_id]
         updated_geometry_datasets = self._remove_from_geometry_datasets({track_id})
         return PythonTrackDataset(new_tracks, updated_geometry_datasets)
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+    def remove_multiple(self, track_ids: set[TrackId]) -> "PythonTrackDataset":
         new_tracks = self._tracks.copy()
         for track_id in track_ids:
             del new_tracks[track_id]
@@ -451,20 +492,20 @@ class PythonTrackDataset(TrackDataset):
         return PythonTrackDataset(new_tracks, updated_geometry_datasets)
 
     def _remove_from_geometry_datasets(
-        self, track_ids: set[TrackId]
+        self, track_ids: Iterable[TrackId]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         updated = {}
         for offset, geometry_dataset in self._geometry_datasets.items():
-            updated[offset] = geometry_dataset.remove(track_ids)
+            updated[offset] = geometry_dataset.remove([_id.id for _id in track_ids])
         return updated
 
-    def clear(self) -> TrackDataset:
+    def clear(self) -> "PythonTrackDataset":
         return PythonTrackDataset()
 
     def as_list(self) -> list[Track]:
         return list(self._tracks.values())
 
-    def split(self, batches: int) -> Sequence["TrackDataset"]:
+    def split(self, batches: int) -> Sequence["PythonTrackDataset"]:
         dataset_size = len(self._tracks)
         batch_size = ceil(dataset_size / batches)
 
@@ -476,7 +517,7 @@ class PythonTrackDataset(TrackDataset):
                 PythonTrackDataset(
                     current_batch,
                     current_geometry_datasets,
-                    calculator=self._calculator,
+                    calculator=self.calculator,
                 )
             )
         return dataset_batches
@@ -493,13 +534,13 @@ class PythonTrackDataset(TrackDataset):
     def __len__(self) -> int:
         return len(self._tracks)
 
-    def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
+    def filter_by_min_detection_length(self, length: int) -> "PythonTrackDataset":
         filtered_tracks = {
             _id: track
             for _id, track in self._tracks.items()
             if len(track.detections) >= length
         }
-        return PythonTrackDataset(filtered_tracks, calculator=self._calculator)
+        return PythonTrackDataset(filtered_tracks, calculator=self.calculator)
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
@@ -524,7 +565,7 @@ class PythonTrackDataset(TrackDataset):
                 applied.
         """
         if (geometry_dataset := self._geometry_datasets.get(offset, None)) is None:
-            geometry_dataset = self._track_geometry_factory(self, offset)
+            geometry_dataset = self.track_geometry_factory(self, offset)
             self._geometry_datasets[offset] = geometry_dataset
         return geometry_dataset
 
@@ -547,19 +588,31 @@ class PythonTrackDataset(TrackDataset):
             if offset not in self._geometry_datasets.keys():
                 self._geometry_datasets[offset] = self._get_geometry_dataset_for(offset)
 
-    def apply_to_first_segments(self, consumer: Callable[[Event], None]) -> None:
-        for track in self.as_list():
-            event = create_enter_scene_event(track)
-            consumer(event)
+    def get_first_segments(self) -> TrackSegmentDataset:
+        segments = [self.__create_first_segment(track) for track in self.as_list()]
 
-    def apply_to_last_segments(self, consumer: Callable[[Event], None]) -> None:
-        for track in self.as_list():
-            event = create_leave_scene_event(track)
-            consumer(event)
+        return PythonTrackSegmentDataset(segments)
+
+    @staticmethod
+    def __create_first_segment(track: Track) -> PythonTrackSegment:
+        start = track.get_detection(0)
+        end = track.get_detection(1)
+        return create_segment_for(track=track, start=start, end=end)
+
+    def get_last_segments(self) -> TrackSegmentDataset:
+        segments = [self.__create_last_segment(track) for track in self.as_list()]
+
+        return PythonTrackSegmentDataset(segments)
+
+    @staticmethod
+    def __create_last_segment(track: Track) -> PythonTrackSegment:
+        start = track.detections[-2]
+        end = track.last_detection
+        return create_segment_for(track=track, start=start, end=end)
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple[TrackDataset, set[TrackId]]:
+    ) -> tuple["PythonTrackDataset", set[TrackId]]:
         if len(self) == 0:
             logger().info("No tracks to cut")
             return self, set()
@@ -567,7 +620,7 @@ class PythonTrackDataset(TrackDataset):
 
         intersecting_track_ids = self.intersecting_tracks([section], offset)
 
-        cut_tracks: list[Track] = []
+        cut_tracks = []
         for track_id in intersecting_track_ids:
             cut_tracks.extend(
                 cut_track_with_section(
@@ -578,6 +631,116 @@ class PythonTrackDataset(TrackDataset):
             PythonTrackDataset.from_list(cut_tracks),
             intersecting_track_ids,
         )
+
+
+class FilteredPythonTrackDataset(FilteredTrackDataset):
+    @property
+    def include_classes(self) -> frozenset[str]:
+        return self._include_classes
+
+    @property
+    def exclude_classes(self) -> frozenset[str]:
+        return self._exclude_classes
+
+    def __init__(
+        self,
+        other: PythonTrackDataset,
+        include_classes: frozenset[str],
+        exclude_classes: frozenset[str],
+    ) -> None:
+        self._other = other
+        self._include_classes = include_classes
+        self._exclude_classes = exclude_classes
+        self._cache: PythonTrackDataset | None = None
+
+    def _filter(self) -> PythonTrackDataset:
+        """Filter TrackDataset by classifications.
+
+        IMPORTANT: Classifications contained in the include_classes will not be
+        removed even if they appear in the set of exclude_classes.
+        Furthermore, the whitelist will not be applied if empty.
+
+        Returns:
+            PythonTrackDataset: the filtered dataset.
+        """
+        if not self.include_classes and not self._exclude_classes:
+            return self._other
+
+        if self._cache is not None:
+            return self._cache
+
+        if self.include_classes:
+            logger().info(
+                "Apply 'include-classes' filter to filter tracks: "
+                f"{self.include_classes}"
+                "\n'exclude-classes' filter is not used"
+            )
+            filtered_dataset = self._get_dataset_with_classes(
+                list(self._other.classifications & self.include_classes)
+            )
+        elif self.exclude_classes:
+            logger().info(
+                "Apply 'exclude-classes' filter to filter tracks: "
+                f"{self.exclude_classes}"
+            )
+            filtered_dataset = self._get_dataset_with_classes(
+                list(self._other.classifications - self.exclude_classes)
+            )
+        else:
+            return self._other
+        self._cache = filtered_dataset
+        return filtered_dataset
+
+    def _get_dataset_with_classes(self, classes: list[str]) -> PythonTrackDataset:
+        tracks_to_keep: dict[TrackId, Track] = dict()
+        tracks_to_remove: list[TrackId] = list()
+
+        for _track in self._other.as_list():
+            if _track.classification in classes:
+                tracks_to_keep[_track.id] = _track
+            else:
+                tracks_to_remove.append(_track.id)
+
+        updated_geometry_datasets = self._other._remove_from_geometry_datasets(
+            tracks_to_remove
+        )
+        return PythonTrackDataset(
+            tracks_to_keep,
+            updated_geometry_datasets,
+            self._other.calculator,
+            self._other.track_geometry_factory,
+        )
+
+    def wrap(self, other: PythonTrackDataset) -> "TrackDataset":
+        return FilteredPythonTrackDataset(
+            other, self.include_classes, self.exclude_classes
+        )
+
+    def add_all(self, other: Iterable[Track]) -> "TrackDataset":
+        return self.wrap(self._other.add_all(other))
+
+    def remove(self, track_id: TrackId) -> "TrackDataset":
+        return self.wrap(self._other.remove(track_id))
+
+    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+        return self.wrap(self._other.remove_multiple(track_ids))
+
+    def clear(self) -> "TrackDataset":
+        return self.wrap(self._other.clear())
+
+    def split(self, chunks: int) -> Sequence["TrackDataset"]:
+        return [self.wrap(dataset) for dataset in self._other.split(chunks)]
+
+    def calculate_geometries_for(
+        self, offsets: Iterable[RelativeOffsetCoordinate]
+    ) -> None:
+        self._other.calculate_geometries_for(offsets)
+
+    def cut_with_section(
+        self, section: Section, offset: RelativeOffsetCoordinate
+    ) -> tuple["TrackDataset", set[TrackId]]:
+        dataset, original_track_ids = self._other.cut_with_section(section, offset)
+        return self.wrap(dataset), original_track_ids
 
 
 class SimpleCutTrackSegmentBuilder(TrackBuilder):

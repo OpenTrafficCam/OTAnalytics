@@ -32,7 +32,7 @@ from OTAnalytics.application.parser.cli_parser import (
     CliParser,
     CliValueProvider,
 )
-from OTAnalytics.application.plotting import LayeredPlotter, PlottingLayer
+from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
     ActionState,
@@ -47,14 +47,16 @@ from OTAnalytics.application.state import (
     VideosMetadata,
 )
 from OTAnalytics.application.ui.frame_control import (
-    SwitchToNextFrame,
-    SwitchToPreviousFrame,
+    SwitchToEvent,
+    SwitchToNext,
+    SwitchToPrevious,
 )
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
+    FilterOutCuttingSections,
     MissingEventsSectionProvider,
     SectionProvider,
     SimpleCreateIntersectionEvents,
@@ -67,6 +69,10 @@ from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.filter_visualization import (
+    CreateDefaultFilterRange,
+    EnableFilterTrackByDate,
+)
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearAllFlows
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
@@ -123,6 +129,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
+    FilteredPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -162,6 +169,7 @@ from OTAnalytics.plugin_parser.streaming_parser import (
     PythonStreamDetectionParser,
     StreamOttrkParser,
 )
+from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -244,7 +252,7 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        track_repository = self._create_track_repository()
+        track_repository = self._create_track_repository(run_config)
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
@@ -278,7 +286,7 @@ class ApplicationStarter:
             clear_all_intersections.on_section_changed
         )
         videos_metadata = VideosMetadata()
-        layers = self._create_layers(
+        layer_groups, layers = self._create_layers(
             datastore,
             intersection_repository,
             track_view_state,
@@ -298,7 +306,7 @@ class ApplicationStarter:
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
 
-        tracks_metadata = self._create_tracks_metadata(track_repository)
+        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         tracks_metadata._classifications.register(
@@ -336,9 +344,8 @@ class ApplicationStarter:
         clear_all_track_to_videos = ClearAllTrackToVideos(
             datastore._track_to_video_repository
         )
-
-        section_provider = MissingEventsSectionProvider(
-            section_repository, event_repository
+        section_provider = FilterOutCuttingSections(
+            MissingEventsSectionProvider(section_repository, event_repository)
         )
         create_events = self._create_use_case_create_events(
             section_provider,
@@ -402,8 +409,26 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
-        previous_frame = SwitchToPreviousFrame(track_view_state, videos_metadata)
-        next_frame = SwitchToNextFrame(track_view_state, videos_metadata)
+        enable_filter_track_by_date = EnableFilterTrackByDate(
+            track_view_state, filter_element_settings_restorer
+        )
+        create_default_filter = CreateDefaultFilterRange(
+            state=track_view_state,
+            videos_metadata=videos_metadata,
+            enable_filter_track_by_date=enable_filter_track_by_date,
+        )
+        previous_frame = SwitchToPrevious(
+            track_view_state, videos_metadata, create_default_filter
+        )
+        next_frame = SwitchToNext(
+            track_view_state, videos_metadata, create_default_filter
+        )
+        switch_event = SwitchToEvent(
+            event_repository=event_repository,
+            track_view_state=track_view_state,
+            section_state=section_state,
+            create_default_filter=create_default_filter,
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -426,8 +451,10 @@ class ApplicationStarter:
             start_new_project,
             project_updater,
             load_track_files,
+            enable_filter_track_by_date,
             previous_frame,
             next_frame,
+            switch_event,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -468,9 +495,6 @@ class ApplicationStarter:
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
         )
-        application.track_view_state.filter_element.register(
-            dummy_viewmodel.notify_filter_element_change
-        )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
         # cut_tracks_intersecting_section.register(
@@ -489,8 +513,8 @@ class ApplicationStarter:
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
 
-        for layer in layers:
-            layer.register(image_updater.notify_layers)
+        for group in layer_groups:
+            group.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         pulling_progressbar_popup_builder.add_widget(main_window)
         apply_cli_cuts = self.create_apply_cli_cuts(
@@ -500,11 +524,11 @@ class ApplicationStarter:
             load_otflow, load_track_files, apply_cli_cuts
         )
         OTAnalyticsGui(
-            main_window, dummy_viewmodel, layers, preload_input_files, run_config
+            main_window, dummy_viewmodel, layer_groups, preload_input_files, run_config
         ).start()
 
     def start_cli(self, run_config: RunConfiguration) -> None:
-        track_repository = self._create_track_repository()
+        track_repository = self._create_track_repository(run_config)
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         track_parser = self._create_track_parser(track_repository)
@@ -544,6 +568,7 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
         )
+        export_tracks = CsvTrackExport(track_repository)
         OTAnalyticsCli(
             run_config,
             track_parser=track_parser,
@@ -558,13 +583,14 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
-            tracks_metadata=TracksMetadata(track_repository),
+            tracks_metadata=self._create_tracks_metadata(track_repository, run_config),
             videos_metadata=VideosMetadata(),
             progressbar=TqdmBuilder(),
+            export_tracks=export_tracks,
         ).start()
 
     def start_stream_cli(self, run_config: RunConfiguration) -> None:
-        track_repository = self._create_track_repository()
+        track_repository = self._create_track_repository(run_config)
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         track_parser = StreamOttrkParser(
@@ -679,10 +705,14 @@ class ApplicationStarter:
             config_parser=config_parser,
         )
 
-    def _create_track_repository(self) -> TrackRepository:
+    def _create_track_repository(self, run_config: RunConfiguration) -> TrackRepository:
         return TrackRepository(
-            PandasTrackDataset.from_list(
-                [], PygeosTrackGeometryDataset.from_track_dataset
+            FilteredPandasTrackDataset(
+                PandasTrackDataset.from_list(
+                    [], PygeosTrackGeometryDataset.from_track_dataset
+                ),
+                run_config.include_classes,
+                run_config.exclude_classes,
             )
         )
         # return TrackRepository(PythonTrackDataset())
@@ -735,7 +765,7 @@ class ApplicationStarter:
         pulling_progressbar_builder: ProgressbarBuilder,
         road_user_assigner: RoadUserAssigner,
         color_palette_provider: ColorPaletteProvider,
-    ) -> Sequence[PlottingLayer]:
+    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         return VisualizationBuilder(
             datastore,
             intersection_repository,
@@ -797,9 +827,11 @@ class ApplicationStarter:
         )
 
     def _create_tracks_metadata(
-        self, track_repository: TrackRepository
+        self, track_repository: TrackRepository, run_config: RunConfiguration
     ) -> TracksMetadata:
-        return TracksMetadata(track_repository)
+        return TracksMetadata(
+            track_repository, run_config.include_classes, run_config.exclude_classes
+        )
 
     def _create_action_state(self) -> ActionState:
         return ActionState()

@@ -345,6 +345,22 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def next_second(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def previous_second(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def next_event(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def previous_event(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def update_skip_time(self, seconds: int, frames: int) -> None:
         raise NotImplementedError
 

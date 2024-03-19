@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 import pytest
 from pandas import DataFrame
 
-from OTAnalytics.application.state import ObservableProperty, TrackViewState
+from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
@@ -43,6 +43,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackPlotter,
     TrackStartEndPointPlotter,
 )
+from tests.utils.state import observable
 
 
 class TestEventToFlowResolver:
@@ -455,9 +456,7 @@ class TestDataFrameProviderFilter:
 
     @pytest.fixture
     def observable_filter_element(self, filter_element: Mock) -> Mock:
-        observable_property = Mock(spec=ObservableProperty)
-        observable_property.get.return_value = filter_element
-        return observable_property
+        return observable(filter_element)
 
     @pytest.fixture
     def track_view_state(self, observable_filter_element: Mock) -> Mock:
@@ -474,7 +473,7 @@ class TestDataFrameProviderFilter:
 
         filter_by_id = FilterById(data_provider, id_filter)
         result = filter_by_id.get_data()
-        expected = filter_input.drop("2")
+        expected = filter_input.drop("2", level=track.TRACK_ID)
 
         assert result.equals(expected)
         data_provider.get_data.assert_called_once()
