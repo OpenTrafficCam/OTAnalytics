@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from typing import Optional
 
 
@@ -7,6 +7,11 @@ from typing import Optional
 class DateRange:
     start_date: Optional[datetime]
     end_date: Optional[datetime]
+
+    def duration(self) -> Optional[timedelta]:
+        if self.start_date and self.end_date:
+            return self.end_date - self.start_date
+        return None
 
 
 def validate_date(date: str, date_format: str) -> bool:

@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from OTAnalytics.application.ui.frame_control import DEFAULT_EVENT_TYPES
 from OTAnalytics.domain.event import (
     DATE_FORMAT,
     DIRECTION_VECTOR,
@@ -28,6 +29,12 @@ from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, TrackId
 from OTAnalytics.domain.types import EventType, EventTypeParseError
+from tests.utils.builders import event_builder
+
+SECTION_ID_1 = SectionId("section 1")
+SECTION_ID_2 = SectionId("section 2")
+
+EVENT_OCCURRENCE = datetime(2022, 1, 1, 0, 0, 0, 0)
 
 
 @pytest.fixture
@@ -70,7 +77,7 @@ class TestEvent:
                 road_user_id="1",
                 road_user_type="car",
                 hostname="my_hostname",
-                occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
+                occurrence=EVENT_OCCURRENCE,
                 frame_number=frame,
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(0, 0),
@@ -80,14 +87,13 @@ class TestEvent:
             )
 
     def test_instantiate_with_valid_args(self) -> None:
-        occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
         event_coordinate = ImageCoordinate(0, 0)
         direction = DirectionVector2D(1, 0)
         event = Event(
             road_user_id="1",
             road_user_type="car",
             hostname="my_hostname",
-            occurrence=occurrence,
+            occurrence=EVENT_OCCURRENCE,
             frame_number=1,
             section_id=SectionId("N"),
             event_coordinate=event_coordinate,
@@ -98,7 +104,7 @@ class TestEvent:
         assert event.road_user_id == "1"
         assert event.road_user_type == "car"
         assert event.hostname == "my_hostname"
-        assert event.occurrence == occurrence
+        assert event.occurrence == EVENT_OCCURRENCE
         assert event.frame_number == 1
         assert event.section_id == SectionId("N")
         assert event.event_coordinate == event_coordinate
@@ -110,7 +116,7 @@ class TestEvent:
         road_user_id = "1"
         road_user_type = "car"
         hostname = "myhostname"
-        occurrence = datetime(2022, 1, 1, 0, 0, 0, 0)
+        occurrence = EVENT_OCCURRENCE
         frame_number = 1
         section_id = SectionId("N")
         event_coordinate = ImageCoordinate(0, 0)
@@ -282,6 +288,55 @@ class TestSceneEventBuilder:
         assert event.event_coordinate == ImageCoordinate(0, 0)
 
 
+def event_1_section_1() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .add_section_id(SECTION_ID_1.id)
+        .add_event_type(EventType.SECTION_ENTER.value)
+        .add_second(1)
+        .build_section_event()
+    )
+
+
+def event_1_section_2() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .add_section_id(SECTION_ID_2.id)
+        .add_event_type(EventType.SECTION_ENTER.value)
+        .add_second(2)
+        .build_section_event()
+    )
+
+
+def event_2_section_1() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .add_section_id(SECTION_ID_1.id)
+        .add_event_type(EventType.SECTION_LEAVE.value)
+        .add_second(3)
+        .build_section_event()
+    )
+
+
+def event_2_section_2() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .add_section_id(SECTION_ID_2.id)
+        .add_event_type(EventType.SECTION_LEAVE.value)
+        .add_second(4)
+        .build_section_event()
+    )
+
+
+def all_events() -> list[Event]:
+    return [
+        event_1_section_1(),
+        event_2_section_1(),
+        event_1_section_2(),
+        event_2_section_2(),
+    ]
+
+
 class TestEventRepository:
     def test_add(self) -> None:
         event = Mock()
@@ -317,6 +372,43 @@ class TestEventRepository:
         subject.notify.assert_called_with(
             EventRepositoryEvent([first_event, second_event], [])
         )
+
+    def test_sort_after_add_all(self) -> None:
+        repository = EventRepository()
+
+        repository.add_all(
+            [
+                event_2_section_1(),
+                event_1_section_2(),
+                event_2_section_2(),
+                event_1_section_1(),
+            ]
+        )
+
+        actual = repository.get_all()
+        expected = [
+            event_1_section_1(),
+            event_2_section_1(),
+            event_1_section_2(),
+            event_2_section_2(),
+        ]
+        assert actual == expected
+
+    def test_sort_after_add(self) -> None:
+        repository = EventRepository()
+        repository.add(event_2_section_1())
+        repository.add(event_1_section_2())
+        repository.add(event_2_section_2())
+        repository.add(event_1_section_1())
+
+        actual = repository.get_all()
+        expected = [
+            event_1_section_1(),
+            event_2_section_1(),
+            event_1_section_2(),
+            event_2_section_2(),
+        ]
+        assert actual == expected
 
     def test_no_event_for_intersected_section(self) -> None:
         section_id_1 = SectionId("1")
@@ -398,3 +490,80 @@ class TestEventRepository:
         all_events = repository.get_all()
         assert all_events == [first_event, second_event]
         assert all_events  # ensure all events can not be exhausted
+
+    @pytest.mark.parametrize(
+        "input_event,expected_event,sections",
+        [
+            (event_1_section_1(), event_1_section_2(), []),
+            (event_1_section_1(), event_2_section_1(), [SECTION_ID_1]),
+            (event_1_section_2(), event_2_section_2(), [SECTION_ID_2]),
+            (event_1_section_1(), event_1_section_2(), [SECTION_ID_1, SECTION_ID_2]),
+        ],
+    )
+    def test_get_next_after(
+        self,
+        input_event: Event,
+        expected_event: Event,
+        sections: list[SectionId],
+    ) -> None:
+        repository = EventRepository()
+        repository.add_all(all_events())
+
+        actual_event = repository.get_next_after(input_event.occurrence, sections)
+
+        assert actual_event == expected_event
+
+    @pytest.mark.parametrize(
+        "input_event,expected_event,sections",
+        [
+            (event_2_section_1(), event_1_section_2(), []),
+            (event_2_section_1(), event_1_section_1(), [SECTION_ID_1]),
+            (event_2_section_2(), event_1_section_2(), [SECTION_ID_2]),
+            (event_2_section_1(), event_1_section_2(), [SECTION_ID_1, SECTION_ID_2]),
+        ],
+    )
+    def test_get_previous_before(
+        self,
+        input_event: Event,
+        expected_event: Event,
+        sections: list[SectionId],
+    ) -> None:
+        repository = EventRepository()
+        repository.add_all(all_events())
+
+        actual_event = repository.get_previous_before(input_event.occurrence, sections)
+
+        assert actual_event == expected_event
+
+    @pytest.mark.parametrize(
+        "sections,event_type,expected_events",
+        [
+            ([], [], all_events()),
+            ([SECTION_ID_1], [], [event_1_section_1(), event_2_section_1()]),
+            ([SECTION_ID_2], [], [event_1_section_2(), event_2_section_2()]),
+            ([SECTION_ID_1, SECTION_ID_2], [], all_events()),
+            ([SECTION_ID_1, SECTION_ID_2], DEFAULT_EVENT_TYPES, all_events()),
+            (
+                [SECTION_ID_1],
+                [EventType.SECTION_ENTER],
+                [event_1_section_1()],
+            ),
+            (
+                [SECTION_ID_1],
+                [EventType.SECTION_LEAVE],
+                [event_2_section_1()],
+            ),
+        ],
+    )
+    def test_get(
+        self,
+        sections: list[SectionId],
+        event_type: list[EventType],
+        expected_events: list[Event],
+    ) -> None:
+        repository = EventRepository()
+        repository.add_all(all_events())
+
+        actual_events = repository.get(sections=sections, event_types=event_type)
+
+        assert actual_events == expected_events
