@@ -204,6 +204,11 @@ class TestSwitchToEvent:
 
         section_state.selected_sections.get.assert_called()
         filter_element.derive_date.assert_called_with(new_date_range)
+        event_repository.get_next_after.assert_called_with(
+            date=END_DATE,
+            sections=section_state.selected_sections.get(),
+            event_types=(EventType.SECTION_ENTER, EventType.SECTION_LEAVE),
+        )
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
         create_default_filter.create.assert_called_once()
 
@@ -227,5 +232,10 @@ class TestSwitchToEvent:
 
         section_state.selected_sections.get.assert_called()
         filter_element.derive_date.assert_not_called()
+        event_repository.get_next_after.assert_called_with(
+            date=END_DATE,
+            sections=section_state.selected_sections.get(),
+            event_types=(EventType.SECTION_ENTER, EventType.SECTION_LEAVE),
+        )
         track_view_state.filter_element.set.assert_not_called()
         create_default_filter.create.assert_called_once()
