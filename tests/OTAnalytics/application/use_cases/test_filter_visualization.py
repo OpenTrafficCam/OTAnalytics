@@ -1,36 +1,20 @@
 from datetime import datetime
-from typing import Optional
 from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.state import TrackViewState, VideosMetadata
+from OTAnalytics.application.state import VideosMetadata
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilterRange,
     EnableFilterTrackByDate,
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
-from tests.utils.state import observable
+from tests.utils.state import create_filter_element, create_track_view_state
 
 START_DATE = datetime(2023, 1, 1, 0, 0, 0)
 END_DATE = datetime(2023, 1, 1, 0, 0, 1)
 FILTER_DURATION = END_DATE - START_DATE
-
-
-def create_filter_element(
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
-) -> Mock:
-    filter_element = Mock(spec=FilterElement)
-    filter_element.date_range = DateRange(start_date=start_date, end_date=end_date)
-    return filter_element
-
-
-def create_track_view_state(filter_element: FilterElement) -> Mock:
-    state = Mock(spec=TrackViewState)
-    state.filter_element = observable(filter_element)
-    return state
 
 
 @pytest.fixture
