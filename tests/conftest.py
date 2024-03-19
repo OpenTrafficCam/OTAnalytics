@@ -363,6 +363,3 @@ def create_run_config(
         exclude_classes=exclude_classes,
     )
     return RunConfiguration(flow_parser, cli_args)
-
-
-NUM_PROCESSES = 1
