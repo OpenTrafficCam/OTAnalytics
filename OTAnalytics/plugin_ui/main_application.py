@@ -46,7 +46,11 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
-from OTAnalytics.application.ui.frame_control import SwitchToNext, SwitchToPrevious
+from OTAnalytics.application.ui.frame_control import (
+    SwitchToEvent,
+    SwitchToNext,
+    SwitchToPrevious,
+)
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.create_events import (
@@ -65,6 +69,10 @@ from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.filter_visualization import (
+    CreateDefaultFilterRange,
+    EnableFilterTrackByDate,
+)
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearAllFlows
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
@@ -395,8 +403,26 @@ class ApplicationStarter:
             remove_tracks,
             remove_section,
         )
-        previous_frame = SwitchToPrevious(track_view_state, videos_metadata)
-        next_frame = SwitchToNext(track_view_state, videos_metadata)
+        enable_filter_track_by_date = EnableFilterTrackByDate(
+            track_view_state, filter_element_settings_restorer
+        )
+        create_default_filter = CreateDefaultFilterRange(
+            state=track_view_state,
+            videos_metadata=videos_metadata,
+            enable_filter_track_by_date=enable_filter_track_by_date,
+        )
+        previous_frame = SwitchToPrevious(
+            track_view_state, videos_metadata, create_default_filter
+        )
+        next_frame = SwitchToNext(
+            track_view_state, videos_metadata, create_default_filter
+        )
+        switch_event = SwitchToEvent(
+            event_repository=event_repository,
+            track_view_state=track_view_state,
+            section_state=section_state,
+            create_default_filter=create_default_filter,
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -419,8 +445,10 @@ class ApplicationStarter:
             start_new_project,
             project_updater,
             load_track_files,
+            enable_filter_track_by_date,
             previous_frame,
             next_frame,
+            switch_event,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -460,9 +488,6 @@ class ApplicationStarter:
         )
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
-        )
-        application.track_view_state.filter_element.register(
-            dummy_viewmodel.notify_filter_element_change
         )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel

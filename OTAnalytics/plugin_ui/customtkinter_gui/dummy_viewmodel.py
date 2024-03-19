@@ -137,6 +137,7 @@ FROM_SECTION = "from_section"
 OTFLOW = "otflow"
 MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
+MISSING_VIDEO_CONTROL_FRAME_MESSAGE = "video control frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
@@ -222,6 +223,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
+        self._update_enabled_video_control_buttons()
 
     def _update_enabled_general_buttons(self) -> None:
         frames = self._get_frames()
@@ -303,6 +305,14 @@ class DummyViewModel(
             multiple_flows_enabled
         )
 
+    def _update_enabled_video_control_buttons(self) -> None:
+        if self._frame_video_control is None:
+            raise MissingInjectedInstanceError(MISSING_VIDEO_CONTROL_FRAME_MESSAGE)
+        action_running = self._application.action_state.action_running.get()
+        videos_exist = len(self._application.get_all_videos()) > 0
+        general_activated = not action_running and videos_exist
+        self._frame_video_control.set_enabled_general_buttons(general_activated)
+
     def _on_section_changed(self, section: SectionId) -> None:
         self._refresh_sections_in_ui()
 
@@ -335,6 +345,7 @@ class DummyViewModel(
         self._frame_filter.update_date_range(
             {"start_date": start_date, "end_date": end_date}
         )
+        self.__enable_filter_track_by_date_button()
 
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         self.notify_files()
@@ -1368,6 +1379,12 @@ class DummyViewModel(
     def previous_second(self) -> None:
         self._application.previous_second()
 
+    def next_event(self) -> None:
+        self._application.next_event()
+
+    def previous_event(self) -> None:
+        self._application.previous_event()
+
     def validate_date(self, date: str) -> bool:
         return any(
             [validate_date(date, date_format) for date_format in SUPPORTED_FORMATS]
@@ -1447,9 +1464,11 @@ class DummyViewModel(
     def enable_filter_track_by_date(self) -> None:
         self._application.enable_filter_track_by_date()
 
+        self.__enable_filter_track_by_date_button()
+
+    def __enable_filter_track_by_date_button(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
-
         self._frame_filter.enable_filter_by_date_button()
         current_date_range = (
             self._application.track_view_state.filter_element.get().date_range
@@ -1620,15 +1639,3 @@ class DummyViewModel(
 
     def set_video_control_frame(self, frame: AbstractFrame) -> None:
         self._frame_video_control = frame
-        self.notify_filter_element_change(
-            self._application.track_view_state.filter_element.get()
-        )
-
-    def notify_filter_element_change(self, filter_element: FilterElement) -> None:
-        if not self._frame_video_control:
-            raise MissingInjectedInstanceError("Frame video control missing")
-        filter_element_is_set = (
-            filter_element.date_range.start_date is not None
-            and filter_element.date_range.end_date is not None
-        )
-        self._frame_video_control.set_enabled_general_buttons(filter_element_is_set)
