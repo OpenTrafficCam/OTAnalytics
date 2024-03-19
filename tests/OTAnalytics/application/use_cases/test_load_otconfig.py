@@ -63,6 +63,7 @@ class TestLoadOtconfig:
         observer.assert_called_once_with(
             ConfigurationFile(file, deserialization_result)
         )
+        clear_repositories.assert_called_once()
 
     def test_load_error(self, otconfig: OtConfig) -> None:
         clear_repositories = Mock()
