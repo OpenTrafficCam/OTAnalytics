@@ -34,7 +34,9 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.track_repository import TrackRepositoryEvent
+from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_repository import TrackRepository, TrackRepositoryEvent
+from OTAnalytics.plugin_parser.streaming_parser import StreamTrackParser
 
 
 class SectionsFileDoesNotExist(Exception):
@@ -257,3 +259,97 @@ class OTAnalyticsCli:
                 output_format="CSV",
             )
             self._export_counts.export(specification=counting_specification)
+
+
+class OTAnalyticsStreamCli(OTAnalyticsCli):
+    def __init__(
+        self,
+        run_config: RunConfiguration,
+        track_parser: StreamTrackParser,
+        track_repository: TrackRepository,
+        event_repository: EventRepository,
+        add_section: AddSection,
+        get_all_sections: GetAllSections,
+        add_flow: AddFlow,
+        create_events: CreateEvents,
+        export_counts: ExportCounts,
+        provide_eventlist_exporter: EventListExporterProvider,
+        apply_cli_cuts: ApplyCliCuts,
+        add_all_tracks: AddAllTracks,
+        get_all_track_ids: GetAllTrackIds,
+        clear_all_tracks: ClearAllTracks,
+        tracks_metadata: TracksMetadata,
+        videos_metadata: VideosMetadata,
+        # progressbar: ProgressbarBuilder,
+    ) -> None:
+        # TODO code duplication, init does not mach supertype
+        # TODO since StreamTrackParser is not a TrackParser :(
+        self._validate_cli_args(run_config)
+        self._run_config = run_config
+
+        self._stream_track_parser = track_parser
+        self._track_repository = track_repository
+        self._event_repository = event_repository
+        self._add_section = add_section
+        self._get_all_sections = get_all_sections
+        self._add_flow = add_flow
+        self._create_events = create_events
+        self._export_counts = export_counts
+        self._provide_eventlist_exporter = provide_eventlist_exporter
+        self._apply_cli_cuts = apply_cli_cuts
+        self._add_all_tracks = add_all_tracks
+        self._get_all_track_ids = get_all_track_ids
+        self._clear_all_tracks = clear_all_tracks
+        self._tracks_metadata = tracks_metadata
+        self._videos_metadata = videos_metadata
+        # self._progressbar = progressbar
+
+    def _parse_tracks(self, track_files: list[Path]) -> None:
+        raise NotImplementedError(
+            "_parse_tracks is not implemented, "
+            + "_parse_track_stream should be used instead."
+        )
+
+    def _parse_track_stream(self, track_files: set[Path]) -> Iterable[TrackDataset]:
+        self._stream_track_parser.register_tracks_metadata(self._tracks_metadata)
+        self._stream_track_parser.register_videos_metadata(self._videos_metadata)
+
+        return self._stream_track_parser.parse(track_files)
+
+    def _run_analysis(
+        self, ottrk_files: set[Path], sections: Iterable[Section], flows: Iterable[Flow]
+    ) -> None:
+        """Run analysis."""
+        self._clear_all_tracks()
+        self._event_repository.clear()
+        self._add_sections(sections)
+        self._add_flows(flows)
+
+        track_stream = self._parse_track_stream(ottrk_files)
+
+        cnt = 0
+        for track_ds in track_stream:
+            track_ds.track_ids
+            cnt += 1
+
+            self._track_repository.add_all(track_ds)
+
+            self._track_repository.clear()
+
+        print("Tracks: ", cnt)
+
+        return
+
+        # self._apply_cli_cuts.apply(
+        #    self._get_all_sections(), preserve_cutting_sections=False
+        # )
+
+        logger().info("Create event list ...")
+        self._create_events()
+        logger().info("Event list created.")
+
+        save_path = self._run_config.save_dir / self._run_config.save_name
+        if self._run_config.do_events:
+            self._export_events(sections, save_path)
+        if self._run_config.do_counting:
+            self._do_export_counts(save_path)

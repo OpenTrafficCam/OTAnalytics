@@ -208,7 +208,7 @@ class PythonStreamDetectionParser(StreamDetectionParser):
 
 class StreamTrackParser(ABC):
     @abstractmethod
-    def parse(self, files: list[Path]) -> Iterator[TrackDataset]:
+    def parse(self, files: set[Path]) -> Iterator[TrackDataset]:
         """
         Parse multiple track files and provide
         the parsed Tracks in form of a lazy stream.
@@ -288,10 +288,10 @@ class StreamOttrkParser(StreamTrackParser):
         for videos_metadata in self._registered_videos_metadata:
             videos_metadata.update(new_video_metadata)
 
-    def parse(self, files: list[Path]) -> Iterator[TrackDataset]:
-        files = self._sort_files(files)
+    def parse(self, files: set[Path]) -> Iterator[TrackDataset]:
+        sorted_files = self._sort_files(files)
         progressbar = self._progressbar(
-            files, unit="files", description="Processed ottrk files: "
+            sorted_files, unit="files", description="Processed ottrk files: "
         )
 
         for ottrk_file in progressbar:
@@ -323,7 +323,7 @@ class StreamOttrkParser(StreamTrackParser):
         # after all files are processed, yield remaining, unfinished tracks
         yield from self._detection_parser.get_remaining_tracks()
 
-    def _sort_files(self, files: list[Path]) -> list[Path]:
+    def _sort_files(self, files: set[Path]) -> list[Path]:
         """
         Sort ottrk files by recorded_start_date in video metadata,
         only considers files with .ottrk extension
@@ -588,7 +588,7 @@ def parse_stream(files: list[Path]) -> None:
     parser.register_tracks_metadata(tracks_metadata)
     parser.register_videos_metadata(videos_metadata)
 
-    res = parser.parse(files)
+    res = parser.parse(set(files))
     [t for t in res]
 
 

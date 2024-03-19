@@ -118,6 +118,7 @@ from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.helpers.time_profiling import log_processing_time
+from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
@@ -151,11 +152,16 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     OtEventListParser,
     OtFlowParser,
+    OttrkFormatFixer,
     OttrkParser,
     OttrkVideoParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_parser.streaming_parser import (
+    PythonStreamDetectionParser,
+    StreamOttrkParser,
+)
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -165,7 +171,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
 )
-from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
+from OTAnalytics.plugin_ui.cli import OTAnalyticsCli, OTAnalyticsStreamCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
@@ -555,6 +561,75 @@ class ApplicationStarter:
             tracks_metadata=TracksMetadata(track_repository),
             videos_metadata=VideosMetadata(),
             progressbar=TqdmBuilder(),
+        ).start()
+
+    def start_stream_cli(self, run_config: RunConfiguration) -> None:
+        track_repository = self._create_track_repository()
+        section_repository = self._create_section_repository()
+        flow_repository = self._create_flow_repository()
+        track_parser = StreamOttrkParser(
+            detection_parser=PythonStreamDetectionParser(
+                track_classification_calculator=ByMaxConfidence(),
+                track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
+            ),
+            format_fixer=OttrkFormatFixer(),
+            progressbar=TqdmBuilder(),
+        )
+        # self._create_track_parser(track_repository)
+        event_repository = self._create_event_repository()
+        add_section = AddSection(section_repository)
+        get_sections_by_id = GetSectionsById(section_repository)
+        add_flow = AddFlow(flow_repository)
+        add_events = AddEvents(event_repository)
+        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+            track_repository
+        )
+        get_all_tracks = GetAllTracks(track_repository)
+        get_all_track_ids = GetAllTrackIds(track_repository)
+        clear_all_events = ClearAllEvents(event_repository)
+        create_events = self._create_use_case_create_events(
+            section_repository.get_all,
+            clear_all_events,
+            get_all_tracks,
+            get_tracks_without_single_detections,
+            add_events,
+            run_config.num_processes,
+        )
+        cut_tracks = self._create_cut_tracks_intersecting_section(
+            GetSectionsById(section_repository),
+            get_all_tracks,
+            AddAllTracks(track_repository),
+            RemoveTracks(track_repository),
+            RemoveSection(section_repository),
+        )
+        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks, track_repository)
+        add_all_tracks = AddAllTracks(track_repository)
+        clear_all_tracks = ClearAllTracks(track_repository)
+        export_counts = self._create_export_counts(
+            event_repository,
+            flow_repository,
+            track_repository,
+            get_sections_by_id,
+            create_events,
+        )
+        OTAnalyticsStreamCli(
+            run_config,
+            track_parser=track_parser,
+            track_repository=track_repository,
+            event_repository=event_repository,
+            get_all_sections=GetAllSections(section_repository),
+            add_section=add_section,
+            create_events=create_events,
+            export_counts=export_counts,
+            provide_eventlist_exporter=provide_available_eventlist_exporter,
+            apply_cli_cuts=apply_cli_cuts,
+            add_all_tracks=add_all_tracks,
+            get_all_track_ids=get_all_track_ids,
+            add_flow=add_flow,
+            clear_all_tracks=clear_all_tracks,
+            tracks_metadata=TracksMetadata(track_repository),
+            videos_metadata=VideosMetadata(),
+            # progressbar=TqdmBuilder(),
         ).start()
 
     def _create_datastore(
