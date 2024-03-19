@@ -68,8 +68,6 @@ class TestCreateDefaultFilterRange:
         enable_filter_track_by_date = Mock(spec=EnableFilterTrackByDate)
         filter_element = create_filter_element(start_date=START_DATE, end_date=END_DATE)
         track_view_state = create_track_view_state(filter_element)
-        derived_filter_element = Mock(spec=FilterElement)
-        filter_element.derive_date.return_value = derived_filter_element
         use_case = CreateDefaultFilterRange(
             track_view_state,
             videos_metadata=videos_metadata,
