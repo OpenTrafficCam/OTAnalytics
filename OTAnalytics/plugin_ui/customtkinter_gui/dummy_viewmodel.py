@@ -356,7 +356,6 @@ class DummyViewModel(
         self._frame_filter.update_date_range(
             {"start_date": start_date, "end_date": end_date}
         )
-        self.__enable_filter_track_by_date_button()
 
     def update_quick_save_button(self, _: Any) -> None:
         if self._button_quick_save_config is None:
