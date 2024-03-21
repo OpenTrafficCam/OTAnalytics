@@ -15,7 +15,6 @@ from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
 )
 from OTAnalytics.application.datastore import DetectionMetadata, TrackParser
-from OTAnalytics.application.parser.cli_parser import CliArguments
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
@@ -74,8 +73,8 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CLASS_SCOOTER,
 )
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
+from tests.utils.builders.run_configuration import NUM_PROCESSES, create_run_config
 
-NUM_PROCESSES = 1
 PYTHON = "PYTHON"
 PANDAS = "PANDAS"
 CURRENT_DATASET_TYPE = PANDAS
@@ -112,7 +111,8 @@ class UseCaseProvider:
 
     @property
     def run_config(self) -> RunConfiguration:
-        cli_args = CliArguments(
+        return create_run_config(
+            flow_parser=self._flow_parser,
             start_cli=True,
             debug=False,
             logfile_overwrite=True,
@@ -121,11 +121,9 @@ class UseCaseProvider:
             otflow_file=str(self._otflow_file),
             save_dir=self._save_dir,
             event_formats=["otevents"],
-            num_processes=NUM_PROCESSES,
             include_classes=list(self._include_classes),
             exclude_classes=list(self._exclude_classes),
         )
-        return RunConfiguration(self._flow_parser, cli_args)
 
     @property
     def sections(self) -> list[Section]:
