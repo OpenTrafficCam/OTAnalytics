@@ -1,6 +1,8 @@
 import bisect
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Generic, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
@@ -565,3 +567,32 @@ class ActionState:
 
     def __init__(self) -> None:
         self.action_running = ObservableProperty[bool](False)
+
+
+@dataclass
+class ConfigurationFile:
+    file: Path
+    content: dict
+
+    @property
+    def is_otconfig(self) -> bool:
+        return self.file_type == "otconfig"
+
+    @property
+    def is_otflow(self) -> bool:
+        return self.file_type == "otflow"
+
+    @property
+    def file_type(self) -> str:
+        if file_type := self.file.suffix:
+            return self.file.suffix[1:]  # remove starting dot
+        else:
+            return file_type
+
+
+class FileState:
+    def __init__(self) -> None:
+        self.last_saved_config = ObservableOptionalProperty[ConfigurationFile]()
+
+    def reset(self) -> None:
+        self.last_saved_config.set(None)

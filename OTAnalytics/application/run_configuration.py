@@ -7,10 +7,10 @@ from OTAnalytics.application.config import (
     DEFAULT_NUM_PROCESSES,
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
-from OTAnalytics.application.datastore import FlowParser
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments
 from OTAnalytics.application.parser.config_parser import OtConfig
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
