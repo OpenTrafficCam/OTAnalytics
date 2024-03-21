@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
-from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.domain.event import Event, EventRepository
@@ -79,41 +78,6 @@ class TrackParser(ABC):
     @abstractmethod
     def parse(self, file: Path) -> TrackParseResult:
         raise NotImplementedError
-
-
-class FlowParser(ABC):
-    @abstractmethod
-    def parse(self, file: Path) -> tuple[Sequence[Section], Sequence[Flow]]:
-        pass
-
-    @abstractmethod
-    def parse_content(
-        self,
-        section_content: list[dict],
-        flow_content: list[dict],
-    ) -> tuple[Sequence[Section], Sequence[Flow]]:
-        pass
-
-    @abstractmethod
-    def parse_section(self, entry: dict) -> Section:
-        pass
-
-    @abstractmethod
-    def serialize(
-        self,
-        sections: Iterable[Section],
-        flows: Iterable[Flow],
-        file: Path,
-    ) -> None:
-        pass
-
-    @abstractmethod
-    def convert(
-        self,
-        sections: Iterable[Section],
-        flows: Iterable[Flow],
-    ) -> dict[str, list[dict]]:
-        pass
 
 
 class EventListParser(ABC):
@@ -216,10 +180,6 @@ class TrackVideoParser(ABC):
         pass
 
 
-class NoSectionsToSave(Exception):
-    pass
-
-
 class Datastore:
     """
     Central element to hold data in the application.
@@ -231,7 +191,6 @@ class Datastore:
         track_file_repository: TrackFileRepository,
         track_parser: TrackParser,
         section_repository: SectionRepository,
-        flow_parser: FlowParser,
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         event_list_parser: EventListParser,
@@ -240,10 +199,8 @@ class Datastore:
         video_parser: VideoParser,
         track_video_parser: TrackVideoParser,
         progressbar: ProgressbarBuilder,
-        config_parser: ConfigParser,
     ) -> None:
         self._track_parser = track_parser
-        self._flow_parser = flow_parser
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
         self._track_video_parser = track_video_parser
@@ -255,7 +212,6 @@ class Datastore:
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
         self._progressbar = progressbar
-        self._config_parser = config_parser
         self.project = Project(name="", start_date=None)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
@@ -278,14 +234,6 @@ class Datastore:
             observer (SectionListObserver): listener to be notified about changes
         """
         self._section_repository.register_sections_observer(observer)
-
-    def load_otconfig(self, file: Path) -> None:
-        self.clear_repositories()
-        config = self._config_parser.parse(file)
-        self.project = config.project
-        self._video_repository.add_all(config.videos)
-        self._section_repository.add_all(config.sections)
-        self._flow_repository.add_all(config.flows)
 
     def clear_repositories(self) -> None:
         self._event_repository.clear()
@@ -340,23 +288,6 @@ class Datastore:
     def delete_all_tracks(self) -> None:
         """Delete all tracks in repository."""
         self._track_repository.clear()
-
-    def save_flow_file(self, file: Path) -> None:
-        """
-        Save the flows and sections from the repositories into a file.
-
-        Args:
-            file (Path): file to save the flows and sections to
-        """
-        if sections := self._section_repository.get_all():
-            flows = self._flow_repository.get_all()
-            self._flow_parser.serialize(
-                sections=sections,
-                flows=flows,
-                file=file,
-            )
-        else:
-            raise NoSectionsToSave()
 
     def get_all_sections(self) -> list[Section]:
         return self._section_repository.get_all()

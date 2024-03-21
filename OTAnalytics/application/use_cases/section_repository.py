@@ -94,6 +94,15 @@ class AddSection:
         return not (section_id in self._section_repository.get_section_ids())
 
 
+class AddAllSections:
+    def __init__(self, add_section: AddSection) -> None:
+        self._add_section = add_section
+
+    def add(self, sections: Iterable[Section]) -> None:
+        for section in sections:
+            self._add_section(section)
+
+
 class ClearAllSections:
     """Clear the section repository.
 

@@ -3,10 +3,12 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.use_cases.flow_repository import (
+    AddAllFlows,
     AddFlow,
     ClearAllFlows,
     FlowAlreadyExists,
     FlowIdAlreadyExists,
+    GetAllFlows,
 )
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
@@ -96,3 +98,27 @@ class TestClearAllFlows:
         clear_all_flows = ClearAllFlows(flow_repository)
         clear_all_flows()
         flow_repository.clear.assert_called_once()
+
+
+class TestGetAllFlows:
+    def test_get(self) -> None:
+        expected_flows = Mock()
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = expected_flows
+        get_all_flows = GetAllFlows(flow_repository)
+        actual_flows = get_all_flows.get()
+        assert actual_flows == expected_flows
+        flow_repository.get_all.assert_called_once()
+
+
+class TestAddAllFlows:
+    def test_add(self, first_flow: Flow, second_flow: Flow) -> None:
+        add_flow = Mock()
+        add_all_flows = AddAllFlows(add_flow)
+
+        add_all_flows.add([first_flow, second_flow])
+
+        assert add_flow.call_args_list == [
+            call(first_flow),
+            call(second_flow),
+        ]

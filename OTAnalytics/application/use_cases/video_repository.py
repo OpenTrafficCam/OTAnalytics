@@ -1,4 +1,6 @@
-from OTAnalytics.domain.video import VideoRepository
+from typing import Iterable
+
+from OTAnalytics.domain.video import Video, VideoRepository
 
 
 class ClearAllVideos:
@@ -14,3 +16,20 @@ class ClearAllVideos:
     def __call__(self) -> None:
         """Clear the video repository."""
         self._video_repository.clear()
+
+
+class AddAllVideos:
+
+    def __init__(self, video_repository: VideoRepository) -> None:
+        self._video_repository = video_repository
+
+    def add(self, videos: Iterable[Video]) -> None:
+        self._video_repository.add_all(videos)
+
+
+class GetAllVideos:
+    def __init__(self, video_repository: VideoRepository) -> None:
+        self._video_repository = video_repository
+
+    def get(self) -> list[Video]:
+        return self._video_repository.get_all()

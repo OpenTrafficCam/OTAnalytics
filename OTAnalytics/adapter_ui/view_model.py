@@ -3,6 +3,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
+from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
+    AbstractButtonQuickSaveConfig,
+)
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
@@ -74,6 +77,13 @@ class ViewModel(ABC):
         pass
 
     @abstractmethod
+    def set_button_quick_save_config(
+        self, button_quick_save_config: AbstractButtonQuickSaveConfig
+    ) -> None:
+
+        raise NotImplementedError
+
+    @abstractmethod
     def load_otconfig(self) -> None:
         pass
 
@@ -127,6 +137,10 @@ class ViewModel(ABC):
 
     @abstractmethod
     def save_configuration(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def quick_save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -350,6 +364,14 @@ class ViewModel(ABC):
 
     @abstractmethod
     def previous_second(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def next_event(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def previous_event(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

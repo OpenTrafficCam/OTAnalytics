@@ -6,6 +6,9 @@ from time import sleep
 from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Any, Iterable, Optional
 
+from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
+    AbstractButtonQuickSaveConfig,
+)
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
@@ -46,10 +49,11 @@ from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
 )
-from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.config import MissingDate
+from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
@@ -57,6 +61,10 @@ from OTAnalytics.application.use_cases.export_events import (
 )
 from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.application.use_cases.quick_save_configuration import (
+    NoExistingFileToSave,
+)
+from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -137,6 +145,7 @@ FROM_SECTION = "from_section"
 OTFLOW = "otflow"
 MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
+MISSING_VIDEO_CONTROL_FRAME_MESSAGE = "video control frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
@@ -177,6 +186,7 @@ class DummyViewModel(
     SectionListObserver,
     FlowListObserver,
 ):
+
     def __init__(
         self,
         application: OTAnalyticsApplication,
@@ -202,11 +212,13 @@ class DummyViewModel(
         self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
+        self._button_quick_save_config: AbstractButtonQuickSaveConfig | None = None
         self._new_section: dict = {}
 
     def notify_videos(self, videos: list[Video]) -> None:
         if self._treeview_videos is None:
             raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
+        self.update_quick_save_button(videos)
         self._treeview_videos.update_items()
         self._update_enabled_buttons()
 
@@ -222,6 +234,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
         self._update_enabled_section_buttons()
         self._update_enabled_flow_buttons()
+        self._update_enabled_video_control_buttons()
 
     def _update_enabled_general_buttons(self) -> None:
         frames = self._get_frames()
@@ -303,6 +316,14 @@ class DummyViewModel(
             multiple_flows_enabled
         )
 
+    def _update_enabled_video_control_buttons(self) -> None:
+        if self._frame_video_control is None:
+            raise MissingInjectedInstanceError(MISSING_VIDEO_CONTROL_FRAME_MESSAGE)
+        action_running = self._application.action_state.action_running.get()
+        videos_exist = len(self._application.get_all_videos()) > 0
+        general_activated = not action_running and videos_exist
+        self._frame_video_control.set_enabled_general_buttons(general_activated)
+
     def _on_section_changed(self, section: SectionId) -> None:
         self._refresh_sections_in_ui()
 
@@ -335,6 +356,18 @@ class DummyViewModel(
         self._frame_filter.update_date_range(
             {"start_date": start_date, "end_date": end_date}
         )
+        self.__enable_filter_track_by_date_button()
+
+    def update_quick_save_button(self, _: Any) -> None:
+        if self._button_quick_save_config is None:
+            raise MissingInjectedInstanceError(AbstractButtonQuickSaveConfig.__name__)
+        try:
+            if self._application.config_has_changed():
+                self._button_quick_save_config.set_state_changed_color()
+            else:
+                self._button_quick_save_config.set_default_color()
+        except NoExistingConfigFound:
+            self._button_quick_save_config.set_default_color()
 
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         self.notify_files()
@@ -353,6 +386,7 @@ class DummyViewModel(
 
     def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
         self._refresh_sections_in_ui()
+        self.update_quick_save_button(section_event)
 
     def _refresh_sections_in_ui(self) -> None:
         if self._treeview_sections is None:
@@ -366,6 +400,7 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self.refresh_items_on_canvas()
         self._treeview_flows.update_items()
+        self.update_quick_save_button(flow_id)
 
     def _notify_action_running_state(self, running: bool) -> None:
         self._update_enabled_buttons()
@@ -379,6 +414,12 @@ class DummyViewModel(
             self._update_selected_sections
         )
         self._application.register_section_changed_observer(self._on_section_changed)
+        self._application.register_section_changed_observer(
+            self.update_quick_save_button
+        )
+        self._application.file_state.last_saved_config.register(
+            self.update_quick_save_button
+        )
 
     def _start_action(self) -> None:
         self._application.action_state.action_running.set(True)
@@ -690,6 +731,10 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_configuration(self) -> None:
+        initial_dir = Path.cwd()
+        if config_file := self._application.file_state.last_saved_config.get():
+            initial_dir = config_file.file.parent
+
         configuration_file = ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
@@ -698,6 +743,7 @@ class DummyViewModel(
             ],
             defaultextension=f".{OTFLOW}",
             initialfile=f"flows.{OTFLOW}",
+            initialdir=initial_dir,
         )
         if not configuration_file.stem:
             return
@@ -707,6 +753,12 @@ class DummyViewModel(
             self._save_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to save has unknown file extension")
+
+    def quick_save_configuration(self) -> None:
+        try:
+            self._application.quick_save_configuration()
+        except NoExistingFileToSave:
+            self.save_configuration()
 
     def _save_otflow(self, otflow_file: Path) -> None:
         logger().info(f"Sections file to save: {otflow_file}")
@@ -1368,6 +1420,12 @@ class DummyViewModel(
     def previous_second(self) -> None:
         self._application.previous_second()
 
+    def next_event(self) -> None:
+        self._application.next_event()
+
+    def previous_event(self) -> None:
+        self._application.previous_event()
+
     def validate_date(self, date: str) -> bool:
         return any(
             [validate_date(date, date_format) for date_format in SUPPORTED_FORMATS]
@@ -1447,9 +1505,11 @@ class DummyViewModel(
     def enable_filter_track_by_date(self) -> None:
         self._application.enable_filter_track_by_date()
 
+        self.__enable_filter_track_by_date_button()
+
+    def __enable_filter_track_by_date_button(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
-
         self._frame_filter.enable_filter_by_date_button()
         current_date_range = (
             self._application.track_view_state.filter_element.get().date_range
@@ -1620,15 +1680,8 @@ class DummyViewModel(
 
     def set_video_control_frame(self, frame: AbstractFrame) -> None:
         self._frame_video_control = frame
-        self.notify_filter_element_change(
-            self._application.track_view_state.filter_element.get()
-        )
 
-    def notify_filter_element_change(self, filter_element: FilterElement) -> None:
-        if not self._frame_video_control:
-            raise MissingInjectedInstanceError("Frame video control missing")
-        filter_element_is_set = (
-            filter_element.date_range.start_date is not None
-            and filter_element.date_range.end_date is not None
-        )
-        self._frame_video_control.set_enabled_general_buttons(filter_element_is_set)
+    def set_button_quick_save_config(
+        self, button_quick_save_config: AbstractButtonQuickSaveConfig
+    ) -> None:
+        self._button_quick_save_config = button_quick_save_config
