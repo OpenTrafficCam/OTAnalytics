@@ -1513,11 +1513,10 @@ class DummyViewModel(
         current_date_range = (
             self._application.track_view_state.filter_element.get().date_range
         )
+        self._frame_filter.enable_filter_by_date_button()
         if current_date_range != DateRange(None, None):
-            self._frame_filter.enable_filter_by_date_button()
             self._frame_filter.set_active_color_on_filter_by_date_button()
         else:
-            self._frame_filter.disable_filter_by_date_button()
             self._frame_filter.set_inactive_color_on_filter_by_date_button()
 
     def disable_filter_track_by_date(self) -> None:

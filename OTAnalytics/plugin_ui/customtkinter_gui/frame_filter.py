@@ -246,6 +246,7 @@ class FilterTracksByDateFilterButton(FilterButton):
         self.button.configure(state=STATE_NORMAL)
 
     def disable_button(self) -> None:
+        self._check_var.set(0)
         self.button.configure(state=STATE_DISABLED, fg_color=COLOR_GRAY)
 
 
