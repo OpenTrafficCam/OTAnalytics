@@ -73,7 +73,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CLASS_SCOOTER,
 )
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
-from tests.conftest import NUM_PROCESSES, create_run_config
+from tests.utils.builders.run_configuration import NUM_PROCESSES, create_run_config
 
 PYTHON = "PYTHON"
 PANDAS = "PANDAS"

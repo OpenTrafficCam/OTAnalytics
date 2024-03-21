@@ -5,7 +5,7 @@ import pytest
 from OTAnalytics.application.datastore import FlowParser
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
-from tests.conftest import create_run_config
+from tests.utils.builders.run_configuration import create_run_config
 
 
 def to_cli_path(test_data_dir: Path, input_file: str) -> str:
