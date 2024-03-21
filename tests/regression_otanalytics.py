@@ -5,6 +5,7 @@ import pytest
 from OTAnalytics.application.datastore import FlowParser
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
+from tests.utils.assertions import assert_two_files_equal_sorted
 from tests.utils.builders.run_configuration import create_run_config
 
 
@@ -132,11 +133,7 @@ class TestRegressionCompleteApplication:
         expected_events_file = Path(test_data_dir / save_name).with_suffix(
             ".events.csv"
         )
-        with open(actual_events_file) as actual:
-            actual_lines = sorted(actual.readlines())
-            with open(expected_events_file) as expected:
-                expected_lines = sorted(expected.readlines())
-                assert actual_lines == expected_lines
+        assert_two_files_equal_sorted(actual_events_file, expected_events_file)
 
         actual_counts_file = (
             Path(test_data_tmp_dir / save_name)
@@ -148,8 +145,4 @@ class TestRegressionCompleteApplication:
             .with_suffix(f".counts_{count_interval}min.csv")
             .absolute()
         )
-        with open(actual_counts_file, mode="r") as actual:
-            actual_lines = sorted(actual.readlines())
-            with open(expected_counts_file, mode="r") as expected:
-                expected_lines = sorted(expected.readlines())
-                assert actual_lines == expected_lines
+        assert_two_files_equal_sorted(actual_counts_file, expected_counts_file)

@@ -23,7 +23,6 @@ from OTAnalytics.domain.section import (
     SectionId,
 )
 from OTAnalytics.domain.track import (
-    Detection,
     Track,
     TrackClassificationCalculator,
     TrackId,
@@ -141,9 +140,9 @@ class TestVersion_1_1_To_1_2:
             detection, False, False
         )
         expected_detection = serialized_detection.copy()
-        serialized_detection[
-            ottrk_dataformat.OCCURRENCE
-        ] = detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
+        serialized_detection[ottrk_dataformat.OCCURRENCE] = (
+            detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
+        )
 
         fixer = Otdet_Version_1_0_To_1_2()
 
@@ -293,9 +292,9 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         parser: PythonDetectionParser,
     ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
@@ -326,9 +325,9 @@ class TestPythonDetectionParser:
         parser: PythonDetectionParser,
     ) -> None:
         mocked_classificator.calculate.return_value = "car"
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
@@ -350,9 +349,9 @@ class TestPythonDetectionParser:
         mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         deserialized_detections = (
             track_builder_setup_with_sample_data.build_detections()
         )
@@ -399,9 +398,9 @@ class TestPythonDetectionParser:
             mocked_track_repository,
             track_length_limit,
         )
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
 
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
@@ -409,19 +408,6 @@ class TestPythonDetectionParser:
         result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
 
         assert len(result_sorted_input) == 0
-
-    def assert_detection_equal(self, d1: Detection, d2: Detection) -> None:
-        assert d1.classification == d2.classification
-        assert d1.confidence == d2.confidence
-        assert d1.x == d2.x
-        assert d1.y == d2.y
-        assert d1.w == d2.w
-        assert d1.h == d2.h
-        assert d1.frame == d2.frame
-        assert d1.occurrence == d2.occurrence
-        assert d1.video_name == d2.video_name
-        assert d1.interpolated_detection == d2.interpolated_detection
-        assert d1.track_id == d2.track_id
 
 
 class TestOtFlowParser:
