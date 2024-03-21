@@ -1,5 +1,5 @@
-from OTAnalytics.application.datastore import FlowParser
 from OTAnalytics.application.parser.cli_parser import CliArguments
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 
 NUM_PROCESSES = 1

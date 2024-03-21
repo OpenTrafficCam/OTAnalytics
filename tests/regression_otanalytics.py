@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from OTAnalytics.application.datastore import FlowParser
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
 from tests.utils.assertions import assert_two_files_equal_sorted
