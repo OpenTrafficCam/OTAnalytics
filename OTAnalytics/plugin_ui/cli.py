@@ -358,5 +358,3 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
             self._export_events(sections, save_path)
         if self._run_config.do_counting:
             self._do_export_counts(save_path)
-        if self._run_config.do_export_tracks:
-            self._do_export_tracks(save_path)
