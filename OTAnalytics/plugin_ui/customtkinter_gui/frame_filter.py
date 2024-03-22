@@ -236,9 +236,11 @@ class FilterTracksByDateFilterButton(FilterButton):
         )
 
     def _enable_filter(self) -> None:
+        # self._check_var.set(1)
         self._viewmodel.enable_filter_track_by_date()
 
     def _disable_filter(self) -> None:
+        # self._check_var.set(0)
         self._viewmodel.disable_filter_track_by_date()
 
     def enable_button(self) -> None:

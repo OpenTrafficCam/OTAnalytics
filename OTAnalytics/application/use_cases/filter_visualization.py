@@ -24,6 +24,7 @@ class EnableFilterTrackByDate:
             )
         )
         self._track_view_state.filter_element.set(restored_filter_element)
+        self._track_view_state.filter_date_active.set(True)
 
 
 class CreateDefaultFilterRange:

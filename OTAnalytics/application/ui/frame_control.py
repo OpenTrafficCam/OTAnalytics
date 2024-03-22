@@ -25,13 +25,13 @@ class SwitchTo(ABC):
         self._create_default_filter = create_default_filter
 
     def switch_second(self) -> None:
-        # self._create_default_filter.create()
+        self._create_default_filter.create()
         skip_time = self._state.skip_time.get()
         current_skip = timedelta(seconds=skip_time.seconds)
         self._switch_time(current_skip)
 
     def switch_frame(self) -> None:
-        # self._create_default_filter.create()
+        self._create_default_filter.create()
         if current_skip := self._get_current_skip_frames():
             self._switch_time(current_skip)
 
@@ -118,7 +118,7 @@ class SwitchToEvent:
         self._event_types = event_types
 
     def switch_to_previous(self) -> None:
-        # self._create_default_filter.create()
+        self._create_default_filter.create()
         if end_date := self.__current_filter_element.date_range.end_date:
             if event := self._event_repository.get_previous_before(
                 date=end_date,

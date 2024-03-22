@@ -1502,6 +1502,7 @@ class DummyViewModel(
         return filter_element.date_range
 
     def enable_filter_track_by_date(self) -> None:
+        self._application.track_view_state.filter_date_active.set(True)
         self._application.enable_filter_track_by_date()
 
         self.__enable_filter_track_by_date_button()
@@ -1519,6 +1520,7 @@ class DummyViewModel(
             self._frame_filter.set_inactive_color_on_filter_by_date_button()
 
     def disable_filter_track_by_date(self) -> None:
+        self._application.track_view_state.filter_date_active.set(False)
         self._application.disable_filter_track_by_date()
 
         if self._frame_filter is None:
