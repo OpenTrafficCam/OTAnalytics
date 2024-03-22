@@ -17,7 +17,7 @@ jobs:
         python-version: ["3.11"]
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/OTAnalytics-EXAMPLE-TEST-DISTRIBUTION
+      url: https://test.pypi.org/p/OTAnalytics-EXAMPLE-TEST-DISTRIBUTION
     permissions:
       actions: read
       contents: read
@@ -46,3 +46,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          verbose: true
