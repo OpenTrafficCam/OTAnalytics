@@ -620,9 +620,7 @@ class ApplicationStarter:
         get_all_tracks = GetAllTracks(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
-        section_provider = FilterOutCuttingSections(
-            MissingEventsSectionProvider(section_repository, event_repository)
-        )
+        section_provider = FilterOutCuttingSections(section_repository.get_all)
         create_events = self._create_use_case_create_events(
             section_provider,
             # use section provider instead of section_repository.get_all
