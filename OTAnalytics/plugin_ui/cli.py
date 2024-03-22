@@ -276,6 +276,7 @@ class OTAnalyticsCli:
 
 
 class OTAnalyticsStreamCli(OTAnalyticsCli):
+
     def __init__(
         self,
         run_config: RunConfiguration,
@@ -294,7 +295,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         clear_all_tracks: ClearAllTracks,
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
-        # progressbar: ProgressbarBuilder,
+        export_tracks: ExportTracks,
     ) -> None:
         # TODO code duplication, init does not mach supertype
         # TODO since StreamTrackParser is not a TrackParser :(
@@ -316,7 +317,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         self._clear_all_tracks = clear_all_tracks
         self._tracks_metadata = tracks_metadata
         self._videos_metadata = videos_metadata
-        # self._progressbar = progressbar
+        self._export_tracks = export_tracks
 
     def _parse_tracks(self, track_files: list[Path]) -> None:
         raise NotImplementedError(
@@ -340,30 +341,22 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         self._add_flows(flows)
 
         track_stream = self._parse_track_stream(ottrk_files)
-
-        cnt = 0
         for track_ds in track_stream:
-            track_ds.track_ids
-            cnt += 1
-
             self._track_repository.add_all(track_ds)
 
+            self._apply_cli_cuts.apply(
+                self._get_all_sections(), preserve_cutting_sections=True
+            )
+            # logger().info("Create event list ...")  # TODO too much logging in loop?
+            self._create_events()
+            # logger().info("Event list created.")
+
             self._track_repository.clear()
-
-        print("Tracks: ", cnt)
-
-        return
-
-        # self._apply_cli_cuts.apply(
-        #    self._get_all_sections(), preserve_cutting_sections=False
-        # )
-
-        logger().info("Create event list ...")
-        self._create_events()
-        logger().info("Event list created.")
 
         save_path = self._run_config.save_dir / self._run_config.save_name
         if self._run_config.do_events:
             self._export_events(sections, save_path)
         if self._run_config.do_counting:
             self._do_export_counts(save_path)
+        if self._run_config.do_export_tracks:
+            self._do_export_tracks(save_path)

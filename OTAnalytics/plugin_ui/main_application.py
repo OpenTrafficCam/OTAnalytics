@@ -194,7 +194,8 @@ class ApplicationStarter:
         )
         if run_config.start_cli:
             try:
-                self.start_cli(run_config)
+                # self.start_cli(run_config)
+                self.start_stream_cli(run_config)
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
@@ -543,8 +544,13 @@ class ApplicationStarter:
         get_all_tracks = GetAllTracks(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
+        section_provider = FilterOutCuttingSections(
+            MissingEventsSectionProvider(section_repository, event_repository)
+        )
         create_events = self._create_use_case_create_events(
-            section_repository.get_all,
+            section_provider,
+            # use section provider instead of section_repository.get_all
+            # section_repository.get_all,
             clear_all_events,
             get_all_tracks,
             get_tracks_without_single_detections,
@@ -590,6 +596,7 @@ class ApplicationStarter:
         ).start()
 
     def start_stream_cli(self, run_config: RunConfiguration) -> None:
+        # TODO remove code duplication with start_cli
         track_repository = self._create_track_repository(run_config)
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
@@ -613,9 +620,16 @@ class ApplicationStarter:
         get_all_tracks = GetAllTracks(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
+        section_provider = FilterOutCuttingSections(
+            MissingEventsSectionProvider(section_repository, event_repository)
+        )
         create_events = self._create_use_case_create_events(
-            section_repository.get_all,
+            section_provider,
+            # use section provider instead of section_repository.get_all
             clear_all_events,
+            # TODO in streaming version this clear_all_events may be harmful,
+            # TODO but seems to be unused in CreateEvents use case
+            # TODO -> why ist it a parameter?
             get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
@@ -638,6 +652,7 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
         )
+        export_tracks = CsvTrackExport(track_repository)
         OTAnalyticsStreamCli(
             run_config,
             track_parser=track_parser,
@@ -655,7 +670,7 @@ class ApplicationStarter:
             clear_all_tracks=clear_all_tracks,
             tracks_metadata=TracksMetadata(track_repository),
             videos_metadata=VideosMetadata(),
-            # progressbar=TqdmBuilder(),
+            export_tracks=export_tracks,
         ).start()
 
     def _create_datastore(
