@@ -186,7 +186,6 @@ class UseCaseProvider:
         return self._starter._create_export_counts(
             self._event_repository,
             self._flow_repository,
-            self._track_repository,
             GetSectionsById(self._section_repository),
             self.get_create_events(),
         )

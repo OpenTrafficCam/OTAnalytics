@@ -367,7 +367,6 @@ class ApplicationStarter:
         export_counts = self._create_export_counts(
             event_repository,
             flow_repository,
-            track_repository,
             get_sections_bv_id,
             create_events,
         )
@@ -570,7 +569,6 @@ class ApplicationStarter:
         export_counts = self._create_export_counts(
             event_repository,
             flow_repository,
-            track_repository,
             get_sections_by_id,
             create_events,
         )
@@ -646,7 +644,6 @@ class ApplicationStarter:
         export_counts = self._create_export_counts(
             event_repository,
             flow_repository,
-            track_repository,
             get_sections_by_id,
             create_events,
         )
@@ -856,7 +853,6 @@ class ApplicationStarter:
     def _create_export_counts(
         event_repository: EventRepository,
         flow_repository: FlowRepository,
-        track_repository: TrackRepository,
         get_sections_by_id: GetSectionsById,
         create_events: CreateEvents,
     ) -> ExportCounts:
@@ -866,7 +862,7 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
-            SimpleTaggerFactory(track_repository),
+            SimpleTaggerFactory(),
             FillZerosExporterFactory(
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),

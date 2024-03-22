@@ -16,8 +16,6 @@ from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import TrackId
-from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 
 LEVEL_FROM_SECTION = "from section"
@@ -324,6 +322,7 @@ class RoadUserAssignment:
     """
 
     road_user: str
+    road_user_type: str
     assignment: Flow
     events: EventPair
 
@@ -352,9 +351,6 @@ class ModeTagger(Tagger):
     Split RoadUserAssignments by mode.
     """
 
-    def __init__(self, track_repository: TrackRepository) -> None:
-        self._track_repository = track_repository
-
     def create_tag(self, assignment: RoadUserAssignment) -> Tag:
         """
         Group name for classification of a track or UNCLASSIFIED.
@@ -365,8 +361,7 @@ class ModeTagger(Tagger):
         Returns:
             Tag: tag of the assignment
         """
-        track = self._track_repository.get_for(TrackId(assignment.road_user))
-        tag = track.classification if track else UNCLASSIFIED
+        tag = assignment.road_user_type
         return create_mode_tag(tag)
 
 
@@ -610,16 +605,16 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             dict[tuple[SectionId, SectionId], list[Flow]]: flows grouped by start and
             end section
         """
-        flows_by_start_and_end: dict[
-            tuple[SectionId, SectionId], list[Flow]
-        ] = defaultdict(list)
+        flows_by_start_and_end: dict[tuple[SectionId, SectionId], list[Flow]] = (
+            defaultdict(list)
+        )
         for current in flows:
             flows_by_start_and_end[(current.start, current.end)].append(current)
         return flows_by_start_and_end
 
     def __group_events_by_road_user(
         self, events: Iterable[Event]
-    ) -> dict[str, list[Event]]:
+    ) -> dict[tuple[str, str], list[Event]]:
         """
         Group events by road user.
 
@@ -629,17 +624,19 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         Returns:
             dict[int, list[Event]]: events grouped by user
         """
-        events_by_road_user: dict[str, list[Event]] = defaultdict(list)
+        events_by_road_user: dict[tuple[str, str], list[Event]] = defaultdict(list)
         sorted_events = sorted(events, key=lambda event: event.occurrence)
         for event in sorted_events:
             if event.section_id:
-                events_by_road_user[event.road_user_id].append(event)
+                events_by_road_user[(event.road_user_id, event.road_user_type)].append(
+                    event
+                )
         return events_by_road_user
 
     def __assign_user_to_flow(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        events_by_road_user: dict[str, list[Event]],
+        events_by_road_user: dict[tuple[str, str], list[Event]],
     ) -> RoadUserAssignments:
         """
         Assign each user to exactly one flow.
@@ -658,7 +655,8 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
                 current = self.__select_flow(candidate_flows)
                 assignments.append(
                     RoadUserAssignment(
-                        road_user=road_user,
+                        road_user=road_user[0],
+                        road_user_type=road_user[1],
                         assignment=current.flow,
                         events=current.candidate,
                     )
@@ -796,9 +794,6 @@ class SimpleTaggerFactory(TaggerFactory):
     Factory to create Tagger for a given CountingSpecification.
     """
 
-    def __init__(self, track_repository: TrackRepository) -> None:
-        self._track_repository = track_repository
-
     def create_tagger(self, specification: CountingSpecificationDto) -> Tagger:
         """
         Create a tagger for the given CountingSpecificationDto.
@@ -809,7 +804,7 @@ class SimpleTaggerFactory(TaggerFactory):
         Returns:
             Tagger: Tagger specified by the given CountingSpecificationDto
         """
-        mode_tagger = ModeTagger(self._track_repository)
+        mode_tagger = ModeTagger()
         time_tagger = TimeslotTagger(
             timedelta(minutes=specification.interval_in_minutes)
         )
