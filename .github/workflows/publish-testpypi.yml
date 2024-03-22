@@ -17,7 +17,7 @@ jobs:
         python-version: ["3.11"]
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/OTAnalytics-EXAMPLE-TEST-DISTRIBUTION-RSENG
+      url: https://test.pypi.org/project/OTAnalytics-EXAMPLE-TEST-DISTRIBUTION
     permissions:
       actions: read
       contents: read
