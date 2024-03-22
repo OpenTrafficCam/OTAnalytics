@@ -35,6 +35,9 @@ files = ["requirements.txt"]
 [tool.hatch.version]
 path = "OTAnalytics/version.py"
 
+[tool.hatch.build.targets.wheel]
+packages = ["OTAnalytics"]
+
 [tool.black]
 line-length = 88
 
