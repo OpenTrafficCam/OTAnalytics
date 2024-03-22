@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-requirements-txt"]
 build-backend = "hatchling.build"
 
 [project]
-name = "OTAnalytics"
+name = "OTAnalytics-EXAMPLE-DISTRIBUTION-RSENG"
 dynamic = ["dependencies", "version"]
 authors = [
   { name="Martin Bärwolff", email="martin.baerwolff@platomo.com" },
