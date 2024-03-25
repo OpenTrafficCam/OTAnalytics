@@ -45,7 +45,7 @@ jobs:
               pip install -r requirements-dev.txt
           fi
       - name: Build release assets
-        run: python ./platomo-build/build.py --package_version 0.0.1
+        run: python ./platomo-build/build.py --package_version 0.1.1
       - name: Remove File
         uses: JesseTG/rm@v1.0.3
         with:
