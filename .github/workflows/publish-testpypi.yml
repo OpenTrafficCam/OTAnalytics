@@ -45,7 +45,7 @@ jobs:
               pip install -r requirements-dev.txt
           fi
       - name: Build release assets
-        run: python ./platomo-build/build.py --package_version 0.1.1
+        run: python ./platomo-build/build.py --package_version 0.0.0.0.5-test-1
       - name: Remove File
         uses: JesseTG/rm@v1.0.3
         with:
@@ -64,6 +64,8 @@ jobs:
           --wheel
           --outdir dist/
           .
+      - name: Show dist content
+        run: ls -ahl dist/
       - name: Publish package distributions to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
