@@ -128,7 +128,7 @@ class SwitchToEvent:
                 self.__switch_to(event)
 
     def switch_to_next(self) -> None:
-        # self._create_default_filter.create()
+        self._create_default_filter.create()
         if end_date := self.__current_filter_element.date_range.end_date:
             if event := self._event_repository.get_next_after(
                 date=end_date,
