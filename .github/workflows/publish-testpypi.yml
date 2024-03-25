@@ -1,7 +1,7 @@
 ---
 # This workflow will install Python dependencies, run tests
 
-name: Run CI/CD
+name: Publish on TestPyPI
 
 on: push
 
