@@ -92,7 +92,7 @@ class TestSwitchToNextFrame:
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
         videos_metadata.get_metadata_for.assert_called_with(END_DATE)
-        create_default_filter.create.assert_not_called()
+        create_default_filter.create.assert_called_once()
 
 
 class TestSwitchToPreviousFrame:
@@ -118,7 +118,7 @@ class TestSwitchToPreviousFrame:
         filter_element.derive_date.assert_called_with(new_date_range)
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
         videos_metadata.get_metadata_for.assert_called_with(END_DATE)
-        create_default_filter.create.assert_not_called()
+        create_default_filter.create.assert_called_once()
 
 
 class TestSwitchToEvent:
@@ -151,7 +151,7 @@ class TestSwitchToEvent:
             event_types=(EventType.SECTION_ENTER, EventType.SECTION_LEAVE),
         )
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
-        create_default_filter.create.assert_not_called()
+        create_default_filter.create.assert_called_once()
 
     def test_switch_to_previous_without_next_event(
         self,
@@ -179,7 +179,7 @@ class TestSwitchToEvent:
             event_types=(EventType.SECTION_ENTER, EventType.SECTION_LEAVE),
         )
         track_view_state.filter_element.set.assert_not_called()
-        create_default_filter.create.assert_not_called()
+        create_default_filter.create.assert_called_once()
 
     def test_switch_to_next(
         self,
@@ -210,7 +210,7 @@ class TestSwitchToEvent:
             event_types=(EventType.SECTION_ENTER, EventType.SECTION_LEAVE),
         )
         track_view_state.filter_element.set.assert_called_with(derived_filter_element)
-        create_default_filter.create.assert_not_called()
+        create_default_filter.create.assert_called_once()
 
     def test_switch_to_next_without_next_event(
         self,
@@ -238,4 +238,4 @@ class TestSwitchToEvent:
             event_types=(EventType.SECTION_ENTER, EventType.SECTION_LEAVE),
         )
         track_view_state.filter_element.set.assert_not_called()
-        create_default_filter.create.assert_not_called()
+        create_default_filter.create.assert_called_once()
