@@ -50,7 +50,7 @@ jobs:
         run: ls -ahl dist/
       - name: Display version info
         run: cat OTAnalytics/version.py
-      - name: Display version info
+      - name: Patch version
         run: echo __version__ = \"0.0.0.0.5.a1\" > OTAnalytics/version.py
       - name: Remove File
         uses: JesseTG/rm@v1.0.3
