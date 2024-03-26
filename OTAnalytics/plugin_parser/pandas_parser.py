@@ -76,8 +76,8 @@ class PandasDetectionParser(DetectionParser):
         )
         tracks_by_size = data.groupby(by=[track.TRACK_ID]).size().reset_index()
         track_ids_to_remain = tracks_by_size.loc[
-            (tracks_by_size[0] >= self._track_length_limit.lower_bound)
-            & (tracks_by_size[0] <= self._track_length_limit.upper_bound),
+            (tracks_by_size[0] <= self._track_length_limit.lower_bound)
+            | (tracks_by_size[0] >= self._track_length_limit.upper_bound),
             track.TRACK_ID,
         ]
         all_track_ids = tracks_by_size[track.TRACK_ID].unique()

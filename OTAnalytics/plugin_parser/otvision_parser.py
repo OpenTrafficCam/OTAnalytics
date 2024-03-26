@@ -358,10 +358,8 @@ class PythonDetectionParser(DetectionParser):
             existing_detections = self._get_existing_detections(track_id)
             all_detections = existing_detections + detections
             track_length = len(all_detections)
-            if (
-                self._track_length_limit.lower_bound
-                <= track_length
-                <= self._track_length_limit.upper_bound
+            if (self._track_length_limit.lower_bound >= track_length) | (
+                track_length >= self._track_length_limit.upper_bound
             ):
                 sort_dets_by_occurrence = sorted(
                     all_detections, key=lambda det: det.occurrence
