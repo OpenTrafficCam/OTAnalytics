@@ -356,7 +356,6 @@ class DummyViewModel(
         self._frame_filter.update_date_range(
             {"start_date": start_date, "end_date": end_date}
         )
-        self.__enable_filter_track_by_date_button()
 
     def update_quick_save_button(self, _: Any) -> None:
         if self._button_quick_save_config is None:
@@ -1502,6 +1501,12 @@ class DummyViewModel(
         filter_element = self._application.track_view_state.filter_element.get()
         return filter_element.date_range
 
+    def change_filter_date_active(self, current: bool) -> None:
+        if current:
+            self.__enable_filter_track_by_date_button()
+        else:
+            self.__disable_filter_track_by_date_button()
+
     def enable_filter_track_by_date(self) -> None:
         self._application.enable_filter_track_by_date()
 
@@ -1510,10 +1515,11 @@ class DummyViewModel(
     def __enable_filter_track_by_date_button(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
-        self._frame_filter.enable_filter_by_date_button()
         current_date_range = (
             self._application.track_view_state.filter_element.get().date_range
         )
+        self._application.track_view_state.filter_date_active.set(True)
+        self._frame_filter.enable_filter_by_date_button()
         if current_date_range != DateRange(None, None):
             self._frame_filter.set_active_color_on_filter_by_date_button()
         else:
@@ -1522,9 +1528,12 @@ class DummyViewModel(
     def disable_filter_track_by_date(self) -> None:
         self._application.disable_filter_track_by_date()
 
+        self.__disable_filter_track_by_date_button()
+
+    def __disable_filter_track_by_date_button(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
-
+        self._application.track_view_state.filter_date_active.set(False)
         self._frame_filter.disable_filter_by_date_button()
 
     def switch_to_prev_date_range(self) -> None:
