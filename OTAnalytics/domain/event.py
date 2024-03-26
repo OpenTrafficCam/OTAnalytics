@@ -383,8 +383,9 @@ class EventRepository:
         Internal add method that does not notify observers.
         """
         if event.section_id:
-            self._events[event.section_id].append(event)
-        else:
+            if event not in self._events[event.section_id]:
+                self._events[event.section_id].append(event)
+        elif event not in self._non_section_events:
             self._non_section_events.append(event)
 
     def add_all(
