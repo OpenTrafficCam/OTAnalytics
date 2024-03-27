@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  regression-test:
     name: Run pytest regression test
     runs-on: [self-hosted]
     steps:
