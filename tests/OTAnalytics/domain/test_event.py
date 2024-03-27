@@ -288,6 +288,16 @@ class TestSceneEventBuilder:
         assert event.event_coordinate == ImageCoordinate(0, 0)
 
 
+def enter_scene_event_1() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .clean_section_id()
+        .add_event_type(EventType.ENTER_SCENE.value)
+        .add_second(1)
+        .build_section_event()
+    )
+
+
 def event_1_section_1() -> Event:
     return (
         event_builder.EventBuilder()
@@ -339,7 +349,7 @@ def all_events() -> list[Event]:
 
 class TestEventRepository:
     def test_add(self) -> None:
-        event = Mock()
+        event = event_1_section_1()
         subject = Mock()
         repository = EventRepository(subject)
 
@@ -347,6 +357,20 @@ class TestEventRepository:
 
         assert event in repository.get_all()
         subject.notify.assert_called_with(EventRepositoryEvent([event], []))
+
+    def test_add_same_event_twice(self) -> None:
+        event_1_1 = event_1_section_1()
+        event_1_2 = event_1_section_1()
+        subject = Mock()
+        repository = EventRepository(subject)
+
+        repository.add(event_1_1)
+        repository.add(event_1_2)
+
+        actual = repository.get_all()
+        expected = [event_1_1]
+        assert actual == expected
+        subject.notify.assert_called_with(EventRepositoryEvent([event_1_1], []))
 
     def test_add_without_section_id(self) -> None:
         event = Mock()
@@ -358,6 +382,20 @@ class TestEventRepository:
 
         assert event in repository.get_all()
         subject.notify.assert_called_with(EventRepositoryEvent([event], []))
+
+    def test_add_same_event_twice_without_section_id(self) -> None:
+        event_1_1 = enter_scene_event_1()
+        event_1_2 = enter_scene_event_1()
+        subject = Mock()
+        repository = EventRepository(subject)
+
+        repository.add(event_1_1)
+        repository.add(event_1_2)
+
+        actual = repository.get_all()
+        expected = [event_1_1]
+        assert actual == expected
+        subject.notify.assert_called_with(EventRepositoryEvent([event_1_1], []))
 
     def test_add_all(self) -> None:
         first_event = Mock()

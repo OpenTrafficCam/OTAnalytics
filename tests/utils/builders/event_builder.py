@@ -32,7 +32,7 @@ class EventBuilder:
     occurrence_second: int = DEFAULT_OCCURRENCE_SECOND
     occurrence_microsecond: int = DEFAULT_OCCURRENCE_MICROSECOND
     frame_number: int = 1
-    section_id: str = "N"
+    section_id: str | None = "N"
     event_coordinate_x: float = 0.0
     event_coordinate_y: float = 0.0
     event_type: str = "section-enter"
@@ -62,7 +62,7 @@ class EventBuilder:
                 tzinfo=timezone.utc,
             ),
             frame_number=self.frame_number,
-            section_id=SectionId(self.section_id),
+            section_id=SectionId(self.section_id) if self.section_id else None,
             event_coordinate=ImageCoordinate(
                 self.event_coordinate_x, self.event_coordinate_y
             ),
@@ -113,4 +113,8 @@ class EventBuilder:
 
     def add_section_id(self, id: str) -> Self:
         self.section_id = id
+        return self
+
+    def clean_section_id(self) -> Self:
+        self.section_id = None
         return self
