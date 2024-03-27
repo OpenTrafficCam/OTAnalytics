@@ -375,8 +375,8 @@ class EventRepository:
             event (Event): the event to add
         """
         self.__do_add(event)
-        self.__sort()
         self.__discard_duplicates()
+        self.__sort()
         self._subject.notify(EventRepositoryEvent([event], []))
 
     def __do_add(self, event: Event) -> None:
