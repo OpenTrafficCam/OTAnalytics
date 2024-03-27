@@ -13,6 +13,7 @@ jobs:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/test.yml'
   regression-test:
+    if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/regression-test.yml'
   create_release:
     needs: 
