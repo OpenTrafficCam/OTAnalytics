@@ -12,8 +12,12 @@ jobs:
   test:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/test.yml'
+  regression-test:
+    uses: './.github/workflows/regression-test.yml'
   create_release:
-    needs: test
+    needs: 
+      - test
+      - regression-test
     uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
     secrets:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
