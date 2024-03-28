@@ -114,7 +114,7 @@ class UseCaseProvider:
     def run_config(self) -> RunConfiguration:
         cli_args = CliArguments(
             start_cli=True,
-            cli_mode=CliMode.BULK,
+            cli_mode=CliMode.STREAM,  # TODO reset to BULK?
             debug=False,
             logfile_overwrite=True,
             track_export=False,

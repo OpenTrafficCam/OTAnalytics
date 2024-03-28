@@ -148,7 +148,7 @@ class ArgparseCliParser(CliParser):
         args = self._parser.parse_args()
         return CliArguments(
             start_cli=args.cli,
-            cli_mode=CliMode[args.cli_mode],
+            cli_mode=args.cli_mode,
             debug=args.debug,
             logfile_overwrite=args.logfile_overwrite,
             config_file=args.config,
