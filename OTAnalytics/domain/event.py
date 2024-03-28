@@ -375,6 +375,7 @@ class EventRepository:
             event (Event): the event to add
         """
         self.__do_add(event)
+        self.__discard_duplicates()
         self.__sort()
         self._subject.notify(EventRepositoryEvent([event], []))
 
@@ -386,6 +387,16 @@ class EventRepository:
             self._events[event.section_id].append(event)
         else:
             self._non_section_events.append(event)
+
+    def __discard_duplicates(self) -> None:
+        """Discard duplicate events in repository."""
+        self._non_section_events = self.__remove_duplicates(self._non_section_events)
+        for section_id, events in self._events.items():
+            self._events[section_id] = self.__remove_duplicates(events)
+
+    def __remove_duplicates(self, events: Iterable[Event]) -> list[Event]:
+        """Discard duplicate events while retaining insertion order."""
+        return list(dict.fromkeys(events))
 
     def add_all(
         self, events: Iterable[Event], sections: list[SectionId] | None = None
@@ -405,6 +416,7 @@ class EventRepository:
             self.__do_add(event)
         for section in sections:
             self._events.setdefault(section, [])
+        self.__discard_duplicates()
         self.__sort()
         self._subject.notify(EventRepositoryEvent(events, []))
 
