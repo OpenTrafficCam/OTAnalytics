@@ -2,7 +2,7 @@ import sys
 from unittest.mock import patch
 
 from OTAnalytics.application.config import DEFAULT_TRACK_FILE_TYPE
-from OTAnalytics.application.parser.cli_parser import CliArguments
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 
 
@@ -54,6 +54,7 @@ class TestArgparseCliParser:
             args = parser.parse()
             assert args == CliArguments(
                 start_cli=True,
+                cli_mode=CliMode.BULK,
                 debug=False,
                 logfile_overwrite=True,
                 track_export=False,

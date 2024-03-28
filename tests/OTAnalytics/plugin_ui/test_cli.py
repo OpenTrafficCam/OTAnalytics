@@ -27,7 +27,11 @@ from OTAnalytics.application.config import (
 from OTAnalytics.application.datastore import FlowParser, TrackParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
-from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseError
+from OTAnalytics.application.parser.cli_parser import (
+    CliArguments,
+    CliMode,
+    CliParseError,
+)
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
@@ -99,6 +103,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 )
 from OTAnalytics.plugin_ui.cli import (
     InvalidSectionFileType,
+    OTAnalyticsBulkCli,
     OTAnalyticsCli,
     SectionsFileDoesNotExist,
 )
@@ -198,6 +203,7 @@ def config_parser(
 def create_run_config(
     flow_parser: FlowParser,
     start_cli: bool = True,
+    cli_mode: CliMode = CliMode.BULK,
     debug: bool = False,
     config_file: str = CONFIG_FILE,
     track_files: list[str] | None = None,
@@ -226,6 +232,7 @@ def create_run_config(
         track_files = [TRACK_FILE]
     cli_args = CliArguments(
         start_cli=start_cli,
+        cli_mode=cli_mode,
         debug=debug,
         logfile_overwrite=logfile_overwrite,
         track_export=track_export,
@@ -363,7 +370,7 @@ class TestOTAnalyticsCli:
         self, mock_cli_dependencies: dict[str, Any], mock_flow_parser: FlowParser
     ) -> None:
         run_config = create_run_config(mock_flow_parser)
-        cli = OTAnalyticsCli(run_config, **mock_cli_dependencies)
+        cli = OTAnalyticsBulkCli(run_config, **mock_cli_dependencies)
         assert cli._run_config == run_config
         assert cli._track_parser == mock_cli_dependencies[self.TRACK_PARSER]
         assert cli._add_section == mock_cli_dependencies[self.ADD_SECTION]
@@ -384,7 +391,7 @@ class TestOTAnalyticsCli:
     ) -> None:
         run_config = create_run_config(mock_flow_parser, track_files=[])
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
-            OTAnalyticsCli(run_config, **mock_cli_dependencies)
+            OTAnalyticsBulkCli(run_config, **mock_cli_dependencies)
 
     def test_init_no_otflow_and_otconfig_file_present(
         self, mock_cli_dependencies: dict[str, Any], mock_flow_parser: FlowParser
@@ -394,7 +401,7 @@ class TestOTAnalyticsCli:
         )
         expected_error_msg = "No otflow or otconfig file passed.*"
         with pytest.raises(CliParseError, match=expected_error_msg):
-            OTAnalyticsCli(run_config, **mock_cli_dependencies)
+            OTAnalyticsBulkCli(run_config, **mock_cli_dependencies)
 
     def test_validate_cli_args_no_tracks(self, mock_flow_parser: FlowParser) -> None:
         run_config = create_run_config(mock_flow_parser, track_files=[])
@@ -494,7 +501,7 @@ class TestOTAnalyticsCli:
             save_suffix=save_suffix,
             count_intervals=[count_interval],
         )
-        cli = OTAnalyticsCli(run_config, **cli_dependencies)
+        cli = OTAnalyticsBulkCli(run_config, **cli_dependencies)
         cli.start()
         expected_event_list_file = save_name.with_name(
             f"stem_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
@@ -541,7 +548,7 @@ class TestOTAnalyticsCli:
 
         run_config = Mock()
         run_config.count_intervals = {interval}
-        cli = OTAnalyticsCli(run_config, **mock_cli_dependencies)
+        cli = OTAnalyticsBulkCli(run_config, **mock_cli_dependencies)
         cli._do_export_counts(test_data_tmp_dir / filename)
 
         export_counts = mock_cli_dependencies[self.EXPORT_COUNTS]
@@ -565,6 +572,7 @@ class TestOTAnalyticsCli:
     ) -> None:
         cli_args = CliArguments(
             start_cli=True,
+            cli_mode=CliMode.BULK,
             debug=False,
             logfile_overwrite=False,
             track_export=False,
@@ -572,7 +580,7 @@ class TestOTAnalyticsCli:
         )
         otconfig = config_parser.parse(temp_otconfig)
         run_config = RunConfiguration(flow_parser, cli_args, otconfig)
-        cli = OTAnalyticsCli(run_config, **cli_dependencies)
+        cli = OTAnalyticsBulkCli(run_config, **cli_dependencies)
 
         cli.start()
         for event_format in run_config.event_formats:
@@ -601,7 +609,7 @@ class TestOTAnalyticsCli:
         logger = Mock()
         get_logger.return_value = logger
 
-        cli = OTAnalyticsCli(Mock(), **mock_cli_dependencies)
+        cli = OTAnalyticsBulkCli(Mock(), **mock_cli_dependencies)
         cli.start()
         logger.exception.assert_called_once_with(exception, exc_info=True)
         mock_run_analysis.assert_called_once()
@@ -633,8 +641,10 @@ class TestOTAnalyticsCli:
 
         mock_cli_dependencies[self.GET_ALL_SECTIONS].return_value = sections
 
-        cli = OTAnalyticsCli(run_config, **mock_cli_dependencies)
-        cli._run_analysis({second_track_file, first_track_file}, sections, flows)
+        cli = OTAnalyticsBulkCli(run_config, **mock_cli_dependencies)
+        cli._prepare_analysis(sections, flows)
+        cli._run_analysis({second_track_file, first_track_file})
+        cli._export_analysis(sections)
 
         mock_cli_dependencies[self.CLEAR_ALL_TRACKS].assert_called_once()
         mock_cli_dependencies[self.EVENT_REPOSITORY].clear.assert_called_once()

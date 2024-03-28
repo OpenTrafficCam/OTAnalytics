@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 from OTAnalytics.application.config import (
@@ -12,6 +13,16 @@ from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 
 DEFAULT_SAVE_SUFFIX = ""
 DEFAULT_SAVE_NAME = ""
+BULK = "bulk"
+STREAM = "stream"
+
+
+class CliMode(Enum):
+    BULK = BULK
+    STREAM = STREAM
+
+    def __str__(self) -> str:
+        return self.value
 
 
 class CliParseError(Exception):
@@ -21,6 +32,7 @@ class CliParseError(Exception):
 @dataclass(frozen=True)
 class CliArguments:
     start_cli: bool
+    cli_mode: CliMode
     debug: bool
     logfile_overwrite: bool
     track_export: bool

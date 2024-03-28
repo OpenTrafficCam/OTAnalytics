@@ -15,7 +15,7 @@ from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
 )
 from OTAnalytics.application.datastore import DetectionMetadata, TrackParser
-from OTAnalytics.application.parser.cli_parser import CliArguments
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
@@ -114,6 +114,7 @@ class UseCaseProvider:
     def run_config(self) -> RunConfiguration:
         cli_args = CliArguments(
             start_cli=True,
+            cli_mode=CliMode.BULK,
             debug=False,
             logfile_overwrite=True,
             track_export=False,
