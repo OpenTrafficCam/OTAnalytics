@@ -95,28 +95,11 @@ class OtConfigParser(ConfigParser):
         self._flow_parser = flow_parser
 
     def parse(self, file: Path) -> OtConfig:
-        """Parse a OTConfig file to a OtConfig object.
-
-        Args:
-            file: Path to the OTConfig file.
-
-        Returns:
-            OtConfig: The parsed OtConfig object.
-        """
         base_folder = file.parent
         content = parse_json(file)
         return self.parse_from_dict(content, base_folder)
 
     def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
-        """Parse a OTConfig from a dictionary.
-
-        Args:
-            data (dict): the contents of an OTConfig.
-            base_folder: the base folder of the OTConfig.
-
-        Returns:
-            OtConfig: The parsed OtConfig object.
-        """
         fixed_content = self._format_fixer.fix(data)
         _project = self._parse_project(fixed_content[PROJECT])
         analysis_config = self._parse_analysis(fixed_content[ANALYSIS], base_folder)
@@ -185,30 +168,11 @@ class OtConfigParser(ConfigParser):
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
-        """Serializes the project with the given videos, sections and flows into the
-        file.
-
-        Args:
-            project (Project): description of the project
-            video_files (Iterable[Video]): video files to reference
-            sections (Iterable[Section]): sections to store
-            flows (Iterable[Flow]): flows to store
-            file (Path): output file
-
-        Raises:
-            StartDateMissing: if start date is not configured
-        """
         self._validate_data(project)
         content = self.convert(project, video_files, sections, flows, file)
         write_json(data=content, path=file)
 
     def serialize_from_config(self, config: OtConfig, file: Path) -> None:
-        """Serializes OTConfig using the given file as a save location.
-
-        Args:
-            config: the config to serialize.
-            file: the location to save the config to.
-        """
         self.serialize(
             config.project, config.videos, config.sections, config.flows, file
         )

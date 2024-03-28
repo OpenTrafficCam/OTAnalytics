@@ -46,10 +46,27 @@ class ConfigParser(ABC):
         self,
         file: Path,
     ) -> OtConfig:
+        """Parse a OTConfig file to a OtConfig object.
+
+        Args:
+            file: Path to the OTConfig file.
+
+        Returns:
+            OtConfig: The parsed OtConfig object.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
+        """Parse a OTConfig from a dictionary.
+
+        Args:
+            data (dict): the contents of an OTConfig.
+            base_folder: the base folder of the OTConfig.
+
+        Returns:
+            OtConfig: The parsed OtConfig object.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -61,10 +78,30 @@ class ConfigParser(ABC):
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
+        """Serializes the project with the given videos, sections and flows into the
+        file.
+
+        Args:
+            project (Project): description of the project
+            video_files (Iterable[Video]): video files to reference
+            sections (Iterable[Section]): sections to store
+            flows (Iterable[Flow]): flows to store
+            file (Path): output file
+
+        Raises:
+            StartDateMissing: if start date is not configured
+        """
+
         raise NotImplementedError
 
     @abstractmethod
     def serialize_from_config(self, config: OtConfig, file: Path) -> None:
+        """Serializes OTConfig using the given file as a save location.
+
+        Args:
+            config: the config to serialize.
+            file: the location to save the config to.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -76,6 +113,7 @@ class ConfigParser(ABC):
         flows: Iterable[Flow],
         file: Path,
     ) -> dict:
+        """Converts the given information into a dictionary."""
         raise NotImplementedError
 
 
