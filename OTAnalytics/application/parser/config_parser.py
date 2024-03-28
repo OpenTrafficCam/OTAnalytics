@@ -70,6 +70,10 @@ class ConfigParser(ABC):
     ) -> dict:
         raise NotImplementedError
 
+    @abstractmethod
+    def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
+        raise NotImplementedError
+
 
 class StartDateMissing(Exception):
     pass

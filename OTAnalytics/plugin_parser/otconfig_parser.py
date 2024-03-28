@@ -83,6 +83,7 @@ class FixMissingAnalysis(OtConfigFormatFixer):
 
 
 class OtConfigParser(ConfigParser):
+
     def __init__(
         self,
         format_fixer: OtConfigFormatFixer,
@@ -96,7 +97,10 @@ class OtConfigParser(ConfigParser):
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
         content = parse_json(file)
-        fixed_content = self._format_fixer.fix(content)
+        return self.parse_from_dict(content, base_folder)
+
+    def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
+        fixed_content = self._format_fixer.fix(data)
         _project = self._parse_project(fixed_content[PROJECT])
         analysis_config = self._parse_analysis(fixed_content[ANALYSIS], base_folder)
         videos = self._video_parser.parse_list(fixed_content[video.VIDEOS], base_folder)
