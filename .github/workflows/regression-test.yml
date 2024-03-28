@@ -2,6 +2,9 @@ name: Regression Test With Pytest
 on:
   workflow_dispatch:
   workflow_call:
+    secrets:
+      PLATOMO_OTC_TESTDATA_ACCESS:
+        required: True
 
 jobs:
   regression-test:
