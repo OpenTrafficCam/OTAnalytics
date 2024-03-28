@@ -245,7 +245,7 @@ class Ottrk_Version_1_0_To_1_2(MetadataFixer):
                 metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE] = str(
                     date.timestamp()
                 )
-            except ValueError:
+            except (ValueError, TypeError):
                 # TODO just for safety in case there are both
                 # TODO file with timestamp and date string in prior versions
                 metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE] = float(

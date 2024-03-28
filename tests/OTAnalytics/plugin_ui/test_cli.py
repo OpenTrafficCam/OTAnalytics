@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
@@ -587,6 +588,10 @@ class TestOTAnalyticsCli:
             expected_events_file = temp_otconfig.with_name(
                 f"my_name_my_suffix.events.{event_format}"
             )
+
+            print(
+                "Files:", os.listdir("d:/ptm/OTAnalytics/tests/data_tmp/temp_otconfig")
+            )
             assert expected_events_file.is_file()
 
         for count_interval in run_config.count_intervals:
@@ -596,7 +601,7 @@ class TestOTAnalyticsCli:
             )
             assert expected_counts_file.is_file()
 
-    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._run_analysis")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._prepare_analysis")
     @patch("OTAnalytics.plugin_ui.cli.logger")
     def test_exceptions_are_being_logged(
         self,
@@ -616,7 +621,7 @@ class TestOTAnalyticsCli:
 
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._do_export_counts")
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._export_events")
-    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._parse_tracks")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsBulkCli._parse_tracks")
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._add_sections")
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._add_flows")
     def test_run_analysis(
