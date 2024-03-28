@@ -15,6 +15,7 @@ jobs:
   regression-test:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/regression-test.yml'
+    secrets: inherit
   create_release:
     needs: 
       - test
