@@ -49,6 +49,10 @@ class ConfigParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
+        raise NotImplementedError
+
+    @abstractmethod
     def serialize(
         self,
         project: Project,
@@ -60,6 +64,10 @@ class ConfigParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def serialize_from_config(self, config: OtConfig, file: Path) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def convert(
         self,
         project: Project,
@@ -68,10 +76,6 @@ class ConfigParser(ABC):
         flows: Iterable[Flow],
         file: Path,
     ) -> dict:
-        raise NotImplementedError
-
-    @abstractmethod
-    def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
         raise NotImplementedError
 
 
