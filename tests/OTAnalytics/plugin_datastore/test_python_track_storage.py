@@ -9,6 +9,7 @@ from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import (
+    INPUT_FILE,
     TRACK_CLASSIFICATION,
     TRACK_ID,
     Detection,
@@ -64,6 +65,7 @@ def valid_detection_dict() -> dict:
         ottrk_format.INTERPOLATED_DETECTION: False,
         "track-id": TrackId("1"),
         "video_name": "file.mp4",
+        "input_file": "file.ottrk",
     }
 
 
@@ -83,6 +85,7 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
         ],
         _track_id=valid_detection_dict[ottrk_format.TRACK_ID],
         _video_name=valid_detection_dict[VIDEO_NAME],
+        _input_file=valid_detection_dict[INPUT_FILE],
     )
 
 
@@ -152,6 +155,7 @@ class TestDetection:
                 _interpolated_detection=False,
                 _track_id=TrackId(str(track_id)),
                 _video_name="file.mp4",
+                _input_file="file.ottrk",
             )
 
     def test_instantiation_with_valid_args(
@@ -167,6 +171,7 @@ class TestDetection:
         assert det.frame == valid_detection_dict[ottrk_format.FRAME]
         assert det.occurrence == valid_detection_dict[ottrk_format.OCCURRENCE]
         assert det.video_name == valid_detection_dict[VIDEO_NAME]
+        assert det.input_file == valid_detection_dict[INPUT_FILE]
         assert (
             det.interpolated_detection
             == valid_detection_dict[ottrk_format.INTERPOLATED_DETECTION]

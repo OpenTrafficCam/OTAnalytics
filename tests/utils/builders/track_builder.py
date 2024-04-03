@@ -6,6 +6,7 @@ from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from tests.utils.builders.constants import (
+    DEFAULT_INPUT_FILE,
     DEFAULT_OCCURRENCE_DAY,
     DEFAULT_OCCURRENCE_HOUR,
     DEFAULT_OCCURRENCE_MICROSECOND,
@@ -38,6 +39,7 @@ class TrackBuilder:
     occurrence_second: int = DEFAULT_OCCURRENCE_SECOND
     occurrence_microsecond: int = DEFAULT_OCCURRENCE_MICROSECOND
     video_name: str = DEFAULT_VIDEO_NAME
+    input_file: str = DEFAULT_INPUT_FILE
     interpolated_detection: bool = False
 
     def __post_init__(self) -> None:
@@ -80,6 +82,7 @@ class TrackBuilder:
             _interpolated_detection=self.interpolated_detection,
             _track_id=TrackId(self.track_id),
             _video_name=self.video_name,
+            _input_file=self.input_file,
         )
 
     def add_track_id(self, id: str) -> None:

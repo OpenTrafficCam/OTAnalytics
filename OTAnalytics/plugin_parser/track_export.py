@@ -43,6 +43,7 @@ def set_column_order(dataframe: DataFrame) -> DataFrame:
         track.OCCURRENCE,
         track.INTERPOLATED_DETECTION,
         track.VIDEO_NAME,
+        track.INPUT_FILE,
     ]
     dataframe = dataframe[
         desired_columns_order

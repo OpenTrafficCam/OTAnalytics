@@ -292,6 +292,7 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         parser: PythonDetectionParser,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         detections: list[dict] = (
             track_builder_setup_with_sample_data.build_serialized_detections()
         )
@@ -302,12 +303,14 @@ class TestPythonDetectionParser:
         result_sorted_input = parser._parse_detections(
             detections,
             metadata_video,
+            input_file,
             TrackId,
         )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
         result_unsorted_input = parser._parse_detections(
             unsorted_detections,
             metadata_video,
+            input_file,
             TrackId,
         )
 
@@ -324,6 +327,7 @@ class TestPythonDetectionParser:
         mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         mocked_classificator.calculate.return_value = "car"
         detections: list[dict] = (
             track_builder_setup_with_sample_data.build_serialized_detections()
@@ -332,9 +336,13 @@ class TestPythonDetectionParser:
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = parser.parse_tracks(detections, metadata_video)
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = parser.parse_tracks(unsorted_detections, metadata_video)
+        result_unsorted_input = parser.parse_tracks(
+            unsorted_detections, metadata_video, input_file
+        )
 
         expected_sorted = PythonTrackDataset.from_list(
             [track_builder_setup_with_sample_data.build_track()]
@@ -349,6 +357,7 @@ class TestPythonDetectionParser:
         mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         detections: list[dict] = (
             track_builder_setup_with_sample_data.build_serialized_detections()
         )
@@ -373,7 +382,9 @@ class TestPythonDetectionParser:
             existing_track.id, merged_classification, all_detections
         )
 
-        result_sorted_input = parser.parse_tracks(detections, metadata_video)
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        )
 
         expected_sorted = PythonTrackDataset.from_list([merged_track])
 
@@ -393,6 +404,7 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         track_length_limit: TrackLengthLimit,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         parser = PythonDetectionParser(
             ByMaxConfidence(),
             mocked_track_repository,
@@ -405,7 +417,9 @@ class TestPythonDetectionParser:
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
-        result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        ).as_list()
 
         assert len(result_sorted_input) == 0
 

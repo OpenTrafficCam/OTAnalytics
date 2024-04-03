@@ -82,17 +82,20 @@ class TestPandasDetectionParser:
         parser: DetectionParser,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        input_file = "tests/data/tracks.ottrk"
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
 
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
-        result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        ).as_list()
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
         result_unsorted_input = parser.parse_tracks(
-            unsorted_detections, metadata_video
+            unsorted_detections, metadata_video, input_file
         ).as_list()
 
         expected_sorted = PandasTrackDataset.from_list(
@@ -118,16 +121,19 @@ class TestPandasDetectionParser:
         track_length_limit: TrackLengthLimit,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
+        input_file = "tests/data/tracks.ottrk"
         parser = PandasDetectionParser(
             PandasByMaxConfidence(), track_geometry_factory, track_length_limit
         )
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
 
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
-        result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        ).as_list()
 
         assert len(result_sorted_input) == 0
