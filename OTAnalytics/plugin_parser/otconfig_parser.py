@@ -5,13 +5,15 @@ from typing import Iterable
 
 from OTAnalytics.application import project
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
-from OTAnalytics.application.datastore import FlowParser, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ConfigParser,
     ExportConfig,
     OtConfig,
+    StartDateMissing,
 )
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
@@ -175,6 +177,23 @@ class OtConfigParser(ConfigParser):
         Raises:
             StartDateMissing: if start date is not configured
         """
+        self._validate_data(project)
+        content = self.convert(project, video_files, sections, flows, file)
+        write_json(data=content, path=file)
+
+    @staticmethod
+    def _validate_data(project: Project) -> None:
+        if project.start_date is None:
+            raise StartDateMissing()
+
+    def convert(
+        self,
+        project: Project,
+        video_files: Iterable[Video],
+        sections: Iterable[Section],
+        flows: Iterable[Flow],
+        file: Path,
+    ) -> dict:
         parent_folder = file.parent
         project_content = project.to_dict()
         video_content = self._video_parser.convert(
@@ -185,4 +204,4 @@ class OtConfigParser(ConfigParser):
         content: dict[str, list[dict] | dict] = {PROJECT: project_content}
         content |= video_content
         content |= section_content
-        write_json(data=content, path=file)
+        return content

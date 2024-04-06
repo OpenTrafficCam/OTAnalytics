@@ -296,3 +296,10 @@ class OTAnalyticsGui:
             f"<{cmd_ctrl}-{opt_alt}-{shift}-{previous_key}>",
             lambda event: self._viewmodel.previous_event(),
         )
+        self._app.bind(
+            f"<{cmd_ctrl}-s>", lambda event: self._viewmodel.quick_save_configuration()
+        )
+        self._app.bind(
+            f"<{cmd_ctrl}-{shift}-S>",
+            lambda event: self._viewmodel.save_configuration(),
+        )

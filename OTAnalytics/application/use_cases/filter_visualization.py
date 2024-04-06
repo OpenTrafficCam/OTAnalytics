@@ -44,6 +44,7 @@ class CreateDefaultFilterRange:
             new_filter = self.__create_new_filter_element(video_start)
             self._enable_filter_track_by_date.enable()
             self._state.filter_element.set(new_filter)
+            self._state.filter_date_active.set(True)
 
     def __create_new_filter_element(self, video_start: datetime) -> FilterElement:
         filter_element = self._state.filter_element.get()

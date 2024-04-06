@@ -7,6 +7,9 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel, ThemeManager
 
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.plugin_ui.customtkinter_gui.button_quick_save_config import (
+    ButtonQuickSaveConfig,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,
     PADY,
@@ -61,6 +64,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_project(self)
+        self._viewmodel.set_button_quick_save_config(self.button_quick_save)
 
     def _get_widgets(self) -> None:
         self._label_name = CTkLabel(master=self, text="Name")
@@ -88,11 +92,17 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             width=10,
             command=self._viewmodel.load_configuration,
         )
-        self.button_save = CTkButton(
+        self.button_save_as = CTkButton(
             master=self._button_frame,
-            text="Save...",
+            text="Save as...",
             width=10,
             command=self._viewmodel.save_configuration,
+        )
+        self.button_quick_save = ButtonQuickSaveConfig(
+            master=self._button_frame,
+            text="Save",
+            width=10,
+            command=self._viewmodel.quick_save_configuration,
         )
 
     def _place_widgets(self) -> None:
@@ -103,7 +113,12 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             row=0, column=0, columnspan=2, padx=0, pady=0, sticky=STICKY
         )
         for column, button in enumerate(
-            [self._button_new, self.button_open, self.button_save]
+            [
+                self._button_new,
+                self.button_open,
+                self.button_save_as,
+                self.button_quick_save,
+            ]
         ):
             self._button_frame.grid_columnconfigure(column, weight=1)
             button.grid(row=0, column=column, padx=PADX, pady=PADY, sticky=STICKY)
@@ -130,7 +145,12 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
 
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         new_state = STATE_NORMAL if enabled else STATE_DISABLED
-        for button in [self._button_new, self.button_save, self.button_open]:
+        for button in [
+            self._button_new,
+            self.button_save_as,
+            self.button_open,
+            self.button_quick_save,
+        ]:
             button.configure(state=new_state)
 
 

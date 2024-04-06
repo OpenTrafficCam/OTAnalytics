@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Callable, Optional
 from unittest.mock import Mock, call
 
@@ -9,6 +10,7 @@ from OTAnalytics.application.datastore import Datastore, VideoMetadata
 from OTAnalytics.application.state import (
     DEFAULT_HEIGHT,
     DEFAULT_WIDTH,
+    ConfigurationFile,
     FlowState,
     ObservableOptionalProperty,
     ObservableProperty,
@@ -486,3 +488,28 @@ class TestTrackViewState:
         assert current_filter_element.date_range == DateRange(None, None)
         assert current_filter_element.classifications is None
         assert track_view_state.track_offset.get() == DEFAULT_TRACK_OFFSET
+
+
+class TestConfigurationFile:
+    @pytest.fixture
+    def otflow_file(self) -> Path:
+        return Path("path/to/my.otflow")
+
+    @pytest.fixture
+    def otconfig_file(self) -> Path:
+        return Path("path/to/my.otconfig")
+
+    def test_is_otflow(self, otflow_file: Path, otconfig_file: Path) -> None:
+        assert ConfigurationFile(otflow_file, Mock()).is_otflow
+        assert not ConfigurationFile(otconfig_file, Mock()).is_otflow
+
+    def test_is_otconfig(self, otconfig_file: Path, otflow_file: Path) -> None:
+        assert ConfigurationFile(otconfig_file, Mock()).is_otconfig
+        assert not ConfigurationFile(otflow_file, Mock()).is_otconfig
+
+    def test_file_type(self, otflow_file: Path) -> None:
+        assert ConfigurationFile(otflow_file, Mock()).file_type == "otflow"
+
+    def test_file_type_has_no_type(self) -> None:
+        no_file_type = Path("path/to/no_file_type")
+        assert ConfigurationFile(no_file_type, Mock()).file_type == ""

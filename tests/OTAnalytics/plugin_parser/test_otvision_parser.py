@@ -23,7 +23,6 @@ from OTAnalytics.domain.section import (
     SectionId,
 )
 from OTAnalytics.domain.track import (
-    Detection,
     Track,
     TrackClassificationCalculator,
     TrackId,
@@ -409,19 +408,6 @@ class TestPythonDetectionParser:
         result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
 
         assert len(result_sorted_input) == 0
-
-    def assert_detection_equal(self, d1: Detection, d2: Detection) -> None:
-        assert d1.classification == d2.classification
-        assert d1.confidence == d2.confidence
-        assert d1.x == d2.x
-        assert d1.y == d2.y
-        assert d1.w == d2.w
-        assert d1.h == d2.h
-        assert d1.frame == d2.frame
-        assert d1.occurrence == d2.occurrence
-        assert d1.video_name == d2.video_name
-        assert d1.interpolated_detection == d2.interpolated_detection
-        assert d1.track_id == d2.track_id
 
 
 class TestOtFlowParser:

@@ -20,7 +20,6 @@ from OTAnalytics.application.config_specification import OtConfigDefaultValuePro
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
-    FlowParser,
     TrackParser,
     TrackToVideoRepository,
     VideoParser,
@@ -32,10 +31,12 @@ from OTAnalytics.application.parser.cli_parser import (
     CliParser,
     CliValueProvider,
 )
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
     ActionState,
+    FileState,
     FlowState,
     SectionState,
     SelectedVideoUpdate,
@@ -53,6 +54,12 @@ from OTAnalytics.application.ui.frame_control import (
 )
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
+from OTAnalytics.application.use_cases.config import SaveOtconfig
+from OTAnalytics.application.use_cases.config_has_changed import (
+    ConfigHasChanged,
+    OtconfigHasChanged,
+    OtflowHasChanged,
+)
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
@@ -73,7 +80,12 @@ from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilterRange,
     EnableFilterTrackByDate,
 )
-from OTAnalytics.application.use_cases.flow_repository import AddFlow, ClearAllFlows
+from OTAnalytics.application.use_cases.flow_repository import (
+    AddAllFlows,
+    AddFlow,
+    ClearAllFlows,
+    GetAllFlows,
+)
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -83,17 +95,24 @@ from OTAnalytics.application.use_cases.generate_flows import (
     GenerateFlows,
     RepositoryFlowIdGenerator,
 )
+from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
 )
+from OTAnalytics.application.use_cases.load_otconfig import LoadOtconfig
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
+from OTAnalytics.application.use_cases.quick_save_configuration import (
+    QuickSaveConfiguration,
+)
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
+from OTAnalytics.application.use_cases.save_otflow import SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
+    AddAllSections,
     AddSection,
     ClearAllSections,
     GetAllSections,
@@ -115,7 +134,11 @@ from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
 )
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
-from OTAnalytics.application.use_cases.video_repository import ClearAllVideos
+from OTAnalytics.application.use_cases.video_repository import (
+    AddAllVideos,
+    ClearAllVideos,
+    GetAllVideos,
+)
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
@@ -148,6 +171,7 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
+from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.otconfig_parser import (
     FixMissingAnalysis,
     MultiFixer,
@@ -282,12 +306,13 @@ class ApplicationStarter:
             flow_repository,
             event_repository,
             pulling_progressbar_builder,
-            run_config,
         )
+        flow_parser = self._create_flow_parser()
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state(section_repository)
         flow_state = self._create_flow_state()
+        file_state = FileState()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         clear_all_intersections = ClearAllIntersections(intersection_repository)
@@ -384,7 +409,7 @@ class ApplicationStarter:
             clear_all_sections,
             clear_all_flows,
             clear_all_events,
-            datastore._flow_parser,
+            flow_parser,
             add_section,
             add_flow,
         )
@@ -410,7 +435,7 @@ class ApplicationStarter:
         project_updater = self._create_project_updater(datastore)
         reset_project_config = self._create_reset_project_config(project_updater)
         start_new_project = self._create_use_case_start_new_project(
-            clear_repositories, reset_project_config, track_view_state
+            clear_repositories, reset_project_config, track_view_state, file_state
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             get_sections_bv_id,
@@ -439,12 +464,41 @@ class ApplicationStarter:
             section_state=section_state,
             create_default_filter=create_default_filter,
         )
+        get_sections = GetAllSections(section_repository)
+        get_flows = GetAllFlows(flow_repository)
+        save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
+        config_parser = self.create_config_parser(run_config, video_parser)
+        save_otconfig = SaveOtconfig(datastore, config_parser, file_state)
+        quick_save_configuration = QuickSaveConfiguration(
+            file_state, save_otflow, save_otconfig
+        )
+        load_otconfig = LoadOtconfig(
+            clear_repositories,
+            config_parser,
+            project_updater,
+            AddAllVideos(video_repository),
+            AddAllSections(add_section),
+            AddAllFlows(add_flow),
+            parse_json,
+        )
+        config_has_changed = ConfigHasChanged(
+            OtconfigHasChanged(
+                config_parser,
+                get_sections,
+                get_flows,
+                GetCurrentProject(datastore),
+                GetAllVideos(video_repository),
+            ),
+            OtflowHasChanged(flow_parser, get_sections, get_flows),
+            file_state,
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
             track_view_state,
             section_state,
             flow_state,
+            file_state,
             tracks_metadata,
             videos_metadata,
             action_state,
@@ -460,11 +514,16 @@ class ApplicationStarter:
             clear_all_events,
             start_new_project,
             project_updater,
+            save_otconfig,
             load_track_files,
             enable_filter_track_by_date,
             previous_frame,
             next_frame,
             switch_event,
+            save_otflow,
+            quick_save_configuration,
+            load_otconfig,
+            config_has_changed,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -472,7 +531,6 @@ class ApplicationStarter:
         )
         cut_tracks_intersecting_section.register(clear_all_events.on_tracks_cut)
         application.connect_clear_event_repository_observer()
-        flow_parser: FlowParser = application._datastore._flow_parser
         name_generator = ArrowFlowNameGenerator()
         dummy_viewmodel = DummyViewModel(
             application,
@@ -505,6 +563,9 @@ class ApplicationStarter:
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
         )
+        track_view_state.filter_date_active.register(
+            dummy_viewmodel.change_filter_date_active
+        )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
         # cut_tracks_intersecting_section.register(
@@ -522,6 +583,9 @@ class ApplicationStarter:
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
+        load_otflow.register(file_state.last_saved_config.set)
+        load_otconfig.register(file_state.last_saved_config.set)
+        project_updater.register(dummy_viewmodel.update_quick_save_button)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
@@ -641,7 +705,6 @@ class ApplicationStarter:
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         progressbar_builder: ProgressbarBuilder,
-        run_config: RunConfiguration,
     ) -> Datastore:
         """
         Build all required objects and inject them where necessary
@@ -651,21 +714,13 @@ class ApplicationStarter:
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
         track_parser = self._create_track_parser(track_repository)
-        flow_parser = self._create_flow_parser()
         event_list_parser = self._create_event_list_parser()
         track_video_parser = OttrkVideoParser(video_parser)
-        format_fixer = self._create_format_fixer(run_config)
-        config_parser = OtConfigParser(
-            video_parser=video_parser,
-            flow_parser=flow_parser,
-            format_fixer=format_fixer,
-        )
         return Datastore(
             track_repository,
             track_file_repository,
             track_parser,
             section_repository,
-            flow_parser,
             flow_repository,
             event_repository,
             event_list_parser,
@@ -674,7 +729,6 @@ class ApplicationStarter:
             video_parser,
             track_video_parser,
             progressbar_builder,
-            config_parser=config_parser,
         )
 
     def _create_track_repository(self, run_config: RunConfiguration) -> TrackRepository:
@@ -883,6 +937,7 @@ class ApplicationStarter:
             flow_parser,
             add_section,
             add_flow,
+            parse_json,
         )
 
     @staticmethod
@@ -910,9 +965,10 @@ class ApplicationStarter:
         clear_repositories: ClearRepositories,
         reset_project_config: ResetProjectConfig,
         track_view_state: TrackViewState,
+        file_state: FileState,
     ) -> StartNewProject:
         return StartNewProject(
-            clear_repositories, reset_project_config, track_view_state
+            clear_repositories, reset_project_config, track_view_state, file_state
         )
 
     @staticmethod
@@ -992,3 +1048,16 @@ class ApplicationStarter:
         track_repository: TrackRepository,
     ) -> ApplyCliCuts:
         return ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
+
+    def create_config_parser(
+        self,
+        run_config: RunConfiguration,
+        video_parser: VideoParser,
+    ) -> OtConfigParser:
+        flow_parser = self._create_flow_parser()
+        format_fixer = self._create_format_fixer(run_config)
+        return OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+            format_fixer=format_fixer,
+        )

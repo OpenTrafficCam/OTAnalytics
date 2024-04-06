@@ -1,6 +1,8 @@
 import bisect
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Generic, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
@@ -31,6 +33,8 @@ from OTAnalytics.domain.video import Video, VideoListObserver
 
 DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
+DEFAULT_FILTER_DATE_ACTIVE = False
+DEFAULT_SKIP_TIME = SkipTime(1, 1)
 
 
 class TrackState(TrackListObserver):
@@ -182,12 +186,15 @@ class TrackViewState:
         self.filter_element = ObservableProperty[FilterElement](
             FilterElement(DateRange(None, None), None)
         )
+        self.filter_date_active = ObservableProperty[bool](
+            default=DEFAULT_FILTER_DATE_ACTIVE
+        )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
         self.selected_videos: ObservableProperty[list[Video]] = ObservableProperty[
             list[Video]
         ](default=[])
-        self.skip_time = ObservableProperty[SkipTime](SkipTime(1, 1))
+        self.skip_time = ObservableProperty[SkipTime](DEFAULT_SKIP_TIME)
 
     def reset(self) -> None:
         """Reset to default settings."""
@@ -196,7 +203,9 @@ class TrackViewState:
         self.view_width.set(DEFAULT_WIDTH)
         self.view_height.set(DEFAULT_HEIGHT)
         self.filter_element.set(FilterElement(DateRange(None, None), None))
+        self.filter_date_active.set(DEFAULT_FILTER_DATE_ACTIVE)
         self.track_offset.set(DEFAULT_TRACK_OFFSET)
+        self.skip_time.set(DEFAULT_SKIP_TIME)
 
 
 class TrackPropertiesUpdater:
@@ -565,3 +574,32 @@ class ActionState:
 
     def __init__(self) -> None:
         self.action_running = ObservableProperty[bool](False)
+
+
+@dataclass
+class ConfigurationFile:
+    file: Path
+    content: dict
+
+    @property
+    def is_otconfig(self) -> bool:
+        return self.file_type == "otconfig"
+
+    @property
+    def is_otflow(self) -> bool:
+        return self.file_type == "otflow"
+
+    @property
+    def file_type(self) -> str:
+        if file_type := self.file.suffix:
+            return self.file.suffix[1:]  # remove starting dot
+        else:
+            return file_type
+
+
+class FileState:
+    def __init__(self) -> None:
+        self.last_saved_config = ObservableOptionalProperty[ConfigurationFile]()
+
+    def reset(self) -> None:
+        self.last_saved_config.set(None)

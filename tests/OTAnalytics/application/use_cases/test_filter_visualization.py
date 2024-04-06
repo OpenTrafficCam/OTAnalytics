@@ -44,7 +44,7 @@ class TestCreateDefaultFilterRange:
     ) -> None:
         enable_filter_track_by_date = Mock(spec=EnableFilterTrackByDate)
         filter_element = create_filter_element(start_date=start_date, end_date=end_date)
-        track_view_state = create_track_view_state(filter_element)
+        track_view_state = create_track_view_state(filter_element, True)
         derived_filter_element = Mock(spec=FilterElement)
         filter_element.derive_date.return_value = derived_filter_element
         use_case = CreateDefaultFilterRange(
@@ -62,12 +62,13 @@ class TestCreateDefaultFilterRange:
         track_view_state.filter_element.set.assert_called_once_with(
             derived_filter_element
         )
+        track_view_state.filter_date_active.set.assert_called_once_with(True)
         enable_filter_track_by_date.enable.assert_called_once()
 
     def test_do_nothing_if_filter_is_already_set(self, videos_metadata: Mock) -> None:
         enable_filter_track_by_date = Mock(spec=EnableFilterTrackByDate)
         filter_element = create_filter_element(start_date=START_DATE, end_date=END_DATE)
-        track_view_state = create_track_view_state(filter_element)
+        track_view_state = create_track_view_state(filter_element, True)
         use_case = CreateDefaultFilterRange(
             track_view_state,
             videos_metadata=videos_metadata,
@@ -79,4 +80,5 @@ class TestCreateDefaultFilterRange:
 
         filter_element.derive_date.assert_not_called()
         track_view_state.filter_element.set.assert_called_once_with(filter_element)
+        track_view_state.filter_date_active.set.assert_called_once_with(True)
         enable_filter_track_by_date.enable.assert_called_once()
