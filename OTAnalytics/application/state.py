@@ -31,6 +31,11 @@ from OTAnalytics.domain.track_repository import (
 )
 from OTAnalytics.domain.video import Video, VideoListObserver
 
+FIRST_DETECTION_OCCURRENCE: str = "first_detection_occurrence"
+LAST_DETECTION_OCCURRENCE: str = "last_detection_occurrence"
+CLASSIFICATIONS: str = "classifications"
+DETECTION_CLASSIFICATIONS: str = "detection_classifications"
+
 DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
 DEFAULT_FILTER_DATE_ACTIVE = False
@@ -461,6 +466,12 @@ class VideosMetadata:
     def last_video_end(self) -> Optional[datetime]:
         return self._last_video_end
 
+    def to_dict(self) -> dict:
+        return {
+            key.timestamp(): metadata.to_dict()
+            for key, metadata in self._metadata.items()
+        }
+
 
 class TracksMetadata(TrackListObserver):
     """Contains relevant information on the currently loaded tracks.
@@ -565,6 +576,20 @@ class TracksMetadata(TrackListObserver):
         """Update the classifications used by the detection model."""
         updated_classes = self._detection_classifications.get().union(new_classes)
         self._detection_classifications.set(updated_classes)
+
+    def to_dict(self) -> dict:
+        first_occurrence = self._first_detection_occurrence.get()
+        last_occurrence = self._last_detection_occurrence.get()
+        return {
+            FIRST_DETECTION_OCCURRENCE: (
+                first_occurrence.timestamp() if first_occurrence else None
+            ),
+            LAST_DETECTION_OCCURRENCE: (
+                last_occurrence.timestamp() if last_occurrence else None
+            ),
+            CLASSIFICATIONS: list(self._classifications.get()),
+            DETECTION_CLASSIFICATIONS: list(self._detection_classifications.get()),
+        }
 
 
 class ActionState:

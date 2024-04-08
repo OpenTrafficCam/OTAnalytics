@@ -66,6 +66,20 @@ class VideoMetadata:
             return self.actual_fps
         return self.recorded_fps
 
+    def to_dict(self) -> dict:
+        return {
+            "path": self.path,
+            "recorded_start_date": self.recorded_start_date.timestamp(),
+            "expected_duration": (
+                self.expected_duration.total_seconds()
+                if self.expected_duration
+                else None
+            ),
+            "recorded_fps": self.recorded_fps,
+            "actual_fps": self.actual_fps,
+            "number_of_frames": self.number_of_frames,
+        }
+
 
 @dataclass(frozen=True)
 class TrackParseResult:
