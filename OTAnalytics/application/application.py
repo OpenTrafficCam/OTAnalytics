@@ -42,6 +42,10 @@ from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.quick_save_configuration import (
     QuickSaveConfiguration,
 )
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportRoadUserAssignments,
+    ExportSpecification,
+)
 from OTAnalytics.application.use_cases.save_otflow import SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -123,6 +127,7 @@ class OTAnalyticsApplication:
         quick_save_configuration: QuickSaveConfiguration,
         load_otconfig: LoadOtconfig,
         config_has_changed: ConfigHasChanged,
+        export_road_user_assignments: ExportRoadUserAssignments,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -161,6 +166,7 @@ class OTAnalyticsApplication:
         self._quick_save_configuration = quick_save_configuration
         self._load_otconfig = load_otconfig
         self._config_has_changed = config_has_changed
+        self._export_road_user_assignments = export_road_user_assignments
 
     def connect_observers(self) -> None:
         """
@@ -621,6 +627,9 @@ class OTAnalyticsApplication:
 
     def config_has_changed(self) -> bool:
         return self._config_has_changed.has_changed()
+
+    def export_road_user_assignments(self, specification: ExportSpecification) -> None:
+        self._export_road_user_assignments.export(specification)
 
 
 class MissingTracksError(Exception):
