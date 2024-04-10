@@ -107,7 +107,8 @@ class TreeviewFiles(TreeviewTemplate):
             [
                 self.__to_resource(file=file, video_loaded=video_loaded)
                 for file, video_loaded in zip(track_files, track_files_have_videos)
-            ]
+            ],
+            lookup_column=COLUMN_FILE,
         )
         self.add_items(item_ids=item_ids)
 

@@ -132,7 +132,8 @@ class TreeviewFlows(TreeviewTemplate):
         item_ids = ColumnResources(
             sorted(
                 [self.__to_resource(flow) for flow in self._viewmodel.get_all_flows()]
-            )
+            ),
+            lookup_column=COLUMN_FLOW,
         )
         self.add_items(item_ids=item_ids)
 

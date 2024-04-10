@@ -16,22 +16,27 @@ class ColumnResource:
 
 
 class ColumnResources:
-    def __init__(self, resources: list[ColumnResource]) -> None:
+    def __init__(
+        self, resources: list[ColumnResource], lookup_column: str = COLUMN_NAME
+    ) -> None:
         self._resources = resources
+        self._lookup_column = lookup_column
         self._to_id = self._create_to_id(resources)
         self._to_name = self._create_to_name(resources)
 
-    @staticmethod
-    def _create_to_id(sections: list[ColumnResource]) -> dict[str, str]:
-        return {resource.values[COLUMN_NAME]: resource.id for resource in sections}
+    def _create_to_id(self, resources: list[ColumnResource]) -> dict[str, str]:
+        return {
+            resource.values[self._lookup_column]: resource.id for resource in resources
+        }
 
-    @staticmethod
-    def _create_to_name(sections: list[ColumnResource]) -> dict[str, str]:
-        return {resource.id: resource.values[COLUMN_NAME] for resource in sections}
+    def _create_to_name(self, resources: list[ColumnResource]) -> dict[str, str]:
+        return {
+            resource.id: resource.values[self._lookup_column] for resource in resources
+        }
 
     @property
     def names(self) -> list[str]:
-        return [resource.values[COLUMN_NAME] for resource in self._resources]
+        return [resource.values[self._lookup_column] for resource in self._resources]
 
     def get_name_for(self, resource_id: str) -> str:
         return self._to_name.get(resource_id, "")
