@@ -5,7 +5,10 @@ from typing import Any, Optional
 
 from customtkinter import CTkButton, CTkComboBox, CTkEntry, CTkLabel, ThemeManager
 
-from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
+from OTAnalytics.adapter_ui.abstract_frame_project import (
+    AbstractFrameProject,
+    AbstractFrameSvzMetadata,
+)
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.project import (
     COORDINATE_X,
@@ -191,7 +194,7 @@ class TabviewSvzMetadata(CustomCTkTabview):
         self.set(self._title)
 
 
-class FrameSvzMetadata(EmbeddedCTkFrame):
+class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
 
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -258,7 +261,7 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
         )
 
     def introduce_to_viewmodel(self) -> None:
-        pass
+        self._viewmodel.set_svz_metadata_frame(self)
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure((0, 1, 2, 3, 4), weight=1)
@@ -334,6 +337,15 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
             COORDINATE_X: self._coordinate_x.get(),
             COORDINATE_Y: self._coordinate_y.get(),
         }
+
+    def update(self, metadata: dict) -> None:
+        self._tk_number.set(metadata[TK_NUMBER])
+        self._counting_location_number.set(metadata[COUNTING_LOCATION_NUMBER])
+        self._direction.set(self._directions.get_name_for(metadata[DIRECTION]))
+        self._weather.set(self._weather_types.get_name_for(metadata[WEATHER]))
+        self._remark.set(metadata[REMARK])
+        self._coordinate_x.set(metadata[COORDINATE_X])
+        self._coordinate_y.set(metadata[COORDINATE_Y])
 
 
 def get_default_toplevel_fg_color() -> str:

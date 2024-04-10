@@ -13,7 +13,10 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
+from OTAnalytics.adapter_ui.abstract_frame_project import (
+    AbstractFrameProject,
+    AbstractFrameSvzMetadata,
+)
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -582,6 +585,7 @@ class DummyViewModel(
         logger().info(f"{OTCONFIG} file to load: {otconfig_file}")
         self._application.load_otconfig(file=Path(otconfig_file))
         self._show_current_project()
+        self._show_current_svz_metadata()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
@@ -1745,3 +1749,14 @@ class DummyViewModel(
                 for key, value in WEATHER_TYPES.items()
             ]
         )
+
+    def set_svz_metadata_frame(self, frame: AbstractFrameSvzMetadata) -> None:
+        self._frame_svz_metadata = frame
+        self._show_current_svz_metadata()
+
+    def _show_current_svz_metadata(self) -> None:
+        if self._frame_svz_metadata is None:
+            raise MissingInjectedInstanceError(type(self._frame_svz_metadata).__name__)
+        project = self._application._datastore.project
+        if metadata := project.metadata:
+            self._frame_svz_metadata.update(metadata=metadata.to_dict())

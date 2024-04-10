@@ -15,3 +15,13 @@ class AbstractFrameProject:
     @abstractmethod
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         raise NotImplementedError
+
+
+class AbstractFrameSvzMetadata:
+    @abstractmethod
+    def introduce_to_viewmodel(self) -> None:
+        pass
+
+    @abstractmethod
+    def update(self, metadata: dict) -> None:
+        pass

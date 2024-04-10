@@ -14,7 +14,19 @@ from OTAnalytics.application.parser.config_parser import (
     StartDateMissing,
 )
 from OTAnalytics.application.parser.flow_parser import FlowParser
-from OTAnalytics.application.project import Project
+from OTAnalytics.application.project import (
+    COORDINATE_X,
+    COORDINATE_Y,
+    COUNTING_LOCATION_NUMBER,
+    DIRECTION,
+    REMARK,
+    TK_NUMBER,
+    WEATHER,
+    DirectionOfStationing,
+    Project,
+    SvzMetadata,
+    WeatherType,
+)
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -119,7 +131,26 @@ class OtConfigParser(ConfigParser):
         _validate_data(data, [project.NAME, project.START_DATE])
         name = data[project.NAME]
         start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
-        return Project(name=name, start_date=start_date)
+        svz_metadata = self._parse_svz_metadata(data[project.METADATA])
+        return Project(name=name, start_date=start_date, metadata=svz_metadata)
+
+    def _parse_svz_metadata(self, data: dict) -> SvzMetadata:
+        tk_number = data[TK_NUMBER]
+        counting_location_number = data[COUNTING_LOCATION_NUMBER]
+        direction = DirectionOfStationing.parse(data[DIRECTION])
+        weather = WeatherType.parse(data[WEATHER])
+        remark = data[REMARK]
+        coordinate_x = data[COORDINATE_X]
+        coordinate_y = data[COORDINATE_Y]
+        return SvzMetadata(
+            tk_number=tk_number,
+            counting_location_number=counting_location_number,
+            direction=direction,
+            weather=weather,
+            remark=remark,
+            coordinate_x=coordinate_x,
+            coordinate_y=coordinate_y,
+        )
 
     def _parse_analysis(self, data: dict, base_folder: Path) -> AnalysisConfig:
         _validate_data(

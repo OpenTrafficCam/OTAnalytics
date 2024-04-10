@@ -10,7 +10,10 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
+from OTAnalytics.adapter_ui.abstract_frame_project import (
+    AbstractFrameProject,
+    AbstractFrameSvzMetadata,
+)
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -399,5 +402,10 @@ class ViewModel(ABC):
     def get_directions_of_stationing(self) -> ColumnResources:
         raise NotImplementedError
 
+    @abstractmethod
     def get_weather_types(self) -> ColumnResources:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_svz_metadata_frame(self, frame: AbstractFrameSvzMetadata) -> None:
         raise NotImplementedError
