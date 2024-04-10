@@ -3,7 +3,7 @@ from tkinter.ttk import Treeview
 from typing import Any, Literal
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.adapter_ui.text_resources import ColumnResource
+from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
@@ -44,7 +44,7 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
         x, y = get_widget_position(self, offset=offset)
         return x, y
 
-    def add_items(self, item_ids: list[ColumnResource]) -> None:
+    def add_items(self, item_ids: ColumnResources) -> None:
         for id in item_ids:
             cell_values = tuple(id.values[column] for column in self["columns"])
             self.insert(parent="", index="end", iid=id.id, text="", values=cell_values)

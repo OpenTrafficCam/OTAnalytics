@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Iterator
 
 COLUMN_NAME = "column_name"
 
@@ -40,3 +41,6 @@ class ColumnResources:
 
     def has(self, resource_id: str) -> bool:
         return resource_id in [resource.id for resource in self._resources]
+
+    def __iter__(self) -> Iterator[ColumnResource]:
+        return self._resources.__iter__()

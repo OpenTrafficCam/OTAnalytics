@@ -3,7 +3,7 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
-from OTAnalytics.adapter_ui.text_resources import ColumnResource
+from OTAnalytics.adapter_ui.text_resources import ColumnResource, ColumnResources
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
@@ -129,11 +129,14 @@ class TreeviewFlows(TreeviewTemplate):
 
     def update_items(self) -> None:
         self.delete(*self.get_children())
-        item_ids = [
-            self.__to_resource(flow) for flow in self._viewmodel.get_all_flows()
-        ]
-        self.add_items(item_ids=sorted(item_ids))
+        item_ids = ColumnResources(
+            sorted(
+                [self.__to_resource(flow) for flow in self._viewmodel.get_all_flows()]
+            )
+        )
+        self.add_items(item_ids=item_ids)
 
-    def __to_resource(self, flow: Flow) -> ColumnResource:
+    @staticmethod
+    def __to_resource(flow: Flow) -> ColumnResource:
         values = {COLUMN_FLOW: flow.name}
         return ColumnResource(id=flow.id.id, values=values)

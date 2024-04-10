@@ -4,7 +4,7 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
-from OTAnalytics.adapter_ui.text_resources import ColumnResource
+from OTAnalytics.adapter_ui.text_resources import ColumnResource, ColumnResources
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
@@ -103,14 +103,17 @@ class TreeviewFiles(TreeviewTemplate):
             else:
                 track_files_have_videos.append(False)
 
-        item_ids = [
-            self.__to_resource(file=file, video_loaded=video_loaded)
-            for file, video_loaded in zip(track_files, track_files_have_videos)
-        ]
+        item_ids = ColumnResources(
+            [
+                self.__to_resource(file=file, video_loaded=video_loaded)
+                for file, video_loaded in zip(track_files, track_files_have_videos)
+            ]
+        )
         self.add_items(item_ids=item_ids)
 
+    @staticmethod
     def __to_resource(
-        self, file: Path, video_loaded: bool, tracks_loaded: bool = True
+        file: Path, video_loaded: bool, tracks_loaded: bool = True
     ) -> ColumnResource:
         values = {
             COLUMN_FILE: file.stem,
