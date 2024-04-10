@@ -3,14 +3,12 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
+from OTAnalytics.adapter_ui.text_resources import ColumnResource
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    ColumnResource,
-    TreeviewTemplate,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
 
 
 class FrameVideos(AbstractCTkFrame):

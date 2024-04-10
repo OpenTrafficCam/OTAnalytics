@@ -30,6 +30,7 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     InnerSegmentsCenterCalculator,
     SectionRefPointCalculator,
 )
+from OTAnalytics.adapter_ui.text_resources import COLUMN_NAME, ColumnResource
 from OTAnalytics.adapter_ui.ui_texts import DIRECTIONS_OF_STATIONING
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
@@ -94,7 +95,6 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import COLUMN_SECTION
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -135,7 +135,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     ToplevelFlows,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
@@ -1250,7 +1249,7 @@ class DummyViewModel(
         self._application.generate_flows()
 
     def __to_resource(self, section: Section) -> ColumnResource:
-        values = {COLUMN_SECTION: section.name}
+        values = {COLUMN_NAME: section.name}
         return ColumnResource(id=section.id.serialize(), values=values)
 
     def __update_flow_data(self, flow_data: dict) -> None:

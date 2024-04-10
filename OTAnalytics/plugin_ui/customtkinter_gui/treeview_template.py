@@ -1,24 +1,13 @@
 from abc import abstractmethod
-from dataclasses import dataclass
 from tkinter.ttk import Treeview
 from typing import Any, Literal
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.text_resources import ColumnResource
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import tk_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 
 EMPTY_SELECTION: list[str] = []
-
-
-@dataclass(frozen=True, order=True)
-class ColumnResource:
-    """
-    Represents a row in a treeview with an id and a dict of values to be shown.
-    The dicts keys represent the columns and the values represent the cell values.
-    """
-
-    id: str
-    values: dict[str, str]
 
 
 class TreeviewTemplate(AbstractTreeviewInterface, Treeview):

@@ -4,16 +4,12 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
+from OTAnalytics.adapter_ui.text_resources import COLUMN_NAME, ColumnResource
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    ColumnResource,
-    TreeviewTemplate,
-)
-
-COLUMN_SECTION = "Section"
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
 
 
 class FrameSections(AbstractCTkFrame):
@@ -125,10 +121,10 @@ class TreeviewSections(TreeviewTemplate):
         self.update_items()
 
     def _define_columns(self) -> None:
-        columns = [COLUMN_SECTION]
+        columns = [COLUMN_NAME]
         self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
-        self.column(column=COLUMN_SECTION, anchor="center", width=150, minwidth=40)
+        self.column(column=COLUMN_NAME, anchor="center", width=150, minwidth=40)
         self["displaycolumns"] = columns
 
     def _introduce_to_viewmodel(self) -> None:
@@ -149,7 +145,7 @@ class TreeviewSections(TreeviewTemplate):
         self.add_items(item_ids=sorted(item_ids))
 
     def __to_resource(self, section: Section) -> ColumnResource:
-        values = {COLUMN_SECTION: section.name}
+        values = {COLUMN_NAME: section.name}
         return ColumnResource(id=section.id.id, values=values)
 
 

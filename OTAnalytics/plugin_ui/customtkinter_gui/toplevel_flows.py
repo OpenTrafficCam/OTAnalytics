@@ -4,16 +4,15 @@ from typing import Any, Optional
 
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
+from OTAnalytics.adapter_ui.text_resources import ColumnResource, TextResources
 from OTAnalytics.application.application import CancelAddFlow
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import COLUMN_SECTION
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
     FrameContent,
     ToplevelTemplate,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 FLOW_ID = "Id"
 FLOW_NAME = "Name"
@@ -36,34 +35,6 @@ class NotExistingSectionException(Exception):
 
 class InvalidFlowNameException(Exception):
     pass
-
-
-class TextResources:
-    def __init__(self, resources: list[ColumnResource]) -> None:
-        self._resources = resources
-        self._to_id = self._create_to_id(resources)
-        self._to_name = self._create_to_name(resources)
-
-    @staticmethod
-    def _create_to_id(sections: list[ColumnResource]) -> dict[str, str]:
-        return {resource.values[COLUMN_SECTION]: resource.id for resource in sections}
-
-    @staticmethod
-    def _create_to_name(sections: list[ColumnResource]) -> dict[str, str]:
-        return {resource.id: resource.values[COLUMN_SECTION] for resource in sections}
-
-    @property
-    def names(self) -> list[str]:
-        return [resource.values[COLUMN_SECTION] for resource in self._resources]
-
-    def get_name_for(self, resource_id: str) -> str:
-        return self._to_name.get(resource_id, "")
-
-    def get_id_for(self, name: str) -> str:
-        return self._to_id.get(name, "")
-
-    def has(self, resource_id: str) -> bool:
-        return resource_id in [resource.id for resource in self._resources]
 
 
 class FrameConfigureFlow(FrameContent):
