@@ -15,9 +15,9 @@ from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_parser.otvision_parser import OtEventListParser
 
-EXTENSION_CSV = ".csv"
-EXTENSION_EXCEL = ".xlsx"
-EXTENSION_OTEVENTS = f".{DEFAULT_EVENTLIST_FILE_TYPE}"
+EXTENSION_CSV = "csv"
+EXTENSION_EXCEL = "xlsx"
+EXTENSION_OTEVENTS = DEFAULT_EVENTLIST_FILE_TYPE
 
 OTC_EXCEL_FORMAT_NAME = "Excel (OpenTrafficCam)"
 OTC_CSV_FORMAT_NAME = "CSV (OpenTrafficCam)"
@@ -102,7 +102,7 @@ class EventListExcelExporter(EventListExporter):
         writer.close()
 
     def get_extension(self) -> str:
-        return EXTENSION_EXCEL
+        return f".{EXTENSION_EXCEL}"
 
     def get_name(self) -> str:
         return OTC_EXCEL_FORMAT_NAME
@@ -119,7 +119,7 @@ class EventListCSVExporter(EventListExporter):
         df_events.to_csv(file, index=False)
 
     def get_extension(self) -> str:
-        return EXTENSION_CSV
+        return f".{EXTENSION_CSV}"
 
     def get_name(self) -> str:
         return OTC_CSV_FORMAT_NAME
@@ -135,7 +135,7 @@ class EventListOteventsExporter(EventListExporter):
         self._event_list_parser.serialize(events, sections, file)
 
     def get_extension(self) -> str:
-        return EXTENSION_OTEVENTS
+        return f".{EXTENSION_OTEVENTS}"
 
     def get_name(self) -> str:
         return OTC_OTEVENTS_FORMAT_NAME
@@ -190,15 +190,15 @@ AVAILABLE_EVENTLIST_EXPORTERS: dict[str, EventListExporter] = {
 
 def provide_available_eventlist_exporter(event_format: str) -> EventListExporter:
     _format = event_format.lower()
-    if _format == EXTENSION_CSV:
+    if _format == EXTENSION_CSV or _format == f".{EXTENSION_CSV}":
         return AVAILABLE_EVENTLIST_EXPORTERS[OTC_CSV_FORMAT_NAME]
-    elif _format == EXTENSION_EXCEL:
+    elif _format == EXTENSION_EXCEL or _format == f".{EXTENSION_EXCEL}":
         return AVAILABLE_EVENTLIST_EXPORTERS[OTC_EXCEL_FORMAT_NAME]
-    elif _format == DEFAULT_EVENTLIST_FILE_TYPE:
+    elif _format == EXTENSION_OTEVENTS or _format == f".{EXTENSION_OTEVENTS}":
         return AVAILABLE_EVENTLIST_EXPORTERS[OTC_OTEVENTS_FORMAT_NAME]
     else:
         raise ExporterNotFoundError(
             f"{event_format} is a not supported eventlist format. "
             f"Supported formats are: [{EXTENSION_CSV}, "
-            f"{EXTENSION_EXCEL}, {DEFAULT_EVENTLIST_FILE_TYPE}]"
+            f"{EXTENSION_EXCEL}, {EXTENSION_OTEVENTS}]"
         )

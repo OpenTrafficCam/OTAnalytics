@@ -231,7 +231,7 @@ class OTAnalyticsCli:
         for event_format in self._run_config.event_formats:
             event_list_exporter = self._provide_eventlist_exporter(event_format)
             actual_save_path = save_path.with_suffix(
-                f".events.{event_list_exporter.get_extension()}"
+                f".events{event_list_exporter.get_extension()}"
             )
             event_list_exporter.export(events, sections, actual_save_path)
             logger().info(f"Event list saved at '{actual_save_path}'")
