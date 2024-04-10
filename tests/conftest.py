@@ -5,6 +5,12 @@ from unittest.mock import Mock
 
 import pytest
 
+from OTAnalytics.application.analysis.traffic_counting import (
+    EventPair,
+    RoadUserAssignment,
+)
+from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
@@ -319,3 +325,61 @@ def pandas_track_segment_dataset_builder(
     track_segment_dataset_builder_provider: TrackSegmentDatasetBuilderProvider,
 ) -> TrackSegmentDatasetBuilder:
     return track_segment_dataset_builder_provider.provide(PANDAS)
+
+
+@pytest.fixture
+def first_line_section() -> Section:
+    return LineSection(
+        SectionId("1"), "First Section", {}, {}, [Coordinate(0, 0), Coordinate(1, 0)]
+    )
+
+
+@pytest.fixture
+def second_line_section() -> Section:
+    return LineSection(
+        SectionId("2"), "Second Section", {}, {}, [Coordinate(0, 0), Coordinate(1, 0)]
+    )
+
+
+@pytest.fixture
+def first_flow(first_line_section: Section, second_line_section: Section) -> Flow:
+    _id = FlowId("First Flow")
+    return Flow(_id, _id.id, first_line_section.id, second_line_section.id)
+
+
+@pytest.fixture
+def first_section_event(first_line_section: Section) -> Event:
+    builder = EventBuilder()
+    builder.add_road_user_id("Road User 1")
+    builder.add_section_id(first_line_section.id.id)
+    return builder.build_section_event()
+
+
+@pytest.fixture
+def second_section_event(second_line_section: Section) -> Event:
+    builder = EventBuilder()
+    builder.add_road_user_id("Road User 1")
+    builder.add_section_id(second_line_section.id.id)
+    return builder.build_section_event()
+
+
+@pytest.fixture
+def first_road_user_assignment(
+    first_flow: Flow, first_section_event: Event, second_section_event: Event
+) -> RoadUserAssignment:
+    return RoadUserAssignment(
+        "Road User 1",
+        first_flow,
+        EventPair(first_section_event, second_section_event),
+    )
+
+
+@pytest.fixture
+def second_road_user_assignment(
+    first_flow: Flow, first_section_event: Event, second_section_event: Event
+) -> RoadUserAssignment:
+    return RoadUserAssignment(
+        "Road User 2",
+        first_flow,
+        EventPair(first_section_event, second_section_event),
+    )
