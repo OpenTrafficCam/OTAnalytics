@@ -38,16 +38,16 @@ class EventListDataFrameBuilder:
         return pd.DataFrame([event.to_dict() for event in events])
 
     def build(self) -> pd.DataFrame:
-        self._convert_occurence_to_seconds_since_epoch()
+        self._convert_occurrence_to_seconds_since_epoch()
         self._split_columns_with_lists()
         self._add_section_names()
         return self._df
 
-    def _convert_occurence_to_seconds_since_epoch(self) -> None:
+    def _convert_occurrence_to_seconds_since_epoch(self) -> None:
         # TODO: Use OTAnalytics´ builtin timestamp methods
         epoch = pd.Timestamp("1970-01-01")
-        occurence = pd.to_datetime(self._df[OCCURRENCE])
-        self._df[f"{OCCURRENCE}_sec"] = (occurence - epoch).dt.total_seconds()
+        occurrence = pd.to_datetime(self._df[OCCURRENCE])
+        self._df[f"{OCCURRENCE}_sec"] = (occurrence - epoch).dt.total_seconds()
 
     def _split_columns_with_lists(self) -> None:
         self._df[["coordinate_px_x", "coordinate_px_y"]] = pd.DataFrame(
