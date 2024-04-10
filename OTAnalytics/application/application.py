@@ -613,6 +613,9 @@ class OTAnalyticsApplication:
     def update_project_start_date(self, start_date: datetime | None) -> None:
         self._project_updater.update_start_date(start_date)
 
+    def update_svz_metadata(self, metadata: dict) -> None:
+        self._project_updater.update_svz_metadata(metadata)
+
     def get_track_repository_size(self) -> int:
         return self._track_repository_size.get()
 

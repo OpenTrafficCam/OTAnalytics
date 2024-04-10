@@ -30,6 +30,7 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     InnerSegmentsCenterCalculator,
     SectionRefPointCalculator,
 )
+from OTAnalytics.adapter_ui.ui_texts import DIRECTIONS_OF_STATIONING
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
     MissingCoordinate,
@@ -1694,3 +1695,9 @@ class DummyViewModel(
         self, button_quick_save_config: AbstractButtonQuickSaveConfig
     ) -> None:
         self._button_quick_save_config = button_quick_save_config
+
+    def update_svz_metadata(self, metadata: dict) -> None:
+        self._application.update_svz_metadata(metadata)
+
+    def get_directions_of_stationing(self) -> dict:
+        return DIRECTIONS_OF_STATIONING

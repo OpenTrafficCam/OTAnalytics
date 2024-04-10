@@ -17,6 +17,7 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.application.project import DirectionOfStationing
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -388,4 +389,11 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_video_control_frame(self, frame: AbstractFrame) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_svz_metadata(self, metadata: dict) -> None:
+        raise NotImplementedError
+
+    def get_directions_of_stationing(self) -> dict[DirectionOfStationing, str]:
         raise NotImplementedError

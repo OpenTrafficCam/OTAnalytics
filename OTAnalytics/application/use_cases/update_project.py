@@ -13,22 +13,30 @@ class ProjectUpdater:
         self._datastore = datastore
         self._subject = Subject[Project]()
 
-    def __call__(self, name: str, start_date: Optional[datetime]) -> None:
-        project = Project(name=name, start_date=start_date)
+    def __call__(
+        self, name: str, start_date: Optional[datetime], metadata: Optional[dict]
+    ) -> None:
+        project = Project(name=name, start_date=start_date, metadata=metadata)
         self._datastore.project = project
         self._subject.notify(project)
 
     def update_name(self, name: str) -> None:
         old_project = self._datastore.project
-        new_project = Project(name, old_project.start_date)
+        new_project = Project(name, old_project.start_date, old_project.metadata)
         self._datastore.project = new_project
         self._subject.notify(new_project)
 
     def update_start_date(self, start_date: Optional[datetime]) -> None:
         old_project = self._datastore.project
-        new_project = Project(old_project.name, start_date)
+        new_project = Project(old_project.name, start_date, old_project.metadata)
         self._datastore.project = new_project
         self._subject.notify(new_project)
 
     def register(self, observer: OBSERVER[Project]) -> None:
         self._subject.register(observer)
+
+    def update_svz_metadata(self, metadata: dict) -> None:
+        old_project = self._datastore.project
+        new_project = Project(old_project.name, old_project.start_date, metadata)
+        self._datastore.project = new_project
+        self._subject.notify(new_project)
