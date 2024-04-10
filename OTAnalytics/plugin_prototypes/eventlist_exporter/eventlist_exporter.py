@@ -5,18 +5,13 @@ import pandas as pd
 
 from OTAnalytics.application.config import DEFAULT_EVENTLIST_FILE_TYPE
 from OTAnalytics.application.datastore import EventListParser
+from OTAnalytics.application.export_formats import event_list
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
 )
-from OTAnalytics.domain.event import (
-    DIRECTION_VECTOR,
-    EVENT_COORDINATE,
-    OCCURRENCE,
-    SECTION_ID,
-    Event,
-)
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_parser.otvision_parser import OtEventListParser
 
@@ -46,24 +41,32 @@ class EventListDataFrameBuilder:
     def _convert_occurrence_to_seconds_since_epoch(self) -> None:
         # TODO: Use OTAnalytics´ builtin timestamp methods
         epoch = pd.Timestamp("1970-01-01")
-        occurrence = pd.to_datetime(self._df[OCCURRENCE])
-        self._df[f"{OCCURRENCE}_sec"] = (occurrence - epoch).dt.total_seconds()
+        occurrence = pd.to_datetime(self._df[event_list.OCCURRENCE])
+        self._df[f"{event_list.OCCURRENCE}_sec"] = (
+            occurrence - epoch
+        ).dt.total_seconds()
 
     def _split_columns_with_lists(self) -> None:
-        self._df[["coordinate_px_x", "coordinate_px_y"]] = pd.DataFrame(
-            self._df[EVENT_COORDINATE].tolist(), index=self._df.index
+        self._df[[event_list.EVENT_COORDINATE_X, event_list.EVENT_COORDINATE_Y]] = (
+            pd.DataFrame(
+                self._df[event_list.EVENT_COORDINATE].tolist(), index=self._df.index
+            )
         )
-        self._df[["vector_px_x", "vector_px_y"]] = pd.DataFrame(
-            self._df[DIRECTION_VECTOR].tolist(), index=self._df.index
+        self._df[[event_list.DIRECTION_VECTOR_X, event_list.DIRECTION_VECTOR_Y]] = (
+            pd.DataFrame(
+                self._df[event_list.DIRECTION_VECTOR].tolist(), index=self._df.index
+            )
         )
-        self._df = self._df.drop(columns=[EVENT_COORDINATE, DIRECTION_VECTOR])
+        self._df = self._df.drop(
+            columns=[event_list.EVENT_COORDINATE, event_list.DIRECTION_VECTOR]
+        )
 
     def _add_section_names(self) -> None:
         sections_list_of_dicts = [section.to_dict() for section in self._sections]
         sections_dict = {
             section["id"]: section["name"] for section in sections_list_of_dicts
         }
-        self._df["section_name"] = self._df[SECTION_ID].map(
+        self._df["section_name"] = self._df[event_list.SECTION_ID].map(
             lambda x: sections_dict.get(x)
         )
 
