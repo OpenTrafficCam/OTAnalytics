@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import repeat
+from typing import Self
 
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
@@ -82,20 +83,25 @@ class TrackBuilder:
             _video_name=self.video_name,
         )
 
-    def add_track_id(self, id: str) -> None:
+    def add_track_id(self, id: str) -> Self:
         self.track_id = id
+        return self
 
-    def add_detection_class(self, classification: str) -> None:
+    def add_detection_class(self, classification: str) -> Self:
         self.detection_class = classification
+        return self
 
-    def add_confidence(self, confidence: float) -> None:
+    def add_confidence(self, confidence: float) -> Self:
         self.confidence = confidence
+        return self
 
-    def add_frame(self, frame: int) -> None:
+    def add_frame(self, frame: int) -> Self:
         self.frame = frame
+        return self
 
-    def add_track_class(self, classification: str) -> None:
+    def add_track_class(self, classification: str) -> Self:
         self.track_class = classification
+        return self
 
     def add_occurrence(
         self,
@@ -106,7 +112,7 @@ class TrackBuilder:
         minute: int,
         second: int,
         microsecond: int,
-    ) -> None:
+    ) -> Self:
         self.occurrence_year = year
         self.occurrence_month = month
         self.occurrence_day = day
@@ -114,20 +120,25 @@ class TrackBuilder:
         self.occurrence_minute = minute
         self.occurrence_second = second
         self.occurrence_microsecond = microsecond
+        return self
 
-    def add_second(self, second: int) -> None:
+    def add_second(self, second: int) -> Self:
         self.occurrence_second = second
+        return self
 
-    def add_microsecond(self, microsecond: int) -> None:
+    def add_microsecond(self, microsecond: int) -> Self:
         self.occurrence_microsecond = microsecond
+        return self
 
-    def add_xy_bbox(self, x: float, y: float) -> None:
+    def add_xy_bbox(self, x: float, y: float) -> Self:
         self.x = x
         self.y = y
+        return self
 
-    def add_wh_bbox(self, w: float, h: float) -> None:
+    def add_wh_bbox(self, w: float, h: float) -> Self:
         self.w = w
         self.h = h
+        return self
 
     def get_metadata(self) -> dict:
         return {
