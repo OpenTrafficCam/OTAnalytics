@@ -4,7 +4,12 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.project import DirectionOfStationing, Project, SvzMetadata
+from OTAnalytics.application.project import (
+    DirectionOfStationing,
+    Project,
+    SvzMetadata,
+    WeatherType,
+)
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 
 
@@ -13,6 +18,7 @@ def svz_metadata() -> SvzMetadata:
     tk_number = "1"
     counting_location_number = "2"
     direction = "1"
+    weather = "2"
     remark = "something"
     coordinate_x = "1.2"
     coordinate_y = "3.4"
@@ -20,6 +26,7 @@ def svz_metadata() -> SvzMetadata:
         tk_number=tk_number,
         counting_location_number=counting_location_number,
         direction=DirectionOfStationing.parse(direction),
+        weather=WeatherType.parse(weather),
         remark=remark,
         coordinate_x=coordinate_x,
         coordinate_y=coordinate_y,
@@ -36,11 +43,6 @@ def datastore(my_project: Project) -> Mock:
     datastore = Mock(spec=Datastore)
     datastore.project = my_project
     return datastore
-
-
-@pytest.fixture
-def project_metadata() -> dict:
-    return {"new": "project metadata"}
 
 
 class TestUpdateProject:
@@ -96,6 +98,7 @@ class TestUpdateProject:
             tk_number=svz_metadata.tk_number,
             counting_location_number=svz_metadata.counting_location_number,
             direction=svz_metadata.direction,
+            weather=svz_metadata.weather,
             remark="new metadata",
             coordinate_x=svz_metadata.coordinate_x,
             coordinate_y=svz_metadata.coordinate_y,

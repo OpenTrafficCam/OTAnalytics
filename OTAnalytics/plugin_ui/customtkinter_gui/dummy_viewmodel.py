@@ -35,7 +35,7 @@ from OTAnalytics.adapter_ui.text_resources import (
     ColumnResource,
     ColumnResources,
 )
-from OTAnalytics.adapter_ui.ui_texts import DIRECTIONS_OF_STATIONING
+from OTAnalytics.adapter_ui.ui_texts import DIRECTIONS_OF_STATIONING, WEATHER_TYPES
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
     MissingCoordinate,
@@ -65,8 +65,10 @@ from OTAnalytics.application.project import (
     DIRECTION,
     REMARK,
     TK_NUMBER,
+    WEATHER,
     DirectionOfStationing,
     SvzMetadata,
+    WeatherType,
 )
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
@@ -1719,6 +1721,9 @@ class DummyViewModel(
                 if metadata[DIRECTION]
                 else None
             ),
+            weather=(
+                WeatherType.parse(metadata[WEATHER]) if metadata[WEATHER] else None
+            ),
             remark=metadata[REMARK],
             coordinate_x=metadata[COORDINATE_X],
             coordinate_y=metadata[COORDINATE_Y],
@@ -1730,5 +1735,13 @@ class DummyViewModel(
             [
                 ColumnResource(id=key.serialize(), values={COLUMN_NAME: value})
                 for key, value in DIRECTIONS_OF_STATIONING.items()
+            ]
+        )
+
+    def get_weather_types(self) -> ColumnResources:
+        return ColumnResources(
+            [
+                ColumnResource(id=key.serialize(), values={COLUMN_NAME: value})
+                for key, value in WEATHER_TYPES.items()
             ]
         )

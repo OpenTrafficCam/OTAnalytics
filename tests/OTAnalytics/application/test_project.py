@@ -10,9 +10,11 @@ from OTAnalytics.application.project import (
     REMARK,
     START_DATE,
     TK_NUMBER,
+    WEATHER,
     DirectionOfStationing,
     Project,
     SvzMetadata,
+    WeatherType,
 )
 
 
@@ -21,6 +23,7 @@ class TestSvzMetadata:
         tk_number = "1"
         counting_location_number = "2"
         direction = "1"
+        weather = "2"
         remark = "something"
         coordinate_x = "1.2"
         coordinate_y = "3.4"
@@ -28,6 +31,7 @@ class TestSvzMetadata:
             tk_number=tk_number,
             counting_location_number=counting_location_number,
             direction=DirectionOfStationing.parse(direction),
+            weather=WeatherType.parse(weather),
             remark=remark,
             coordinate_x=coordinate_x,
             coordinate_y=coordinate_y,
@@ -39,6 +43,7 @@ class TestSvzMetadata:
             TK_NUMBER: tk_number,
             COUNTING_LOCATION_NUMBER: counting_location_number,
             DIRECTION: direction,
+            WEATHER: weather,
             REMARK: remark,
             COORDINATE_X: coordinate_x,
             COORDINATE_Y: coordinate_y,
@@ -54,6 +59,7 @@ class TestProject:
         tk_number = "1"
         counting_location_number = "2"
         direction = "1"
+        weather = "2"
         remark = "something"
         coordinate_x = "1.2"
         coordinate_y = "3.4"
@@ -61,6 +67,7 @@ class TestProject:
             tk_number=tk_number,
             counting_location_number=counting_location_number,
             direction=DirectionOfStationing.parse(direction),
+            weather=WeatherType.parse(weather),
             remark=remark,
             coordinate_x=coordinate_x,
             coordinate_y=coordinate_y,

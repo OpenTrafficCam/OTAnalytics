@@ -14,6 +14,7 @@ from OTAnalytics.application.project import (
     DIRECTION,
     REMARK,
     TK_NUMBER,
+    WEATHER,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.button_quick_save_config import (
     ButtonQuickSaveConfig,
@@ -196,12 +197,14 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
         self._directions = self._viewmodel.get_directions_of_stationing()
+        self._weather_types = self._viewmodel.get_weather_types()
         self._tk_number = tkinter.StringVar()
         self._counting_location_number = tkinter.StringVar()
+        self._direction = tkinter.StringVar()
+        self._weather = tkinter.StringVar()
+        self._remark = tkinter.StringVar()
         self._coordinate_x = tkinter.StringVar()
         self._coordinate_y = tkinter.StringVar()
-        self._direction = tkinter.StringVar()
-        self._remark = tkinter.StringVar()
         self._get_widgets()
         self._place_widgets()
         self.introduce_to_viewmodel()
@@ -222,6 +225,24 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
             textvariable=self._counting_location_number,
             placeholder_text="Zählstellennummer",
         )
+        self._label_direction = CTkLabel(master=self, text="Ausrichtung")
+        self._entry_direction = CTkComboBox(
+            master=self,
+            variable=self._direction,
+            values=self._directions.names,
+        )
+        self._label_weather = CTkLabel(master=self, text="Wetter")
+        self._entry_weather = CTkComboBox(
+            master=self,
+            variable=self._weather,
+            values=self._weather_types.names,
+        )
+        self._label_remark = CTkLabel(master=self, text="Bemerkung")
+        self._entry_remark = CTkEntry(
+            master=self,
+            textvariable=self._remark,
+            placeholder_text="Bemerkung",
+        )
         self._label_coordinate = CTkLabel(master=self, text="Geokoordinate")
         self._label_coordinate_x = CTkLabel(master=self, text="X")
         self._entry_coordinate_x = CTkEntry(
@@ -234,18 +255,6 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
             master=self,
             textvariable=self._coordinate_y,
             placeholder_text="Y Koordinate",
-        )
-        self._label_direction = CTkLabel(master=self, text="Ausrichtung")
-        self._entry_direction = CTkComboBox(
-            master=self,
-            variable=self._direction,
-            values=self._directions.names,
-        )
-        self._label_remark = CTkLabel(master=self, text="Bemerkung")
-        self._entry_remark = CTkEntry(
-            master=self,
-            textvariable=self._remark,
-            placeholder_text="Bemerkung",
         )
 
     def introduce_to_viewmodel(self) -> None:
@@ -273,26 +282,32 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
         self._entry_direction.grid(
             row=2, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self._label_remark.grid(
+        self._label_weather.grid(
             row=3, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
         )
-        self._entry_remark.grid(
+        self._entry_weather.grid(
             row=3, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self._label_remark.grid(
+            row=4, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
+        )
+        self._entry_remark.grid(
+            row=4, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self._label_coordinate.grid(
-            row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+            row=5, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._label_coordinate_x.grid(
-            row=5, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self._entry_coordinate_x.grid(
-            row=5, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self._label_coordinate_y.grid(
             row=6, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self._entry_coordinate_y.grid(
+        self._entry_coordinate_x.grid(
             row=6, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self._label_coordinate_y.grid(
+            row=7, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self._entry_coordinate_y.grid(
+            row=7, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _wire_callbacks(self) -> None:
@@ -301,6 +316,7 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
             "write", callback=self._update_metadata
         )
         self._direction.trace_add("write", callback=self._update_metadata)
+        self._weather.trace_add("write", callback=self._update_metadata)
         self._remark.trace_add("write", callback=self._update_metadata)
         self._coordinate_x.trace_add("write", callback=self._update_metadata)
         self._coordinate_y.trace_add("write", callback=self._update_metadata)
@@ -313,6 +329,7 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
             TK_NUMBER: self._tk_number.get(),
             COUNTING_LOCATION_NUMBER: self._counting_location_number.get(),
             DIRECTION: self._directions.get_id_for(self._direction.get()),
+            WEATHER: self._weather_types.get_id_for(self._weather.get()),
             REMARK: self._remark.get(),
             COORDINATE_X: self._coordinate_x.get(),
             COORDINATE_Y: self._coordinate_y.get(),

@@ -398,3 +398,6 @@ class ViewModel(ABC):
     @abstractmethod
     def get_directions_of_stationing(self) -> ColumnResources:
         raise NotImplementedError
+
+    def get_weather_types(self) -> ColumnResources:
+        raise NotImplementedError
