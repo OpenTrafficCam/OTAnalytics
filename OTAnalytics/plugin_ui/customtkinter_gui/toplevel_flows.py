@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
-from OTAnalytics.adapter_ui.text_resources import ColumnResource, TextResources
+from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.application.application import CancelAddFlow
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
@@ -40,14 +40,14 @@ class InvalidFlowNameException(Exception):
 class FrameConfigureFlow(FrameContent):
     def __init__(
         self,
-        section_ids: list[ColumnResource],
+        section_ids: ColumnResources,
         name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self._section_ids = TextResources(section_ids)
+        self._section_ids = section_ids
         self._name_generator = name_generator
         self._current_name = StringVar()
         self._input_values: dict = self.__create_input_values(input_values)
@@ -193,7 +193,7 @@ class FrameConfigureFlow(FrameContent):
 class ToplevelFlows(ToplevelTemplate):
     def __init__(
         self,
-        section_ids: list[ColumnResource],
+        section_ids: ColumnResources,
         name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,

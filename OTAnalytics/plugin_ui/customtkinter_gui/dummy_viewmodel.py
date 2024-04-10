@@ -30,7 +30,11 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     InnerSegmentsCenterCalculator,
     SectionRefPointCalculator,
 )
-from OTAnalytics.adapter_ui.text_resources import COLUMN_NAME, ColumnResource
+from OTAnalytics.adapter_ui.text_resources import (
+    COLUMN_NAME,
+    ColumnResource,
+    ColumnResources,
+)
 from OTAnalytics.adapter_ui.ui_texts import DIRECTIONS_OF_STATIONING
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
@@ -1178,15 +1182,16 @@ class DummyViewModel(
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
-        section_ids = [
-            self.__to_resource(section) for section in self.get_all_sections()
-        ]
-        if len(section_ids) < 2:
+        sections = list(self.get_all_sections())
+        if len(sections) < 2:
             InfoBox(
                 message="To add a flow, at least two sections are needed",
                 initial_position=position,
             )
             raise CancelAddFlow()
+        section_ids = ColumnResources(
+            [self.__to_resource(section) for section in sections]
+        )
         return self.__create_flow_data(input_values, title, position, section_ids)
 
     def __create_flow_data(
@@ -1194,7 +1199,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[ColumnResource],
+        section_ids: ColumnResources,
     ) -> dict:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
@@ -1221,7 +1226,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[ColumnResource],
+        section_ids: ColumnResources,
     ) -> dict:
         return ToplevelFlows(
             title=title,

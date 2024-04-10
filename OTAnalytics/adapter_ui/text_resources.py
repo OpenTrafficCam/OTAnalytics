@@ -14,7 +14,7 @@ class ColumnResource:
     values: dict[str, str]
 
 
-class TextResources:
+class ColumnResources:
     def __init__(self, resources: list[ColumnResource]) -> None:
         self._resources = resources
         self._to_id = self._create_to_id(resources)
