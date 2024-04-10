@@ -195,6 +195,7 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self._directions = self._viewmodel.get_directions_of_stationing()
         self._tk_number = tkinter.StringVar()
         self._counting_location_number = tkinter.StringVar()
         self._coordinate_x = tkinter.StringVar()
@@ -238,7 +239,7 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
         self._entry_direction = CTkComboBox(
             master=self,
             variable=self._direction,
-            values=list(self._viewmodel.get_directions_of_stationing().values()),
+            values=self._directions.names,
         )
         self._label_remark = CTkLabel(master=self, text="Bemerkung")
         self._entry_remark = CTkEntry(
@@ -311,7 +312,7 @@ class FrameSvzMetadata(EmbeddedCTkFrame):
         return {
             TK_NUMBER: self._tk_number.get(),
             COUNTING_LOCATION_NUMBER: self._counting_location_number.get(),
-            DIRECTION: self._direction.get(),
+            DIRECTION: self._directions.get_id_for(self._direction.get()),
             REMARK: self._remark.get(),
             COORDINATE_X: self._coordinate_x.get(),
             COORDINATE_Y: self._coordinate_y.get(),

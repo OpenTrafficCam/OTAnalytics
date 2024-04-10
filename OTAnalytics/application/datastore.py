@@ -212,7 +212,7 @@ class Datastore:
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
         self._progressbar = progressbar
-        self.project = Project(name="", start_date=None, metadata={})
+        self.project = Project(name="", start_date=None, metadata=None)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._video_repository.register_videos_observer(observer)

@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
 )
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.project import SvzMetadata
 from OTAnalytics.application.state import (
     ActionState,
     FileState,
@@ -613,7 +614,7 @@ class OTAnalyticsApplication:
     def update_project_start_date(self, start_date: datetime | None) -> None:
         self._project_updater.update_start_date(start_date)
 
-    def update_svz_metadata(self, metadata: dict) -> None:
+    def update_svz_metadata(self, metadata: SvzMetadata) -> None:
         self._project_updater.update_svz_metadata(metadata)
 
     def get_track_repository_size(self) -> int:

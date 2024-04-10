@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from OTAnalytics.application.datastore import Datastore
-from OTAnalytics.application.project import Project
+from OTAnalytics.application.project import Project, SvzMetadata
 from OTAnalytics.domain.observer import OBSERVER, Subject
 
 
@@ -14,7 +14,7 @@ class ProjectUpdater:
         self._subject = Subject[Project]()
 
     def __call__(
-        self, name: str, start_date: Optional[datetime], metadata: Optional[dict]
+        self, name: str, start_date: Optional[datetime], metadata: Optional[SvzMetadata]
     ) -> None:
         project = Project(name=name, start_date=start_date, metadata=metadata)
         self._datastore.project = project
@@ -35,7 +35,7 @@ class ProjectUpdater:
     def register(self, observer: OBSERVER[Project]) -> None:
         self._subject.register(observer)
 
-    def update_svz_metadata(self, metadata: dict) -> None:
+    def update_svz_metadata(self, metadata: SvzMetadata) -> None:
         old_project = self._datastore.project
         new_project = Project(old_project.name, old_project.start_date, metadata)
         self._datastore.project = new_project

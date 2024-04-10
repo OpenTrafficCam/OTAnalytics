@@ -17,7 +17,7 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
-from OTAnalytics.application.project import DirectionOfStationing
+from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -395,5 +395,6 @@ class ViewModel(ABC):
     def update_svz_metadata(self, metadata: dict) -> None:
         raise NotImplementedError
 
-    def get_directions_of_stationing(self) -> dict[DirectionOfStationing, str]:
+    @abstractmethod
+    def get_directions_of_stationing(self) -> ColumnResources:
         raise NotImplementedError

@@ -58,6 +58,16 @@ from OTAnalytics.application.config import (
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
+from OTAnalytics.application.project import (
+    COORDINATE_X,
+    COORDINATE_Y,
+    COUNTING_LOCATION_NUMBER,
+    DIRECTION,
+    REMARK,
+    TK_NUMBER,
+    DirectionOfStationing,
+    SvzMetadata,
+)
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
@@ -1701,7 +1711,24 @@ class DummyViewModel(
         self._button_quick_save_config = button_quick_save_config
 
     def update_svz_metadata(self, metadata: dict) -> None:
-        self._application.update_svz_metadata(metadata)
+        svz_metadata = SvzMetadata(
+            tk_number=metadata[TK_NUMBER],
+            counting_location_number=metadata[COUNTING_LOCATION_NUMBER],
+            direction=(
+                DirectionOfStationing.parse(metadata[DIRECTION])
+                if metadata[DIRECTION]
+                else None
+            ),
+            remark=metadata[REMARK],
+            coordinate_x=metadata[COORDINATE_X],
+            coordinate_y=metadata[COORDINATE_Y],
+        )
+        self._application.update_svz_metadata(svz_metadata)
 
-    def get_directions_of_stationing(self) -> dict:
-        return DIRECTIONS_OF_STATIONING
+    def get_directions_of_stationing(self) -> ColumnResources:
+        return ColumnResources(
+            [
+                ColumnResource(id=key.serialize(), values={COLUMN_NAME: value})
+                for key, value in DIRECTIONS_OF_STATIONING.items()
+            ]
+        )
