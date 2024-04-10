@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from itertools import repeat
 from typing import Self
 
 from OTAnalytics.domain.track import Detection, Track, TrackId
@@ -276,30 +275,31 @@ def create_track(
     start_second: int,
     track_class: str = "car",
     detection_classes: list[str] | None = None,
+    confidences: list[float] | None = None,
 ) -> Track:
     if detection_classes:
         if len(detection_classes) != len(coord):
             raise ValueError(
                 "Track coordinates must match length of detection classifications."
             )
+    if confidences:
+        if len(confidences) != len(coord):
+            raise ValueError("Track coordinates must match length of confidences.")
     track_builder = TrackBuilder()
     track_builder.add_track_id(track_id)
     track_builder.add_track_class(track_class)
 
-    if detection_classes:
-        detections = [
-            (x, y, detection_class)
-            for (x, y), detection_class in zip(coord, detection_classes)
-        ]
-    else:
-        detections = [
-            (x, y, detection_class)
-            for (x, y), detection_class in zip(coord, repeat(track_class))
-        ]
-
-    for second, (x, y, detection_class) in enumerate(detections, start=start_second):
-        track_builder.add_second(second)
+    current_second = start_second
+    for current_index, (x, y) in enumerate(coord, start=0):
+        track_builder.add_second(current_second)
         track_builder.add_xy_bbox(x, y)
-        track_builder.add_detection_class(detection_class)
+        if detection_classes:
+            track_builder.add_detection_class(detection_classes[current_index])
+        else:
+            track_builder.add_detection_class(track_class)
+        if confidences:
+            track_builder.add_confidence(confidences[current_index])
         track_builder.append_detection()
+        current_second += 1
+
     return track_builder.build_track()

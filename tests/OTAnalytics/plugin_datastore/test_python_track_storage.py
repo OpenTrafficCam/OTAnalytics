@@ -28,6 +28,7 @@ from OTAnalytics.domain.track_dataset import (
     START_VIDEO_NAME,
     START_X,
     START_Y,
+    TrackDoesNotExistError,
     TrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.python_track_store import (
@@ -618,6 +619,22 @@ class TestPythonTrackDataset:
         assert empty_dataset.empty
         filled_dataset = empty_dataset.add_all([car_track])
         assert not filled_dataset.empty
+
+    def test_get_max_confidences_for(
+        self,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        empty_dataset = PythonTrackDataset()
+        with pytest.raises(TrackDoesNotExistError):
+            empty_dataset.get_max_confidences_for([car_track.id.id])
+        filled_dataset = empty_dataset.add_all([car_track, pedestrian_track])
+
+        car_id = car_track.id.id
+        pedestrian_id = pedestrian_track.id.id
+
+        result = filled_dataset.get_max_confidences_for([car_id, pedestrian_id])
+        assert result == {car_id: 0.8, pedestrian_id: 0.9}
 
 
 class TestSimpleCutTrackSegmentBuilder:

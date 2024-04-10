@@ -30,6 +30,7 @@ from OTAnalytics.domain.track_dataset import (
     FilteredTrackDataset,
     IntersectionPoint,
     TrackDataset,
+    TrackDoesNotExistError,
     TrackGeometryDataset,
     TrackSegmentDataset,
 )
@@ -586,6 +587,19 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             cut_segment_index = bisect(cut_info[track_id], row["cumcount"])
             return f"{track_id}_{cut_segment_index}"
         return row[track.TRACK_ID]
+
+    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+        try:
+            return (
+                self._dataset.loc[track_ids][track.CONFIDENCE]
+                .groupby(level=[LEVEL_TRACK_ID])
+                .max()
+                .to_dict()
+            )
+        except KeyError as cause:
+            raise TrackDoesNotExistError(
+                "Some tracks do not exists in dataset with given id"
+            ) from cause
 
 
 class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):

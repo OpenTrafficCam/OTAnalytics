@@ -5,7 +5,10 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import FilteredTrackDataset
+from OTAnalytics.domain.track_dataset import (
+    FilteredTrackDataset,
+    TrackDoesNotExistError,
+)
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CLASS_BICYCLIST,
     CLASS_CAR,
@@ -412,3 +415,31 @@ class TestFilteredTrackDataset:
             assert result_dataset.include_classes == frozenset()
             assert result_dataset.exclude_classes == frozenset()
             mock_other.cut_with_section.assert_called_once_with(section, offset)
+
+    @pytest.mark.parametrize(
+        "include_classes,exclude_classes,expected",
+        [
+            ([], [], {"1": 0.8, "2": 0.9}),
+            (["car"], [], {"1": 0.8}),
+            ([], ["car"], {"2": 0.9}),
+        ],
+    )
+    def test_get_max_confidences_for(
+        self,
+        include_classes: list[str],
+        exclude_classes: list[str],
+        expected: dict[str, float],
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        empty_datasets = self.get_datasets([], include_classes, exclude_classes)
+
+        for empty_dataset in empty_datasets.values():
+            with pytest.raises(TrackDoesNotExistError):
+                empty_dataset.get_max_confidences_for([car_track.id.id])
+
+            filled_dataset = empty_dataset.add_all([car_track, pedestrian_track])
+            all_track_ids = [track_id.id for track_id in filled_dataset.track_ids]
+
+            result = filled_dataset.get_max_confidences_for(all_track_ids)
+            assert result == expected

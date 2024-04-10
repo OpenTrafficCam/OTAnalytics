@@ -215,7 +215,7 @@ def closed_track() -> Track:
 
 @pytest.fixture
 def car_track() -> Track:
-    return create_track("1", [(1, 1), (2, 2)], 1, CLASS_CAR)
+    return create_track("1", [(1, 1), (2, 2)], 1, CLASS_CAR, confidences=[0.6, 0.8])
 
 
 @pytest.fixture
@@ -225,7 +225,9 @@ def car_track_continuing() -> Track:
 
 @pytest.fixture
 def pedestrian_track() -> Track:
-    return create_track("2", [(1, 1), (2, 2), (3, 3)], 1, CLASS_PEDESTRIAN)
+    return create_track(
+        "2", [(1, 1), (2, 2), (3, 3)], 1, CLASS_PEDESTRIAN, confidences=[0.9, 0.8, 0.7]
+    )
 
 
 @pytest.fixture

@@ -19,6 +19,10 @@ END_FRAME: str = "end_frame"
 END_VIDEO_NAME: str = "end_video_name"
 
 
+class TrackDoesNotExistError(Exception):
+    pass
+
+
 @dataclass(frozen=True, order=True)
 class IntersectionPoint:
     index: int
@@ -201,6 +205,21 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+        """Get max confidences for given track ids.
+
+        Args:
+            track_ids: the track ids to get the max confidences for.
+
+        Returns:
+            dict[TrackId, float]: the max confidence values for the track ids.
+
+        Raises:
+            TrackDoesNotExistError: if given track id does not exist within dataset.
+        """
+        raise NotImplementedError
+
 
 class FilteredTrackDataset(TrackDataset):
     @property
@@ -272,6 +291,9 @@ class FilteredTrackDataset(TrackDataset):
 
     def get_last_segments(self) -> TrackSegmentDataset:
         return self._filter().get_last_segments()
+
+    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+        return self._filter().get_max_confidences_for(track_ids)
 
 
 class TrackGeometryDataset(ABC):
