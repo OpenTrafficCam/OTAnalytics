@@ -15,8 +15,9 @@ from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_parser.otvision_parser import OtEventListParser
 
-EXTENSION_CSV = "csv"
-EXTENSION_EXCEL = "xlsx"
+EXTENSION_CSV = ".csv"
+EXTENSION_EXCEL = ".xlsx"
+EXTENSION_OTEVENTS = f".{DEFAULT_EVENTLIST_FILE_TYPE}"
 
 OTC_EXCEL_FORMAT_NAME = "Excel (OpenTrafficCam)"
 OTC_CSV_FORMAT_NAME = "CSV (OpenTrafficCam)"
@@ -134,7 +135,7 @@ class EventListOteventsExporter(EventListExporter):
         self._event_list_parser.serialize(events, sections, file)
 
     def get_extension(self) -> str:
-        return DEFAULT_EVENTLIST_FILE_TYPE
+        return EXTENSION_OTEVENTS
 
     def get_name(self) -> str:
         return OTC_OTEVENTS_FORMAT_NAME

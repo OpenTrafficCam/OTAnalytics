@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Protocol, Self
 
@@ -158,7 +159,8 @@ class RoadUserAssignmentExporter(ABC):
         return result
 
 
-class ExportSpecification(Protocol):
+@dataclass(frozen=True)
+class ExportSpecification:
     save_path: Path
     format: str
 
@@ -211,3 +213,12 @@ class ExportRoadUserAssignments:
         road_user_assignments = self._assigner.assign(events, flows)
         exporter = self._exporter_factory.create(specification)
         exporter.export(road_user_assignments)
+
+    def get_supported_formats(self) -> Iterable[ExportFormat]:
+        """
+        Returns an iterable of the supported export formats.
+
+        Returns:
+            Iterable[ExportFormat]: supported export formats
+        """
+        return self._exporter_factory.get_supported_formats()

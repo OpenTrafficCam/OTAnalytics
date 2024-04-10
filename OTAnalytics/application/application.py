@@ -631,6 +631,11 @@ class OTAnalyticsApplication:
     def export_road_user_assignments(self, specification: ExportSpecification) -> None:
         self._export_road_user_assignments.export(specification)
 
+    def get_road_user_export_formats(
+        self,
+    ) -> Iterable[ExportFormat]:
+        return self._export_road_user_assignments.get_supported_formats()
+
 
 class MissingTracksError(Exception):
     pass
