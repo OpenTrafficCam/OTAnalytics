@@ -3,6 +3,7 @@ from typing import Callable, Optional, Sequence
 
 from pandas import DataFrame
 
+from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.datastore import Datastore
@@ -44,7 +45,6 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 )
 from OTAnalytics.plugin_prototypes.event_visualization import PandasEventProvider
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    ColorPaletteProvider,
     EventToFlowResolver,
     FilterByClassification,
     FilterByFrame,

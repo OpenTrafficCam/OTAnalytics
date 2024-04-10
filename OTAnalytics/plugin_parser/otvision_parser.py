@@ -35,7 +35,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackImage,
 )
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
 from OTAnalytics.plugin_datastore.python_track_store import (
@@ -339,10 +339,12 @@ class PythonDetectionParser(DetectionParser):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
     ):
         self._track_classification_calculator = track_classification_calculator
         self._track_repository = track_repository
+        self._track_geometry_factory = track_geometry_factory
         self._track_length_limit = track_length_limit
         self._path_cache: dict[str, Path] = {}
 
@@ -387,7 +389,9 @@ class PythonDetectionParser(DetectionParser):
                 )
 
         return PythonTrackDataset.from_list(
-            tracks, self._track_classification_calculator
+            tracks,
+            self._track_geometry_factory,
+            self._track_classification_calculator,
         )
 
     def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:

@@ -69,6 +69,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
@@ -286,7 +289,9 @@ class TestOTAnalyticsCli:
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
-        track_repository = TrackRepository(PythonTrackDataset())
+        track_repository = TrackRepository(
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        )
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()
@@ -340,7 +345,10 @@ class TestOTAnalyticsCli:
         return {
             self.TRACK_PARSER: OttrkParser(
                 PythonDetectionParser(
-                    ByMaxConfidence(), track_repository, DEFAULT_TRACK_LENGTH_LIMIT
+                    ByMaxConfidence(),
+                    track_repository,
+                    PygeosTrackGeometryDataset.from_track_dataset,
+                    DEFAULT_TRACK_LENGTH_LIMIT,
                 ),
             ),
             self.EVENT_REPOSITORY: event_repository,
