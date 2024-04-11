@@ -37,7 +37,17 @@ class EventListDataFrameBuilder:
         self._convert_occurrence_to_seconds_since_epoch()
         self._split_columns_with_lists()
         self._add_section_names()
+        self._add_detailed_date_time_columns()
         return self._df
+
+    def _add_detailed_date_time_columns(self) -> None:
+        occurrence_column = pd.to_datetime(self._df[event_list.OCCURRENCE])
+        self._df[event_list.OCCURRENCE_DATE] = occurrence_column.dt.strftime(
+            event_list.DATE_FORMAT
+        )
+        self._df[event_list.OCCURRENCE_TIME] = occurrence_column.dt.strftime(
+            event_list.TIME_FORMAT
+        )
 
     def _convert_occurrence_to_seconds_since_epoch(self) -> None:
         # TODO: Use OTAnalytics´ builtin timestamp methods
