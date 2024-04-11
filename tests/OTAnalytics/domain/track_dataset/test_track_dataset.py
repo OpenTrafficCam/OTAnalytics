@@ -4,14 +4,14 @@ from unittest.mock import Mock
 import pytest
 from _pytest.fixtures import FixtureRequest
 
-from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import FilteredTrackDataset
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+from OTAnalytics.adapter_visualization.color_provider import (
     CLASS_BICYCLIST,
     CLASS_CAR,
     CLASS_CARGOBIKE,
     CLASS_PEDESTRIAN,
 )
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset import FilteredTrackDataset
 from tests.utils.assertions import (
     assert_equal_track_properties,
     assert_track_dataset_has_tracks,

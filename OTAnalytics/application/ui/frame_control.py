@@ -3,9 +3,7 @@ from datetime import timedelta
 from typing import Sequence
 
 from OTAnalytics.application.state import SectionState, TrackViewState, VideosMetadata
-from OTAnalytics.application.use_cases.filter_visualization import (
-    CreateDefaultFilterRange,
-)
+from OTAnalytics.application.use_cases.filter_visualization import CreateDefaultFilter
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
@@ -18,7 +16,7 @@ class SwitchTo(ABC):
         self,
         state: TrackViewState,
         videos_metadata: VideosMetadata,
-        create_default_filter: CreateDefaultFilterRange,
+        create_default_filter: CreateDefaultFilter,
     ) -> None:
         self._state = state
         self._videos_metadata = videos_metadata
@@ -61,7 +59,7 @@ class SwitchToNext(SwitchTo):
         self,
         state: TrackViewState,
         videos_metadata: VideosMetadata,
-        create_default_filter: CreateDefaultFilterRange,
+        create_default_filter: CreateDefaultFilter,
     ) -> None:
         super().__init__(state, videos_metadata, create_default_filter)
 
@@ -82,7 +80,7 @@ class SwitchToPrevious(SwitchTo):
         self,
         state: TrackViewState,
         videos_metadata: VideosMetadata,
-        create_default_filter: CreateDefaultFilterRange,
+        create_default_filter: CreateDefaultFilter,
     ) -> None:
         super().__init__(state, videos_metadata, create_default_filter)
 
@@ -108,7 +106,7 @@ class SwitchToEvent:
         event_repository: EventRepository,
         track_view_state: TrackViewState,
         section_state: SectionState,
-        create_default_filter: CreateDefaultFilterRange,
+        create_default_filter: CreateDefaultFilter,
         event_types: Sequence[EventType] = DEFAULT_EVENT_TYPES,
     ) -> None:
         self._event_repository = event_repository

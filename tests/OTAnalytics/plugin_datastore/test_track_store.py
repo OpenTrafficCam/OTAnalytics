@@ -155,7 +155,11 @@ class TestPandasTrackDataset:
         expected_dataset = PandasTrackDataset.from_list([track], track_geometry_factory)
         dataset = PandasTrackDataset(track_geometry_factory)
 
-        merged = dataset.add_all(PythonTrackDataset({track.id: track}))
+        merged = dataset.add_all(
+            PythonTrackDataset(
+                PygeosTrackGeometryDataset.from_track_dataset, {track.id: track}
+            )
+        )
 
         assert 0 == len(dataset.as_list())
         for actual, expected in zip(merged, expected_dataset):
@@ -164,7 +168,9 @@ class TestPandasTrackDataset:
     def test_add_nothing(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         dataset = PandasTrackDataset(track_geometry_factory)
 
-        merged = dataset.add_all(PythonTrackDataset())
+        merged = dataset.add_all(
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        )
 
         assert 0 == len(merged.as_list())
 
@@ -183,7 +189,8 @@ class TestPandasTrackDataset:
             PandasTrackDataset,
             dataset.add_all(
                 PythonTrackDataset(
-                    {second_track.id: second_track, third_track.id: third_track}
+                    PygeosTrackGeometryDataset.from_track_dataset,
+                    {second_track.id: second_track, third_track.id: third_track},
                 )
             ),
         )
