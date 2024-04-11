@@ -2,6 +2,10 @@ import logging
 from pathlib import Path
 from typing import Sequence
 
+from OTAnalytics.adapter_visualization.color_provider import (
+    DEFAULT_COLOR_PALETTE,
+    ColorPaletteProvider,
+)
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -198,10 +202,6 @@ from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     provide_available_eventlist_exporter,
-)
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    DEFAULT_COLOR_PALETTE,
-    ColorPaletteProvider,
 )
 from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository

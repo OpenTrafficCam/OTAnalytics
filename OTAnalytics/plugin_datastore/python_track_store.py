@@ -40,9 +40,6 @@ from OTAnalytics.domain.track_dataset import (
     TrackGeometryDataset,
     TrackSegmentDataset,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
-)
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 
@@ -349,14 +346,12 @@ class PythonTrackDataset(TrackDataset):
 
     def __init__(
         self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         values: Optional[dict[TrackId, Track]] = None,
         geometry_datasets: (
             dict[RelativeOffsetCoordinate, TrackGeometryDataset] | None
         ) = None,
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY = (
-            PygeosTrackGeometryDataset.from_track_dataset
-        ),
     ) -> None:
         if values is None:
             values = {}
@@ -373,10 +368,13 @@ class PythonTrackDataset(TrackDataset):
     @staticmethod
     def from_list(
         tracks: list[Track],
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         calculator: TrackClassificationCalculator = ByMaxConfidence(),
     ) -> "PythonTrackDataset":
         return PythonTrackDataset(
-            {track.id: track for track in tracks}, calculator=calculator
+            track_geometry_factory,
+            {track.id: track for track in tracks},
+            calculator=calculator,
         )
 
     def add_all(self, other: Iterable[Track]) -> "PythonTrackDataset":
@@ -405,7 +403,9 @@ class PythonTrackDataset(TrackDataset):
                 logger().exception(build_error, exc_info=True)
         merged = self._tracks | merged_tracks
         updated_geometry_dataset = self._add_to_geometry_dataset(merged_tracks.values())
-        return PythonTrackDataset(merged, updated_geometry_dataset)
+        return PythonTrackDataset(
+            self.track_geometry_factory, merged, updated_geometry_dataset
+        )
 
     def _add_to_geometry_dataset(
         self, new_tracks: Iterable[Track]
@@ -437,14 +437,18 @@ class PythonTrackDataset(TrackDataset):
         new_tracks = self._tracks.copy()
         del new_tracks[track_id]
         updated_geometry_datasets = self._remove_from_geometry_datasets({track_id})
-        return PythonTrackDataset(new_tracks, updated_geometry_datasets)
+        return PythonTrackDataset(
+            self.track_geometry_factory, new_tracks, updated_geometry_datasets
+        )
 
     def remove_multiple(self, track_ids: set[TrackId]) -> "PythonTrackDataset":
         new_tracks = self._tracks.copy()
         for track_id in track_ids:
             del new_tracks[track_id]
         updated_geometry_datasets = self._remove_from_geometry_datasets(track_ids)
-        return PythonTrackDataset(new_tracks, updated_geometry_datasets)
+        return PythonTrackDataset(
+            self.track_geometry_factory, new_tracks, updated_geometry_datasets
+        )
 
     def _remove_from_geometry_datasets(
         self, track_ids: Iterable[TrackId]
@@ -455,7 +459,7 @@ class PythonTrackDataset(TrackDataset):
         return updated
 
     def clear(self) -> "PythonTrackDataset":
-        return PythonTrackDataset()
+        return PythonTrackDataset(self.track_geometry_factory)
 
     def as_list(self) -> list[Track]:
         return list(self._tracks.values())
@@ -470,6 +474,7 @@ class PythonTrackDataset(TrackDataset):
             current_geometry_datasets = self._get_geometries_for(current_batch.keys())
             dataset_batches.append(
                 PythonTrackDataset(
+                    self.track_geometry_factory,
                     current_batch,
                     current_geometry_datasets,
                     calculator=self.calculator,
@@ -495,7 +500,9 @@ class PythonTrackDataset(TrackDataset):
             for _id, track in self._tracks.items()
             if len(track.detections) >= length
         }
-        return PythonTrackDataset(filtered_tracks, calculator=self.calculator)
+        return PythonTrackDataset(
+            self.track_geometry_factory, filtered_tracks, calculator=self.calculator
+        )
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
@@ -586,7 +593,7 @@ class PythonTrackDataset(TrackDataset):
                 )
             )
         return (
-            PythonTrackDataset.from_list(cut_tracks),
+            PythonTrackDataset.from_list(cut_tracks, self.track_geometry_factory),
             intersecting_track_ids,
         )
 
@@ -721,10 +728,10 @@ class FilteredPythonTrackDataset(FilteredTrackDataset):
             tracks_to_remove
         )
         return PythonTrackDataset(
+            self._other.track_geometry_factory,
             tracks_to_keep,
             updated_geometry_datasets,
             self._other.calculator,
-            self._other.track_geometry_factory,
         )
 
     def wrap(self, other: PythonTrackDataset) -> "TrackDataset":
