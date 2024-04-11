@@ -40,6 +40,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     SimpleCutTrackSegmentBuilder,
     create_segment_for,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.utils.assertions import (
     assert_track_geometry_dataset_add_all_called_correctly,
@@ -319,11 +322,13 @@ class TestPythonTrackDataset:
             track.id = track_id
             dataset[track_id] = track
 
-        return PythonTrackDataset(dataset)
+        return PythonTrackDataset(
+            PygeosTrackGeometryDataset.from_track_dataset, dataset
+        )
 
     def test_add_all_to_empty(self, car_track: Track, pedestrian_track: Track) -> None:
         tracks = [car_track, pedestrian_track]
-        dataset = PythonTrackDataset()
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
         result_dataset = cast(PythonTrackDataset, dataset.add_all(tracks))
 
         assert list(result_dataset) == tracks
@@ -348,7 +353,11 @@ class TestPythonTrackDataset:
                 TrackGeometryDataset, geometry_dataset_with_offset
             ),
         }
-        dataset = PythonTrackDataset({car_track.id: car_track}, geometry_datasets)
+        dataset = PythonTrackDataset(
+            PygeosTrackGeometryDataset.from_track_dataset,
+            {car_track.id: car_track},
+            geometry_datasets,
+        )
         dataset_merged_track = cast(
             PythonTrackDataset,
             dataset.add_all([car_track_continuing, pedestrian_track]),
@@ -376,30 +385,35 @@ class TestPythonTrackDataset:
         }
 
     def test_add_nothing(self, car_track: Track) -> None:
-        dataset = PythonTrackDataset()
-        result_dataset = dataset.add_all([car_track]).add_all(PythonTrackDataset())
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        result_dataset = dataset.add_all([car_track]).add_all(
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        )
 
         assert list(result_dataset) == [car_track]
 
     def test_get_for(self, car_track: Track, pedestrian_track: Track) -> None:
-        dataset = PythonTrackDataset()
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
         result_dataset = dataset.add_all([car_track, pedestrian_track])
 
         result = result_dataset.get_for(car_track.id)
         assert result == car_track
 
     def test_get_for_missing_id(self, car_track: Track) -> None:
-        dataset = PythonTrackDataset.from_list([car_track])
+        dataset = PythonTrackDataset.from_list(
+            [car_track],
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
         returned = dataset.get_for(TrackId("Foobar"))
         assert returned is None
 
     def test_get_for_missing_id_on_empty_dataset(self) -> None:
-        dataset = PythonTrackDataset()
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
         returned = dataset.get_for(TrackId("1"))
         assert returned is None
 
     def test_clear(self, car_track: Track, pedestrian_track: Track) -> None:
-        dataset = PythonTrackDataset()
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
         result_dataset = dataset.add_all([car_track, pedestrian_track])
 
         result = result_dataset.clear()
@@ -408,6 +422,7 @@ class TestPythonTrackDataset:
     def test_remove(self, car_track: Track, pedestrian_track: Track) -> None:
         geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
         dataset = PythonTrackDataset(
+            PygeosTrackGeometryDataset.from_track_dataset,
             {car_track.id: car_track, pedestrian_track.id: pedestrian_track},
             {RelativeOffsetCoordinate(0, 0): geometry_dataset},
         )
@@ -421,6 +436,7 @@ class TestPythonTrackDataset:
     def test_remove_multiple(self, car_track: Track, pedestrian_track: Track) -> None:
         geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
         dataset = PythonTrackDataset(
+            PygeosTrackGeometryDataset.from_track_dataset,
             {car_track.id: car_track, pedestrian_track.id: pedestrian_track},
             {RelativeOffsetCoordinate(0, 0): geometry_dataset},
         )
@@ -478,6 +494,7 @@ class TestPythonTrackDataset:
             ),
         }
         dataset = PythonTrackDataset(
+            PygeosTrackGeometryDataset.from_track_dataset,
             {car_track.id: car_track, pedestrian_track.id: pedestrian_track},
             geometry_datasets,
         )
@@ -503,7 +520,9 @@ class TestPythonTrackDataset:
     def test_filter_by_minimum_detection_length(
         self, car_track: Track, pedestrian_track: Track
     ) -> None:
-        dataset = PythonTrackDataset().add_all([car_track, pedestrian_track])
+        dataset = PythonTrackDataset(
+            PygeosTrackGeometryDataset.from_track_dataset
+        ).add_all([car_track, pedestrian_track])
 
         filtered_dataset = dataset.filter_by_min_detection_length(3)
 
@@ -519,7 +538,10 @@ class TestPythonTrackDataset:
             [car_track, pedestrian_track]
         )
         segments = python_track_segment_dataset_builder.build()
-        dataset = PythonTrackDataset.from_list([car_track, pedestrian_track])
+        dataset = PythonTrackDataset.from_list(
+            [car_track, pedestrian_track],
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
 
         actual = dataset.get_first_segments()
 
@@ -536,37 +558,49 @@ class TestPythonTrackDataset:
         )
         segments = python_track_segment_dataset_builder.build()
 
-        dataset = PythonTrackDataset.from_list([car_track, pedestrian_track])
+        dataset = PythonTrackDataset.from_list(
+            [car_track, pedestrian_track],
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
 
         actual = dataset.get_last_segments()
 
         assert actual == segments
 
     def test_first_occurrence(self, car_track: Track, pedestrian_track: Track) -> None:
-        dataset = PythonTrackDataset.from_list([pedestrian_track, car_track])
+        dataset = PythonTrackDataset.from_list(
+            [pedestrian_track, car_track],
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
         assert dataset.first_occurrence == car_track.first_detection.occurrence
         assert dataset.first_occurrence == pedestrian_track.first_detection.occurrence
 
     def test_last_occurrence(self, car_track: Track, pedestrian_track: Track) -> None:
-        dataset = PythonTrackDataset.from_list([pedestrian_track, car_track])
+        dataset = PythonTrackDataset.from_list(
+            [pedestrian_track, car_track],
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
         assert dataset.last_occurrence == pedestrian_track.last_detection.occurrence
 
     def test_first_occurrence_on_empty_dataset(self) -> None:
-        dataset = PythonTrackDataset()
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
         assert dataset.first_occurrence is None
 
     def test_last_occurrence_on_empty_dataset(self) -> None:
-        dataset = PythonTrackDataset()
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
         assert dataset.last_occurrence is None
 
     def test_classifications(self, car_track: Track, pedestrian_track: Track) -> None:
-        dataset = PythonTrackDataset.from_list([car_track, pedestrian_track])
+        dataset = PythonTrackDataset.from_list(
+            [car_track, pedestrian_track],
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
         assert dataset.classifications == frozenset(
             [car_track.classification, pedestrian_track.classification]
         )
 
     def test_classifications_on_empty_dataset(self) -> None:
-        dataset = PythonTrackDataset()
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
         assert dataset.classifications == frozenset()
 
     def test_cut_with_section(
@@ -581,9 +615,15 @@ class TestPythonTrackDataset:
             expected_tracks,
             expected_original_track_ids,
         ) = cutting_section_test_case
-        expected_dataset = PythonTrackDataset.from_list(expected_tracks)
+        expected_dataset = PythonTrackDataset.from_list(
+            expected_tracks,
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
 
-        dataset = PythonTrackDataset.from_list(input_tracks)
+        dataset = PythonTrackDataset.from_list(
+            input_tracks,
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
         cut_track_dataset, original_track_ids = dataset.cut_with_section(
             cutting_section, RelativeOffsetCoordinate(0, 0)
         )
@@ -594,7 +634,10 @@ class TestPythonTrackDataset:
         assert original_track_ids == expected_original_track_ids
 
     def test_cut_with_section_no_tracks(self) -> None:
-        dataset = PythonTrackDataset.from_list([])
+        dataset = PythonTrackDataset.from_list(
+            [],
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
         cut_track_dataset, original_track_ids = dataset.cut_with_section(
             Mock(), RelativeOffsetCoordinate(0, 0)
         )
@@ -606,7 +649,7 @@ class TestPythonTrackDataset:
         car_track: Track,
         pedestrian_track: Track,
     ) -> None:
-        dataset = PythonTrackDataset()
+        dataset = PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
         assert dataset.track_ids == frozenset()
         updated_dataset = dataset.add_all([car_track, pedestrian_track])
         assert updated_dataset.track_ids == frozenset(
@@ -614,7 +657,9 @@ class TestPythonTrackDataset:
         )
 
     def test_empty(self, car_track: Track) -> None:
-        empty_dataset = PythonTrackDataset()
+        empty_dataset = PythonTrackDataset(
+            PygeosTrackGeometryDataset.from_track_dataset
+        )
         assert empty_dataset.empty
         filled_dataset = empty_dataset.add_all([car_track])
         assert not filled_dataset.empty
