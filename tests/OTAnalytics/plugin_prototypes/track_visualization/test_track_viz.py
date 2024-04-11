@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import pytest
 from pandas import DataFrame
 
+from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import Event
@@ -27,9 +28,11 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrack,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
-    ColorPaletteProvider,
     EventToFlowResolver,
     FilterByClassification,
     FilterById,
@@ -96,7 +99,10 @@ class TestPandasDataProvider:
 class TestPandasTrackProvider:
     def test_get_data_empty_track_repository(self) -> None:
         track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = PythonTrackDataset.from_list([])
+        track_repository.get_all.return_value = PythonTrackDataset.from_list(
+            [],
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
         filter_builder = Mock(FilterBuilder)
 
         provider = PandasTrackProvider(

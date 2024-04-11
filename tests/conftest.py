@@ -5,6 +5,13 @@ from unittest.mock import Mock
 
 import pytest
 
+from OTAnalytics.adapter_visualization.color_provider import (
+    CLASS_BICYCLIST,
+    CLASS_CAR,
+    CLASS_CARGOBIKE,
+    CLASS_PEDESTRIAN,
+    CLASS_TRUCK,
+)
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
@@ -20,13 +27,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CLASS_BICYCLIST,
-    CLASS_CAR,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
-    CLASS_TRUCK,
-)
 from tests.utils.builders.event_builder import EventBuilder
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_segment_builder import (
