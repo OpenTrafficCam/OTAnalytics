@@ -640,7 +640,11 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
         )
-        export_tracks = CsvTrackExport(track_repository)
+        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
+        videos_metadata = VideosMetadata()
+        export_tracks = CsvTrackExport(
+            track_repository, tracks_metadata, videos_metadata
+        )
         OTAnalyticsCli(
             run_config,
             track_parser=track_parser,
@@ -655,8 +659,8 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
-            tracks_metadata=self._create_tracks_metadata(track_repository, run_config),
-            videos_metadata=VideosMetadata(),
+            tracks_metadata=tracks_metadata,
+            videos_metadata=videos_metadata,
             progressbar=TqdmBuilder(),
             export_tracks=export_tracks,
         ).start()
