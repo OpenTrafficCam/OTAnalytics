@@ -1,5 +1,4 @@
 from pandas import DataFrame
-from plugin_parser.json_parser import write_json
 
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.track_export import (
@@ -9,6 +8,7 @@ from OTAnalytics.application.use_cases.track_export import (
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
+from OTAnalytics.plugin_parser.json_parser import write_json
 
 
 class CsvTrackExport(ExportTracks):
