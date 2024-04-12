@@ -117,6 +117,28 @@ class TestRegressionCompleteApplication:
                 event_formats=("csv", "otevents"),
             )
 
+    # @pytest.mark.skip
+    def test_whole_day_recreate_test_data(
+        self,
+        otflow_file: str,
+        all_track_files_test_dataset: list[Path],
+        otflow_parser: FlowParser,
+    ) -> None:
+        batches = list(chunked(sorted(all_track_files_test_dataset), n=8))
+        for test_file in tqdm(batches, desc="test data file"):
+            test_data = test_file
+            test_interval = "24h"
+            save_dir = test_data[0].parent
+            self._run_otanalytics(
+                count_interval=15,
+                otflow_file=otflow_file,
+                test_data=[str(file) for file in test_data],
+                save_dir=save_dir,
+                test_interval=test_interval,
+                otflow_parser=otflow_parser,
+                event_formats=("csv", "otevents"),
+            )
+
     def test_15_min(
         self,
         otflow_file: str,
