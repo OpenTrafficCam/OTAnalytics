@@ -4,6 +4,7 @@ from unittest.mock import Mock
 import pandas
 from pandas.testing import assert_frame_equal
 
+from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.track_export import (
     TrackExportSpecification,
     TrackFileFormat,
@@ -23,6 +24,10 @@ class TestCsvTrackExport:
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         test_data_tmp_dir: Path,
     ) -> None:
+        mock_tracks_metadata = Mock(spec=TracksMetadata)
+        mock_tracks_metadata.to_dict.return_value = {"tracks": "metadata"}
+        mock_videos_metadata = Mock(spec=VideosMetadata)
+        mock_videos_metadata.to_dict.return_value = {"videos": "metadata"}
         track_builder = append_sample_data(track_builder)
         track_repository = Mock(spec=TrackRepository)
         track_dataset = PandasTrackDataset.from_list(
@@ -30,7 +35,9 @@ class TestCsvTrackExport:
             track_geometry_factory=track_geometry_factory,
         )
         track_repository.get_all.return_value = track_dataset
-        use_case = CsvTrackExport(track_repository)
+        use_case = CsvTrackExport(
+            track_repository, mock_tracks_metadata, mock_videos_metadata
+        )
         export_file = test_data_tmp_dir / "exported_tracks"
         actual_file = export_file.with_suffix(".tracks.csv")
         specification = TrackExportSpecification(

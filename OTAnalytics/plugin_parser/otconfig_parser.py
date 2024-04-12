@@ -83,6 +83,7 @@ class FixMissingAnalysis(OtConfigFormatFixer):
 
 
 class OtConfigParser(ConfigParser):
+
     def __init__(
         self,
         format_fixer: OtConfigFormatFixer,
@@ -96,7 +97,10 @@ class OtConfigParser(ConfigParser):
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
         content = parse_json(file)
-        fixed_content = self._format_fixer.fix(content)
+        return self.parse_from_dict(content, base_folder)
+
+    def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
+        fixed_content = self._format_fixer.fix(data)
         _project = self._parse_project(fixed_content[PROJECT])
         analysis_config = self._parse_analysis(fixed_content[ANALYSIS], base_folder)
         videos = self._video_parser.parse_list(fixed_content[video.VIDEOS], base_folder)
@@ -164,22 +168,14 @@ class OtConfigParser(ConfigParser):
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
-        """Serializes the project with the given videos, sections and flows into the
-        file.
-
-        Args:
-            project (Project): description of the project
-            video_files (Iterable[Video]): video files to reference
-            sections (Iterable[Section]): sections to store
-            flows (Iterable[Flow]): flows to store
-            file (Path): output file
-
-        Raises:
-            StartDateMissing: if start date is not configured
-        """
         self._validate_data(project)
         content = self.convert(project, video_files, sections, flows, file)
         write_json(data=content, path=file)
+
+    def serialize_from_config(self, config: OtConfig, file: Path) -> None:
+        self.serialize(
+            config.project, config.videos, config.sections, config.flows, file
+        )
 
     @staticmethod
     def _validate_data(project: Project) -> None:

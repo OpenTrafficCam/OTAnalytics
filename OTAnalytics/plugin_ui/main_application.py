@@ -2,6 +2,10 @@ import logging
 from pathlib import Path
 from typing import Sequence
 
+from OTAnalytics.adapter_visualization.color_provider import (
+    DEFAULT_COLOR_PALETTE,
+    ColorPaletteProvider,
+)
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -192,10 +196,6 @@ from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     provide_available_eventlist_exporter,
-)
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    DEFAULT_COLOR_PALETTE,
-    ColorPaletteProvider,
 )
 from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
@@ -626,7 +626,11 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
         )
-        export_tracks = CsvTrackExport(track_repository)
+        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
+        videos_metadata = VideosMetadata()
+        export_tracks = CsvTrackExport(
+            track_repository, tracks_metadata, videos_metadata
+        )
         OTAnalyticsCli(
             run_config,
             track_parser=track_parser,
@@ -641,8 +645,8 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
-            tracks_metadata=self._create_tracks_metadata(track_repository, run_config),
-            videos_metadata=VideosMetadata(),
+            tracks_metadata=tracks_metadata,
+            videos_metadata=videos_metadata,
             progressbar=TqdmBuilder(),
             export_tracks=export_tracks,
         ).start()
