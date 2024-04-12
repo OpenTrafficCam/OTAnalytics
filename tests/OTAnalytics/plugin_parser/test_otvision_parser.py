@@ -66,6 +66,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 from tests.utils.assertions import assert_track_datasets_equal
 from tests.utils.builders.track_builder import (
     TrackBuilder,
+    append_sample_data,
     track_builder_with_sample_data,
 )
 
@@ -73,34 +74,6 @@ from tests.utils.builders.track_builder import (
 @pytest.fixture
 def track_builder_setup_with_sample_data() -> TrackBuilder:
     return track_builder_with_sample_data()
-
-
-def append_sample_data(
-    track_builder: TrackBuilder,
-    frame_offset: int = 0,
-    microsecond_offset: int = 0,
-) -> TrackBuilder:
-    track_builder.add_frame(frame_offset + 1)
-    track_builder.add_microsecond(microsecond_offset + 1)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 2)
-    track_builder.add_microsecond(microsecond_offset + 2)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 3)
-    track_builder.add_microsecond(microsecond_offset + 3)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 4)
-    track_builder.add_microsecond(microsecond_offset + 4)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 5)
-    track_builder.add_microsecond(microsecond_offset + 5)
-    track_builder.append_detection()
-
-    return track_builder
 
 
 @pytest.fixture
