@@ -64,40 +64,16 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     Version,
 )
 from tests.utils.assertions import assert_track_datasets_equal
-from tests.utils.builders.track_builder import TrackBuilder
+from tests.utils.builders.track_builder import (
+    TrackBuilder,
+    append_sample_data,
+    track_builder_with_sample_data,
+)
 
 
 @pytest.fixture
-def track_builder_setup_with_sample_data(track_builder: TrackBuilder) -> TrackBuilder:
-    return append_sample_data(track_builder, frame_offset=0, microsecond_offset=0)
-
-
-def append_sample_data(
-    track_builder: TrackBuilder,
-    frame_offset: int = 0,
-    microsecond_offset: int = 0,
-) -> TrackBuilder:
-    track_builder.add_frame(frame_offset + 1)
-    track_builder.add_microsecond(microsecond_offset + 1)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 2)
-    track_builder.add_microsecond(microsecond_offset + 2)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 3)
-    track_builder.add_microsecond(microsecond_offset + 3)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 4)
-    track_builder.add_microsecond(microsecond_offset + 4)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 5)
-    track_builder.add_microsecond(microsecond_offset + 5)
-    track_builder.append_detection()
-
-    return track_builder
+def track_builder_setup_with_sample_data() -> TrackBuilder:
+    return track_builder_with_sample_data()
 
 
 @pytest.fixture
@@ -232,18 +208,19 @@ class TestOttrkParser:
     def test_parse_ottrk_sample(
         self,
         test_data_tmp_dir: Path,
-        track_builder_setup_with_sample_data: TrackBuilder,
         ottrk_parser: OttrkParser,
         version: str,
         track_id: str,
     ) -> None:
-        track_builder_setup_with_sample_data.set_ottrk_version(version)
-        ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
+        track_builder = track_builder_with_sample_data(input_file=str(ottrk_file))
+        track_builder.set_ottrk_version(version)
+        ottrk_data = track_builder.build_ottrk()
         write_json_bz2(ottrk_data, ottrk_file)
         parse_result = ottrk_parser.parse(ottrk_file)
 
         example_track_builder = TrackBuilder()
+        example_track_builder.add_input_file(str(ottrk_file))
         example_track_builder.add_track_id(track_id)
         append_sample_data(example_track_builder)
         expected_track = example_track_builder.build_track()
@@ -301,6 +278,7 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         parser: PythonDetectionParser,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         detections: list[dict] = (
             track_builder_setup_with_sample_data.build_serialized_detections()
         )
@@ -311,12 +289,14 @@ class TestPythonDetectionParser:
         result_sorted_input = parser._parse_detections(
             detections,
             metadata_video,
+            input_file,
             TrackId,
         )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
         result_unsorted_input = parser._parse_detections(
             unsorted_detections,
             metadata_video,
+            input_file,
             TrackId,
         )
 
@@ -333,6 +313,7 @@ class TestPythonDetectionParser:
         mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         mocked_classificator.calculate.return_value = "car"
         detections: list[dict] = (
             track_builder_setup_with_sample_data.build_serialized_detections()
@@ -341,9 +322,13 @@ class TestPythonDetectionParser:
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = parser.parse_tracks(detections, metadata_video)
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = parser.parse_tracks(unsorted_detections, metadata_video)
+        result_unsorted_input = parser.parse_tracks(
+            unsorted_detections, metadata_video, input_file
+        )
 
         expected_sorted = PythonTrackDataset.from_list(
             [track_builder_setup_with_sample_data.build_track()],
@@ -359,6 +344,7 @@ class TestPythonDetectionParser:
         mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         detections: list[dict] = (
             track_builder_setup_with_sample_data.build_serialized_detections()
         )
@@ -383,7 +369,9 @@ class TestPythonDetectionParser:
             existing_track.id, merged_classification, all_detections
         )
 
-        result_sorted_input = parser.parse_tracks(detections, metadata_video)
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        )
 
         expected_sorted = PythonTrackDataset.from_list(
             [merged_track], PygeosTrackGeometryDataset.from_track_dataset
@@ -405,6 +393,7 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         track_length_limit: TrackLengthLimit,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         parser = PythonDetectionParser(
             ByMaxConfidence(),
             mocked_track_repository,
@@ -418,7 +407,9 @@ class TestPythonDetectionParser:
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
-        result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        ).as_list()
 
         assert len(result_sorted_input) == 0
 

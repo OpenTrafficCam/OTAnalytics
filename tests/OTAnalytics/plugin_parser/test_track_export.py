@@ -5,7 +5,10 @@ import pandas
 from pandas.testing import assert_frame_equal
 
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
-from OTAnalytics.application.use_cases.track_export import TrackExportSpecification
+from OTAnalytics.application.use_cases.track_export import (
+    TrackExportSpecification,
+    TrackFileFormat,
+)
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackRepository
@@ -37,7 +40,10 @@ class TestCsvTrackExport:
         )
         export_file = test_data_tmp_dir / "exported_tracks"
         actual_file = export_file.with_suffix(".tracks.csv")
-        specification = TrackExportSpecification(save_path=export_file)
+        specification = TrackExportSpecification(
+            save_path=export_file,
+            export_format=[TrackFileFormat.CSV],
+        )
 
         use_case.export(specification=specification)
 
