@@ -64,12 +64,15 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     Version,
 )
 from tests.utils.assertions import assert_track_datasets_equal
-from tests.utils.builders.track_builder import TrackBuilder
+from tests.utils.builders.track_builder import (
+    TrackBuilder,
+    track_builder_with_sample_data,
+)
 
 
 @pytest.fixture
-def track_builder_setup_with_sample_data(track_builder: TrackBuilder) -> TrackBuilder:
-    return append_sample_data(track_builder, frame_offset=0, microsecond_offset=0)
+def track_builder_setup_with_sample_data() -> TrackBuilder:
+    return track_builder_with_sample_data()
 
 
 def append_sample_data(
@@ -232,18 +235,19 @@ class TestOttrkParser:
     def test_parse_ottrk_sample(
         self,
         test_data_tmp_dir: Path,
-        track_builder_setup_with_sample_data: TrackBuilder,
         ottrk_parser: OttrkParser,
         version: str,
         track_id: str,
     ) -> None:
-        track_builder_setup_with_sample_data.set_ottrk_version(version)
-        ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
+        track_builder = track_builder_with_sample_data(input_file=str(ottrk_file))
+        track_builder.set_ottrk_version(version)
+        ottrk_data = track_builder.build_ottrk()
         write_json_bz2(ottrk_data, ottrk_file)
         parse_result = ottrk_parser.parse(ottrk_file)
 
         example_track_builder = TrackBuilder()
+        example_track_builder.add_input_file(str(ottrk_file))
         example_track_builder.add_track_id(track_id)
         append_sample_data(example_track_builder)
         expected_track = example_track_builder.build_track()

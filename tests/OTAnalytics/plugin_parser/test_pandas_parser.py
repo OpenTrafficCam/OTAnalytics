@@ -19,45 +19,12 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from tests.utils.assertions import assert_equal_track_properties
-from tests.utils.builders.track_builder import TrackBuilder
-
-
-@pytest.fixture
-def track_builder_setup_with_sample_data(track_builder: TrackBuilder) -> TrackBuilder:
-    return append_sample_data(track_builder, frame_offset=0, microsecond_offset=0)
+from tests.utils.builders.track_builder import track_builder_with_sample_data
 
 
 @pytest.fixture
 def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
     return PygeosTrackGeometryDataset.from_track_dataset
-
-
-def append_sample_data(
-    track_builder: TrackBuilder,
-    frame_offset: int = 0,
-    microsecond_offset: int = 0,
-) -> TrackBuilder:
-    track_builder.add_frame(frame_offset + 1)
-    track_builder.add_microsecond(microsecond_offset + 1)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 2)
-    track_builder.add_microsecond(microsecond_offset + 2)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 3)
-    track_builder.add_microsecond(microsecond_offset + 3)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 4)
-    track_builder.add_microsecond(microsecond_offset + 4)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 5)
-    track_builder.add_microsecond(microsecond_offset + 5)
-    track_builder.append_detection()
-
-    return track_builder
 
 
 @pytest.fixture
@@ -78,18 +45,14 @@ class TestPandasDetectionParser:
 
     def test_parse_tracks(
         self,
-        track_builder_setup_with_sample_data: TrackBuilder,
         parser: DetectionParser,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
         input_file = "tests/data/tracks.ottrk"
-        detections: list[dict] = (
-            track_builder_setup_with_sample_data.build_serialized_detections()
-        )
+        track_builder = track_builder_with_sample_data(input_file)
+        detections: list[dict] = track_builder.build_serialized_detections()
 
-        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
-            ottrk_dataformat.VIDEO
-        ]
+        metadata_video = track_builder.get_metadata()[ottrk_dataformat.VIDEO]
         result_sorted_input = parser.parse_tracks(
             detections, metadata_video, input_file
         ).as_list()
@@ -99,7 +62,8 @@ class TestPandasDetectionParser:
         ).as_list()
 
         expected_sorted = PandasTrackDataset.from_list(
-            [track_builder_setup_with_sample_data.build_track()], track_geometry_factory
+            [track_builder.build_track()],
+            track_geometry_factory,
         ).as_list()
 
         for sorted, expected in zip(result_sorted_input, expected_sorted):
@@ -117,21 +81,17 @@ class TestPandasDetectionParser:
     def test_parse_tracks_consider_minimum_length(
         self,
         mocked_track_repository: Mock,
-        track_builder_setup_with_sample_data: TrackBuilder,
         track_length_limit: TrackLengthLimit,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
     ) -> None:
         input_file = "tests/data/tracks.ottrk"
+        track_builder = track_builder_with_sample_data(input_file)
         parser = PandasDetectionParser(
             PandasByMaxConfidence(), track_geometry_factory, track_length_limit
         )
-        detections: list[dict] = (
-            track_builder_setup_with_sample_data.build_serialized_detections()
-        )
+        detections: list[dict] = track_builder.build_serialized_detections()
 
-        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
-            ottrk_dataformat.VIDEO
-        ]
+        metadata_video = track_builder.get_metadata()[ottrk_dataformat.VIDEO]
         result_sorted_input = parser.parse_tracks(
             detections, metadata_video, input_file
         ).as_list()

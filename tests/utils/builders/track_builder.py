@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import repeat
+from typing import Self
 
 from OTAnalytics.domain.track import Detection, Track, TrackId
 from OTAnalytics.plugin_datastore.python_track_store import PythonDetection, PythonTrack
@@ -131,6 +132,10 @@ class TrackBuilder:
     def add_wh_bbox(self, w: float, h: float) -> None:
         self.w = w
         self.h = h
+
+    def add_input_file(self, input_file: str) -> Self:
+        self.input_file = input_file
+        return self
 
     def get_metadata(self) -> dict:
         return {
@@ -295,3 +300,15 @@ def create_track(
         track_builder.add_detection_class(detection_class)
         track_builder.append_detection()
     return track_builder.build_track()
+
+
+def track_builder_with_sample_data(
+    input_file: str = DEFAULT_INPUT_FILE,
+    frame_offset: int = 0,
+    microsecond_offset: int = 0,
+) -> TrackBuilder:
+    return append_sample_data(
+        TrackBuilder(input_file=input_file),
+        frame_offset=frame_offset,
+        microsecond_offset=microsecond_offset,
+    )
