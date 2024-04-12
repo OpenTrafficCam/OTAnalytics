@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import pytest
+from more_itertools import chunked
+from tqdm import tqdm
 
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
@@ -33,6 +35,12 @@ def track_files_2hours(test_data_dir: Path) -> list[str]:
 
 
 @pytest.fixture(scope="module")
+def all_track_files_test_dataset() -> list[Path]:
+    data_folder = Path("../../platomo/OpenTrafficCam-testdata/tests/data")
+    return list(data_folder.glob("*.ottrk"))
+
+
+@pytest.fixture(scope="module")
 def otflow_file(test_data_dir: Path) -> str:
     return to_cli_path(test_data_dir, "OTCamera19_FR20_2023-05-24.otflow")
 
@@ -43,6 +51,72 @@ def otflow_parser() -> FlowParser:
 
 
 class TestRegressionCompleteApplication:
+
+    @pytest.mark.skip
+    def test_15_min_recreate_test_data(
+        self,
+        otflow_file: str,
+        all_track_files_test_dataset: list[Path],
+        otflow_parser: FlowParser,
+    ) -> None:
+        for test_file in tqdm(all_track_files_test_dataset, desc="test data file"):
+            test_data = test_file
+            test_interval = "15min"
+            save_dir = test_data.parent
+            self._run_otanalytics(
+                count_interval=15,
+                otflow_file=otflow_file,
+                test_data=[str(test_data)],
+                save_dir=save_dir,
+                test_interval=test_interval,
+                otflow_parser=otflow_parser,
+                event_formats=("csv", "otevents"),
+            )
+
+    @pytest.mark.skip
+    def test_2_h_single_recreate_test_data(
+        self,
+        otflow_file: str,
+        all_track_files_test_dataset: list[Path],
+        otflow_parser: FlowParser,
+    ) -> None:
+        batches = list(chunked(sorted(all_track_files_test_dataset), n=8))
+        for test_file in tqdm(batches, desc="test data file"):
+            test_data = test_file
+            test_interval = "2h"
+            save_dir = test_data[0].parent
+            self._run_otanalytics(
+                count_interval=15,
+                otflow_file=otflow_file,
+                test_data=[str(file) for file in test_data],
+                save_dir=save_dir,
+                test_interval=test_interval,
+                otflow_parser=otflow_parser,
+                event_formats=("csv", "otevents"),
+            )
+
+    @pytest.mark.skip
+    def test_2_h_recreate_test_data(
+        self,
+        otflow_file: str,
+        all_track_files_test_dataset: list[Path],
+        otflow_parser: FlowParser,
+    ) -> None:
+        batches = list(chunked(sorted(all_track_files_test_dataset), n=8))
+        for test_file in tqdm(batches, desc="test data file"):
+            test_data = test_file
+            test_interval = "2h"
+            save_dir = test_data[0].parent
+            self._run_otanalytics(
+                count_interval=120,
+                otflow_file=otflow_file,
+                test_data=[str(file) for file in test_data],
+                save_dir=save_dir,
+                test_interval=test_interval,
+                otflow_parser=otflow_parser,
+                event_formats=("csv", "otevents"),
+            )
+
     def test_15_min(
         self,
         otflow_file: str,
@@ -114,18 +188,14 @@ class TestRegressionCompleteApplication:
         otflow_parser: FlowParser,
         count_interval: int,
     ) -> None:
-        save_name = f"{Path(test_data[0]).stem}_{test_interval}"
-
-        run_config = create_run_config(
-            track_files=[str(_file) for _file in test_data],
-            otflow_file=str(otflow_file),
-            save_dir=str(test_data_tmp_dir),
-            save_name=save_name,
-            event_formats=["csv"],
-            count_intervals=[count_interval],
-            flow_parser=otflow_parser,
+        save_name = self._run_otanalytics(
+            count_interval,
+            otflow_file,
+            otflow_parser,
+            test_data,
+            test_data_tmp_dir,
+            test_interval,
         )
-        ApplicationStarter().start_cli(run_config)
 
         actual_events_file = Path(test_data_tmp_dir / save_name).with_suffix(
             ".events.csv"
@@ -146,3 +216,26 @@ class TestRegressionCompleteApplication:
             .absolute()
         )
         assert_two_files_equal_sorted(actual_counts_file, expected_counts_file)
+
+    def _run_otanalytics(
+        self,
+        count_interval: int,
+        otflow_file: str,
+        otflow_parser: FlowParser,
+        test_data: list[str],
+        save_dir: Path,
+        test_interval: str,
+        event_formats: tuple[str, ...] = ("csv",),
+    ) -> str:
+        save_name = f"{Path(test_data[0]).stem}_{test_interval}"
+        run_config = create_run_config(
+            track_files=[str(_file) for _file in test_data],
+            otflow_file=str(otflow_file),
+            save_dir=str(save_dir),
+            save_name=save_name,
+            event_formats=list(event_formats),
+            count_intervals=[count_interval],
+            flow_parser=otflow_parser,
+        )
+        ApplicationStarter().start_cli(run_config)
+        return save_name
