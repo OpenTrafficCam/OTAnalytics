@@ -36,6 +36,7 @@ from OTAnalytics.domain.track_dataset import (
     FilteredTrackDataset,
     IntersectionPoint,
     TrackDataset,
+    TrackDoesNotExistError,
     TrackGeometryDataset,
     TrackSegmentDataset,
 )
@@ -645,6 +646,19 @@ class PythonTrackDataset(TrackDataset):
         track_builder.add_id(track_id)
         track_builder.add_detection(detection)
         return track_builder.build()
+
+    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+        result: dict[str, float] = {}
+        for track_id in track_ids:
+            _track = self.get_for(TrackId(track_id))
+            if not _track:
+                raise TrackDoesNotExistError(f"Track {track_id} not found.")
+
+            max_confidence = max(
+                [detection.confidence for detection in _track.detections]
+            )
+            result[track_id] = max_confidence
+        return result
 
 
 class FilteredPythonTrackDataset(FilteredTrackDataset):

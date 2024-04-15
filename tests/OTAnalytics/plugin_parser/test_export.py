@@ -26,7 +26,15 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportSpecificationDto,
     FlowNameDto,
 )
-from OTAnalytics.plugin_parser.export import CsvExport, FillZerosExporter, TagExploder
+from OTAnalytics.plugin_parser.export import (
+    END_DATE,
+    END_TIME,
+    START_DATE,
+    START_TIME,
+    CsvExport,
+    FillZerosExporter,
+    TagExploder,
+)
 
 
 class TestCsvExport:
@@ -53,7 +61,11 @@ class TestCsvExport:
         counts.to_dict.return_value = {tag: 1}
         expected = {
             LEVEL_START_TIME: {0: "2023-01-02 08:00:00"},
+            START_DATE: {0: "2023-01-02"},
+            START_TIME: {0: "08:00:00"},
             LEVEL_END_TIME: {0: "2023-01-02 08:15:00"},
+            END_DATE: {0: "2023-01-02"},
+            END_TIME: {0: "08:15:00"},
             LEVEL_CLASSIFICATION: {0: "car"},
             LEVEL_FLOW: {0: "West --> Ost"},
             LEVEL_FROM_SECTION: {0: "West"},

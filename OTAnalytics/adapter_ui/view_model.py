@@ -395,6 +395,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def export_road_user_assignments(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def update_svz_metadata(self, metadata: dict) -> None:
         raise NotImplementedError
 

@@ -85,6 +85,9 @@ from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.application.use_cases.quick_save_configuration import (
     NoExistingFileToSave,
 )
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportSpecification,
+)
 from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
@@ -1715,6 +1718,46 @@ class DummyViewModel(
         self, button_quick_save_config: AbstractButtonQuickSaveConfig
     ) -> None:
         self._button_quick_save_config = button_quick_save_config
+
+    def export_road_user_assignments(self) -> None:
+        if len(self._application.get_all_flows()) == 0:
+            InfoBox(
+                message=(
+                    "Counting needs at least one flow.\n"
+                    "There is no flow configured.\n"
+                    "Please create a flow."
+                ),
+                initial_position=(
+                    self._window.get_position() if self._window else (0, 0)
+                ),
+            )
+            return
+        export_formats: dict = {
+            export_format.name: export_format.file_extension
+            for export_format in self._application.get_road_user_export_formats()
+        }
+        default_format = next(iter(export_formats.keys()))
+        default_values: dict = {
+            EXPORT_FORMAT: default_format,
+        }
+
+        try:
+            export_values = ToplevelExportEvents(
+                title="Export road user assignments",
+                initial_position=(50, 50),
+                input_values=default_values,
+                export_format_extensions=export_formats,
+                initial_file_stem="road_user_assignments",
+            ).get_data()
+            logger().debug(export_values)
+            save_path = export_values[toplevel_export_events.EXPORT_FILE]
+            export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
+
+            export_specification = ExportSpecification(save_path, export_format)
+            self._application.export_road_user_assignments(export_specification)
+            logger().info(f"Exporting road user assignments to {save_path}")
+        except CancelExportEvents:
+            logger().info("User canceled configuration of export")
 
     def update_svz_metadata(self, metadata: dict) -> None:
         svz_metadata = SvzMetadata(

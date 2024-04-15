@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from itertools import repeat
 from typing import Self
 
 from OTAnalytics.domain.track import Detection, Track, TrackId
@@ -86,20 +85,25 @@ class TrackBuilder:
             _input_file=self.input_file,
         )
 
-    def add_track_id(self, id: str) -> None:
+    def add_track_id(self, id: str) -> Self:
         self.track_id = id
+        return self
 
-    def add_detection_class(self, classification: str) -> None:
+    def add_detection_class(self, classification: str) -> Self:
         self.detection_class = classification
+        return self
 
-    def add_confidence(self, confidence: float) -> None:
+    def add_confidence(self, confidence: float) -> Self:
         self.confidence = confidence
+        return self
 
-    def add_frame(self, frame: int) -> None:
+    def add_frame(self, frame: int) -> Self:
         self.frame = frame
+        return self
 
-    def add_track_class(self, classification: str) -> None:
+    def add_track_class(self, classification: str) -> Self:
         self.track_class = classification
+        return self
 
     def add_occurrence(
         self,
@@ -110,7 +114,7 @@ class TrackBuilder:
         minute: int,
         second: int,
         microsecond: int,
-    ) -> None:
+    ) -> Self:
         self.occurrence_year = year
         self.occurrence_month = month
         self.occurrence_day = day
@@ -118,20 +122,25 @@ class TrackBuilder:
         self.occurrence_minute = minute
         self.occurrence_second = second
         self.occurrence_microsecond = microsecond
+        return self
 
-    def add_second(self, second: int) -> None:
+    def add_second(self, second: int) -> Self:
         self.occurrence_second = second
+        return self
 
-    def add_microsecond(self, microsecond: int) -> None:
+    def add_microsecond(self, microsecond: int) -> Self:
         self.occurrence_microsecond = microsecond
+        return self
 
-    def add_xy_bbox(self, x: float, y: float) -> None:
+    def add_xy_bbox(self, x: float, y: float) -> Self:
         self.x = x
         self.y = y
+        return self
 
-    def add_wh_bbox(self, w: float, h: float) -> None:
+    def add_wh_bbox(self, w: float, h: float) -> Self:
         self.w = w
         self.h = h
+        return self
 
     def add_input_file(self, input_file: str) -> Self:
         self.input_file = input_file
@@ -273,32 +282,33 @@ def create_track(
     start_second: int,
     track_class: str = "car",
     detection_classes: list[str] | None = None,
+    confidences: list[float] | None = None,
 ) -> Track:
     if detection_classes:
         if len(detection_classes) != len(coord):
             raise ValueError(
                 "Track coordinates must match length of detection classifications."
             )
+    if confidences:
+        if len(confidences) != len(coord):
+            raise ValueError("Track coordinates must match length of confidences.")
     track_builder = TrackBuilder()
     track_builder.add_track_id(track_id)
     track_builder.add_track_class(track_class)
 
-    if detection_classes:
-        detections = [
-            (x, y, detection_class)
-            for (x, y), detection_class in zip(coord, detection_classes)
-        ]
-    else:
-        detections = [
-            (x, y, detection_class)
-            for (x, y), detection_class in zip(coord, repeat(track_class))
-        ]
-
-    for second, (x, y, detection_class) in enumerate(detections, start=start_second):
-        track_builder.add_second(second)
+    current_second = start_second
+    for current_index, (x, y) in enumerate(coord, start=0):
+        track_builder.add_second(current_second)
         track_builder.add_xy_bbox(x, y)
-        track_builder.add_detection_class(detection_class)
+        if detection_classes:
+            track_builder.add_detection_class(detection_classes[current_index])
+        else:
+            track_builder.add_detection_class(track_class)
+        if confidences:
+            track_builder.add_confidence(confidences[current_index])
         track_builder.append_detection()
+        current_second += 1
+
     return track_builder.build_track()
 
 
