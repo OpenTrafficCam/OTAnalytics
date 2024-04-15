@@ -1,16 +1,7 @@
 {
   "project": {
-    "name": "Test- Knotenpunk",
-    "start_date": 1704092400.0,
-    "metadata": {
-      "tk_number": "1234",
-      "counting_location_number": "6789",
-      "direction": "2",
-      "weather": "2",
-      "remark": "Nichts spannendes",
-      "coordinate_x": "8.1235",
-      "coordinate_y": "49.2468"
-    }
+    "name": "My Test Project",
+    "start_date": 1577877077.0
   },
   "videos": [
     {
