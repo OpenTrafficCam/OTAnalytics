@@ -117,7 +117,7 @@ class TestRegressionCompleteApplication:
                 event_formats=("csv", "otevents"),
             )
 
-    # @pytest.mark.skip
+    @pytest.mark.skip
     def test_whole_day_recreate_test_data(
         self,
         otflow_file: str,
