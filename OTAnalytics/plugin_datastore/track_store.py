@@ -92,6 +92,10 @@ class PandasDetection(Detection):
     def video_name(self) -> str:
         return self.__get_attribute(track.VIDEO_NAME)
 
+    @property
+    def input_file(self) -> str:
+        return self.__get_attribute(track.INPUT_FILE)
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, PandasDetection):
             return False

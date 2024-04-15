@@ -146,6 +146,7 @@ class TestCachedPandasTrackProvider:
                 False,
                 t_id,
                 "video_name",
+                "video_name.ottrk",
             ),
             PythonDetection(
                 "car",
@@ -159,6 +160,7 @@ class TestCachedPandasTrackProvider:
                 False,
                 t_id,
                 "video_name",
+                "video_name.ottrk",
             ),
             PythonDetection(
                 "car",
@@ -172,6 +174,7 @@ class TestCachedPandasTrackProvider:
                 False,
                 t_id,
                 "video_name",
+                "video_name.ottrk",
             ),
             PythonDetection(
                 "car",
@@ -185,6 +188,7 @@ class TestCachedPandasTrackProvider:
                 False,
                 t_id,
                 "video_name",
+                "video_name.ottrk",
             ),
             PythonDetection(
                 "car",
@@ -198,6 +202,7 @@ class TestCachedPandasTrackProvider:
                 False,
                 t_id,
                 "video_name",
+                "video_name.ottrk",
             ),
         ]
         return PythonTrack(t_id, "car", detections)

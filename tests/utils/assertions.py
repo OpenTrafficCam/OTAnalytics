@@ -18,6 +18,7 @@ def assert_equal_detection_properties(actual: Detection, expected: Detection) ->
     assert expected.video_name == actual.video_name
     assert expected.interpolated_detection == actual.interpolated_detection
     assert actual.track_id == expected.track_id
+    assert actual.input_file == expected.input_file
 
 
 def assert_equal_track_properties(actual: Track, expected: Track) -> None:

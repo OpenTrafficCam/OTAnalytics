@@ -35,14 +35,21 @@ class PandasDetectionParser(DetectionParser):
         self,
         detections: list[dict],
         metadata_video: dict,
+        input_file: str,
         id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
-        return self._parse_as_dataframe(detections, metadata_video, id_generator)
+        return self._parse_as_dataframe(
+            detections=detections,
+            metadata_video=metadata_video,
+            input_file=input_file,
+            id_generator=id_generator,
+        )
 
     def _parse_as_dataframe(
         self,
         detections: list[dict],
         metadata_video: dict,
+        input_file: str,
         id_generator: TrackIdGenerator,
     ) -> TrackDataset:
         video_name = (
@@ -69,6 +76,7 @@ class PandasDetectionParser(DetectionParser):
             data[track.TRACK_ID].astype(str).apply(id_generator).astype(str)
         )
         data[track.VIDEO_NAME] = video_name
+        data[track.INPUT_FILE] = input_file
         data[track.OCCURRENCE] = (
             data[track.OCCURRENCE]
             .astype(float)

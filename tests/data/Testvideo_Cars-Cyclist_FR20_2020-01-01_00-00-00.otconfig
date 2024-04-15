@@ -1,163 +1,191 @@
 {
-    "project": {
-        "name": "My Test Project",
-        "start_date": 1577877077.0
-    },
-    "videos": [
-        {
-            "path": "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        }
+  "project": {
+    "name": "Test- Knotenpunk",
+    "start_date": 1704092400.0,
+    "metadata": {
+      "tk_number": "1234",
+      "counting_location_number": "6789",
+      "direction": "2",
+      "weather": "2",
+      "remark": "Nichts spannendes",
+      "coordinate_x": "8.1235",
+      "coordinate_y": "49.2468"
+    }
+  },
+  "videos": [
+    {
+      "path": "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+    }
+  ],
+  "analysis": {
+    "tracks": [
+      "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
     ],
-    "analysis":{
-        "tracks": [
-            "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
-        ],
-        "do_events": true,
-        "do_counting": true,
-        "export":{
-            "event_formats": ["csv", "xlsx"],
-            "save_name": "my_name",
-            "save_suffix": "my_suffix",
-            "count_intervals": [2, 3, 4]
-        },
-        "num_processes": 2,
-        "logfile": "path/to/my/log_dir",
-        "debug": true
+    "do_events": true,
+    "do_counting": true,
+    "export": {
+      "event_formats": [
+        "csv",
+        "xlsx"
+      ],
+      "save_name": "my_name",
+      "save_suffix": "my_suffix",
+      "count_intervals": [
+        2,
+        3,
+        4
+      ]
     },
-    "sections": [
-        {
-            "id": "1",
-            "name": "S\u00fcd",
-            "type": "line",
-            "relative_offset_coordinates": {
-                "section-enter": {
-                    "x": 0.5,
-                    "y": 0.5
-                }
-            },
-            "coordinates": [
-                {
-                    "x": 72,
-                    "y": 184
-                },
-                {
-                    "x": 267,
-                    "y": 102
-                }
-            ],
-            "plugin_data": {}
-        },
-        {
-            "id": "2",
-            "name": "Nord",
-            "type": "line",
-            "relative_offset_coordinates": {
-                "section-enter": {
-                    "x": 0.5,
-                    "y": 0.5
-                }
-            },
-            "coordinates": [
-                {
-                    "x": 109,
-                    "y": 336
-                },
-                {
-                    "x": 245,
-                    "y": 357
-                },
-                {
-                    "x": 277,
-                    "y": 261
-                },
-                {
-                    "x": 448,
-                    "y": 252
-                },
-                {
-                    "x": 444,
-                    "y": 133
-                }
-            ],
-            "plugin_data": {}
-        },
-        {
-            "type": "area",
-            "id": "3",
-            "name": "Area51",
-            "relative_offset_coordinates": {
-                "section-enter": {
-                    "x": 0.5,
-                    "y": 0.5
-                }
-            },
-            "coordinates": [
-                {
-                    "x": 108,
-                    "y": 232
-                },
-                {
-                    "x": 137,
-                    "y": 283
-                },
-                {
-                    "x": 392,
-                    "y": 158
-                },
-                {
-                    "x": 339,
-                    "y": 116
-                },
-                {
-                    "x": 108,
-                    "y": 232
-                }
-            ],
-            "plugin_data": {}
+    "num_processes": 2,
+    "logfile": "path/to/my/log_dir",
+    "debug": true
+  },
+  "sections": [
+    {
+      "id": "1",
+      "name": "S\u00fcd",
+      "type": "line",
+      "relative_offset_coordinates": {
+        "section-enter": {
+          "x": 0.5,
+          "y": 0.5
         }
-    ],
-    "flows": [
+      },
+      "coordinates": [
         {
-            "id": "1",
-            "name": "S\u00fcd --> Nord",
-            "start": "1",
-            "end": "2",
-            "distance": 0
+          "x": 43,
+          "y": 184
         },
         {
-            "id": "2",
-            "name": "S\u00fcd --> Area51",
-            "start": "1",
-            "end": "3",
-            "distance": 0
+          "x": 137,
+          "y": 200
         },
         {
-            "id": "3",
-            "name": "Nord --> S\u00fcd",
-            "start": "2",
-            "end": "1",
-            "distance": 0
+          "x": 352,
+          "y": 145
         },
         {
-            "id": "4",
-            "name": "Nord --> Area51",
-            "start": "2",
-            "end": "3",
-            "distance": 0
-        },
-        {
-            "id": "5",
-            "name": "Area51 --> S\u00fcd",
-            "start": "3",
-            "end": "1",
-            "distance": 0
-        },
-        {
-            "id": "6",
-            "name": "Area51 --> Nord",
-            "start": "3",
-            "end": "2",
-            "distance": 0
+          "x": 362,
+          "y": 89
         }
-    ]
+      ],
+      "plugin_data": {}
+    },
+    {
+      "id": "2",
+      "name": "West",
+      "type": "line",
+      "relative_offset_coordinates": {
+        "section-enter": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "coordinates": [
+        {
+          "x": 388,
+          "y": 83
+        },
+        {
+          "x": 428,
+          "y": 139
+        },
+        {
+          "x": 577,
+          "y": 159
+        },
+        {
+          "x": 694,
+          "y": 125
+        }
+      ],
+      "plugin_data": {
+        "distances": {
+          "S\u00fcd": "022",
+          "Ost": "0",
+          "Nord": "0"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Nord",
+      "type": "line",
+      "relative_offset_coordinates": {
+        "section-enter": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "coordinates": [
+        {
+          "x": 788,
+          "y": 175
+        },
+        {
+          "x": 621,
+          "y": 213
+        },
+        {
+          "x": 287,
+          "y": 394
+        },
+        {
+          "x": 230,
+          "y": 578
+        }
+      ],
+      "plugin_data": {
+        "distances": {
+          "West": "0"
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Ost",
+      "type": "line",
+      "relative_offset_coordinates": {
+        "section-enter": {
+          "x": 0.7,
+          "y": 0.2
+        }
+      },
+      "coordinates": [
+        {
+          "x": 15,
+          "y": 204
+        },
+        {
+          "x": 130,
+          "y": 222
+        },
+        {
+          "x": 270,
+          "y": 369
+        },
+        {
+          "x": 215,
+          "y": 573
+        }
+      ],
+      "plugin_data": {}
+    }
+  ],
+  "flows": [
+    {
+      "id": "Nord --> S\u00fcd",
+      "name": "Nord --> S\u00fcd",
+      "start": "3",
+      "end": "1",
+      "distance": 25.0
+    },
+    {
+      "id": "S\u00fcd --> Nord",
+      "name": "S\u00fcd --> Nord",
+      "start": "1",
+      "end": "3",
+      "distance": 0.0
+    }
+  ]
 }

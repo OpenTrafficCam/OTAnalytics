@@ -85,6 +85,7 @@ class PythonDetection(Detection, DataclassValidation):
     _interpolated_detection: bool
     _track_id: TrackId
     _video_name: str
+    _input_file: str
 
     @property
     def classification(self) -> str:
@@ -129,6 +130,10 @@ class PythonDetection(Detection, DataclassValidation):
     @property
     def video_name(self) -> str:
         return self._video_name
+
+    @property
+    def input_file(self) -> str:
+        return self._input_file
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()
@@ -828,6 +833,7 @@ class SimpleCutTrackSegmentBuilder(TrackBuilder):
                     detection.interpolated_detection,
                     self._track_id,
                     detection.video_name,
+                    detection.input_file,
                 )
             )
         return new_detections
