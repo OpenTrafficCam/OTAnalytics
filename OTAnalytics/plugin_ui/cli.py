@@ -28,6 +28,7 @@ from OTAnalytics.application.use_cases.section_repository import (
 from OTAnalytics.application.use_cases.track_export import (
     ExportTracks,
     TrackExportSpecification,
+    TrackFileFormat,
 )
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
@@ -231,7 +232,7 @@ class OTAnalyticsCli:
         for event_format in self._run_config.event_formats:
             event_list_exporter = self._provide_eventlist_exporter(event_format)
             actual_save_path = save_path.with_suffix(
-                f".events.{event_list_exporter.get_extension()}"
+                f".events{event_list_exporter.get_extension()}"
             )
             event_list_exporter.export(events, sections, actual_save_path)
             logger().info(f"Event list saved at '{actual_save_path}'")
@@ -268,6 +269,9 @@ class OTAnalyticsCli:
 
     def _do_export_tracks(self, save_path: Path) -> None:
         logger().info("Start tracks export")
-        specification = TrackExportSpecification(save_path=save_path)
+        specification = TrackExportSpecification(
+            save_path=save_path,
+            export_format=[TrackFileFormat.CSV, TrackFileFormat.OTTRK],
+        )
         self._export_tracks.export(specification=specification)
         logger().info("Finished tracks export")

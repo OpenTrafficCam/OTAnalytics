@@ -72,10 +72,12 @@ class ToplevelExportEvents(ToplevelTemplate):
         self,
         export_format_extensions: dict[str, str],
         input_values: dict,
+        initial_file_stem: str = INITIAL_FILE_STEM,
         **kwargs: Any,
     ) -> None:
         self._input_values = input_values
         self._export_format_extensions = export_format_extensions
+        self._initial_file_stem = initial_file_stem
         super().__init__(**kwargs)
 
     def _create_frame_content(self, master: Any) -> FrameContent:
@@ -87,12 +89,12 @@ class ToplevelExportEvents(ToplevelTemplate):
 
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
-        export_extension = f"*.{self._export_format_extensions[export_format]}"
+        export_extension = f"*{self._export_format_extensions[export_format]}"
         export_file = ask_for_save_file_name(
             title="Save counts as",
             filetypes=[(export_format, export_extension)],
             defaultextension=export_extension,
-            initialfile=INITIAL_FILE_STEM,
+            initialfile=self._initial_file_stem,
         )
         self._input_values[EXPORT_FILE] = export_file
         if export_file == "":

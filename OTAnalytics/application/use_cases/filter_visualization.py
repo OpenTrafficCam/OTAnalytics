@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
 from OTAnalytics.application.state import TrackViewState, VideosMetadata
@@ -26,7 +27,13 @@ class EnableFilterTrackByDate:
         self._track_view_state.filter_element.set(restored_filter_element)
 
 
-class CreateDefaultFilterRange:
+class CreateDefaultFilter(ABC):
+    @abstractmethod
+    def create(self) -> None:
+        raise NotImplementedError
+
+
+class CreateDefaultFilterRange(CreateDefaultFilter):
     def __init__(
         self,
         state: TrackViewState,

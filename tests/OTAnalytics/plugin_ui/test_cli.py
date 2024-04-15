@@ -69,6 +69,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
@@ -286,7 +289,9 @@ class TestOTAnalyticsCli:
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
-        track_repository = TrackRepository(PythonTrackDataset())
+        track_repository = TrackRepository(
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        )
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()
@@ -336,11 +341,18 @@ class TestOTAnalyticsCli:
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),
         )
-        export_tracks = CsvTrackExport(track_repository)
+        tracks_metadata = TracksMetadata(track_repository)
+        videos_metadata = VideosMetadata()
+        export_tracks = CsvTrackExport(
+            track_repository, tracks_metadata, videos_metadata
+        )
         return {
             self.TRACK_PARSER: OttrkParser(
                 PythonDetectionParser(
-                    ByMaxConfidence(), track_repository, DEFAULT_TRACK_LENGTH_LIMIT
+                    ByMaxConfidence(),
+                    track_repository,
+                    PygeosTrackGeometryDataset.from_track_dataset,
+                    DEFAULT_TRACK_LENGTH_LIMIT,
                 ),
             ),
             self.EVENT_REPOSITORY: event_repository,
@@ -355,8 +367,8 @@ class TestOTAnalyticsCli:
             self.ADD_ALL_TRACKS: add_all_tracks,
             self.GET_ALL_TRACK_IDS: get_all_track_ids,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
-            self.TRACKS_METADATA: TracksMetadata(track_repository),
-            self.VIDEOS_METADATA: VideosMetadata(),
+            self.TRACKS_METADATA: tracks_metadata,
+            self.VIDEOS_METADATA: videos_metadata,
             self.PROGRESSBAR: NoProgressbarBuilder(),
         }
 

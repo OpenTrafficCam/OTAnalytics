@@ -35,7 +35,7 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackImage,
 )
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
 from OTAnalytics.plugin_datastore.python_track_store import (
@@ -289,6 +289,7 @@ class DetectionParser(ABC):
         self,
         detections: list[dict],
         metadata_video: dict,
+        input_file: str,
         id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
         """Parse the detections.
@@ -299,6 +300,7 @@ class DetectionParser(ABC):
         Args:
             detections (list[dict]): the detections in dict format.
             metadata_video (dict): metadata of the track file in dict format.
+            input_file (Path): path to the input file containing the detections.
             id_generator (TrackIdGenerator): generator used to create track ids.
 
         Returns:
@@ -339,10 +341,12 @@ class PythonDetectionParser(DetectionParser):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
     ):
         self._track_classification_calculator = track_classification_calculator
         self._track_repository = track_repository
+        self._track_geometry_factory = track_geometry_factory
         self._track_length_limit = track_length_limit
         self._path_cache: dict[str, Path] = {}
 
@@ -350,9 +354,15 @@ class PythonDetectionParser(DetectionParser):
         self,
         dets: list[dict],
         metadata_video: dict,
+        input_file: str,
         id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
-        tracks_dict = self._parse_detections(dets, metadata_video, id_generator)
+        tracks_dict = self._parse_detections(
+            det_list=dets,
+            metadata_video=metadata_video,
+            input_file=input_file,
+            id_generator=id_generator,
+        )
         tracks: list[Track] = []
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
@@ -387,7 +397,9 @@ class PythonDetectionParser(DetectionParser):
                 )
 
         return PythonTrackDataset.from_list(
-            tracks, self._track_classification_calculator
+            tracks,
+            self._track_geometry_factory,
+            self._track_classification_calculator,
         )
 
     def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:
@@ -409,6 +421,7 @@ class PythonDetectionParser(DetectionParser):
         self,
         det_list: list[dict],
         metadata_video: dict,
+        input_file: str,
         id_generator: TrackIdGenerator,
     ) -> dict[TrackId, list[Detection]]:
         """Convert dict to Detection objects and group them by their track id."""
@@ -429,6 +442,7 @@ class PythonDetectionParser(DetectionParser):
                 _track_id=id_generator(str(det_dict[ottrk_format.TRACK_ID])),
                 _video_name=metadata_video[ottrk_format.FILENAME]
                 + metadata_video[ottrk_format.FILETYPE],
+                _input_file=input_file,
             )
             if not tracks_dict.get(det.track_id):
                 tracks_dict[det.track_id] = []
@@ -473,7 +487,7 @@ class OttrkParser(TrackParser):
         video_metadata = self._parse_video_metadata(metadata_video)
         id_generator = self._create_id_generator_from(ottrk_dict[ottrk_format.METADATA])
         tracks = self._detection_parser.parse_tracks(
-            dets_list, metadata_video, id_generator
+            dets_list, metadata_video, str(ottrk_file), id_generator
         )
         detection_metadata = self._parse_metadata(ottrk_dict[ottrk_format.METADATA])
         return TrackParseResult(tracks, detection_metadata, video_metadata)

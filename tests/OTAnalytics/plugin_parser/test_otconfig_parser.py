@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
-from unittest.mock import Mock, PropertyMock, call
+from unittest.mock import Mock, PropertyMock, call, patch
 
 import pytest
 
@@ -40,6 +40,17 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     OtConfigParser,
 )
 from tests.conftest import do_nothing
+
+
+@pytest.fixture
+def mock_otconfig() -> OtConfig:
+    project = Mock()
+    analysis = Mock()
+    videos = Mock()
+    sections = Mock()
+    flows = Mock()
+
+    return OtConfig(project, analysis, videos, sections, flows)
 
 
 class TestOtConfigParser:
@@ -81,6 +92,23 @@ class TestOtConfigParser:
             call(videos, relative_to=test_data_tmp_dir)
         ]
         assert flow_parser.convert.call_args_list == [call(sections, flows)]
+
+    @patch("OTAnalytics.plugin_parser.otconfig_parser.OtConfigParser.serialize")
+    def test_serialize_from_config(
+        self, mock_serialize: Mock, mock_otconfig: OtConfig
+    ) -> None:
+        save_path = Path("path/to/my/file.otconfig")
+        serializer = OtConfigParser(Mock(), Mock(), Mock())
+
+        serializer.serialize_from_config(mock_otconfig, save_path)
+
+        mock_serialize.assert_called_once_with(
+            mock_otconfig.project,
+            mock_otconfig.videos,
+            mock_otconfig.sections,
+            mock_otconfig.flows,
+            save_path,
+        )
 
     def test_parse_config(
         self, otconfig_file: Path, do_nothing_fixer: OtConfigFormatFixer

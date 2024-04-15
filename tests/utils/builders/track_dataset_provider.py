@@ -55,7 +55,9 @@ class TrackDatasetProvider:
         return PandasTrackDataset.from_list(tracks, self.GEOMETRY_FACTORY)
 
     def provide_python(self, tracks: list[Track]) -> PythonTrackDataset:
-        return PythonTrackDataset.from_list(tracks)
+        return PythonTrackDataset.from_list(
+            tracks, PygeosTrackGeometryDataset.from_track_dataset
+        )
 
     def provide_filtered(
         self,

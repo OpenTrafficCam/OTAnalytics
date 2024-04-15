@@ -2,7 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Iterable
 
-from pandas import DataFrame
+from pandas import DataFrame, to_datetime
 
 from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
@@ -27,6 +27,14 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.logger import logger
 
+START_DATE = "start occurrence date"
+START_TIME = "start occurrence time"
+END_DATE = "end occurrence date"
+END_TIME = "end occurrence time"
+
+DATE_FORMAT = "%Y-%m-%d"
+TIME_FORMAT = "%H:%M:%S"
+
 
 class CsvExport(Exporter):
     def __init__(self, output_file: str) -> None:
@@ -38,6 +46,7 @@ class CsvExport(Exporter):
         if dataframe.empty:
             logger().info("Nothing to count.")
             return
+        dataframe = self._add_detailed_date_time_columns(dataframe)
         dataframe = self._set_column_order(dataframe)
         dataframe = dataframe.sort_values(
             by=[LEVEL_START_TIME, LEVEL_END_TIME, LEVEL_CLASSIFICATION]
@@ -45,11 +54,25 @@ class CsvExport(Exporter):
         dataframe.to_csv(self.__create_path(), index=False)
         logger().info(f"Counts saved at {self._output_file}")
 
+    def _add_detailed_date_time_columns(self, df: DataFrame) -> DataFrame:
+        start_occurrence = to_datetime(df[LEVEL_START_TIME])
+        end_occurrence = to_datetime(df[LEVEL_END_TIME])
+
+        df[START_DATE] = start_occurrence.dt.strftime(DATE_FORMAT)
+        df[START_TIME] = start_occurrence.dt.strftime(TIME_FORMAT)
+        df[END_DATE] = end_occurrence.dt.strftime(DATE_FORMAT)
+        df[END_TIME] = end_occurrence.dt.strftime(TIME_FORMAT)
+        return df
+
     @staticmethod
     def _set_column_order(dataframe: DataFrame) -> DataFrame:
         desired_columns_order = [
             LEVEL_START_TIME,
+            START_DATE,
+            START_TIME,
             LEVEL_END_TIME,
+            END_DATE,
+            END_TIME,
             LEVEL_CLASSIFICATION,
             LEVEL_FLOW,
             LEVEL_FROM_SECTION,

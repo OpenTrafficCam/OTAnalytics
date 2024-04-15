@@ -389,3 +389,7 @@ class ViewModel(ABC):
     @abstractmethod
     def set_video_control_frame(self, frame: AbstractFrame) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def export_road_user_assignments(self) -> None:
+        raise NotImplementedError

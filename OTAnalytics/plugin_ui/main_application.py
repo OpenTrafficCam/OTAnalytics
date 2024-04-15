@@ -2,6 +2,10 @@ import logging
 from pathlib import Path
 from typing import Sequence
 
+from OTAnalytics.adapter_visualization.color_provider import (
+    DEFAULT_COLOR_PALETTE,
+    ColorPaletteProvider,
+)
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -110,6 +114,9 @@ from OTAnalytics.application.use_cases.quick_save_configuration import (
     QuickSaveConfiguration,
 )
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.save_otflow import SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddAllSections,
@@ -187,15 +194,14 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_parser.road_user_assignment_export import (
+    SimpleRoadUserAssignmentExporterFactory,
+)
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     provide_available_eventlist_exporter,
-)
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    DEFAULT_COLOR_PALETTE,
-    ColorPaletteProvider,
 )
 from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
@@ -476,6 +482,13 @@ class ApplicationStarter:
             OtflowHasChanged(flow_parser, get_sections, get_flows),
             file_state,
         )
+        export_road_user_assignments = self.create_export_road_user_assignments(
+            get_all_tracks,
+            section_repository,
+            event_repository,
+            flow_repository,
+            create_events,
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -508,6 +521,7 @@ class ApplicationStarter:
             quick_save_configuration,
             load_otconfig,
             config_has_changed,
+            export_road_user_assignments,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -626,7 +640,11 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
         )
-        export_tracks = CsvTrackExport(track_repository)
+        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
+        videos_metadata = VideosMetadata()
+        export_tracks = CsvTrackExport(
+            track_repository, tracks_metadata, videos_metadata
+        )
         OTAnalyticsCli(
             run_config,
             track_parser=track_parser,
@@ -641,8 +659,8 @@ class ApplicationStarter:
             get_all_track_ids=get_all_track_ids,
             add_flow=add_flow,
             clear_all_tracks=clear_all_tracks,
-            tracks_metadata=self._create_tracks_metadata(track_repository, run_config),
-            videos_metadata=VideosMetadata(),
+            tracks_metadata=tracks_metadata,
+            videos_metadata=videos_metadata,
             progressbar=TqdmBuilder(),
             export_tracks=export_tracks,
         ).start()
@@ -1004,4 +1022,20 @@ class ApplicationStarter:
             video_parser=video_parser,
             flow_parser=flow_parser,
             format_fixer=format_fixer,
+        )
+
+    def create_export_road_user_assignments(
+        self,
+        get_all_tracks: GetAllTracks,
+        section_repository: SectionRepository,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        create_events: CreateEvents,
+    ) -> ExportRoadUserAssignments:
+        return ExportRoadUserAssignments(
+            event_repository,
+            flow_repository,
+            create_events,
+            FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
+            SimpleRoadUserAssignmentExporterFactory(section_repository, get_all_tracks),
         )
