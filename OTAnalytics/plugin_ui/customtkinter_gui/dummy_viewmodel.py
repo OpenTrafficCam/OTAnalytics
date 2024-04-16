@@ -1667,7 +1667,6 @@ class DummyViewModel(
         self._reset_filters()
         self._reset_plotting_layer()
         self._display_preview_image()
-        self._show_current_svz_metadata()
 
     def _reset_filters(self) -> None:
         if self._frame_filter is None:
@@ -1808,14 +1807,3 @@ class DummyViewModel(
             self._frame_svz_metadata.update(metadata=metadata.to_dict())
         else:
             self._frame_svz_metadata.update({})
-
-    # def update_svz_metadata_in_frame(self, project: Project) -> None:
-    #     if self._frame_svz_metadata is None:
-    # noqa        raise MissingInjectedInstanceError(type(self._frame_svz_metadata).__name__)
-    #
-    #     if project.metadata:
-    #         metadata = project.metadata.to_dict()
-    #     else:
-    #         metadata = dict()
-    #
-    #     self._frame_svz_metadata.update(metadata)
