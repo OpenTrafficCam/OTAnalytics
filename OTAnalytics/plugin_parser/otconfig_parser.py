@@ -131,7 +131,9 @@ class OtConfigParser(ConfigParser):
         _validate_data(data, [project.NAME, project.START_DATE])
         name = data[project.NAME]
         start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
-        svz_metadata = self._parse_svz_metadata(data[project.METADATA])
+        svz_metadata = None
+        if svz_data := data.get(project.METADATA):
+            svz_metadata = self._parse_svz_metadata(svz_data)
         return Project(name=name, start_date=start_date, metadata=svz_metadata)
 
     def _parse_svz_metadata(self, data: dict) -> SvzMetadata:
