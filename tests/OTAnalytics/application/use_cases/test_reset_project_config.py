@@ -9,4 +9,4 @@ class TestResetProjectConfig:
         update_project = Mock(spec=ProjectUpdater)
         reset_project_config = ResetProjectConfig(update_project)
         reset_project_config()
-        assert update_project.call_args_list == [call("", None)]
+        assert update_project.call_args_list == [call("", None, None)]
