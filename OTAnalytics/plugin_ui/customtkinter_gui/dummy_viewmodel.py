@@ -232,6 +232,7 @@ class DummyViewModel(
         self._frame_analysis: Optional[AbstractFrame] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
+        self._frame_svz_metadata: Optional[AbstractFrameSvzMetadata] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._button_quick_save_config: AbstractButtonQuickSaveConfig | None = None
@@ -1653,6 +1654,7 @@ class DummyViewModel(
             return
         self._application.start_new_project()
         self._show_current_project()
+        self._show_current_svz_metadata()
         logger().info("Start new project.")
 
     def update_project_name(self, name: str) -> None:
@@ -1665,6 +1667,7 @@ class DummyViewModel(
         self._reset_filters()
         self._reset_plotting_layer()
         self._display_preview_image()
+        self._show_current_svz_metadata()
 
     def _reset_filters(self) -> None:
         if self._frame_filter is None:
@@ -1803,3 +1806,16 @@ class DummyViewModel(
         project = self._application._datastore.project
         if metadata := project.metadata:
             self._frame_svz_metadata.update(metadata=metadata.to_dict())
+        else:
+            self._frame_svz_metadata.update({})
+
+    # def update_svz_metadata_in_frame(self, project: Project) -> None:
+    #     if self._frame_svz_metadata is None:
+    # noqa        raise MissingInjectedInstanceError(type(self._frame_svz_metadata).__name__)
+    #
+    #     if project.metadata:
+    #         metadata = project.metadata.to_dict()
+    #     else:
+    #         metadata = dict()
+    #
+    #     self._frame_svz_metadata.update(metadata)

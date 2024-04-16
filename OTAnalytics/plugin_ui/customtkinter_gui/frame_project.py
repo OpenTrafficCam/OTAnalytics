@@ -339,13 +339,22 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
         }
 
     def update(self, metadata: dict) -> None:
-        self._tk_number.set(metadata[TK_NUMBER])
-        self._counting_location_number.set(metadata[COUNTING_LOCATION_NUMBER])
-        self._direction.set(self._directions.get_name_for(metadata[DIRECTION]))
-        self._weather.set(self._weather_types.get_name_for(metadata[WEATHER]))
-        self._remark.set(metadata[REMARK])
-        self._coordinate_x.set(metadata[COORDINATE_X])
-        self._coordinate_y.set(metadata[COORDINATE_Y])
+        if metadata:
+            self._tk_number.set(metadata[TK_NUMBER])
+            self._counting_location_number.set(metadata[COUNTING_LOCATION_NUMBER])
+            self._direction.set(self._directions.get_name_for(metadata[DIRECTION]))
+            self._weather.set(self._weather_types.get_name_for(metadata[WEATHER]))
+            self._remark.set(metadata[REMARK])
+            self._coordinate_x.set(metadata[COORDINATE_X])
+            self._coordinate_y.set(metadata[COORDINATE_Y])
+        else:
+            self._tk_number.set("")
+            self._counting_location_number.set("")
+            self._direction.set("")
+            self._weather.set("")
+            self._remark.set("")
+            self._coordinate_x.set("")
+            self._coordinate_y.set("")
 
 
 def get_default_toplevel_fg_color() -> str:
