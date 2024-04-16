@@ -55,7 +55,9 @@ class TestLoadOtconfig:
         load_otconfig.load(file)
 
         update_project.assert_called_once_with(
-            otconfig.project.name, otconfig.project.start_date
+            otconfig.project.name,
+            otconfig.project.start_date,
+            otconfig.project.metadata,
         )
         add_videos.add.assert_called_once_with(otconfig.videos)
         add_sections.add.assert_called_once_with(otconfig.sections)

@@ -42,7 +42,9 @@ class LoadOtconfig:
         self._clear_repositories()
         config = self._config_parser.parse(file)
         try:
-            self._update_project(config.project.name, config.project.start_date)
+            self._update_project(
+                config.project.name, config.project.start_date, config.project.metadata
+            )
             self._add_videos.add(config.videos)
             self._add_sections.add(config.sections)
             self._add_flows.add(config.flows)

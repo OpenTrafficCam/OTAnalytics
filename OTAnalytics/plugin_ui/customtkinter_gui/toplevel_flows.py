@@ -4,16 +4,15 @@ from typing import Any, Optional
 
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
+from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.application.application import CancelAddFlow
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import COLUMN_SECTION
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
     FrameContent,
     ToplevelTemplate,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 FLOW_ID = "Id"
 FLOW_NAME = "Name"
@@ -41,7 +40,7 @@ class InvalidFlowNameException(Exception):
 class FrameConfigureFlow(FrameContent):
     def __init__(
         self,
-        section_ids: list[ColumnResource],
+        section_ids: ColumnResources,
         name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,
@@ -50,8 +49,6 @@ class FrameConfigureFlow(FrameContent):
         super().__init__(**kwargs)
         self._section_ids = section_ids
         self._name_generator = name_generator
-        self._section_name_to_id = self._create_section_name_to_id(section_ids)
-        self._section_id_to_name = self._create_section_id_to_name(section_ids)
         self._current_name = StringVar()
         self._input_values: dict = self.__create_input_values(input_values)
         self._show_distance = show_distance
@@ -68,7 +65,7 @@ class FrameConfigureFlow(FrameContent):
         self.dropdown_section_start = CTkOptionMenu(
             master=self,
             width=180,
-            values=self._section_names(),
+            values=self._section_ids.names,
             command=self._autofill_name,
         )
         self.dropdown_section_start.set(self._get_start_section_name())
@@ -76,7 +73,7 @@ class FrameConfigureFlow(FrameContent):
         self.dropdown_section_end = CTkOptionMenu(
             master=self,
             width=180,
-            values=self._section_names(),
+            values=self._section_ids.names,
             command=self._autofill_name,
         )
         self.dropdown_section_end.set(self._get_end_section_name())
@@ -109,16 +106,6 @@ class FrameConfigureFlow(FrameContent):
             self.label_distance.grid(row=3, column=0, padx=PADX, pady=PADY, sticky=E)
             self.entry_distance.grid(row=3, column=1, padx=PADX, pady=PADY, sticky=W)
 
-    def _create_section_name_to_id(
-        self, sections: list[ColumnResource]
-    ) -> dict[str, str]:
-        return {resource.values[COLUMN_SECTION]: resource.id for resource in sections}
-
-    def _create_section_id_to_name(
-        self, sections: list[ColumnResource]
-    ) -> dict[str, str]:
-        return {resource.id: resource.values[COLUMN_SECTION] for resource in sections}
-
     def __set_initial_values(self) -> None:
         self._current_name.set(self._input_values.get(FLOW_NAME, ""))
 
@@ -133,9 +120,6 @@ class FrameConfigureFlow(FrameContent):
             DISTANCE: None,
         }
 
-    def _section_names(self) -> list[str]:
-        return [resource.values[COLUMN_SECTION] for resource in self._section_ids]
-
     def _autofill_name(self, event: Any) -> None:
         if self._last_autofilled_name == self.entry_name.get():
             self.entry_name.delete(0, tkinter.END)
@@ -149,25 +133,19 @@ class FrameConfigureFlow(FrameContent):
 
     def _get_end_section_name(self) -> str:
         _id = self._input_values[END_SECTION]
-        return self._get_section_name_for_id(_id)
-
-    def _get_section_name_for_id(self, name: str) -> str:
-        return self._section_id_to_name.get(name, "")
+        return self._section_ids.get_name_for(_id)
 
     def _get_start_section_name(self) -> str:
         _id = self._input_values[START_SECTION]
-        return self._get_section_name_for_id(_id)
+        return self._section_ids.get_name_for(_id)
 
     def _get_end_section_id(self) -> str:
         name = self.dropdown_section_end.get()
-        return self._get_section_id_for_name(name)
-
-    def _get_section_id_for_name(self, name: str) -> str:
-        return self._section_name_to_id.get(name, "")
+        return self._section_ids.get_id_for(name)
 
     def _get_start_section_id(self) -> str:
         name = self.dropdown_section_start.get()
-        return self._get_section_id_for_name(name)
+        return self._section_ids.get_id_for(name)
 
     def _is_float_above_zero(self, entry_value: Any) -> bool:
         try:
@@ -193,7 +171,7 @@ class FrameConfigureFlow(FrameContent):
             )
         else:
             for section in sections:
-                if section not in [resource.id for resource in self._section_ids]:
+                if not self._section_ids.has(section):
                     raise NotExistingSectionException(
                         f"{section} is not an existing section"
                     )
@@ -215,7 +193,7 @@ class FrameConfigureFlow(FrameContent):
 class ToplevelFlows(ToplevelTemplate):
     def __init__(
         self,
-        section_ids: list[ColumnResource],
+        section_ids: ColumnResources,
         name_generator: FlowNameGenerator,
         input_values: dict | None = None,
         show_distance: bool = True,
