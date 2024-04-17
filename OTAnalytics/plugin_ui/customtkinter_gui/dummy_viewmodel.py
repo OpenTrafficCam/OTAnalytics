@@ -64,8 +64,12 @@ from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.project import (
     COORDINATE_X,
     COORDINATE_Y,
+    COUNTING_DAY,
     COUNTING_LOCATION_NUMBER,
     DIRECTION,
+    DIRECTION_DESCRIPTION,
+    HAS_BICYCLE_LANE,
+    IS_BICYCLE_COUNTING,
     REMARK,
     TK_NUMBER,
     WEATHER,
@@ -1770,6 +1774,10 @@ class DummyViewModel(
                 if metadata[DIRECTION]
                 else None
             ),
+            direction_description=metadata[DIRECTION_DESCRIPTION],
+            has_bicycle_lane=metadata[HAS_BICYCLE_LANE],
+            is_bicycle_counting=metadata[IS_BICYCLE_COUNTING],
+            counting_day=metadata[COUNTING_DAY],
             weather=(
                 WeatherType.parse(metadata[WEATHER]) if metadata[WEATHER] else None
             ),

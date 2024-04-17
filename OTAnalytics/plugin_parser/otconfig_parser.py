@@ -17,11 +17,16 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import (
     COORDINATE_X,
     COORDINATE_Y,
+    COUNTING_DAY,
     COUNTING_LOCATION_NUMBER,
     DIRECTION,
+    DIRECTION_DESCRIPTION,
+    HAS_BICYCLE_LANE,
+    IS_BICYCLE_COUNTING,
     REMARK,
     TK_NUMBER,
     WEATHER,
+    CountingDayType,
     DirectionOfStationing,
     Project,
     SvzMetadata,
@@ -140,6 +145,10 @@ class OtConfigParser(ConfigParser):
         tk_number = data[TK_NUMBER]
         counting_location_number = data[COUNTING_LOCATION_NUMBER]
         direction = DirectionOfStationing.parse(data[DIRECTION])
+        direction_description = data[DIRECTION_DESCRIPTION]
+        has_bicycle_lane = data[HAS_BICYCLE_LANE]
+        is_bicycle_counting = data[IS_BICYCLE_COUNTING]
+        counting_day = CountingDayType.parse(data[COUNTING_DAY])
         weather = WeatherType.parse(data[WEATHER])
         remark = data[REMARK]
         coordinate_x = data[COORDINATE_X]
@@ -148,6 +157,10 @@ class OtConfigParser(ConfigParser):
             tk_number=tk_number,
             counting_location_number=counting_location_number,
             direction=direction,
+            direction_description=direction_description,
+            has_bicycle_lane=has_bicycle_lane,
+            is_bicycle_counting=is_bicycle_counting,
+            counting_day=counting_day,
             weather=weather,
             remark=remark,
             coordinate_x=coordinate_x,

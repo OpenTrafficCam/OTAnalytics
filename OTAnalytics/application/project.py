@@ -9,6 +9,10 @@ METADATA: str = "metadata"
 TK_NUMBER: str = "tk_number"
 COUNTING_LOCATION_NUMBER: str = "counting_location_number"
 DIRECTION: str = "direction"
+DIRECTION_DESCRIPTION: str = "direction_description"
+HAS_BICYCLE_LANE: str = "has_bicycle_lane"
+IS_BICYCLE_COUNTING: str = "is_bicycle_counting"
+COUNTING_DAY: str = "counting_day"
 WEATHER: str = "weather"
 REMARK: str = "remark"
 COORDINATE_X: str = "coordinate_x"
@@ -37,6 +41,42 @@ class DirectionOfStationing(Enum):
                 raise DirectionOfStationingParseError(
                     f"Unable to parse not existing direction '{direction}'"
                 )
+
+
+class CountingDayTypeParseError(Exception):
+    pass
+
+
+class CountingDayType(Enum):
+    NOW_1 = "1"
+    NOW_2 = "2"
+    FR_1 = "3"
+    FR_2 = "4"
+    SO_1 = "5"
+    SO_2 = "6"
+    FEW_1 = "7"
+    FEW_2 = "8"
+
+    def serialize(self) -> str:
+        return self.value
+
+    @staticmethod
+    def parse(counting_day_type: str) -> "CountingDayType":
+        for type in [
+            CountingDayType.NOW_1,
+            CountingDayType.NOW_2,
+            CountingDayType.FR_1,
+            CountingDayType.FR_2,
+            CountingDayType.SO_1,
+            CountingDayType.SO_2,
+            CountingDayType.FEW_1,
+            CountingDayType.FEW_2,
+        ]:
+            if type.value == counting_day_type:
+                return type
+        raise CountingDayTypeParseError(
+            f"Unable to parse not existing weather type '{counting_day_type}'"
+        )
 
 
 class WeatherTypeParseError(Exception):
@@ -74,6 +114,10 @@ class SvzMetadata:
     tk_number: str | None
     counting_location_number: str | None
     direction: DirectionOfStationing | None
+    direction_description: str | None
+    has_bicycle_lane: bool | None
+    is_bicycle_counting: bool | None
+    counting_day: CountingDayType | None
     weather: WeatherType | None
     remark: str | None
     coordinate_x: str | None
@@ -86,6 +130,16 @@ class SvzMetadata:
                 self.counting_location_number if self.counting_location_number else None
             ),
             DIRECTION: self.direction.serialize() if self.direction else None,
+            DIRECTION_DESCRIPTION: (
+                self.direction_description if self.direction_description else None
+            ),
+            HAS_BICYCLE_LANE: (
+                self.has_bicycle_lane if self.has_bicycle_lane else None
+            ),
+            IS_BICYCLE_COUNTING: (
+                self.is_bicycle_counting if self.is_bicycle_counting else None
+            ),
+            COUNTING_DAY: self.counting_day.serialize() if self.counting_day else None,
             WEATHER: self.weather.serialize() if self.weather else None,
             REMARK: self.remark if self.remark else None,
             COORDINATE_X: self.coordinate_x if self.coordinate_x else None,

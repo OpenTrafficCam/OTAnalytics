@@ -3,7 +3,14 @@ import tkinter
 from datetime import datetime
 from typing import Any, Optional
 
-from customtkinter import CTkButton, CTkComboBox, CTkEntry, CTkLabel, ThemeManager
+from customtkinter import (
+    CTkButton,
+    CTkCheckBox,
+    CTkComboBox,
+    CTkEntry,
+    CTkLabel,
+    ThemeManager,
+)
 
 from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameProject,
@@ -13,8 +20,12 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.project import (
     COORDINATE_X,
     COORDINATE_Y,
+    COUNTING_DAY,
     COUNTING_LOCATION_NUMBER,
     DIRECTION,
+    DIRECTION_DESCRIPTION,
+    HAS_BICYCLE_LANE,
+    IS_BICYCLE_COUNTING,
     REMARK,
     TK_NUMBER,
     WEATHER,
@@ -200,10 +211,15 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
         self._directions = self._viewmodel.get_directions_of_stationing()
+        self._counting_day_types = self._viewmodel.get_directions_of_stationing()
         self._weather_types = self._viewmodel.get_weather_types()
         self._tk_number = tkinter.StringVar()
         self._counting_location_number = tkinter.StringVar()
         self._direction = tkinter.StringVar()
+        self._direction_description = tkinter.StringVar()
+        self._has_bicycle_lane = tkinter.BooleanVar()
+        self._is_bicycle_counting = tkinter.BooleanVar()
+        self._counting_day_type = tkinter.StringVar()
         self._weather = tkinter.StringVar()
         self._remark = tkinter.StringVar()
         self._coordinate_x = tkinter.StringVar()
@@ -233,6 +249,34 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             master=self,
             variable=self._direction,
             values=self._directions.names,
+        )
+        self._label_direction_description = CTkLabel(
+            master=self,
+            text="Zählrichtung\n (Name aus ZV)",
+            compound="left",
+            justify="left",
+            anchor="w",
+        )
+        self._entry_direction_description = CTkEntry(
+            master=self,
+            textvariable=self._direction_description,
+            placeholder_text="Ausrichtung Beschreibung",
+        )
+        self._checkbox_has_bicycle_lane = CTkCheckBox(
+            master=self,
+            text="Seitlicher Radweg vorhanden",
+            variable=self._has_bicycle_lane,
+        )
+        self._checkbox_is_bicycle_counting = CTkCheckBox(
+            master=self,
+            text="Fahrradzählung",
+            variable=self._is_bicycle_counting,
+        )
+        self._label_counting_day_type = CTkLabel(master=self, text="Kategorie Zähltag")
+        self._entry_counting_day_type = CTkComboBox(
+            master=self,
+            variable=self._counting_day_type,
+            values=self._counting_day_types.names,
         )
         self._label_weather = CTkLabel(master=self, text="Wetter")
         self._entry_weather = CTkComboBox(
@@ -285,32 +329,50 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
         self._entry_direction.grid(
             row=2, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self._label_weather.grid(
+        self._label_direction_description.grid(
             row=3, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
         )
-        self._entry_weather.grid(
+        self._entry_direction_description.grid(
             row=3, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
-        self._label_remark.grid(
-            row=4, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
+        self._checkbox_has_bicycle_lane.grid(
+            row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY_WEST
         )
-        self._entry_remark.grid(
-            row=4, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+        self._checkbox_is_bicycle_counting.grid(
+            row=5, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY_WEST
         )
-        self._label_coordinate.grid(
-            row=5, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        self._label_counting_day_type.grid(
+            row=6, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
         )
-        self._label_coordinate_x.grid(
-            row=6, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
-        )
-        self._entry_coordinate_x.grid(
+        self._entry_counting_day_type.grid(
             row=6, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self._label_weather.grid(
+            row=7, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
+        )
+        self._entry_weather.grid(
+            row=7, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self._label_remark.grid(
+            row=8, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
+        )
+        self._entry_remark.grid(
+            row=8, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self._label_coordinate.grid(
+            row=9, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self._label_coordinate_x.grid(
+            row=10, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self._entry_coordinate_x.grid(
+            row=10, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+        )
         self._label_coordinate_y.grid(
-            row=7, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=11, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._entry_coordinate_y.grid(
-            row=7, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=11, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
 
     def _wire_callbacks(self) -> None:
@@ -319,6 +381,10 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             "write", callback=self._update_metadata
         )
         self._direction.trace_add("write", callback=self._update_metadata)
+        self._direction_description.trace_add("write", callback=self._update_metadata)
+        self._has_bicycle_lane.trace_add("write", callback=self._update_metadata)
+        self._is_bicycle_counting.trace_add("write", callback=self._update_metadata)
+        self._counting_day_type.trace_add("write", callback=self._update_metadata)
         self._weather.trace_add("write", callback=self._update_metadata)
         self._remark.trace_add("write", callback=self._update_metadata)
         self._coordinate_x.trace_add("write", callback=self._update_metadata)
@@ -332,6 +398,12 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             TK_NUMBER: self._tk_number.get(),
             COUNTING_LOCATION_NUMBER: self._counting_location_number.get(),
             DIRECTION: self._directions.get_id_for(self._direction.get()),
+            DIRECTION_DESCRIPTION: self._direction_description.get(),
+            HAS_BICYCLE_LANE: self._has_bicycle_lane.get(),
+            IS_BICYCLE_COUNTING: self._is_bicycle_counting.get(),
+            COUNTING_DAY: self._counting_day_types.get_id_for(
+                self._counting_day_type.get()
+            ),
             WEATHER: self._weather_types.get_id_for(self._weather.get()),
             REMARK: self._remark.get(),
             COORDINATE_X: self._coordinate_x.get(),
@@ -343,6 +415,10 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             self._tk_number.set(metadata[TK_NUMBER])
             self._counting_location_number.set(metadata[COUNTING_LOCATION_NUMBER])
             self._direction.set(self._directions.get_name_for(metadata[DIRECTION]))
+            self._direction_description.set(metadata[DIRECTION_DESCRIPTION])
+            self._has_bicycle_lane.set(metadata[HAS_BICYCLE_LANE])
+            self._is_bicycle_counting.set(metadata[IS_BICYCLE_COUNTING])
+            self._counting_day_type.set(metadata[COUNTING_DAY])
             self._weather.set(self._weather_types.get_name_for(metadata[WEATHER]))
             self._remark.set(metadata[REMARK])
             self._coordinate_x.set(metadata[COORDINATE_X])
@@ -351,6 +427,10 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             self._tk_number.set("")
             self._counting_location_number.set("")
             self._direction.set("")
+            self._direction_description.set("")
+            self._has_bicycle_lane.set(False)
+            self._is_bicycle_counting.set(False)
+            self._counting_day_type.set("")
             self._weather.set("")
             self._remark.set("")
             self._coordinate_x.set("")
