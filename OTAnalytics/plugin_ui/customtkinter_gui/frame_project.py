@@ -6,9 +6,9 @@ from typing import Any, Optional
 from customtkinter import (
     CTkButton,
     CTkCheckBox,
-    CTkComboBox,
     CTkEntry,
     CTkLabel,
+    CTkOptionMenu,
     ThemeManager,
 )
 
@@ -222,7 +222,7 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             placeholder_text="Zählstellennummer",
         )
         self._label_direction = CTkLabel(master=self, text="Ausrichtung")
-        self._entry_direction = CTkComboBox(
+        self._entry_direction = CTkOptionMenu(
             master=self,
             variable=self._direction,
             values=self._directions.names,
@@ -250,13 +250,13 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             variable=self._is_bicycle_counting,
         )
         self._label_counting_day_type = CTkLabel(master=self, text="Kategorie Zähltag")
-        self._entry_counting_day_type = CTkComboBox(
+        self._entry_counting_day_type = CTkOptionMenu(
             master=self,
             variable=self._counting_day_type,
             values=self._counting_day_types.names,
         )
         self._label_weather = CTkLabel(master=self, text="Wetter")
-        self._entry_weather = CTkComboBox(
+        self._entry_weather = CTkOptionMenu(
             master=self,
             variable=self._weather,
             values=self._weather_types.names,
