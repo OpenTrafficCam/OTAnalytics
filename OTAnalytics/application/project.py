@@ -75,7 +75,7 @@ class CountingDayType(Enum):
             if type.value == counting_day_type:
                 return type
         raise CountingDayTypeParseError(
-            f"Unable to parse not existing weather type '{counting_day_type}'"
+            f"Unable to parse not existing counting day type '{counting_day_type}'"
         )
 
 
