@@ -59,20 +59,24 @@ class TabviewProject(CustomCTkTabview):
     ) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
-        self._title: str = "Project"
+        self._project_title = "Project"
+        self._svz_title = "SVZ"
         self._get_widgets()
         self._place_widgets()
-        self.disable_segmented_button()
 
     def _get_widgets(self) -> None:
-        self.add(self._title)
+        self.add(self._project_title)
         self.frame_project = FrameProject(
-            master=self.tab(self._title), viewmodel=self._viewmodel
+            master=self.tab(self._project_title), viewmodel=self._viewmodel
+        )
+        self.add(self._svz_title)
+        self.frame_svz_metadata = FrameSvzMetadata(
+            master=self.tab(self._svz_title), viewmodel=self._viewmodel
         )
 
     def _place_widgets(self) -> None:
         self.frame_project.pack(fill=tkinter.BOTH, expand=True)
-        self.set(self._title)
+        self.frame_svz_metadata.pack(fill=tkinter.BOTH, expand=True)
 
 
 class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
@@ -127,7 +131,6 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             width=10,
             command=self._viewmodel.quick_save_configuration,
         )
-        self._svz_metadata = TabviewSvzMetadata(master=self, viewmodel=self._viewmodel)
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure(2, weight=1)
@@ -149,9 +152,6 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         self._label_name.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
         self._entry_name.grid(row=1, column=1, padx=PADX, pady=PADY, sticky=STICKY)
         self._start_date_row.grid(row=2, column=0, columnspan=2, sticky=STICKY_WEST)
-        self._svz_metadata.grid(
-            row=3, column=0, columnspan=2, padx=0, pady=0, sticky=STICKY
-        )
 
     def _wire_callbacks(self) -> None:
         self._project_name.trace_add("write", callback=self._update_project_name)
@@ -179,30 +179,6 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             self.button_quick_save,
         ]:
             button.configure(state=new_state)
-
-
-class TabviewSvzMetadata(CustomCTkTabview):
-    def __init__(
-        self,
-        viewmodel: ViewModel,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(**kwargs)
-        self._viewmodel = viewmodel
-        self._title: str = "SVZ Metadaten"
-        self._get_widgets()
-        self._place_widgets()
-        self.disable_segmented_button()
-
-    def _get_widgets(self) -> None:
-        self.add(self._title)
-        self.frame_project = FrameSvzMetadata(
-            master=self.tab(self._title), viewmodel=self._viewmodel
-        )
-
-    def _place_widgets(self) -> None:
-        self.frame_project.pack(fill=tkinter.BOTH, expand=True)
-        self.set(self._title)
 
 
 class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
