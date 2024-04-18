@@ -404,17 +404,31 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
 
     def update(self, metadata: dict) -> None:
         if metadata:
-            self._tk_number.set(metadata[TK_NUMBER])
-            self._counting_location_number.set(metadata[COUNTING_LOCATION_NUMBER])
-            self._direction.set(self._directions.get_name_for(metadata[DIRECTION]))
-            self._direction_description.set(metadata[DIRECTION_DESCRIPTION])
+            self._tk_number.set(self.__get_display_value(TK_NUMBER, metadata))
+            self._counting_location_number.set(
+                self.__get_display_value(COUNTING_LOCATION_NUMBER, metadata)
+            )
+            self._direction.set(
+                self._directions.get_name_for(
+                    self.__get_display_value(DIRECTION, metadata)
+                )
+            )
+            self._direction_description.set(
+                self.__get_display_value(DIRECTION_DESCRIPTION, metadata)
+            )
             self._has_bicycle_lane.set(metadata[HAS_BICYCLE_LANE])
             self._is_bicycle_counting.set(metadata[IS_BICYCLE_COUNTING])
-            self._counting_day_type.set(metadata[COUNTING_DAY])
-            self._weather.set(self._weather_types.get_name_for(metadata[WEATHER]))
-            self._remark.set(metadata[REMARK])
-            self._coordinate_x.set(metadata[COORDINATE_X])
-            self._coordinate_y.set(metadata[COORDINATE_Y])
+            self._counting_day_type.set(
+                self.__get_display_value(COUNTING_DAY, metadata)
+            )
+            self._weather.set(
+                self._weather_types.get_name_for(
+                    self.__get_display_value(WEATHER, metadata)
+                )
+            )
+            self._remark.set(self.__get_display_value(REMARK, metadata))
+            self._coordinate_x.set(self.__get_display_value(COORDINATE_X, metadata))
+            self._coordinate_y.set(self.__get_display_value(COORDINATE_Y, metadata))
         else:
             self._tk_number.set("")
             self._counting_location_number.set("")
@@ -427,6 +441,10 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             self._remark.set("")
             self._coordinate_x.set("")
             self._coordinate_y.set("")
+
+    @staticmethod
+    def __get_display_value(field: str, metadata: dict) -> str:
+        return metadata[field] if metadata[field] else ""
 
 
 def get_default_toplevel_fg_color() -> str:

@@ -134,10 +134,10 @@ class SvzMetadata:
                 self.direction_description if self.direction_description else None
             ),
             HAS_BICYCLE_LANE: (
-                self.has_bicycle_lane if self.has_bicycle_lane else None
+                self.has_bicycle_lane if self.has_bicycle_lane else False
             ),
             IS_BICYCLE_COUNTING: (
-                self.is_bicycle_counting if self.is_bicycle_counting else None
+                self.is_bicycle_counting if self.is_bicycle_counting else False
             ),
             COUNTING_DAY: self.counting_day.serialize() if self.counting_day else None,
             WEATHER: self.weather.serialize() if self.weather else None,

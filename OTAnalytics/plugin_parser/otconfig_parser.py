@@ -144,12 +144,16 @@ class OtConfigParser(ConfigParser):
     def _parse_svz_metadata(self, data: dict) -> SvzMetadata:
         tk_number = data[TK_NUMBER]
         counting_location_number = data[COUNTING_LOCATION_NUMBER]
-        direction = DirectionOfStationing.parse(data[DIRECTION])
+        direction = (
+            DirectionOfStationing.parse(data[DIRECTION]) if data[DIRECTION] else None
+        )
         direction_description = data[DIRECTION_DESCRIPTION]
         has_bicycle_lane = data[HAS_BICYCLE_LANE]
         is_bicycle_counting = data[IS_BICYCLE_COUNTING]
-        counting_day = CountingDayType.parse(data[COUNTING_DAY])
-        weather = WeatherType.parse(data[WEATHER])
+        counting_day = (
+            CountingDayType.parse(data[COUNTING_DAY]) if data[COUNTING_DAY] else None
+        )
+        weather = WeatherType.parse(data[WEATHER]) if data[WEATHER] else None
         remark = data[REMARK]
         coordinate_x = data[COORDINATE_X]
         coordinate_y = data[COORDINATE_Y]
