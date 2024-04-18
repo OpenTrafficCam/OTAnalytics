@@ -419,7 +419,9 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             self._has_bicycle_lane.set(metadata[HAS_BICYCLE_LANE])
             self._is_bicycle_counting.set(metadata[IS_BICYCLE_COUNTING])
             self._counting_day_type.set(
-                self.__get_display_value(COUNTING_DAY, metadata)
+                self._counting_day_types.get_name_for(
+                    self.__get_display_value(COUNTING_DAY, metadata)
+                )
             )
             self._weather.set(
                 self._weather_types.get_name_for(
