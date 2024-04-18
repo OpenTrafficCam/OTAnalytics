@@ -186,6 +186,7 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
+        self._padding_multiplier = 4
         self._directions = self._viewmodel.get_directions_of_stationing()
         self._counting_day_types = self._viewmodel.get_directions_of_stationing()
         self._weather_types = self._viewmodel.get_weather_types()
@@ -306,16 +307,31 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             row=2, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
         )
         self._label_direction_description.grid(
-            row=3, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
+            row=3,
+            column=0,
+            columnspan=1,
+            padx=PADX,
+            pady=(PADY, PADY * self._padding_multiplier),
+            sticky=STICKY,
         )
         self._entry_direction_description.grid(
-            row=3, column=1, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY
+            row=3,
+            column=1,
+            columnspan=1,
+            padx=PADX,
+            pady=(PADY, PADY * self._padding_multiplier),
+            sticky=STICKY,
         )
         self._checkbox_has_bicycle_lane.grid(
             row=4, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY_WEST
         )
         self._checkbox_is_bicycle_counting.grid(
-            row=5, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY_WEST
+            row=5,
+            column=0,
+            columnspan=2,
+            padx=PADX,
+            pady=(PADY, PADY * self._padding_multiplier),
+            sticky=STICKY_WEST,
         )
         self._label_counting_day_type.grid(
             row=6, column=0, columnspan=1, padx=PADX, pady=PADY, sticky=STICKY_WEST
