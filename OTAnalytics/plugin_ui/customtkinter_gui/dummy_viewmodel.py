@@ -38,7 +38,11 @@ from OTAnalytics.adapter_ui.text_resources import (
     ColumnResource,
     ColumnResources,
 )
-from OTAnalytics.adapter_ui.ui_texts import DIRECTIONS_OF_STATIONING, WEATHER_TYPES
+from OTAnalytics.adapter_ui.ui_texts import (
+    COUNTING_DAY_TYPES,
+    DIRECTIONS_OF_STATIONING,
+    WEATHER_TYPES,
+)
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
     MissingCoordinate,
@@ -73,6 +77,7 @@ from OTAnalytics.application.project import (
     REMARK,
     TK_NUMBER,
     WEATHER,
+    CountingDayType,
     DirectionOfStationing,
     SvzMetadata,
     WeatherType,
@@ -1777,7 +1782,7 @@ class DummyViewModel(
             direction_description=metadata[DIRECTION_DESCRIPTION],
             has_bicycle_lane=metadata[HAS_BICYCLE_LANE],
             is_bicycle_counting=metadata[IS_BICYCLE_COUNTING],
-            counting_day=metadata[COUNTING_DAY],
+            counting_day=CountingDayType.parse(metadata[COUNTING_DAY]),
             weather=(
                 WeatherType.parse(metadata[WEATHER]) if metadata[WEATHER] else None
             ),
@@ -1792,6 +1797,14 @@ class DummyViewModel(
             [
                 ColumnResource(id=key.serialize(), values={COLUMN_NAME: value})
                 for key, value in DIRECTIONS_OF_STATIONING.items()
+            ]
+        )
+
+    def get_counting_day_types(self) -> ColumnResources:
+        return ColumnResources(
+            [
+                ColumnResource(id=key.serialize(), values={COLUMN_NAME: value})
+                for key, value in COUNTING_DAY_TYPES.items()
             ]
         )
 

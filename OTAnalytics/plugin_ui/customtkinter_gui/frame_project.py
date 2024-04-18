@@ -188,7 +188,7 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
         self._viewmodel = viewmodel
         self._padding_multiplier = 4
         self._directions = self._viewmodel.get_directions_of_stationing()
-        self._counting_day_types = self._viewmodel.get_directions_of_stationing()
+        self._counting_day_types = self._viewmodel.get_counting_day_types()
         self._weather_types = self._viewmodel.get_weather_types()
         self._tk_number = tkinter.StringVar()
         self._counting_location_number = tkinter.StringVar()
