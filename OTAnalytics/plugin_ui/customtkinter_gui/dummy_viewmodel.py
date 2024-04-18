@@ -1782,7 +1782,11 @@ class DummyViewModel(
             direction_description=metadata[DIRECTION_DESCRIPTION],
             has_bicycle_lane=metadata[HAS_BICYCLE_LANE],
             is_bicycle_counting=metadata[IS_BICYCLE_COUNTING],
-            counting_day=CountingDayType.parse(metadata[COUNTING_DAY]),
+            counting_day=(
+                CountingDayType.parse(metadata[COUNTING_DAY])
+                if metadata[COUNTING_DAY]
+                else None
+            ),
             weather=(
                 WeatherType.parse(metadata[WEATHER]) if metadata[WEATHER] else None
             ),
