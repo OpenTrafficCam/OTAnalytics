@@ -645,6 +645,13 @@ class ApplicationStarter:
         export_tracks = CsvTrackExport(
             track_repository, tracks_metadata, videos_metadata
         )
+        export_road_user_assignments = self.create_export_road_user_assignments(
+            get_all_tracks,
+            section_repository,
+            event_repository,
+            flow_repository,
+            create_events,
+        )
         OTAnalyticsCli(
             run_config,
             track_parser=track_parser,
@@ -663,6 +670,7 @@ class ApplicationStarter:
             videos_metadata=videos_metadata,
             progressbar=TqdmBuilder(),
             export_tracks=export_tracks,
+            export_road_user_assignments=export_road_user_assignments,
         ).start()
 
     def _create_datastore(
