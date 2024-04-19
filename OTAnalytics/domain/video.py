@@ -58,6 +58,10 @@ class Video(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def is_in(self, date: datetime) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
     def to_dict(
         self,
         relative_to: Path,
@@ -83,6 +87,53 @@ class DifferentDrivesException(Exception):
     pass
 
 
+@dataclass(frozen=True)
+class VideoMetadata:
+    path: str
+    recorded_start_date: datetime
+    expected_duration: Optional[timedelta]
+    recorded_fps: float
+    actual_fps: Optional[float]
+    number_of_frames: int
+
+    @property
+    def start(self) -> datetime:
+        return self.recorded_start_date
+
+    @property
+    def end(self) -> datetime:
+        return self.start + self.duration
+
+    @property
+    def duration(self) -> timedelta:
+        if self.expected_duration:
+            return self.expected_duration
+        return timedelta(seconds=self.number_of_frames / self.recorded_fps)
+
+    @property
+    def fps(self) -> float:
+        if self.actual_fps:
+            return self.actual_fps
+        return self.recorded_fps
+
+    def to_dict(self) -> dict:
+        return {
+            "path": self.path,
+            "recorded_start_date": self.recorded_start_date.timestamp(),
+            "expected_duration": (
+                self.expected_duration.total_seconds()
+                if self.expected_duration
+                else None
+            ),
+            "recorded_fps": self.recorded_fps,
+            "actual_fps": self.actual_fps,
+            "number_of_frames": self.number_of_frames,
+        }
+
+    def is_in(self, date: datetime) -> bool:
+        return self.start <= date < self.end
+
+
 @dataclass
 class SimpleVideo(Video):
     """Represents a video file.
@@ -95,14 +146,21 @@ class SimpleVideo(Video):
         ValueError: if video file path does not exist.
     """
 
+    def is_in(self, date: datetime) -> bool:
+        if self.metadata:
+            return self.metadata.is_in(date)
+        return False
+
     video_reader: VideoReader
     path: Path
-    _start_date: Optional[datetime]
+    metadata: Optional[VideoMetadata]
     _fps: Optional[int] = None
 
     @property
     def start_date(self) -> Optional[datetime]:
-        return self._start_date
+        if self.metadata:
+            return self.metadata.recorded_start_date
+        return None
 
     @property
     def fps(self) -> float:
@@ -250,3 +308,6 @@ class VideoRepository:
         """
         self._videos.clear()
         self._observers.notify([])
+
+    def get_by_date(self, date: datetime) -> list[Video]:
+        return [video for video in self._videos.values() if video.is_in(date)]

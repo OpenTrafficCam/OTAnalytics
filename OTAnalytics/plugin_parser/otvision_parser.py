@@ -16,7 +16,6 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     TrackParseResult,
     TrackVideoParser,
-    VideoMetadata,
     VideoParser,
 )
 from OTAnalytics.application.logger import logger
@@ -37,7 +36,13 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
+from OTAnalytics.domain.video import (
+    PATH,
+    SimpleVideo,
+    Video,
+    VideoMetadata,
+    VideoReader,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
@@ -812,8 +817,10 @@ class SimpleVideoParser(VideoParser):
     def __init__(self, video_reader: VideoReader) -> None:
         self._video_reader = video_reader
 
-    def parse(self, file: Path, start_date: Optional[datetime]) -> Video:
-        return SimpleVideo(self._video_reader, file, start_date)
+    def parse(self, file: Path, metadata: VideoMetadata | None) -> Video:
+        if metadata:
+            return SimpleVideo(self._video_reader, file, metadata)
+        return SimpleVideo(self._video_reader, file, None)
 
     def parse_list(
         self,
@@ -844,6 +851,7 @@ class SimpleVideoParser(VideoParser):
 
 @dataclass
 class CachedVideo(Video):
+
     other: Video
     cache: dict[int, TrackImage] = field(default_factory=dict)
 
@@ -871,13 +879,17 @@ class CachedVideo(Video):
     def to_dict(self, relative_to: Path) -> dict:
         return self.other.to_dict(relative_to)
 
+    def is_in(self, date: datetime) -> bool:
+        return self.other.is_in(date)
+
 
 class CachedVideoParser(VideoParser):
+
     def __init__(self, other: VideoParser) -> None:
         self._other = other
 
-    def parse(self, file: Path, start_date: Optional[datetime]) -> Video:
-        other_video = self._other.parse(file, start_date)
+    def parse(self, file: Path, metadata: Optional[VideoMetadata]) -> Video:
+        other_video = self._other.parse(file, metadata)
         return self.__create_cached_video(other_video)
 
     def __create_cached_video(self, other_video: Video) -> Video:
@@ -902,13 +914,9 @@ class OttrkVideoParser(TrackVideoParser):
         self._video_parser = video_parser
 
     def parse(
-        self, file: Path, track_ids: list[TrackId]
+        self, file: Path, track_ids: list[TrackId], metadata: VideoMetadata
     ) -> Tuple[list[TrackId], list[Video]]:
-        content = parse_json_bz2(file)
-        metadata = content[ottrk_format.METADATA][ottrk_format.VIDEO]
-        video_file = metadata[ottrk_format.FILENAME] + metadata[ottrk_format.FILETYPE]
-        start_date = self.__parse_recorded_start_date(metadata)
-        video = self._video_parser.parse(file.parent / video_file, start_date)
+        video = self._video_parser.parse(file.parent / metadata.path, metadata)
         return track_ids, [video] * len(track_ids)
 
     def __parse_recorded_start_date(self, metadata: dict) -> datetime:
