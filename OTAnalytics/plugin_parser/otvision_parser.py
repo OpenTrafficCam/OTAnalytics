@@ -879,8 +879,8 @@ class CachedVideo(Video):
     def to_dict(self, relative_to: Path) -> dict:
         return self.other.to_dict(relative_to)
 
-    def is_in(self, date: datetime) -> bool:
-        return self.other.is_in(date)
+    def contains(self, date: datetime) -> bool:
+        return self.other.contains(date)
 
 
 class CachedVideoParser(VideoParser):

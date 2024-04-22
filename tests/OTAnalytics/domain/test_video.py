@@ -112,8 +112,8 @@ class TestVideoRepository:
         assert result == ordered_videos
 
     def test_get_by_date(self, video_1: Mock, video_2: Mock) -> None:
-        video_1.is_in.return_value = False
-        video_2.is_in.return_value = True
+        video_1.contains.return_value = False
+        video_2.contains.return_value = True
 
         repository = VideoRepository()
         repository.add_all([video_1, video_2])
@@ -155,8 +155,8 @@ class TestVideoMetadata:
         assert metadata.end == expected_video_end
         assert metadata.fps == recorded_fps
 
-    def test_is_in(self, metadata: VideoMetadata) -> None:
-        assert not metadata.is_in(FIRST_START_DATE - timedelta(seconds=1))
-        assert metadata.is_in(FIRST_START_DATE)
-        assert metadata.is_in(FIRST_START_DATE + timedelta(seconds=2))
-        assert not metadata.is_in(FIRST_START_DATE + timedelta(seconds=3))
+    def test_contains(self, metadata: VideoMetadata) -> None:
+        assert not metadata.contains(FIRST_START_DATE - timedelta(seconds=1))
+        assert metadata.contains(FIRST_START_DATE)
+        assert metadata.contains(FIRST_START_DATE + timedelta(seconds=2))
+        assert not metadata.contains(FIRST_START_DATE + timedelta(seconds=3))

@@ -749,14 +749,14 @@ class TestCachedVideo:
         other.to_dict.assert_called_once()
         assert cached_dict is original_dict
 
-    def test_is_in(self) -> None:
+    def test_contains(self) -> None:
         date = Mock()
         other = Mock(spec=Video)
-        other.is_in.return_value = True
+        other.contains.return_value = True
 
         cached_video = CachedVideo(other)
-        assert cached_video.is_in(date) is True
-        other.is_in.assert_called_with(date)
+        assert cached_video.contains(date) is True
+        other.contains.assert_called_with(date)
 
 
 class TestCachedVideoParser:

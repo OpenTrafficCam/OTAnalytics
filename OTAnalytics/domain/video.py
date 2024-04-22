@@ -58,7 +58,7 @@ class Video(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def is_in(self, date: datetime) -> bool:
+    def contains(self, date: datetime) -> bool:
         raise NotImplementedError
 
     @abstractmethod
@@ -130,7 +130,7 @@ class VideoMetadata:
             "number_of_frames": self.number_of_frames,
         }
 
-    def is_in(self, date: datetime) -> bool:
+    def contains(self, date: datetime) -> bool:
         return self.start <= date < self.end
 
 
@@ -145,11 +145,6 @@ class SimpleVideo(Video):
     Raises:
         ValueError: if video file path does not exist.
     """
-
-    def is_in(self, date: datetime) -> bool:
-        if self.metadata:
-            return self.metadata.is_in(date)
-        return False
 
     video_reader: VideoReader
     path: Path
@@ -212,6 +207,11 @@ class SimpleVideo(Video):
                 f"Configuration is stored on {other_drive}"
             )
         return path.relpath(self.path, relative_to)
+
+    def contains(self, date: datetime) -> bool:
+        if self.metadata:
+            return self.metadata.contains(date)
+        return False
 
 
 class VideoListObserver(ABC):
@@ -310,4 +310,4 @@ class VideoRepository:
         self._observers.notify([])
 
     def get_by_date(self, date: datetime) -> list[Video]:
-        return [video for video in self._videos.values() if video.is_in(date)]
+        return [video for video in self._videos.values() if video.contains(date)]
