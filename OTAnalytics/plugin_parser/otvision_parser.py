@@ -818,9 +818,7 @@ class SimpleVideoParser(VideoParser):
         self._video_reader = video_reader
 
     def parse(self, file: Path, metadata: VideoMetadata | None) -> Video:
-        if metadata:
-            return SimpleVideo(self._video_reader, file, metadata)
-        return SimpleVideo(self._video_reader, file, None)
+        return SimpleVideo(self._video_reader, file, metadata)
 
     def parse_list(
         self,
