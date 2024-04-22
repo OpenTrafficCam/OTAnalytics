@@ -11,6 +11,8 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import SectionRepository
 
+CSV_FORMAT = ExportFormat("CSV", ".csv")
+
 
 class RoadUserAssignmentCsvExporter(RoadUserAssignmentExporter):
 
@@ -31,9 +33,7 @@ class SimpleRoadUserAssignmentExporterFactory:
         self._section_repository = section_repository
         self._get_all_tracks = get_all_tracks
         self._formats = {
-            ExportFormat(
-                "CSV", ".csv"
-            ): lambda builder, output_file: RoadUserAssignmentCsvExporter(
+            CSV_FORMAT: lambda builder, output_file: RoadUserAssignmentCsvExporter(
                 section_repository, get_all_tracks, builder, output_file
             )
         }
