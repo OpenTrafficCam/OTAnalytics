@@ -13,7 +13,6 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     TrackToVideoRepository,
     TrackVideoParser,
-    VideoMetadata,
     VideoParser,
 )
 from OTAnalytics.application.parser.config_parser import ConfigParser
@@ -61,52 +60,20 @@ class MockVideoReader(VideoReader):
         return 0
 
 
-class TestVideoMetadata:
-    def test_fully_specified_metadata(self) -> None:
-        recorded_fps = 20.0
-        actual_fps = 20.0
-        metadata = VideoMetadata(
-            path="video_path_1.mp4",
-            recorded_start_date=FIRST_START_DATE,
-            expected_duration=timedelta(seconds=3),
-            recorded_fps=recorded_fps,
-            actual_fps=actual_fps,
-            number_of_frames=60,
-        )
-        assert metadata.start == FIRST_START_DATE
-        assert metadata.end == FIRST_START_DATE + timedelta(seconds=3)
-        assert metadata.fps == actual_fps
-
-    def test_partially_specified_metadata(self) -> None:
-        recorded_fps = 20.0
-        metadata = VideoMetadata(
-            path="video_path_1.mp4",
-            recorded_start_date=FIRST_START_DATE,
-            expected_duration=None,
-            recorded_fps=recorded_fps,
-            actual_fps=None,
-            number_of_frames=60,
-        )
-        assert metadata.start == FIRST_START_DATE
-        expected_video_end = FIRST_START_DATE + timedelta(seconds=3)
-        assert metadata.end == expected_video_end
-        assert metadata.fps == recorded_fps
-
-
 class TestSimpleVideo:
     video_reader = MockVideoReader()
 
     def test_raise_error_if_file_not_exists(self) -> None:
         with pytest.raises(ValueError):
-            SimpleVideo(self.video_reader, Path("foo/bar.mp4"), FIRST_START_DATE)
+            SimpleVideo(self.video_reader, Path("foo/bar.mp4"), None)
 
     def test_init_with_valid_args(self, cyclist_video: Path) -> None:
-        video = SimpleVideo(self.video_reader, cyclist_video, FIRST_START_DATE)
+        video = SimpleVideo(self.video_reader, cyclist_video, None)
         assert video.path == cyclist_video
         assert video.video_reader == self.video_reader
 
     def test_get_frame_return_correct_image(self, cyclist_video: Path) -> None:
-        video = SimpleVideo(self.video_reader, cyclist_video, FIRST_START_DATE)
+        video = SimpleVideo(self.video_reader, cyclist_video, None)
         assert video.get_frame(0).as_image() == Image.fromarray(
             array([[1, 0], [0, 1]], int32)
         )

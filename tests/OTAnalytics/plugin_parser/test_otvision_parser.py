@@ -5,7 +5,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics import version
-from OTAnalytics.application.datastore import VideoMetadata, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.domain import flow, geometry, section
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
@@ -29,7 +29,7 @@ from OTAnalytics.domain.track import (
     TrackImage,
 )
 from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.domain.video import Video
+from OTAnalytics.domain.video import Video, VideoMetadata
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrack,
@@ -749,6 +749,15 @@ class TestCachedVideo:
         other.to_dict.assert_called_once()
         assert cached_dict is original_dict
 
+    def test_contains(self) -> None:
+        date = Mock()
+        other = Mock(spec=Video)
+        other.contains.return_value = True
+
+        cached_video = CachedVideo(other)
+        assert cached_video.contains(date) is True
+        other.contains.assert_called_with(date)
+
 
 class TestCachedVideoParser:
     def test_parse_to_cached_video(self, test_data_tmp_dir: Path) -> None:
@@ -760,7 +769,7 @@ class TestCachedVideoParser:
 
         cached_parser = CachedVideoParser(video_parser)
 
-        parsed_video = cached_parser.parse(video_file, start_date=None)
+        parsed_video = cached_parser.parse(video_file, None)
 
         assert isinstance(parsed_video, CachedVideo)
         assert parsed_video.other == video

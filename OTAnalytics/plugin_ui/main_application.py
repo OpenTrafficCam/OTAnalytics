@@ -329,7 +329,9 @@ class ApplicationStarter:
         )
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         track_view_state.selected_videos.register(image_updater.notify_video)
-        selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
+        selected_video_updater = SelectedVideoUpdate(
+            datastore, track_view_state, videos_metadata
+        )
 
         tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
         # TODO: Should not register to tracks_metadata._classifications but to
@@ -563,6 +565,9 @@ class ApplicationStarter:
         )
         track_view_state.filter_date_active.register(
             dummy_viewmodel.change_filter_date_active
+        )
+        track_view_state.filter_element.register(
+            selected_video_updater.on_filter_element_change
         )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
