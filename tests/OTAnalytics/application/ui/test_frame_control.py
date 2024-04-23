@@ -3,7 +3,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.datastore import VideoMetadata
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.state import SectionState, TrackViewState, VideosMetadata
 from OTAnalytics.application.ui.frame_control import (
@@ -19,6 +18,7 @@ from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.domain.video import VideoMetadata
 from tests.utils.state import observable
 
 FPS = 1

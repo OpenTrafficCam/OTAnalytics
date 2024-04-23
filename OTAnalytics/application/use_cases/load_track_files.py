@@ -63,7 +63,9 @@ class LoadTrackFiles:
         """
         parse_result = self._track_parser.parse(file)
         track_ids = list(parse_result.tracks.track_ids)
-        track_ids, videos = self._track_video_parser.parse(file, track_ids)
+        track_ids, videos = self._track_video_parser.parse(
+            file, track_ids, parse_result.video_metadata
+        )
         self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(parse_result.tracks)

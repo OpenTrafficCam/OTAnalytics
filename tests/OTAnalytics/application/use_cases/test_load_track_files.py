@@ -37,13 +37,18 @@ class TestLoadTrackFile:
         some_track = Mock()
         some_track_id = TrackId("1")
         some_track.id = some_track_id
-        some_video = SimpleVideo(Mock(), Path(""), START_DATE)
+        some_video_metadata = Mock()
+
         detection_metadata = Mock()
+        detection_metadata.detection_classes = {"class1", "class2"}
+
+        some_video = SimpleVideo(Mock(), Path(""), some_video_metadata)
         track_dataset_result = Mock()
         type(track_dataset_result).track_ids = frozenset([some_track_id])
         parse_result = Mock()
         parse_result.tracks = track_dataset_result
-        parse_result.metadata = detection_metadata
+        parse_result.detection_metadata = detection_metadata
+        parse_result.video_metadata = some_video_metadata
         track_parser.parse.return_value = parse_result
         track_video_parser.parse.return_value = [some_track_id], [some_video]
 
@@ -53,6 +58,8 @@ class TestLoadTrackFile:
         order.video_repository = video_repository
         order.track_repository = track_repository
         order.track_to_video_repository = track_to_video_repository
+        order.tracks_metadata = tracks_metadata
+        order.videos_metadata = videos_metadata
         load_track_file = LoadTrackFiles(
             track_parser,
             track_video_parser,
@@ -69,8 +76,14 @@ class TestLoadTrackFile:
 
         assert order.mock_calls == [
             call.track_parser.parse(some_file),
-            call.track_video_parser.parse(some_file, [some_track_id]),
+            call.track_video_parser.parse(
+                some_file, [some_track_id], some_video_metadata
+            ),
             call.video_repository.add_all([some_video]),
             call.track_to_video_repository.add_all([some_track_id], [some_video]),
             call.track_repository.add_all(track_dataset_result),
+            call.tracks_metadata.update_detection_classes(
+                detection_metadata.detection_classes
+            ),
+            call.videos_metadata.update(some_video_metadata),
         ]
