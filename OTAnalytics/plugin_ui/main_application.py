@@ -329,7 +329,9 @@ class ApplicationStarter:
         )
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         track_view_state.selected_videos.register(image_updater.notify_video)
-        selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
+        selected_video_updater = SelectedVideoUpdate(
+            datastore, track_view_state, videos_metadata
+        )
 
         tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
         # TODO: Should not register to tracks_metadata._classifications but to
@@ -564,6 +566,9 @@ class ApplicationStarter:
         track_view_state.filter_date_active.register(
             dummy_viewmodel.change_filter_date_active
         )
+        track_view_state.filter_element.register(
+            selected_video_updater.on_filter_element_change
+        )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
         # cut_tracks_intersecting_section.register(
@@ -645,6 +650,13 @@ class ApplicationStarter:
         export_tracks = CsvTrackExport(
             track_repository, tracks_metadata, videos_metadata
         )
+        export_road_user_assignments = self.create_export_road_user_assignments(
+            get_all_tracks,
+            section_repository,
+            event_repository,
+            flow_repository,
+            create_events,
+        )
         OTAnalyticsCli(
             run_config,
             track_parser=track_parser,
@@ -663,6 +675,7 @@ class ApplicationStarter:
             videos_metadata=videos_metadata,
             progressbar=TqdmBuilder(),
             export_tracks=export_tracks,
+            export_road_user_assignments=export_road_user_assignments,
         ).start()
 
     def _create_datastore(

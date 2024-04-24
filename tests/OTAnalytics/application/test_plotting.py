@@ -3,7 +3,6 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.application.datastore import VideoMetadata
 from OTAnalytics.application.plotting import (
     GetCurrentFrame,
     GetCurrentVideoPath,
@@ -17,7 +16,7 @@ from OTAnalytics.application.state import Plotter, TrackViewState, VideosMetadat
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.track import TrackImage
-from OTAnalytics.domain.video import Video
+from OTAnalytics.domain.video import Video, VideoMetadata
 
 
 class TestLayeredPlotter:

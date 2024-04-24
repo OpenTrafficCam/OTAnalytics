@@ -21,6 +21,10 @@ from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.export_events import EventListExporterProvider
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportRoadUserAssignments,
+    ExportSpecification,
+)
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetAllSections,
@@ -40,6 +44,7 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_repository import TrackRepositoryEvent
+from OTAnalytics.plugin_parser.road_user_assignment_export import CSV_FORMAT
 
 
 class SectionsFileDoesNotExist(Exception):
@@ -72,6 +77,7 @@ class OTAnalyticsCli:
         videos_metadata: VideosMetadata,
         progressbar: ProgressbarBuilder,
         export_tracks: ExportTracks,
+        export_road_user_assignments: ExportRoadUserAssignments,
     ) -> None:
         self._validate_cli_args(run_config)
         self._run_config = run_config
@@ -92,6 +98,7 @@ class OTAnalyticsCli:
         self._videos_metadata = videos_metadata
         self._progressbar = progressbar
         self._export_tracks = export_tracks
+        self._export_road_user_assignments = export_road_user_assignments
 
     def start(self) -> None:
         """Start analysis."""
@@ -236,6 +243,13 @@ class OTAnalyticsCli:
             )
             event_list_exporter.export(events, sections, actual_save_path)
             logger().info(f"Event list saved at '{actual_save_path}'")
+
+            assignment_path = save_path.with_suffix(".road_user_assignment.csv")
+            specification = ExportSpecification(
+                save_path=assignment_path, format=CSV_FORMAT.name
+            )
+            self._export_road_user_assignments.export(specification=specification)
+            logger().info(f"Road user assignment saved at '{assignment_path}'")
 
     def _do_export_counts(self, save_path: Path) -> None:
         logger().info("Create counts ...")
