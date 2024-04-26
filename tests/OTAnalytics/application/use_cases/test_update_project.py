@@ -5,6 +5,7 @@ import pytest
 
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.project import (
+    CountingDayType,
     DirectionOfStationing,
     Project,
     SvzMetadata,
@@ -18,6 +19,10 @@ def svz_metadata() -> SvzMetadata:
     tk_number = "1"
     counting_location_number = "2"
     direction = "1"
+    direction_description = "direction_description"
+    has_bicycle_lane = False
+    is_bicycle_counting = False
+    counting_day = "2"
     weather = "2"
     remark = "something"
     coordinate_x = "1.2"
@@ -26,6 +31,10 @@ def svz_metadata() -> SvzMetadata:
         tk_number=tk_number,
         counting_location_number=counting_location_number,
         direction=DirectionOfStationing.parse(direction),
+        direction_description=direction_description,
+        has_bicycle_lane=has_bicycle_lane,
+        is_bicycle_counting=is_bicycle_counting,
+        counting_day=CountingDayType.parse(counting_day),
         weather=WeatherType.parse(weather),
         remark=remark,
         coordinate_x=coordinate_x,
@@ -98,6 +107,10 @@ class TestUpdateProject:
             tk_number=svz_metadata.tk_number,
             counting_location_number=svz_metadata.counting_location_number,
             direction=svz_metadata.direction,
+            direction_description=svz_metadata.direction_description,
+            has_bicycle_lane=svz_metadata.has_bicycle_lane,
+            is_bicycle_counting=svz_metadata.is_bicycle_counting,
+            counting_day=svz_metadata.counting_day,
             weather=svz_metadata.weather,
             remark="new metadata",
             coordinate_x=svz_metadata.coordinate_x,
