@@ -20,6 +20,7 @@ OCCURRENCE: str = "occurrence"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
 VIDEO_NAME: str = "video_name"
+INPUT_FILE: str = "input_file"
 
 
 @dataclass(frozen=True, order=True)
@@ -96,6 +97,11 @@ class Detection(ABC):
     def video_name(self) -> str:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def input_file(self) -> str:
+        raise NotImplementedError
+
     def to_dict(self) -> dict:
         return {
             CLASSIFICATION: self.classification,
@@ -109,6 +115,7 @@ class Detection(ABC):
             INTERPOLATED_DETECTION: self.interpolated_detection,
             TRACK_ID: self.track_id.id,
             VIDEO_NAME: self.video_name,
+            INPUT_FILE: self.input_file,
         }
 
     def get_coordinate(self, offset: RelativeOffsetCoordinate | None) -> Coordinate:

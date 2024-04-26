@@ -22,7 +22,10 @@ def create_filter_element(
     return filter_element
 
 
-def create_track_view_state(filter_element: FilterElement) -> Mock:
+def create_track_view_state(
+    filter_element: FilterElement, filter_date_active: bool
+) -> Mock:
     state = Mock(spec=TrackViewState)
     state.filter_element = observable(filter_element)
+    state.filter_date_active = observable(filter_date_active)
     return state

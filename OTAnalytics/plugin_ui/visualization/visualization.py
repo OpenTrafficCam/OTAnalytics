@@ -3,6 +3,7 @@ from typing import Callable, Optional, Sequence
 
 from pandas import DataFrame
 
+from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.datastore import Datastore
@@ -44,7 +45,6 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 )
 from OTAnalytics.plugin_prototypes.event_visualization import PandasEventProvider
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    ColorPaletteProvider,
     EventToFlowResolver,
     FilterByClassification,
     FilterByFrame,
@@ -80,6 +80,16 @@ MARKERSIZE_EVENT_FRAME = 12
 MARKERSIZE_EVENT_FILTER = 6
 MARKER_EVENT_FILTER = "x"
 MARKER_EVENT_FRAME = "o"
+
+
+class FilterStartDateProvider(VisualizationTimeProvider):
+    def __init__(self, state: TrackViewState) -> None:
+        self._state = state
+
+    def get_time(self) -> datetime:
+        if start_date := self._state.filter_element.get().date_range.start_date:
+            return start_date
+        return LONG_IN_THE_PAST
 
 
 class FilterEndDateProvider(VisualizationTimeProvider):
@@ -153,10 +163,14 @@ class VisualizationBuilder:
         self._flow_repository = datastore._flow_repository
         self._intersection_repository = intersection_repository
         self._event_repository = datastore._event_repository
-        self._get_current_frame = GetCurrentFrame(track_view_state, videos_metadata)
-        self._get_current_video = GetCurrentVideoPath(track_view_state, videos_metadata)
         self._visualization_time_provider: VisualizationTimeProvider = (
             FilterEndDateProvider(track_view_state)
+        )
+        self._get_current_frame = GetCurrentFrame(
+            self._visualization_time_provider, videos_metadata
+        )
+        self._get_current_video = GetCurrentVideoPath(
+            self._visualization_time_provider, videos_metadata
         )
         self._pandas_data_provider: Optional[PandasDataFrameProvider] = None
         self._pandas_event_data_provider: Optional[PandasDataFrameProvider] = None

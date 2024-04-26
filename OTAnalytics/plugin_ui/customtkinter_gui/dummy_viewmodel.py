@@ -6,11 +6,17 @@ from time import sleep
 from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Any, Iterable, Optional
 
+from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
+    AbstractButtonQuickSaveConfig,
+)
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
+from OTAnalytics.adapter_ui.abstract_frame_project import (
+    AbstractFrameProject,
+    AbstractFrameSvzMetadata,
+)
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -27,6 +33,12 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     InnerSegmentsCenterCalculator,
     SectionRefPointCalculator,
 )
+from OTAnalytics.adapter_ui.text_resources import (
+    COLUMN_NAME,
+    ColumnResource,
+    ColumnResources,
+)
+from OTAnalytics.adapter_ui.ui_texts import DIRECTIONS_OF_STATIONING, WEATHER_TYPES
 from OTAnalytics.adapter_ui.view_model import (
     MetadataProvider,
     MissingCoordinate,
@@ -46,10 +58,23 @@ from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
 )
-from OTAnalytics.application.datastore import FlowParser, NoSectionsToSave
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
+from OTAnalytics.application.project import (
+    COORDINATE_X,
+    COORDINATE_Y,
+    COUNTING_LOCATION_NUMBER,
+    DIRECTION,
+    REMARK,
+    TK_NUMBER,
+    WEATHER,
+    DirectionOfStationing,
+    SvzMetadata,
+    WeatherType,
+)
 from OTAnalytics.application.use_cases.config import MissingDate
+from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
@@ -57,6 +82,13 @@ from OTAnalytics.application.use_cases.export_events import (
 )
 from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.application.use_cases.quick_save_configuration import (
+    NoExistingFileToSave,
+)
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportSpecification,
+)
+from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -85,7 +117,6 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_sections import COLUMN_SECTION
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -126,7 +157,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     ToplevelFlows,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import ColumnResource
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
@@ -178,6 +208,7 @@ class DummyViewModel(
     SectionListObserver,
     FlowListObserver,
 ):
+
     def __init__(
         self,
         application: OTAnalyticsApplication,
@@ -201,13 +232,16 @@ class DummyViewModel(
         self._frame_analysis: Optional[AbstractFrame] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
+        self._frame_svz_metadata: Optional[AbstractFrameSvzMetadata] = None
         self._treeview_sections: Optional[AbstractTreeviewInterface]
         self._treeview_flows: Optional[AbstractTreeviewInterface]
+        self._button_quick_save_config: AbstractButtonQuickSaveConfig | None = None
         self._new_section: dict = {}
 
     def notify_videos(self, videos: list[Video]) -> None:
         if self._treeview_videos is None:
             raise MissingInjectedInstanceError(type(self._treeview_videos).__name__)
+        self.update_quick_save_button(videos)
         self._treeview_videos.update_items()
         self._update_enabled_buttons()
 
@@ -345,7 +379,17 @@ class DummyViewModel(
         self._frame_filter.update_date_range(
             {"start_date": start_date, "end_date": end_date}
         )
-        self.__enable_filter_track_by_date_button()
+
+    def update_quick_save_button(self, _: Any) -> None:
+        if self._button_quick_save_config is None:
+            raise MissingInjectedInstanceError(AbstractButtonQuickSaveConfig.__name__)
+        try:
+            if self._application.config_has_changed():
+                self._button_quick_save_config.set_state_changed_color()
+            else:
+                self._button_quick_save_config.set_default_color()
+        except NoExistingConfigFound:
+            self._button_quick_save_config.set_default_color()
 
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         self.notify_files()
@@ -364,6 +408,7 @@ class DummyViewModel(
 
     def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
         self._refresh_sections_in_ui()
+        self.update_quick_save_button(section_event)
 
     def _refresh_sections_in_ui(self) -> None:
         if self._treeview_sections is None:
@@ -377,6 +422,7 @@ class DummyViewModel(
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         self.refresh_items_on_canvas()
         self._treeview_flows.update_items()
+        self.update_quick_save_button(flow_id)
 
     def _notify_action_running_state(self, running: bool) -> None:
         self._update_enabled_buttons()
@@ -390,6 +436,12 @@ class DummyViewModel(
             self._update_selected_sections
         )
         self._application.register_section_changed_observer(self._on_section_changed)
+        self._application.register_section_changed_observer(
+            self.update_quick_save_button
+        )
+        self._application.file_state.last_saved_config.register(
+            self.update_quick_save_button
+        )
 
     def _start_action(self) -> None:
         self._application.action_state.action_running.set(True)
@@ -537,6 +589,7 @@ class DummyViewModel(
         logger().info(f"{OTCONFIG} file to load: {otconfig_file}")
         self._application.load_otconfig(file=Path(otconfig_file))
         self._show_current_project()
+        self._show_current_svz_metadata()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
@@ -701,6 +754,10 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_configuration(self) -> None:
+        initial_dir = Path.cwd()
+        if config_file := self._application.file_state.last_saved_config.get():
+            initial_dir = config_file.file.parent
+
         configuration_file = ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
@@ -709,6 +766,7 @@ class DummyViewModel(
             ],
             defaultextension=f".{OTFLOW}",
             initialfile=f"flows.{OTFLOW}",
+            initialdir=initial_dir,
         )
         if not configuration_file.stem:
             return
@@ -718,6 +776,12 @@ class DummyViewModel(
             self._save_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to save has unknown file extension")
+
+    def quick_save_configuration(self) -> None:
+        try:
+            self._application.quick_save_configuration()
+        except NoExistingFileToSave:
+            self.save_configuration()
 
     def _save_otflow(self, otflow_file: Path) -> None:
         logger().info(f"Sections file to save: {otflow_file}")
@@ -1138,15 +1202,16 @@ class DummyViewModel(
         if self._treeview_flows is None:
             raise MissingInjectedInstanceError(type(self._treeview_flows).__name__)
         position = self._treeview_flows.get_position()
-        section_ids = [
-            self.__to_resource(section) for section in self.get_all_sections()
-        ]
-        if len(section_ids) < 2:
+        sections = list(self.get_all_sections())
+        if len(sections) < 2:
             InfoBox(
                 message="To add a flow, at least two sections are needed",
                 initial_position=position,
             )
             raise CancelAddFlow()
+        section_ids = ColumnResources(
+            [self.__to_resource(section) for section in sections]
+        )
         return self.__create_flow_data(input_values, title, position, section_ids)
 
     def __create_flow_data(
@@ -1154,7 +1219,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[ColumnResource],
+        section_ids: ColumnResources,
     ) -> dict:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
@@ -1181,7 +1246,7 @@ class DummyViewModel(
         input_values: dict | None,
         title: str,
         position: tuple[int, int],
-        section_ids: list[ColumnResource],
+        section_ids: ColumnResources,
     ) -> dict:
         return ToplevelFlows(
             title=title,
@@ -1209,7 +1274,7 @@ class DummyViewModel(
         self._application.generate_flows()
 
     def __to_resource(self, section: Section) -> ColumnResource:
-        values = {COLUMN_SECTION: section.name}
+        values = {COLUMN_NAME: section.name}
         return ColumnResource(id=section.id.serialize(), values=values)
 
     def __update_flow_data(self, flow_data: dict) -> None:
@@ -1461,6 +1526,12 @@ class DummyViewModel(
         filter_element = self._application.track_view_state.filter_element.get()
         return filter_element.date_range
 
+    def change_filter_date_active(self, current: bool) -> None:
+        if current:
+            self.__enable_filter_track_by_date_button()
+        else:
+            self.__disable_filter_track_by_date_button()
+
     def enable_filter_track_by_date(self) -> None:
         self._application.enable_filter_track_by_date()
 
@@ -1469,10 +1540,11 @@ class DummyViewModel(
     def __enable_filter_track_by_date_button(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
-        self._frame_filter.enable_filter_by_date_button()
         current_date_range = (
             self._application.track_view_state.filter_element.get().date_range
         )
+        self._application.track_view_state.filter_date_active.set(True)
+        self._frame_filter.enable_filter_by_date_button()
         if current_date_range != DateRange(None, None):
             self._frame_filter.set_active_color_on_filter_by_date_button()
         else:
@@ -1481,9 +1553,12 @@ class DummyViewModel(
     def disable_filter_track_by_date(self) -> None:
         self._application.disable_filter_track_by_date()
 
+        self.__disable_filter_track_by_date_button()
+
+    def __disable_filter_track_by_date_button(self) -> None:
         if self._frame_filter is None:
             raise MissingInjectedInstanceError(AbstractFrameFilter.__name__)
-
+        self._application.track_view_state.filter_date_active.set(False)
         self._frame_filter.disable_filter_by_date_button()
 
     def switch_to_prev_date_range(self) -> None:
@@ -1579,6 +1654,7 @@ class DummyViewModel(
             return
         self._application.start_new_project()
         self._show_current_project()
+        self._show_current_svz_metadata()
         logger().info("Start new project.")
 
     def update_project_name(self, name: str) -> None:
@@ -1639,3 +1715,95 @@ class DummyViewModel(
 
     def set_video_control_frame(self, frame: AbstractFrame) -> None:
         self._frame_video_control = frame
+
+    def set_button_quick_save_config(
+        self, button_quick_save_config: AbstractButtonQuickSaveConfig
+    ) -> None:
+        self._button_quick_save_config = button_quick_save_config
+
+    def export_road_user_assignments(self) -> None:
+        if len(self._application.get_all_flows()) == 0:
+            InfoBox(
+                message=(
+                    "Counting needs at least one flow.\n"
+                    "There is no flow configured.\n"
+                    "Please create a flow."
+                ),
+                initial_position=(
+                    self._window.get_position() if self._window else (0, 0)
+                ),
+            )
+            return
+        export_formats: dict = {
+            export_format.name: export_format.file_extension
+            for export_format in self._application.get_road_user_export_formats()
+        }
+        default_format = next(iter(export_formats.keys()))
+        default_values: dict = {
+            EXPORT_FORMAT: default_format,
+        }
+
+        try:
+            export_values = ToplevelExportEvents(
+                title="Export road user assignments",
+                initial_position=(50, 50),
+                input_values=default_values,
+                export_format_extensions=export_formats,
+                initial_file_stem="road_user_assignments",
+            ).get_data()
+            logger().debug(export_values)
+            save_path = export_values[toplevel_export_events.EXPORT_FILE]
+            export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
+
+            export_specification = ExportSpecification(save_path, export_format)
+            self._application.export_road_user_assignments(export_specification)
+            logger().info(f"Exporting road user assignments to {save_path}")
+        except CancelExportEvents:
+            logger().info("User canceled configuration of export")
+
+    def update_svz_metadata(self, metadata: dict) -> None:
+        svz_metadata = SvzMetadata(
+            tk_number=metadata[TK_NUMBER],
+            counting_location_number=metadata[COUNTING_LOCATION_NUMBER],
+            direction=(
+                DirectionOfStationing.parse(metadata[DIRECTION])
+                if metadata[DIRECTION]
+                else None
+            ),
+            weather=(
+                WeatherType.parse(metadata[WEATHER]) if metadata[WEATHER] else None
+            ),
+            remark=metadata[REMARK],
+            coordinate_x=metadata[COORDINATE_X],
+            coordinate_y=metadata[COORDINATE_Y],
+        )
+        self._application.update_svz_metadata(svz_metadata)
+
+    def get_directions_of_stationing(self) -> ColumnResources:
+        return ColumnResources(
+            [
+                ColumnResource(id=key.serialize(), values={COLUMN_NAME: value})
+                for key, value in DIRECTIONS_OF_STATIONING.items()
+            ]
+        )
+
+    def get_weather_types(self) -> ColumnResources:
+        return ColumnResources(
+            [
+                ColumnResource(id=key.serialize(), values={COLUMN_NAME: value})
+                for key, value in WEATHER_TYPES.items()
+            ]
+        )
+
+    def set_svz_metadata_frame(self, frame: AbstractFrameSvzMetadata) -> None:
+        self._frame_svz_metadata = frame
+        self._show_current_svz_metadata()
+
+    def _show_current_svz_metadata(self) -> None:
+        if self._frame_svz_metadata is None:
+            raise MissingInjectedInstanceError(type(self._frame_svz_metadata).__name__)
+        project = self._application._datastore.project
+        if metadata := project.metadata:
+            self._frame_svz_metadata.update(metadata=metadata.to_dict())
+        else:
+            self._frame_svz_metadata.update({})

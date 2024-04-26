@@ -1,10 +1,12 @@
 import bisect
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Generic, Optional
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
-from OTAnalytics.application.datastore import Datastore, VideoMetadata
+from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
@@ -27,10 +29,17 @@ from OTAnalytics.domain.track_repository import (
     TrackRepositoryEvent,
     TrackSubject,
 )
-from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.domain.video import Video, VideoListObserver, VideoMetadata
+
+FIRST_DETECTION_OCCURRENCE: str = "first_detection_occurrence"
+LAST_DETECTION_OCCURRENCE: str = "last_detection_occurrence"
+CLASSIFICATIONS: str = "classifications"
+DETECTION_CLASSIFICATIONS: str = "detection_classifications"
 
 DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
+DEFAULT_FILTER_DATE_ACTIVE = False
+DEFAULT_SKIP_TIME = SkipTime(1, 1)
 
 
 class TrackState(TrackListObserver):
@@ -182,12 +191,15 @@ class TrackViewState:
         self.filter_element = ObservableProperty[FilterElement](
             FilterElement(DateRange(None, None), None)
         )
+        self.filter_date_active = ObservableProperty[bool](
+            default=DEFAULT_FILTER_DATE_ACTIVE
+        )
         self.view_width = ObservableProperty[int](default=DEFAULT_WIDTH)
         self.view_height = ObservableProperty[int](default=DEFAULT_HEIGHT)
         self.selected_videos: ObservableProperty[list[Video]] = ObservableProperty[
             list[Video]
         ](default=[])
-        self.skip_time = ObservableProperty[SkipTime](SkipTime(1, 1))
+        self.skip_time = ObservableProperty[SkipTime](DEFAULT_SKIP_TIME)
 
     def reset(self) -> None:
         """Reset to default settings."""
@@ -196,7 +208,9 @@ class TrackViewState:
         self.view_width.set(DEFAULT_WIDTH)
         self.view_height.set(DEFAULT_HEIGHT)
         self.filter_element.set(FilterElement(DateRange(None, None), None))
+        self.filter_date_active.set(DEFAULT_FILTER_DATE_ACTIVE)
         self.track_offset.set(DEFAULT_TRACK_OFFSET)
+        self.skip_time.set(DEFAULT_SKIP_TIME)
 
 
 class TrackPropertiesUpdater:
@@ -228,10 +242,70 @@ class Plotter(ABC):
         pass
 
 
+class VideosMetadata:
+    def __init__(self) -> None:
+        self._metadata: dict[datetime, VideoMetadata] = {}
+        self._first_video_start: Optional[datetime] = None
+        self._last_video_end: Optional[datetime] = None
+
+    def update(self, metadata: VideoMetadata) -> None:
+        """
+        Update the stored metadata.
+        """
+        if metadata.start in self._metadata.keys():
+            raise ValueError(
+                f"metadata with start date {metadata.start} already exists."
+            )
+        self._metadata[metadata.start] = metadata
+        self._metadata = dict(sorted(self._metadata.items()))
+        self._update_start_end_by(metadata)
+
+    def _update_start_end_by(self, metadata: VideoMetadata) -> None:
+        if (not self._first_video_start) or metadata.start < self._first_video_start:
+            self._first_video_start = metadata.start
+        if (not self._last_video_end) or metadata.end > self._last_video_end:
+            self._last_video_end = metadata.end
+
+    def get_metadata_for(self, current: datetime) -> Optional[VideoMetadata]:
+        """
+        Find the metadata for the given datetime. If the datetime matches exactly a
+        start time of a video, the corresponding VideoMetadata is returned. Otherwise,
+        the metadata of the video containing the datetime will be returned.
+        """
+        if current in self._metadata:
+            return self._metadata[current]
+        keys = list(self._metadata.keys())
+        key = bisect.bisect_left(keys, current) - 1
+        metadata = self._metadata[keys[key]]
+        if metadata.start <= current <= metadata.end:
+            return metadata
+        return None
+
+    @property
+    def first_video_start(self) -> Optional[datetime]:
+        return self._first_video_start
+
+    @property
+    def last_video_end(self) -> Optional[datetime]:
+        return self._last_video_end
+
+    def to_dict(self) -> dict:
+        return {
+            key.timestamp(): metadata.to_dict()
+            for key, metadata in self._metadata.items()
+        }
+
+
 class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
-    def __init__(self, datastore: Datastore, track_view_state: TrackViewState) -> None:
+    def __init__(
+        self,
+        datastore: Datastore,
+        track_view_state: TrackViewState,
+        videos_metadata: VideosMetadata,
+    ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
+        self._videos_metadata = videos_metadata
 
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         all_tracks = self._datastore.get_all_tracks()
@@ -243,6 +317,27 @@ class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
     def notify_videos(self, videos: list[Video]) -> None:
         if videos:
             self._track_view_state.selected_videos.set([videos[0]])
+
+    def on_filter_element_change(self, filter_element: FilterElement) -> None:
+        start_date = filter_element.date_range.start_date
+        end_date = filter_element.date_range.end_date
+        video_repository = self._datastore._video_repository
+
+        if not start_date and not end_date:
+            if first_video_start := self._videos_metadata.first_video_start:
+                first_video = video_repository.get_by_date(first_video_start)
+                self._track_view_state.selected_videos.set(first_video)
+            return
+
+        if not end_date:
+            self._track_view_state.selected_videos.set([])
+            return
+
+        if not (videos := video_repository.get_by_date(end_date)):
+            self._track_view_state.selected_videos.set([])
+            return
+
+        self._track_view_state.selected_videos.set(videos)
 
 
 class SectionState(SectionListObserver):
@@ -405,54 +500,6 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._track_view_state.background_image.set(self._plotter.plot())
 
 
-class VideosMetadata:
-    def __init__(self) -> None:
-        self._metadata: dict[datetime, VideoMetadata] = {}
-        self._first_video_start: Optional[datetime] = None
-        self._last_video_end: Optional[datetime] = None
-
-    def update(self, metadata: VideoMetadata) -> None:
-        """
-        Update the stored metadata.
-        """
-        if metadata.start in self._metadata.keys():
-            raise ValueError(
-                f"metadata with start date {metadata.start} already exists."
-            )
-        self._metadata[metadata.start] = metadata
-        self._metadata = dict(sorted(self._metadata.items()))
-        self._update_start_end_by(metadata)
-
-    def _update_start_end_by(self, metadata: VideoMetadata) -> None:
-        if (not self._first_video_start) or metadata.start < self._first_video_start:
-            self._first_video_start = metadata.start
-        if (not self._last_video_end) or metadata.end > self._last_video_end:
-            self._last_video_end = metadata.end
-
-    def get_metadata_for(self, current: datetime) -> Optional[VideoMetadata]:
-        """
-        Find the metadata for the given datetime. If the datetime matches exactly a
-        start time of a video, the corresponding VideoMetadata is returned. Otherwise,
-        the metadata of the video containing the datetime will be returned.
-        """
-        if current in self._metadata:
-            return self._metadata[current]
-        keys = list(self._metadata.keys())
-        key = bisect.bisect_left(keys, current) - 1
-        metadata = self._metadata[keys[key]]
-        if metadata.start <= current <= metadata.end:
-            return metadata
-        return None
-
-    @property
-    def first_video_start(self) -> Optional[datetime]:
-        return self._first_video_start
-
-    @property
-    def last_video_end(self) -> Optional[datetime]:
-        return self._last_video_end
-
-
 class TracksMetadata(TrackListObserver):
     """Contains relevant information on the currently loaded tracks.
 
@@ -557,6 +604,20 @@ class TracksMetadata(TrackListObserver):
         updated_classes = self._detection_classifications.get().union(new_classes)
         self._detection_classifications.set(updated_classes)
 
+    def to_dict(self) -> dict:
+        first_occurrence = self._first_detection_occurrence.get()
+        last_occurrence = self._last_detection_occurrence.get()
+        return {
+            FIRST_DETECTION_OCCURRENCE: (
+                first_occurrence.timestamp() if first_occurrence else None
+            ),
+            LAST_DETECTION_OCCURRENCE: (
+                last_occurrence.timestamp() if last_occurrence else None
+            ),
+            CLASSIFICATIONS: list(self._classifications.get()),
+            DETECTION_CLASSIFICATIONS: list(self._detection_classifications.get()),
+        }
+
 
 class ActionState:
     """
@@ -565,3 +626,32 @@ class ActionState:
 
     def __init__(self) -> None:
         self.action_running = ObservableProperty[bool](False)
+
+
+@dataclass
+class ConfigurationFile:
+    file: Path
+    content: dict
+
+    @property
+    def is_otconfig(self) -> bool:
+        return self.file_type == "otconfig"
+
+    @property
+    def is_otflow(self) -> bool:
+        return self.file_type == "otflow"
+
+    @property
+    def file_type(self) -> str:
+        if file_type := self.file.suffix:
+            return self.file.suffix[1:]  # remove starting dot
+        else:
+            return file_type
+
+
+class FileState:
+    def __init__(self) -> None:
+        self.last_saved_config = ObservableOptionalProperty[ConfigurationFile]()
+
+    def reset(self) -> None:
+        self.last_saved_config.set(None)

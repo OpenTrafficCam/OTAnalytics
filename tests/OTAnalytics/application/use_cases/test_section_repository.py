@@ -3,6 +3,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.use_cases.section_repository import (
+    AddAllSections,
     AddSection,
     ClearAllSections,
     GetAllSections,
@@ -146,3 +147,16 @@ class TestGetSectionOffset:
         )
         assert section_offset is None
         get_sections_by_id.assert_called_once_with([section_north.id])
+
+
+class TestAddAllSections:
+    def test_add(self, section_north: Section, section_south: Section) -> None:
+        add_section = Mock()
+        add_all_sections = AddAllSections(add_section)
+
+        add_all_sections.add([section_north, section_south])
+
+        assert add_section.call_args_list == [
+            call(section_north),
+            call(section_south),
+        ]

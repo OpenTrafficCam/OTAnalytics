@@ -8,7 +8,6 @@ from OTAnalytics.application.state import (
     ObservableOptionalProperty,
     ObservableProperty,
     Plotter,
-    TrackViewState,
     VideosMetadata,
 )
 from OTAnalytics.domain.track import TrackImage
@@ -282,15 +281,15 @@ class GetCurrentVideoPath:
 
     def __init__(
         self,
-        state: TrackViewState,
+        time_provider: VisualizationTimeProvider,
         videos_metadata: VideosMetadata,
     ) -> None:
-        self._state = state
+        self._time_provider = time_provider
         self._videos_metadata = videos_metadata
 
     def get_video(self) -> Optional[str]:
-        if end_date := self._state.filter_element.get().date_range.end_date:
-            if metadata := self._videos_metadata.get_metadata_for(end_date):
+        if current_time := self._time_provider.get_time():
+            if metadata := self._videos_metadata.get_metadata_for(current_time):
                 return metadata.path
         return None
 
@@ -303,16 +302,16 @@ class GetCurrentFrame:
 
     def __init__(
         self,
-        state: TrackViewState,
+        time_provider: VisualizationTimeProvider,
         videos_metadata: VideosMetadata,
     ) -> None:
-        self._state = state
+        self._time_provider = time_provider
         self._videos_metadata = videos_metadata
 
     def get_frame_number(self) -> int:
-        if end_date := self._state.filter_element.get().date_range.end_date:
-            if metadata := self._videos_metadata.get_metadata_for(end_date):
-                time_in_video = end_date - metadata.start
+        if current_time := self._time_provider.get_time():
+            if metadata := self._videos_metadata.get_metadata_for(current_time):
+                time_in_video = current_time - metadata.start
                 if time_in_video < timedelta(0):
                     return 0
                 if time_in_video > metadata.duration:

@@ -5,14 +5,28 @@ from typing import Iterable
 
 from OTAnalytics.application import project
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
-from OTAnalytics.application.datastore import FlowParser, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ConfigParser,
     ExportConfig,
     OtConfig,
+    StartDateMissing,
 )
-from OTAnalytics.application.project import Project
+from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.project import (
+    COORDINATE_X,
+    COORDINATE_Y,
+    COUNTING_LOCATION_NUMBER,
+    DIRECTION,
+    REMARK,
+    TK_NUMBER,
+    WEATHER,
+    DirectionOfStationing,
+    Project,
+    SvzMetadata,
+    WeatherType,
+)
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -81,6 +95,7 @@ class FixMissingAnalysis(OtConfigFormatFixer):
 
 
 class OtConfigParser(ConfigParser):
+
     def __init__(
         self,
         format_fixer: OtConfigFormatFixer,
@@ -94,7 +109,10 @@ class OtConfigParser(ConfigParser):
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
         content = parse_json(file)
-        fixed_content = self._format_fixer.fix(content)
+        return self.parse_from_dict(content, base_folder)
+
+    def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
+        fixed_content = self._format_fixer.fix(data)
         _project = self._parse_project(fixed_content[PROJECT])
         analysis_config = self._parse_analysis(fixed_content[ANALYSIS], base_folder)
         videos = self._video_parser.parse_list(fixed_content[video.VIDEOS], base_folder)
@@ -113,7 +131,28 @@ class OtConfigParser(ConfigParser):
         _validate_data(data, [project.NAME, project.START_DATE])
         name = data[project.NAME]
         start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
-        return Project(name=name, start_date=start_date)
+        svz_metadata = None
+        if svz_data := data.get(project.METADATA):
+            svz_metadata = self._parse_svz_metadata(svz_data)
+        return Project(name=name, start_date=start_date, metadata=svz_metadata)
+
+    def _parse_svz_metadata(self, data: dict) -> SvzMetadata:
+        tk_number = data[TK_NUMBER]
+        counting_location_number = data[COUNTING_LOCATION_NUMBER]
+        direction = DirectionOfStationing.parse(data[DIRECTION])
+        weather = WeatherType.parse(data[WEATHER])
+        remark = data[REMARK]
+        coordinate_x = data[COORDINATE_X]
+        coordinate_y = data[COORDINATE_Y]
+        return SvzMetadata(
+            tk_number=tk_number,
+            counting_location_number=counting_location_number,
+            direction=direction,
+            weather=weather,
+            remark=remark,
+            coordinate_x=coordinate_x,
+            coordinate_y=coordinate_y,
+        )
 
     def _parse_analysis(self, data: dict, base_folder: Path) -> AnalysisConfig:
         _validate_data(
@@ -162,19 +201,28 @@ class OtConfigParser(ConfigParser):
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
-        """Serializes the project with the given videos, sections and flows into the
-        file.
+        self._validate_data(project)
+        content = self.convert(project, video_files, sections, flows, file)
+        write_json(data=content, path=file)
 
-        Args:
-            project (Project): description of the project
-            video_files (Iterable[Video]): video files to reference
-            sections (Iterable[Section]): sections to store
-            flows (Iterable[Flow]): flows to store
-            file (Path): output file
+    def serialize_from_config(self, config: OtConfig, file: Path) -> None:
+        self.serialize(
+            config.project, config.videos, config.sections, config.flows, file
+        )
 
-        Raises:
-            StartDateMissing: if start date is not configured
-        """
+    @staticmethod
+    def _validate_data(project: Project) -> None:
+        if project.start_date is None:
+            raise StartDateMissing()
+
+    def convert(
+        self,
+        project: Project,
+        video_files: Iterable[Video],
+        sections: Iterable[Section],
+        flows: Iterable[Flow],
+        file: Path,
+    ) -> dict:
         parent_folder = file.parent
         project_content = project.to_dict()
         video_content = self._video_parser.convert(
@@ -185,4 +233,4 @@ class OtConfigParser(ConfigParser):
         content: dict[str, list[dict] | dict] = {PROJECT: project_content}
         content |= video_content
         content |= section_content
-        write_json(data=content, path=file)
+        return content

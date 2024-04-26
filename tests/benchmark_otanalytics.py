@@ -5,6 +5,13 @@ from typing import Callable, Iterable
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
+from OTAnalytics.adapter_visualization.color_provider import (
+    CLASS_BICYCLIST,
+    CLASS_BICYCLIST_TRAILER,
+    CLASS_CARGOBIKE,
+    CLASS_PEDESTRIAN,
+    CLASS_SCOOTER,
+)
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -15,7 +22,6 @@ from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
 )
 from OTAnalytics.application.datastore import DetectionMetadata, TrackParser
-from OTAnalytics.application.parser.cli_parser import CliArguments
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
@@ -66,16 +72,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CLASS_BICYCLIST,
-    CLASS_BICYCLIST_TRAILER,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
-    CLASS_SCOOTER,
-)
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
+from tests.utils.builders.run_configuration import NUM_PROCESSES, create_run_config
 
-NUM_PROCESSES = 1
 PYTHON = "PYTHON"
 PANDAS = "PANDAS"
 CURRENT_DATASET_TYPE = PANDAS
@@ -112,7 +111,8 @@ class UseCaseProvider:
 
     @property
     def run_config(self) -> RunConfiguration:
-        cli_args = CliArguments(
+        return create_run_config(
+            flow_parser=self._flow_parser,
             start_cli=True,
             debug=False,
             logfile_overwrite=True,
@@ -121,11 +121,9 @@ class UseCaseProvider:
             otflow_file=str(self._otflow_file),
             save_dir=self._save_dir,
             event_formats=["otevents"],
-            num_processes=NUM_PROCESSES,
             include_classes=list(self._include_classes),
             exclude_classes=list(self._exclude_classes),
         )
-        return RunConfiguration(self._flow_parser, cli_args)
 
     @property
     def sections(self) -> list[Section]:
@@ -236,13 +234,19 @@ class UseCaseProvider:
 
     def provide_python_track_dataset(self) -> TrackDataset:
         return FilteredPythonTrackDataset(
-            PythonTrackDataset(), self._include_classes, self._exclude_classes
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset),
+            self._include_classes,
+            self._exclude_classes,
         )
 
     def provide_python_detection_parser(
         self, track_repository: TrackRepository
     ) -> PythonDetectionParser:
-        return PythonDetectionParser(ByMaxConfidence(), track_repository)
+        return PythonDetectionParser(
+            ByMaxConfidence(),
+            track_repository,
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
 
     def provide_pandas_detection_parser(self) -> PandasDetectionParser:
         return PandasDetectionParser(
@@ -322,7 +326,11 @@ def cutting_section() -> Section:
 
 @pytest.fixture
 def python_track_parser(python_track_repository: TrackRepository) -> TrackParser:
-    detection_parser = PythonDetectionParser(ByMaxConfidence(), python_track_repository)
+    detection_parser = PythonDetectionParser(
+        ByMaxConfidence(),
+        python_track_repository,
+        PygeosTrackGeometryDataset.from_track_dataset,
+    )
     return OttrkParser(detection_parser)
 
 

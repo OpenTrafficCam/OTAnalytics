@@ -8,8 +8,10 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
 )
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.project import SvzMetadata
 from OTAnalytics.application.state import (
     ActionState,
+    FileState,
     FlowState,
     SectionState,
     TracksMetadata,
@@ -23,6 +25,7 @@ from OTAnalytics.application.ui.frame_control import (
     SwitchToPrevious,
 )
 from OTAnalytics.application.use_cases.config import SaveOtconfig
+from OTAnalytics.application.use_cases.config_has_changed import ConfigHasChanged
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
@@ -34,8 +37,17 @@ from OTAnalytics.application.use_cases.filter_visualization import (
 )
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
+from OTAnalytics.application.use_cases.load_otconfig import LoadOtconfig
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.application.use_cases.quick_save_configuration import (
+    QuickSaveConfiguration,
+)
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportRoadUserAssignments,
+    ExportSpecification,
+)
+from OTAnalytics.application.use_cases.save_otflow import SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetSectionOffset,
@@ -90,6 +102,7 @@ class OTAnalyticsApplication:
         track_view_state: TrackViewState,
         section_state: SectionState,
         flow_state: FlowState,
+        file_state: FileState,
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
         action_state: ActionState,
@@ -105,17 +118,24 @@ class OTAnalyticsApplication:
         clear_all_events: ClearAllEvents,
         start_new_project: StartNewProject,
         project_updater: ProjectUpdater,
+        save_otconfig: SaveOtconfig,
         load_track_files: LoadTrackFiles,
         enable_filter_by_date: EnableFilterTrackByDate,
         previous_frame: SwitchToPrevious,
         next_frame: SwitchToNext,
         switch_event: SwitchToEvent,
+        save_otflow: SaveOtflow,
+        quick_save_configuration: QuickSaveConfiguration,
+        load_otconfig: LoadOtconfig,
+        config_has_changed: ConfigHasChanged,
+        export_road_user_assignments: ExportRoadUserAssignments,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
         self.track_view_state: TrackViewState = track_view_state
         self.section_state: SectionState = section_state
         self.flow_state: FlowState = flow_state
+        self.file_state = file_state
         self._tracks_metadata = tracks_metadata
         self._videos_metadata = videos_metadata
         self.action_state = action_state
@@ -128,9 +148,7 @@ class OTAnalyticsApplication:
         self._clear_all_events = clear_all_events
         self._export_counts = export_counts
         self._project_updater = project_updater
-        self._save_otconfig = SaveOtconfig(
-            datastore, config_parser=datastore._config_parser
-        )
+        self._save_otconfig = save_otconfig
         self._create_events = create_events
         self._load_otflow = load_otflow
         self._start_new_project = start_new_project
@@ -145,6 +163,11 @@ class OTAnalyticsApplication:
         self._switch_previous = previous_frame
         self._switch_next = next_frame
         self._switch_event = switch_event
+        self._save_otflow = save_otflow
+        self._quick_save_configuration = quick_save_configuration
+        self._load_otconfig = load_otconfig
+        self._config_has_changed = config_has_changed
+        self._export_road_user_assignments = export_road_user_assignments
 
     def connect_observers(self) -> None:
         """
@@ -247,7 +270,7 @@ class OTAnalyticsApplication:
         self._save_otconfig(file)
 
     def load_otconfig(self, file: Path) -> None:
-        self._datastore.load_otconfig(file)
+        self._load_otconfig.load(file)
 
     def add_tracks_of_files(self, track_files: list[Path]) -> None:
         """
@@ -359,7 +382,7 @@ class OTAnalyticsApplication:
         Args:
             file (Path): file to save the flows and sections to
         """
-        self._datastore.save_flow_file(file)
+        self._save_otflow.save(file)
 
     def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
         """
@@ -597,8 +620,25 @@ class OTAnalyticsApplication:
     def update_project_start_date(self, start_date: datetime | None) -> None:
         self._project_updater.update_start_date(start_date)
 
+    def update_svz_metadata(self, metadata: SvzMetadata) -> None:
+        self._project_updater.update_svz_metadata(metadata)
+
     def get_track_repository_size(self) -> int:
         return self._track_repository_size.get()
+
+    def quick_save_configuration(self) -> None:
+        self._quick_save_configuration.save()
+
+    def config_has_changed(self) -> bool:
+        return self._config_has_changed.has_changed()
+
+    def export_road_user_assignments(self, specification: ExportSpecification) -> None:
+        self._export_road_user_assignments.export(specification)
+
+    def get_road_user_export_formats(
+        self,
+    ) -> Iterable[ExportFormat]:
+        return self._export_road_user_assignments.get_supported_formats()
 
 
 class MissingTracksError(Exception):

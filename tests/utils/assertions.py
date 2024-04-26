@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Iterable
 from unittest.mock import Mock
 
@@ -17,6 +18,7 @@ def assert_equal_detection_properties(actual: Detection, expected: Detection) ->
     assert expected.video_name == actual.video_name
     assert expected.interpolated_detection == actual.interpolated_detection
     assert actual.track_id == expected.track_id
+    assert actual.input_file == expected.input_file
 
 
 def assert_equal_track_properties(actual: Track, expected: Track) -> None:
@@ -56,3 +58,13 @@ def assert_track_dataset_has_tracks(dataset: TrackDataset, tracks: list[Track]) 
         actual = dataset.get_for(expected.id)
         assert actual
         assert_equal_track_properties(actual, expected)
+
+
+def assert_two_files_equal_sorted(
+    actual_counts_file: Path, expected_counts_file: Path
+) -> None:
+    with open(actual_counts_file, mode="r") as actual:
+        actual_lines = sorted(actual.readlines())
+        with open(expected_counts_file, mode="r") as expected:
+            expected_lines = sorted(expected.readlines())
+            assert actual_lines == expected_lines

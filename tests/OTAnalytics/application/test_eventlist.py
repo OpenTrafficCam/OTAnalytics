@@ -50,6 +50,7 @@ def create_detection(
     _interpolated_detection: bool = False,
     _track_id: TrackId = TrackId("1"),
     _video_name: str = HOSTNAME + "_something.mp4",
+    _input_file: str = HOSTNAME + "_something.ottrk",
 ) -> Detection:
     return PythonDetection(
         _classification=_classification,
@@ -63,6 +64,7 @@ def create_detection(
         _interpolated_detection=_interpolated_detection,
         _track_id=_track_id,
         _video_name=_video_name,
+        _input_file=_input_file,
     )
 
 

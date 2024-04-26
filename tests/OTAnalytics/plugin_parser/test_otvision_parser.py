@@ -5,7 +5,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics import version
-from OTAnalytics.application.datastore import VideoMetadata, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.domain import flow, geometry, section
 from OTAnalytics.domain.event import EVENT_LIST, Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
@@ -23,18 +23,20 @@ from OTAnalytics.domain.section import (
     SectionId,
 )
 from OTAnalytics.domain.track import (
-    Detection,
     Track,
     TrackClassificationCalculator,
     TrackId,
     TrackImage,
 )
 from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.domain.video import Video
+from OTAnalytics.domain.video import Video, VideoMetadata
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrack,
     PythonTrackDataset,
+)
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.json_parser import write_json, write_json_bz2
@@ -62,40 +64,16 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     Version,
 )
 from tests.utils.assertions import assert_track_datasets_equal
-from tests.utils.builders.track_builder import TrackBuilder
+from tests.utils.builders.track_builder import (
+    TrackBuilder,
+    append_sample_data,
+    track_builder_with_sample_data,
+)
 
 
 @pytest.fixture
-def track_builder_setup_with_sample_data(track_builder: TrackBuilder) -> TrackBuilder:
-    return append_sample_data(track_builder, frame_offset=0, microsecond_offset=0)
-
-
-def append_sample_data(
-    track_builder: TrackBuilder,
-    frame_offset: int = 0,
-    microsecond_offset: int = 0,
-) -> TrackBuilder:
-    track_builder.add_frame(frame_offset + 1)
-    track_builder.add_microsecond(microsecond_offset + 1)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 2)
-    track_builder.add_microsecond(microsecond_offset + 2)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 3)
-    track_builder.add_microsecond(microsecond_offset + 3)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 4)
-    track_builder.add_microsecond(microsecond_offset + 4)
-    track_builder.append_detection()
-
-    track_builder.add_frame(frame_offset + 5)
-    track_builder.add_microsecond(microsecond_offset + 5)
-    track_builder.append_detection()
-
-    return track_builder
+def track_builder_setup_with_sample_data() -> TrackBuilder:
+    return track_builder_with_sample_data()
 
 
 @pytest.fixture
@@ -141,9 +119,9 @@ class TestVersion_1_1_To_1_2:
             detection, False, False
         )
         expected_detection = serialized_detection.copy()
-        serialized_detection[
-            ottrk_dataformat.OCCURRENCE
-        ] = detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
+        serialized_detection[ottrk_dataformat.OCCURRENCE] = (
+            detection.occurrence.strftime(ottrk_dataformat.DATE_FORMAT)
+        )
 
         fixer = Otdet_Version_1_0_To_1_2()
 
@@ -213,6 +191,7 @@ class TestOttrkParser:
         detection_parser = PythonDetectionParser(
             calculator,
             mocked_track_repository,
+            PygeosTrackGeometryDataset.from_track_dataset,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
@@ -229,18 +208,19 @@ class TestOttrkParser:
     def test_parse_ottrk_sample(
         self,
         test_data_tmp_dir: Path,
-        track_builder_setup_with_sample_data: TrackBuilder,
         ottrk_parser: OttrkParser,
         version: str,
         track_id: str,
     ) -> None:
-        track_builder_setup_with_sample_data.set_ottrk_version(version)
-        ottrk_data = track_builder_setup_with_sample_data.build_ottrk()
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
+        track_builder = track_builder_with_sample_data(input_file=str(ottrk_file))
+        track_builder.set_ottrk_version(version)
+        ottrk_data = track_builder.build_ottrk()
         write_json_bz2(ottrk_data, ottrk_file)
         parse_result = ottrk_parser.parse(ottrk_file)
 
         example_track_builder = TrackBuilder()
+        example_track_builder.add_input_file(str(ottrk_file))
         example_track_builder.add_track_id(track_id)
         append_sample_data(example_track_builder)
         expected_track = example_track_builder.build_track()
@@ -248,7 +228,11 @@ class TestOttrkParser:
             ["person", "bus", "boat", "truck", "car", "motorcycle", "bicycle", "train"]
         )
         assert_track_datasets_equal(
-            parse_result.tracks, PythonTrackDataset.from_list([expected_track])
+            parse_result.tracks,
+            PythonTrackDataset.from_list(
+                [expected_track],
+                PygeosTrackGeometryDataset.from_track_dataset,
+            ),
         )
         assert (
             parse_result.detection_metadata.detection_classes
@@ -286,6 +270,7 @@ class TestPythonDetectionParser:
         return PythonDetectionParser(
             mocked_classificator,
             mocked_track_repository,
+            PygeosTrackGeometryDataset.from_track_dataset,
         )
 
     def test_parse_detections_output_has_same_order_as_input(
@@ -293,9 +278,10 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         parser: PythonDetectionParser,
     ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        input_file = track_builder_setup_with_sample_data.input_file
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
@@ -303,12 +289,14 @@ class TestPythonDetectionParser:
         result_sorted_input = parser._parse_detections(
             detections,
             metadata_video,
+            input_file,
             TrackId,
         )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
         result_unsorted_input = parser._parse_detections(
             unsorted_detections,
             metadata_video,
+            input_file,
             TrackId,
         )
 
@@ -325,20 +313,26 @@ class TestPythonDetectionParser:
         mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         mocked_classificator.calculate.return_value = "car"
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = parser.parse_tracks(detections, metadata_video)
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = parser.parse_tracks(unsorted_detections, metadata_video)
+        result_unsorted_input = parser.parse_tracks(
+            unsorted_detections, metadata_video, input_file
+        )
 
         expected_sorted = PythonTrackDataset.from_list(
-            [track_builder_setup_with_sample_data.build_track()]
+            [track_builder_setup_with_sample_data.build_track()],
+            PygeosTrackGeometryDataset.from_track_dataset,
         )
         assert_track_datasets_equal(result_sorted_input, expected_sorted)
         assert_track_datasets_equal(result_unsorted_input, expected_sorted)
@@ -350,9 +344,10 @@ class TestPythonDetectionParser:
         mocked_classificator: Mock,
         parser: PythonDetectionParser,
     ) -> None:
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        input_file = track_builder_setup_with_sample_data.input_file
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
         deserialized_detections = (
             track_builder_setup_with_sample_data.build_detections()
         )
@@ -374,9 +369,13 @@ class TestPythonDetectionParser:
             existing_track.id, merged_classification, all_detections
         )
 
-        result_sorted_input = parser.parse_tracks(detections, metadata_video)
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        )
 
-        expected_sorted = PythonTrackDataset.from_list([merged_track])
+        expected_sorted = PythonTrackDataset.from_list(
+            [merged_track], PygeosTrackGeometryDataset.from_track_dataset
+        )
 
         assert_track_datasets_equal(result_sorted_input, expected_sorted)
         mocked_classificator.calculate.assert_called_once_with(all_detections)
@@ -394,34 +393,25 @@ class TestPythonDetectionParser:
         track_builder_setup_with_sample_data: TrackBuilder,
         track_length_limit: TrackLengthLimit,
     ) -> None:
+        input_file = track_builder_setup_with_sample_data.input_file
         parser = PythonDetectionParser(
             ByMaxConfidence(),
             mocked_track_repository,
+            PygeosTrackGeometryDataset.from_track_dataset,
             track_length_limit,
         )
-        detections: list[
-            dict
-        ] = track_builder_setup_with_sample_data.build_serialized_detections()
+        detections: list[dict] = (
+            track_builder_setup_with_sample_data.build_serialized_detections()
+        )
 
         metadata_video = track_builder_setup_with_sample_data.get_metadata()[
             ottrk_dataformat.VIDEO
         ]
-        result_sorted_input = parser.parse_tracks(detections, metadata_video).as_list()
+        result_sorted_input = parser.parse_tracks(
+            detections, metadata_video, input_file
+        ).as_list()
 
         assert len(result_sorted_input) == 0
-
-    def assert_detection_equal(self, d1: Detection, d2: Detection) -> None:
-        assert d1.classification == d2.classification
-        assert d1.confidence == d2.confidence
-        assert d1.x == d2.x
-        assert d1.y == d2.y
-        assert d1.w == d2.w
-        assert d1.h == d2.h
-        assert d1.frame == d2.frame
-        assert d1.occurrence == d2.occurrence
-        assert d1.video_name == d2.video_name
-        assert d1.interpolated_detection == d2.interpolated_detection
-        assert d1.track_id == d2.track_id
 
 
 class TestOtFlowParser:
@@ -759,6 +749,15 @@ class TestCachedVideo:
         other.to_dict.assert_called_once()
         assert cached_dict is original_dict
 
+    def test_contains(self) -> None:
+        date = Mock()
+        other = Mock(spec=Video)
+        other.contains.return_value = True
+
+        cached_video = CachedVideo(other)
+        assert cached_video.contains(date) is True
+        other.contains.assert_called_with(date)
+
 
 class TestCachedVideoParser:
     def test_parse_to_cached_video(self, test_data_tmp_dir: Path) -> None:
@@ -770,7 +769,7 @@ class TestCachedVideoParser:
 
         cached_parser = CachedVideoParser(video_parser)
 
-        parsed_video = cached_parser.parse(video_file, start_date=None)
+        parsed_video = cached_parser.parse(video_file, None)
 
         assert isinstance(parsed_video, CachedVideo)
         assert parsed_video.other == video

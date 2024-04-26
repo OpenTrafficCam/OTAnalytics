@@ -1,15 +1,19 @@
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
-from unittest.mock import Mock, PropertyMock, call
+from unittest.mock import Mock, PropertyMock, call, patch
+
+import pytest
 
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
-from OTAnalytics.application.datastore import FlowParser, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ExportConfig,
     OtConfig,
+    StartDateMissing,
 )
+from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
@@ -36,6 +40,17 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     OtConfigParser,
 )
 from tests.conftest import do_nothing
+
+
+@pytest.fixture
+def mock_otconfig() -> OtConfig:
+    project = Mock()
+    analysis = Mock()
+    videos = Mock()
+    sections = Mock()
+    flows = Mock()
+
+    return OtConfig(project, analysis, videos, sections, flows)
 
 
 class TestOtConfigParser:
@@ -77,6 +92,23 @@ class TestOtConfigParser:
             call(videos, relative_to=test_data_tmp_dir)
         ]
         assert flow_parser.convert.call_args_list == [call(sections, flows)]
+
+    @patch("OTAnalytics.plugin_parser.otconfig_parser.OtConfigParser.serialize")
+    def test_serialize_from_config(
+        self, mock_serialize: Mock, mock_otconfig: OtConfig
+    ) -> None:
+        save_path = Path("path/to/my/file.otconfig")
+        serializer = OtConfigParser(Mock(), Mock(), Mock())
+
+        serializer.serialize_from_config(mock_otconfig, save_path)
+
+        mock_serialize.assert_called_once_with(
+            mock_otconfig.project,
+            mock_otconfig.videos,
+            mock_otconfig.sections,
+            mock_otconfig.flows,
+            save_path,
+        )
 
     def test_parse_config(
         self, otconfig_file: Path, do_nothing_fixer: OtConfigFormatFixer
@@ -164,6 +196,11 @@ class TestOtConfigParser:
         config_parser.parse(file=otconfig_file)
 
         format_fixer.fix.assert_called_once()
+
+    def test_validate(self) -> None:
+        project = Project("My Name", None)
+        with pytest.raises(StartDateMissing):
+            OtConfigParser._validate_data(project)
 
 
 class TestMultiFixer:
