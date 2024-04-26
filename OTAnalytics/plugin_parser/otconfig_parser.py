@@ -4,6 +4,15 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application import project
+from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_DO_COUNTING,
+    DEFAULT_DO_EVENTS,
+    DEFAULT_EVENT_FORMATS,
+    DEFAULT_LOG_FILE,
+    DEFAULT_SAVE_NAME,
+    DEFAULT_SAVE_SUFFIX,
+)
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
@@ -28,6 +37,7 @@ from OTAnalytics.application.project import (
     WeatherType,
 )
 from OTAnalytics.domain import flow, section, video
+from OTAnalytics.domain.files import build_relative_path
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
@@ -164,7 +174,6 @@ class OtConfigParser(ConfigParser):
                 EXPORT,
                 NUM_PROCESSES,
                 LOGFILE,
-                DEBUG,
             ],
         )
         export_config = self._parse_export(data[EXPORT])
@@ -197,17 +206,23 @@ class OtConfigParser(ConfigParser):
         self,
         project: Project,
         video_files: Iterable[Video],
+        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
         self._validate_data(project)
-        content = self.convert(project, video_files, sections, flows, file)
+        content = self.convert(project, video_files, track_files, sections, flows, file)
         write_json(data=content, path=file)
 
     def serialize_from_config(self, config: OtConfig, file: Path) -> None:
         self.serialize(
-            config.project, config.videos, config.sections, config.flows, file
+            config.project,
+            config.videos,
+            config.analysis.track_files,
+            config.sections,
+            config.flows,
+            file,
         )
 
     @staticmethod
@@ -219,6 +234,7 @@ class OtConfigParser(ConfigParser):
         self,
         project: Project,
         video_files: Iterable[Video],
+        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
@@ -230,7 +246,38 @@ class OtConfigParser(ConfigParser):
             relative_to=parent_folder,
         )
         section_content = self._flow_parser.convert(sections, flows)
+        analysis_content: dict = {
+            ANALYSIS: {
+                DO_EVENTS: DEFAULT_DO_EVENTS,
+                DO_COUNTING: DEFAULT_DO_COUNTING,
+                TRACKS: sorted(
+                    [
+                        build_relative_path(
+                            file,
+                            parent_folder,
+                            lambda actual, other: (
+                                "Track and config files are stored on "
+                                "different drives. "
+                                f"Track file is stored on {actual}."
+                                f"Configuration is stored on {other}"
+                            ),
+                        )
+                        for file in track_files
+                    ]
+                ),
+                EXPORT: {
+                    SAVE_NAME: DEFAULT_SAVE_NAME,
+                    SAVE_SUFFIX: DEFAULT_SAVE_SUFFIX,
+                    EVENT_FORMATS: list(DEFAULT_EVENT_FORMATS),
+                    COUNT_INTERVALS: [DEFAULT_COUNTING_INTERVAL_IN_MINUTES],
+                },
+                NUM_PROCESSES: 1,
+                LOGFILE: str(DEFAULT_LOG_FILE),
+            }
+        }
         content: dict[str, list[dict] | dict] = {PROJECT: project_content}
         content |= video_content
+        content |= analysis_content
         content |= section_content
+
         return content

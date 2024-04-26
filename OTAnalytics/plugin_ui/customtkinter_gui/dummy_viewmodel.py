@@ -115,7 +115,8 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
+from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.helpers.files import DifferentDrivesException
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (

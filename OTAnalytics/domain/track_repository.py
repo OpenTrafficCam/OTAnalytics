@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.observer import Subject
+from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import TrackDataset
 
@@ -225,6 +225,7 @@ class TrackRepository:
 class TrackFileRepository:
     def __init__(self) -> None:
         self._files: set[Path] = set()
+        self._subject = Subject[Iterable[Path]]()
 
     def add(self, file: Path) -> None:
         """
@@ -234,6 +235,7 @@ class TrackFileRepository:
             file (Path): track file to be added.
         """
         self._files.add(file)
+        self._subject.notify([file])
 
     def add_all(self, files: Iterable[Path]) -> None:
         """
@@ -244,6 +246,7 @@ class TrackFileRepository:
         """
         for file in files:
             self.add(file)
+        self._subject.notify(files)
 
     def get_all(self) -> set[Path]:
         """
@@ -253,3 +256,6 @@ class TrackFileRepository:
             set[Path]: all tracks within the repository.
         """
         return self._files.copy()
+
+    def register(self, observer: OBSERVER[Iterable[Path]]) -> None:
+        self._subject.register(observer)

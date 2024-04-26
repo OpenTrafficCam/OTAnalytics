@@ -480,6 +480,7 @@ class ApplicationStarter:
                 get_flows,
                 GetCurrentProject(datastore),
                 GetAllVideos(video_repository),
+                get_all_track_files,
             ),
             OtflowHasChanged(flow_parser, get_sections, get_flows),
             file_state,
@@ -589,6 +590,7 @@ class ApplicationStarter:
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
+        track_file_repository.register(dummy_viewmodel.update_quick_save_button)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
