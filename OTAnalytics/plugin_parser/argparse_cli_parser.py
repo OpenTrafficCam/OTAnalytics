@@ -89,7 +89,7 @@ class ArgparseCliParser(CliParser):
         )
         self._parser.add_argument(
             "--track-export",
-            action="store_true",
+            action="store_false",
             help="Export tracks as csv",
             required=False,
         )
