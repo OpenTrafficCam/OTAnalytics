@@ -82,6 +82,16 @@ MARKER_EVENT_FILTER = "x"
 MARKER_EVENT_FRAME = "o"
 
 
+class FilterStartDateProvider(VisualizationTimeProvider):
+    def __init__(self, state: TrackViewState) -> None:
+        self._state = state
+
+    def get_time(self) -> datetime:
+        if start_date := self._state.filter_element.get().date_range.start_date:
+            return start_date
+        return LONG_IN_THE_PAST
+
+
 class FilterEndDateProvider(VisualizationTimeProvider):
     def __init__(self, state: TrackViewState) -> None:
         self._state = state
@@ -153,10 +163,14 @@ class VisualizationBuilder:
         self._flow_repository = datastore._flow_repository
         self._intersection_repository = intersection_repository
         self._event_repository = datastore._event_repository
-        self._get_current_frame = GetCurrentFrame(track_view_state, videos_metadata)
-        self._get_current_video = GetCurrentVideoPath(track_view_state, videos_metadata)
         self._visualization_time_provider: VisualizationTimeProvider = (
             FilterEndDateProvider(track_view_state)
+        )
+        self._get_current_frame = GetCurrentFrame(
+            self._visualization_time_provider, videos_metadata
+        )
+        self._get_current_video = GetCurrentVideoPath(
+            self._visualization_time_provider, videos_metadata
         )
         self._pandas_data_provider: Optional[PandasDataFrameProvider] = None
         self._pandas_event_data_provider: Optional[PandasDataFrameProvider] = None
