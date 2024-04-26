@@ -471,6 +471,7 @@ class ApplicationStarter:
             AddAllVideos(video_repository),
             AddAllSections(add_section),
             AddAllFlows(add_flow),
+            load_track_files,
             parse_json,
         )
         config_has_changed = ConfigHasChanged(
