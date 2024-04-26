@@ -234,8 +234,16 @@ class TrackFileRepository:
         Args:
             file (Path): track file to be added.
         """
-        self._files.add(file)
+        self.__add(file)
         self._subject.notify([file])
+
+    def __add(self, file: Path) -> None:
+        """Add a single track file the repository without notifying observers.
+
+        Args:
+            file (Path): track file to be added.
+        """
+        self._files.add(file)
 
     def add_all(self, files: Iterable[Path]) -> None:
         """
@@ -245,7 +253,7 @@ class TrackFileRepository:
             files (Iterable[Path]): the files to be added.
         """
         for file in files:
-            self.add(file)
+            self.__add(file)
         self._subject.notify(files)
 
     def get_all(self) -> set[Path]:
