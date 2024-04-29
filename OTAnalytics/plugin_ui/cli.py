@@ -6,6 +6,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
@@ -244,7 +245,9 @@ class OTAnalyticsCli:
             event_list_exporter.export(events, sections, actual_save_path)
             logger().info(f"Event list saved at '{actual_save_path}'")
 
-            assignment_path = save_path.with_suffix(".road_user_assignment.csv")
+            assignment_path = save_path.with_suffix(
+                f".{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
+            )
             specification = ExportSpecification(
                 save_path=assignment_path, format=CSV_FORMAT.name
             )

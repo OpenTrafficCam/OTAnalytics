@@ -4,6 +4,7 @@ from typing import Any
 from customtkinter import CTkLabel, CTkOptionMenu
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_EVENTS
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
@@ -13,7 +14,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
 
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
-INITIAL_FILE_STEM = "events"
 
 
 class CancelExportEvents(Exception):
@@ -74,7 +74,7 @@ class ToplevelExportEvents(ToplevelTemplate):
         viewmodel: ViewModel,
         export_format_extensions: dict[str, str],
         input_values: dict,
-        initial_file_stem: str = INITIAL_FILE_STEM,
+        initial_file_stem: str = CONTEXT_FILE_TYPE_EVENTS,
         **kwargs: Any,
     ) -> None:
         self._viewmodel = viewmodel
@@ -95,7 +95,7 @@ class ToplevelExportEvents(ToplevelTemplate):
         export_file_type = self._export_format_extensions[export_format][1:]
         export_extension = f"*.{export_file_type}"
         suggested_save_path = self._viewmodel.get_save_path_suggestion(
-            export_file_type, context_file_type=INITIAL_FILE_STEM
+            export_file_type, context_file_type=self._initial_file_stem
         )
         export_file = ask_for_save_file_name(
             title="Save counts as",

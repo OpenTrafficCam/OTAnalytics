@@ -61,6 +61,8 @@ from OTAnalytics.application.application import (
 from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    OTCONFIG_FILE_TYPE,
+    OTFLOW_FILE_TYPE,
 )
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
@@ -173,14 +175,14 @@ TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
-OTFLOW = "otflow"
+# OTFLOW = "otflow"
 MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
 MISSING_VIDEO_CONTROL_FRAME_MESSAGE = "video control frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
-OTCONFIG = "otconfig"
+# OTCONFIG = "otconfig"
 
 
 class MissingInjectedInstanceError(Exception):
@@ -515,9 +517,9 @@ class DummyViewModel(
 
     def save_otconfig(self) -> None:
         title = "Save configuration as"
-        file_types = [(f"{OTCONFIG} file", f"*.{OTCONFIG}")]
-        defaultextension = f".{OTCONFIG}"
-        initialfile = f"config.{OTCONFIG}"
+        file_types = [(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")]
+        defaultextension = f".{OTCONFIG_FILE_TYPE}"
+        initialfile = f"config.{OTCONFIG_FILE_TYPE}"
         otconfig_file: Path = ask_for_save_file_path(
             title, file_types, defaultextension, initialfile=initialfile
         )
@@ -573,10 +575,10 @@ class DummyViewModel(
             askopenfilename(
                 title="Load configuration file",
                 filetypes=[
-                    (f"{OTFLOW} file", f"*.{OTFLOW}"),
-                    (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                    (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
+                    (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
                 ],
-                defaultextension=f".{OTFLOW}",
+                defaultextension=f".{OTFLOW_FILE_TYPE}",
             )
         )
         if not otconfig_file:
@@ -595,7 +597,7 @@ class DummyViewModel(
         )
         if proceed.canceled:
             return
-        logger().info(f"{OTCONFIG} file to load: {otconfig_file}")
+        logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
         self._application.load_otconfig(file=Path(otconfig_file))
         self._show_current_project()
         self._show_current_svz_metadata()
@@ -726,17 +728,17 @@ class DummyViewModel(
             askopenfilename(
                 title="Load sections file",
                 filetypes=[
-                    (f"{OTFLOW} file", f"*.{OTFLOW}"),
-                    (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                    (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
+                    (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
                 ],
-                defaultextension=f".{OTFLOW}",
+                defaultextension=f".{OTFLOW_FILE_TYPE}",
             )
         )
         if not configuration_file.stem:
             return
-        elif configuration_file.suffix == f".{OTFLOW}":
+        elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._load_otflow(configuration_file)
-        elif configuration_file.suffix == f".{OTCONFIG}":
+        elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             self._load_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to load has unknown file extension")
@@ -763,22 +765,22 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_configuration(self) -> None:
-        suggested_save_path = self._application.suggest_save_path(OTFLOW)
+        suggested_save_path = self._application.suggest_save_path(OTFLOW_FILE_TYPE)
         configuration_file = ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
-                (f"{OTFLOW} file", f"*.{OTFLOW}"),
-                (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
+                (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
             ],
-            defaultextension=f".{OTFLOW}",
+            defaultextension=f".{OTFLOW_FILE_TYPE}",
             initialfile=suggested_save_path.name,
             initialdir=suggested_save_path.parent,
         )
         if not configuration_file.stem:
             return
-        elif configuration_file.suffix == f".{OTFLOW}":
+        elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._save_otflow(configuration_file)
-        elif configuration_file.suffix == f".{OTCONFIG}":
+        elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             self._save_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to save has unknown file extension")

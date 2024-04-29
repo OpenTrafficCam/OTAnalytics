@@ -23,6 +23,13 @@ DEFAULT_TRACK_OFFSET: RelativeOffsetCoordinate = RelativeOffsetCoordinate(0.5, 0
 DEFAULT_PROGRESSBAR_STEP_PERCENTAGE: int = 5
 DEFAULT_NUM_PROCESSES = 4
 
+
+# File Types
+CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS = "road_user_assignment"
+CONTEXT_FILE_TYPE_EVENTS = "events"
+OTCONFIG_FILE_TYPE = "otconfig"
+OTFLOW_FILE_TYPE = "otflow"
+
 OS: str = platform.system()
 """OS OTAnalytics is currently running on"""
 
