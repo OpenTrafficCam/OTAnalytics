@@ -34,7 +34,7 @@ class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
         self._unit = unit
         self._total = total
         self._current_progress = counter
-        self._close = False
+        self._close = False if self._total else True
 
         super().__init__(**kwargs)
         self.title(title)
@@ -68,6 +68,10 @@ class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
         self._progressbar.pack(padx=PADX, pady=PADY)
 
     def _update_progress(self) -> None:
+        if not self._total:
+            self.destroy()
+            return
+
         percent = self._current_progress.get_value() / self._total
         message = (
             f"{self._current_progress.get_value()} of " f"{self._total} {self._unit}"
