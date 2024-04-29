@@ -6,9 +6,9 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_COUNTS,
     CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
-    DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
@@ -270,7 +270,7 @@ class OTAnalyticsCli:
             raise ValueError("modes is None but has to be defined for exporting counts")
         for count_interval in self._run_config.count_intervals:
             output_file = save_path.with_suffix(
-                f".{DEFAULT_COUNTS_FILE_STEM}_{count_interval}"
+                f".{CONTEXT_FILE_TYPE_COUNTS}_{count_interval}"
                 f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}."
                 f"{DEFAULT_COUNTS_FILE_TYPE}"
             )
