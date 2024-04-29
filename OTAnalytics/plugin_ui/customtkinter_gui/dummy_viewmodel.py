@@ -763,10 +763,7 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_configuration(self) -> None:
-        initial_dir = Path.cwd()
-        if config_file := self._application.file_state.last_saved_config.get():
-            initial_dir = config_file.file.parent
-
+        suggested_save_path = self._application.suggest_save_path(OTFLOW)
         configuration_file = ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
@@ -774,8 +771,8 @@ class DummyViewModel(
                 (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
             ],
             defaultextension=f".{OTFLOW}",
-            initialfile=f"flows.{OTFLOW}",
-            initialdir=initial_dir,
+            initialfile=suggested_save_path.name,
+            initialdir=suggested_save_path.parent,
         )
         if not configuration_file.stem:
             return

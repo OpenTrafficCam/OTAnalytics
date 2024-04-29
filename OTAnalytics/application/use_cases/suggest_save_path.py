@@ -10,9 +10,9 @@ from OTAnalytics.application.use_cases.video_repository import GetAllVideos
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 
-class FileNameSuggester:
+class SavePathSuggester:
     """
-    Class for suggesting file names based on the config file, otflow file,
+    Class for suggesting save paths based on the config file, otflow file,
     the first track file, and video file.
 
     Args:
@@ -63,7 +63,7 @@ class FileNameSuggester:
         self._provide_datetime = provide_datetime
 
     def suggest(self, file_type: str, context_file_type: str = "") -> Path:
-        """Suggests a file path based on the given file type and an optional
+        """Suggests a save path based on the given file type and an optional
         related file type.
 
         The suggested path is in the following format:

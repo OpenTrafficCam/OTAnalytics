@@ -6,9 +6,9 @@ import pytest
 
 from OTAnalytics.application.state import ConfigurationFile, FileState
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
-from OTAnalytics.application.use_cases.suggest_file_name import (
+from OTAnalytics.application.use_cases.suggest_save_path import (
     DATETIME_FORMAT,
-    FileNameSuggester,
+    SavePathSuggester,
 )
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.video_repository import GetAllVideos
@@ -64,12 +64,12 @@ def create_suggestor(
     last_saved_config: Path | None = None,
     track_files: set[Path] | None = None,
     video_files: list[Path] | None = None,
-) -> FileNameSuggester:
+) -> SavePathSuggester:
     get_project = create_project_provider(project_name)
     file_state = create_file_state(last_saved_config)
     get_track_files = create_track_file_provider(track_files)
     get_videos = create_video_provider(video_files)
-    return FileNameSuggester(
+    return SavePathSuggester(
         file_state,
         get_track_files,
         get_videos,
@@ -82,7 +82,7 @@ def provide_datetime() -> datetime:
     return DATETIME_NOW
 
 
-class TestFileNameSuggester:
+class TestSavePathSuggester:
     @pytest.mark.parametrize(
         (
             "project_name,last_saved_config,track_files,video_files,"
