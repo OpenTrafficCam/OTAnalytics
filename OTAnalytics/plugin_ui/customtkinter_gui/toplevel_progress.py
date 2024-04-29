@@ -107,7 +107,7 @@ class PullingProgressbarPopupBuilder(ProgressbarPopupBuilder):
             raise ProgressbarBuildError(
                 f"Missing counter in {ProgressbarBuilder.__name__}"
             )
-        if not self._total:
+        if self._total is None:
             raise ProgressbarBuildError(
                 f"Missing total in {ProgressbarBuilder.__name__}"
             )
@@ -133,7 +133,7 @@ class PollingProgressbarPopupBuilder(ProgressbarPopupBuilder):
             raise ProgressbarBuildError(
                 f"Missing counter in {ProgressbarBuilder.__name__}"
             )
-        if not self._total:
+        if self._total is None:
             raise ProgressbarBuildError(
                 f"Missing total in {ProgressbarBuilder.__name__}"
             )
