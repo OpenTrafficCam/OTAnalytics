@@ -5,6 +5,15 @@ from unittest.mock import Mock, PropertyMock, call, patch
 
 import pytest
 
+from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_DO_COUNTING,
+    DEFAULT_DO_EVENTS,
+    DEFAULT_EVENT_FORMATS,
+    DEFAULT_LOG_FILE,
+    DEFAULT_SAVE_NAME,
+    DEFAULT_SAVE_SUFFIX,
+)
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
@@ -45,7 +54,10 @@ from tests.conftest import do_nothing
 @pytest.fixture
 def mock_otconfig() -> OtConfig:
     project = Mock()
+    track_files = Mock()
     analysis = Mock()
+    analysis.tracks = track_files
+
     videos = Mock()
     sections = Mock()
     flows = Mock()
@@ -66,17 +78,34 @@ class TestOtConfigParser:
         )
         project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
         videos: list[Video] = []
+        track_files: list[Path] = []
         sections: list[Section] = []
         flows: list[Flow] = []
         output = test_data_tmp_dir / "config.otconfig"
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
         serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+        serialized_analysis: dict = {
+            ANALYSIS: {
+                DO_EVENTS: DEFAULT_DO_EVENTS,
+                DO_COUNTING: DEFAULT_DO_COUNTING,
+                TRACKS: [],
+                EXPORT: {
+                    SAVE_NAME: DEFAULT_SAVE_NAME,
+                    SAVE_SUFFIX: DEFAULT_SAVE_SUFFIX,
+                    EVENT_FORMATS: list(DEFAULT_EVENT_FORMATS),
+                    COUNT_INTERVALS: [DEFAULT_COUNTING_INTERVAL_IN_MINUTES],
+                },
+                NUM_PROCESSES: 1,
+                LOGFILE: str(DEFAULT_LOG_FILE),
+            }
+        }
         video_parser.convert.return_value = serialized_videos
         flow_parser.convert.return_value = serialized_sections
 
         config_parser.serialize(
             project=project,
             video_files=videos,
+            track_files=track_files,
             sections=sections,
             flows=flows,
             file=output,
@@ -85,6 +114,7 @@ class TestOtConfigParser:
         serialized_content = parse_json(output)
         expected_content: dict[str, Any] = {PROJECT: project.to_dict()}
         expected_content |= serialized_videos
+        expected_content |= serialized_analysis
         expected_content |= serialized_sections
 
         assert serialized_content == expected_content
@@ -105,6 +135,7 @@ class TestOtConfigParser:
         mock_serialize.assert_called_once_with(
             mock_otconfig.project,
             mock_otconfig.videos,
+            mock_otconfig.analysis.track_files,
             mock_otconfig.sections,
             mock_otconfig.flows,
             save_path,

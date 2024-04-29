@@ -56,7 +56,7 @@ class TestArgparseCliParser:
                 start_cli=True,
                 debug=False,
                 logfile_overwrite=True,
-                track_export=False,
+                track_export=True,
                 config_file=config_file,
                 track_files=[track_file_1, track_file_2],
                 otflow_file=sections_file,

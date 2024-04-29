@@ -23,6 +23,15 @@ DEFAULT_TRACK_OFFSET: RelativeOffsetCoordinate = RelativeOffsetCoordinate(0.5, 0
 DEFAULT_PROGRESSBAR_STEP_PERCENTAGE: int = 5
 DEFAULT_NUM_PROCESSES = 4
 
+# OTConfig Default Values
+DEFAULT_DO_EVENTS = True
+DEFAULT_DO_COUNTING = True
+DEFAULT_SAVE_NAME = ""
+DEFAULT_SAVE_SUFFIX = ""
+DEFAULT_EVENT_FORMATS = {"csv"}
+DEFAULT_LOG_FILE = Path("logs")
+
+
 OS: str = platform.system()
 """OS OTAnalytics is currently running on"""
 

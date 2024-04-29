@@ -4,6 +4,7 @@ from OTAnalytics.application.state import ConfigurationFile, FileState
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.section_repository import GetAllSections
+from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.video_repository import GetAllVideos
 
 
@@ -15,12 +16,14 @@ class OtconfigHasChanged:
         get_flows: GetAllFlows,
         get_current_project: GetCurrentProject,
         get_videos: GetAllVideos,
+        get_track_files: GetAllTrackFiles,
     ):
         self._config_parser = config_parser
         self._get_sections = get_sections
         self._get_flows = get_flows
         self._get_current_project = get_current_project
         self._get_videos = get_videos
+        self._get_track_files = get_track_files
 
     def has_changed(self, prev_config: ConfigurationFile) -> bool:
         """
@@ -35,6 +38,7 @@ class OtconfigHasChanged:
         current_content = self._config_parser.convert(
             self._get_current_project.get(),
             self._get_videos.get(),
+            self._get_track_files(),
             self._get_sections(),
             self._get_flows.get(),
             prev_config.file,
