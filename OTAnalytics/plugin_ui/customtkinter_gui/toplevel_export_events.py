@@ -3,6 +3,7 @@ from typing import Any
 
 from customtkinter import CTkLabel, CTkOptionMenu
 
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
@@ -70,11 +71,13 @@ class FrameConfigureExportEvents(FrameContent):
 class ToplevelExportEvents(ToplevelTemplate):
     def __init__(
         self,
+        viewmodel: ViewModel,
         export_format_extensions: dict[str, str],
         input_values: dict,
         initial_file_stem: str = INITIAL_FILE_STEM,
         **kwargs: Any,
     ) -> None:
+        self._viewmodel = viewmodel
         self._input_values = input_values
         self._export_format_extensions = export_format_extensions
         self._initial_file_stem = initial_file_stem
@@ -89,12 +92,17 @@ class ToplevelExportEvents(ToplevelTemplate):
 
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
-        export_extension = f"*{self._export_format_extensions[export_format]}"
+        export_file_type = self._export_format_extensions[export_format][1:]
+        export_extension = f"*.{export_file_type}"
+        suggested_save_path = self._viewmodel.get_save_path_suggestion(
+            export_file_type, context_file_type=INITIAL_FILE_STEM
+        )
         export_file = ask_for_save_file_name(
             title="Save counts as",
             filetypes=[(export_format, export_extension)],
             defaultextension=export_extension,
-            initialfile=self._initial_file_stem,
+            initialfile=suggested_save_path.name,
+            initialdir=suggested_save_path.parent,
         )
         self._input_values[EXPORT_FILE] = export_file
         if export_file == "":

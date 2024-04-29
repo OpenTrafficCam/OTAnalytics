@@ -1394,6 +1394,7 @@ class DummyViewModel(
             initial_position=(50, 50),
             input_values=default_values,
             export_format_extensions=export_format_extensions,
+            viewmodel=self,
         ).get_data()
         file = input_values[toplevel_export_events.EXPORT_FILE]
         export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
@@ -1756,6 +1757,7 @@ class DummyViewModel(
                 input_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem="road_user_assignments",
+                viewmodel=self,
             ).get_data()
             logger().debug(export_values)
             save_path = export_values[toplevel_export_events.EXPORT_FILE]
@@ -1829,3 +1831,6 @@ class DummyViewModel(
             self._frame_svz_metadata.update(metadata=metadata.to_dict())
         else:
             self._frame_svz_metadata.update({})
+
+    def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
+        return self._application.suggest_save_path(file_type, context_file_type)
