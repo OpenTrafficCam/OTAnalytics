@@ -3,6 +3,7 @@ from typing import Iterable, Optional
 
 from pandas import DataFrame, Series
 
+from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.domain import track
 from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
 
@@ -93,6 +94,26 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
         ]
 
 
+class DataFrameStartsAtOrAfterFrame(DataFramePredicate):
+    """Checks if the DataFrame rows start at or after frame.
+
+    Args:
+        column_name (str): the DataFrame column name to apply the predicate to
+        frame (int): the frame number to evaluate against (inclusive)
+    """
+
+    def __init__(
+        self,
+        column_name: str,
+        frame: int,
+    ) -> None:
+        self.column_name: str = column_name
+        self._frame = frame
+
+    def test(self, to_test: DataFrame) -> DataFrame:
+        return to_test[to_test[track.FRAME] >= self._frame]
+
+
 class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
     """Checks if the DataFrame rows ends before or at date.
 
@@ -120,6 +141,26 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
         ]
 
 
+class DataFrameEndsBeforeOrAtFrame(DataFramePredicate):
+    """Checks if the DataFrame rows ends before or at frame.
+
+    Args:
+        column_name (str): the DataFrame column name to apply the predicate to
+        frame (int): the frame number to evaluate against (inclusive)
+    """
+
+    def __init__(
+        self,
+        column_name: str,
+        frame: int,
+    ) -> None:
+        self.column_name: str = column_name
+        self._frame = frame
+
+    def test(self, to_test: DataFrame) -> DataFrame:
+        return to_test[to_test[track.FRAME] <= self._frame]
+
+
 class DataFrameHasClassifications(DataFramePredicate):
     """Checks if the DataFrame rows have classifications.
 
@@ -143,8 +184,9 @@ class DataFrameHasClassifications(DataFramePredicate):
 class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
     """A builder used to build a `DataFrameFilter`."""
 
-    def __init__(self) -> None:
+    def __init__(self, current_frame: GetCurrentFrame) -> None:
         super().__init__()
+        self._current_frame = current_frame
         self._complex_predicate: Optional[Predicate[DataFrame, DataFrame]] = None
         self._classification_column: Optional[str] = None
         self._occurrence_column: Optional[str] = None
@@ -162,7 +204,10 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
             return
 
         self._extend_complex_predicate(
-            DataFrameStartsAtOrAfterDate(self._occurrence_column, start_date)
+            DataFrameStartsAtOrAfterFrame(
+                track.FRAME, self._current_frame.get_frame_number_for(start_date)
+            )
+            # DataFrameStartsAtOrAfterDate(self._occurrence_column, start_date)
         )
 
     def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
@@ -170,7 +215,10 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
             return
 
         self._extend_complex_predicate(
-            DataFrameEndsBeforeOrAtDate(self._occurrence_column, end_date)
+            DataFrameEndsBeforeOrAtFrame(
+                track.FRAME, self._current_frame.get_frame_number_for(end_date)
+            )
+            # DataFrameEndsBeforeOrAtDate(self._occurrence_column, end_date)
         )
 
     def set_classification_column(self, classification_name: str) -> None:

@@ -5,15 +5,18 @@ from unittest.mock import Mock
 import pytest
 from pandas import DataFrame
 
+from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track import CLASSIFICATION, OCCURRENCE, Detection, Track
 from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameEndsBeforeOrAtDate,
+    DataFrameEndsBeforeOrAtFrame,
     DataFrameFilter,
     DataFrameFilterBuilder,
     DataFrameHasClassifications,
     DataFramePredicate,
     DataFrameStartsAtOrAfterDate,
+    DataFrameStartsAtOrAfterFrame,
     NoOpDataFrameFilter,
 )
 from tests.utils.builders.track_builder import TrackBuilder
@@ -152,37 +155,48 @@ class TestNoOpDataFrameFilter:
         assert result == iterable
 
 
+DEFAULT_FRAME = 1
+
+
 class TestDataFrameFilterBuilder:
-    def test_add_starts_at_or_after_date_predicate(self) -> None:
+    @pytest.fixture
+    def current_frame(self) -> Mock:
+        current_frame = Mock(spec=GetCurrentFrame)
+        frame = DEFAULT_FRAME
+        current_frame.get_frame_number_for.return_value = frame
+        return current_frame
+
+    def test_add_starts_at_or_after_date_predicate(self, current_frame: Mock) -> None:
         start_date = datetime(2000, 1, 1)
 
-        builder = DataFrameFilterBuilder()
+        builder = DataFrameFilterBuilder(current_frame)
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_starts_at_or_after_date_predicate(start_date)
         builder.build()
         dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) is DataFrameStartsAtOrAfterDate
-        assert dataframe_filter._predicate._start_date == start_date
+        assert type(dataframe_filter._predicate) is DataFrameStartsAtOrAfterFrame
+        assert dataframe_filter._predicate._frame == DEFAULT_FRAME
+        current_frame.get_frame_number_for.assert_called_once_with(start_date)
 
-    def test_add_ends_before_or_at_date_predicate(self) -> None:
+    def test_add_ends_before_or_at_date_predicate(self, current_frame: Mock) -> None:
         end_date = datetime(2000, 1, 3)
 
-        builder = DataFrameFilterBuilder()
+        builder = DataFrameFilterBuilder(current_frame)
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_ends_before_or_at_date_predicate(end_date)
-
         builder.build()
 
         dataframe_filter = builder.get_result()
         assert hasattr(dataframe_filter, "_predicate")
-        assert type(dataframe_filter._predicate) is DataFrameEndsBeforeOrAtDate
-        assert dataframe_filter._predicate._end_date == end_date
+        assert type(dataframe_filter._predicate) is DataFrameEndsBeforeOrAtFrame
+        assert dataframe_filter._predicate._frame == DEFAULT_FRAME
+        current_frame.get_frame_number_for.assert_called_once_with(end_date)
 
-    def test_add_has_classifications_predicate(self) -> None:
+    def test_add_has_classifications_predicate(self, current_frame: Mock) -> None:
         classifications = {"car", "truck"}
 
-        builder = DataFrameFilterBuilder()
+        builder = DataFrameFilterBuilder(current_frame)
         builder.set_classification_column(CLASSIFICATION)
         builder.add_has_classifications_predicate(classifications)
 
@@ -193,35 +207,41 @@ class TestDataFrameFilterBuilder:
         assert type(dataframe_filter._predicate) is DataFrameHasClassifications
         assert dataframe_filter._predicate._classifications == classifications
 
-    def test_add_has_classifications_predicate_column_not_set(self) -> None:
+    def test_add_has_classifications_predicate_column_not_set(
+        self, current_frame: Mock
+    ) -> None:
         classifications = {"car", "truck"}
-        builder = DataFrameFilterBuilder()
+        builder = DataFrameFilterBuilder(current_frame)
         builder.add_has_classifications_predicate(classifications)
         builder.build()
         dataframe_filter = builder.get_result()
         assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
-    def test_add_starts_at_or_after_date_predicate_raise_error(self) -> None:
+    def test_add_starts_at_or_after_date_predicate_raise_error(
+        self, current_frame: Mock
+    ) -> None:
         start_date = datetime(2000, 1, 1)
-        builder = DataFrameFilterBuilder()
+        builder = DataFrameFilterBuilder(current_frame)
         builder.add_starts_at_or_after_date_predicate(start_date)
         builder.build()
         dataframe_filter = builder.get_result()
         assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
-    def test_add_ends_before_or_date_predicate_raise_error(self) -> None:
+    def test_add_ends_before_or_date_predicate_raise_error(
+        self, current_frame: Mock
+    ) -> None:
         end_date = datetime(2000, 1, 1)
-        builder = DataFrameFilterBuilder()
+        builder = DataFrameFilterBuilder(current_frame)
         builder.add_ends_before_or_at_date_predicate(end_date)
         builder.build()
         dataframe_filter = builder.get_result()
         assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
-    def test_add_multiple_predicates(self) -> None:
+    def test_add_multiple_predicates(self, current_frame: Mock) -> None:
         end_date = datetime(2000, 1, 3)
         classifications = {"car", "truck"}
 
-        builder = DataFrameFilterBuilder()
+        builder = DataFrameFilterBuilder(current_frame)
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_ends_before_or_at_date_predicate(end_date)
 
@@ -234,26 +254,28 @@ class TestDataFrameFilterBuilder:
         assert hasattr(dataframe_filter, "_predicate")
         assert (
             type(dataframe_filter._predicate._first_predicate)
-            is DataFrameEndsBeforeOrAtDate
+            is DataFrameEndsBeforeOrAtFrame
         )
         assert (
             type(dataframe_filter._predicate._second_predicate)
             is DataFrameHasClassifications
         )
 
-        assert dataframe_filter._predicate._first_predicate._end_date == end_date
+        assert dataframe_filter._predicate._first_predicate._frame == DEFAULT_FRAME
 
-    def test_create_noop_filter_if_no_predicate_added(self) -> None:
-        builder = DataFrameFilterBuilder()
+    def test_create_noop_filter_if_no_predicate_added(
+        self, current_frame: Mock
+    ) -> None:
+        builder = DataFrameFilterBuilder(current_frame)
         builder.build()
         track_filter = builder.get_result()
 
         assert type(track_filter) is NoOpDataFrameFilter
 
-    def test_reset(self) -> None:
+    def test_reset(self, current_frame: Mock) -> None:
         classifications = {"car", "truck"}
 
-        builder = DataFrameFilterBuilder()
+        builder = DataFrameFilterBuilder(current_frame)
         builder.set_classification_column(CLASSIFICATION)
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_has_classifications_predicate(classifications)

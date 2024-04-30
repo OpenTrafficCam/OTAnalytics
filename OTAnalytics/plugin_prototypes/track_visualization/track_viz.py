@@ -57,7 +57,7 @@ from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 """Frames start with 1 in OTVision but frames of videos are loaded zero based."""
-FRAME_OFFSET = 1
+FRAME_OFFSET = 0
 
 ENCODING = "UTF-8"
 DPI = 100
@@ -280,7 +280,6 @@ class FilterByOccurrence(PandasDataFrameProvider):
         self._filter_builder.set_occurrence_column(track.OCCURRENCE)
         filter_element = self._track_view_state.filter_element.get()
         dataframe_filter = filter_element.build_filter(self._filter_builder)
-
         return next(iter(dataframe_filter.apply([track_df])))
 
 
@@ -634,6 +633,7 @@ class FilterByFrame(PandasDataFrameProvider):
         if track_df.empty:
             return track_df
         current_frame = self._current_frame.get_frame_number() + FRAME_OFFSET
+        print(f"BBox plotter filter frame number: {current_frame}")
         return track_df[track_df[track.FRAME] == current_frame]
 
 
