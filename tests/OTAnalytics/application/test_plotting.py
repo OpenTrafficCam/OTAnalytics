@@ -12,9 +12,7 @@ from OTAnalytics.application.plotting import (
     VideoProvider,
     VisualizationTimeProvider,
 )
-from OTAnalytics.application.state import Plotter, TrackViewState, VideosMetadata
-from OTAnalytics.domain.date import DateRange
-from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.application.state import Plotter, VideosMetadata
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.video import Video, VideoMetadata
 
@@ -126,21 +124,20 @@ class TestBackgroundPlotter:
 class TestGetCurrentVideoPath:
     def test_get_video(self) -> None:
         filter_end_date = datetime(2023, 1, 1, 0, 1)
-        mocked_filter_element = FilterElement(
-            DateRange(start_date=None, end_date=filter_end_date), classifications=set()
-        )
+        time_provider = Mock(spec=VisualizationTimeProvider)
+        time_provider.get_time.return_value = filter_end_date
+
         video_path = "some/path"
-        state = TrackViewState()
-        state.filter_element.set(mocked_filter_element)
         metadata = Mock(spec=VideoMetadata)
         metadata.path = video_path
         videos_metadata = Mock(spec=VideosMetadata)
         videos_metadata.get_metadata_for.return_value = metadata
-        use_case = GetCurrentVideoPath(state, videos_metadata)
+        use_case = GetCurrentVideoPath(time_provider, videos_metadata)
 
         actual = use_case.get_video()
 
         assert actual == video_path
+        time_provider.get_time.assert_called_once()
 
 
 class TestGetCurrentFrame:
@@ -159,11 +156,8 @@ class TestGetCurrentFrame:
         expected_frame_number: int,
     ) -> None:
         video_start_date = datetime(2023, 1, 1, 0, 1)
-        mocked_filter_element = FilterElement(
-            DateRange(start_date=None, end_date=filter_end_date), classifications=set()
-        )
-        state = TrackViewState()
-        state.filter_element.set(mocked_filter_element)
+        time_provider = Mock(spec=VisualizationTimeProvider)
+        time_provider.get_time.return_value = filter_end_date
         metadata = Mock(spec=VideoMetadata)
         metadata.start = video_start_date
         metadata.duration = timedelta(seconds=3)
@@ -171,10 +165,11 @@ class TestGetCurrentFrame:
         metadata.number_of_frames = 60
         videos_metadata = Mock(spec=VideosMetadata)
         videos_metadata.get_metadata_for.return_value = metadata
-        use_case = GetCurrentFrame(state, videos_metadata)
+        use_case = GetCurrentFrame(time_provider, videos_metadata)
 
         frame_number = use_case.get_frame_number()
 
         assert frame_number == expected_frame_number
 
         videos_metadata.get_metadata_for.assert_called_with(filter_end_date)
+        time_provider.get_time.assert_called_once()
