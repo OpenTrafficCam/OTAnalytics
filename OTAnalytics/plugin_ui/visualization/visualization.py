@@ -762,7 +762,7 @@ class VisualizationBuilder:
         )
 
     def _create_dataframe_filter_builder(self) -> DataFrameFilterBuilder:
-        return DataFrameFilterBuilder()
+        return DataFrameFilterBuilder(current_frame=self._get_current_frame)
 
     # TODO duplicate to main_application.py
     def _create_tracks_intersecting_sections(self) -> TracksIntersectingSections:
