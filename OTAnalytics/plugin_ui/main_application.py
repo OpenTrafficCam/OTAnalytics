@@ -589,6 +589,8 @@ class ApplicationStarter:
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
+        project_updater.register(dummy_viewmodel.show_current_project)
+        project_updater.register(dummy_viewmodel.update_svz_metadata_view)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
@@ -598,7 +600,10 @@ class ApplicationStarter:
             cut_tracks_intersecting_section, track_repository
         )
         preload_input_files = self.create_preload_input_files(
-            load_otflow, load_track_files, apply_cli_cuts
+            load_otconfig=load_otconfig,
+            load_otflow=load_otflow,
+            load_track_files=load_track_files,
+            apply_cli_cuts=apply_cli_cuts,
         )
         OTAnalyticsGui(
             main_window, dummy_viewmodel, layer_groups, preload_input_files, run_config
@@ -1011,11 +1016,17 @@ class ApplicationStarter:
 
     def create_preload_input_files(
         self,
+        load_otconfig: LoadOtconfig,
         load_otflow: LoadOtflow,
         load_track_files: LoadTrackFiles,
         apply_cli_cuts: ApplyCliCuts,
     ) -> PreloadInputFiles:
-        return PreloadInputFiles(load_track_files, load_otflow, apply_cli_cuts)
+        return PreloadInputFiles(
+            load_track_files=load_track_files,
+            load_otconfig=load_otconfig,
+            load_otflow=load_otflow,
+            apply_cli_cuts=apply_cli_cuts,
+        )
 
     def create_apply_cli_cuts(
         self,
