@@ -57,7 +57,7 @@ from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
 """Frames start with 1 in OTVision but frames of videos are loaded zero based."""
-FRAME_OFFSET = 0
+FRAME_OFFSET = 1
 
 ENCODING = "UTF-8"
 DPI = 100
