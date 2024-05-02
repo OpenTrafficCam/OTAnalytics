@@ -7,7 +7,7 @@ from pandas import DataFrame
 
 from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track import CLASSIFICATION, OCCURRENCE, Detection, Track
+from OTAnalytics.domain.track import CLASSIFICATION, FRAME, OCCURRENCE, Detection, Track
 from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameEndsBeforeOrAtDate,
     DataFrameEndsBeforeOrAtFrame,
@@ -90,6 +90,14 @@ class TestDataFramePredicates:
                 DataFrameStartsAtOrAfterDate(
                     OCCURRENCE, datetime(2000, 1, 10, tzinfo=timezone.utc)
                 ),
+                [False, False, False, False, False],
+            ),
+            (
+                DataFrameStartsAtOrAfterFrame(FRAME, 0),
+                [True, True, True, True, True],
+            ),
+            (
+                DataFrameStartsAtOrAfterFrame(FRAME, 10),
                 [False, False, False, False, False],
             ),
             (

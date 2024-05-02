@@ -207,7 +207,6 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
             DataFrameStartsAtOrAfterFrame(
                 track.FRAME, self._current_frame.get_frame_number_for(start_date)
             )
-            # DataFrameStartsAtOrAfterDate(self._occurrence_column, start_date)
         )
 
     def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
@@ -218,7 +217,6 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
             DataFrameEndsBeforeOrAtFrame(
                 track.FRAME, self._current_frame.get_frame_number_for(end_date)
             )
-            # DataFrameEndsBeforeOrAtDate(self._occurrence_column, end_date)
         )
 
     def set_classification_column(self, classification_name: str) -> None:
