@@ -407,6 +407,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_counting_day_types(self) -> ColumnResources:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_weather_types(self) -> ColumnResources:
         raise NotImplementedError
 

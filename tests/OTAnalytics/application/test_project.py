@@ -3,14 +3,19 @@ from datetime import datetime
 from OTAnalytics.application.project import (
     COORDINATE_X,
     COORDINATE_Y,
+    COUNTING_DAY,
     COUNTING_LOCATION_NUMBER,
     DIRECTION,
+    DIRECTION_DESCRIPTION,
+    HAS_BICYCLE_LANE,
+    IS_BICYCLE_COUNTING,
     METADATA,
     NAME,
     REMARK,
     START_DATE,
     TK_NUMBER,
     WEATHER,
+    CountingDayType,
     DirectionOfStationing,
     Project,
     SvzMetadata,
@@ -23,6 +28,10 @@ class TestSvzMetadata:
         tk_number = "1"
         counting_location_number = "2"
         direction = "1"
+        direction_description = "direction_description"
+        has_bicycle_lane = True
+        is_bicycle_counting = True
+        counting_day = "2"
         weather = "2"
         remark = "something"
         coordinate_x = "1.2"
@@ -31,6 +40,10 @@ class TestSvzMetadata:
             tk_number=tk_number,
             counting_location_number=counting_location_number,
             direction=DirectionOfStationing.parse(direction),
+            direction_description=direction_description,
+            has_bicycle_lane=has_bicycle_lane,
+            is_bicycle_counting=is_bicycle_counting,
+            counting_day=CountingDayType.parse(counting_day),
             weather=WeatherType.parse(weather),
             remark=remark,
             coordinate_x=coordinate_x,
@@ -43,6 +56,10 @@ class TestSvzMetadata:
             TK_NUMBER: tk_number,
             COUNTING_LOCATION_NUMBER: counting_location_number,
             DIRECTION: direction,
+            DIRECTION_DESCRIPTION: direction_description,
+            HAS_BICYCLE_LANE: has_bicycle_lane,
+            IS_BICYCLE_COUNTING: is_bicycle_counting,
+            COUNTING_DAY: counting_day,
             WEATHER: weather,
             REMARK: remark,
             COORDINATE_X: coordinate_x,
@@ -59,6 +76,10 @@ class TestProject:
         tk_number = "1"
         counting_location_number = "2"
         direction = "1"
+        direction_description = "direction_description"
+        has_bicycle_lane = True
+        is_bicycle_counting = True
+        counting_day = "2"
         weather = "2"
         remark = "something"
         coordinate_x = "1.2"
@@ -67,6 +88,10 @@ class TestProject:
             tk_number=tk_number,
             counting_location_number=counting_location_number,
             direction=DirectionOfStationing.parse(direction),
+            direction_description=direction_description,
+            has_bicycle_lane=has_bicycle_lane,
+            is_bicycle_counting=is_bicycle_counting,
+            counting_day=CountingDayType.parse(counting_day),
             weather=WeatherType.parse(weather),
             remark=remark,
             coordinate_x=coordinate_x,
