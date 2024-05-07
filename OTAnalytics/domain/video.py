@@ -112,6 +112,8 @@ class VideoMetadata:
 
     @property
     def fps(self) -> float:
+        if self.actual_fps:
+            return self.actual_fps
         return self.recorded_fps
 
     def to_dict(self) -> dict:
@@ -156,7 +158,9 @@ class SimpleVideo(Video):
 
     @property
     def fps(self) -> float:
-        return self.video_reader.get_fps(self.path)
+        return (
+            self.metadata.fps if self.metadata else self.video_reader.get_fps(self.path)
+        )
 
     def __post_init__(self) -> None:
         self.check_path_exists()
