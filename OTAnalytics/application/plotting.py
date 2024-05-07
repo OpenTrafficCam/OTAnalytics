@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from math import floor
 from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import (
     ObservableOptionalProperty,
     ObservableProperty,
@@ -140,7 +141,7 @@ class TrackBackgroundPlotter(Plotter):
         if videos := self._video_provider():
             visualization_time = self._visualization_time_provider.get_time()
             frame_number = videos[0].get_frame_number_for(visualization_time)
-            print(f"Background plotter frame number: {frame_number}")
+            logger().debug(f"Background plotter frame number: {frame_number}")
             return videos[0].get_frame(frame_number)
         return None
 
