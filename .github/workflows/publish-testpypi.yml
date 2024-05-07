@@ -45,13 +45,13 @@ jobs:
               pip install -r requirements-dev.txt
           fi
       - name: Build release assets
-        run: python ./platomo-build/build.py --package_version 0.0.0.0.11.a1
+        run: python ./platomo-build/build.py --package_version 0.0.0.0.12.a1
       - name: Display dist content
         run: ls -ahl dist/
       - name: Display version info
         run: cat OTAnalytics/version.py
       - name: Patch version
-        run: echo __version__ = \"0.0.0.0.11.a1\" > OTAnalytics/version.py
+        run: echo __version__ = \"0.0.0.0.12.a1\" > OTAnalytics/version.py
       - name: Remove File
         uses: JesseTG/rm@v1.0.3
         with:
