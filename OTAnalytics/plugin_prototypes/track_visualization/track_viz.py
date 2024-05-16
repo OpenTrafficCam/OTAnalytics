@@ -13,6 +13,7 @@ from pandas import DataFrame
 from PIL import Image
 
 from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import (
     DynamicLayersPlotter,
     EntityPlotterFactory,
@@ -280,7 +281,6 @@ class FilterByOccurrence(PandasDataFrameProvider):
         self._filter_builder.set_occurrence_column(track.OCCURRENCE)
         filter_element = self._track_view_state.filter_element.get()
         dataframe_filter = filter_element.build_filter(self._filter_builder)
-
         return next(iter(dataframe_filter.apply([track_df])))
 
 
@@ -634,6 +634,7 @@ class FilterByFrame(PandasDataFrameProvider):
         if track_df.empty:
             return track_df
         current_frame = self._current_frame.get_frame_number() + FRAME_OFFSET
+        logger().debug(f"BBox plotter filter frame number: {current_frame}")
         return track_df[track_df[track.FRAME] == current_frame]
 
 
