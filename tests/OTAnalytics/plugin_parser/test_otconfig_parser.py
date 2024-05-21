@@ -1,3 +1,4 @@
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
@@ -39,6 +40,7 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     EXPORT,
     LOGFILE,
     NUM_PROCESSES,
+    PATH,
     PROJECT,
     SAVE_NAME,
     SAVE_SUFFIX,
@@ -48,7 +50,7 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     OtConfigFormatFixer,
     OtConfigParser,
 )
-from tests.conftest import do_nothing
+from tests.conftest import YieldFixture, do_nothing
 
 
 @pytest.fixture
@@ -63,6 +65,16 @@ def mock_otconfig() -> OtConfig:
     flows = Mock()
 
     return OtConfig(project, analysis, videos, sections, flows)
+
+
+@pytest.fixture
+def base_dir(test_data_tmp_dir: Path) -> YieldFixture[Path]:
+    base_folder = test_data_tmp_dir / "my_base_folder"
+    if base_folder.exists():
+        shutil.rmtree(base_folder)
+    base_folder.mkdir(exist_ok=False)
+    yield base_folder
+    shutil.rmtree(base_folder)
 
 
 class TestOtConfigParser:
@@ -232,6 +244,33 @@ class TestOtConfigParser:
         project = Project("My Name", None)
         with pytest.raises(StartDateMissing):
             OtConfigParser._validate_data(project)
+
+    def test_parse_videos_alternative_files(self, base_dir: Path) -> None:
+        expected_in_config_first_video = Path("relpath/to/video/first.mp4")
+        expected_in_config_second_video = Path("relpath/to/video/second.mp4")
+
+        actual_first_video = base_dir / expected_in_config_first_video.name
+        actual_second_video = base_dir / expected_in_config_second_video.name
+        actual_first_video.touch()
+        actual_second_video.touch()
+
+        video_entries = [
+            {PATH: expected_in_config_first_video},
+            {PATH: expected_in_config_second_video},
+        ]
+        video_parser = Mock()
+        parser = OtConfigParser(Mock(), video_parser, Mock())
+        parser._parse_videos(video_entries, base_dir)
+
+        video_parser.parse_list.assert_called_once_with(
+            [
+                {PATH: expected_in_config_first_video.name},
+                {PATH: expected_in_config_second_video.name},
+            ],
+            base_dir,
+        )
+        actual_first_video.unlink()
+        actual_second_video.unlink()
 
 
 class TestMultiFixer:

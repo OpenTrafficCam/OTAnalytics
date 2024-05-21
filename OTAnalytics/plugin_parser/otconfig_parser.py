@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from OTAnalytics.application import project
 from OTAnalytics.application.config import (
@@ -15,6 +15,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ConfigParser,
@@ -130,7 +131,7 @@ class OtConfigParser(ConfigParser):
         fixed_content = self._format_fixer.fix(data)
         _project = self._parse_project(fixed_content[PROJECT])
         analysis_config = self._parse_analysis(fixed_content[ANALYSIS], base_folder)
-        videos = self._video_parser.parse_list(fixed_content[video.VIDEOS], base_folder)
+        videos = self._parse_videos(fixed_content[video.VIDEOS], base_folder)
         sections, flows = self._flow_parser.parse_content(
             fixed_content[section.SECTIONS], fixed_content[flow.FLOWS]
         )
@@ -141,6 +142,30 @@ class OtConfigParser(ConfigParser):
             sections=sections,
             flows=flows,
         )
+
+    def _parse_videos(
+        self, video_entries: list[dict], base_folder: Path
+    ) -> Sequence[Video]:
+        existing_entries = []
+        for video_entry in video_entries:
+            video_file = base_folder / video_entry[PATH]
+            if video_file.exists():
+                existing_entries.append(video_entry)
+            else:
+                alternative_file = base_folder / video_file.name
+                logger().warning(
+                    f"Unable to find video file '{video_file}'. "
+                    "Try searching for video file with same name in "
+                    f"base_folder '{base_folder}'."
+                )
+                if alternative_file.exists():
+                    existing_entries.append({PATH: alternative_file.name})
+                else:
+                    raise FileNotFoundError(
+                        f"Searching for alternative video file '{alternative_file}'"
+                        "unsuccessful. Can not parse OTConfig."
+                    )
+        return self._video_parser.parse_list(existing_entries, base_folder)
 
     def _parse_project(self, data: dict) -> Project:
         _validate_data(data, [project.NAME, project.START_DATE])
@@ -217,7 +242,26 @@ class OtConfigParser(ConfigParser):
     def _parse_track_files(
         self, track_files: list[str], base_folder: Path
     ) -> set[Path]:
-        return {base_folder / _file for _file in track_files}
+        existing_track_files: set[Path] = set()
+        for _file in track_files:
+            file_in_config = base_folder / _file
+            if file_in_config.exists():
+                existing_track_files.add(file_in_config)
+            else:
+                alternative_file = base_folder / file_in_config.name
+                logger().warning(
+                    f"Unable to find track file '{file_in_config}'. "
+                    "Try searching for track file with same name in "
+                    f"base_folder '{base_folder}'."
+                )
+                if alternative_file.exists():
+                    existing_track_files.add(alternative_file)
+                else:
+                    raise FileNotFoundError(
+                        f"Searching for alternative track file '{alternative_file}'"
+                        "unsuccessful. Can not parse OTConfig."
+                    )
+        return existing_track_files
 
     def serialize(
         self,
