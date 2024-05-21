@@ -127,6 +127,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     RemoveSection,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
+from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -474,13 +475,15 @@ class ApplicationStarter:
             load_track_files,
             parse_json,
         )
+        get_all_videos = GetAllVideos(video_repository)
+        get_current_project = GetCurrentProject(datastore)
         config_has_changed = ConfigHasChanged(
             OtconfigHasChanged(
                 config_parser,
                 get_sections,
                 get_flows,
-                GetCurrentProject(datastore),
-                GetAllVideos(video_repository),
+                get_current_project,
+                get_all_videos,
                 get_all_track_files,
             ),
             OtflowHasChanged(flow_parser, get_sections, get_flows),
@@ -492,6 +495,9 @@ class ApplicationStarter:
             event_repository,
             flow_repository,
             create_events,
+        )
+        save_path_suggester = SavePathSuggester(
+            file_state, get_all_track_files, get_all_videos, get_current_project
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -526,6 +532,7 @@ class ApplicationStarter:
             load_otconfig,
             config_has_changed,
             export_road_user_assignments,
+            save_path_suggester,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(

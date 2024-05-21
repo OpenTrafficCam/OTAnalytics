@@ -5,6 +5,10 @@ from typing import Any
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_COUNTS,
+    DEFAULT_COUNT_INTERVAL_TIME_UNIT,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import DateRow
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
@@ -18,7 +22,6 @@ START = "start"
 END = "end"
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
-INITIAL_FILE_STEM = "counts"
 
 
 class CancelExportCounts(Exception):
@@ -130,11 +133,17 @@ class ToplevelExportCounts(ToplevelTemplate):
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
         export_extension = self._export_formats[export_format]
+        suggested_save_path = self._viewmodel.get_save_path_suggestion(
+            export_extension[1:],
+            f"{CONTEXT_FILE_TYPE_COUNTS}"
+            f"_{self._input_values[INTERVAL]}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}",
+        )
         export_file = ask_for_save_file_name(
             title="Save counts as",
             filetypes=[(export_format, export_extension)],
             defaultextension=export_extension,
-            initialfile=INITIAL_FILE_STEM,
+            initialfile=suggested_save_path.name,
+            initialdir=suggested_save_path.parent,
         )
         self._input_values[EXPORT_FILE] = export_file
         if export_file == "":
