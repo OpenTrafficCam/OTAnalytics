@@ -514,16 +514,17 @@ class DummyViewModel(
         self._frame_project.update(name=project.name, start_date=project.start_date)
 
     def save_otconfig(self) -> None:
-        title = "Save configuration as"
-        file_types = [(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")]
-        defaultextension = f".{OTCONFIG_FILE_TYPE}"
-        initialfile = f"config.{OTCONFIG_FILE_TYPE}"
-        otconfig_file: Path = ask_for_save_file_path(
-            title, file_types, defaultextension, initialfile=initialfile
+        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        configuration_file = ask_for_save_file_path(
+            title="Save configuration as",
+            filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
+            defaultextension=f".{OTCONFIG_FILE_TYPE}",
+            initialfile=suggested_save_path.name,
+            initialdir=suggested_save_path.parent,
         )
-        if not otconfig_file:
+        if not configuration_file:
             return
-        self._save_otconfig(otconfig_file)
+        self._save_otconfig(configuration_file)
 
     def _save_otconfig(self, otconfig_file: Path) -> None:
         logger().info(f"Config file to save: {otconfig_file}")
