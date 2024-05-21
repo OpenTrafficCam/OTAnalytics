@@ -175,14 +175,12 @@ TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
-# OTFLOW = "otflow"
 MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
 MISSING_VIDEO_CONTROL_FRAME_MESSAGE = "video control frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
-# OTCONFIG = "otconfig"
 
 
 class MissingInjectedInstanceError(Exception):
