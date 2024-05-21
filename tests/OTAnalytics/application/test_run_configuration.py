@@ -347,7 +347,7 @@ class TestRunConfiguration:
         cli_args.log_file = None
         assert (
             build_config(cli_args, otconfig).log_file
-            == Path(cli_args.config_file) / cfg_log_file
+            == Path(cli_args.config_file).parent / cfg_log_file
         )
         assert build_config(cli_args, None).log_file == DEFAULT_LOG_FILE
 

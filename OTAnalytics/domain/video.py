@@ -144,7 +144,6 @@ class SimpleVideo(Video):
     video_reader: VideoReader
     path: Path
     metadata: Optional[VideoMetadata]
-    _fps: Optional[int] = None
 
     @property
     def start_date(self) -> Optional[datetime]:
@@ -154,7 +153,9 @@ class SimpleVideo(Video):
 
     @property
     def fps(self) -> float:
-        return self._fps if self._fps else self.video_reader.get_fps(self.path)
+        return (
+            self.metadata.fps if self.metadata else self.video_reader.get_fps(self.path)
+        )
 
     def __post_init__(self) -> None:
         self.check_path_exists()

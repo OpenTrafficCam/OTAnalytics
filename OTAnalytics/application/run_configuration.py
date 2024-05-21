@@ -145,7 +145,7 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         if self._cli_args.log_file:
             return Path(self._cli_args.log_file)
         if self._otconfig and self._cli_args.config_file:
-            base_dir = Path(self._cli_args.config_file)
+            base_dir = Path(self._cli_args.config_file).parent
             return base_dir / self._otconfig.analysis.logfile
         return DEFAULT_LOG_FILE
 
