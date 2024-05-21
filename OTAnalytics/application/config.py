@@ -13,7 +13,6 @@ CUTTING_SECTION_MARKER: str = "#cut"
 CLI_CUTTING_SECTION_MARKER: str = "#clicut"
 DEFAULT_EVENTLIST_FILE_STEM: str = "events"
 DEFAULT_EVENTLIST_FILE_TYPE: str = "otevents"
-DEFAULT_COUNTS_FILE_STEM: str = "counts"
 DEFAULT_COUNTS_FILE_TYPE: str = "csv"
 DEFAULT_COUNT_INTERVAL_TIME_UNIT: str = "min"
 DEFAULT_TRACK_FILE_TYPE: str = "ottrk"
@@ -22,6 +21,15 @@ DEFAULT_COUNTING_INTERVAL_IN_MINUTES: int = 15
 DEFAULT_TRACK_OFFSET: RelativeOffsetCoordinate = RelativeOffsetCoordinate(0.5, 0.5)
 DEFAULT_PROGRESSBAR_STEP_PERCENTAGE: int = 5
 DEFAULT_NUM_PROCESSES = 4
+
+
+# File Types
+CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS = "road_user_assignments"
+CONTEXT_FILE_TYPE_EVENTS = "events"
+CONTEXT_FILE_TYPE_COUNTS = "counts"
+OTCONFIG_FILE_TYPE = "otconfig"
+OTFLOW_FILE_TYPE = "otflow"
+
 
 OS: str = platform.system()
 """OS OTAnalytics is currently running on"""
