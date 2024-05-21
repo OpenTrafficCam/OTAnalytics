@@ -17,8 +17,8 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_COUNTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
-    DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
@@ -564,7 +564,7 @@ class TestOTAnalyticsCli:
         interval = 15
         filename = "filename"
         expected_output_file = (
-            test_data_tmp_dir / f"{filename}.{DEFAULT_COUNTS_FILE_STEM}_{interval}"
+            test_data_tmp_dir / f"{filename}.{CONTEXT_FILE_TYPE_COUNTS}_{interval}"
             f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}."
             f"{DEFAULT_COUNTS_FILE_TYPE}"
         )

@@ -24,12 +24,14 @@ class SaveOtconfig:
         if self._datastore.project.start_date:
             project = self._datastore.project
             video_files = self._datastore.get_all_videos()
+            track_files = self._datastore._track_file_repository.get_all()
             sections = self._datastore.get_all_sections()
             flows = self._datastore.get_all_flows()
 
             self._config_parser.serialize(
                 project=project,
                 video_files=video_files,
+                track_files=track_files,
                 sections=sections,
                 flows=flows,
                 file=file,
@@ -38,7 +40,7 @@ class SaveOtconfig:
                 ConfigurationFile(
                     file,
                     self._config_parser.convert(
-                        project, video_files, sections, flows, file
+                        project, video_files, track_files, sections, flows, file
                     ),
                 )
             )
