@@ -74,6 +74,7 @@ class ConfigParser(ABC):
         self,
         project: Project,
         video_files: Iterable[Video],
+        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
@@ -84,6 +85,7 @@ class ConfigParser(ABC):
         Args:
             project (Project): description of the project
             video_files (Iterable[Video]): video files to reference
+            track_files (Iterable[Path]): track files to reference
             sections (Iterable[Section]): sections to store
             flows (Iterable[Flow]): flows to store
             file (Path): output file
@@ -109,6 +111,7 @@ class ConfigParser(ABC):
         self,
         project: Project,
         video_files: Iterable[Video],
+        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,

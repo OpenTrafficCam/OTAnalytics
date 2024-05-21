@@ -472,6 +472,7 @@ class ApplicationStarter:
             AddAllVideos(video_repository),
             AddAllSections(add_section),
             AddAllFlows(add_flow),
+            load_track_files,
             parse_json,
         )
         get_all_videos = GetAllVideos(video_repository)
@@ -483,6 +484,7 @@ class ApplicationStarter:
                 get_flows,
                 get_current_project,
                 get_all_videos,
+                get_all_track_files,
             ),
             OtflowHasChanged(flow_parser, get_sections, get_flows),
             file_state,
@@ -596,6 +598,7 @@ class ApplicationStarter:
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
+        track_file_repository.register(dummy_viewmodel.update_quick_save_button)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)

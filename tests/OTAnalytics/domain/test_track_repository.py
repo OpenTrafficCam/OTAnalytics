@@ -196,7 +196,10 @@ class TestTrackFileRepository:
         return Mock(spec=Path)
 
     def test_add(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        observer = Mock()
         repository = TrackFileRepository()
+        repository.register(observer)
+
         assert repository._files == set()
         repository.add(mock_file)
         assert repository._files == {mock_file}
@@ -204,8 +207,17 @@ class TestTrackFileRepository:
         assert repository._files == {mock_file}
         repository.add(mock_other_file)
         assert repository._files == {mock_file, mock_other_file}
+        assert observer.call_args_list == [
+            call([mock_file]),
+            call([mock_file]),
+            call([mock_other_file]),
+        ]
 
     def test_add_all(self, mock_file: Mock, mock_other_file: Mock) -> None:
+        observer = Mock()
         repository = TrackFileRepository()
+        repository.register(observer)
+
         repository.add_all([mock_file, mock_other_file])
         assert repository._files == {mock_file, mock_other_file}
+        observer.assert_called_once_with([mock_file, mock_other_file])

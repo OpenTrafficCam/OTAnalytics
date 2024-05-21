@@ -2,11 +2,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from math import floor
-from os import path
-from os.path import normcase, splitdrive
 from pathlib import Path
 from typing import Iterable, Optional
 
+from OTAnalytics.domain.files import build_relative_path
 from OTAnalytics.domain.track import TrackImage
 
 VIDEOS: str = "videos"
@@ -81,10 +80,6 @@ class Video(ABC):
 
         """
         pass
-
-
-class DifferentDrivesException(Exception):
-    pass
 
 
 @dataclass(frozen=True)
@@ -196,18 +191,17 @@ class SimpleVideo(Video):
         self,
         relative_to: Path,
     ) -> dict:
-        return {PATH: self.__build_relative_path(relative_to)}
-
-    def __build_relative_path(self, relative_to: Path) -> str:
-        self_drive, _ = splitdrive(self.path)
-        other_drive, _ = splitdrive(relative_to)
-        if normcase(self_drive) != normcase(other_drive):
-            raise DifferentDrivesException(
-                "Video and config files are stored on different drives. "
-                f"Video file is stored on {self_drive}."
-                f"Configuration is stored on {other_drive}"
+        return {
+            PATH: build_relative_path(
+                self.path,
+                relative_to,
+                lambda actual, other: (
+                    "Video and config files are stored on different drives. "
+                    f"Video file is stored on {actual}."
+                    f"Configuration is stored on {other}"
+                ),
             )
-        return path.relpath(self.path, relative_to)
+        }
 
     def contains(self, date: datetime) -> bool:
         if self.metadata:

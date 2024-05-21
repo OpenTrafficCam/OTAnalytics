@@ -31,6 +31,15 @@ OTCONFIG_FILE_TYPE = "otconfig"
 OTFLOW_FILE_TYPE = "otflow"
 
 
+# OTConfig Default Values
+DEFAULT_DO_EVENTS = True
+DEFAULT_DO_COUNTING = True
+DEFAULT_SAVE_NAME = ""
+DEFAULT_SAVE_SUFFIX = ""
+DEFAULT_EVENT_FORMATS = {"csv"}
+DEFAULT_LOG_FILE = Path("logs")
+
+
 OS: str = platform.system()
 """OS OTAnalytics is currently running on"""
 
