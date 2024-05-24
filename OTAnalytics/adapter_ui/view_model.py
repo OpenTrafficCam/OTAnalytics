@@ -417,3 +417,7 @@ class ViewModel(ABC):
     @abstractmethod
     def set_svz_metadata_frame(self, frame: AbstractFrameSvzMetadata) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
+        raise NotImplementedError

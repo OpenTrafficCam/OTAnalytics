@@ -40,18 +40,21 @@ class TestOtconfigHasChanged:
     ) -> None:
         current_project = Mock()
         videos = Mock()
+        track_files = Mock()
         sections = Mock()
         flows = Mock()
         get_sections = Mock()
         get_flows = Mock()
         get_current_project = Mock()
         get_videos = Mock()
+        get_track_files = Mock()
         config_parser = Mock()
 
         get_sections.return_value = sections
         get_flows.get.return_value = flows
         get_current_project.get.return_value = current_project
         get_videos.get.return_value = videos
+        get_track_files.return_value = track_files
         config_parser.convert.return_value = current_data
 
         use_case = OtconfigHasChanged(
@@ -60,6 +63,7 @@ class TestOtconfigHasChanged:
             get_flows,
             get_current_project,
             get_videos,
+            get_track_files,
         )
         config_file = ConfigurationFile(Mock(), previous_data)
 
@@ -67,12 +71,14 @@ class TestOtconfigHasChanged:
         config_parser.convert.assert_called_once_with(
             current_project,
             videos,
+            track_files,
             sections,
             flows,
             config_file.file,
         )
         get_current_project.get.assert_called_once()
         get_videos.get.assert_called_once()
+        get_track_files.assert_called_once()
         get_sections.assert_called_once()
         get_flows.get.assert_called_once()
 

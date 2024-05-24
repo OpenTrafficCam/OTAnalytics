@@ -9,11 +9,14 @@ from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.config import MissingDate, SaveOtconfig
+from OTAnalytics.domain.track_repository import TrackFileRepository
 
 
 class TestSaveOtconfig:
     def test_correct_date(self, test_data_tmp_dir: Path) -> None:
+        track_file_repository = Mock(spec=TrackFileRepository)
         datastore = Mock(spec=Datastore)
+        datastore._track_file_repository = track_file_repository
         datastore.project = Project("name", start_date=datetime(2023, 1, 1))
         convert_result = Mock()
         config_parser = Mock(spec=ConfigParser)
