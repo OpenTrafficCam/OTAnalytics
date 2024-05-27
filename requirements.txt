@@ -8,6 +8,6 @@ pandas==2.2.2
 pillow==10.3.0
 pygeos==0.14
 seaborn==0.13.2
-shapely==2.0.2
+shapely==2.0.4
 tqdm==4.66.2
 ujson==5.9.0
