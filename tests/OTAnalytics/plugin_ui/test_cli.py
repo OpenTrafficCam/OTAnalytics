@@ -353,7 +353,7 @@ class TestOTAnalyticsCli:
             GetSectionsById(section_repository),
             create_events,
             assigner,
-            SimpleTaggerFactory(track_repository),
+            SimpleTaggerFactory(),
             FillZerosExporterFactory(
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),

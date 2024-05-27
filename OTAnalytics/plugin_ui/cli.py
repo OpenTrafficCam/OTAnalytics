@@ -303,6 +303,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
         export_tracks: ExportTracks,
+        export_road_user_assignments: ExportRoadUserAssignments,
         track_parser: TrackParser,
         progressbar: ProgressbarBuilder,
     ) -> None:
@@ -322,6 +323,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
             tracks_metadata,
             videos_metadata,
             export_tracks,
+            export_road_user_assignments,
         )
         self._track_parser = track_parser
         self._progressbar = progressbar
@@ -371,6 +373,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
         export_tracks: ExportTracks,
+        export_road_user_assignments: ExportRoadUserAssignments,
         track_parser: StreamTrackParser,
     ) -> None:
         super().__init__(
@@ -389,6 +392,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
             tracks_metadata,
             videos_metadata,
             export_tracks,
+            export_road_user_assignments,
         )
         self._stream_track_parser = track_parser
 

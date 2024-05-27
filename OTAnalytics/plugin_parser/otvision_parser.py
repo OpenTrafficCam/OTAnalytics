@@ -471,7 +471,7 @@ class PythonDetectionParser(DetectionParser):
         input_file: str,
         id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
-        tracks_dict = self._parse_detections(
+        tracks_dict = self._parse_track_detections(
             det_list=dets,
             metadata_video=metadata_video,
             input_file=input_file,

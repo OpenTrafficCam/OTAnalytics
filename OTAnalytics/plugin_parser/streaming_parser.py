@@ -31,6 +31,7 @@ from OTAnalytics.domain.track import (
 from OTAnalytics.domain.track_dataset import (
     IntersectionPoint,
     TrackDataset,
+    TrackDoesNotExistError,
     TrackSegmentDataset,
 )
 from OTAnalytics.domain.track_repository import TrackRepository
@@ -122,6 +123,7 @@ class StreamDetectionParser(ABC):
     @abstractmethod
     def parse_tracks(
         self,
+        input_file: str,
         detections: list[dict],
         metadata_video: dict,
         id_generator: TrackIdGenerator = TrackId,
@@ -132,6 +134,7 @@ class StreamDetectionParser(ABC):
         the according Track is assembled and provided via the stream.
 
         Args:
+            input_file: (str): path of the file tie given detections were read from
             detections (list[dict]): the detections in dict format.
             metadata_video (dict): metadata of the track file in dict format.
             id_generator (TrackIdGenerator): generator used to create track ids.
@@ -165,12 +168,15 @@ class PythonStreamDetectionParser(StreamDetectionParser):
 
     def parse_tracks(
         self,
+        input_file: str,
         detections: list[dict],
         metadata_video: dict,
         id_generator: TrackIdGenerator = TrackId,
     ) -> Iterator[TrackDataset]:
         for det_dict in detections:
-            det = parse_python_detection(metadata_video, id_generator, det_dict)
+            det = parse_python_detection(
+                metadata_video, id_generator, det_dict, input_file
+            )
 
             # Group detections by track id
             if not self._tracks_dict.get(det.track_id):
@@ -293,7 +299,7 @@ class StreamOttrkParser(StreamTrackParser):
 
     def parse(self, files: set[Path]) -> Iterator[TrackDataset]:
         sorted_files = self._sort_files(files)
-        progressbar = self._progressbar(
+        progressbar: Iterable[Path] = self._progressbar(
             sorted_files, unit="files", description="Processed ottrk files: "
         )
 
@@ -319,7 +325,10 @@ class StreamOttrkParser(StreamTrackParser):
             del metadata
 
             yield from self._detection_parser.parse_tracks(
-                det_list, metadata_video, id_generator
+                input_file=str(ottrk_file),
+                detections=det_list,
+                metadata_video=metadata_video,
+                id_generator=id_generator,
             )
             del det_list
 
@@ -412,7 +421,7 @@ class SingletonTrackDataset(TrackDataset):
 
     def clear(self) -> "TrackDataset":
         """Returns empty PythonTrackDataset."""
-        return PythonTrackDataset()
+        return self._empty_dataset()
 
     def as_list(self) -> list[Track]:
         """Return list with single track."""
@@ -530,12 +539,15 @@ class SingletonTrackDataset(TrackDataset):
 
         if len(cut_tracks) > 0:
             return (
-                PythonTrackDataset.from_list(cut_tracks),
+                PythonTrackDataset.from_list(
+                    cut_tracks,
+                    PygeosTrackGeometryDataset.from_track_dataset,
+                ),
                 {self._track.id},
                 # only possible id is the single track of this data set
             )
         else:  # return empty track dataset as no tracks were cut
-            return (PythonTrackDataset(), set())
+            return (self._empty_dataset(), set())
 
     def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
         """
@@ -546,7 +558,32 @@ class SingletonTrackDataset(TrackDataset):
         if len(self._track.detections) >= length:
             return self
         else:
-            return PythonTrackDataset()
+            return self._empty_dataset()
+
+    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+        if len(set(track_ids)) != 1:
+            raise ValueError(
+                f"Multiple track ids lookup ({track_ids}) in SingletionTrackDataset "
+                + f"which only contains one track: {self._track.id}"
+            )
+
+        if len(track_ids) == 0:
+            return dict()
+
+        track_id = track_ids[0]
+        if track_id != self._track.id:
+            raise TrackDoesNotExistError(
+                f"Track {track_id} not found. Only contains track {self._track.id}!"
+            )
+
+        max_confidence = max(
+            [detection.confidence for detection in self._track.detections]
+        )
+
+        return {track_id: max_confidence}
+
+    def _empty_dataset(self) -> TrackDataset:
+        return PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
 
 
 # TESTING
@@ -587,7 +624,11 @@ def parse_old(dir: Path) -> None:
 
 
 def parse_stream(files: list[Path]) -> None:
-    track_repository = TrackRepository(PythonTrackDataset())
+    track_repository = TrackRepository(
+        PythonTrackDataset(
+            track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset
+        )
+    )
 
     tracks_metadata = TracksMetadata(track_repository)
     videos_metadata = VideosMetadata()
