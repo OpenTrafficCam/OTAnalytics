@@ -5,6 +5,13 @@ from typing import Callable, Iterable
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
+from OTAnalytics.adapter_visualization.color_provider import (
+    CLASS_BICYCLIST,
+    CLASS_BICYCLIST_TRAILER,
+    CLASS_CARGOBIKE,
+    CLASS_PEDESTRIAN,
+    CLASS_SCOOTER,
+)
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -66,13 +73,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CLASS_BICYCLIST,
-    CLASS_BICYCLIST_TRAILER,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
-    CLASS_SCOOTER,
-)
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
 from tests.utils.builders.run_configuration import NUM_PROCESSES, create_run_config
 
@@ -235,13 +235,19 @@ class UseCaseProvider:
 
     def provide_python_track_dataset(self) -> TrackDataset:
         return FilteredPythonTrackDataset(
-            PythonTrackDataset(), self._include_classes, self._exclude_classes
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset),
+            self._include_classes,
+            self._exclude_classes,
         )
 
     def provide_python_detection_parser(
         self, track_repository: TrackRepository
     ) -> PythonDetectionParser:
-        return PythonDetectionParser(ByMaxConfidence(), track_repository)
+        return PythonDetectionParser(
+            ByMaxConfidence(),
+            track_repository,
+            PygeosTrackGeometryDataset.from_track_dataset,
+        )
 
     def provide_pandas_detection_parser(self) -> PandasDetectionParser:
         return PandasDetectionParser(
@@ -321,7 +327,11 @@ def cutting_section() -> Section:
 
 @pytest.fixture
 def python_track_parser(python_track_repository: TrackRepository) -> TrackParser:
-    detection_parser = PythonDetectionParser(ByMaxConfidence(), python_track_repository)
+    detection_parser = PythonDetectionParser(
+        ByMaxConfidence(),
+        python_track_repository,
+        PygeosTrackGeometryDataset.from_track_dataset,
+    )
     return OttrkParser(detection_parser)
 
 

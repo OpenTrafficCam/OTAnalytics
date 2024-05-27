@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
 )
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.project import SvzMetadata
 from OTAnalytics.application.state import (
     ActionState,
     FileState,
@@ -42,6 +43,10 @@ from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.quick_save_configuration import (
     QuickSaveConfiguration,
 )
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportRoadUserAssignments,
+    ExportSpecification,
+)
 from OTAnalytics.application.use_cases.save_otflow import SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
@@ -49,6 +54,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
+from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     TrackRepositorySize,
@@ -123,6 +129,8 @@ class OTAnalyticsApplication:
         quick_save_configuration: QuickSaveConfiguration,
         load_otconfig: LoadOtconfig,
         config_has_changed: ConfigHasChanged,
+        export_road_user_assignments: ExportRoadUserAssignments,
+        file_name_suggester: SavePathSuggester,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -161,6 +169,8 @@ class OTAnalyticsApplication:
         self._quick_save_configuration = quick_save_configuration
         self._load_otconfig = load_otconfig
         self._config_has_changed = config_has_changed
+        self._export_road_user_assignments = export_road_user_assignments
+        self._file_name_suggester = file_name_suggester
 
     def connect_observers(self) -> None:
         """
@@ -613,6 +623,9 @@ class OTAnalyticsApplication:
     def update_project_start_date(self, start_date: datetime | None) -> None:
         self._project_updater.update_start_date(start_date)
 
+    def update_svz_metadata(self, metadata: SvzMetadata) -> None:
+        self._project_updater.update_svz_metadata(metadata)
+
     def get_track_repository_size(self) -> int:
         return self._track_repository_size.get()
 
@@ -621,6 +634,38 @@ class OTAnalyticsApplication:
 
     def config_has_changed(self) -> bool:
         return self._config_has_changed.has_changed()
+
+    def export_road_user_assignments(self, specification: ExportSpecification) -> None:
+        self._export_road_user_assignments.export(specification)
+
+    def get_road_user_export_formats(
+        self,
+    ) -> Iterable[ExportFormat]:
+        return self._export_road_user_assignments.get_supported_formats()
+
+    def suggest_save_path(self, file_type: str, context_file_type: str = "") -> Path:
+        """Suggests a save path based on the given file type and an optional
+        related file type.
+
+        The suggested path is in the following format:
+        <BASE FOLDER>/<FILE STEM>.<CONTEXT FILE TYPE>.<FILE TYPE>
+
+        The base folder will be determined in the following precedence:
+            1. First loaded config file (otconfig or otflow)
+            2. First loaded track file (ottrk)
+            3. First loaded video file
+            4. Default: Current working directory
+
+        The file stem suggestion will be determined in the following precedence:
+            1. The file stem of the loaded config file (otconfig or otflow)
+            2. <CURRENT PROJECT NAME>_<CURRENT DATE AND TIME>
+            3. Default: <CURRENT DATE AND TIME>
+
+        Args:
+            file_type (str): the file type.
+            context_file_type (str): the context file type.
+        """
+        return self._file_name_suggester.suggest(file_type, context_file_type)
 
 
 class MissingTracksError(Exception):

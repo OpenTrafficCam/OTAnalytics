@@ -12,6 +12,7 @@ from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
     TrackDataset,
+    TrackDoesNotExistError,
     TrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.python_track_store import (
@@ -155,7 +156,11 @@ class TestPandasTrackDataset:
         expected_dataset = PandasTrackDataset.from_list([track], track_geometry_factory)
         dataset = PandasTrackDataset(track_geometry_factory)
 
-        merged = dataset.add_all(PythonTrackDataset({track.id: track}))
+        merged = dataset.add_all(
+            PythonTrackDataset(
+                PygeosTrackGeometryDataset.from_track_dataset, {track.id: track}
+            )
+        )
 
         assert 0 == len(dataset.as_list())
         for actual, expected in zip(merged, expected_dataset):
@@ -164,7 +169,9 @@ class TestPandasTrackDataset:
     def test_add_nothing(self, track_geometry_factory: TRACK_GEOMETRY_FACTORY) -> None:
         dataset = PandasTrackDataset(track_geometry_factory)
 
-        merged = dataset.add_all(PythonTrackDataset())
+        merged = dataset.add_all(
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        )
 
         assert 0 == len(merged.as_list())
 
@@ -183,7 +190,8 @@ class TestPandasTrackDataset:
             PandasTrackDataset,
             dataset.add_all(
                 PythonTrackDataset(
-                    {second_track.id: second_track, third_track.id: third_track}
+                    PygeosTrackGeometryDataset.from_track_dataset,
+                    {second_track.id: second_track, third_track.id: third_track},
                 )
             ),
         )
@@ -600,3 +608,20 @@ class TestPandasTrackDataset:
         assert empty_dataset.empty
         filled_dataset = empty_dataset.add_all([car_track])
         assert not filled_dataset.empty
+
+    def test_get_max_confidences_for(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        empty_dataset = PandasTrackDataset(track_geometry_factory)
+        with pytest.raises(TrackDoesNotExistError):
+            empty_dataset.get_max_confidences_for([car_track.id.id])
+        filled_dataset = empty_dataset.add_all([car_track, pedestrian_track])
+
+        car_id = car_track.id.id
+        pedestrian_id = pedestrian_track.id.id
+
+        result = filled_dataset.get_max_confidences_for([car_id, pedestrian_id])
+        assert result == {car_id: 0.8, pedestrian_id: 0.9}

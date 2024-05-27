@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
@@ -29,42 +28,17 @@ from OTAnalytics.domain.track_repository import (
     TrackListObserver,
     TrackRepository,
 )
-from OTAnalytics.domain.video import Video, VideoListObserver, VideoRepository
+from OTAnalytics.domain.video import (
+    Video,
+    VideoListObserver,
+    VideoMetadata,
+    VideoRepository,
+)
 
 
 @dataclass(frozen=True)
 class DetectionMetadata:
     detection_classes: frozenset[str]
-
-
-@dataclass(frozen=True)
-class VideoMetadata:
-    path: str
-    recorded_start_date: datetime
-    expected_duration: Optional[timedelta]
-    recorded_fps: float
-    actual_fps: Optional[float]
-    number_of_frames: int
-
-    @property
-    def start(self) -> datetime:
-        return self.recorded_start_date
-
-    @property
-    def end(self) -> datetime:
-        return self.start + self.duration
-
-    @property
-    def duration(self) -> timedelta:
-        if self.expected_duration:
-            return self.expected_duration
-        return timedelta(seconds=self.number_of_frames / self.recorded_fps)
-
-    @property
-    def fps(self) -> float:
-        if self.actual_fps:
-            return self.actual_fps
-        return self.recorded_fps
 
 
 @dataclass(frozen=True)
@@ -90,7 +64,7 @@ class EventListParser(ABC):
 
 class VideoParser(ABC):
     @abstractmethod
-    def parse(self, file: Path, start_date: Optional[datetime]) -> Video:
+    def parse(self, file: Path, metadata: Optional[VideoMetadata]) -> Video:
         pass
 
     @abstractmethod
@@ -165,7 +139,7 @@ class TrackVideoParser(ABC):
 
     @abstractmethod
     def parse(
-        self, file: Path, track_ids: list[TrackId]
+        self, file: Path, track_ids: list[TrackId], metadata: VideoMetadata
     ) -> Tuple[list[TrackId], list[Video]]:
         """
         Parse the given file in ottrk format and retrieve video information from it
@@ -173,6 +147,7 @@ class TrackVideoParser(ABC):
         Args:
             file (Path): file in ottrk format
             track_ids (list[TrackId]): track ids to get videos for
+            metadata (VideoMetadata): the video metadata
 
         Returns:
             Tuple[list[TrackId], list[Video]]: track ids and the corresponding videos
@@ -212,7 +187,7 @@ class Datastore:
         self._video_repository = video_repository
         self._track_to_video_repository = track_to_video_repository
         self._progressbar = progressbar
-        self.project = Project(name="", start_date=None)
+        self.project = Project(name="", start_date=None, metadata=None)
 
     def register_video_observer(self, observer: VideoListObserver) -> None:
         self._video_repository.register_videos_observer(observer)

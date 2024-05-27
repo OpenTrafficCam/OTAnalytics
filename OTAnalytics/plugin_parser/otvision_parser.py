@@ -16,7 +16,6 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     TrackParseResult,
     TrackVideoParser,
-    VideoMetadata,
     VideoParser,
 )
 from OTAnalytics.application.logger import logger
@@ -35,9 +34,15 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackImage,
 )
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.domain.video import PATH, SimpleVideo, Video, VideoReader
+from OTAnalytics.domain.video import (
+    PATH,
+    SimpleVideo,
+    Video,
+    VideoMetadata,
+    VideoReader,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
@@ -339,6 +344,7 @@ class DetectionParser(ABC):
         self,
         detections: list[dict],
         metadata_video: dict,
+        input_file: str,
         id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
         """Parse the detections.
@@ -349,6 +355,7 @@ class DetectionParser(ABC):
         Args:
             detections (list[dict]): the detections in dict format.
             metadata_video (dict): metadata of the track file in dict format.
+            input_file (Path): path to the input file containing the detections.
             id_generator (TrackIdGenerator): generator used to create track ids.
 
         Returns:
@@ -387,7 +394,10 @@ DEFAULT_TRACK_LENGTH_LIMIT = TrackLengthLimit(
 # TODO Review: these methods for creating PythonDetections and PythonTracks are static
 # TODO and could live outside a class for reusability in streaming_parser
 def parse_python_detection(
-    metadata_video: dict, id_generator: TrackIdGenerator, det_dict: dict
+    metadata_video: dict,
+    id_generator: TrackIdGenerator,
+    det_dict: dict,
+    input_file: str,
 ) -> PythonDetection:
     """Convert dict to Detection object."""
     return PythonDetection(
@@ -405,6 +415,7 @@ def parse_python_detection(
         _track_id=id_generator(str(det_dict[ottrk_format.TRACK_ID])),
         _video_name=metadata_video[ottrk_format.FILENAME]
         + metadata_video[ottrk_format.FILETYPE],
+        _input_file=input_file,
     )
 
 
@@ -444,9 +455,11 @@ class PythonDetectionParser(DetectionParser):
         self,
         track_classification_calculator: TrackClassificationCalculator,
         track_repository: TrackRepository,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
     ):
         self._track_repository = track_repository
+        self._track_geometry_factory = track_geometry_factory
         self._path_cache: dict[str, Path] = {}
         self._track_classification_calculator = track_classification_calculator
         self._track_length_limit = track_length_limit
@@ -455,9 +468,15 @@ class PythonDetectionParser(DetectionParser):
         self,
         dets: list[dict],
         metadata_video: dict,
+        input_file: str,
         id_generator: TrackIdGenerator = TrackId,
     ) -> TrackDataset:
-        tracks_dict = self._parse_track_detections(dets, metadata_video, id_generator)
+        tracks_dict = self._parse_detections(
+            det_list=dets,
+            metadata_video=metadata_video,
+            input_file=input_file,
+            id_generator=id_generator,
+        )
         tracks: list[Track] = []
 
         for track_id, detections in tracks_dict.items():
@@ -473,7 +492,9 @@ class PythonDetectionParser(DetectionParser):
                 tracks.append(current_track)
 
         return PythonTrackDataset.from_list(
-            tracks, self._track_classification_calculator
+            tracks,
+            self._track_geometry_factory,
+            self._track_classification_calculator,
         )
 
     def _get_existing_detections(self, track_id: TrackId) -> list[Detection]:
@@ -495,6 +516,7 @@ class PythonDetectionParser(DetectionParser):
         self,
         det_list: list[dict],
         metadata_video: dict,
+        input_file: str,
         id_generator: TrackIdGenerator,
     ) -> dict[TrackId, list[Detection]]:
         """
@@ -503,7 +525,9 @@ class PythonDetectionParser(DetectionParser):
         """
         tracks_dict: dict[TrackId, list[Detection]] = {}
         for det_dict in det_list:
-            det = parse_python_detection(metadata_video, id_generator, det_dict)
+            det = parse_python_detection(
+                metadata_video, id_generator, det_dict, input_file
+            )
 
             if not tracks_dict.get(det.track_id):
                 tracks_dict[det.track_id] = []
@@ -548,7 +572,7 @@ class OttrkParser(TrackParser):
         video_metadata = self.parse_video_metadata(metadata_video)
         id_generator = self.create_id_generator_from(ottrk_dict[ottrk_format.METADATA])
         tracks = self._detection_parser.parse_tracks(
-            dets_list, metadata_video, id_generator
+            dets_list, metadata_video, str(ottrk_file), id_generator
         )
         detection_metadata = self.parse_metadata(ottrk_dict[ottrk_format.METADATA])
         return TrackParseResult(tracks, detection_metadata, video_metadata)
@@ -876,8 +900,8 @@ class SimpleVideoParser(VideoParser):
     def __init__(self, video_reader: VideoReader) -> None:
         self._video_reader = video_reader
 
-    def parse(self, file: Path, start_date: Optional[datetime]) -> Video:
-        return SimpleVideo(self._video_reader, file, start_date)
+    def parse(self, file: Path, metadata: VideoMetadata | None) -> Video:
+        return SimpleVideo(self._video_reader, file, metadata)
 
     def parse_list(
         self,
@@ -908,6 +932,7 @@ class SimpleVideoParser(VideoParser):
 
 @dataclass
 class CachedVideo(Video):
+
     other: Video
     cache: dict[int, TrackImage] = field(default_factory=dict)
 
@@ -935,13 +960,17 @@ class CachedVideo(Video):
     def to_dict(self, relative_to: Path) -> dict:
         return self.other.to_dict(relative_to)
 
+    def contains(self, date: datetime) -> bool:
+        return self.other.contains(date)
+
 
 class CachedVideoParser(VideoParser):
+
     def __init__(self, other: VideoParser) -> None:
         self._other = other
 
-    def parse(self, file: Path, start_date: Optional[datetime]) -> Video:
-        other_video = self._other.parse(file, start_date)
+    def parse(self, file: Path, metadata: Optional[VideoMetadata]) -> Video:
+        other_video = self._other.parse(file, metadata)
         return self.__create_cached_video(other_video)
 
     def __create_cached_video(self, other_video: Video) -> Video:
@@ -971,21 +1000,9 @@ class OttrkVideoParser(TrackVideoParser):
         self._track_format_fixer = track_format_fixer
 
     def parse(
-        self,
-        file: Path,
-        track_ids: list[TrackId],
+        self, file: Path, track_ids: list[TrackId], metadata: VideoMetadata
     ) -> Tuple[list[TrackId], list[Video]]:
-        # TODO review: this section crashed once: the metadata format was incompatible
-        # TODO: current fix: apply format fixer here
-        content = parse_json_bz2(file)
-        metadata = self._track_format_fixer.fix_metadata(content[ottrk_format.METADATA])
-        video_metadata = metadata[ottrk_format.VIDEO]
-        video_file = (
-            video_metadata[ottrk_format.FILENAME]
-            + video_metadata[ottrk_format.FILETYPE]
-        )
-        start_date = self.__parse_recorded_start_date(video_metadata)
-        video = self._video_parser.parse(file.parent / video_file, start_date)
+        video = self._video_parser.parse(file.parent / metadata.path, metadata)
         return track_ids, [video] * len(track_ids)
 
     def __parse_recorded_start_date(self, metadata: dict) -> datetime:

@@ -2,6 +2,10 @@ import logging
 from pathlib import Path
 from typing import Sequence
 
+from OTAnalytics.adapter_visualization.color_provider import (
+    DEFAULT_COLOR_PALETTE,
+    ColorPaletteProvider,
+)
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
@@ -110,6 +114,9 @@ from OTAnalytics.application.use_cases.quick_save_configuration import (
     QuickSaveConfiguration,
 )
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.save_otflow import SaveOtflow
 from OTAnalytics.application.use_cases.section_repository import (
     AddAllSections,
@@ -120,6 +127,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     RemoveSection,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
+from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
@@ -189,6 +197,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_parser.road_user_assignment_export import (
+    SimpleRoadUserAssignmentExporterFactory,
+)
 from OTAnalytics.plugin_parser.streaming_parser import (
     PythonStreamDetectionParser,
     StreamOttrkParser,
@@ -340,7 +351,9 @@ class ApplicationStarter:
         )
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         track_view_state.selected_videos.register(image_updater.notify_video)
-        selected_video_updater = SelectedVideoUpdate(datastore, track_view_state)
+        selected_video_updater = SelectedVideoUpdate(
+            datastore, track_view_state, videos_metadata
+        )
 
         tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
         # TODO: Should not register to tracks_metadata._classifications but to
@@ -479,18 +492,32 @@ class ApplicationStarter:
             AddAllVideos(video_repository),
             AddAllSections(add_section),
             AddAllFlows(add_flow),
+            load_track_files,
             parse_json,
         )
+        get_all_videos = GetAllVideos(video_repository)
+        get_current_project = GetCurrentProject(datastore)
         config_has_changed = ConfigHasChanged(
             OtconfigHasChanged(
                 config_parser,
                 get_sections,
                 get_flows,
-                GetCurrentProject(datastore),
-                GetAllVideos(video_repository),
+                get_current_project,
+                get_all_videos,
+                get_all_track_files,
             ),
             OtflowHasChanged(flow_parser, get_sections, get_flows),
             file_state,
+        )
+        export_road_user_assignments = self.create_export_road_user_assignments(
+            get_all_tracks,
+            section_repository,
+            event_repository,
+            flow_repository,
+            create_events,
+        )
+        save_path_suggester = SavePathSuggester(
+            file_state, get_all_track_files, get_all_videos, get_current_project
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -524,6 +551,8 @@ class ApplicationStarter:
             quick_save_configuration,
             load_otconfig,
             config_has_changed,
+            export_road_user_assignments,
+            save_path_suggester,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -566,6 +595,9 @@ class ApplicationStarter:
         track_view_state.filter_date_active.register(
             dummy_viewmodel.change_filter_date_active
         )
+        track_view_state.filter_element.register(
+            selected_video_updater.on_filter_element_change
+        )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
         # cut_tracks_intersecting_section.register(
@@ -586,6 +618,7 @@ class ApplicationStarter:
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
+        track_file_repository.register(dummy_viewmodel.update_quick_save_button)
 
         for group in layer_groups:
             group.register(image_updater.notify_layers)
@@ -645,7 +678,18 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
         )
-        export_tracks = CsvTrackExport(track_repository)
+        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
+        videos_metadata = VideosMetadata()
+        export_tracks = CsvTrackExport(
+            track_repository, tracks_metadata, videos_metadata
+        )
+        export_road_user_assignments = self.create_export_road_user_assignments(
+            get_all_tracks,
+            section_repository,
+            event_repository,
+            flow_repository,
+            create_events,
+        )
 
         cli: OTAnalyticsCli
         if run_config.cli_bulk_mode:
@@ -667,6 +711,7 @@ class ApplicationStarter:
                 tracks_metadata,
                 videos_metadata,
                 export_tracks,
+                export_road_user_assignments,
                 track_parser,
                 progressbar=TqdmBuilder(),
             )
@@ -689,6 +734,7 @@ class ApplicationStarter:
                 tracks_metadata,
                 videos_metadata,
                 export_tracks,
+                export_road_user_assignments,
                 stream_track_parser,
             )
 
@@ -1060,4 +1106,20 @@ class ApplicationStarter:
             video_parser=video_parser,
             flow_parser=flow_parser,
             format_fixer=format_fixer,
+        )
+
+    def create_export_road_user_assignments(
+        self,
+        get_all_tracks: GetAllTracks,
+        section_repository: SectionRepository,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        create_events: CreateEvents,
+    ) -> ExportRoadUserAssignments:
+        return ExportRoadUserAssignments(
+            event_repository,
+            flow_repository,
+            create_events,
+            FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
+            SimpleRoadUserAssignmentExporterFactory(section_repository, get_all_tracks),
         )

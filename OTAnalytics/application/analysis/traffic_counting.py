@@ -484,6 +484,15 @@ class RoadUserAssignments:
     Represents a group of RoadUserAssignment objects.
     """
 
+    @property
+    def road_user_ids(self) -> list[str]:
+        """Returns a sorted list of all road user ids within this group of assignments.
+
+        Returns:
+            list[str]: the road user ids.
+        """
+        return sorted([assignment.road_user for assignment in self._assignments])
+
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()
 

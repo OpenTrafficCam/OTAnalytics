@@ -7,8 +7,9 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_COUNTS,
+    CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
-    DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
@@ -22,6 +23,10 @@ from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.export_events import EventListExporterProvider
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportRoadUserAssignments,
+    ExportSpecification,
+)
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetAllSections,
@@ -29,6 +34,7 @@ from OTAnalytics.application.use_cases.section_repository import (
 from OTAnalytics.application.use_cases.track_export import (
     ExportTracks,
     TrackExportSpecification,
+    TrackFileFormat,
 )
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
@@ -41,6 +47,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepositoryEvent
+from OTAnalytics.plugin_parser.road_user_assignment_export import CSV_FORMAT
 from OTAnalytics.plugin_parser.streaming_parser import StreamTrackParser
 
 
@@ -72,6 +79,7 @@ class OTAnalyticsCli(ABC):
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
         export_tracks: ExportTracks,
+        export_road_user_assignments: ExportRoadUserAssignments,
     ) -> None:
         self._validate_cli_args(run_config)
         self._run_config = run_config
@@ -92,6 +100,7 @@ class OTAnalyticsCli(ABC):
         self._videos_metadata = videos_metadata
 
         self._export_tracks = export_tracks
+        self._export_road_user_assignments = export_road_user_assignments
 
     def start(self) -> None:
         """Start analysis."""
@@ -221,10 +230,19 @@ class OTAnalyticsCli(ABC):
         for event_format in self._run_config.event_formats:
             event_list_exporter = self._provide_eventlist_exporter(event_format)
             actual_save_path = save_path.with_suffix(
-                f".events.{event_list_exporter.get_extension()}"
+                f".events{event_list_exporter.get_extension()}"
             )
             event_list_exporter.export(events, sections, actual_save_path)
             logger().info(f"Event list saved at '{actual_save_path}'")
+
+            assignment_path = save_path.with_suffix(
+                f".{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
+            )
+            specification = ExportSpecification(
+                save_path=assignment_path, format=CSV_FORMAT.name
+            )
+            self._export_road_user_assignments.export(specification=specification)
+            logger().info(f"Road user assignment saved at '{assignment_path}'")
 
     def _do_export_counts(self, save_path: Path) -> None:
         logger().info("Create counts ...")
@@ -242,7 +260,7 @@ class OTAnalyticsCli(ABC):
             raise ValueError("modes is None but has to be defined for exporting counts")
         for count_interval in self._run_config.count_intervals:
             output_file = save_path.with_suffix(
-                f".{DEFAULT_COUNTS_FILE_STEM}_{count_interval}"
+                f".{CONTEXT_FILE_TYPE_COUNTS}_{count_interval}"
                 f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}."
                 f"{DEFAULT_COUNTS_FILE_TYPE}"
             )
@@ -258,7 +276,10 @@ class OTAnalyticsCli(ABC):
 
     def _do_export_tracks(self, save_path: Path) -> None:
         logger().info("Start tracks export")
-        specification = TrackExportSpecification(save_path=save_path)
+        specification = TrackExportSpecification(
+            save_path=save_path,
+            export_format=[TrackFileFormat.CSV, TrackFileFormat.OTTRK],
+        )
         self._export_tracks.export(specification=specification)
         logger().info("Finished tracks export")
 

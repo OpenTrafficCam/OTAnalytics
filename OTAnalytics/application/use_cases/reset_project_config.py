@@ -13,4 +13,4 @@ class ResetProjectConfig:
 
     def __call__(self) -> None:
         """Reset the project configuration."""
-        self._update_project("", None)
+        self._update_project("", None, None)

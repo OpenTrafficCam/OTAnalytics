@@ -6,7 +6,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
-from OTAnalytics.application.datastore import Datastore, VideoMetadata
+from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.state import (
     DEFAULT_HEIGHT,
     DEFAULT_WIDTH,
@@ -37,6 +37,7 @@ from OTAnalytics.domain.track_repository import (
     TrackRepository,
     TrackRepositoryEvent,
 )
+from OTAnalytics.domain.video import VideoMetadata
 
 FIRST_START_DATE = datetime(
     year=2019,

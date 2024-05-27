@@ -3,14 +3,12 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkFrame, CTkScrollbar
 
+from OTAnalytics.adapter_ui.text_resources import ColumnResource, ColumnResources
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
-from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import (
-    ColumnResource,
-    TreeviewTemplate,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
 
 
 class FrameVideos(AbstractCTkFrame):
@@ -97,11 +95,13 @@ class TreeviewVideos(TreeviewTemplate):
 
     def update_items(self) -> None:
         self.delete(*self.get_children())
-        item_ids = [
-            self.__to_resource(video) for video in self._viewmodel.get_all_videos()
-        ]
+        item_ids = ColumnResources(
+            [self.__to_resource(video) for video in self._viewmodel.get_all_videos()],
+            lookup_column=COLUMN_VIDEO,
+        )
         self.add_items(item_ids=item_ids)
 
-    def __to_resource(self, video: Video) -> ColumnResource:
+    @staticmethod
+    def __to_resource(video: Video) -> ColumnResource:
         values = {COLUMN_VIDEO: video.get_path().name}
         return ColumnResource(id=str(video.get_path()), values=values)

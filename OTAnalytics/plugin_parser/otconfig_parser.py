@@ -1,11 +1,21 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from OTAnalytics.application import project
+from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_DO_COUNTING,
+    DEFAULT_DO_EVENTS,
+    DEFAULT_EVENT_FORMATS,
+    DEFAULT_LOG_FILE,
+    DEFAULT_SAVE_NAME,
+    DEFAULT_SAVE_SUFFIX,
+)
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ConfigParser,
@@ -14,8 +24,26 @@ from OTAnalytics.application.parser.config_parser import (
     StartDateMissing,
 )
 from OTAnalytics.application.parser.flow_parser import FlowParser
-from OTAnalytics.application.project import Project
+from OTAnalytics.application.project import (
+    COORDINATE_X,
+    COORDINATE_Y,
+    COUNTING_DAY,
+    COUNTING_LOCATION_NUMBER,
+    DIRECTION,
+    DIRECTION_DESCRIPTION,
+    HAS_BICYCLE_LANE,
+    IS_BICYCLE_COUNTING,
+    REMARK,
+    TK_NUMBER,
+    WEATHER,
+    CountingDayType,
+    DirectionOfStationing,
+    Project,
+    SvzMetadata,
+    WeatherType,
+)
 from OTAnalytics.domain import flow, section, video
+from OTAnalytics.domain.files import build_relative_path
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
@@ -83,6 +111,7 @@ class FixMissingAnalysis(OtConfigFormatFixer):
 
 
 class OtConfigParser(ConfigParser):
+
     def __init__(
         self,
         format_fixer: OtConfigFormatFixer,
@@ -96,10 +125,13 @@ class OtConfigParser(ConfigParser):
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
         content = parse_json(file)
-        fixed_content = self._format_fixer.fix(content)
+        return self.parse_from_dict(content, base_folder)
+
+    def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
+        fixed_content = self._format_fixer.fix(data)
         _project = self._parse_project(fixed_content[PROJECT])
         analysis_config = self._parse_analysis(fixed_content[ANALYSIS], base_folder)
-        videos = self._video_parser.parse_list(fixed_content[video.VIDEOS], base_folder)
+        videos = self._parse_videos(fixed_content[video.VIDEOS], base_folder)
         sections, flows = self._flow_parser.parse_content(
             fixed_content[section.SECTIONS], fixed_content[flow.FLOWS]
         )
@@ -111,11 +143,68 @@ class OtConfigParser(ConfigParser):
             flows=flows,
         )
 
+    def _parse_videos(
+        self, video_entries: list[dict], base_folder: Path
+    ) -> Sequence[Video]:
+        existing_entries = []
+        for video_entry in video_entries:
+            video_file = base_folder / video_entry[PATH]
+            if video_file.exists():
+                existing_entries.append(video_entry)
+            else:
+                alternative_file = base_folder / video_file.name
+                logger().warning(
+                    f"Unable to find video file '{video_file}'. "
+                    "Try searching for video file with same name in "
+                    f"base_folder '{base_folder}'."
+                )
+                if alternative_file.exists():
+                    existing_entries.append({PATH: alternative_file.name})
+                else:
+                    raise FileNotFoundError(
+                        f"Searching for alternative video file '{alternative_file}'"
+                        "unsuccessful. Can not parse OTConfig."
+                    )
+        return self._video_parser.parse_list(existing_entries, base_folder)
+
     def _parse_project(self, data: dict) -> Project:
         _validate_data(data, [project.NAME, project.START_DATE])
         name = data[project.NAME]
         start_date = datetime.fromtimestamp(data[project.START_DATE], timezone.utc)
-        return Project(name=name, start_date=start_date)
+        svz_metadata = None
+        if svz_data := data.get(project.METADATA):
+            svz_metadata = self._parse_svz_metadata(svz_data)
+        return Project(name=name, start_date=start_date, metadata=svz_metadata)
+
+    def _parse_svz_metadata(self, data: dict) -> SvzMetadata:
+        tk_number = data[TK_NUMBER]
+        counting_location_number = data[COUNTING_LOCATION_NUMBER]
+        direction = (
+            DirectionOfStationing.parse(data[DIRECTION]) if data[DIRECTION] else None
+        )
+        direction_description = data[DIRECTION_DESCRIPTION]
+        has_bicycle_lane = data[HAS_BICYCLE_LANE]
+        is_bicycle_counting = data[IS_BICYCLE_COUNTING]
+        counting_day = (
+            CountingDayType.parse(data[COUNTING_DAY]) if data[COUNTING_DAY] else None
+        )
+        weather = WeatherType.parse(data[WEATHER]) if data[WEATHER] else None
+        remark = data[REMARK]
+        coordinate_x = data[COORDINATE_X]
+        coordinate_y = data[COORDINATE_Y]
+        return SvzMetadata(
+            tk_number=tk_number,
+            counting_location_number=counting_location_number,
+            direction=direction,
+            direction_description=direction_description,
+            has_bicycle_lane=has_bicycle_lane,
+            is_bicycle_counting=is_bicycle_counting,
+            counting_day=counting_day,
+            weather=weather,
+            remark=remark,
+            coordinate_x=coordinate_x,
+            coordinate_y=coordinate_y,
+        )
 
     def _parse_analysis(self, data: dict, base_folder: Path) -> AnalysisConfig:
         _validate_data(
@@ -127,7 +216,6 @@ class OtConfigParser(ConfigParser):
                 EXPORT,
                 NUM_PROCESSES,
                 LOGFILE,
-                DEBUG,
             ],
         )
         export_config = self._parse_export(data[EXPORT])
@@ -154,32 +242,49 @@ class OtConfigParser(ConfigParser):
     def _parse_track_files(
         self, track_files: list[str], base_folder: Path
     ) -> set[Path]:
-        return {base_folder / _file for _file in track_files}
+        existing_track_files: set[Path] = set()
+        for _file in track_files:
+            file_in_config = base_folder / _file
+            if file_in_config.exists():
+                existing_track_files.add(file_in_config)
+            else:
+                alternative_file = base_folder / file_in_config.name
+                logger().warning(
+                    f"Unable to find track file '{file_in_config}'. "
+                    "Try searching for track file with same name in "
+                    f"base_folder '{base_folder}'."
+                )
+                if alternative_file.exists():
+                    existing_track_files.add(alternative_file)
+                else:
+                    raise FileNotFoundError(
+                        f"Searching for alternative track file '{alternative_file}'"
+                        "unsuccessful. Can not parse OTConfig."
+                    )
+        return existing_track_files
 
     def serialize(
         self,
         project: Project,
         video_files: Iterable[Video],
+        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
     ) -> None:
-        """Serializes the project with the given videos, sections and flows into the
-        file.
-
-        Args:
-            project (Project): description of the project
-            video_files (Iterable[Video]): video files to reference
-            sections (Iterable[Section]): sections to store
-            flows (Iterable[Flow]): flows to store
-            file (Path): output file
-
-        Raises:
-            StartDateMissing: if start date is not configured
-        """
         self._validate_data(project)
-        content = self.convert(project, video_files, sections, flows, file)
+        content = self.convert(project, video_files, track_files, sections, flows, file)
         write_json(data=content, path=file)
+
+    def serialize_from_config(self, config: OtConfig, file: Path) -> None:
+        self.serialize(
+            config.project,
+            config.videos,
+            config.analysis.track_files,
+            config.sections,
+            config.flows,
+            file,
+        )
 
     @staticmethod
     def _validate_data(project: Project) -> None:
@@ -190,6 +295,7 @@ class OtConfigParser(ConfigParser):
         self,
         project: Project,
         video_files: Iterable[Video],
+        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
@@ -201,7 +307,38 @@ class OtConfigParser(ConfigParser):
             relative_to=parent_folder,
         )
         section_content = self._flow_parser.convert(sections, flows)
+        analysis_content: dict = {
+            ANALYSIS: {
+                DO_EVENTS: DEFAULT_DO_EVENTS,
+                DO_COUNTING: DEFAULT_DO_COUNTING,
+                TRACKS: sorted(
+                    [
+                        build_relative_path(
+                            file,
+                            parent_folder,
+                            lambda actual, other: (
+                                "Track and config files are stored on "
+                                "different drives. "
+                                f"Track file is stored on {actual}."
+                                f"Configuration is stored on {other}"
+                            ),
+                        )
+                        for file in track_files
+                    ]
+                ),
+                EXPORT: {
+                    SAVE_NAME: DEFAULT_SAVE_NAME,
+                    SAVE_SUFFIX: DEFAULT_SAVE_SUFFIX,
+                    EVENT_FORMATS: list(DEFAULT_EVENT_FORMATS),
+                    COUNT_INTERVALS: [DEFAULT_COUNTING_INTERVAL_IN_MINUTES],
+                },
+                NUM_PROCESSES: 1,
+                LOGFILE: str(DEFAULT_LOG_FILE),
+            }
+        }
         content: dict[str, list[dict] | dict] = {PROJECT: project_content}
         content |= video_content
+        content |= analysis_content
         content |= section_content
+
         return content

@@ -2,11 +2,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from math import floor
-from os import path
-from os.path import normcase, splitdrive
 from pathlib import Path
 from typing import Iterable, Optional
 
+from OTAnalytics.domain.files import build_relative_path
 from OTAnalytics.domain.track import TrackImage
 
 VIDEOS: str = "videos"
@@ -58,6 +57,10 @@ class Video(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def contains(self, date: datetime) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
     def to_dict(
         self,
         relative_to: Path,
@@ -79,8 +82,51 @@ class Video(ABC):
         pass
 
 
-class DifferentDrivesException(Exception):
-    pass
+@dataclass(frozen=True)
+class VideoMetadata:
+    path: str
+    recorded_start_date: datetime
+    expected_duration: Optional[timedelta]
+    recorded_fps: float
+    actual_fps: Optional[float]
+    number_of_frames: int
+
+    @property
+    def start(self) -> datetime:
+        return self.recorded_start_date
+
+    @property
+    def end(self) -> datetime:
+        return self.start + self.duration
+
+    @property
+    def duration(self) -> timedelta:
+        if self.expected_duration:
+            return self.expected_duration
+        return timedelta(seconds=self.number_of_frames / self.recorded_fps)
+
+    @property
+    def fps(self) -> float:
+        if self.actual_fps:
+            return self.actual_fps
+        return self.recorded_fps
+
+    def to_dict(self) -> dict:
+        return {
+            "path": self.path,
+            "recorded_start_date": self.recorded_start_date.timestamp(),
+            "expected_duration": (
+                self.expected_duration.total_seconds()
+                if self.expected_duration
+                else None
+            ),
+            "recorded_fps": self.recorded_fps,
+            "actual_fps": self.actual_fps,
+            "number_of_frames": self.number_of_frames,
+        }
+
+    def contains(self, date: datetime) -> bool:
+        return self.start <= date < self.end
 
 
 @dataclass
@@ -97,16 +143,19 @@ class SimpleVideo(Video):
 
     video_reader: VideoReader
     path: Path
-    _start_date: Optional[datetime]
-    _fps: Optional[int] = None
+    metadata: Optional[VideoMetadata]
 
     @property
     def start_date(self) -> Optional[datetime]:
-        return self._start_date
+        if self.metadata:
+            return self.metadata.recorded_start_date
+        return None
 
     @property
     def fps(self) -> float:
-        return self._fps if self._fps else self.video_reader.get_fps(self.path)
+        return (
+            self.metadata.fps if self.metadata else self.video_reader.get_fps(self.path)
+        )
 
     def __post_init__(self) -> None:
         self.check_path_exists()
@@ -142,18 +191,22 @@ class SimpleVideo(Video):
         self,
         relative_to: Path,
     ) -> dict:
-        return {PATH: self.__build_relative_path(relative_to)}
-
-    def __build_relative_path(self, relative_to: Path) -> str:
-        self_drive, _ = splitdrive(self.path)
-        other_drive, _ = splitdrive(relative_to)
-        if normcase(self_drive) != normcase(other_drive):
-            raise DifferentDrivesException(
-                "Video and config files are stored on different drives. "
-                f"Video file is stored on {self_drive}."
-                f"Configuration is stored on {other_drive}"
+        return {
+            PATH: build_relative_path(
+                self.path,
+                relative_to,
+                lambda actual, other: (
+                    "Video and config files are stored on different drives. "
+                    f"Video file is stored on {actual}."
+                    f"Configuration is stored on {other}"
+                ),
             )
-        return path.relpath(self.path, relative_to)
+        }
+
+    def contains(self, date: datetime) -> bool:
+        if self.metadata:
+            return self.metadata.contains(date)
+        return False
 
 
 class VideoListObserver(ABC):
@@ -250,3 +303,6 @@ class VideoRepository:
         """
         self._videos.clear()
         self._observers.notify([])
+
+    def get_by_date(self, date: datetime) -> list[Video]:
+        return [video for video in self._videos.values() if video.contains(date)]

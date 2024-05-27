@@ -18,8 +18,8 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_COUNTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
-    DEFAULT_COUNTS_FILE_STEM,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
@@ -49,6 +49,9 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
 from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    ExportRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetAllSections,
@@ -74,6 +77,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+    PygeosTrackGeometryDataset,
+)
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
@@ -96,6 +102,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
     PythonDetectionParser,
     SimpleVideoParser,
+)
+from OTAnalytics.plugin_parser.road_user_assignment_export import (
+    SimpleRoadUserAssignmentExporterFactory,
 )
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
@@ -270,6 +279,7 @@ class TestOTAnalyticsCli:
     TRACKS_METADATA: str = "tracks_metadata"
     VIDEOS_METADATA: str = "videos_metadata"
     PROGRESSBAR: str = "progressbar"
+    EXPORT_ROAD_USER_ASSIGNMENT: str = "export_road_user_assignments"
 
     @pytest.fixture
     def mock_cli_dependencies(self) -> dict[str, Any]:
@@ -290,11 +300,14 @@ class TestOTAnalyticsCli:
             self.TRACKS_METADATA: Mock(spec=TracksMetadata),
             self.VIDEOS_METADATA: Mock(spec=VideosMetadata),
             self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
+            self.EXPORT_ROAD_USER_ASSIGNMENT: Mock(spec=ExportRoadUserAssignments),
         }
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
-        track_repository = TrackRepository(PythonTrackDataset())
+        track_repository = TrackRepository(
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        )
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()
@@ -333,22 +346,39 @@ class TestOTAnalyticsCli:
         create_events = CreateEvents(
             clear_all_events, create_intersection_events, create_scene_events
         )
+        assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         export_counts = ExportTrafficCounting(
             event_repository,
             flow_repository,
             GetSectionsById(section_repository),
             create_events,
-            FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
-            SimpleTaggerFactory(),
+            assigner,
+            SimpleTaggerFactory(track_repository),
             FillZerosExporterFactory(
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),
         )
-        export_tracks = CsvTrackExport(track_repository)
+        tracks_metadata = TracksMetadata(track_repository)
+        videos_metadata = VideosMetadata()
+        export_tracks = CsvTrackExport(
+            track_repository, tracks_metadata, videos_metadata
+        )
+        export_road_user_assignments = ExportRoadUserAssignments(
+            event_repository=event_repository,
+            flow_repository=flow_repository,
+            create_events=create_events,
+            assigner=assigner,
+            exporter_factory=SimpleRoadUserAssignmentExporterFactory(
+                section_repository, get_all_tracks
+            ),
+        )
         return {
             self.TRACK_PARSER: OttrkParser(
                 PythonDetectionParser(
-                    ByMaxConfidence(), track_repository, DEFAULT_TRACK_LENGTH_LIMIT
+                    ByMaxConfidence(),
+                    track_repository,
+                    PygeosTrackGeometryDataset.from_track_dataset,
+                    DEFAULT_TRACK_LENGTH_LIMIT,
                 ),
             ),
             self.EVENT_REPOSITORY: event_repository,
@@ -363,9 +393,10 @@ class TestOTAnalyticsCli:
             self.ADD_ALL_TRACKS: add_all_tracks,
             self.GET_ALL_TRACK_IDS: get_all_track_ids,
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
-            self.TRACKS_METADATA: TracksMetadata(track_repository),
-            self.VIDEOS_METADATA: VideosMetadata(),
+            self.TRACKS_METADATA: tracks_metadata,
+            self.VIDEOS_METADATA: videos_metadata,
             self.PROGRESSBAR: NoProgressbarBuilder(),
+            self.EXPORT_ROAD_USER_ASSIGNMENT: export_road_user_assignments,
         }
 
     def test_init(
@@ -387,6 +418,10 @@ class TestOTAnalyticsCli:
         assert cli._tracks_metadata == mock_cli_dependencies[self.TRACKS_METADATA]
         assert cli._videos_metadata == mock_cli_dependencies[self.VIDEOS_METADATA]
         assert cli._progressbar == mock_cli_dependencies[self.PROGRESSBAR]
+        assert (
+            cli._export_road_user_assignments
+            == mock_cli_dependencies[self.EXPORT_ROAD_USER_ASSIGNMENT]
+        )
 
     def test_init_empty_tracks_cli_arg(
         self, mock_cli_dependencies: dict[str, Any], mock_flow_parser: FlowParser
@@ -537,7 +572,7 @@ class TestOTAnalyticsCli:
         interval = 15
         filename = "filename"
         expected_output_file = (
-            test_data_tmp_dir / f"{filename}.{DEFAULT_COUNTS_FILE_STEM}_{interval}"
+            test_data_tmp_dir / f"{filename}.{CONTEXT_FILE_TYPE_COUNTS}_{interval}"
             f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}."
             f"{DEFAULT_COUNTS_FILE_TYPE}"
         )

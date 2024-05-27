@@ -10,13 +10,17 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
-from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
+from OTAnalytics.adapter_ui.abstract_frame_project import (
+    AbstractFrameProject,
+    AbstractFrameSvzMetadata,
+)
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -388,4 +392,32 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_video_control_frame(self, frame: AbstractFrame) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def export_road_user_assignments(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_svz_metadata(self, metadata: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_directions_of_stationing(self) -> ColumnResources:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_counting_day_types(self) -> ColumnResources:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_weather_types(self) -> ColumnResources:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_svz_metadata_frame(self, frame: AbstractFrameSvzMetadata) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
         raise NotImplementedError

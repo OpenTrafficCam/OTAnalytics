@@ -1,18 +1,19 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, call
 
 import pytest
 
 from OTAnalytics.domain.video import (
     PATH,
-    DifferentDrivesException,
     SimpleVideo,
     Video,
     VideoListObserver,
+    VideoMetadata,
     VideoReader,
     VideoRepository,
 )
+from tests.OTAnalytics.application.test_datastore import FIRST_START_DATE
 
 START_DATE = datetime(2023, 1, 1)
 
@@ -33,25 +34,11 @@ class TestVideo:
         config_path.parent.mkdir(parents=True)
         video_path.touch()
         config_path.touch()
-        video = SimpleVideo(video_reader, video_path, START_DATE)
+        video = SimpleVideo(video_reader, video_path, None)
 
         result = video.to_dict(config_path)
 
         assert result[PATH] == expected_video_path
-
-    def test_resolve_relative_paths_on_different_drives(
-        self, video_reader: Mock
-    ) -> None:
-        video_path = Mock(spec=Path)
-        config_path = Mock(spec=Path)
-        video = SimpleVideo(video_reader, video_path, START_DATE)
-
-        with patch(
-            "OTAnalytics.domain.video.splitdrive",
-            side_effect=[("C:", "rest"), ("D:", "rest")],
-        ):
-            with pytest.raises(DifferentDrivesException):
-                video.to_dict(config_path)
 
 
 class TestVideoRepository:
@@ -73,7 +60,7 @@ class TestVideoRepository:
         observer = Mock(spec=VideoListObserver)
         path = test_data_tmp_dir / "dummy.mp4"
         path.touch()
-        video = SimpleVideo(video_reader, path, START_DATE)
+        video = SimpleVideo(video_reader, path, None)
         repository = VideoRepository()
         repository.register_videos_observer(observer)
 
@@ -108,3 +95,53 @@ class TestVideoRepository:
 
         assert unorderd_videos != ordered_videos
         assert result == ordered_videos
+
+    def test_get_by_date(self, video_1: Mock, video_2: Mock) -> None:
+        video_1.contains.return_value = False
+        video_2.contains.return_value = True
+
+        repository = VideoRepository()
+        repository.add_all([video_1, video_2])
+        result = repository.get_by_date(START_DATE)
+        assert result == [video_2]
+
+
+class TestVideoMetadata:
+    @pytest.fixture
+    def metadata(self) -> VideoMetadata:
+        recorded_fps = 20.0
+        actual_fps = 20.0
+        return VideoMetadata(
+            path="video_path_1.mp4",
+            recorded_start_date=FIRST_START_DATE,
+            expected_duration=timedelta(seconds=3),
+            recorded_fps=recorded_fps,
+            actual_fps=actual_fps,
+            number_of_frames=60,
+        )
+
+    def test_fully_specified_metadata(self, metadata: VideoMetadata) -> None:
+        assert metadata.start == FIRST_START_DATE
+        assert metadata.end == FIRST_START_DATE + timedelta(seconds=3)
+        assert metadata.fps == 20.0
+
+    def test_partially_specified_metadata(self) -> None:
+        recorded_fps = 20.0
+        metadata = VideoMetadata(
+            path="video_path_1.mp4",
+            recorded_start_date=FIRST_START_DATE,
+            expected_duration=None,
+            recorded_fps=recorded_fps,
+            actual_fps=None,
+            number_of_frames=60,
+        )
+        assert metadata.start == FIRST_START_DATE
+        expected_video_end = FIRST_START_DATE + timedelta(seconds=3)
+        assert metadata.end == expected_video_end
+        assert metadata.fps == recorded_fps
+
+    def test_contains(self, metadata: VideoMetadata) -> None:
+        assert not metadata.contains(FIRST_START_DATE - timedelta(seconds=1))
+        assert metadata.contains(FIRST_START_DATE)
+        assert metadata.contains(FIRST_START_DATE + timedelta(seconds=2))
+        assert not metadata.contains(FIRST_START_DATE + timedelta(seconds=3))
