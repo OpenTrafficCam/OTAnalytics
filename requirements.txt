@@ -9,5 +9,5 @@ pillow==10.3.0
 pygeos==0.14
 seaborn==0.13.2
 shapely==2.0.4
-tqdm==4.66.2
+tqdm==4.66.4
 ujson==5.9.0
