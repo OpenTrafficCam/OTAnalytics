@@ -1,7 +1,7 @@
 -r requirements.txt
 black==24.4.2
 flake8==7.0.0
-interrogate==1.5.0
+interrogate==1.7.0
 isort==5.13.2
 mypy==1.10.0
 pre-commit==3.6.2
