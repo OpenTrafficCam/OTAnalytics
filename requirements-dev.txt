@@ -5,7 +5,7 @@ interrogate==1.5.0
 isort==5.13.2
 mypy==1.10.0
 pre-commit==3.6.2
-pytest==8.0.0
+pytest==8.2.1
 pytest-benchmark==4.0.0
 pytest-cov==4.1.0
 yamllint==1.35.1
