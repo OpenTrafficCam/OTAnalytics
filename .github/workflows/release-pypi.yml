@@ -16,6 +16,10 @@ jobs:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
+  update-version:
+    if: endsWith(github.event.base_ref, 'main')
+    uses: './.github/workflows/update-version.yml'
+    secrets: inherit
   create_pypi_release:
     needs:
       - test

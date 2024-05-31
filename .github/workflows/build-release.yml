@@ -16,8 +16,12 @@ jobs:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
+  update-version:
+    if: endsWith(github.event.base_ref, 'main')
+    uses: './.github/workflows/update-version.yml'
+    secrets: inherit
   create_release:
-    needs: 
+    needs:
       - test
       - regression-test
     uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
