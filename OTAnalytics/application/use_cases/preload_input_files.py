@@ -20,10 +20,12 @@ class PreloadInputFiles:
 
     def load(self, run_config: RunConfiguration) -> None:
         if run_config.config_file:
+            # use case load_otconfig already loads the track files
             self._load_otconfig.load(run_config.config_file)
         if run_config.otflow:
             self._load_otflow(run_config.otflow)
-        if run_config.track_files:
+
+        if run_config.track_files and not run_config.config_file:
             self._load_track_files(list(run_config.track_files))
 
         if run_config.sections:
