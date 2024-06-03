@@ -18,6 +18,7 @@ class TestPreloadInputFiles:
         type(run_config).track_files = PropertyMock(
             return_value=[Path("path/one.ottrk"), Path("path/two.ottrk")]
         )
+        type(run_config).otflow = None
         type(run_config).sections = PropertyMock(return_value={Mock(), Mock()})
 
         preload_input_files = PreloadInputFiles(
@@ -26,7 +27,7 @@ class TestPreloadInputFiles:
         preload_input_files.load(run_config)
 
         load_otflow.assert_not_called()
-        load_otconfig.assert_called_once_with(run_config.config_file)
+        load_otconfig.load.assert_called_once_with(run_config.config_file)
         load_track_files.assert_called_once_with(run_config.track_files)
         apply_cli_cuts.apply.assert_called_once_with(
             run_config.sections, preserve_cutting_sections=True
