@@ -1,5 +1,5 @@
 customtkinter==5.2.2
-matplotlib==3.8.2
+matplotlib==3.9.0
 more-itertools==10.2.0
 numpy==1.26.4
 opencv-python==4.10.0.82
