@@ -225,11 +225,13 @@ class DummyViewModel(
         flow_parser: FlowParser,
         name_generator: FlowNameGenerator,
         event_list_export_formats: dict,
+        show_svz: bool,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
+        self._show_svz = show_svz
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
@@ -247,6 +249,9 @@ class DummyViewModel(
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._button_quick_save_config: AbstractButtonQuickSaveConfig | None = None
         self._new_section: dict = {}
+
+    def show_svz(self) -> bool:
+        return self._show_svz
 
     def notify_videos(self, videos: list[Video]) -> None:
         if self._treeview_videos is None:

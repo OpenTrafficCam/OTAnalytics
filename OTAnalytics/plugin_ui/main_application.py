@@ -546,6 +546,7 @@ class ApplicationStarter:
             flow_parser,
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
+            show_svz=run_config.show_svz,
         )
         application.register_video_observer(dummy_viewmodel)
         application.register_sections_observer(dummy_viewmodel)
