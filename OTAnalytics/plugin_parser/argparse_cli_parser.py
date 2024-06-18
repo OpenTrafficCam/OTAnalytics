@@ -28,7 +28,7 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--show_svz",
+            "--show-svz",
             action="store_true",
             help="Show SVZ-Tab in OTAnalytics GUI. If omitted the tab will be hidden.",
             required=False,
