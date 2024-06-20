@@ -73,6 +73,8 @@ class TabviewProject(CustomCTkTabview):
         self.frame_svz_metadata = FrameSvzMetadata(
             master=self.tab(self._svz_title), viewmodel=self._viewmodel
         )
+        if not self._viewmodel.show_svz():
+            self.delete(self._svz_title)
 
     def _place_widgets(self) -> None:
         self.frame_project.pack(fill=tkinter.BOTH, expand=True)
