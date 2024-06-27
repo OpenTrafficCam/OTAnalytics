@@ -225,11 +225,13 @@ class DummyViewModel(
         flow_parser: FlowParser,
         name_generator: FlowNameGenerator,
         event_list_export_formats: dict,
+        show_svz: bool,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
+        self._show_svz = show_svz
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
@@ -247,6 +249,9 @@ class DummyViewModel(
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._button_quick_save_config: AbstractButtonQuickSaveConfig | None = None
         self._new_section: dict = {}
+
+    def show_svz(self) -> bool:
+        return self._show_svz
 
     def notify_videos(self, videos: list[Video]) -> None:
         if self._treeview_videos is None:
@@ -506,9 +511,9 @@ class DummyViewModel(
 
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
         self._frame_project = project_frame
-        self._show_current_project()
+        self.show_current_project()
 
-    def _show_current_project(self) -> None:
+    def show_current_project(self, _: Any = None) -> None:
         if self._frame_project is None:
             raise MissingInjectedInstanceError(type(self._frame_project).__name__)
         project = self._application._datastore.project
@@ -599,8 +604,8 @@ class DummyViewModel(
             return
         logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
         self._application.load_otconfig(file=Path(otconfig_file))
-        self._show_current_project()
-        self._show_current_svz_metadata()
+        self.show_current_project()
+        self.update_svz_metadata_view()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
@@ -1662,8 +1667,8 @@ class DummyViewModel(
         if proceed.canceled:
             return
         self._application.start_new_project()
-        self._show_current_project()
-        self._show_current_svz_metadata()
+        self.show_current_project()
+        self.update_svz_metadata_view()
         logger().info("Start new project.")
 
     def update_project_name(self, name: str) -> None:
@@ -1823,9 +1828,9 @@ class DummyViewModel(
 
     def set_svz_metadata_frame(self, frame: AbstractFrameSvzMetadata) -> None:
         self._frame_svz_metadata = frame
-        self._show_current_svz_metadata()
+        self.update_svz_metadata_view()
 
-    def _show_current_svz_metadata(self) -> None:
+    def update_svz_metadata_view(self, _: Any = None) -> None:
         if self._frame_svz_metadata is None:
             raise MissingInjectedInstanceError(type(self._frame_svz_metadata).__name__)
         project = self._application._datastore.project

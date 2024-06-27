@@ -73,6 +73,8 @@ class TabviewProject(CustomCTkTabview):
         self.frame_svz_metadata = FrameSvzMetadata(
             master=self.tab(self._svz_title), viewmodel=self._viewmodel
         )
+        if not self._viewmodel.show_svz():
+            self.delete(self._svz_title)
 
     def _place_widgets(self) -> None:
         self.frame_project.pack(fill=tkinter.BOTH, expand=True)
@@ -382,8 +384,17 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
         self._coordinate_x.trace_add("write", callback=self._update_metadata)
         self._coordinate_y.trace_add("write", callback=self._update_metadata)
 
+        self._activate_update()
+
+    def _activate_update(self) -> None:
+        self._update = True
+
+    def _deactivate_update(self) -> None:
+        self._update = False
+
     def _update_metadata(self, name: str, other: str, mode: str) -> None:
-        self._viewmodel.update_svz_metadata(self.__build_metadata())
+        if self._update:
+            self._viewmodel.update_svz_metadata(self.__build_metadata())
 
     def __build_metadata(self) -> dict:
         return {
@@ -403,6 +414,7 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
         }
 
     def update(self, metadata: dict) -> None:
+        self._deactivate_update()
         if metadata:
             self._tk_number.set(self.__get_display_value(TK_NUMBER, metadata))
             self._counting_location_number.set(
@@ -443,6 +455,7 @@ class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
             self._remark.set("")
             self._coordinate_x.set("")
             self._coordinate_y.set("")
+        self._activate_update()
 
     @staticmethod
     def __get_display_value(field: str, metadata: dict) -> str:

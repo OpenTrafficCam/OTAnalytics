@@ -209,5 +209,9 @@ class RunConfiguration(OtConfigDefaultValueProvider):
             return frozenset(self._cli_args.exclude_classes)
         return frozenset()
 
+    @property
+    def show_svz(self) -> bool:
+        return self._cli_args.show_svz
+
 
 RunConfigurationBuilder = Callable[[CliArguments, OtConfig | None], RunConfiguration]
