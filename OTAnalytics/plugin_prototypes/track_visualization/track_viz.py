@@ -610,10 +610,7 @@ class FilterByVideo(PandasDataFrameProvider):
         if track_df.empty:
             return track_df
         current_video = self._current_video.get_video()
-        if current_video:
-            return track_df[track_df[track.VIDEO_NAME] == current_video]
-        else:
-            return track_df
+        return track_df[track_df[track.VIDEO_NAME] == current_video]
 
 
 class FilterByFrame(PandasDataFrameProvider):

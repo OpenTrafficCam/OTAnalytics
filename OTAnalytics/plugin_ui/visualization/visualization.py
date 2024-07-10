@@ -479,13 +479,10 @@ class VisualizationBuilder:
     def _create_filter_by_occurrence(
         self, data_provider: PandasDataFrameProvider
     ) -> PandasDataFrameProvider:
-        return FilterByVideo(
-            FilterByOccurrence(
-                data_provider,
-                self._track_view_state,
-                self._create_dataframe_filter_builder(),
-            ),
-            self._get_current_video,
+        return FilterByOccurrence(
+            data_provider,
+            self._track_view_state,
+            self._create_dataframe_filter_builder(),
         )
 
     def _create_get_sections_by_id(self) -> GetSectionsById:
