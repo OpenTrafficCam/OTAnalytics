@@ -28,6 +28,12 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--show-svz",
+            action="store_true",
+            help="Show SVZ-Tab in OTAnalytics GUI. If omitted the tab will be hidden.",
+            required=False,
+        )
+        self._parser.add_argument(
             "--config",
             type=str,
             help="Path to otconfig file.",
@@ -141,6 +147,7 @@ class ArgparseCliParser(CliParser):
             start_cli=args.cli,
             debug=args.debug,
             logfile_overwrite=args.logfile_overwrite,
+            show_svz=args.show_svz,
             config_file=args.config,
             track_files=args.ottrks,
             otflow_file=args.otflow,

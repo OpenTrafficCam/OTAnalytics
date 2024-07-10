@@ -841,6 +841,6 @@ class MatplotlibTrackPlotter(TrackPlotter):
         bbox_contents = canvas.copy_from_bbox(axes.bbox)
         left, bottom, right, top = bbox_contents.get_extents()
 
-        image_array = numpy.frombuffer(bbox_contents.to_string(), dtype=numpy.uint8)
+        image_array = numpy.asarray(bbox_contents)
         image_array = image_array.reshape([top - bottom, right - left, 4])
         return PilImage(Image.fromarray(image_array, mode="RGBA"))

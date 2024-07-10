@@ -8,5 +8,5 @@ if "x%PYTHON_VERSION:3.11=%"=="x%PYTHON_VERSION%" (
 )
 
 call venv\Scripts\activate
-python -m OTAnalytics
+python -m OTAnalytics %*
 deactivate
