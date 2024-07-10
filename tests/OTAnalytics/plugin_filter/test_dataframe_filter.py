@@ -93,6 +93,18 @@ class TestDataFramePredicates:
                 [False, False, False, False, False],
             ),
             (
+                DataFrameEndsBeforeOrAtDate(
+                    OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
+                ),
+                [False, False, False, False, False],
+            ),
+            (
+                DataFrameEndsBeforeOrAtDate(
+                    OCCURRENCE, datetime(2000, 1, 10, tzinfo=timezone.utc)
+                ),
+                [True, True, True, True, True],
+            ),
+            (
                 DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 [True, True, True, True, True],
             ),
